@@ -1,0 +1,467 @@
+/**
+ * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
+ */
+package asemon.pcs;
+
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import asemon.TrendGraphDataPoint;
+import asemon.cm.CountersModel;
+import asemon.utils.Configuration;
+
+public abstract class PersistWriterBase
+    implements IPersistWriter
+{
+    /** Log4j logging. */
+	private static Logger _logger          = Logger.getLogger(PersistWriterBase.class);
+
+	/*---------------------------------------------------
+	** DEFINITIONS/STATIC variables
+	**---------------------------------------------------
+	*/
+	public static final int SESSIONS                = 0;
+	public static final int SESSION_PARAMS          = 1;
+	public static final int SESSION_SAMPLES         = 2;
+	public static final int SESSION_SAMPLE_SUM      = 3;
+	public static final int SESSION_SAMPLE_DETAILES = 4;
+	public static final int ABS                     = 10;
+	public static final int DIFF                    = 11;
+	public static final int RATE                    = 12;
+
+	/** Character used for quoted identifier */
+	public static String  qic = "\"";
+	
+
+	/*---------------------------------------------------
+	** class members
+	**---------------------------------------------------
+	*/
+	/** when DDL is "created" we do not need to do this again */
+	private List _saveDdlIsCalled = new LinkedList();
+
+
+	
+	/*---------------------------------------------------
+	** Constructors
+	**---------------------------------------------------
+	*/
+	// NONE
+
+	
+	/*---------------------------------------------------
+	** Methods Need to be implemented by sub classes
+	**---------------------------------------------------
+	*/
+	/** Need to be implemented by the implementation */
+	abstract public String getName();
+
+	/** Need to be implemented by the implementation */
+	abstract public void init(Configuration props) throws Exception;
+
+
+	
+	
+	/*---------------------------------------------------
+	** Methods implementing: IPersistWriter
+	**---------------------------------------------------
+	*/
+	/** Empty implementation */
+	public void beginOfSample()
+	{
+	}
+
+	/** Empty implementation */
+	public void endOfSample()
+	{
+	}
+
+
+	
+	/** Empty implementation */
+	public void startSession(PersistContainer cont)
+	{
+	}
+
+	/** Empty implementation */
+	public void saveSession(PersistContainer cont)
+	{
+	}
+
+	/** Empty implementation */
+	public void saveCounters(CountersModel cm)
+	{
+	}
+
+	/** Empty implementation */
+	public boolean saveDdl(CountersModel cm)
+	{
+		return true;
+	}
+	
+	public boolean isDdlCreated(CountersModel cm)
+	{
+		String tabName = cm.getName();
+
+		return _saveDdlIsCalled.contains(tabName);
+	}
+
+	public boolean isDdlCreated(String tabName)
+	{
+		return _saveDdlIsCalled.contains(tabName);
+	}
+
+	public void markDdlAsCreated(CountersModel cm)
+	{
+		String tabName = cm.getName();
+
+		_saveDdlIsCalled.add(tabName);
+	}
+
+	public void markDdlAsCreated(String tabName)
+	{
+		_saveDdlIsCalled.add(tabName);
+	}
+
+
+	
+	
+	
+	
+	
+	/*---------------------------------------------------
+	** HELPER Methods that subclasses can use
+	**---------------------------------------------------
+	*/
+	/** Helper method */
+	public String fill(String str, int fill)
+	{
+		if (str.length() < fill)
+		{
+			String fillStr = "                                                              ";
+			return (str + fillStr).substring(0,fill);
+		}
+		return str;
+	}
+
+	/**
+	 * This method can be overladed and used to change the syntax for various datatypes 
+	 */
+	public String getDatatype(String type, int length, int prec, int scale)
+	{
+		if ( type.equals("char") || type.equals("varchar") )
+			type = type + "(" + length + ")";
+		
+		if ( type.equals("numeric") || type.equals("decimal") )
+			type = type + "(" + prec + "," + scale + ")";
+
+		return type;
+	}
+	public String getDatatype(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
+	throws SQLException
+	{
+		String type   = null;
+		int    length = -1;
+		int    prec   = -1;
+		int    scale  = -1;
+
+		if (isDeltaOrPct)
+		{
+			type    = "numeric";
+			length  = -1;
+			prec    = 10;
+			scale   = 1;
+		}
+		else
+		{
+			type  = rsmd.getColumnTypeName(col);
+			if ( type.equals("char") || type.equals("varchar") )
+			{
+				length = rsmd.getColumnDisplaySize(col);
+				prec   = -1;
+				scale  = -1;
+			}
+			
+			if ( type.equals("numeric") || type.equals("decimal") )
+			{
+				length = -1;
+				prec   = rsmd.getPrecision(col);
+				scale  = rsmd.getScale(col);
+				
+			}
+		}
+		return getDatatype(type, length, prec, scale);
+	}
+	public String getNullable(boolean nullable)
+	{
+		return nullable ? "    null" : "not null";
+		
+	}
+	public String getNullable(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
+	throws SQLException
+	{
+//		return getNullable(rsmd.isNullable(col)>0);
+		return getNullable(true);
+	}
+
+	/** Helper method to get a table name */
+	public static String getTableName(int type, CountersModel cm, boolean addQuotedIdentifierChar)
+	{
+		String q = "";
+		if (addQuotedIdentifierChar)
+			q = qic;
+
+		switch (type)
+		{
+		case SESSIONS:                return q + "MonSessions"              + q;
+		case SESSION_PARAMS:          return q + "MonSessionParams"         + q;
+		case SESSION_SAMPLES:         return q + "MonSessionSamples"        + q;
+		case SESSION_SAMPLE_SUM:      return q + "MonSessionSampleSum"      + q;
+		case SESSION_SAMPLE_DETAILES: return q + "MonSessionSampleDetailes" + q;
+		case ABS:                     return q + cm.getName() + "_abs"      + q;
+		case DIFF:                    return q + cm.getName() + "_diff"     + q;
+		case RATE:                    return q + cm.getName() + "_rate"     + q;
+		default:
+			throw new RuntimeException("Unknown type of '"+type+"' in getTableName()."); 
+		}
+	}
+
+	/** Helper method to generate a DDL string, to get the 'create table' */
+	public String getTableDdlString(int type, CountersModel cm)
+	throws SQLException
+	{
+		String tabName = getTableName(type, cm, true);
+		StringBuffer sbSql = new StringBuffer();
+
+		try
+		{
+			if (type == SESSIONS)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"ServerName"      +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"NumOfSamples"    +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"LastSampleTime"  +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+")\n");
+				sbSql.append(") \n");
+			}
+			else if (type == SESSION_PARAMS)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime"+qic,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"Type"            +qic,40)+" "+fill(getDatatype("varchar", 10,  -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"ParamName"       +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("varchar", 4096,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("varchar", 1536,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"ParamName"+qic+")\n");
+				sbSql.append(") \n");
+			}
+			else if (type == SESSION_SAMPLES)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("\n");
+//				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionSampleTime"+qic+", "+qic+"SessionStartTime"+qic+")\n");
+				sbSql.append(") \n");
+			}
+			else if (type == SESSION_SAMPLE_SUM)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"CmName"           +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"absSamples"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"diffSamples"      +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"rateSamples"      +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"CmName"+qic+")\n");
+				sbSql.append(") \n");
+			}
+			else if (type == SESSION_SAMPLE_DETAILES)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"CmName"           +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"graphCount"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"absRows"          +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"diffRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"rateRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append(") \n");
+			}
+			else if (type == ABS || type == DIFF || type == RATE)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SampleTime"       +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SampleMs"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("\n");
+				
+				ResultSetMetaData rsmd = cm.getResultSetMetaData();
+				
+				if ( rsmd == null )
+					throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+				if ( rsmd.getColumnCount() == 0 )
+					throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+
+				int cols = rsmd.getColumnCount();
+				for (int c=1; c<=cols; c++) 
+				{
+					boolean isDeltaOrPct = false;
+					if (type == DIFF)
+					{
+						if ( cm.isPctColumn(c-1) )
+							isDeltaOrPct = true;
+					}
+
+					if (type == RATE)
+					{
+						if ( cm.isDiffColumn(c-1) || cm.isPctColumn(c-1) )
+							isDeltaOrPct = true;
+					}
+
+
+					String colName = fill(qic+rsmd.getColumnLabel(c)+qic,       40);
+					String dtName  = fill(getDatatype(c, rsmd, isDeltaOrPct),   20);
+					String nullable= getNullable(c, rsmd, isDeltaOrPct);
+
+					sbSql.append("   ," +colName+ " " + dtName + " " + nullable + "\n");
+				}
+				sbSql.append(") \n");
+			}
+			else
+			{
+				return null;
+			}
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("SQLException, Error generating DDL to Persistant Counter DB.", e);
+		}
+		
+		return sbSql.toString();
+	}
+
+	/** Helper method to generate a DDL string, to get the 'create index' */
+	public String getIndexDdlString(int type, CountersModel cm)
+	{
+		if (type == SESSIONS)
+		{
+			return null;
+		}
+		else if (type == SESSION_PARAMS)
+		{
+			return null;
+		}
+		else if (type == SESSION_SAMPLES)
+		{
+			return null;
+		}
+		else if (type == SESSION_SAMPLE_SUM)
+		{
+			return null;
+		}
+		else if (type == SESSION_SAMPLE_DETAILES)
+		{
+			String tabName = getTableName(type, null, false);
+			return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
+		}
+		else if (type == ABS || type == DIFF || type == RATE)
+		{
+			String tabName = getTableName(type, cm, false);
+//			return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SampleTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n";
+			return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	public String getGraphTableDdlString(String tabName, TrendGraphDataPoint tgdp)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("create table " + qic+tabName+qic + "\n");
+		sb.append("( \n");
+		sb.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+		sb.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+		sb.append("   ,"+fill(qic+"SampleTime"       +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
+		sb.append("\n");
+
+		// loop all data
+		Double[] dataArr  = tgdp.getData();
+		for (int d=0; d<dataArr.length; d++)
+		{
+			sb.append("   ,"+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+"\n");
+			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+"\n");
+		}
+		sb.append(") \n");
+
+		//System.out.println("getGraphTableDdlString: "+sb.toString());
+		return sb.toString();
+	}
+
+	public String getGraphIndexDdlString(String tabName, TrendGraphDataPoint tgdp)
+	{
+//		String sql = "create index " + qic+tgdp.getName()+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SampleTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n"; 
+		String sql = "create index " + qic+tgdp.getName()+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n"; 
+		//System.out.println("getGraphIndexDdlString: "+sql);
+		return sql;
+	}
+
+	public String getGraphAlterTableDdlString(Connection conn, String tabName, TrendGraphDataPoint tgdp)
+	throws SQLException
+	{
+		// Obtain a DatabaseMetaData object from our current connection
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+		int colCounter = 0;
+		ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+		while(rs.next())
+		{
+			colCounter++;
+		}
+		rs.close();
+
+		if (colCounter > 0)
+		{
+			colCounter -= 3; // take away: SessionStartTime, SessionSampleTime, SampleTime
+			colCounter = colCounter / 2;
+			
+			Double[] dataArr  = tgdp.getData();
+			if (colCounter < dataArr.length)
+			{
+				StringBuilder sb = new StringBuilder();
+				sb.append("alter table " + qic+tabName+qic + "\n");
+				
+				for (int d=colCounter; d<dataArr.length; d++)
+				{
+					sb.append("   add column "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",30,-1,-1),20)+" "+getNullable(true)+"\n");
+					sb.append("   add column "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+"\n");
+				}
+				//System.out.println("getGraphAlterTableDdlString: "+sb.toString());
+				return sb.toString();
+			}
+		}
+		return "";
+	}
+}

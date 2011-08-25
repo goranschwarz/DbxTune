@@ -1,0 +1,667 @@
+/**
+ * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
+ */
+package asemon.utils;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+
+/**
+ * A String utility class.
+ *
+ * @author Goran Schwarz
+ */
+public class StringUtil
+{
+	private static Logger _logger = Logger.getLogger(StringUtil.class);
+
+	public static String toCommaStr(List list)
+	{
+		return toCommaStr(list, ", ");
+	}
+	public static String toCommaStr(List list, String entrySep)
+	{
+		if (list == null)
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (Iterator it = list.iterator(); it.hasNext();)
+		{
+			Object val = it.next();
+
+			sb.append(val);
+
+			if (it.hasNext())
+				sb.append(entrySep);
+		}
+		return sb.toString();
+	}
+
+	public static String toCommaStr(Map map)
+	{
+		return toCommaStr(map, "=", ", ");
+	}
+	public static String toCommaStrKey(Map map)
+	{
+		return toCommaStr(map, "=", ", ", true, false);
+	}
+	public static String toCommaStrKey(Map map, String entrySep)
+	{
+		return toCommaStr(map, "=", entrySep, true, false);
+	}
+	public static String toCommaStrVal(Map map)
+	{
+		return toCommaStr(map, "=", ", ", false, true);
+	}
+	public static String toCommaStrVal(Map map, String entrySep)
+	{
+		return toCommaStr(map, "=", entrySep, false, true);
+	}
+	public static String toCommaStr(Map map, String keyValSep, String entrySep)
+	{
+		return toCommaStr(map, keyValSep, entrySep, true, true);
+	}
+	public static String toCommaStr(Map map, String keyValSep, String entrySep, boolean useKey, boolean useValue)
+	{
+		if (map == null)
+			return "";
+		if (map.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (Iterator it = map.keySet().iterator(); it.hasNext();)
+		{
+			Object key = it.next();
+			Object val = map.get(key);
+
+			if (useKey)              sb.append(key);
+			if (useKey && useValue)  sb.append(keyValSep);
+			if (useValue)            sb.append(val);
+//			sb.append(key).append(keyValSep).append(val);
+			
+			if (it.hasNext())
+				sb.append(entrySep);
+		}
+		return sb.toString();
+	}
+
+
+
+	public static String toCommaStrMultiMap(Map map)
+	{
+		return toCommaStrMultiMap(map, "=", ", ");
+	}
+	public static String toCommaStrMultiMapKey(Map map)
+	{
+		return toCommaStrMultiMap(map, "=", ", ", true, false);
+	}
+	public static String toCommaStrMultiMapKey(Map map, String entrySep)
+	{
+		return toCommaStrMultiMap(map, "=", entrySep, true, false);
+	}
+	public static String toCommaStrMultiMapVal(Map map)
+	{
+		return toCommaStrMultiMap(map, "=", ", ", false, true);
+	}
+	public static String toCommaStrMultiMapVal(Map map, String entrySep)
+	{
+		return toCommaStrMultiMap(map, "=", entrySep, false, true);
+	}
+	public static String toCommaStrMultiMap(Map map, String keyValSep, String entrySep)
+	{
+		return toCommaStrMultiMap(map, keyValSep, entrySep, true, true);
+	}
+	public static String toCommaStrMultiMap(Map map, String keyValSep, String entrySep, boolean useKey, boolean useValue)
+	{
+		if (map == null)
+			return "";
+		if (map.isEmpty())
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (Iterator it = map.keySet().iterator(); it.hasNext();)
+		{
+			Object key = it.next();
+			Object val = map.get(key);
+
+			if (val instanceof List)
+			{
+				List list = (List) val;
+				for (Iterator listIt = list.iterator(); listIt.hasNext();)
+				{
+					Object listVal = (Object) listIt.next();
+					if (useKey)              sb.append(key);
+					if (useKey && useValue)  sb.append(keyValSep);
+					if (useValue)            sb.append(listVal);
+//					sb.append(key).append(keyValSep).append(listVal);
+
+					if (listIt.hasNext())
+						sb.append(entrySep);
+				}
+			}
+			else
+			{
+				if (useKey)              sb.append(key);
+				if (useKey && useValue)  sb.append(keyValSep);
+				if (useValue)            sb.append(val);
+//				sb.append(key).append(keyValSep).append(val);
+			}
+			
+			if (it.hasNext())
+				sb.append(entrySep);
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Parse a comma separated key=value string and make it into a Map
+	 * <p>
+	 * FIXME 1: This implementation is way to simple, it doesnt handle ',' or '=' chars inside the key/value strings etc...
+	 * If it finds problems it will just strip the faulty string/chars
+	 * FIXME 2: If the "key" value already exists, a warning message will be written to log, is this enough or do we need to do anything else
+	 * @param source "aaa=111,bbb=222, ccc=333" or "{aaa=111,bbb=222, ccc=333}"
+	 * @return a Map, if nothing was found, the Map will simply be empty. (never returns null)
+	 */
+	public static Map parseCommaStrToMap(String source)
+	{
+		return parseCommaStrToMap(source, "=", ",");
+	}
+	public static Map parseCommaStrToMap(String source, String keyValSep, String entrySep)
+	{
+		if (source == null)
+			return new LinkedHashMap();
+		source = source.trim();
+
+		// if string start and ends with {}, strip those chars 
+		if (source.startsWith("{") && source.endsWith("}"))
+			source = source.substring(1, source.length()-1);
+
+		LinkedHashMap map = new LinkedHashMap();
+
+		Scanner parser = new Scanner(source);
+		parser.useDelimiter(entrySep);
+		while (parser.hasNext())
+		{
+			String keyVal = parser.next().trim();
+			String sa[] = split(keyValSep, keyVal);
+			if (sa.length == 2)
+			{
+				String key = sa[0];
+				String val = sa[1];
+
+				Object oldVal = map.put(key, val);
+				if (oldVal != null)
+					_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
+			}
+		}
+
+		return map;
+	}
+
+	/**
+	 * Parse a comma separated key=value string and make it into a MultiMap<br>
+	 * the MultiMap is just a HashMap, but the value for the key is a linked list
+	 * <p>
+	 * FIXME 1: This implementation is way to simple, it doesnt handle ',' or '=' chars inside the key/value strings etc...
+	 * If it finds problems it will just strip the faulty string/chars
+	 * FIXME 2: use <code>Multimap</code> object instead (see: http://google-collections.googlecode.com/svn/trunk/javadoc/com/google/common/collect/Multimap.html)
+	 * @param source "aaa=111,bbb=222, ccc=333" or "{aaa=111,bbb=222, ccc=333}"
+	 * @return a Map, if nothing was found, the Map will simply be empty. (never returns null)
+	 */
+	public static Map parseCommaStrToMultiMap(String source)
+	{
+		return parseCommaStrToMultiMap(source, "=", ",");
+	}
+	public static Map parseCommaStrToMultiMap(String source, String keyValSep, String entrySep)
+	{
+		if (source == null)
+			return new LinkedHashMap();
+		source = source.trim();
+
+		// if string start and ends with {}, strip those chars 
+		if (source.startsWith("{") && source.endsWith("}"))
+			source = source.substring(1, source.length()-1);
+
+		LinkedHashMap map = new LinkedHashMap();
+
+		Scanner parser = new Scanner(source);
+		parser.useDelimiter(entrySep);
+		while (parser.hasNext())
+		{
+			String keyVal = parser.next().trim();
+			String sa[] = split(keyValSep, keyVal);
+			if (sa.length == 2)
+			{
+				String key = sa[0];
+				String val = sa[1];
+
+				List list = (List) map.get(key);
+				if (list == null)
+					list = new LinkedList();
+
+				// Add the value to the list, then assign the list to the key.
+				list.add(val);
+				map.put(key, list);
+			}
+		}
+
+		return map;
+	}
+
+	public static String toCommaStr(Object[] oa)
+	{
+		return toCommaStr(oa, ", ");
+	}
+	public static String toCommaStr(Object[] oa, String sep)
+	{
+		StringBuffer sb = new StringBuffer();
+
+		if (oa == null)
+			return "";
+
+		for(int i=0; i<oa.length; i++)
+		{
+			sb.append(oa[i]);
+			if (i < (oa.length-1))
+				sb.append(sep);
+		}
+		return sb.toString();
+	}
+
+	public static String[] commaStrToArray(String str)
+	{
+		if (str == null)
+			return new String[] {};
+
+		String[] sa = str.split(",");
+		for (int i=0; i<sa.length; i++)
+			sa[i] = sa[i].trim();
+
+		return sa;
+	}
+
+	public static boolean arrayContains(Object[] oa, Object o)
+	{
+		if (oa == null)
+			return false;
+
+		for(int i=0; i<oa.length; i++)
+		{
+			if (oa[i].equals(o))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+     * Counts the number of occurrances of the String <code>occurs</code> in the
+     * String <code>s</code>.
+     *
+     * @param occurs The String to count
+     * @param s The String to count in
+     */
+    public static int count(String occurs, String s)
+    {
+      int count = 0;
+      int current = -1;
+      int next = 0;
+      next = s.indexOf(occurs);
+      while ( next > -1)
+      {
+          count++;
+          current = next;
+          next = s.indexOf(occurs, current + 1);
+      }
+      return count;
+    }
+
+    /**
+     * Split the String s into an array of strings. The String s is split at
+     * each occurrence of the substring <code>splitAt</code> in <code>s</code>.
+     * <p>
+     * Example:
+     * The string <tt>s = "onextwoxthreexfour"</tt>, with <tt>splitAt = "x"</tt>
+     * is split into an array equivalent to <tt>{"one", "two", "three", "four"}
+     * </tt>.
+     *
+     * @param splitAt Indicates where to split the string s
+     * @param s String to split
+     */
+    public static String[] split(String splitAt, String s)
+    {
+      int noOfLines = count(splitAt, s) + 1;
+      java.lang.String[] stringArray = new String[noOfLines];
+      String remaining = s;
+      int pos;
+      int splitLen = splitAt.length();
+
+      for (int i = 0; i < noOfLines - 1; i++)
+      {
+          pos = remaining.indexOf(splitAt);
+          stringArray[i] = remaining.substring(0,pos);
+          remaining = remaining.substring(pos + splitLen, remaining.length());
+      }
+
+      // last element
+      stringArray[noOfLines - 1] = remaining;
+      return stringArray;
+    }
+
+    /**
+     */
+    public static String word(String str, int number)
+    {
+    	String[] stra = str.split("[ \t\n\f\r]");
+    	if (stra.length < number)
+    	{
+    		return null;
+    		//throw new IndexOutOfBoundsException("This string only consists of "+stra.length+", while you want to read word "+number);
+    	}
+    	return stra[number];
+    }
+    /**
+     */
+    public static String lastWord(String str)
+    {
+    	String[] stra = str.split("[ \t\n\f\r]");
+    	return stra[ stra.length - 1 ];
+    }
+
+    /**
+     * Left justify a string and fill extra spaces to the right
+     */
+    public static String left(String str, int num)
+    {
+    	if (str.length() > num)
+    		num = str.length();
+
+    	int maxPadSize = num - str.length();
+    	String space = "                                                                                                                                                                                                                                                               ";
+    	while (space.length() < maxPadSize)
+    		space += "                                                                                                                                                                                                                                                               ";
+
+    	return (str + space).substring(0, num);
+    }
+    /**
+     * Right justify a string and fill extra spaces to the left
+     */
+    public static String right(String str, int num)
+    {
+    	int len = num - str.length();
+    	String space = "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ";
+    	return space.substring(0, len) + str;
+    }
+
+
+    /**
+     * All ${ENV_VARIABLE_NAME} will be substrituted with the environment variable
+     * from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
+     * In that case go and get the value from the runtime instead...
+     *
+     * @param val A string that should be substituted
+     * @return    The substituted string
+     */
+    public static String envVariableSubstitution(String val)
+    {
+		// Extract Environment variables
+		// search for ${ENV_NAME}
+		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
+		while( compiledRegex.matcher(val).find() )
+		{
+			String envVal  = null;
+			String envName = val.substring( val.indexOf("${")+2, val.indexOf("}") );
+
+			// Get value for a specific env variable
+			// But some java runtimes does not do getenv(),
+			// then we need to revert back to getProperty() from the system property
+			// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
+			try
+			{
+				envVal  = System.getenv(envName);
+			}
+			catch (Throwable t)
+			{
+				envVal = System.getProperty(envName);
+				if (envVal == null)
+				{
+					System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+				}
+			}
+			if (envVal == null)
+			{
+				System.out.println("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
+				envVal="";
+			}
+			// Backslashes does not work that good in replaceFirst()...
+			// So change them to / instead...
+			envVal = envVal.replace('\\', '/');
+
+			// NOW substityte the ENV VARIABLE with a real value...
+			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
+		}
+
+		return val;
+    }
+
+
+    /**
+     * Duplicate the input string X number of times
+     * @param str
+     * @param size
+     * @return
+     */
+	public static String replicate(String str, int size)
+	{
+		StringBuilder sb = new StringBuilder(size);
+		for (int i=0; i<size; i++)
+			sb.append(str);
+		return sb.toString();
+	}
+
+	/**
+	 * Add extra space at the end of the input String<br>
+	 * If the input string is longer than the fill size, the original string will be returned
+	 * 
+	 * @param str The string to append spaces on
+	 * @param fill The minimum length() of the output String 
+	 * @return
+	 */
+	public static String fill(String str, int fill)
+	{
+		if (str.length() >= fill)
+			return str;
+
+		StringBuilder sb = new StringBuilder(str);
+
+		// Append a long string on every loop
+		while (sb.length() < fill)
+			sb.append("                                                           ");
+
+		return sb.substring(0, fill);
+	}
+
+	/**
+	 * For the moment, quite simple just strip of <b>anything</b> that has <> character
+	 * 
+	 * @param a String with html tags
+	 * @return The String without html tags 
+	 */
+	public static String stripHtml(String in)
+	{
+		if (in == null)
+			return null;
+
+		return in.replaceAll("\\<.*?\\>", "");   // STRIP ALL HTML Tags from the description.
+	}
+
+	/**
+	 * Add newlines to the input string.
+	 * @param str Input string
+	 * @param rowLength The approx row length
+	 * @param wordCountHysteresis If there are only ## words left in the input string.... keep them on the same line
+	 * @param lineBreak The string used to make the new line.
+	 * @return The in string with line wraps added.
+	 */
+	public static String makeApproxLineBreak(String str, int rowLength, int wordCountHysteresis, String lineBreak)
+	{
+		if (str.length() <= rowLength)
+			return str;
+
+		// ok chop the string into peaces of about (length) on each row
+		StringBuffer sb = new StringBuffer();
+
+		char[] ca = str.toCharArray();
+		int c   = 0; // char position in the string
+		int car = 0; // Char At Row
+		while ( c < ca.length )
+		{
+			sb.append(ca[c]);
+			c++; car++;
+			// should we make a line break
+			if (car >= rowLength)
+			{
+				// If next "space" is in reach, break of the line
+				// But if it's "out of reach", make a new line at once
+				int nextSpacePos = str.substring(c).trim().indexOf(' '); 
+				if (nextSpacePos > 0 && nextSpacePos < Math.max(15, rowLength/4))
+				{
+					// Look ahead to get next "space"
+					while ( (c < ca.length) && ca[c] != ' ' )
+					{
+						sb.append(ca[c]);
+						c++;
+					}
+					
+					// Here we could also check if we got more than X words left on the line
+					// then we could choose to include them on "this" row, or make a new row for them.
+					if (str.substring(c).split("\\s", wordCountHysteresis+1).length <= wordCountHysteresis)
+					{
+						while ( c < ca.length )
+						{
+							sb.append(ca[c]);
+							c++;
+						}
+					}
+					else
+					{
+						sb.append(lineBreak);
+					}
+				}
+				else
+				{
+					sb.append(lineBreak);
+				}
+				car = 0;
+			}
+		}
+		return sb.toString();
+	}
+
+	public static String getHostname()
+	{
+		try 
+		{
+			InetAddress addr = InetAddress.getLocalHost();
+			
+			// Get IP Address
+			//byte[] ipAddr = addr.getAddress();
+
+			// Get hostname
+			String hostname = addr.getHostName();
+
+			return hostname;
+		}
+		catch (UnknownHostException e) 
+		{
+			return null;
+		}
+	}
+
+
+	/**
+	 * Converts a Throwable to  String
+	 * 
+	 * @param t A Throwable
+	 * @return A String representation of the Throwable
+	 */
+	public static String stackTraceToString(Throwable t)
+	{
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		t.printStackTrace(pw);
+		return sw.toString();
+	}
+
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    //// TEST CODE
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+
+    public static void main(String[] args)
+    {
+    	System.out.println("MAP=|" + parseCommaStrToMap("aaa=11\\,11,bbbbb=2222, cccc=3333") +"|.");
+    	System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111,bbbbb=2222, cccc=3333}") +"|.");
+    	System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111, bbbbb=2222, cccc=3333,}") +"|.");
+
+    	String t1Str = "{aaa=1111, bbb=2222, bbb=3333,}";
+    	Map    t1Map = parseCommaStrToMultiMap(t1Str);
+    	System.out.println("MMAP=|" + t1Map +"|.");
+    	System.out.println("MMAP.toCommaStrMultiMap=|" + toCommaStrMultiMap(t1Map) +"|.");
+
+    	System.out.println("MMAP.toCommaStrMultiMap(useKey)=|" + toCommaStrMultiMap(t1Map, "=", ",", true, false) +"|.");
+    	System.out.println("MMAP.toCommaStrMultiMap(useVal)=|" + toCommaStrMultiMap(t1Map, "=", ",", false, true) +"|.");
+
+    	System.out.println("MMAP.toCommaStrMultiMapKey=|" + toCommaStrMultiMapKey(t1Map) +"|.");
+    	System.out.println("MMAP.toCommaStrMultiMapVal=|" + toCommaStrMultiMapVal(t1Map) +"|.");
+    	System.exit(0);
+
+    	System.out.println("TEST: StringUtil BEGIN.");
+
+		if ( ! StringUtil.lastWord(" 1 2 3 ").equals("3") )
+    		System.out.println("FAILED:  test-1: StringUtil.lastWord()");
+
+    	if ( ! StringUtil.lastWord("").equals("") )
+    		System.out.println("FAILED:  test-2: StringUtil.lastWord()");
+
+    	if ( ! StringUtil.lastWord(" 1 2\t 3 ").equals("3") )
+    		System.out.println("FAILED:  test-3: StringUtil.lastWord()");
+
+    	if ( ! StringUtil.lastWord(" 1 2 \n3").equals("3") )
+    		System.out.println("FAILED:  test-4: StringUtil.lastWord()");
+
+    	if ( ! StringUtil.left("123", 5).equals("123  ") )
+    		System.out.println("FAILED:  test-1: StringUtil.left()");
+
+    	if ( ! StringUtil.right("  123", 5).equals("  123") )
+    		System.out.println("FAILED:  test-1: StringUtil.right()");
+
+    	if ( ! (StringUtil.fill("123", 1).length() == 3))
+    		System.out.println("FAILED:  test-1: StringUtil.fill()");
+
+    	if ( ! (StringUtil.fill("123", 50).length() == 50))
+    		System.out.println("FAILED:  test-2: StringUtil.fill(\"123\", 50)");
+
+    	if ( ! (StringUtil.fill("123", 5000).length() == 5000))
+    		System.out.println("FAILED:  test-3: StringUtil.fill(\"123\", 5000)");
+
+
+    	if ( ! (StringUtil.stripHtml("123<html>-<b>B</b>.<xml xx=xxx, z=z>").indexOf("<") == -1) )
+    		System.out.println("FAILED:  test-1: StringUtil.stripHtml()");
+
+		System.out.println("TEST: StringUtil END.");
+    }
+}
