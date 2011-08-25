@@ -133,7 +133,7 @@ public class Logging
 //			_props.setProperty("log4j.rootLogger", "DEBUG, console");
 
 //			if (_props.getProperty("log4j.appender.asetune") == null)
-//				_props.setProperty("log4j.appender.asetune", "asetune.gui.GuiLogAppender");
+//				_props.setProperty("log4j.appender.asetune", "com.asetune.gui.GuiLogAppender");
 
 			// Console
 			if (_props.getProperty("log4j.appender.console") == null)

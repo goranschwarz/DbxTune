@@ -736,10 +736,10 @@ public class ConnectionDialog
 		    "You can probably fill in the blanks... <code>[Monitor][Subsystem][Osname].sleep=[samplePeriodToTheCommand]</code><br>" +
 		    "<br>" +
 		    "If you need to debug or check what the OS Command is sending, you can add the following to the Configuration file:<br>" +
-		    "<code>log4j.logger.asetune.hostmon.HostMonitor=DEBUG</code><br>" +
+		    "<code>log4j.logger.com.asetune.hostmon.HostMonitor=DEBUG</code><br>" +
 		    "<br>" +
 		    "Or you can use the 'log viewer' to change the 'log level' while "+Version.getAppName()+" is still running: <br>" +
-		    "MainMenu->View->Open Log Window..., then Press 'Set log level'... locate asetune.hostmon.HostMonitor and change it.";
+		    "MainMenu->View->Open Log Window..., then Press 'Set log level'... locate com.asetune.hostmon.HostMonitor and change it.";
 		txt = new MultiLineLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
@@ -909,7 +909,7 @@ public class ConnectionDialog
 		_pcsJdbcDriver_cbx.setEditable(true);
 		_pcsJdbcUrl_cbx   .setEditable(true);
 		
-		_pcsWriter_cbx    .addItem("asetune.pcs.PersistWriterJdbc");
+		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
 
 		_pcsJdbcDriver_cbx.addItem("org.h2.Driver");
 		_pcsJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
@@ -1738,7 +1738,7 @@ public class ConnectionDialog
 			{
 				String pcs = pcsa[i].trim();
 				
-				if (pcs.equals("asetune.pcs.PersistWriterJdbc"))
+				if (pcs.equals("com.asetune.pcs.PersistWriterJdbc"))
 				{
 					pcsProps.put("PersistWriterJdbc.jdbcDriver", _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
 					pcsProps.put("PersistWriterJdbc.jdbcUrl",    _pcsJdbcUrl_cbx     .getEditor().getItem().toString());

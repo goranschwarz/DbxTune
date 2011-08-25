@@ -82,7 +82,7 @@ public class FocusableTip {
 	private static final int Y_MARGIN = 12;
 
 //	private static final String MSG =
-////		"asetune.gui.focusabletip.FocusableTip";
+////		"com.asetune.gui.focusabletip.FocusableTip";
 //		"org.fife.ui.rsyntaxtextarea.focusabletip.FocusableTip";
 //	private static final ResourceBundle msg = ResourceBundle.getBundle(MSG);
 

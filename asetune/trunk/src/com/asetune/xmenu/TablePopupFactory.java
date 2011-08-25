@@ -145,37 +145,37 @@ public class TablePopupFactory
 //		Properties menuProp = new Properties();
 //
 //		menuProp.put("menu.1.name",      "Show Procedure Text ${DBName} ${procName} ${linenum}");
-//		menuProp.put("menu.1.classname", "asetune.xmenu.ProcedureText");
+//		menuProp.put("menu.1.classname", "com.asetune.xmenu.ProcedureText");
 //		menuProp.put("menu.1.param.1",   "DBName");
 //		menuProp.put("menu.1.param.2",   "procName");
 //		menuProp.put("menu.1.param.3",   "linenum");
 //
 //		menuProp.put("menu.2.name",      "Show Procedure call stack for ${SPID}");
-//		menuProp.put("menu.2.classname", "asetune.xmenu.ProcedureCallStack");
+//		menuProp.put("menu.2.classname", "com.asetune.xmenu.ProcedureCallStack");
 //		menuProp.put("menu.2.param.1",   "SPID");
 //
 //		menuProp.put("menu.3.name",      "kill ${SPID}");
-//		menuProp.put("menu.3.classname", "asetune.xmenu.SQLWindow");
+//		menuProp.put("menu.3.classname", "com.asetune.xmenu.SQLWindow");
 //		menuProp.put("menu.3.config",    "kill ${SPID}");
 //		menuProp.put("menu.3.param.1",   "SPID");
 //
 //		menuProp.put("menu.4.name",      "showplan ${SPID}");
-//		menuProp.put("menu.4.classname", "asetune.xmenu.SQLWindow");
+//		menuProp.put("menu.4.classname", "com.asetune.xmenu.SQLWindow");
 //		menuProp.put("menu.4.config",    "exec sp_showplan ${SPID}, null, null, null");
 //		menuProp.put("menu.4.param.1",   "SPID");
 //
 //		menuProp.put("menu.5.name",      "dbcc sqltext(${SPID})");
-//		menuProp.put("menu.5.classname", "asetune.xmenu.SQLWindow");
+//		menuProp.put("menu.5.classname", "com.asetune.xmenu.SQLWindow");
 //		menuProp.put("menu.5.config",    "dbcc traceon(3604) dbcc sqltext(${SPID})");
 //		menuProp.put("menu.5.param.1",   "SPID");
 //
 //		menuProp.put("menu.6.name",      "select * from master..sysprocesses where spid = ${SPID}");
-//		menuProp.put("menu.6.classname", "asetune.xmenu.SQLWindow");
+//		menuProp.put("menu.6.classname", "com.asetune.xmenu.SQLWindow");
 //		menuProp.put("menu.6.config",    "select * from master..sysprocesses where spid = ${SPID}");
 //		menuProp.put("menu.6.param.1",   "SPID");
 //
 //		menuProp.put("menu.7.name",      "select * from ${DBName}..sysobjects where type = 'U'");
-//		menuProp.put("menu.7.classname", "asetune.xmenu.SQLWindow");
+//		menuProp.put("menu.7.classname", "com.asetune.xmenu.SQLWindow");
 //		menuProp.put("menu.7.config",    "select * from ${DBName}..sysobjects where type = 'U'");
 //		menuProp.put("menu.7.param.1",   "DBName");
 		
@@ -226,7 +226,7 @@ public class TablePopupFactory
 				continue;
 			}
 
-			if ("asetune.xmenu.SQLWindow".equals(classname))
+			if ("com.asetune.xmenu.SQLWindow".equals(classname))
 			{
 				if (config == null)
 				{

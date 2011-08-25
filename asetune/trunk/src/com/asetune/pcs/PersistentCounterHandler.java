@@ -101,7 +101,7 @@ implements Runnable
 				}
 				catch (ClassCastException e)
 				{
-					throw new ClassCastException("When trying to load writerWriter class '"+writerClassName+"'. The writerWriter do not seem to follow the interface 'asetune.pcs.IPersistWriter'");
+					throw new ClassCastException("When trying to load writerWriter class '"+writerClassName+"'. The writerWriter do not seem to follow the interface 'com.asetune.pcs.IPersistWriter'");
 				}
 				catch (ClassNotFoundException e)
 				{
