@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/dsparser.jar"/>
+	<classpathentry kind="lib" path="lib/jconn3.jar"/>
+	<classpathentry kind="lib" path="lib/h2.jar"/>
+	<classpathentry kind="lib" path="lib/jcommon-1.0.14.jar"/>
+	<classpathentry kind="lib" path="lib/jfreechart-1.0.11.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.jfree.org/jfreechart/api/javadoc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/miglayout-3.6.jar"/>
+	<classpathentry kind="lib" path="lib/wizard.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/jchart2d-3.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://jchart2d.sourceforge.net/docs/javadoc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/swingx-0.9.5.jar" sourcepath="C:/download/java/swinglabs/swingx-0.9.5/swingx-0.9.5-src/src/java/">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/download/java/swinglabs/swingx-0.9.5-javadoc.zip!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/planviewer.jar"/>
+	<classpathentry kind="lib" path="lib/oncrpc.jar"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>

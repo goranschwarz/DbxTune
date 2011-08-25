@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+<TITLE>AseMon Todo</TITLE>
+<META NAME="Author" CONTENT="Goran Schwarz">
+<META NAME="Description" CONTENT="Helptext">
+
+<style type="text/css">
+<!--
+body {font-family: Arial, Helvetica, sans-serif; background-color: #FFFFFF; color:#000000}
+li   {margin-bottom: 5px}
+-->
+</style>
+
+</HEAD>
+<BODY>
+
+<h1>This is what I like TODO</h1>
+<p>
+	If you have any good ideas, let me know:<br>
+	<A HREF=\"mailto:goran_schwarz@hotmail.com\">goran_schwarz@hotmail.com</A><br>
+	<A HREF=\"mailto:gorans@sybase.com\">gorans@sybase.com</A><br>
+</p>
+<UL>
+	<LI>
+		Move CountersModel into asemon.cm package this also implicates
+		splitting GetCounters all "sub classes" and make them into
+		"proper" java classes. Why: the GetCounters starts to get BIG
+	<LI>
+		More "save props" for graphs and TabCntrPanels
+	<LI>
+		The OFF-LINE MODE. Meaning view persisted counters...
+		- Add Off-Line Connect dialogue
+	<LI>
+		Work more on the Spinlock panel... set descriptions for known
+		spinlocks, fix the renderer so it indicates high values with
+		RED color or similar.
+	<LI>
+		Configuration now has getProps() and getSaveProps() why not put
+		them together for "read" so it reads: system->props->saveProps
+		and when we saveProps we only save them into the saveProps
+		because we do not want to write in the "config" file...
+		Meaning different level of config read...
+	<LI>
+		Cleanup all the classes that are not used today...
+	<LI>
+		Save more GUI stuff in the saveProps. have a "tab" been "un-docked"
+		into its own window, what was the x,y position.
+		Should the graph(s) be active or disabled.
+	<LI>
+		Menu->view->"Configure" What tabs should be visible and some
+		configurations for each tab in a "list" form.
+		Example: Show on Tab[x], Persist To Off-line (abs[x] diff[x] rate[x])
+	<LI>
+		Persister: if table destination table exists: check if all the
+		desired columns are in the table (if not, alter table add column...)
+	<LI>
+		Try to get HOST CPU usage in it's own Tab
+		(and if possible disk IO statistics)
+
+
+	<LI>
+		New Properties/Preferences Dialog which looks like the Eclipse one...
+	<LI>
+		SQL Capture: Right click menu on tables, redo the GUI and code
+	<LI>
+		Make copy to clipboard a bit better
+	<LI>
+		Validate that the OFF Line works as it should after this major re-code
+	<LI>
+		CounterModel redo the code, it's pritty uggly for the moment
+	<LI>
+		Options panel: make all CM properties editable (a good overview) of all the CM's that are configured.
+	<LI>
+		Implement the lock tool
+	<LI>
+		Integrate 'dbisql' into various places... dbisql has good perf & tuning output.<br>
+		Right now it's in SQL Window, but it needs to be in more places.
+	<LI>
+		OFF-Line: Store only the specified capture set (ABS, DIFF or RATE)
+	<LI>
+		WIZARD: create a wizard that creates a new UserDefined CM...
+	<LI>
+		A new permanent CM that checks mon"CurrentExecutingSQL and statements... this is a complement to capture SQL
+	<LI>
+		OFF-Line: make a "Capture SQL" that works for off-line as well
+</UL>
+
+
+</BODY>
+</HTML>

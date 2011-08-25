@@ -1,0 +1,297 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+<TITLE>AseMon History</TITLE>
+<META NAME="Author" CONTENT="Goran Schwarz">
+<META NAME="Description" CONTENT="Helptext">
+
+<style type="text/css">
+<!--
+body {font-family: Arial, Helvetica, sans-serif; background-color: #FFFFFF; color:#000000}
+li   {margin-bottom: 6px}
+-->
+</style>
+
+</HEAD>
+<BODY>
+<font face="Arial, Verdana">
+
+<h1>History of what has been done so far</h1>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-31</H2>
+<UL>
+	<LI>
+		Checking for updates on the net (but I need to change the web address later)<br>
+		But I need to implement the web page for new downloads etc...
+	<LI>
+		Re-coded MainFrame and moved to GUI<br>
+	<LI>
+		Trendgraph<br>
+		- setChartMaxHistoryTimeInMinutes() could get garbled.<br>
+		- Add dummypoint when not connected to avoid NPE from ToolTip.
+		- also moved TrendGraph
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-26</H2>
+<UL>
+	<LI>
+		Capture SQL on the right click menu
+	<LI>
+		Copy table information to clipboard (but: needs more work)
+	<LI>
+		Changed a bunch of the Icons and added icons to the GTabbedPane, 
+		right click menu, goto tab.
+	<LI>
+		SQL Window can now show graphical showplan views (same as dbisql).<br>
+		Some graphical changes as well, print/raiserror messages now comes
+		in-line with the result sets (priviously it was just at the end)<BR>
+		You can also select cells to copy+paste values from.<br>
+		Messages are now also copy+paste enabled. 
+	<LI>
+		Using MigLayout in summary panel for graphs now, which makes it a bit
+		nicer for resizing... the graphs grows in height now as well.
+	<LI>
+		For the filter "Do not show unchanged counter rows" I added the abbility
+		to dissregard some columns. So even if it's a diff counter and it's NOT
+		zero it will still filtered out that column.<br>
+		This is good for "WaitTime" column in the "Processes" tab. Because it's
+		always contains values... I still want to see the diff/rate values.
+		But I don't want to use them (as valid values) in the filter check.
+	<LI>
+		The filter "Do not show unchanged counter rows" has also been moved from
+		the Options panel to the Filter panel, where it really resides.<br> 
+		This also made me move the "Counter Type" panel one snap left...
+	<LI>
+		Selected row in the table is still selected after a "data refresh"
+		and hopefully it's the same row even if it has changed location
+		due to resort of the new/refreshed data...
+	<LI>
+		MainFrame - status panel (at bottom) now has Memory information<br>
+		This class will be needed to recode soon - the code is ugly...
+	<LI>
+		If data collection is paused, a watermark text will inform you
+		about the Pause...
+	<LI>
+		The AboutBox panel now contains<br>
+		- History<br>
+		- Todo<br>
+		- System Properties<br>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-16</H2>
+<UL>
+	<LI>
+		Moved the negativeDiffCounters to Zero so we can choose this
+		for each panel....
+	<LI>
+		Added icons for the TableCntrPanel and most of the CM's
+	<LI>
+		Some small changes on the xmenu stuff.
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-13</H2>
+<UL>
+	<LI>
+		ALOT OF THINGS WHERE DONE
+	<LI>
+		Moved a lot of files around, the goal is that all GUI components should be in 'gui' package
+
+	<LI>
+		Configuration.java: moved to utils package, and added encrypt/decrypt of passwords
+	<LI>
+		AseMonitoringConfig -> gui.AseMonitoringConfigDialog: remade gui layout
+	<LI>
+		CountersModel Made it a TableModel... there is a lot more needed to be done on this one
+		and that will be done in next check-in
+	<LI>
+		A new dictionary for displaying ToolTip on WaitEventId
+	<LI>
+		Moved Version information into its own class 'Version.java'
+	<LI>
+		The ConnectionDialog has been totally rewritten
+	<LI>
+		Auto login ability on startup
+	<LI>
+		A logAppender for log4j that has a Gui Window so we can look at the errorlog graphically
+		and also change the log level "on the fly", but the log level is not saved into the
+		properties file. We only want to change it during this session.
+	<LI>
+		Total new Dialog for changing some small properties (only Refresh rate for now)
+	<LI>
+		A new 'Query window' has been added to the MainFrame menu. This will open a GUI 'isql'
+	<LI>
+		TabularCntrPanel has been rewritten:
+		<UL>
+			<LI> The TabbedPane has been rewritten to do "dock/undock" tabs into windows and
+				 right click popups on the Tabbs that handles more stuff.
+			<LI> now using MigLayout as it's Gui layout manager
+			<LI> Using JXTable instead of JTable
+			<LI> Sorting is done by JXTable
+			<LI> Filtering is done by JXTable
+			<LI> Highlighting/Color setting is done by JXTable (in JTable this is CellRenderer)
+			<LI> right-click on the table now uses 'xmenu', which is specified in the config file
+				so now it's really easy to add your own right click menu items.
+				Default menu items is 'stored proc text, sp callstack, optdiag, sp_help, sp_spaceused...'
+		</UL>
+	<LI>
+		A bunch of new icons has been added
+	<LI>
+		AboutBox total rewrite
+	<LI>
+		And a lot more small stuff
+	<LI>
+		NOTE: A lot more is needed to be changed and cleanup, so this is just a partial check-in.
+	<LI>
+		Reine Changed TrendGraph to use JChart2D instead of JFreeChart, this due to
+		performance reasons when we had *long* "Graph History Time".
+		This was merged in from the "trunk".
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-02-12</H2>
+<UL>
+	<LI>
+		Multiple ResultSets is now handled
+	<LI>
+		Watermark on the summary graphs is now on the scroll panel,
+		this makes the watermark more center of the view/what we see...
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-02-03</H2>
+<UL>
+	<LI>
+		User Defined Graph can be added
+		this probably needs more work, but for now it's "ok"...
+	<LI>
+		SummaryPanel was "redesigned" and moved to GUI package
+	<LI>
+		Default ASEMon Icon was changed (added more blue on the table)
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-01-23</H2>
+<UL>
+	<LI>
+		Sometimes that graphs did not get updated in the summary panel.
+		This was a timing problem, when data is captured, it's done with
+		it's own thread. If the "get data" thread was not complete before
+		we wanted to update the graphs, the graphs was not updated.
+		So now I wait for the "get data thread" to complete before continue.
+	<LI>
+		The Toolbar was added.
+	<LI>
+		The first glans at "offline setup wizard" was created (need more work here)
+	<LI>
+		Changed the j4log from 1.2.8 -> 1.2.15
+	<LI>
+		Some small stuff as well
+	<LI>
+		Default ASEMon Icon was changed
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-31</H2>
+<UL>
+	<LI>
+		Fixed bug in summary panel counte. If ASE listens to several networks
+		only show the first "min()" listener. otherwise the subquery will fail...
+	<LI>
+		Added Wrap/Scroll capability in the TabPanel
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-27</H2>
+<UL>
+	<LI>
+		Fixed bug in engine average calculation...
+		in version X i changed getRateValueAvg to discard 0.0 as "rows"
+		this was to support the Average Service Time in DeviceIO graph better.
+		But now I'm using getRateValueAvgGtZero instead.
+	<LI>
+		Added the "WATER MARK" text to TabularControlPanel and SummaryPanel
+		to easier know what is happening behind the scenes... are we connected...
+	<LI>
+		Added some descriptions for Tooltip on the TABS.
+	<LI>
+		added methods: isMonConnected(), getMonConnection() this will hopefully
+		be used to distinguish between OFF-Line mode and ON-Line mode.
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-24</H2>
+<UL>
+	<LI>
+		Added this "version history" comment
+	<LI>
+		Doing "late initialization" of CountersObject, which means that
+		we can create the GUI graphics and decide later what SQL statement to
+		use dependent on what version the ASE Server is of.
+	<LI>
+		Took away a lot of static variables in GetCounters and MainFrame
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-16</H2>
+<UL>
+	<LI>
+		Major thing is NO-GUI mode is configurable and can persist the
+		counters in a JDBC session. (ASE and H2 has been tested)
+		H2 would be the preferred option. This so we can store the
+		counters in another server/database store than the one we
+		pulling out data from. Using the H2 DB it would also be
+		easier to sample ASE counters on Unix systems and later on
+		view them on a Windows machine.
+	<LI>
+		some changes to "capture SQL" tool.
+	<LI>
+		saving more options in the "save props" file!
+	<LI>
+		And a lot more small things.
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>200x-xx-xx</H2>
+<UL>
+	<LI>
+		Started from asemon 0.96 by Jean-Paul Martin<BR>
+		Redone a whole lot of things
+	<LI>
+		Automatic resize of columns headers in tables
+	<LI>
+		Cell renders are not dependent on Object type, but it's now
+		using method calls to decide what to do when rendering.
+	<LI>
+		Do not remember all things I did back then
+</UL>
+
+
+
+
+</font>
+</BODY>
+</HTML>

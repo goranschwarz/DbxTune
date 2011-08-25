@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ================================================ -->
+<!--  Sample buildfile for jar components             -->
+<!--                                                  -->
+<!-- ================================================ -->
+<project name="asemon" default="compile" basedir=".">
+	<description>Build file for asemon</description>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -->
+	<!-- set global properties for this build  -->
+	<!-- - - - - - - - - - - - - - - - - - - - -->
+	<property name="src"          location="src"/>
+	<property name="build"        location="build"/>
+	<property name="dist"         location="dist"/>
+	<property name="launch4j.dir" location="C:/Program Files/Launch4j" />
+
+	<path id="project.class.path">
+		<fileset dir="lib" includes="*.jar"/>
+<!--
+		<pathelement location="lib/"/>
+		<pathelement path="${java.class.path}/"/>
+		<pathelement path="${additional.path}"/>
+-->
+	</path>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: init             -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="init">
+		<!-- Create the time stamp -->
+		<tstamp>
+			<format property="DSTAMP" pattern="yyyy-MM-dd"/>
+		</tstamp>
+
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${build}"/>
+	</target>
+
+
+	<!-- ========================= -->
+	<!--   target: build           -->
+	<!-- ========================= -->
+	<target name="build" depends="init" description="--> compile and jar this component">
+
+		<javac srcdir="${src.home}" destdir="${build.home}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}">
+<!--			<classpath refid="compile.classpath" />-->
+			<classpath refid="project.class.path"/>
+		</javac>
+
+		<jar destfile="${dist.home}/${app.name}.jar" basedir="${build.home}" excludes="**/*UT.class" />
+	</target>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: compile          -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="compile" depends="init" description="compile the source " >
+		<!-- Compile the java code from ${src} into ${build} -->
+		<javac source="1.5" target="1.5" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
+			<classpath refid="project.class.path"/>
+		</javac>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: dist             -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="dist" depends="compile" description="generate the distribution" >
+		<!-- Create the distribution directory -->
+		<mkdir dir="${dist}/lib"/>
+		<mkdir dir="${dist}/data"/>
+		<mkdir dir="${dist}/classes"/>
+
+		<launch4j configFile="./launch4j.xml" />
+
+		<copy file="asemon.bat"                 toFile="${dist}/asemon.bat"/>
+		<copy file="asemon.sh"                  toFile="${dist}/asemon.sh"/>
+		<copy file="asemon.properties"          toFile="${dist}/asemon.properties"/>
+		<copy file="${src}/asemon/history.html" toFile="${dist}/history.html"/>
+		<copy todir="${dist}/lib">
+			<fileset dir="lib">
+				<include name="*.jar"/>
+			</fileset>
+		</copy>
+
+		<!-- Put everything in ${build} into the asemon_${DSTAMP}.jar file -->
+		<jar jarfile="${dist}/lib/asemon.jar" basedir="${build}"/>
+
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: clean            -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="clean" description="clean up" >
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: exe              -->
+	<!-- - - - - - - - - - - - - - -->
+	<taskdef name="launch4j" 
+		classname="net.sf.launch4j.ant.Launch4jTask"
+		classpath="${launch4j.dir}/launch4j.jar:${launch4j.dir}/lib/xstream.jar" />
+	<target name="exe" description="Use launch4j to generate an EXE for Asemon" depends="dist" >
+		<launch4j configFile="./launch4j.xml" />
+	</target>
+</project>
+
