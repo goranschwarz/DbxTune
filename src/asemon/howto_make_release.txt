@@ -1,0 +1,87 @@
+###########################################################
+## Before final checkin:
+###########################################################
+
+-----------------------------------------------------------
+Version.java
+- versin str: BUILD_STRING
+- is dev ver: IS_DEVELOPMENT_VERSION
+- valid date: DEV_VERSION_EXPIRE_STR
+
+-----------------------------------------------------------
+history.html
+- update DATE on the last "what has changed" comment
+
+-----------------------------------------------------------
+in Eclipse: (get rid of unnecessary import)
+- Organize Import: at the asemon level: Ctrl+Shift+o
+
+-----------------------------------------------------------
+Check that all files are ADDED to SVN:
+cd C:\projects\asemon
+svn st
+
+-----------------------------------------------------------
+ANT BUILD
+set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
+ant
+cd dist
+asemon.bat
+-- Check if everything is working
+cd ..
+ant clean
+
+
+###########################################################
+## Checkin last code
+###########################################################
+CHECKIN
+- use turtoiseAVN in the explorer, or svn:
+	c:
+	cd C:\projects\asemon
+	svn commit 
+
+
+###########################################################
+## Subversion TAG the release
+###########################################################
+
+
+###########################################################
+## MAKE DISTRIBUTION
+###########################################################
+c:
+cd c:\tmpsvn
+set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
+ant
+cd dist
+asemon.bat
+-- Check if everything is working
+cd ..
+
+
+
+
+
+###########################################################
+## publish the new version
+###########################################################
+-----------------------------------------------------------
+done at asemon.se
+
+update: check_for_update.php
+- source version string/id (Version.java:SOURCE_REV_STRING)
+
+update: download.html
+- set the new asemon_YYYY-MM-DD.zip in 2 places 
+
+ftp: history.html
+- ftp history.html
+
+
+-----------------------------------------------------------
+Sourceforge
+
+- ftp asemon_YYYY-MM-DD.zip
+
+
