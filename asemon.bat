@@ -1,11 +1,11 @@
 @echo off
-title PerfDemo-console
+title AseMon-console
 setlocal
 
 rem ------------------------------------------------------------------------
-rem --- set PERF_DEMO_HOME to current directory if NOT already set
+rem --- set ASEMON_HOME to current directory if NOT already set
 rem ------------------------------------------------------------------------
-IF "%PERF_DEMO_HOME%"=="" set PERF_DEMO_HOME=%~dp0
+IF "%ASEMON_HOME%"=="" set ASEMON_HOME=%~dp0
 
 rem --- IF "%SYBASE%"=="" set SYBASE=c:\sybase
 
@@ -15,8 +15,8 @@ rem ------------------------------------------------------------------------
 rem --- remove last '\' char
 rem ------------------------------------------------------------------------
 :stripHome
-if not _%PERF_DEMO_HOME:~-1%==_\ goto afterStripHome
-set PERF_DEMO_HOME=%PERF_DEMO_HOME:~0,-1%
+if not _%ASEMON_HOME:~-1%==_\ goto afterStripHome
+set ASEMON_HOME=%ASEMON_HOME:~0,-1%
 goto stripHome
 :afterStripHome
 
@@ -25,7 +25,7 @@ goto stripHome
 rem ------------------------------------------------------------------------
 rem --- set some default environment variables
 rem ------------------------------------------------------------------------
-set PERF_DEMO_SAVE_DIR=%PERF_DEMO_HOME%\data
+set ASEMON_SAVE_DIR=%ASEMON_HOME%\data
 
 rem set JAVA_HOME=%SYBASE_JRE%
 rem set JAVA_HOME=%SYBASE%\shared-1_0\JRE-1_4
@@ -47,6 +47,8 @@ rem --- set DEBUG_OPTIONS=-agentlib:hprof=cpu=samples,interval=20,depth=50
 rem --- set DEBUG_OPTIONS=-agentlib:hprof=cpu=times
 set DEBUG_OPTIONS=
 
+set SPLASH=-splash:lib/asemon_splash.jpg
+
 
 
 rem ------------------------------------------------------------------------
@@ -54,7 +56,7 @@ rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
 rem ------------------------------------------------------------------------
 IF "%SYBASE%"=="" GOTO no_sybase
-IF "%PERF_DEMO_HOME%"=="" GOTO no_perfdemohome
+IF "%ASEMON_HOME%"=="" GOTO no_asemonhome
 rem --- IF "%JAVA_HOME%"=="" GOTO no_javahome
 
 
@@ -62,7 +64,7 @@ rem --- IF "%JAVA_HOME%"=="" GOTO no_javahome
 rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
-set classpath=%PERF_DEMO_HOME%\classes
+set classpath=%ASEMON_HOME%\classes
 set classpath=%classpath%;%ASEMON_HOME%\lib\asemon.jar
 set classpath=%classpath%;%ASEMON_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%ASEMON_HOME%\lib\jconn4.jar
@@ -78,6 +80,11 @@ set classpath=%classpath%;%ASEMON_HOME%\lib\commons-cli-1.2.jar
 set classpath=%classpath%;%ASEMON_HOME%\lib\proxy-vole_20110515.jar
 set classpath=%classpath%;%ASEMON_HOME%\lib\ganymed-ssh2-build251beta1.jar
 
+rem set classpath=%classpath%;%ASEMON_HOME%\lib\h2.jar
+rem set classpath=%classpath%;%ASEMON_HOME%\lib\miglayout-3.6.jar
+rem set classpath=%classpath%;%ASEMON_HOME%\lib\jchart2d-3.2.0.jar
+rem set classpath=%classpath%;%ASEMON_HOME%\lib\proxy-vole_20100914.jar
+
 rem --- echo %CLASSPATH%
 
 
@@ -90,14 +97,22 @@ set PATH=%JAVA_HOME%\bin;%PATH%
 
 
 rem ------------------------------------------------------------------------
+rem --- CHECK current Java Version
+rem ------------------------------------------------------------------------
+java asemon.utils.JavaVersion 6
+IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
+
+
+
+rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
 rem ------------------------------------------------------------------------
-cd %PERF_DEMO_HOME%
+cd %ASEMON_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DPERF_DEMO_HOME="%PERF_DEMO_HOME%" -DPERF_DEMO_SAVE_DIR="%PERF_DEMO_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% asemon.perftest.PerfDemo %1 %2 %3 %4 %5 %6 %7 %8 %9
+java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASEMON_HOME="%ASEMON_HOME%" -DASEMON_SAVE_DIR="%ASEMON_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% asemon.Asemon %*
 
-goto exit_perfdemo
+goto exit_asemon
 
 
 
@@ -105,13 +120,13 @@ rem ------------------------------------------------------------------------
 rem --- Various exit points
 rem ------------------------------------------------------------------------
 
-:no_perfdemohome
+:no_asemonhome
 echo -----------------------------------------------------------------------
-echo Error: no PERF_DEMO_HOME environment variable.
+echo Error: no ASEMON_HOME environment variable.
 echo -----------------------------------------------------------------------
-echo Must set the PERF_DEMO_HOME variable to the place where you installed perfdemo.
+echo Must set the ASEMON_HOME variable to the place where you installed asemon.
 echo -----------------------------------------------------------------------
-goto exit_perfdemo
+goto exit_asemon
 
 :no_javahome
 echo -----------------------------------------------------------------------
@@ -119,7 +134,16 @@ echo Error: no JAVA_HOME environment variable.
 echo -----------------------------------------------------------------------
 echo Must set the JAVA_HOME variable to the place where JDK or JRE is installed.
 echo -----------------------------------------------------------------------
-goto exit_perfdemo
+goto exit_asemon
+
+:to_low_java_version
+echo -----------------------------------------------------------------------
+echo Error: Use a higher java version.
+echo -----------------------------------------------------------------------
+echo The java installation can be pointed out using the variable JAVA_HOME
+echo Current JAVA_HOME variable is set to %JAVA_HOME%
+echo -----------------------------------------------------------------------
+goto exit_asemon
 
 :no_sybase
 echo -----------------------------------------------------------------------
@@ -129,12 +153,12 @@ echo 1: Set the env variable SYBASE to where sybase software is installed
 echo 2: If you do not have sybase software on this machine, 'set SYBASE=c:\sybase' or any directory
 echo    The SYBASE variable is just a pointer where to find the sql.ini file.
 echo .
-echo If you have a sql.ini file somewhere, perfdemo looks for it under %%SYBASE%%\ini\sql.ini.
+echo If you have a sql.ini file somewhere, asemon looks for it under %%SYBASE%%\ini\sql.ini.
 echo If you do not have a sql.ini file, just set SYBASE=c:\whatever
 echo    and then you can to specify to what host and port when connecting to the ASE server.
 echo -----------------------------------------------------------------------
-goto exit_perfdemo
+goto exit_asemon
 
-:exit_perfdemo
+:exit_asemon
 pause
 endlocal
