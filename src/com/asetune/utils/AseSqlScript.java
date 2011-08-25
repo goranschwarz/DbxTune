@@ -86,7 +86,7 @@ implements SybMessageHandler
 	
 	/**
 	 * 
-	 * @param className using full package name spec "se.asetune.utils.ClassName"
+	 * @param className using full package name spec "com.asetune.utils.ClassName"
 	 * @param filename
 	 * @throws SQLException
 	 */
@@ -252,7 +252,7 @@ implements SybMessageHandler
 	
 	/**
 	 * 
-	 * @param className using full package name spec "se.asetune.utils.ClassName"
+	 * @param className using full package name spec "com.asetune.utils.ClassName"
 	 * @param filename
 	 * @throws SQLException
 	 */
@@ -679,7 +679,7 @@ implements SybMessageHandler
 	 * the results of the database query.  It passes that TableModel to the
 	 * JTable component for display.
 	 **/
-	// from asetune.gui.QueryWindow
+	// from com.asetune.gui.QueryWindow
 	@SuppressWarnings("unused")
 	private void displayQueryResults(Connection conn, String sql)
 	{

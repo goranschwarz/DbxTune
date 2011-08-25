@@ -158,7 +158,7 @@ public class WizardOffline
 		//Add the PCS Writer, or add it as a wizard property?
 		String writerClass = conf.getProperty("PersistentCounterHandler.WriterClass");
 		if(writerClass == null)
-			writerClass = "asetune.pcs.PersistWriterJdbc";
+			writerClass = "com.asetune.pcs.PersistWriterJdbc";
 		settings.put("PersistentCounterHandler.WriterClass", writerClass);
 		
 //		settings.put("CM.sysMon.test", "testtest");
