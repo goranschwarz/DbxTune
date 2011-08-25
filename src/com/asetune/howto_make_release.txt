@@ -1,0 +1,113 @@
+###########################################################
+## Before final checkin:
+###########################################################
+
+-----------------------------------------------------------
+Version.java
+- versin str: BUILD_STRING
+- is dev ver: IS_DEVELOPMENT_VERSION
+- valid date: DEV_VERSION_EXPIRE_STR
+
+-----------------------------------------------------------
+history.html
+- update DATE on the last "what has changed" comment
+
+-----------------------------------------------------------
+in Eclipse: (get rid of unnecessary import)
+- Organize Import: at the asemon level: Ctrl+Shift+o
+
+-----------------------------------------------------------
+Check that all files are ADDED to SVN:
+cd C:\projects\asemon
+svn st
+
+-----------------------------------------------------------
+ANT BUILD
+set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
+ant
+cd dist
+asemon.bat
+-- Check if everything is working
+cd ..
+ant clean
+
+-----------------------------------------------------------
+CLEANUP configuratin
+C:\projects\asemon\asemon.properties
+
+
+
+###########################################################
+## Checkin last code
+###########################################################
+CHECKIN
+- use turtoiseAVN in the explorer, or svn:
+	c:
+	cd C:\projects\asemon
+	svn commit 
+
+
+###########################################################
+## Subversion TAG the release
+###########################################################
+svn copy https://gorans.no-ip.org/projects/asemon/trunk \
+ https://gorans.no-ip.org/projects/asemon/tags/YYYY-MM-DD -m "Tagging the release."
+
+
+###########################################################
+## MAKE DISTRIBUTION
+###########################################################
+c:
+cd c:\tmpsvn
+svn co https://gorans.no-ip.org/projects/asemon/tags/YYYY-MM-DD release
+cd release
+
+set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
+ant
+cd dist
+asemon.bat
+-- Check if everything is working
+cd ..
+
+
+
+
+
+###########################################################
+## publish the new version
+###########################################################
+-----------------------------------------------------------
+Sourceforge
+
+- ftp asemon_YYYY-MM-DD.zip (from: cd c:\tmpsvn\release)
+- ftp history.html          (from: cd c:\tmpsvn\release\src\asemon)
+
+-----------------------------------------------------------
+done at asemon.se
+
+ftp: history.html
+- ftp history.html
+
+update: download.html
+- set the new asemon_YYYY-MM-DD.zip in 2 places 
+
+update: check_for_update.php
+- source version string/id (notepad c:\tmpsvn\release\src\asemon\Version.java :SOURCE_REV_STRING)
+	$ASEMON_LATEST_VERSION_SRC = nnn;
+	$ASEMON_LATEST_VERSION_STR = "x.y.z";
+	$ASEMON_LATEST_VERSION_STR = "YYYY-MM-DD";
+
+
+###########################################################
+## CLEANUP
+###########################################################
+c:
+cd c:\tmpsvn
+- remove the release and other created directories
+
+
+###########################################################
+## MAIL out that a new release is available
+###########################################################
+
+
