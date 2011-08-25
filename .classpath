@@ -4,6 +4,16 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/dsparser.jar"/>
 	<classpathentry kind="lib" path="lib/jconn3.jar"/>
+	<classpathentry kind="lib" path="lib/h2.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/h2-2009-12-18/h2/src/main">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.h2database.com/javadoc/index.html"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/miglayout-3.6.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.migcalendar.com/miglayout/javadoc/index.html"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib/wizard.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:/Documents and Settings/gorans/My Documents/Downloads/java/wizard/WizardAPI.zip!/"/>
@@ -13,6 +23,16 @@
 	<classpathentry kind="lib" path="lib/commons-cli-1.2.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/commons-cli-1.2-bin/commons-cli-1.2/commons-cli-1.2-sources.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://commons.apache.org/cli/api-release/index.html"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/jchart2d-3.2.0.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/jchart2d/jchart2d-eclipse-project-3.2.0/jchart2d/src">
+		<attributes>
+			<attribute name="javadoc_location" value="http://jchart2d.sourceforge.net/docs/javadoc/index.html"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/proxy-vole_20100914.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/proxy-vole-read-only/proxy_vole/src">
+		<attributes>
+			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/swingx-core-1.6.2.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/swingx-1.6.2-sources.zip">
@@ -27,37 +47,7 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/ganymed-ssh2-build251beta1.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/ganymed-ssh2-build251beta1/src">
 		<attributes>
-			<attribute name="javadoc_location" value="http://www.cleondris.ch/opensource/ssh2/javadoc/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/h2-1.3.155.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://www.h2database.com/javadoc/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/jchart2d-3.2.1.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/new_jars/jchart2d-eclipse-project-3.2.1/jchart2d/src/">
-		<attributes>
-			<attribute name="javadoc_location" value="http://jchart2d.sourceforge.net/docs/javadoc/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/miglayout-3.7.4-swing.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://migcalendar.com/miglayout/javadoc/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/proxy-vole_20110515.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="lib/autocomplete.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/autocomplete"/>
+			<attribute name="javadoc_location" value="file:/C:/Documents and Settings/gorans/My Documents/Downloads/java/ganymed-ssh2-build251beta1/javadoc/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="classes"/>

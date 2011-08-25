@@ -1,72 +1,61 @@
 <launch4jConfig>
   <dontWrapJar>true</dontWrapJar>
-  <headerType>console</headerType>
-<!-- <headerType>console|gui</headerType> -->
-  <jar>lib/asetune.jar</jar>
-  <outfile>dist/asetune.exe</outfile>
-  <errTitle>AseTune</errTitle>
+  <headerType>gui</headerType>
+  <jar>lib/asemon.jar</jar>
+  <outfile>dist/asemon.exe</outfile>
+  <errTitle>Asemon</errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>
   <priority>normal</priority>
   <downloadUrl>http://java.com/download</downloadUrl>
-  <supportUrl>www.asetune.com</supportUrl>
+  <supportUrl>www.asemon.se</supportUrl>
   <customProcName>false</customProcName>
   <stayAlive>true</stayAlive>
   <manifest></manifest>
-  <icon>C:\projects\asetune\src\com\asetune\images\asetune_icon_32.ico</icon>
+  <icon>C:\projects\asemon\src\asemon\images\asemon_icon_32.ico</icon>
   <classPath>
-    <mainClass>com.asetune.AseTune</mainClass>
+    <mainClass>asemon.Asemon</mainClass>
     <cp>.\classes\</cp>
-    <cp>.\lib\asetune.jar</cp>
+    <cp>.\lib\asemon.jar</cp>
     <cp>.\lib\jconn3.jar</cp>
-    <cp>.\lib\jconn4.jar</cp>
     <cp>.\lib\dsparser.jar</cp>
-    <cp>.\lib\log4j-1.2.16.jar</cp>
+    <cp>.\lib\jcommon-1.0.14.jar</cp>
+    <cp>.\lib\log4j-1.2.15.jar</cp>
+    <cp>.\lib\jfreechart-1.0.11.jar</cp>
     <cp>.\lib\h2.jar</cp>
     <cp>.\lib\wizard.jar</cp>
     <cp>.\lib\miglayout-3.6.jar</cp>
-    <cp>.\lib\swingx-core-1.6.2.jar</cp>
-    <cp>.\lib\jchart2d-3.2.0.jar</cp>
+    <cp>.\lib\swingx-1.0.jar</cp>
+    <cp>.\lib\jchart2d-3.1.0.jar</cp>
     <cp>.\lib\planviewer.jar</cp>
     <cp>.\lib\commons-cli-1.2.jar</cp>
-    <cp>.\lib\proxy-vole_20100914.jar</cp>
-    <cp>.\lib\ganymed-ssh2-build251beta1.jar</cp>
   </classPath>
   <jre>
     <path></path>
-    <minVersion>1.6.0</minVersion>
+    <minVersion>1.5.0</minVersion>
     <maxVersion></maxVersion>
     <jdkPreference>preferJre</jdkPreference>
     <initialHeapSize>16</initialHeapSize>
     <maxHeapSize>1024</maxHeapSize>
     <opt>-Dswing.defaultlaf=com.sun.java.swing.plaf.windows.WindowsLookAndFeel</opt>
     <opt>-Denv.sybase=&quot;%SYBASE%&quot;</opt>
-    <opt>-Denv.asetune.home=&quot;%ASETUNE_HOME%&quot;</opt>
+    <opt>-Denv.asemon.home=&quot;%ASEMON_HOME%&quot;</opt>
     <opt>-Dxxx.launch4j.exedir="%EXEDIR%"</opt>
     <opt>-Dxxx.launch4j.exefile="%EXEFILE%"</opt>
     <opt>-Dxxx.env.path="%Path%"</opt>
     <opt>-Dxxx.settings="%HomeDrive%%HomePath%\\settings.ini"</opt>
   </jre>
 
-<!--
-  <splash>
-    <file>src\com\asetune\images\asetune_splash.bmp</file>
-    <waitForWindow>true</waitForWindow>
-    <timeout>60</timeout>
-    <timeoutErr>true</timeoutErr>
-  </splash>
--->
-
   <versionInfo>
     <fileVersion>1.0.0.0</fileVersion>
     <txtFileVersion>1.0.0</txtFileVersion>
-    <fileDescription>AseTune - Performance Monitor for Sybase ASE</fileDescription>
+    <fileDescription>Asemon - Performance Monitor for Sybase ASE</fileDescription>
     <copyright>(c)2010 Goran Schwarz. All Rights Reserved.</copyright>
     <productVersion>1.0.0.0</productVersion>
     <txtProductVersion>1.0.0</txtProductVersion>
-    <productName>AseTune - Performance Monitor for Sybase ASE</productName>
+    <productName>Asemon - Performance Monitor for Sybase ASE</productName>
     <companyName>Goran Schwarz</companyName>
-    <internalName>asetune</internalName>
-    <originalFilename>asetune.exe</originalFilename>
+    <internalName>asemon</internalName>
+    <originalFilename>asemon.exe</originalFilename>
   </versionInfo>
 </launch4jConfig>
