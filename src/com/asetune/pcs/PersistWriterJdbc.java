@@ -18,9 +18,9 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -673,6 +673,9 @@ public class PersistWriterJdbc
 //
 //		dbExec(sbSql.toString());
 
+		if (val != null && val.length() >= SESSION_PARAMS_VAL_MAXLEN)
+			val = val.substring(0, SESSION_PARAMS_VAL_MAXLEN - 1);
+
 		try
 		{
 			// Get the SQL statement
@@ -794,25 +797,46 @@ public class PersistWriterJdbc
 			_logger.info("Storing "+Version.getAppName()+" configuration information in table "+getTableName(SESSION_PARAMS, null, false));
 			//--------------------------------
 			// STORE the configuration file
-//			Configuration conf = Configuration.getInstance(Configuration.CONF); 
-			Configuration conf = Configuration.getCombinedConfiguration(); 
-			Iterator<Object> it = conf.keySet().iterator();
-			while (it.hasNext()) 
+			Configuration conf;
+			conf = Configuration.getInstance(Configuration.SYSTEM_CONF);
+			if (conf != null)
 			{
-				String key = (String)it.next();
-				String val = conf.getPropertyRaw(key);
-
-				insertSessionParam(ts, "config", key, val);
+				for (String key : conf.getKeys())
+				{
+					String val = conf.getPropertyRaw(key);
+	
+					insertSessionParam(ts, "system.config", key, val);
+				}
 			}
-//			conf = Configuration.getInstance(Configuration.TEMP);
-			conf = Configuration.getCombinedConfiguration();
-			it = conf.keySet().iterator();
-			while (it.hasNext()) 
-			{
-				String key = (String)it.next();
-				String val = conf.getPropertyRaw(key);
 
-				insertSessionParam(ts, "tmpConfig", key, val);
+			conf = Configuration.getInstance(Configuration.USER_CONF);
+			if (conf != null)
+			{
+				for (String key : conf.getKeys())
+				{
+					String val = conf.getPropertyRaw(key);
+	
+					insertSessionParam(ts, "user.config", key, val);
+				}
+			}
+
+			conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf != null)
+			{
+				for (String key : conf.getKeys())
+				{
+					String val = conf.getPropertyRaw(key);
+	
+					insertSessionParam(ts, "temp.config", key, val);
+				}
+			}
+
+			Properties systemProps = System.getProperties();
+			for (Object key : systemProps.keySet())
+			{
+				String val = systemProps.getProperty(key.toString());
+
+				insertSessionParam(ts, "system.properties", key.toString(), val);
 			}
 
 			// Storing the MonTablesDictionary(monTables & monTableColumns), 

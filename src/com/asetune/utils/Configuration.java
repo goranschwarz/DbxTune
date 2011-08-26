@@ -13,12 +13,16 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -277,13 +281,17 @@ extends Properties
 		for (Iterator<Object> it = this.keySet().iterator(); it.hasNext();)
 		{
 			String key = (String) it.next();
-			if (key.startsWith(prefix))
+			if (prefix == null || key.startsWith(prefix))
 			{
 				matchingKeys.add(key);
 			}
 		}
 		Collections.sort(matchingKeys);
 		return matchingKeys;
+	}
+	public List<String> getKeys()
+	{
+		return getKeys(null);
 	}
 
 	/**
@@ -899,6 +907,80 @@ extends Properties
 	{
 		private static final long	serialVersionUID	= 1L;
 
+		//------------------------------------------
+		// The below will "might" be supported in the future
+		//------------------------------------------
+		@Override
+		public Enumeration<?> propertyNames()
+		{
+			throw new RuntimeException("propertyNames() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized boolean isEmpty()
+		{
+			throw new RuntimeException("isEmpty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized Enumeration<Object> keys()
+		{
+			throw new RuntimeException("keys() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized Enumeration<Object> elements()
+		{
+			throw new RuntimeException("elements() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized boolean contains(Object value)
+		{
+			throw new RuntimeException("contains() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public boolean containsValue(Object value)
+		{
+			throw new RuntimeException("containsValue() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized boolean containsKey(Object key)
+		{
+			throw new RuntimeException("containsKey() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public Set<Object> keySet()
+		{
+			throw new RuntimeException("keySet() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public Set<Entry<Object, Object>> entrySet()
+		{
+			throw new RuntimeException("entrySet() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public Collection<Object> values()
+		{
+			throw new RuntimeException("values() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+
+		@Override
+		public synchronized int size()
+		{
+			throw new RuntimeException("size() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+		}
+		
+		
+		//------------------------------------------
+		// The below will "never" be supported
+		//------------------------------------------
+
 		@Override
 		public void save()
 		{
@@ -1021,7 +1103,7 @@ extends Properties
 					for (Iterator<Object> it = conf.keySet().iterator(); it.hasNext();)
 					{
 						String key = (String) it.next();
-						if (key.startsWith(prefix))
+						if (prefix == null || key.startsWith(prefix))
 						{
 							if ( ! matchingKeys.contains(key) )
 								matchingKeys.add(key);
@@ -1032,6 +1114,10 @@ extends Properties
 
 			Collections.sort(matchingKeys);
 			return matchingKeys;
+		}
+		public List<String> getKeys()
+		{
+			return getKeys(null);
 		}
 
 		/**

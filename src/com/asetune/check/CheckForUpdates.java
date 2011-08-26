@@ -907,6 +907,8 @@ public class CheckForUpdates
 	
 	/**
 	 */
+	private static boolean _sendCounterUsage_done = false;
+
 	public static void sendCounterUsageInfoNoBlock()
 	{
 		if ( ! _sendCounterUsageInfo )
@@ -920,10 +922,19 @@ public class CheckForUpdates
 //		{
 //			public void run()
 //			{
-				CheckForUpdates chk = new CheckForUpdates();
+				if ( ! _sendCounterUsage_done )
+				{
+					_sendCounterUsage_done = true;
 
-				// Go and check
-				chk.sendCounterUsageInfo();
+					CheckForUpdates chk = new CheckForUpdates();
+	
+					// Go and check
+					chk.sendCounterUsageInfo();
+				}
+				else
+				{
+					_logger.debug("sendCounterUsageInfo, already done...");
+				}
 //			}
 //		};
 //		Thread checkThread = new Thread(doLater);
@@ -948,7 +959,7 @@ public class CheckForUpdates
 
 		if (_checkId < 0)
 		{
-			_logger.debug("No checkId was disovered when trying to send 'Counter Usage' info, skipping this.");
+			_logger.debug("No checkId was discovered when trying to send 'Counter Usage' info, skipping this.");
 			return;
 		}
 
@@ -999,9 +1010,9 @@ public class CheckForUpdates
 			// SEND OFF THE REQUEST
 			InputStream in;
 			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams, 3000);
+				in = sendHttpPost(urlStr, urlParams, 2000);
 			else
-				in = sendHttpParams(urlStr, urlParams, 3000);
+				in = sendHttpParams(urlStr, urlParams, 2000);
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;

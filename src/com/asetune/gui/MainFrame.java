@@ -284,7 +284,24 @@ public class MainFrame
 		// Calculate initial size
 //		pack();
 		//setSize(new Dimension(747, 536));
+
+		// Install shutdown hook
+		Runtime.getRuntime().addShutdownHook(new Thread()
+		{
+			@Override
+			public void run()
+			{
+				_logger.debug("----Start Shutdown Hook");
+				CheckForUpdates.sendCounterUsageInfoNoBlock();
+				_logger.debug("----End Shutdown Hook");
+			}
+		});
 	}
+
+//	static
+//	{
+//		_logger.setLevel(Level.TRACE);
+//	}
 	/*---------------------------------------------------
 	** END: constructors
 	**---------------------------------------------------
