@@ -52,6 +52,9 @@
 	// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 	// doCleanup("delete from asemon_udc_info");
 
+	// doCleanup("alter table asemon_connect_info add column usePcs     varchar(5)");
+	// doCleanup("alter table asemon_connect_info add column pcsConfig  varchar(400)");
+
 	//------------------------------------------
 	// Close connection to the database
 	//-----

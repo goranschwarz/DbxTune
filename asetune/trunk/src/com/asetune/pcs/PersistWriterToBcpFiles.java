@@ -52,6 +52,9 @@ public class PersistWriterToBcpFiles
 	private String _ddlFilesOsCmd       = null;
 
 	private long   _lastCounterFileCloseTime = System.currentTimeMillis();
+	
+	private Configuration _config    = null;
+	private String        _configStr = null;
 
 	private List<String> _bcpFiles = new LinkedList<String>();
 	private List<String> _ddlFiles = new LinkedList<String>();
@@ -70,24 +73,43 @@ public class PersistWriterToBcpFiles
 	**---------------------------------------------------
 	*/
 
+	@Override
 	public String getName()
 	{
 		return _name;
 	}
 
+	@Override
 	public void close()
 	{
 	}
 
+	@Override
 	public void startServices()
 	{
 	}
+	@Override
 	public void stopServices()
 	{
 	}
 
+	@Override
+	public Configuration getConfig()
+	{
+		return _config;
+	}
+
+	@Override
+	public String getConfigStr()
+	{
+		return _configStr;
+	}
+
+	@Override
 	public void init(Configuration props) throws Exception
 	{
+		_config = props;
+
 		String propPrefix = "PersistWriterToBcpFiles.";
 		String propname = null;
 
@@ -123,8 +145,15 @@ public class PersistWriterToBcpFiles
 
 		_ddlFilesOsCmd = props.getProperty(propPrefix+"ddlFilesOsCmd");
 
-		String configStr = "saveToDir='"+_saveToDir+"', moveFilesAfterXSeconds='"+_moveFilesAfterXSeconds+"', moveFilesOsCmd='"+_moveFilesOsCmd+"', moveFilesDateFormat='"+_moveFilesDateFormat+"', ddlFilesOsCmd='"+_ddlFilesOsCmd+"'.";
-		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
+		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+_configStr);
+
+		_configStr = 
+			"saveToDir="               + _saveToDir +
+			",moveFilesAfterXSeconds=" + _moveFilesAfterXSeconds +
+			",moveFilesOsCmd="         + _moveFilesOsCmd +
+			",moveFilesDateFormat="    + _moveFilesDateFormat +
+			",ddlFilesOsCmd="          + _ddlFilesOsCmd +
+			"";
 	}
 
 	/*---------------------------------------------------
@@ -181,6 +210,7 @@ public class PersistWriterToBcpFiles
 		}
 	}
 
+	@Override
 	public void saveSample(PersistContainer cont)
 	{
 		Timestamp parentSampleTime = cont.getMainSampleTime();
@@ -286,6 +316,7 @@ public class PersistWriterToBcpFiles
 		}
 	}
 	
+	@Override
 	public boolean saveDdl(CountersModel cm)
   	{
 		// Write SQL Table definition

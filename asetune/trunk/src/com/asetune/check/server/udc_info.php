@@ -68,7 +68,7 @@
 	foreach ($udcArr as $udcKey => $udcValue)
 	{
 		//printf("udcKey='%s', udcValue='%s'\n", $udcKey, $udcValue);
-		// hmmm it looks like all '.' in the key to '_', I'm not sure where this is done, in the java client side (URLConnection) or somewhere else
+		// hmmm it looks like all '.' in the key to '_', I'm not shure where this is done, in the java client side (URLConnection) or somewhere else
 
 		$udcValueEscaped = mysql_real_escape_string($udcValue);
 

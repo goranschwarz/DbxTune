@@ -68,6 +68,10 @@ CREATE TABLE asemon_connect_info
 		srvUser                 varchar(30),
 		srvVersionStr           varchar(150),
 
+		usePcs                  varchar(5),
+		pcsConfig               varchar(400),
+
+
 		PRIMARY KEY (checkId, serverAddTime)
 );
 

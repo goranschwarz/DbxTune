@@ -145,6 +145,10 @@
 			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
 		exit;
 	}
+	if ( $user_name == "gorans" )
+	{
+		echo "ERROR: ---WARNING--- THE USER 'GORANS' SHOULD BE LOG DISABLED, HOPEFULLY THIS IS A TEST.\n";
+	}
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
