@@ -45,7 +45,6 @@ import org.jdesktop.swingx.JXMultiSplitPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.MultiSplitLayout;
 
-
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.utils.AseConnectionFactory;

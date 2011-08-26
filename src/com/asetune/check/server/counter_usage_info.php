@@ -1,30 +1,62 @@
 <?php
-	//print_r ($_POST);
+	//----------------------------------------
+	// FUNCTION: get params from POST or GET
+	//----------------------------------------
+	function getUrlParam($param)
+	{
+		if(!empty($_POST))
+		{
+			return $_POST[$param];
+		}
+		else if(!empty($_GET))
+		{
+			return urldecode($_GET[$param]);
+		}
+	}
+	//----------------------------------------
+	// FUNCTION: get POST or GET
+	//----------------------------------------
+	function getDataArray()
+	{
+		if(!empty($_POST))
+		{
+			return $_POST;
+		}
+		else if(!empty($_GET))
+		{
+			return $_GET;
+		}
+		return array();
+	}
+
 
 	//------------------------------------------
 	// if debug is sent, print some extra info on the outstream
-	$debug = $_POST['debug'];
+	$debug = getUrlParam('debug');
 
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
-	$checkId            = $_POST['checkId'];
-	$clientTime         = $_POST['clientTime'];
-	$userName           = $_POST['userName'];
+	$checkId            = getUrlParam('checkId');
+	$clientTime         = getUrlParam('clientTime');
+	$userName           = getUrlParam('userName');
 
 	// Copy all values AFTER userName to an array
 	$cpArr = array();
 	$doCopy = 0;
-	foreach ($_POST as $key => $value)
+	$dataArray = getDataArray();
+	foreach ($dataArray as $key => $value)
 	{
 		if ( $debug == "true" )
 			printf("Key='%s', value='%s', doCopy=%d\n", $key, $value, $doCopy);
 
 		if ( $doCopy == 1 )
-			$cpArr[$key] = "$value";
+			$cpArr[$key] = urldecode("$value");
 
 		if ( $key == "userName")
 			$doCopy = 1;
 	}
+	if ( $debug == "true" )
+		print_r($cpArr);
 
 	//------------------------------------------
 	// Now connect to the database
@@ -46,7 +78,7 @@
 			serverAddTime,
 			clientTime,
 			userName,
-	
+
 			cmName,
 			addSequence,
 			refreshCount,
@@ -56,23 +88,23 @@
 		(
 			$checkId,
 			NOW(),
-			'$clientTime',	
+			'$clientTime',
 			'$userName',
-	
+
 			'$key',
 			$addSequence,
 			$value
-		)";  
+		)";
 		// NOTE: value will consist of two values, which are already separated by a comma(,)
 		//       so value will be refreshCount,sumRowCount
-	
+
 		if ( $debug == "true" )
 		{
 			echo "DEBUG EXECUTING SQL: $sql\n";
 		}
-	
+
 		//------------------------------------------
-		// Do the INSERT, if errors exit 
+		// Do the INSERT, if errors exit
 		mysql_query($sql);
 
 		$errorNumber = mysql_errno();

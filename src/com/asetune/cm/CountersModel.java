@@ -31,7 +31,6 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
 
-
 import com.asetune.AseTune;
 import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
@@ -183,6 +182,7 @@ implements Cloneable
 
 	private boolean dataInitialized=false;
 	private boolean firstTimeSample=true;
+	private boolean _sqlInitDone=false;
 
 	private int maxRowSeen;
 	
@@ -2761,17 +2761,24 @@ implements Cloneable
 
 		// If the CounterModel need to be initialized by executing any 
 		// specific SQL statement the firts time around
-		if (firstTimeSample && _sqlInit != null && !_sqlInit.trim().equals(""))
+		String sqlInit = getSqlInit();
+		if (sqlInit != null && !sqlInit.trim().equals(""))
 		{
-			try
+			if ( ! _sqlInitDone )
 			{
-				Statement stmt = conn.createStatement();
-				stmt.execute(_sqlInit);
-				stmt.close();
-			}
-			catch (SQLException e)
-			{
-				_logger.warn("Problem when executing the 'init' SQL statement.", e);
+				try
+				{
+
+					Statement stmt = conn.createStatement();
+					stmt.execute(sqlInit);
+					stmt.close();
+
+					_sqlInitDone = true;
+				}
+				catch (SQLException e)
+				{
+					_logger.warn("Problem when executing the 'init' SQL statement: "+sqlInit, e);
+				}
 			}
 		}
 

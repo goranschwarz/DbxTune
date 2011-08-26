@@ -19,7 +19,6 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
-
 import com.asetune.gui.ResultSetTableModel;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;

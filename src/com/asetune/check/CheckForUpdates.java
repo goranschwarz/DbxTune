@@ -23,14 +23,12 @@ import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-
 
 import com.asetune.AseTune;
 import com.asetune.GetCounters;
@@ -75,30 +73,29 @@ public class CheckForUpdates
 // The redirect from www.asetune.com -> www.asemon.se seems like it's stripping all the parameters
 // So this is a bit problematic...
 
-//	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
-//	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
-//	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
-//	private   static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
-//	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
-//
-//	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
-//	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
-	
-	protected static final String ASETUNE_HOME_URL               = "http://www.asemon.se";
-	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asemon.se/check_for_update.php";
-	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asemon.se/connect_info.php";
-	private   static final String ASETUNE_UDC_INFO_URL           = "http://www.asemon.se/udc_info.php";
-	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asemon.se/counter_usage_info.php";
+	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
+	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
+	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
+	private   static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
+	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
 
-	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asemon.se/download.html";
-	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asemon.se/history.html";
+	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
+	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
+	
 
 	private static boolean _sendConnectInfo      = true;
 	private static boolean _sendUdcInfo          = true;
 	private static boolean _sendCounterUsageInfo = true;
 
-	private URL	           _url;
-	private QueryString	   _query	       = new QueryString();
+	/** What PHP variables will be used to pick up variables <br>
+	 *  true  = _POST[], HTTP POST will be used, "no" limit in size... <br>
+	 *  false = _GET[], send as: http://www.site.com?param1=var1&param2=var2 approximately 2000 chars is max<br> 
+	 */
+	private boolean        _useHttpPost    = false;
+	// Note: when redirecting URL from www.asetune.com -> www.asemon.se, it looses the POST entries
+	//       So right now we need to use the 'http://www.site.com?param1=val1&param2=val2' instead
+
+//	private URL	           _url;
 	private String         _action        = "";
 	
 	// The below is protected, just because test purposes, it should be private
@@ -146,36 +143,63 @@ public class CheckForUpdates
 	** BEGIN: private helper methods
 	**---------------------------------------------------
 	*/
-	private void add(String name, String value)
-	{
-		if (value == null)
-			value = "";
-		
-		// replace all '\', with '/', which makes some fields more readable.
-		value = value.replace('\\', '/');
 
-		_query.add(name, value);
+	/**
+	 * Send a HTTP data fields via X number of parameters<br>
+	 * The request would look like: http://www.some.com?param1=val1&param2=val2<br>
+	 * in a PHP page they could be picked up by: _GET['param1']<br>
+	 * NOTE: there is a limit at about 2000 character for this type.
+	 */
+	private InputStream sendHttpParams(String urlStr, QueryString urlParams)
+	throws MalformedURLException, IOException
+	{
+		return sendHttpParams(urlStr, urlParams, 3*1000);
 	}
+	private InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
+	throws MalformedURLException, IOException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("sendHttpParams() BASE URL: "+urlStr);
+			_logger.debug("sendHttpParams() PARAMSTR: "+urlParams.toString());
+		}
 
-	private InputStream post() throws IOException
-	{
-		return post(3*1000); // 3 seconds
-	}
-	private InputStream post(int timeoutInMs) throws IOException
-	{
-		// In JDK 5, we can make the JDK go and get if we use proxies
-		// for specific URL:s, just set the below property...
-		//		System.setProperty("java.net.useSystemProxies", "true");
-		// The above is done in method init()
-		// The init() method also creates our own ProxySelector, which only
-		// calls the DefaultProxySelector in case the protocoll is 'http/https'
-		//
-		// This because it would try to use Proxy for the protcol 'socket'
-		// aswell and then it would probably hang when we do a connect() via
-		// JDBC... and that we dont want...
+		// Get the URL
+		URL url = new URL( urlStr + "?" + urlParams.toString() );
 
 		// open the connection and prepare it to POST
-		URLConnection conn = _url.openConnection();
+		URLConnection conn = url.openConnection();
+		conn.setConnectTimeout(timeoutInMs); // 3 seconds
+
+		// Return the response
+		return conn.getInputStream();
+	}
+
+
+	/**
+	 * Send a HTTP data fields via POST handling<br>
+	 * The request would look like: http://www.some.com?param1=val1&param2=val2<br>
+	 * in a PHP page they could be picked up by: _POST['param1']
+	 */
+	private InputStream sendHttpPost(String urlStr, QueryString urlParams)
+	throws MalformedURLException, IOException
+	{
+		return sendHttpPost(urlStr, urlParams, 3*1000);
+	}
+	private InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs) 
+	throws MalformedURLException, IOException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("sendHttpPost() BASE URL: "+urlStr);
+			_logger.debug("sendHttpPost() POST STR: "+urlParams.toString());
+		}
+
+		// Get the URL
+		URL url = new URL(urlStr);
+
+		// open the connection and prepare it to POST
+		URLConnection conn = url.openConnection();
 		conn.setConnectTimeout(timeoutInMs); // 3 seconds
 		conn.setDoOutput(true);
 		OutputStreamWriter out = new OutputStreamWriter(conn.getOutputStream(), "ASCII");
@@ -183,9 +207,7 @@ public class CheckForUpdates
 		// The POST line, the Content-type header,
 		// and the Content-length headers are sent by the URLConnection.
 		// We just need to send the data
-		if (_logger.isDebugEnabled())
-			_logger.debug("post() query: "+_query.toString());
-		out.write(_query.toString());
+		out.write(urlParams.toString());
 		out.write("\r\n");
 		out.flush();
 		out.close();
@@ -193,7 +215,6 @@ public class CheckForUpdates
 		// Return the response
 		return conn.getInputStream();
 	}
-
 	/*---------------------------------------------------
 	** END: private helper methods
 	**---------------------------------------------------
@@ -297,73 +318,72 @@ public class CheckForUpdates
 	 */
 	public void check()
 	{
+		// URS to use
+		String urlStr = ASETUNE_CHECK_UPDATE_URL;
+
 		_hasUpgrade   = false;
 		_checkSucceed = false;
 
-		try
-		{
-			_url = new URL(ASETUNE_CHECK_UPDATE_URL);
-		}
-		catch (MalformedURLException ex)
-		{ 
-			// shouldn't happen
-			_logger.debug("When we checking for later version, we had problems", ex);
-			return;
-		}
-
-//		add("name", "Goran Schwarz");
-//		add("email", "goran_schwarz@hotmail.com");
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
 
 		Date timeNow = new Date(System.currentTimeMillis());
 		String clientTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
 		if (_logger.isDebugEnabled())
-			add("debug",    "true");
+			urlParams.add("debug",    "true");
 			
-		add("clientCheckTime",     clientTime);
+		urlParams.add("clientCheckTime",     clientTime);
 
-		add("clientSourceDate",     Version.getSourceDate());
-		add("clientSourceVersion",  Version.getSourceRev());
-		add("clientAseTuneVersion", Version.getVersionStr());
+		urlParams.add("clientSourceDate",     Version.getSourceDate());
+		urlParams.add("clientSourceVersion",  Version.getSourceRev());
+		urlParams.add("clientAseTuneVersion", Version.getVersionStr());
 
 		try 
 		{
 			InetAddress addr = InetAddress.getLocalHost();
 			
-			add("clientHostName",          addr.getHostName());
-			add("clientHostAddress",       addr.getHostAddress());
-			add("clientCanonicalHostName", addr.getCanonicalHostName());
+			urlParams.add("clientHostName",          addr.getHostName());
+			urlParams.add("clientHostAddress",       addr.getHostAddress());
+			urlParams.add("clientCanonicalHostName", addr.getCanonicalHostName());
 
 		}
 		catch (UnknownHostException e) 
 		{
 		}
 
-		add("user_name",          System.getProperty("user.name"));
-		add("user_dir",           System.getProperty("user.dir"));
-		add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
-		add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
-		add("gui",                AseTune.hasGUI()+"");
+		urlParams.add("user_name",          System.getProperty("user.name"));
+		urlParams.add("user_dir",           System.getProperty("user.dir"));
+		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
+		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
+		urlParams.add("gui",                AseTune.hasGUI()+"");
 
-		add("java_version",       System.getProperty("java.version"));
-		add("java_vm_version",    System.getProperty("java.vm.version"));
-		add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
-		add("java_home",          System.getProperty("java.home"));
-		add("java_class_path",    System.getProperty("java.class.path"));
-		add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
-		add("os_name",            System.getProperty("os.name"));
-		add("os_version",         System.getProperty("os.version"));
-		add("os_arch",            System.getProperty("os.arch"));
-		add("sun_desktop",        System.getProperty("sun.desktop"));
-		add("user_country",       System.getProperty("user.country"));
-		add("user_language",      System.getProperty("user.language"));
-		add("user_timezone",      System.getProperty("user.timezone"));
-		add("-end-",              "-end-");
+		urlParams.add("java_version",       System.getProperty("java.version"));
+		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
+		urlParams.add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
+		urlParams.add("java_home",          System.getProperty("java.home"));
+		if (_useHttpPost)
+			urlParams.add("java_class_path",System.getProperty("java.class.path"));
+		else
+			urlParams.add("java_class_path","discarded when using sendHttpParams()");
+		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
+		urlParams.add("os_name",            System.getProperty("os.name"));
+		urlParams.add("os_version",         System.getProperty("os.version"));
+		urlParams.add("os_arch",            System.getProperty("os.arch"));
+		urlParams.add("sun_desktop",        System.getProperty("sun.desktop"));
+		urlParams.add("user_country",       System.getProperty("user.country"));
+		urlParams.add("user_language",      System.getProperty("user.language"));
+		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
+		urlParams.add("-end-",              "-end-");
 
 		try
 		{
 			// SEND OFF THE REQUEST
-			InputStream in = post();
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
 
 			//----------------------------------------------
 			// This is how a response would look like
@@ -602,10 +622,10 @@ public class CheckForUpdates
 	 * what URL did we check at?
 	 * @return
 	 */
-	public URL getURL()
-	{
-		return _url;
-	}
+//	public URL getURL()
+//	{
+//		return _url;
+//	}
 
 	
 	/**
@@ -640,6 +660,9 @@ public class CheckForUpdates
 	 */
 	public void sendConnectInfo()
 	{
+		// URL TO USE
+		String urlStr = ASETUNE_CONNECT_INFO_URL;
+
 		if ( ! _sendConnectInfo )
 		{
 			_logger.debug("Send 'Connect info' has been disabled.");
@@ -659,16 +682,8 @@ public class CheckForUpdates
 			return;
 		}
 
-		try
-		{
-			_url = new URL(ASETUNE_CONNECT_INFO_URL);
-		}
-		catch (MalformedURLException ex)
-		{ 
-			// shouldn't happen
-			_logger.debug("When sending connection info, we had problems", ex);
-			return;
-		}
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
 
 		Date timeNow = new Date(System.currentTimeMillis());
 
@@ -689,24 +704,28 @@ public class CheckForUpdates
 		if (srvVersionStr != null) srvVersionStr.trim();
 		
 		if (_logger.isDebugEnabled())
-			add("debug",    "true");
+			urlParams.add("debug",    "true");
 			
-		add("checkId",             checkId);
-		add("clientTime",          clientTime);
-		add("userName",            System.getProperty("user.name"));
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
 
-		add("srvVersion",          srvVersion);
-		add("isClusterEnabled",    isClusterEnabled);
+		urlParams.add("srvVersion",          srvVersion);
+		urlParams.add("isClusterEnabled",    isClusterEnabled);
 
-		add("srvName",             srvName);
-		add("srvIpPort",           srvIpPort);
-		add("srvUser",             srvUser);
-		add("srvVersionStr",       srvVersionStr);
+		urlParams.add("srvName",             srvName);
+		urlParams.add("srvIpPort",           srvIpPort);
+		urlParams.add("srvUser",             srvUser);
+		urlParams.add("srvVersionStr",       srvVersionStr);
 
 		try
 		{
 			// SEND OFF THE REQUEST
-			InputStream in = post();
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;
@@ -769,6 +788,9 @@ public class CheckForUpdates
 	 */
 	public void sendUdcInfo()
 	{
+		// URL TO USE
+		String urlStr = ASETUNE_UDC_INFO_URL;
+
 		if ( ! _sendUdcInfo )
 		{
 			_logger.debug("Send 'UDC info' has been disabled.");
@@ -781,7 +803,6 @@ public class CheckForUpdates
 			return;
 		}
 
-//		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf == null)
 		{
@@ -789,16 +810,8 @@ public class CheckForUpdates
 			return;
 		}
 
-		try
-		{
-			_url = new URL(ASETUNE_UDC_INFO_URL);
-		}
-		catch (MalformedURLException ex)
-		{ 
-			// shouldn't happen
-			_logger.debug("When sending UDC info, we had problems", ex);
-			return;
-		}
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
 
 		Date timeNow = new Date(System.currentTimeMillis());
 
@@ -806,24 +819,28 @@ public class CheckForUpdates
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
 		if (_logger.isDebugEnabled())
-			add("debug",    "true");
+			urlParams.add("debug",    "true");
 
-		add("checkId",             checkId);
-		add("clientTime",          clientTime);
-		add("userName",            System.getProperty("user.name"));
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
 
-		Iterator<Object> it = conf.keySet().iterator();
 		int udcRows = 0;
-		while (it.hasNext()) 
+		// key: UDC 
+		for (String key : conf.getKeys("udc."))
 		{
-			String key = (String)it.next();
 			String val = conf.getPropertyRaw(key);
 
-			if (key.startsWith("udc.") || key.startsWith("hostmon.udc."))
-			{
-				add(key, val);
-				udcRows++;
-			}
+			urlParams.add(key, val);
+			udcRows++;
+		}
+		// key: HOSTMON.UDC
+		for (String key : conf.getKeys("hostmon.udc."))
+		{
+			String val = conf.getPropertyRaw(key);
+
+			urlParams.add(key, val);
+			udcRows++;
 		}
 
 		// If NO UDC rows where found, no need to continue
@@ -836,7 +853,11 @@ public class CheckForUpdates
 		try
 		{
 			// SEND OFF THE REQUEST
-			InputStream in = post();
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;
@@ -900,6 +921,9 @@ public class CheckForUpdates
 	 */
 	public void sendCounterUsageInfo()
 	{
+		// URL TO USE
+		String urlStr = ASETUNE_COUNTER_USAGE_INFO_URL;
+
 		if ( ! _sendCounterUsageInfo )
 		{
 			_logger.debug("Send 'Counter Usage Info' has been disabled.");
@@ -912,7 +936,6 @@ public class CheckForUpdates
 			return;
 		}
 
-//		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf == null)
 		{
@@ -920,16 +943,8 @@ public class CheckForUpdates
 			return;
 		}
 
-		try
-		{
-			_url = new URL(ASETUNE_COUNTER_USAGE_INFO_URL);
-		}
-		catch (MalformedURLException ex)
-		{ 
-			// shouldn't happen
-			_logger.debug("When sending 'Counter Usage' info, we had problems", ex);
-			return;
-		}
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
 
 		Date timeNow = new Date(System.currentTimeMillis());
 
@@ -937,11 +952,11 @@ public class CheckForUpdates
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
 		if (_logger.isDebugEnabled())
-			add("debug",    "true");
+			urlParams.add("debug",    "true");
 
-		add("checkId",             checkId);
-		add("clientTime",          clientTime);
-		add("userName",            System.getProperty("user.name"));
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
 
 		int rows = 0;
 		for (CountersModel cm : GetCounters.getCmList())
@@ -951,7 +966,7 @@ public class CheckForUpdates
 				minRefresh = 1;
 			if (cm.getRefreshCounter() >= minRefresh)
 			{
-				add(cm.getName(), cm.getRefreshCounter()+","+cm.getSumRowCount());
+				urlParams.add(cm.getName(), cm.getRefreshCounter()+","+cm.getSumRowCount());
 				rows++;
 			}
 		}
@@ -966,7 +981,11 @@ public class CheckForUpdates
 		try
 		{
 			// SEND OFF THE REQUEST
-			InputStream in = post(1500); // timeout of 1.5 seconds
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams, 1500);
+			else
+				in = sendHttpParams(urlStr, urlParams, 1500);
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;
@@ -1174,7 +1193,7 @@ public class CheckForUpdates
 
 
 	
-	private class QueryString
+	private static class QueryString
 	{
 
 		private StringBuffer	query	= new StringBuffer();
@@ -1190,12 +1209,19 @@ public class CheckForUpdates
 
 		public synchronized void add(String name, String value)
 		{
-			query.append('&');
+			if (query.length() > 0)
+				query.append('&');
 			encode(name, value);
 		}
 
 		private synchronized void encode(String name, String value)
 		{
+			if (value == null)
+			value = "";
+		
+			// replace all '\', with '/', which makes some fields more readable.
+			value = value.replace('\\', '/');
+
 			try
 			{
 				query.append(URLEncoder.encode(name, "UTF-8"));

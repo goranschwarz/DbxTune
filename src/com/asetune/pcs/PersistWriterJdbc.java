@@ -27,12 +27,12 @@ import org.apache.log4j.Logger;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
-import com.asetune.MonTablesDictionary;
-import com.asetune.TrendGraphDataPoint;
-import com.asetune.Version;
 import com.asetune.AseConfigText.ConfigType;
+import com.asetune.MonTablesDictionary;
 import com.asetune.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.MonTablesDictionary.MonTableEntry;
+import com.asetune.TrendGraphDataPoint;
+import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.utils.Configuration;

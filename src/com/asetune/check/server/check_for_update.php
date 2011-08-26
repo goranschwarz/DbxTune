@@ -1,6 +1,41 @@
 <?php
+	//----------------------------------------
+	// FUNCTION: get params from POST or GET
+	//----------------------------------------
+	function getUrlParam($param)
+	{
+		if(!empty($_POST))
+		{
+			return $_POST[$param];
+		}
+		else if(!empty($_GET))
+		{
+			return urldecode($_GET[$param]);
+		}
+
+	}
+	//----------------------------------------
+	// FUNCTION: get params from POST or GET
+	//           if first param is not set, try secondary param
+	//           if none was found return the default value.
+	//----------------------------------------
+	function getUrlParam2($param, $altParam)
+	{
+		$val = getUrlParam($param);
+		if (!empty($val))
+			return $val;
+
+		$val = getUrlParam($altParam);
+		if (!empty($val))
+			return $val;
+
+		return $val;
+	}
+
+
 	//------------------------------------------
 	// DEFINE latest version information
+	//-------
 	$ASEMON_LATEST_VERSION_SRC = 229;
 	$ASEMON_LATEST_VERSION_STR = "2.1.0";
 	$ASEMON_LATEST_VERSION_STR = "2011-07-15";
@@ -10,17 +45,44 @@
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL              = "";
 
+
 	//------------------------------------------
-	// DEFINE latest version information
-	$clSrcVer = $_POST['clientSourceVersion'];
-	if ( "$clSrcVer" == "" )
+	// if debug is sent, print some extra info on the outstream
+	//-------
+	$debug = getUrlParam('debug');
+	if ( $debug == "true" )
+	{
+		if(!empty($_POST))
+			echo "DEBUG: getting data from _POST variable\n";
+		else if(!empty($_GET))
+			echo "DEBUG: getting data from _GET variable\n";
+		else
+			echo "DEBUG: no _POST, no _GET, so what should I do...\n";
+	}
+
+
+	//------------------------------------------
+	// GET latest version information
+	//-------
+	$clientSrcVer = getUrlParam('clientSourceVersion');
+	if (!isset($clientSrcVer))
+		$clientSrcVer     = -1;
+
+	if ( $clientSrcVer < 0 )
 	{
 		echo "ERROR: clientSourceVersion was NOT PASSED... So to few parameters was passed, NO-UPGRADE will be the result.\n";
-		$clSrcVer = 9999999;
+		echo "ERROR: _POST count = " . count($_POST) . "\n";
+		echo "ERROR: _GET  count = " . count($_POST) . "\n";
+		$clientSrcVer = 9999999;
 	}
-	//echo "DEBUG: clientSourceVersion = '$clSrcVer'\n";
+	if ( $debug == "true" )
+		echo "DEBUG: clientSrcVer = '$clientSrcVer'\n";
 
-	if ($clSrcVer < $ASEMON_LATEST_VERSION_SRC)
+
+	//------------------------------------------
+	// CHECK if later version exists
+	//-------
+	if ($clientSrcVer < $ASEMON_LATEST_VERSION_SRC)
 	{
 		echo "ACTION:UPGRADE:$ASEMON_LATEST_VERSION_STR:$DOWNLOAD_URL:$WHATSNEW_URL\n";
 		echo "OPTIONS: $SEND_OPTIONS\n";
@@ -33,51 +95,51 @@
 		echo "FEEDBACK: $FEEDBACK_URL\n";
 	}
 
-	//------------------------------------------
-	// if debug is sent, print some extra info on the outstream
-	$debug = $_POST['debug'];
 
 
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
-	$clientCheckTime         = $_POST['clientCheckTime'];
+	//-------
+	$clientCheckTime         = getUrlParam('clientCheckTime');
 
-	$clientSourceDate        = $_POST['clientSourceDate'];
-	$clientSourceVersion     = $_POST['clientSourceVersion'];
-	$clientAsemonVersion     = $_POST['clientAsemonVersion'];
-	$clientAseTuneVersion    = $_POST['clientAseTuneVersion'];
+	$clientSourceDate        = getUrlParam('clientSourceDate');
+	$clientSourceVersion     = getUrlParam('clientSourceVersion');
+	$clientAppVersionStr     = getUrlParam2('clientAseTuneVersion', 'clientAsemonVersion');
 
-	// clientAsemonVersion: will go away, so if it's not there use the clientAseTuneVersion
-	if ( $clientAsemonVersion == "" )
-	{
-		$clientAsemonVersion = $clientAseTuneVersion;
-	}
+	$clientHostName          = getUrlParam('clientHostName');
+	$clientHostAddress       = getUrlParam('clientHostAddress');
+	$clientCanonicalHostName = getUrlParam('clientCanonicalHostName');
 
-	$clientHostName          = $_POST['clientHostName'];
-	$clientHostAddress       = $_POST['clientHostAddress'];
-	$clientCanonicalHostName = $_POST['clientCanonicalHostName'];
+	$user_name               = getUrlParam('user_name');
+	$user_dir                = getUrlParam('user_dir');
+	$propfile                = getUrlParam('propfile');
+	$gui                     = getUrlParam('gui');
+	$sun_desktop             = getUrlParam('sun_desktop');
+	$user_country            = getUrlParam('user_country');
+	$user_language           = getUrlParam('user_language');
+	$user_timezone           = getUrlParam('user_timezone');
 
-	$user_name               = $_POST['user_name'];
-	$user_dir                = $_POST['user_dir'];
-	$propfile                = $_POST['propfile'];
-	$gui                     = $_POST['gui'];
-	$sun_desktop             = $_POST['sun_desktop'];
-	$user_country            = $_POST['user_country'];
-	$user_language           = $_POST['user_language'];
-	$user_timezone           = $_POST['user_timezone'];
-	
-	$java_version            = $_POST['java_version'];
-	$java_vm_version         = $_POST['java_vm_version'];
-	$java_vm_vendor          = $_POST['java_vm_vendor'];
-	$java_home               = $_POST['java_home'];
-	$java_class_path         = $_POST['java_class_path'];
-	$memory                  = $_POST['memory'];
-	$os_name                 = $_POST['os_name'];
-	$os_version              = $_POST['os_version'];
-	$os_arch                 = $_POST['os_arch'];
+	$java_version            = getUrlParam('java_version');
+	$java_vm_version         = getUrlParam('java_vm_version');
+	$java_vm_vendor          = getUrlParam('java_vm_vendor');
+	$java_home               = getUrlParam('java_home');
+	$java_class_path         = getUrlParam('java_class_path');
+	$memory                  = getUrlParam('memory');
+	$os_name                 = getUrlParam('os_name');
+	$os_version              = getUrlParam('os_version');
+	$os_arch                 = getUrlParam('os_arch');
 
+
+	//------------------------------------------
 	// If user is 'gorans', get out of here otherwise I will flod the log with personal entries
+	//-------
 	if ( $user_name == "gorans" )
+	{
+		if ( $debug == "true" )
+			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
+		exit;
+	}
+	if ( empty($user_name ) )
 	{
 		if ( $debug == "true" )
 			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
@@ -86,10 +148,7 @@
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
-//	mysql_connect("localhost", "asemon_stat", "asemon") or die(mysql_error());
-//	mysql_select_db("asemon_stat") or die(mysql_error());
-
-//	$db=mysql_connect("localhost", "asemon_se", "qazZSE44") or die(mysql_error());
+	//-------
 	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
 	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
 
@@ -136,7 +195,7 @@
 
 		'$clientSourceDate',
 		$clientSourceVersion,
-		'$clientAsemonVersion',
+		'$clientAppVersionStr',
 
 		'$clientHostName',
 		'$clientHostAddress',

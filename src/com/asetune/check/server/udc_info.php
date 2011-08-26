@@ -1,24 +1,58 @@
 <?php
-	//print_r ($_POST);
+	//----------------------------------------
+	// FUNCTION: get params from POST or GET
+	//----------------------------------------
+	function getUrlParam($param)
+	{
+		if(!empty($_POST))
+		{
+			return $_POST[$param];
+		}
+		else if(!empty($_GET))
+		{
+			return urldecode($_GET[$param]);
+		}
+	}
+	//----------------------------------------
+	// FUNCTION: get POST or GET
+	//----------------------------------------
+	function getDataArray()
+	{
+		if(!empty($_POST))
+		{
+			return $_POST;
+		}
+		else if(!empty($_GET))
+		{
+			return $_GET;
+		}
+		return array();
+	}
+
 
 	//------------------------------------------
 	// if debug is sent, print some extra info on the outstream
-	$debug = $_POST['debug'];
+	$debug = getUrlParam('debug');
 
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
-	$checkId            = $_POST['checkId'];
-	$clientTime         = $_POST['clientTime'];
-	$userName           = $_POST['userName'];
+	$checkId            = getUrlParam('checkId');
+	$clientTime         = getUrlParam('clientTime');
+	$userName           = getUrlParam('userName');
 
-	// Copy all UDC rows into it's own array
+	// Copy all UDC rows into its own array
 	$udcArr = array();
-	foreach ($_POST as $key => $value)
+	$dataArray = getDataArray();
+	foreach ($dataArray as $key => $value)
 	{
-		//printf("Key='%s', value='%s'\n", $key, $value);
+		if ( $debug == "true" )
+			printf("Key='%s', value='%s'\n", $key, $value);
+
 		if (strpos($key, 'udc') === 0) // key starts with 'udc.'
-			$udcArr[$key] = "$value";
+			$udcArr[$key] = urldecode($value);
 	}
+	if ( $debug == "true" )
+		print_r($udcArr);
 
 	//------------------------------------------
 	// Now connect to the database
@@ -27,14 +61,14 @@
 
 // Delete the records for this user, so we can refresh the UDC=User Defined Counter
 //$sql = "delete from asemon_udc_info where userName = '$userName' and serverAddTime <where older than 7 days>";
-$sql = "delete from asemon_udc_info where userName = '$userName'";
-mysql_query($sql) or die("ERROR: " . mysql_error());
+//$sql = "delete from asemon_udc_info where userName = '$userName'";
+//mysql_query($sql) or die("ERROR: " . mysql_error());
 
 	// Insert one row for every UDC key/value
 	foreach ($udcArr as $udcKey => $udcValue)
 	{
 		//printf("udcKey='%s', udcValue='%s'\n", $udcKey, $udcValue);
-		// hmmm it looks like all '.' in the key to '_', I'm not shure where this is done, in the java client side (URLConnection) or somewhere else
+		// hmmm it looks like all '.' in the key to '_', I'm not sure where this is done, in the java client side (URLConnection) or somewhere else
 
 		$udcValueEscaped = mysql_real_escape_string($udcValue);
 
@@ -43,9 +77,9 @@ mysql_query($sql) or die("ERROR: " . mysql_error());
 			checkId,
 			serverAddTime,
 			clientTime,
-	
+
 			userName,
-	
+
 			udcKey,
 			udcValue
 		)
@@ -54,18 +88,18 @@ mysql_query($sql) or die("ERROR: " . mysql_error());
 			$checkId,
 			NOW(),
 			'$clientTime',
-	
+
 			'$userName',
-	
+
 			'$udcKey',
 			'$udcValueEscaped'
 		)";
-	
+
 		if ( $debug == "true" )
 		{
 			echo "DEBUG EXECUTING SQL: $sql\n";
 		}
-	
+
 		//------------------------------------------
 		// Do the INSERT, if errors exit (1062==Duplicate Key, which we dont kare about here...)
 		mysql_query($sql);

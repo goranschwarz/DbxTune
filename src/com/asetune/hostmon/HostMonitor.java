@@ -15,11 +15,11 @@ import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.utils.Configuration;
-import com.asetune.utils.StringUtil;
-
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Session;
+
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 /**
  * FIXME: describe me

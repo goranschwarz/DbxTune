@@ -22,7 +22,6 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-
 import com.asetune.gui.ConnectionProgressCallback;
 import com.sybase.util.ds.interfaces.Service;
 import com.sybase.util.ds.interfaces.SyInterfacesDriver;
