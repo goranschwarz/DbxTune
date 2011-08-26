@@ -65,6 +65,25 @@ implements Runnable
 		init(props);
 	}
 
+	/**
+	 * Get a "public" string of how all writer are configured, no not reveal
+	 * passwords or sensitive information.
+	 */
+	public String getConfigStr()
+	{
+		String configStr = "";
+
+		// loop all writer classes
+		for (IPersistWriter pw : _writerClasses)
+		{
+			configStr += pw.getName() + "={" + pw.getConfigStr() + "}, ";
+		}
+		if (configStr.length() > 0)
+			configStr = configStr.substring(0, configStr.length()-2);
+		
+		return configStr;
+	}
+
 	/** Initialize various member of the class */
 	public synchronized void init(Configuration props)
 	throws Exception

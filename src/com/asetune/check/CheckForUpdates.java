@@ -35,6 +35,7 @@ import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
@@ -698,6 +699,18 @@ public class CheckForUpdates
 		String srvUser          = AseConnectionFactory.getUser();
 		String srvVersionStr    = mtd.aseVersionStr;
 
+		String usePcs           = "false";
+		String pcsConfig        = "";
+		if (PersistentCounterHandler.hasInstance())
+		{
+			PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+			if (pch.isRunning())
+			{
+				usePcs = "true";
+				pcsConfig = pch.getConfigStr();
+			}
+		}
+
 		if (srvName       != null) srvName.trim();
 		if (srvIpPort     != null) srvIpPort.trim();
 		if (srvUser       != null) srvUser.trim();
@@ -717,6 +730,9 @@ public class CheckForUpdates
 		urlParams.add("srvIpPort",           srvIpPort);
 		urlParams.add("srvUser",             srvUser);
 		urlParams.add("srvVersionStr",       srvVersionStr);
+
+		urlParams.add("usePcs",              usePcs);
+		urlParams.add("pcsConfig",           pcsConfig);
 
 		try
 		{
@@ -983,9 +999,9 @@ public class CheckForUpdates
 			// SEND OFF THE REQUEST
 			InputStream in;
 			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams, 1500);
+				in = sendHttpPost(urlStr, urlParams, 3000);
 			else
-				in = sendHttpParams(urlStr, urlParams, 1500);
+				in = sendHttpParams(urlStr, urlParams, 3000);
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;

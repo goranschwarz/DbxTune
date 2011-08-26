@@ -34,12 +34,15 @@
 	$srvUser            = getUrlParam('srvUser');
 	$srvVersionStr      = getUrlParam('srvVersionStr');
 
-
+	$usePcs             = getUrlParam('usePcs');
+	$pcsConfig          = getUrlParam('pcsConfig');
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
 	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
 	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+
+	$pcsConfig = mysql_real_escape_string($pcsConfig);
 
 	$sql = "insert into asemon_connect_info
 	(
@@ -54,7 +57,10 @@
 		srvName,
 		srvIpPort,
 		srvUser,
-		srvVersionStr
+		srvVersionStr,
+
+		usePcs,
+		pcsConfig
 	)
 	values
 	(
@@ -69,7 +75,10 @@
 		'$srvName',
 		'$srvIpPort',
 		'$srvUser',
-		'$srvVersionStr'
+		'$srvVersionStr',
+
+		'$usePcs',
+		'$pcsConfig'
 	)";
 
 	if ( $debug == "true" )

@@ -81,6 +81,9 @@ public class PersistWriterJdbc
 	//private boolean _h2NewDbOnDateChange = true;
 	//private String  _h2DbDateParseFormat = "yyyy-MM-dd_HH.mm";
 
+	private Configuration _config    = null;
+	private String        _configStr = null;
+
 	
 	/*---------------------------------------------------
 	** Constructors
@@ -170,8 +173,22 @@ public class PersistWriterJdbc
 	}
 
 	@Override
+	public Configuration getConfig()
+	{
+		return _config;
+	}
+
+	@Override
+	public String getConfigStr()
+	{
+		return _configStr;
+	}
+
+	@Override
 	public void init(Configuration props) throws Exception
 	{
+		_config = props;
+
 		String propPrefix = "PersistWriterJdbc.";
 		String propname = null;
 
@@ -198,7 +215,6 @@ public class PersistWriterJdbc
 		// Set _h2DbDateParseFormat, _h2NewDbOnDateChange if the URL has variable ${DATE:format=someFormat;roll=true|false}
 		urlSubstitution(null, _jdbcUrl);
 
-//		String configStr = "jdbcDriver='"+_jdbcDriver+"', jdbcUrl='"+_jdbcUrl+"', jdbcUser='"+_jdbcUser+"', jdbcPasswd='*hidden*'.";
 //		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
 		_logger.info ("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"'.");
 		_logger.info ("                  "+propPrefix+"jdbcDriver           = " + _jdbcDriver);
@@ -210,7 +226,17 @@ public class PersistWriterJdbc
 		_logger.info ("                  "+propPrefix+"h2NewDbOnDateChange  = " + _h2NewDbOnDateChange);
 		_logger.info ("                  "+propPrefix+"h2DateParseFormat    = " + _h2DbDateParseFormat);
 		_logger.info ("                  "+propPrefix+"startH2NetworkServer = " + _startH2NetworkServer);
-	}
+
+		_configStr = 
+			"jdbcDriver="            + _jdbcDriver +
+			",jdbcUrl="              + _jdbcUrl +
+			",jdbcUser="             + _jdbcUser +
+			",jdbcKeepConnOpen="     + _keepConnOpen +
+			",h2NewDbOnDateChange="  + _h2NewDbOnDateChange +
+			",h2DateParseFormat="    + _h2DbDateParseFormat +
+			",startH2NetworkServer=" + _startH2NetworkServer +
+			"";
+}
 
 	@Override
 	protected void finalize() throws Throwable

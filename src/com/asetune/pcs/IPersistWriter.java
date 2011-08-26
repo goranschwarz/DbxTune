@@ -33,6 +33,17 @@ public interface IPersistWriter
 	public void close();
 
 	/**
+	 * Get the configuration which this writer is using.
+	 */
+	public Configuration getConfig();
+
+	/**
+	 * Get a "public" string of how the the writer is configured, no not reveal
+	 * passwords or sensitive information.
+	 */
+	public String getConfigStr();
+
+	/**
 	 * Checks if a Session has been started or not, if not started we should call startSession(PersistContainer)
 	 */
 	public boolean isSessionStarted();
