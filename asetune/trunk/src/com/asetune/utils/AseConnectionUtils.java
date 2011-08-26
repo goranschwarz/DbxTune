@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.gui.AseConfigMonitoringDialog;

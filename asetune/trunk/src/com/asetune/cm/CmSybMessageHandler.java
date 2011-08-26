@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.sybase.jdbcx.EedInfo;

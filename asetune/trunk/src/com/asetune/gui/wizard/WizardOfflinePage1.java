@@ -26,7 +26,6 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.netbeans.spi.wizard.WizardPage;
 
-
 import com.asetune.AseTune;
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;

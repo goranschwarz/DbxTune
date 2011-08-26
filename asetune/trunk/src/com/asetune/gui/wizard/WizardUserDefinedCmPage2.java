@@ -81,7 +81,7 @@ implements ActionListener
 	
 	private boolean    _firtsTimeRender = true;
 
-	private JTextArea   _sqlOpen_txt          = new JTextArea();        // A field to enter a query in
+	private JTextArea   _sqlInit_txt          = new JTextArea();        // A field to enter a query in
 	private JTextArea   _sql_txt              = new JTextArea();        // A field to enter a query in
 	private JLabel      _needVersion_lbl      = new JLabel("Min ASE Version");
 	private JTextField  _needVersion_txt      = new JTextField(NEED_VERSION_DEFAULT);
@@ -104,7 +104,7 @@ implements ActionListener
 		JButton button;
 		setLayout(new MigLayout("", "[grow]", ""));
 
-		_sqlOpen_txt         .setName("sqlOpen");
+		_sqlInit_txt         .setName("sqlInit");
 		_sql_txt             .setName("sql");
 		_sqlClose_txt        .setName("sqlClose");
 		_needVersion_txt     .setName("needVersion");
@@ -127,7 +127,7 @@ implements ActionListener
 				"</ul></html>");
 
 		add( new MultiLineLabel(WIZ_HELP1), "wmin 100, span, pushx, growx, wrap" );
-		add(_sqlOpen_txt, "growx, pushx, wrap");
+		add(_sqlInit_txt, "growx, pushx, wrap");
 
 		button = new JButton("Test SQL");
 		button.addActionListener(this);
@@ -174,7 +174,7 @@ implements ActionListener
 		CountersModel cm = GetCounters.getCmByName(cmName);
 		if (cm != null)
 		{
-			_sqlOpen_txt    .setText( cm.getSqlInit() );
+			_sqlInit_txt    .setText( cm.getSqlInit() );
 			_sql_txt        .setText( cm.getSql() );
 			_sqlClose_txt   .setText( cm.getSqlClose() );
 			_needVersion_txt.setText( cm.getDependsOnVersion()+"" );
@@ -281,7 +281,7 @@ implements ActionListener
 //		System.out.println("Source("+name+"): " + src);
 
 		String sql = null;
-		if (name.equals("BUTTON_TEST_SQL_OPEN"))    sql = _sqlOpen_txt .getText();
+		if (name.equals("BUTTON_TEST_SQL_OPEN"))    sql = _sqlInit_txt .getText();
 		if (name.equals("BUTTON_TEST_SQL_REFRESH")) sql = _sql_txt     .getText();
 		if (name.equals("BUTTON_TEST_SQL_CLOSE"))   sql = _sqlClose_txt.getText();
 
@@ -300,7 +300,7 @@ implements ActionListener
 
 				// Get the SQL that was used in QueryWindow and put it back in...
 				String retSql = qw.getSql();
-				if (name.equals("BUTTON_TEST_SQL_OPEN"))    _sqlOpen_txt .setText(retSql);
+				if (name.equals("BUTTON_TEST_SQL_OPEN"))    _sqlInit_txt .setText(retSql);
 				if (name.equals("BUTTON_TEST_SQL_REFRESH")) _sql_txt     .setText(retSql);
 				if (name.equals("BUTTON_TEST_SQL_CLOSE"))   _sqlClose_txt.setText(retSql);
 			}

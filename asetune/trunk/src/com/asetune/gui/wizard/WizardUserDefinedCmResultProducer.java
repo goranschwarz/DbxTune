@@ -178,7 +178,7 @@ implements WizardResultProducer
 		String name             = getKey("name"              , wizdata);
 		String displayName      = getKey("displayName"       , wizdata);
 		String description      = getKey("description"       , wizdata);
-		String sqlOpen          = getKey("sqlOpen"           , wizdata);
+		String sqlInit          = getKey("sqlInit"           , wizdata);
 		String sql              = getKey("sql"               , wizdata);
 		String sqlClose         = getKey("sqlClose"          , wizdata);
 		String needVersion      = getKey("needVersion"       , wizdata);
@@ -212,7 +212,7 @@ implements WizardResultProducer
 		                         out +=        prefix + "name              = " + name;
 		                         out += "\n" + prefix + "displayName       = " + displayName;
 		                         out += "\n" + prefix + "description       = " + description;
-		if (hasVal(sqlOpen))     out += "\n" + prefix + "sqlOpen           = " + sqlOpen .replaceAll("\n", " \\\\\n");
+		if (hasVal(sqlInit))     out += "\n" + prefix + "sqlInit           = " + sqlInit .replaceAll("\n", " \\\\\n");
 	                             out += "\n" + prefix + "sql               = " + sql     .replaceAll("\n", " \\\\\n");
 		if (hasVal(sqlClose))    out += "\n" + prefix + "sqlClose          = " + sqlClose.replaceAll("\n", " \\\\\n");
 		if (hasVal(needVersion)) out += "\n" + prefix + "needVersion       = " + needVersion;
@@ -250,7 +250,7 @@ implements WizardResultProducer
 		String name             = getKey("name"              , wizdata);
 		String displayName      = getKey("displayName"       , wizdata);
 		String description      = getKey("description"       , wizdata);
-		String sqlOpen          = getKey("sqlOpen"           , wizdata);
+		String sqlInit          = getKey("sqlInit"           , wizdata);
 		String sql              = getKey("sql"               , wizdata);
 		String sqlClose         = getKey("sqlClose"          , wizdata);
 		String needVersion      = getKey("needVersion"       , wizdata);
@@ -280,7 +280,7 @@ implements WizardResultProducer
 		                         out.setProperty(prefix + "name",             name);
 		                         out.setProperty(prefix + "displayName",      displayName);
 		                         out.setProperty(prefix + "description",      description);
-		if (hasVal(sqlOpen))     out.setProperty(prefix + "sqlOpen",          sqlOpen);
+		if (hasVal(sqlInit))     out.setProperty(prefix + "sqlInit",          sqlInit);
 		                         out.setProperty(prefix + "sql",              sql);
 		if (hasVal(sqlClose))    out.setProperty(prefix + "sqlClose",         sqlClose);
 		if (hasVal(needVersion)) out.setProperty(prefix + "needVersion",      needVersion);

@@ -14,13 +14,13 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
+import net.miginfocom.swing.MigLayout;
+
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.Cache;
 import com.asetune.AseConfigText.ConfigType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
-
-import net.miginfocom.swing.MigLayout;
 
 public class AseConfigViewDialog
 extends JDialog

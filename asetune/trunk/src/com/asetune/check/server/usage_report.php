@@ -23,16 +23,18 @@
 <BODY>
 
 <h1>Choose a Specific Report Below</h1>
-<A HREF="http://www.asemon.se/usage_report.php?summary=true&conn=true&udc=true&usage=true&full=true">All below reports</A> <BR>
-<BR>
 <A HREF="http://www.asemon.se/usage_report.php?summary_count=true"  >Summary Report, Start Count</A>      <BR>
 <A HREF="http://www.asemon.se/usage_report.php?summary_country=true">Summary Report, Country Count</A>    <BR>
 <A HREF="http://www.asemon.se/usage_report.php?summary_version=true">Summary Report, Version Count</A>    <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true" >Summary Report, ASE Version Count</A><BR>
 <A HREF="http://www.asemon.se/usage_report.php?summary_user=true"   >Summary Report, on User</A>          <BR>
 <A HREF="http://www.asemon.se/usage_report.php?conn=true"           >Connection Info Report</A>           <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A><BR>
 <A HREF="http://www.asemon.se/usage_report.php?usage=true"          >Counter Usage Info Report</A>        <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (last 300)</A>           <BR>
+<BR>
+Admin:<BR>
+<A HREF="http://www.asemon.se/db_cleanup.php"                       >DB Cleanup, remove 'gorans' etc</A>  <BR>
 
 <?php
 	//------------------------------------------
@@ -41,6 +43,7 @@
 	$rpt_summary_count      = $_GET['summary_count'];
 	$rpt_summary_country    = $_GET['summary_country'];
 	$rpt_summary_version    = $_GET['summary_version'];
+	$rpt_summary_asever     = $_GET['summary_asever'];
 	$rpt_summary_user       = $_GET['summary_user'];
 	$rpt_conn               = $_GET['conn'];
 	$rpt_udc                = $_GET['udc'];
@@ -147,6 +150,10 @@
 	//		);
 	//	";
 	//	mysql_query($sql) or die("ERROR: " . mysql_error());
+
+	//	$sql = "delete from asemon_usage where user_name = 'rlarsson'";        mysql_query($sql) or die("ERROR: " . mysql_error());
+	//	$sql = "delete from asemon_usage where user_name = 'gorans'";          mysql_query($sql) or die("ERROR: " . mysql_error());
+	//	$sql = "delete from asemon_usage where user_name = ''";                mysql_query($sql) or die("ERROR: " . mysql_error());
 
 	//	$sql = "alter table asemon_usage add column sun_desktop   varchar(15)";        mysql_query($sql) or die("ERROR: " . mysql_error());
 	//	$sql = "alter table asemon_usage add column user_country  varchar(5)";         mysql_query($sql) or die("ERROR: " . mysql_error());
@@ -524,6 +531,58 @@
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "Summary Report, Version Count");
+	}
+
+	//-------------------------------------------
+	// SUMMARY REPORT, ASE VERSION COUNT
+	//-------------------------------------------
+	if ( $rpt_summary_asever == "true" )
+	{
+		$sql = "
+			SELECT srvVersion, sum(isClusterEnabled) as clusterCount, count(*) as ConnectCount
+			FROM asemon_connect_info
+			GROUP BY srvVersion
+			ORDER BY srvVersion desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
+
+		$sql = "
+			SELECT srvVersionStr, count(*) as ConnectCount
+			FROM asemon_connect_info
+			GROUP BY srvVersionStr
+			ORDER BY srvVersionStr desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
+
+		$sql = "
+			SELECT srvVersionStr, count(*) as ConnectCount
+			FROM asemon_connect_info
+			WHERE isClusterEnabled > 0
+			GROUP BY srvVersionStr
+			ORDER BY srvVersionStr desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Summary Report, Connected to ASE CLUSTER Version Count");
 	}
 
 	//-------------------------------------------

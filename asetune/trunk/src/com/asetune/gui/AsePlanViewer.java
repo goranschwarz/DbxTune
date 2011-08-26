@@ -21,7 +21,6 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.PropertyConfigurator;
 
-
 import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.SwingUtils;
