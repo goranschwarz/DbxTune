@@ -11,11 +11,14 @@ public class VersionInfo
 {
 //	public static Calendar SP_MISSING_STATS_CRDATE = new GregorianCalendar(2009, 12, 10); // YYYY, MM, DD
 
-	public static final String  SP_MISSING_STATS_CR_STR       = "2010-11-16";  // "YYYY-MM-DD"
+	public static final String  SP_MISSING_STATS_CR_STR       = "2011-09-01";  // "YYYY-MM-DD"
 	public static       Date    SP_MISSING_STATS_CRDATE       = null;
 
 	public static final String  SP_ASETUNE_RA_STATS_CR_STR    = "2011-08-15";  // "YYYY-MM-DD"
 	public static       Date    SP_ASETUNE_RA_STATS_CRDATE    = null;
+
+	public static final String  SP_ASETUNE_QP_METRICS_CR_STR  = "2011-09-01";  // "YYYY-MM-DD"
+	public static       Date    SP_ASETUNE_QP_METRICS_CRDATE  = null;
 
 	public static final String  SP_LIST_UNUSED_INDEXES_CR_STR = "2011-04-14";  // "YYYY-MM-DD"
 	public static       Date    SP_LIST_UNUSED_INDEXES_CRDATE = null;
@@ -46,7 +49,7 @@ public class VersionInfo
 
 			SP_MISSING_STATS_CRDATE       = sdf.parse(SP_MISSING_STATS_CR_STR);
 			SP_ASETUNE_RA_STATS_CRDATE    = sdf.parse(SP_ASETUNE_RA_STATS_CR_STR);
-			SP_LIST_UNUSED_INDEXES_CRDATE = sdf.parse(SP_LIST_UNUSED_INDEXES_CR_STR);
+			SP_ASETUNE_QP_METRICS_CRDATE  = sdf.parse(SP_ASETUNE_QP_METRICS_CR_STR);
 
 			SP_WHOISW_CRDATE              = sdf.parse(SP_WHOISW_CR_STR);
 			SP_WHOISB_CRDATE              = sdf.parse(SP_WHOISB_CR_STR);

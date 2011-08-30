@@ -39,8 +39,8 @@ import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.SwingUtils;
 
 
-public class AboutBox 
-	extends JDialog 
+public class AboutBox
+	extends JDialog
 	implements ActionListener, HyperlinkListener
 {
 	private static Logger _logger              = Logger.getLogger(AboutBox.class);
@@ -72,7 +72,7 @@ public class AboutBox
 
 		setVisible(true);
 	}
-	
+
 	public void actionPerformed(ActionEvent e)
 	{
 		if ( _ok_but.equals(e.getSource()) )
@@ -89,13 +89,13 @@ public class AboutBox
 	}
 
 	@SuppressWarnings("unused")
-	public void hyperlinkUpdate(HyperlinkEvent hle) 
-	{  
-		if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) 
-		{  
+	public void hyperlinkUpdate(HyperlinkEvent hle)
+	{
+		if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType()))
+		{
 			URL    url    = hle.getURL();
 			String urlStr = ""+hle.getURL();
-			_logger.info("You clicked on '"+urlStr+"'. On Windows systems a mail client or http browser will be opened.");  
+			_logger.info("You clicked on '"+urlStr+"'. On Windows systems a mail client or http browser will be opened.");
 
 			//Desktop.getDesktop().mail(someURI);
 //			if ( System.getProperty("os.name").startsWith("Windows"))
@@ -118,15 +118,15 @@ public class AboutBox
 		}
 	}
 
-	
+
 	/*---------------------------------------------------
 	** BEGIN: component initialization
 	**---------------------------------------------------
 	*/
-	protected void initComponents() 
+	protected void initComponents()
 	{
 		setTitle("About");
-		
+
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("ins 0","[fill]",""));
 
@@ -148,18 +148,18 @@ public class AboutBox
 
 	}
 
-	protected JPanel initTabAbout() 
+	protected JPanel initTabAbout()
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 20 20 20 20","[grow]",""));
 
 		JLabel icon        = new JLabel(SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif"));
 
-		JLabel appName     = new JLabel(); 
+		JLabel appName     = new JLabel();
 		appName.setText(Version.getAppName());
 		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
 
-		String str = 
+		String str =
 			"<html>" +
 			"<HEAD> " +
 			"<style type=\"text/css\"> " +
@@ -188,19 +188,20 @@ public class AboutBox
 			"<UL>" +
 			"<LI>Jean-Paul Martin  for initial version of AseMon.<br>" +
 			"<LI>Reine Lindqvist   for various help.<br>" +
+			"<LI>Niklas Andersson  for various help.<br>" +
 			"</UL>" +
 			"<br>" +
 			"If this application gave you better performance, <br>" +
 			"<B>please</B> donate whatever you think it was worth: <br>" +
 			"<A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
 			"</html>";
-		
+
 		JEditorPane feedback   = new JEditorPane("text/html", str);
 		feedback.setEditable(false);
-		feedback.setOpaque(false);  
+		feedback.setOpaque(false);
 		feedback.addHyperlinkListener(this);
 
-		
+
 		panel.add(icon,       "center, wrap");
 		panel.add(appName,    "center, wrap 20");
 
@@ -209,7 +210,7 @@ public class AboutBox
 		return panel;
 	}
 
-	protected JPanel initTabTodo() 
+	protected JPanel initTabTodo()
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout());
@@ -217,22 +218,22 @@ public class AboutBox
 		JEditorPane htmlPane   = new JEditorPane();
 		htmlPane.addHyperlinkListener(this);
 		htmlPane.setEditable(false);
-		htmlPane.setOpaque(false);  
+		htmlPane.setOpaque(false);
 
 		URL url = Version.class.getResource("todo.html");
-		if (url != null) 
+		if (url != null)
 		{
-			try 
+			try
 			{
 				htmlPane.setPage(url);
-			} 
-			catch (IOException e) 
+			}
+			catch (IOException e)
 			{
 				htmlPane.setText("Attempted to read a bad URL: " + url);
 				_logger.error("Attempted to read a bad URL: " + url);
 			}
-		} 
-		else 
+		}
+		else
 		{
 			htmlPane.setText("Couldn't find file: todo.html");
 		}
@@ -242,7 +243,7 @@ public class AboutBox
 		return panel;
 	}
 
-	protected JPanel initTabHistory() 
+	protected JPanel initTabHistory()
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout());
@@ -250,22 +251,22 @@ public class AboutBox
 		JEditorPane htmlPane   = new JEditorPane();
 		htmlPane.addHyperlinkListener(this);
 		htmlPane.setEditable(false);
-		htmlPane.setOpaque(false);  
+		htmlPane.setOpaque(false);
 
 		URL url = Version.class.getResource("history.html");
-		if (url != null) 
+		if (url != null)
 		{
-			try 
+			try
 			{
 				htmlPane.setPage(url);
-			} 
-			catch (IOException e) 
+			}
+			catch (IOException e)
 			{
 				htmlPane.setText("Attempted to read a bad URL: " + url);
 				_logger.error("Attempted to read a bad URL: " + url);
 			}
-		} 
-		else 
+		}
+		else
 		{
 			htmlPane.setText("Couldn't find file: history.html");
 		}
@@ -274,9 +275,9 @@ public class AboutBox
 		panel.add(new JScrollPane(htmlPane), BorderLayout.CENTER);
 		return panel;
 	}
-	
-	
-	protected JPanel initTabSystemInfo() 
+
+
+	protected JPanel initTabSystemInfo()
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout());
@@ -298,7 +299,7 @@ public class AboutBox
 			Vector<String> row = new Vector<String>();
 			row.add(key);
 			row.add(val);
-			
+
 			rows.add(row);
 		}
 
@@ -307,17 +308,17 @@ public class AboutBox
 		tab.packAll(); // set size so that all content in all cells are visible
 		tab.setSortable(true);
 		tab.setColumnControlVisible(true);
-		
+
 		panel.add(new JScrollPane(tab), BorderLayout.CENTER);
 		return panel;
 	}
-	
-	
+
+
 	/*---------------------------------------------------
 	** END: component initialization
 	**---------------------------------------------------
 	*/
-	
+
 	public static void main(String[] args)
 	{
 		try
@@ -328,7 +329,7 @@ public class AboutBox
 		{
 			e.printStackTrace();
 		}
-		
+
 		new AboutBox(null);
 	}
 }

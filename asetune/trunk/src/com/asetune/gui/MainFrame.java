@@ -132,10 +132,10 @@ public class MainFrame
 	public static final String ACTION_OPEN_REFRESH_RATE         = "OPEN_REFRESH_RATE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW     = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW     = "OPEN_GRAPH_GRAPH_VIEW";
-	public static final String ACTION_OPEN_ASE_CONFIG_MON       = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_ASE_CONFIG_VIEW      = "ACTION_OPEN_ASE_CONFIG_VIEW";
 	public static final String ACTION_OPEN_TCP_PANEL_CONFIG     = "OPEN_TCP_PANEL_CONFIG";
 
+	public static final String ACTION_OPEN_ASE_CONFIG_MON       = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL          = "OPEN_CAPTURE_SQL";
 	public static final String ACTION_OPEN_SQL_QUERY_WIN        = "OPEN_SQL_QUERY_WIN";
 	public static final String ACTION_OPEN_LOCK_TOOL            = "OPEN_LOCK_TOOL";
@@ -195,7 +195,6 @@ public class MainFrame
 	private JMenu               _preferences_m          = new JMenu("Preferences");
 	private JMenuItem           _refreshRate_mi         = new JMenuItem("Refresh Rate...");
 	private JCheckBoxMenuItem   _autoResizePcTable_mi   = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
-	private JMenuItem           _aseConfMon_mi          = new JMenuItem("Configure ASE for Monitoring...");
 	private JMenuItem           _aseConfigView_mi       = new JMenuItem("View ASE Configuration...");
 	private JMenuItem           _tcpSettingsConf_mi     = new JMenuItem("Change 'Counter Table' Parameters...");
 	private JMenuItem           _counterTabView_mi      = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
@@ -204,6 +203,7 @@ public class MainFrame
 	
 	// Tools
 	private JMenu               _tools_m                = new JMenu("Tools");
+	private JMenuItem           _aseConfMon_mi          = new JMenuItem("Configure ASE for Monitoring...");
 	private JMenuItem           _captureSql_mi          = new JMenuItem("Capture SQL...");
 	private JMenu               _preDefinedSql_m        = null;
 	private JMenuItem           _sqlQuery_mi            = new JMenuItem("SQL Query Window...");
@@ -376,13 +376,13 @@ public class MainFrame
 		_offlineSessionsView_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
 		_autoResizePcTable_mi  .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
 		_refreshRate_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
-		_aseConfMon_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_aseConfigView_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
 		_tcpSettingsConf_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
 		_counterTabView_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.gif"));
 		_graphView_mi          .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
 		_graphs_m              .setIcon(SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
 		
+		_aseConfMon_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_captureSql_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 		_sqlQuery_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
 //		_lockTool_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
@@ -411,13 +411,13 @@ public class MainFrame
 		_view_m.add(_preferences_m);
 			_preferences_m.add(_autoResizePcTable_mi);
 			_preferences_m.add(_refreshRate_mi);
-		_view_m.add(_aseConfMon_mi);
 		_view_m.add(_aseConfigView_mi);
 		_view_m.add(_tcpSettingsConf_mi);
 		_view_m.add(_counterTabView_mi);
 		_view_m.add(_graphView_mi);
 		_view_m.add(_graphs_m);
 		
+		_tools_m.add(_aseConfMon_mi);
 		_tools_m.add(_captureSql_mi);
 		_preDefinedSql_m = createPredefinedSqlMenu();
 		if (_preDefinedSql_m != null) _tools_m.add(_preDefinedSql_m);
@@ -439,12 +439,12 @@ public class MainFrame
 		_offlineSessionsView_mi.setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
 		_autoResizePcTable_mi  .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
 		_refreshRate_mi        .setActionCommand(ACTION_OPEN_REFRESH_RATE);
-		_aseConfMon_mi         .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_aseConfigView_mi      .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
 		_tcpSettingsConf_mi    .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
 		_counterTabView_mi     .setActionCommand(ACTION_OPEN_COUNTER_TAB_VIEW);
 		_graphView_mi          .setActionCommand(ACTION_OPEN_GRAPH_GRAPH_VIEW);
 
+		_aseConfMon_mi         .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_captureSql_mi         .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
 		_sqlQuery_mi           .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
 //		_lockTool_mi           .setActionCommand(ACTION_OPEN_LOCK_TOOL);
@@ -464,12 +464,12 @@ public class MainFrame
 		_offlineSessionsView_mi.addActionListener(this);
 		_autoResizePcTable_mi  .addActionListener(this);
 		_refreshRate_mi        .addActionListener(this);
-		_aseConfMon_mi         .addActionListener(this);
 		_aseConfigView_mi      .addActionListener(this);
 		_tcpSettingsConf_mi    .addActionListener(this);
 		_counterTabView_mi     .addActionListener(this);
 		_graphView_mi          .addActionListener(this);
 
+		_aseConfMon_mi         .addActionListener(this);
 		_captureSql_mi         .addActionListener(this);
 		_sqlQuery_mi           .addActionListener(this);
 //		_lockTool_mi           .addActionListener(this);
@@ -491,6 +491,7 @@ public class MainFrame
 		_sqlQuery_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.ALT_MASK));
 		_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, ActionEvent.ALT_MASK));
 		_tcpSettingsConf_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.ALT_MASK));
+		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, ActionEvent.ALT_MASK));
 
 		
 		//--------------------------
@@ -838,13 +839,13 @@ public class MainFrame
 		// Monitor Server components
 		_autoResizePcTable_mi.setEnabled(true);
 		_refreshRate_mi      .setEnabled(true);
-		_aseConfMon_mi       .setEnabled(true);
 		_aseConfigView_mi    .setEnabled(true);
 		_tcpSettingsConf_mi  .setEnabled(true);
 		_counterTabView_mi   .setEnabled(true);
 		_graphView_mi        .setEnabled(true);
 		_graphs_m            .setEnabled(true);
 
+		_aseConfMon_mi       .setEnabled(true);
 		_captureSql_mi       .setEnabled(true);
 		if (_preDefinedSql_m != null) _preDefinedSql_m.setEnabled(true);
 		_sqlQuery_mi         .setEnabled(true);
@@ -861,13 +862,13 @@ public class MainFrame
 		// Monitor Server components
 		_autoResizePcTable_mi.setEnabled(true);
 		_refreshRate_mi      .setEnabled(false);
-		_aseConfMon_mi       .setEnabled(false);
 		_aseConfigView_mi    .setEnabled(true);
 		_tcpSettingsConf_mi  .setEnabled(true);
 		_counterTabView_mi   .setEnabled(true);
 		_graphView_mi        .setEnabled(true);
 		_graphs_m            .setEnabled(true);
 
+		_aseConfMon_mi       .setEnabled(false);
 		_captureSql_mi       .setEnabled(false);
 		if (_preDefinedSql_m != null) _preDefinedSql_m.setEnabled(false);
 		_sqlQuery_mi         .setEnabled(false);
@@ -1095,7 +1096,7 @@ public class MainFrame
 		{
 			_logger.debug("called: ACTION_GOTO_BLOCKED_TAB");
 
-			String toTabName = "Blocking";
+			String toTabName = GetCounters.CM_DESC__BLOCKING; // "Blocking"
 			JTabbedPane tabPane = getTabbedPane();
 			if (tabPane != null)
 				tabPane.setSelectedIndex(tabPane.indexOfTab(toTabName));
@@ -1105,7 +1106,7 @@ public class MainFrame
 		{
 			_logger.debug("called: ACTION_GOTO_DATABASE_TAB");
 
-			String toTabName = "Databases";
+			String toTabName = GetCounters.CM_DESC__OPEN_DATABASES; // "Databases"
 			JTabbedPane tabPane = getTabbedPane();
 			if (tabPane != null)
 				tabPane.setSelectedIndex(tabPane.indexOfTab(toTabName));

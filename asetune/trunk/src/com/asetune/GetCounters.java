@@ -28,6 +28,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -45,6 +46,7 @@ import com.asetune.cm.CountersModelAppend;
 import com.asetune.cm.CountersModelUserDefined;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.sql.VersionInfo;
+import com.asetune.gui.AseConfigMonitoringDialog;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
@@ -313,6 +315,9 @@ extends Thread
 	/** is sp_configure 'capture missing statistics' set or not */
 	protected boolean _config_captureMissingStatistics = false;
 
+	/** is sp_configure 'enable metrics capture' set or not */
+	protected boolean _config_enableMetricsCapture = false;
+
 	
 	public static final String TRANLOG_DISK_IO_TOOLTIP =
 		  "Below is a table that describes how a fast or slow disk affects number of transactions per second.<br>" +
@@ -333,7 +338,118 @@ extends Thread
 		  "The above table was found in the document: <br> " +
 		  "http://www.sybase.com/detail?id=1091630<br>" +
 		  "http://www.sybase.com/files/White_Papers/Managing-DBMS-Workloads-v1.0-WP.pdf<br>";
+
 	
+	////////////////////////////////////////////////////////////////////////////////
+	// NOTE: if you add a CM, also add it to class: CounterSetTemplates
+	////////////////////////////////////////////////////////////////////////////////
+	public static final String CM_NAME__SUMMARY                 = SummaryPanel.CM_NAME;
+	public static final String CM_DESC__SUMMARY                 = "Summary";
+
+	public static final String CM_NAME__OBJECT_ACTIVITY         = "CMobjectActivity";
+	public static final String CM_DESC__OBJECT_ACTIVITY         = "Objects";
+
+	public static final String CM_NAME__PROCESS_ACTIVITY        = "CMprocessActivity";
+	public static final String CM_DESC__PROCESS_ACTIVITY        = "Processes";
+
+	public static final String CM_NAME__OPEN_DATABASES          = "CMopenDatabases";
+	public static final String CM_DESC__OPEN_DATABASES          = "Databases";
+
+	public static final String CM_NAME__TEMPDB_ACTIVITY         = "CMtempdbActivity";
+	public static final String CM_DESC__TEMPDB_ACTIVITY         = "Temp Db";
+
+	public static final String CM_NAME__SYS_WAIT                = "CMsysWait";
+	public static final String CM_DESC__SYS_WAIT                = "Waits";
+
+	public static final String CM_NAME__ENGINE                  = "CMengine";
+	public static final String CM_DESC__ENGINE                  = "Engines";
+
+	public static final String CM_NAME__SYS_LOAD                = "CMsysLoad";
+	public static final String CM_DESC__SYS_LOAD                = "System Load";
+
+	public static final String CM_NAME__DATA_CACHE              = "CMdataCache";
+	public static final String CM_DESC__DATA_CACHE              = "Caches";
+
+	public static final String CM_NAME__CACHE_POOL              = "CMcachePool";
+	public static final String CM_DESC__CACHE_POOL              = "Pools";
+
+	public static final String CM_NAME__DEVICE_IO               = "CMdeviceIo";
+	public static final String CM_DESC__DEVICE_IO               = "Devices";
+
+	public static final String CM_NAME__IO_QUEUE_SUM            = "CMioQueueSum";
+	public static final String CM_DESC__IO_QUEUE_SUM            = "IO Sum";
+
+	public static final String CM_NAME__IO_QUEUE                = "CMioQueue";
+	public static final String CM_DESC__IO_QUEUE                = "IO Queue";
+
+	public static final String CM_NAME__SPINLOCK_SUM            = "CMspinlockSum";
+	public static final String CM_DESC__SPINLOCK_SUM            = "Spinlock Sum";
+
+	public static final String CM_NAME__SYSMON                  = "CMsysmon";
+	public static final String CM_DESC__SYSMON                  = "Sysmon Raw";
+
+	public static final String CM_NAME__REP_AGENT               = "CMrepAgent";
+	public static final String CM_DESC__REP_AGENT               = "RepAgent";
+
+	public static final String CM_NAME__CACHED_PROC             = "CMcachedProcs";
+	public static final String CM_DESC__CACHED_PROC             = "Cached Procedures";
+
+	public static final String CM_NAME__PROC_CACHE_LOAD         = "CMprocCacheLoad";
+	public static final String CM_DESC__PROC_CACHE_LOAD         = "Procedure Cache Load";
+
+	public static final String CM_NAME__PROC_CALL_STACK         = "CMprocCallStack";
+	public static final String CM_DESC__PROC_CALL_STACK         = "Procedure Call Stack";
+
+	public static final String CM_NAME__CACHED_OBJECTS          = "CMcachedObjects";
+	public static final String CM_DESC__CACHED_OBJECTS          = "Cached Objects";
+
+	public static final String CM_NAME__ERRORLOG                = "CMerrolog";
+	public static final String CM_DESC__ERRORLOG                = "Errorlog";
+
+	public static final String CM_NAME__DEADLOCK                = "CMdeadlock";
+	public static final String CM_DESC__DEADLOCK                = "Deadlock";
+
+	public static final String CM_NAME__LOCK_TIMEOUT            = "CMlockTimeout";
+	public static final String CM_DESC__LOCK_TIMEOUT            = "Lock Timeout";
+
+	public static final String CM_NAME__PROC_CACHE_MODULE_USAGE = "CMpCacheModuleUsage";
+	public static final String CM_DESC__PROC_CACHE_MODULE_USAGE = "Proc Cache Module Usage";
+
+	public static final String CM_NAME__PROC_CACHE_MEMORY_USAGE = "CMpCacheMemoryUsage";
+	public static final String CM_DESC__PROC_CACHE_MEMORY_USAGE = "Proc Cache Memory Usage";
+
+	public static final String CM_NAME__STATEMENT_CACHE         = "CMstatementCache";
+	public static final String CM_DESC__STATEMENT_CACHE         = "Statement Cache";
+
+	public static final String CM_NAME__STATEMENT_CACHE_DETAILS = "CMstmntCacheDetails";
+	public static final String CM_DESC__STATEMENT_CACHE_DETAILS = "Statement Cache Details";
+
+	public static final String CM_NAME__ACTIVE_OBJECTS          = "CMactiveObjects";
+	public static final String CM_DESC__ACTIVE_OBJECTS          = "Active Objects";
+
+	public static final String CM_NAME__ACTIVE_STATEMENTS       = "CMactiveStatements";
+	public static final String CM_DESC__ACTIVE_STATEMENTS       = "Active Statements";
+
+	public static final String CM_NAME__BLOCKING                = "CMblocking";
+	public static final String CM_DESC__BLOCKING                = "Blocking";
+
+	public static final String CM_NAME__MISSING_STATISTICS      = "CMmissingStats";
+	public static final String CM_DESC__MISSING_STATISTICS      = "Missing Statistics";
+
+	public static final String CM_NAME__QP_METRICS              = "CMqpMetrics";
+	public static final String CM_DESC__QP_METRICS              = "QP Metrics";
+
+	public static final String CM_NAME__SP_MONITOR_CONFIG       = "CMspMonitorConfig";
+	public static final String CM_DESC__SP_MONITOR_CONFIG       = "sp_monitorconfig";
+
+	public static final String CM_NAME__OS_IOSTAT               = "CMosIostat";
+	public static final String CM_DESC__OS_IOSTAT               = "OS Disk Stat";
+
+	public static final String CM_NAME__OS_VMSTAT               = "CMosVmstat";
+	public static final String CM_DESC__OS_VMSTAT               = "OS CPU(vmstat)";
+
+	public static final String CM_NAME__OS_MPSTAT               = "CMosMpstat";
+	public static final String CM_DESC__OS_MPSTAT               = "OS CPU(mpstat)";
 	
 	
 	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
@@ -502,7 +618,11 @@ extends Thread
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
 
 		// Get some specific configurations
-		_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
+		if (aseVersion >= 15031)
+			_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
+
+		if (aseVersion >= 15020)
+			_config_enableMetricsCapture = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable metrics capture");
 
 		
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
@@ -615,7 +735,7 @@ extends Thread
 //			   )
 			if ( aseVersion >= 15031 && aseVersion < 16000 )
 			{
-				if (_config_captureMissingStatistics)
+				if (_config_captureMissingStatistics || _config_enableMetricsCapture)
 				{
 					_logger.debug("Checking for full transaction log in the master database.");
 	
@@ -705,8 +825,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 
-		name         = SummaryPanel.CM_NAME; //"CMsummary";
-		displayName  = "Summary";
+		name         = CM_NAME__SUMMARY;
+		displayName  = CM_DESC__SUMMARY;
 		description  = "Overview of how the system performs.";
 
 		SplashWindow.drawProgress("Loading: Counter Model '"+SummaryPanel.CM_NAME + "'");
@@ -1055,8 +1175,8 @@ extends Thread
 //
 //		(43 rows affected)
 
-		name         = "CMobjActivity";
-		displayName  = "Objects";
+		name         = CM_NAME__OBJECT_ACTIVITY;
+		displayName  = CM_DESC__OBJECT_ACTIVITY;
 		description  = "<html>" +
 							"Performance information about object/tables." +
 							"<br><br>" +
@@ -1131,7 +1251,7 @@ extends Thread
 				String tabRowCount = "";
 				String dbNameCol   = "DBName=db_name(A.DBID)";
 				String objNameCol  = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-				if (aseVersion >= 15000)
+				if (aseVersion >= 15020)
 				{
 					tabRowCount = "TabRowCount = convert(bigint,row_count(A.DBID, A.ObjectID)), \n";
 					dbNameCol  = "DBName";
@@ -1303,8 +1423,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMprocActivity";
-		displayName  = "Processes";
+		name         = CM_NAME__PROCESS_ACTIVITY;
+		displayName  = CM_DESC__PROCESS_ACTIVITY;
 		description  = "<html>" +
 							"<p>What SybasePIDs are doing what.</p>" +
 							"Tip:<br>" +
@@ -1768,9 +1888,32 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMdbActivity";
-		displayName  = "Databases";
-		description  = "Various information on a database level.";
+		name         = CM_NAME__OPEN_DATABASES;
+		displayName  = CM_DESC__OPEN_DATABASES;
+		description  = "<html>" +
+				"Various information on a database level.<br>" +
+				"<br>" +
+				"<b>Note:</b><br>" +
+				"Databases in the attached Graphs can be excluded<br>" +
+				"Exclude a database from graphs is based on:<br>" +
+				"<ul>" +
+				"    <li>Part of the skip list</li>" +
+				"    <li>Database size is lower than the skip limit</li>" +
+				"</ul>" +
+				"Db skip list can be changed with the property <code>"+CM_NAME__OPEN_DATABASES+".skipDbsInGraphs=db1ToSkip, db2ToSkip...</code><br>" +
+				"Db size limit can be changed with the property <code>"+CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs=#mb</code><br>" +
+				"In the file '<code>"+Configuration.getInstance(Configuration.USER_CONF).getFilename()+"</code>'.<br>" +
+				"The default skip list is: <code>master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs</code><br>" +
+				"The default size limit is: <code>300</code><br>" +
+				"If you <b>always</b> want a database present in the graphs, add database to property <code>"+CM_NAME__OPEN_DATABASES+".keepDbsInGraphs=db1, db2...</code><br>" +
+				"<br><br>" +
+				"Table Background colors:" +
+				"<ul>" +
+				"    <li>BLUE - A Database backup is in progress</li>" +
+				"    <li>PINK - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
+				"    <li>RED  - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
+				"</ul>" +
+				"</html>";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
 		
@@ -1780,7 +1923,7 @@ extends Thread
 		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {"enable monitoring=1"};
 		colsCalcDiff = new String[] {"AppendLogRequests", "AppendLogWaits"};
-		colsCalcPCT  = new String[] {"AppendLogContPct"};
+		colsCalcPCT  = new String[] {"AppendLogContPct", "LogSizeUsedPct"};
 		pkList       = new LinkedList<String>();
 		     pkList.add("DBName");
 
@@ -1791,6 +1934,19 @@ extends Thread
 				true, true)
 		{
 			private static final long serialVersionUID = 5078336367667465709L;
+
+			/** databases that should ALWAYS be part of the graphs */
+			private String[] _keepDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
+					.getProperty(CM_NAME__OPEN_DATABASES+".keepDbsInGraphs", ""));
+
+			/** databases that should be left OUT in the graphs */
+			private String[] _skipDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
+					.getProperty(CM_NAME__OPEN_DATABASES+".skipDbsInGraphs", 
+					"master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs"));
+
+			/** databases size smaller than this should be left OUT in the graphs */
+			private int _skipDbsWithSizeLtInGraphs = Configuration.getCombinedConfiguration()
+					.getIntProperty(CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs", 300);
 
 			@Override
 			public void initSql(Connection conn)
@@ -1805,6 +1961,21 @@ extends Thread
 					mtd.addColumn("monOpenDatabases", "AppendLogContPct",   "<html>" +
 					                                                             "Log Semaphore Contention in percent.<br> " +
 					                                                             "<b>Formula</b>: Pct = (AppendLogWaits / AppendLogRequests) * 100<br>" +
+					                                                        "</html>");
+					mtd.addColumn("monOpenDatabases", "DbSizeInMb",         "<html>Database size in MB</html>");
+					mtd.addColumn("monOpenDatabases", "LogSizeInMb",        "<html>" +
+					                                                             "Size in MB of the transaction log in the database. <br>" +
+					                                                             "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & 4) = 4<br>" +
+					                                                        "</html>");
+					mtd.addColumn("monOpenDatabases", "LogSizeFreeInMb",    "<html>" +
+					                                                             "How many MB have we got left in the Transaction log.<br> " +
+					                                                             "<b>Formula</b>: (lct_admin('logsegment_freepages',DBID)-lct_admin('reserved_for_rollbacks',DBID)) / (1024.0*1024.0/@@maxpagesize)<br>" +
+					                                                             "<b>Note 1</b>: This is the same formula as sp_helpdb 'dbname' uses to calculate space left.<br>" +
+					                                                             "<b>Note 2</b>: This might not work correct for databases with mixed data and log.<br>" +
+					                                                        "</html>");
+					mtd.addColumn("monOpenDatabases", "LogSizeUsedPct",     "<html>" +
+					                                                            "How many percent have we <b>used</b> of the transaction log. near 100% = Full<br> " +
+					                                                            "<b>Formula</b>: Pct = 100.0 - ((oval_LogSizeFreeInMb / oval_LogSizeInMb) * 100.0)<br>" +
 					                                                        "</html>");
 				}
 				catch (NameNotFoundException e) {/*ignore*/}
@@ -1833,12 +2004,26 @@ extends Thread
 					ceDbRecoveryStatus = "CeDbRecoveryStatus = db_recovery_status(DBID), ";
 				}
 
+				// If we implement the FreeLogSize, then we need to take away databases that are in recovery etc...
+				// Also calculate it into MB...
+				// The calculation is stolen from: sp_helpdb dbname
+				// declare	@pgsPerMb                int
+				// select  @pgsPerMb           = 1024*1024 / @@maxpagesize
+				// select @pgsPerMb   : 512=2K, 256=4K, 128=8K, 64=16K 
+				// select mbUsed = pagesUsed / @pgsPerMb
+
+				String DbSizeInMb      = "DbSizeInMb      = (select sum(u.size) from master..sysusages u where u.dbid = mond.DBID)                                   / (1024*1024/@@maxpagesize), \n";
+				String LogSizeInMb     = "LogSizeInMb     = (select sum(u.size) from master..sysusages u where u.dbid = mond.DBID and (segmap & 4) = 4)              / (1024*1024/@@maxpagesize), \n";
+				String LogSizeFreeInMb = "LogSizeFreeInMb = convert(numeric(10,1), (lct_admin('logsegment_freepages',DBID)-lct_admin('reserved_for_rollbacks',DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+				String LogSizeUsedPct  = "LogSizeUsedPct  = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+
 				cols1 += "DBName, DBID, " + ceDbRecoveryStatus + "AppendLogRequests, AppendLogWaits, \n" +
 				         "AppendLogContPct = CASE \n" +
 				         "                      WHEN AppendLogRequests > 0 \n" +
 				         "                      THEN convert(numeric(10,2), ((AppendLogWaits+0.0)/AppendLogRequests)*100.0) \n" +
 				         "                      ELSE convert(numeric(10,2), 0.0) \n" +
 				         "                   END, \n" +
+				         DbSizeInMb + LogSizeInMb + LogSizeFreeInMb + LogSizeUsedPct + 
 				         "TransactionLogFull, " + SuspendedProcesses + "BackupInProgress, LastBackupFailed, BackupStartTime, ";
 				cols2 += "";
 				cols3 += QuiesceTag;
@@ -1853,9 +2038,15 @@ extends Thread
 				if (cols.endsWith(", "))
 					cols = cols.substring(0, cols.length()-2);
 
+//				String sql = 
+//					"select " + cols + "\n" +
+//					"from monOpenDatabases \n" +
+//					"order by DBName \n";
+
 				String sql = 
 					"select " + cols + "\n" +
-					"from monOpenDatabases \n" +
+					"from monOpenDatabases mond\n" +
+					"where DBID in (select db.dbid from master..sysdatabases db where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
 					"order by DBName \n";
 
 				setSql(sql);
@@ -1875,6 +2066,13 @@ extends Thread
 				double calcAppendLogContPct;
 				int AppendLogContPctId = -1;
 
+				int    oval_LogSizeInMb;
+				double oval_LogSizeFreeInMb;
+				double calc_LogSizeUsedPct;
+				int pos_LogSizeInMb     = -1;
+				int pos_LogSizeFreeInMb = -1;
+				int pos_LogSizeUsedPct  = -1;
+
 				// Find column Id's
 				List<String> colNames = diffData.getColNames();
 				if (colNames == null)
@@ -1886,6 +2084,9 @@ extends Thread
 					if      (colName.equals("AppendLogContPct"))   AppendLogContPctId   = colId;
 					else if (colName.equals("AppendLogRequests"))  AppendLogRequestsId  = colId;
 					else if (colName.equals("AppendLogWaits"))     AppendLogWaitsId     = colId;
+					else if (colName.equals("LogSizeInMb"))        pos_LogSizeInMb      = colId;
+					else if (colName.equals("LogSizeFreeInMb"))    pos_LogSizeFreeInMb  = colId;
+					else if (colName.equals("LogSizeUsedPct"))     pos_LogSizeUsedPct   = colId;
 //					else if (colName.equals("TransactionLogFull")) TransactionLogFullId = colId;
 //					else if (colName.equals("SuspendedProcesses")) SuspendedProcessesId = colId;
 				}
@@ -1893,13 +2094,15 @@ extends Thread
 				// Loop on all diffData rows
 				for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 				{
-					AppendLogRequests = ((Number)diffData.getValueAt(rowId, AppendLogRequestsId)).intValue();
-					AppendLogWaits    = ((Number)diffData.getValueAt(rowId, AppendLogWaitsId   )).intValue();
+					AppendLogRequests    = ((Number)diffData.getValueAt(rowId, AppendLogRequestsId)).intValue();
+					AppendLogWaits       = ((Number)diffData.getValueAt(rowId, AppendLogWaitsId   )).intValue();
+					oval_LogSizeInMb     = ((Number)diffData.getValueAt(rowId, pos_LogSizeInMb    )).intValue();
+					oval_LogSizeFreeInMb = ((Number)diffData.getValueAt(rowId, pos_LogSizeFreeInMb)).doubleValue();
 
-					// int totIo = Reads + APFReads + Writes;
+					// COLUMN: AppendLogContPct
 					if (AppendLogRequests > 0)
 					{
-						// WaitTimePerWait = WaitTime / Waits;
+						// Formula: AppendLogContPct = (AppendLogWaits / AppendLogRequests) * 100;
 						calcAppendLogContPct = ((AppendLogWaits + 0.0) / AppendLogRequests) * 100.0;
 
 						BigDecimal newVal = new BigDecimal(calcAppendLogContPct).setScale(2, BigDecimal.ROUND_HALF_EVEN);
@@ -1907,6 +2110,18 @@ extends Thread
 					}
 					else
 						diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, AppendLogContPctId);
+
+					// COLUMN: LogSizeUsedPct
+					if (oval_LogSizeInMb > 0) // I doubt that oval_LogSizeInMb can be 0
+					{
+						// Formula: 
+						calc_LogSizeUsedPct = 100.0 - (((oval_LogSizeFreeInMb + 0.0) / oval_LogSizeInMb) * 100.0);
+
+						BigDecimal newVal = new BigDecimal(calc_LogSizeUsedPct).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+						diffData.setValueAt(newVal, rowId, pos_LogSizeUsedPct);
+					}
+					else
+						diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, pos_LogSizeUsedPct);
 				}
 
 // DELETE THIS ONE... it's in CmSummary now
@@ -1947,15 +2162,85 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
+				// Filter out rows we do NOT want in the list
+				// For rows we want to look at: put the row'ids in a list
+				ArrayList<Integer> rowList = new ArrayList<Integer>();
+				for (int i=0; i<this.size(); i++)
+				{
+					String dbname = this.getAbsString(i, "DBName");
+					int    dbsize = ((Number)this.getAbsValue (i, "DbSizeInMb")).intValue();
+
+					boolean keepDb = true;
+
+					if (StringUtil.contains(dbname, _skipDbsInGraphs))
+						keepDb = false;
+
+					if (dbsize < _skipDbsWithSizeLtInGraphs)
+						keepDb = false;
+
+					if (StringUtil.contains(dbname, _keepDbsInGraphs))
+						keepDb = true;
+						
+					if (keepDb)
+						rowList.add(new Integer(i));
+				}
+
 				if ("DbLogSemapContGraph".equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
-					Double[] dArray = new Double[this.size()];
-					String[] lArray = new String[dArray.length];
-					for (int i = 0; i < dArray.length; i++)
+					Double[] dArray = new Double[rowList.size()];
+					String[] lArray = new String[rowList.size()];
+					int d = 0;
+					for (int row : rowList)
 					{
-						lArray[i] = this.getAbsString        (i, "DBName");
-						dArray[i] = this.getDiffValueAsDouble(i, "AppendLogContPct");
+						String dbname = this.getAbsString        (row, "DBName");
+						Double dvalue = this.getDiffValueAsDouble(row, "AppendLogContPct");
+
+						lArray[d] = dbname;
+						dArray[d] = dvalue;
+						d++;
+					}
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(lArray);
+					tgdp.setData(dArray);
+				}
+				if ("DbLogSizeLeftGraph".equals(tgdp.getName()))
+				{
+					// Write 1 "line" for every database
+					Double[] dArray = new Double[rowList.size()];
+					String[] lArray = new String[rowList.size()];
+					int d = 0;
+					for (int row : rowList)
+					{
+						String dbname = this.getAbsString       (row, "DBName");
+						Double dvalue = this.getAbsValueAsDouble(row, "LogSizeFreeInMb");
+
+						lArray[d] = dbname;
+						dArray[d] = dvalue;
+						d++;
+					}
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(lArray);
+					tgdp.setData(dArray);
+				}
+				if ("DbLogSizeUsedPctGraph".equals(tgdp.getName()))
+				{
+					// Write 1 "line" for every database
+					Double[] dArray = new Double[rowList.size()];
+					String[] lArray = new String[rowList.size()];
+					int d = 0;
+					for (int row : rowList)
+					{
+						String dbname = this.getAbsString        (row, "DBName");
+						Double dvalue = this.getDiffValueAsDouble(row, "LogSizeUsedPct");
+
+						lArray[d] = dbname;
+						dArray[d] = dvalue;
+						d++;
 					}
 
 					// Set the values
@@ -1968,7 +2253,9 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("DbLogSemapContGraph", new TrendGraphDataPoint("DbLogSemapContGraph", new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData("DbLogSemapContGraph",   new TrendGraphDataPoint("DbLogSemapContGraph",   new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData("DbLogSizeLeftGraph",    new TrendGraphDataPoint("DbLogSizeLeftGraph",    new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData("DbLogSizeUsedPctGraph", new TrendGraphDataPoint("DbLogSizeUsedPctGraph", new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
 			final String finalDisplayName = displayName;
@@ -2009,23 +2296,60 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("DbLogSemapContGraph",
+			TrendGraph tg = null;
+			tg = new TrendGraph("DbLogSemapContGraph",
 					"DB Transaction Log Semaphore Contention", // Menu Checkbox text
 					"DB Transaction Log Semaphore Contention in Percent", // Label on the graph
 					new String[] { "runtime-replaced" }, 
 					false, tmp, false, -1);
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
+			tg = new TrendGraph("DbLogSizeLeftGraph",
+					"DB Transaction Log Space left in MB", // Menu Checkbox text
+					"DB Transaction Log Space left to use in MB", // Label on the graph
+					new String[] { "runtime-replaced" }, 
+					false, tmp, false, -1);
+			tmp.addTrendGraph(tg.getName(), tg, true);
+			
+			tg = new TrendGraph("DbLogSizeUsedPctGraph",
+					"DB Transaction Log Space used in PCT", // Menu Checkbox text
+					"DB Transaction Log Space used in Percent", // Label on the graph
+					new String[] { "runtime-replaced" }, 
+					true, tmp, false, -1);
+			tmp.addTrendGraph(tg.getName(), tg, true);
+			
 			// RED = FULL TRANSACTION LOG
 			if (conf != null) colorStr = conf.getProperty(name+".color.fullTranslog");
 			tcp.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 			{
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
-					Number  isLogFull = (Number) adapter.getValue(adapter.getColumnIndex("TransactionLogFull"));
+					Number isLogFull = (Number) adapter.getValue(adapter.getColumnIndex("TransactionLogFull"));
 					return isLogFull != null && isLogFull.intValue() > 0;
 				}
 			}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+			// PINK = TRANSACTION LOG at 90%
+			if (conf != null) colorStr = conf.getProperty(name+".color.almostFullTranslog");
+			tcp.addHighlighter( new ColorHighlighter(new HighlightPredicate()
+			{
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					Number almostLogFull = (Number) adapter.getValue(adapter.getColumnIndex("LogSizeUsedPct"));
+					return almostLogFull != null && almostLogFull.doubleValue() > 90.0;
+				}
+			}, SwingUtils.parseColor(colorStr, Color.PINK), null));
+
+			// BLUE = in 'DUMP DATABASE'
+			if (conf != null) colorStr = conf.getProperty(name+".color.dumpdb");
+			tcp.addHighlighter( new ColorHighlighter(new HighlightPredicate()
+			{
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					Number backupInProg = (Number) adapter.getValue(adapter.getColumnIndex("BackupInProgress"));
+					return backupInProg != null && backupInProg.intValue() > 0;
+				}
+			}, SwingUtils.parseColor(colorStr, Color.BLUE), null));
 		}
 
 		_CMList.add(tmp);
@@ -2070,8 +2394,8 @@ extends Thread
 		// InstanceID                     tinyint   The Server Instance Identifier (cluster only)
 		//
 
-		name         = "CMTmpdbActivity";
-		displayName  = "Temp Db";
+		name         = CM_NAME__TEMPDB_ACTIVITY;
+		displayName  = CM_DESC__TEMPDB_ACTIVITY;
 		description  = "Provides statistics for all local temporary databases.";
 		
 		needVersion  = 15500;
@@ -2241,8 +2565,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMsysWaitActivity";
-		displayName  = "Waits";
+		name         = CM_NAME__SYS_WAIT;
+		displayName  = CM_DESC__SYS_WAIT;
 		description  = "What different resources are the ASE Server waiting for.";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -2393,8 +2717,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMengineActivity";
-		displayName  = "Engines";
+		name         = CM_NAME__ENGINE;
+		displayName  = CM_DESC__ENGINE;
 		description  = "What ASE Server engine is working. In here we can also se what engines are doing/checking for IO's.";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -2668,8 +2992,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMSysLoad";
-		displayName  = "System Load";
+		name         = CM_NAME__SYS_LOAD;
+		displayName  = CM_DESC__SYS_LOAD;
 		description  = "<html>" +
 		                   "The SYSTEM load.<br>" +
 		                   "Here you can see the balancing between engines<br>" +
@@ -2857,8 +3181,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMcacheActivity";
-		displayName  = "Data Caches";
+		name         = CM_NAME__DATA_CACHE;
+		displayName  = CM_DESC__DATA_CACHE;
 		description  = "What (user defined) data caches have we got and how many 'chache misses' goes out to disk...";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -3094,8 +3418,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMpoolActivity";
-		displayName  = "Pools";
+		name         = CM_NAME__CACHE_POOL;
+		displayName  = CM_DESC__CACHE_POOL;
 		description  = "The cahces has 2K or 16K pools, how are they behaving?";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -3292,8 +3616,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMdeviceActivity";
-		displayName  = "Devices";
+		name         = CM_NAME__DEVICE_IO;
+		displayName  = CM_DESC__DEVICE_IO;
 		description  = 
 			"<html>" +
 			  "<p>What devices are doing IO's and what's the approximare service time on the disk.</p>" +
@@ -3528,8 +3852,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMioQueueSumAct";
-		displayName  = "IO Sum";
+		name         = CM_NAME__IO_QUEUE_SUM;
+		displayName  = CM_DESC__IO_QUEUE_SUM;
 		description  = 
 			"<html><p>A <b>Summary</b> of how many IO's have the ASE Server done on various segments (UserDb/Tempdb/System)</p>" +
 			"For ASE 15.0.2 or so, we will have 'System' segment covered aswell.<br>" +
@@ -3678,8 +4002,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMioQueueActivity";
-		displayName  = "IO Queue";
+		name         = CM_NAME__IO_QUEUE;
+		displayName  = CM_DESC__IO_QUEUE;
 		description  = 
 			"<html><p>How many IO's have the ASE Server done on various segments (UserDb/Tempdb/System) on specific devices.</p>" +
 			"For ASE 15.0.2 or so, we will have 'System' segment covered aswell.<br>" +
@@ -3831,8 +4155,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMspinlockSum";
-		displayName  = "Spinlock Sum";
+		name         = CM_NAME__SPINLOCK_SUM;
+		displayName  = CM_DESC__SPINLOCK_SUM;
 		description  = "<html><p>What spinlocks do we have contention on.</p>" +
 			"This could be a bit heavy to use when there is a 'low' refresh interwall.<br>" +
 			"For the moment considder this as <b>experimental</b>.</html>";
@@ -4171,8 +4495,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMsysmon";
-		displayName  = "Sysmon Raw";
+		name         = CM_NAME__SYSMON;
+		displayName  = CM_DESC__SYSMON;
 		description  = "<html><p>Just grabs the raw counters used in sp_sysmon.</p>" +
 			"NOTE: reuses data from 'Spinlock Sum', so this needs to be running as well.<br>" +
 			"For the moment consider this as <b>very experimental</b>.</html>";
@@ -4258,8 +4582,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMrepAgent";
-		displayName  = "RepAgent";
+		name         = CM_NAME__REP_AGENT;
+		displayName  = CM_DESC__REP_AGENT;
 		description  = "<html><p>Grabs the raw counters for RepAgents from sysmonitors.</p>" +
 			"NOTE: reuses data from 'Spinlock Sum', so this needs to be running as well.<br>" +
 			"For the moment consider this as <b>very experimental</b>.</html>";
@@ -4403,8 +4727,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMcachedProcs";
-		displayName  = "Cached Procedures";
+		name         = CM_NAME__CACHED_PROC;
+		displayName  = CM_DESC__CACHED_PROC;
 		description  = "What Objects is located in the 'procedure cache'.";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -4582,8 +4906,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMprocCache";
-		displayName  = "Procedure Cache";
+		name         = CM_NAME__PROC_CACHE_LOAD;
+		displayName  = CM_DESC__PROC_CACHE_LOAD;
 		description  = "This is just a short one to see if we have 'stored procedure' swapping for some reason. The reason is for the moment not known.";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -4723,8 +5047,8 @@ extends Thread
 		// 15.5        added   InstanceID      Cluster instance ID
 		//---------------------------------------------------------------------------------------------------
 
-		name         = "CMprocCallStack";
-		displayName  = "Procedure Call Stack";
+		name         = CM_NAME__PROC_CALL_STACK;
+		displayName  = CM_DESC__PROC_CALL_STACK;
 		description  = "<html>" +
 							"Nesting levels of currenty executed procedures, this can be used as a light 'profiler'" +
 							"<br><br>" +
@@ -4963,8 +5287,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMcachedObjects";
-		displayName  = "Cached Objects";
+		name         = CM_NAME__CACHED_OBJECTS;
+		displayName  = CM_DESC__CACHED_OBJECTS;
 		description  = "";
 		description  = "<html>" +
 							"<p>What Tables is located in the 'data cache' and to what cache is it bound?</p>" +
@@ -5093,8 +5417,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMerrolog";
-		displayName  = "Errorlog";
+		name         = CM_NAME__ERRORLOG;
+		displayName  = CM_DESC__ERRORLOG;
 		description  = "Look at the ASE Servers errorlog.";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -5171,8 +5495,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMdeadlock";
-		displayName  = "Deadlock";
+		name         = CM_NAME__DEADLOCK;
+		displayName  = CM_DESC__DEADLOCK;
 		description  = "Have we had any deadlocks in the system?";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -5246,8 +5570,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-//		name         = "CMlockTimeout";
-//		displayName  = "Lock Timeout";
+//		name         = CM_NAME__LOCK_TIMEOUT;
+//		displayName  = CM_DESC__LOCK_TIMEOUT;
 //		description  = "What SQL Statements caused a lock timeout";
 //		
 //		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -5310,8 +5634,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMpCacheModuleUsage";
-		displayName  = "Proc Cache Module Usage";
+		name         = CM_NAME__PROC_CACHE_MODULE_USAGE;
+		displayName  = CM_DESC__PROC_CACHE_MODULE_USAGE;
 		description  = "What module of the ASE Server is using the 'procedure cache' or 'dynamic memory pool'";
 		
 		needVersion  = 15010; // monProcedureCache*Usage where intruduced in 15.0.1
@@ -5411,8 +5735,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMpCacheMemoryUsage";
-		displayName  = "Proc Cache Memory Usage";
+		name         = CM_NAME__PROC_CACHE_MEMORY_USAGE;
+		displayName  = CM_DESC__PROC_CACHE_MEMORY_USAGE;
 		description  = "What module and what 'part' of the modules are using the 'procedure cache' or 'dynamic memory pool'.";
 		
 		needVersion  = 15010; // monProcedureCache*Usage where intruduced in 15.0.1
@@ -5524,8 +5848,8 @@ extends Thread
 		// 15.5        added   InstanceID      Cluster instance ID
 		//---------------------------------------------------------------------------------------------------
 		
-		name         = "CMstatementCache";
-		displayName  = "Statement Cache";
+		name         = CM_NAME__STATEMENT_CACHE;
+		displayName  = CM_DESC__STATEMENT_CACHE;
 		description  = "Get overall statistics on the whole statement cache.";
 		
 		needVersion  = 15020; // monStatementCache where intruduced in 15.0.2
@@ -5787,8 +6111,8 @@ extends Thread
 		// 15.5          added   InstanceID      Cluster instance ID
 		//---------------------------------------------------------------------------------------------------
 
-		name         = "CMstmntCacheDetails";
-		displayName  = "Statement Cache Details";
+		name         = CM_NAME__STATEMENT_CACHE_DETAILS;
+		displayName  = CM_DESC__STATEMENT_CACHE_DETAILS;
 		description  = "<html>" +
 							"Get detailed statistics about each SQL statement in the cache.<br>" +
 							"This also includes the SQL statement itself<br>" +
@@ -6089,8 +6413,8 @@ extends Thread
 		// 15.5        added   InstanceID      Cluster instance ID
 		//---------------------------------------------------------------------------------------------------
 
-		name         = "CMActiveObjects";
-		displayName  = "Active Objects";
+		name         = CM_NAME__ACTIVE_OBJECTS;
+		displayName  = CM_DESC__ACTIVE_OBJECTS;
 		description  = "<html>" +
 							"Objects that are currently accessed by any active Statements in the ASE." +
 							"<br><br>" +
@@ -6228,8 +6552,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMActiveStatements";
-		displayName  = "Active Statements";
+		name         = CM_NAME__ACTIVE_STATEMENTS;
+		displayName  = CM_DESC__ACTIVE_STATEMENTS;
 		description  = "<html>" +
 							"Statemenets that are currently executing in the ASE." +
 							"<br><br>" +
@@ -7041,8 +7365,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMblocking";
-		displayName  = "Blocking";
+		name         = CM_NAME__BLOCKING;
+		displayName  = CM_DESC__BLOCKING;
 		description  = "<html>" +
 							"Are there any SPIDS blocked/blocking for more than 'Lock wait threshold' in the system" +
 							"<br><br>" +
@@ -7187,9 +7511,13 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMmissingStats";
-		displayName  = "Missing Statistics";
-		description  = "The optimizer executed queries where it didnt find statistics for this objects";
+		name         = CM_NAME__MISSING_STATISTICS;
+		displayName  = CM_DESC__MISSING_STATISTICS;
+		description  = "<html>" +
+		                   "The optimizer executed queries where it didnt find statistics for this objects<br>" +
+		                   "<br>" +
+		                   "<b>Note:</b> <code>sp_configure 'capture missing statistics'</code>, must be enabled." +
+		               "</html>";
 		
 		needVersion  = 15031; // sp_configure "capture missing statistics": where intruduced in 15.0.3 ESD#1
 		needCeVersion= 0;
@@ -7248,12 +7576,209 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		// Query Plan Metrics
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
+		name         = CM_NAME__QP_METRICS;
+		displayName  = CM_DESC__QP_METRICS;
+		description  = "<html>" +
+		                   "Query Processing Metrics<br>" +
+		                   "<br>" +
+		                   "<b>Note:</b> <code>sp_configure 'enable metrics capture'</code>, must be enabled." +
+		               "</html>";
+		
+		needVersion  = 15020;
+		needCeVersion= 0;
+		monTables    = new String[] {"sysquerymetrics"};
+		needRole     = new String[] {};
+		needConfig   = new String[] {"enable metrics capture"}; // NO default for this configuration
+		colsCalcDiff = new String[] {"cnt", "abort_cnt"};
+		colsCalcPCT  = new String[] {};
+		pkList       = new LinkedList<String>();
+		    pkList.add("DBName");
+		    pkList.add("id");
+		    pkList.add("sequence");
+
+		tmp = new CountersModel(name, null, 
+				pkList, colsCalcDiff, colsCalcPCT, 
+				monTables, needRole, needConfig, needVersion, needCeVersion, 
+				false, true, 60)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected CmSybMessageHandler createSybMessageHandler()
+			{
+				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
+
+				// Msg 2528: DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
+				msgHandler.addDiscardMsgNum(2528);
+
+				// Msg 0: FLUSHMETRICS
+				msgHandler.addDiscardMsgNum(0);
+
+				return msgHandler;
+			}
+
+			@Override
+			public void initSql(Connection conn)
+			{
+				try 
+				{
+					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+					mtd.addTable("sysquerymetrics",  "Holds about Query Plan Metrics.");
+
+					mtd.addColumn("sysquerymetrics", "DBName",       "<html>Database name</html>");
+					mtd.addColumn("sysquerymetrics", "uid",          "<html>User ID</html>");
+					mtd.addColumn("sysquerymetrics", "gid",          "<html>Group ID</html>");
+					mtd.addColumn("sysquerymetrics", "id",           "<html>Unique ID</html>");
+					mtd.addColumn("sysquerymetrics", "hashkey",      "<html>The hashkey over the SQL query text</html>");
+					mtd.addColumn("sysquerymetrics", "sequence",     "<html>Sequence number for a row when multiple rows are required for the SQL text</html>");
+					mtd.addColumn("sysquerymetrics", "exec_min",     "<html>Minimum execution time</html>");
+					mtd.addColumn("sysquerymetrics", "exec_max",     "<html>Maximum execution time</html>");
+					mtd.addColumn("sysquerymetrics", "exec_avg",     "<html>Average execution time</html>");
+					mtd.addColumn("sysquerymetrics", "elap_min",     "<html>Minimum elapsed time</html>");
+					mtd.addColumn("sysquerymetrics", "elap_max",     "<html>Maximum elapsed time</html>");
+					mtd.addColumn("sysquerymetrics", "elap_avg",     "<html>Average elapsed time</html>");
+					mtd.addColumn("sysquerymetrics", "lio_min",      "<html>Minimum logical IO</html>");
+					mtd.addColumn("sysquerymetrics", "lio_max",      "<html>Maximum logical IO</html>");
+					mtd.addColumn("sysquerymetrics", "lio_avg",      "<html>Average logical IO</html>");
+					mtd.addColumn("sysquerymetrics", "pio_min",      "<html>Minumum physical IO</html>");
+					mtd.addColumn("sysquerymetrics", "pio_max",      "<html>Maximum physical IO</html>");
+					mtd.addColumn("sysquerymetrics", "pio_avg",      "<html>Average physical IO</html>");
+					mtd.addColumn("sysquerymetrics", "cnt",          "<html>Number of times the query has been executed.</html>");
+					mtd.addColumn("sysquerymetrics", "abort_cnt",    "<html>Number of times a query was aborted by Resource Governor as a resource limit was exceeded.</html>");
+					mtd.addColumn("sysquerymetrics", "text",         "<html>query text</html>");
+				}
+				catch (NameNotFoundException e) {/*ignore*/}
+
+				//int aseVersion = getServerVersion();
+
+				String sql = "exec sp_asetune_qp_metrics";
+				setSql(sql);
+			}
+		};
+
+		// Need stored proc 'sp_missing_stats'
+		// check if it exists: if not it will be created in super.init(conn)
+		tmp.addDependsOnStoredProc("sybsystemprocs", "sp_asetune_qp_metrics", VersionInfo.SP_ASETUNE_QP_METRICS_CRDATE, VersionInfo.class, "sp_asetune_qp_metrics.sql", AseConnectionUtils.SA_ROLE);
+
+		tmp.setDisplayName(displayName);
+		tmp.setDescription(description);
+		if (AseTune.hasGUI())
+		{
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), tmp)
+			{
+				private static final long	serialVersionUID	= 1L;
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("QP Metrics", true);
+					panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
+					panel.setToolTipText(
+						"<html>" +
+							"Use this panel to controll the Query Plan Metrics subsystem.<br>" +
+						"</html>");
+
+					String filterStr = "lio_avg > 100 and elap_max > 10";
+					Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (tmpConf != null)
+						filterStr = tmpConf.getProperty(CM_NAME__QP_METRICS+".show.filter", "");
+
+					if ( ! filterStr.trim().equals("") )
+						getCm().setSqlWhere("'show', '"+filterStr+"'");
+					
+					final JButton    drop_but   = new JButton("Reset QP Metrics");
+					final JLabel     filter_lbl = new JLabel("Filter:");
+					final JTextField filter_txt = new JTextField(filterStr);
+					final JButton    aseCfg_but = new JButton("Server Config");
+
+					drop_but   .setToolTipText("<html>This will drop/purge all sampled Query Plan Metrics in all databases<br>execute <code>sp_metrics 'drop', '1'</code> in every database</html>");
+					filter_lbl.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10<code> </html>");
+					filter_txt.setToolTipText("<html>Just get some row...<br>This is simply a WHERE Clause to the select...<br>Note: ASE will still write statements below these limits to the system tables, see button 'Server Config' to change capture level at the Server side.<br><b>Example:</b> <code>lio_avg > 100 and elap_max > 10<code> </html>");
+					aseCfg_but.setToolTipText("<html>Set filter in the ASE Server...<br>This means the ASE does <b>not</b> store/writes unnececary statemenst <br>to the system tables, avoiding excessive catalog writes for simple queries.<br><br>Simply open the Ase Configure dialog.</html>");
+
+					panel.add( drop_but,   "wrap 10");
+					panel.add( filter_lbl, "split");
+					panel.add( filter_txt, "growx, pushx, wrap 10");
+					panel.add( aseCfg_but, "wrap");
+
+					drop_but.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							String sql = "sp_asetune_qp_metrics 'drop'";
+							if ( ! isMonConnected() )
+							{
+								SwingUtils.showInfoMessage("Not Connected", "Sorry not connected to the database.");
+								return;
+							}
+							
+							try
+							{
+								Statement stmnt = getMonConnection().createStatement();
+								stmnt.executeUpdate(sql);
+								stmnt.close();
+							}
+							catch (SQLException ex)
+							{
+								SwingUtils.showErrorMessage("Problems", "Problems when dropping/purging the Query Plab Metrics", ex);
+								_logger.warn("Problems execute SQL '"+sql+"', Caught: " + e.toString() );
+							}
+						}
+					});
+
+					filter_txt.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							String filterStr = filter_txt.getText().trim();
+							getCm().setSqlWhere("'show', '"+filterStr+"'");
+							
+							// Save config...
+							Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (tmpConf != null)
+							{
+								tmpConf.setProperty(CM_NAME__QP_METRICS+".show.filter", filterStr);
+								tmpConf.save();
+							}
+						}
+					});
+
+					aseCfg_but.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							AseConfigMonitoringDialog.showDialog(MainFrame.getInstance(), getMonConnection(), -1);
+						}
+					});
+
+					return panel;
+				}
+			};
+			tcp.setToolTipText( description );
+			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_qp_metrics_activity.png") );
+			tcp.setCm(tmp);
+			MainFrame.addTcp( tcp );
+
+			tmp.setTabPanel( tcp );
+		}
+		
+		_CMList.add(tmp);
+
+
+		
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
 		// Monitor Config
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMspMonitorConfig";
-		displayName  = "sp_monitorconfig";
+		name         = CM_NAME__SP_MONITOR_CONFIG;
+		displayName  = CM_DESC__SP_MONITOR_CONFIG;
 		description  = "<html>" +
 							"Executes: sp_monitorconfig 'all'... <br>" +
 							"<b>Note</b>: set postpone time to 10 minutes or so, we dont need to sample this that often." +
@@ -7324,8 +7849,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMosIostat";
-		displayName  = "OS Disk Stat";
+		name         = CM_NAME__OS_IOSTAT;
+		displayName  = CM_DESC__OS_IOSTAT;
 		description  = "Executes: 'iostat' on the Operating System";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -7484,8 +8009,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMosVmstat";
-		displayName  = "OS CPU(vmstat)";
+		name         = CM_NAME__OS_VMSTAT;
+		displayName  = CM_DESC__OS_VMSTAT;
 		description  = "Executes: 'vmstat' on the Operating System";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -7644,8 +8169,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		name         = "CMosMpstat";
-		displayName  = "OS CPU(mpstat)";
+		name         = CM_NAME__OS_MPSTAT;
+		displayName  = CM_DESC__OS_MPSTAT;
 		description  = "Executes: 'mpstat' on the Operating System";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");

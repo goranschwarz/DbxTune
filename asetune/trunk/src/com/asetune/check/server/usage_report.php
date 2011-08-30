@@ -492,7 +492,7 @@ Admin:<BR>
 	{
 		$sql = "
 			SELECT
-				clientAsemonVersion, user_country, user_language, count(*) as usageCount
+				clientAsemonVersion, user_country, user_language, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_usage
 			GROUP BY
 				clientAsemonVersion, user_country, user_language
@@ -516,7 +516,7 @@ Admin:<BR>
 	{
 		$sql = "
 			SELECT
-				clientAsemonVersion, count(*) as usageCount
+				clientAsemonVersion, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_usage
 			GROUP BY
 				clientAsemonVersion
@@ -539,7 +539,7 @@ Admin:<BR>
 	if ( $rpt_summary_asever == "true" )
 	{
 		$sql = "
-			SELECT srvVersion, sum(isClusterEnabled) as clusterCount, count(*) as ConnectCount
+			SELECT srvVersion, sum(isClusterEnabled) as clusterCount, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
 			GROUP BY srvVersion
 			ORDER BY srvVersion desc
@@ -554,7 +554,7 @@ Admin:<BR>
 		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
-			SELECT srvVersionStr, count(*) as ConnectCount
+			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
 			GROUP BY srvVersionStr
 			ORDER BY srvVersionStr desc
@@ -569,7 +569,7 @@ Admin:<BR>
 		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
-			SELECT srvVersionStr, count(*) as ConnectCount
+			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
 			WHERE isClusterEnabled > 0
 			GROUP BY srvVersionStr

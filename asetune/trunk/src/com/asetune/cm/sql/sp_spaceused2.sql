@@ -3,9 +3,9 @@
 -------------------------------------------------------------
 --
 -- If you change anything in here, do NOT forget to change
--- the field 'SP_XXX_CR_STR' in 'asemon.cm.sql.VersionInfo'
+-- the field 'SP_XXX_CR_STR' in 'com.asetune.cm.sql.VersionInfo'
 --
--- Otherwise it will NOT be recreated... when asemon starts...
+-- Otherwise it will NOT be recreated... when asetune starts...
 --
 -------------------------------------------------------------
 set nocount on

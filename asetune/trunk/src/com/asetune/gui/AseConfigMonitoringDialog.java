@@ -127,6 +127,26 @@ public class AseConfigMonitoringDialog
 
 	private JLabel             _configurabelMemory_lbl        = new JLabel("#"+default_configurabelMemoryText);
 
+	// PANEL: OTHER
+	private JCheckBox          _cfgCapMissingStatistics_chk   = new JCheckBox("Capture Missing Statistics");
+	private JCheckBox          _cfgEnableMetricsCapture_chk   = new JCheckBox("Enable Metrics Capture");
+
+	private JLabel             _cfgMetricsElapMax_lbl         = new JLabel("metrics elap max");
+	private SpinnerNumberModel _cfgMetricsElapMax_spm         = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsElapMax_sp          = new JSpinner(_cfgMetricsElapMax_spm);
+
+	private JLabel             _cfgMetricsExecMax_lbl         = new JLabel("metrics exec max");
+	private SpinnerNumberModel _cfgMetricsExecMax_spm         = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsExecMax_sp          = new JSpinner(_cfgMetricsExecMax_spm);
+
+	private JLabel             _cfgMetricsLioMax_lbl          = new JLabel("metrics lio max");
+	private SpinnerNumberModel _cfgMetricsLioMax_spm          = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
+	private JSpinner           _cfgMetricsLioMax_sp           = new JSpinner(_cfgMetricsLioMax_spm);
+
+	private JLabel             _cfgMetricsPioMax_lbl          = new JLabel("metrics pio max");
+	private SpinnerNumberModel _cfgMetricsPioMax_spm          = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsPioMax_sp           = new JSpinner(_cfgMetricsPioMax_spm);
+
 	// PANEL: ON-EXIT
 	private JRadioButton       _onExitDoNotDisable_rb         = new JRadioButton("Do Not Disable", true);
 	private JRadioButton       _onExitAutoDisable_rb          = new JRadioButton("Automatically");
@@ -156,7 +176,7 @@ public class AseConfigMonitoringDialog
 	{
 
 		_conn = conn;
-
+		
 		setAseVersion(aseVersionNum);
 		initComponents();
 		pack();
@@ -177,12 +197,20 @@ public class AseConfigMonitoringDialog
 	public static void showDialog(Frame owner, Connection conn, int aseVersionNum)
 	{
 		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
+
+		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
+			return;
+
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
 	public static void showDialog(Dialog owner, Connection conn, int aseVersionNum)
 	{
 		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
+
+		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
+			return;
+
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
@@ -195,6 +223,9 @@ public class AseConfigMonitoringDialog
 			dialog = new AseConfigMonitoringDialog((Dialog)owner, conn, aseVersionNum, msgDialogTitle);
 		else
 			dialog = new AseConfigMonitoringDialog((Dialog)null, conn, aseVersionNum, msgDialogTitle);
+
+		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
+			return;
 
 		dialog.setVisible(true);
 		dialog.dispose();
@@ -242,9 +273,10 @@ public class AseConfigMonitoringDialog
 		_monitoringPanel = createMonitoringPanel();
 
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_monitoringPanel,  "grow");
-		panel.add(createOnExitPanel(),      "grow");
-		panel.add(createOkCancelPanel(),    "bottom, right, push");
+		panel.add(_monitoringPanel,                "growx");
+		panel.add(createOtherMonitorConfigPanel(), "growx");
+		panel.add(createOnExitPanel(),             "growx");
+		panel.add(createOkCancelPanel(),           "bottom, right, push");
 
 		loadProps();
 
@@ -294,8 +326,6 @@ public class AseConfigMonitoringDialog
 
 		_configurabelMemory_lbl        .setToolTipText(_tts.add(_configurabelMemory_lbl,        "Available memory to be used for additional configurations or 'data caches' etc. This memory is basically not used by the ASE, meaning it's \"waste\" and ready for usage by someone..."));
 
-
-
 		//--- LAYOUT
 		panel.add(_enableMonitoring_chk,          "wrap 15");
 
@@ -337,6 +367,95 @@ public class AseConfigMonitoringDialog
 
 		//--- ACTIONS
 		_predefinedConfigs_cbx.addActionListener(this);
+
+		return panel;
+	}
+
+	private JPanel createOtherMonitorConfigPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Other Monitor Configuration", true);
+		panel.setLayout(new MigLayout("gap 0","",""));   // insets Top Left Bottom Right
+
+		String toolTipText;
+
+		//--- TOOLTIP 
+		// The ToolTip is also used to display configuration problems...
+		// So the ToolTipStore is used to reset the original ToolTip when problem is solved.
+
+		// TOOLTIP: _cfgCapMissingStatistics_chk
+		toolTipText	= "<html>" +
+			"Missing Statistics are captured in the system catalogs, and can be view from <i>dbname</i>..sysstatistics <br>" +
+			"<br>" +
+			"This metrics is used in the Performance Counter Tab 'Missing Statistics'." +
+			"</html>";
+		_cfgCapMissingStatistics_chk   .setToolTipText(_tts.add(_cfgCapMissingStatistics_chk, toolTipText));
+
+		// TOOLTIP: _cfgEnableMetricsCapture
+		toolTipText	= "<html>" +
+			"Enables Adaptive Server to capture metrics at the server level. <br>" +
+			"Metrics for ad hoc statements are captured in the system catalogs, and can be view from <i>dbname</i>..sysquerymetrics <br>" +
+			"metrics for statements in a stored procedure are saved in the procedure cache.<br>" +
+			"<br>" +
+			"This metrics is used in the Performance Counter Tab 'QP Metrics'." +
+			"</html>";
+		_cfgEnableMetricsCapture_chk.setToolTipText(_tts.add(_cfgEnableMetricsCapture_chk, toolTipText));
+
+		// TOOLTIP: _cfgMetricsElapMax_*
+		toolTipText	= "<html>" +
+			"If the elapsed time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
+			"<br>" +
+			"Unit: milliseconds<br>" +
+			"Note: <code><b>metrics elap max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"</html>";
+		_cfgMetricsElapMax_lbl.setToolTipText(_tts.add(_cfgMetricsElapMax_lbl, toolTipText));
+		_cfgMetricsElapMax_sp .setToolTipText(_tts.add(_cfgMetricsElapMax_sp,  toolTipText));
+
+		// TOOLTIP: _cfgMetricsExecMax_*
+		toolTipText = "<html>" +
+			"If the execution time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
+			"<br>" +
+			"Unit: milliseconds<br>" +
+			"Note: <code><b>metrics exec max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"</html>";
+		_cfgMetricsExecMax_lbl.setToolTipText(_tts.add(_cfgMetricsExecMax_lbl, toolTipText));
+		_cfgMetricsExecMax_sp .setToolTipText(_tts.add(_cfgMetricsExecMax_sp,  toolTipText));
+
+		// TOOLTIP: _cfgMetricsLioMax_*
+		toolTipText = "<html>" +
+			"If the logical IO time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
+			"<br>" +
+			"Unit: logical pages<br>" +
+			"Note: <code><b>metrics lio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"</html>";
+		_cfgMetricsLioMax_lbl .setToolTipText(_tts.add(_cfgMetricsLioMax_lbl, toolTipText));
+		_cfgMetricsLioMax_sp  .setToolTipText(_tts.add(_cfgMetricsLioMax_sp,  toolTipText));
+
+		// TOOLTIP: _cfgMetricsPioMax_*
+		toolTipText = "<html>" +
+			"If the physical IO time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
+			"<br>" +
+			"Unit: logical pages<br>" +
+			"Note: <code><b>metrics pio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"</html>";
+		_cfgMetricsPioMax_lbl .setToolTipText(_tts.add(_cfgMetricsPioMax_lbl, toolTipText));
+		_cfgMetricsPioMax_sp  .setToolTipText(_tts.add(_cfgMetricsPioMax_sp,  toolTipText));
+
+		//--- LAYOUT
+		panel.add(_cfgCapMissingStatistics_chk,   "wrap");
+
+		panel.add(_cfgEnableMetricsCapture_chk,   "wrap");
+
+		panel.add(_cfgMetricsElapMax_lbl,         "gapleft 50");
+		panel.add(_cfgMetricsElapMax_sp,          "right, wrap");
+		
+		panel.add(_cfgMetricsExecMax_lbl,         "gapleft 50");
+		panel.add(_cfgMetricsExecMax_sp,          "right, wrap");
+		
+		panel.add(_cfgMetricsLioMax_lbl,          "gapleft 50");
+		panel.add(_cfgMetricsLioMax_sp,           "right, wrap");
+		
+		panel.add(_cfgMetricsPioMax_lbl,          "gapleft 50");
+		panel.add(_cfgMetricsPioMax_sp,           "right, wrap 10");
 
 		return panel;
 	}
@@ -434,9 +553,28 @@ public class AseConfigMonitoringDialog
 				comp.setEnabled(false);
 
 				// Special components that has ASE version dependencies
-				if ( comp.equals(_statementCacheMonitoring_chk) )
+				if (    comp.equals(_cfgEnableMetricsCapture_chk) 
+				     || comp.equals(_cfgMetricsElapMax_lbl)
+				     || comp.equals(_cfgMetricsElapMax_sp)
+				     || comp.equals(_cfgMetricsExecMax_lbl)
+				     || comp.equals(_cfgMetricsExecMax_sp)
+				     || comp.equals(_cfgMetricsLioMax_lbl)
+				     || comp.equals(_cfgMetricsLioMax_sp)
+				     || comp.equals(_cfgMetricsPioMax_lbl)
+				     || comp.equals(_cfgMetricsPioMax_sp)
+				   )
 				{
 					if (_aseVersionNum >= 15020)
+						comp.setEnabled(true);
+				}
+				else if ( comp.equals(_statementCacheMonitoring_chk) )
+				{
+					if (_aseVersionNum >= 15020)
+						comp.setEnabled(true);
+				}
+				else if ( comp.equals(_cfgCapMissingStatistics_chk) )
+				{
+					if (_aseVersionNum >= 15031)
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeActive_chk) )
@@ -599,6 +737,13 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+
+//			_cfgCapMissingStatistics_chk  .setSelected(false);
+//			_cfgEnableMetricsCapture_chk  .setSelected(false);
+//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MINIMAL]) ) // MINIMAL
 		{
@@ -627,6 +772,13 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+
+//			_cfgCapMissingStatistics_chk  .setSelected(false);
+//			_cfgEnableMetricsCapture_chk  .setSelected(false);
+//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_SMALL]) ) // SMALL
 		{
@@ -655,6 +807,13 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+
+//			_cfgCapMissingStatistics_chk  .setSelected(false);
+//			_cfgEnableMetricsCapture_chk  .setSelected(false);
+//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MEDIUM]) ) // MEDIUM
 		{
@@ -683,6 +842,13 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm      .setValue( new Integer(2048) );
+
+//			_cfgCapMissingStatistics_chk  .setSelected(false);
+//			_cfgEnableMetricsCapture_chk  .setSelected(false);
+//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_LARGE]) ) // LARGE
 		{
@@ -711,6 +877,13 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm      .setValue( new Integer(4096) );
+
+//			_cfgCapMissingStatistics_chk  .setSelected(false);
+//			_cfgEnableMetricsCapture_chk  .setSelected(false);
+//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
 		}
 	}
 
@@ -821,6 +994,19 @@ public class AseConfigMonitoringDialog
 				}
 			}
 			rs.close();
+			
+			if (_aseVersionNum >= 15031) 
+				_cfgCapMissingStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture missing statistics") > 0 );
+
+			if (_aseVersionNum >= 15020) 
+			{
+				_cfgEnableMetricsCapture_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "enable metrics capture") > 0 );
+				_cfgMetricsElapMax_spm      .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics elap max") );
+				_cfgMetricsExecMax_spm      .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics exec max") );
+				_cfgMetricsLioMax_spm       .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics lio max") );
+				_cfgMetricsPioMax_spm       .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics pio max") );
+			}
+
 
 			// How much memory are there left for re-configuration
 			rs = stmt.executeQuery(
@@ -960,6 +1146,9 @@ public class AseConfigMonitoringDialog
 
 		_configErrors = false;
 
+		// NOTE: Version checking is NOT needed here
+		//       checkAndSetAseConfig() only do stuff if: comp.isEnabled()
+		
 		checkAndSetAseConfig(conn, "enable monitoring",              _enableMonitoring_chk);
 		checkAndSetAseConfig(conn, "per object statistics active",   _perObjectStatisticsActive_chk);
 		checkAndSetAseConfig(conn, "statement statistics active",    _statementStatisticsActive_chk);
@@ -981,6 +1170,13 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "statement pipe max messages",    _statementPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "plan text pipe max messages",    _planTextPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "max SQL text monitored",         _maxSqlTextMonitored_sp);
+
+		checkAndSetAseConfig(conn, "capture missing statistics",     _cfgCapMissingStatistics_chk);
+		checkAndSetAseConfig(conn, "enable metrics capture",         _cfgEnableMetricsCapture_chk);
+		checkAndSetAseConfig(conn, "metrics elap max",               _cfgMetricsElapMax_sp);
+		checkAndSetAseConfig(conn, "metrics exec max",               _cfgMetricsExecMax_sp);
+		checkAndSetAseConfig(conn, "metrics lio max",                _cfgMetricsLioMax_sp);
+		checkAndSetAseConfig(conn, "metrics pio max",                _cfgMetricsPioMax_sp);
 
 		// Go ahead and load "current" ASE configuration.
 		if ( ! _configErrors )

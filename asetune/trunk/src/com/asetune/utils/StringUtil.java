@@ -336,6 +336,11 @@ public class StringUtil
 		return sb.toString();
 	}
 
+	/**
+	 * splits every part of a comma separated string into a array element
+	 * @param str "db1,db2" returns ["db1"]["db2"].length=2, "db1" returns ["db1"].length=1, "" returns [""].length=1
+	 * @return a String[]
+	 */
 	public static String[] commaStrToArray(String str)
 	{
 		if (str == null)
@@ -364,127 +369,132 @@ public class StringUtil
 	}
 
 	/**
-     * Counts the number of occurrances of the String <code>occurs</code> in the
-     * String <code>s</code>.
-     *
-     * @param occurs The String to count
-     * @param s The String to count in
+	 * Counts the number of occurrances of the String <code>occurs</code> in the
+	 * String <code>s</code>.
+	 *
+	 * @param occurs The String to count
+	 * @param s The String to count in
+	 */
+	public static int count(String occurs, String s)
+	{
+		int count = 0;
+		int current = -1;
+		int next = 0;
+		next = s.indexOf(occurs);
+		while ( next > -1)
+		{
+			count++;
+			current = next;
+			next = s.indexOf(occurs, current + 1);
+		}
+		return count;
+	}
+
+	/**
+	 * Split the String s into an array of strings. The String s is split at
+	 * each occurrence of the substring <code>splitAt</code> in <code>s</code>.
+	 * <p>
+	 * Example:
+	 * The string <tt>s = "onextwoxthreexfour"</tt>, with <tt>splitAt = "x"</tt>
+	 * is split into an array equivalent to <tt>{"one", "two", "three", "four"}
+	 * </tt>.
+	 *
+	 * @param splitAt Indicates where to split the string s
+	 * @param s String to split
+	 */
+	public static String[] split(String splitAt, String s)
+	{
+		int noOfLines = count(splitAt, s) + 1;
+		java.lang.String[] stringArray = new String[noOfLines];
+		String remaining = s;
+		int pos;
+		int splitLen = splitAt.length();
+
+		for (int i = 0; i < noOfLines - 1; i++)
+		{
+			pos = remaining.indexOf(splitAt);
+			stringArray[i] = remaining.substring(0, pos);
+			remaining = remaining.substring(pos + splitLen, remaining.length());
+		}
+
+		// last element
+		stringArray[noOfLines - 1] = remaining;
+		return stringArray;
+	}
+
+	/**
+	 */
+	public static String word(String str, int number)
+	{
+		String[] stra = str.split("[ \t\n\f\r]");
+		if ( stra.length < number )
+		{
+			return null;
+			// throw new
+			// IndexOutOfBoundsException("This string only consists of "+stra.length+", while you want to read word "+number);
+		}
+		return stra[number];
+	}
+
+	/**
      */
-    public static int count(String occurs, String s)
-    {
-      int count = 0;
-      int current = -1;
-      int next = 0;
-      next = s.indexOf(occurs);
-      while ( next > -1)
-      {
-          count++;
-          current = next;
-          next = s.indexOf(occurs, current + 1);
-      }
-      return count;
-    }
+	public static String lastWord(String str)
+	{
+		String[] stra = str.split("[ \t\n\f\r]");
+		return stra[stra.length - 1];
+	}
 
-    /**
-     * Split the String s into an array of strings. The String s is split at
-     * each occurrence of the substring <code>splitAt</code> in <code>s</code>.
-     * <p>
-     * Example:
-     * The string <tt>s = "onextwoxthreexfour"</tt>, with <tt>splitAt = "x"</tt>
-     * is split into an array equivalent to <tt>{"one", "two", "three", "four"}
-     * </tt>.
-     *
-     * @param splitAt Indicates where to split the string s
-     * @param s String to split
-     */
-    public static String[] split(String splitAt, String s)
-    {
-      int noOfLines = count(splitAt, s) + 1;
-      java.lang.String[] stringArray = new String[noOfLines];
-      String remaining = s;
-      int pos;
-      int splitLen = splitAt.length();
+	/**
+	 * Left justify a string and fill extra spaces to the right
+	 */
+	public static String left(String str, int num)
+	{
+		return left(str, num, true);
+	}
 
-      for (int i = 0; i < noOfLines - 1; i++)
-      {
-          pos = remaining.indexOf(splitAt);
-          stringArray[i] = remaining.substring(0,pos);
-          remaining = remaining.substring(pos + splitLen, remaining.length());
-      }
+	/**
+	 * Left justify a string and fill extra spaces to the right
+	 */
+	public static String left(String str, int num, boolean allowGrow)
+	{
+		if ( allowGrow )
+		{
+			if ( str.length() > num )
+				num = str.length();
+		}
 
-      // last element
-      stringArray[noOfLines - 1] = remaining;
-      return stringArray;
-    }
+		int maxPadSize = num - str.length();
+		String space = "                                                                                                                                                                                                                                                               ";
+		while (space.length() < maxPadSize)
+			space += "                                                                                                                                                                                                                                                               ";
 
-    /**
-     */
-    public static String word(String str, int number)
-    {
-    	String[] stra = str.split("[ \t\n\f\r]");
-    	if (stra.length < number)
-    	{
-    		return null;
-    		//throw new IndexOutOfBoundsException("This string only consists of "+stra.length+", while you want to read word "+number);
-    	}
-    	return stra[number];
-    }
-    /**
-     */
-    public static String lastWord(String str)
-    {
-    	String[] stra = str.split("[ \t\n\f\r]");
-    	return stra[ stra.length - 1 ];
-    }
+		return (str + space).substring(0, num);
+	}
 
-    /**
-     * Left justify a string and fill extra spaces to the right
-     */
-    public static String left(String str, int num)
-    {
-    	return left(str, num, true);
-    }
-    /**
-     * Left justify a string and fill extra spaces to the right
-     */
-    public static String left(String str, int num, boolean allowGrow)
-    {
-    	if (allowGrow)
-    	{
-    		if (str.length() > num)
-    			num = str.length();
-    	}
+	/**
+	 * Right justify a string and fill extra spaces to the left
+	 */
+	public static String right(String str, int num)
+	{
+		int len = num - str.length();
+		if ( len < 0 )
+			len = 0;
+		String space = "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ";
+		return (space.substring(0, len) + str).substring(0, num);
+	}
 
-    	int maxPadSize = num - str.length();
-    	String space = "                                                                                                                                                                                                                                                               ";
-    	while (space.length() < maxPadSize)
-    		space += "                                                                                                                                                                                                                                                               ";
-
-    	return (str + space).substring(0, num);
-    }
-    /**
-     * Right justify a string and fill extra spaces to the left
-     */
-    public static String right(String str, int num)
-    {
-    	int len = num - str.length();
-    	if (len < 0)
-    		len = 0;
-    	String space = "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ";
-    	return (space.substring(0, len) + str).substring(0, num);
-    }
-
-
-    /**
-     * All ${ENV_VARIABLE_NAME} will be substrituted with the environment variable
-     * from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
-     * In that case go and get the value from the runtime instead...
-     *
-     * @param val A string that should be substituted
-     * @return    The substituted string
-     */
-    public static String envVariableSubstitution(String val)
-    {
+	/**
+	 * All ${ENV_VARIABLE_NAME} will be substrituted with the environment
+	 * variable from the OperatingSystem. Some JVM's the System.getenv() does
+	 * not work<br>
+	 * In that case go and get the value from the runtime instead...
+	 * 
+	 * @param val
+	 *            A string that should be substituted
+	 * @return The substituted string
+	 */
+	public static String envVariableSubstitution(String val)
+	{
 		// Extract Environment variables
 		// search for ${ENV_NAME}
 		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
@@ -523,15 +533,15 @@ public class StringUtil
 		}
 
 		return val;
-    }
+	}
 
 
-    /**
-     * Duplicate the input string X number of times
-     * @param str
-     * @param size
-     * @return
-     */
+	/**
+	 * Duplicate the input string X number of times
+	 * @param str
+	 * @param size
+	 * @return
+	 */
 	public static String replicate(String str, int size)
 	{
 		StringBuilder sb = new StringBuilder(size);
@@ -695,63 +705,87 @@ public class StringUtil
 		return str.trim().equals("");
 	}
 
+	/**
+	 * Check if 'searchStr' is part of the 'searchArr'
+	 * @param searchStr
+	 * @param searchArr
+	 * @return true if part of the array
+	 */
+	public static boolean contains(String searchStr, String[] searchArr)
+	{
+		for (String str : searchArr)
+		{
+			if (str.equals(searchStr))
+				return true;
+		}
+		return false;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////
-    //// TEST CODE
-    /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
+	//// TEST CODE
+	/////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 
-    public static void main(String[] args)
-    {
-    	System.out.println("MAP=|" + parseCommaStrToMap("aaa=11\\,11,bbbbb=2222, cccc=3333") +"|.");
-    	System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111,bbbbb=2222, cccc=3333}") +"|.");
-    	System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111, bbbbb=2222, cccc=3333,}") +"|.");
+	public static void main(String[] args)
+	{
+		String[] strArr = commaStrToArray("");
+		System.out.println("length="+strArr.length);
+		for (int i=0; i<strArr.length; i++)
+		{
+			System.out.println("arr["+i+"]='"+strArr[i]+"'.");
+		}
+		System.exit(0);
 
-    	String t1Str = "{aaa=1111, bbb=2222, bbb=3333,}";
-    	Map<String,List<String>> t1Map = parseCommaStrToMultiMap(t1Str);
-    	System.out.println("MMAP=|" + t1Map +"|.");
-    	System.out.println("MMAP.toCommaStrMultiMap=|" + toCommaStrMultiMap(t1Map) +"|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("aaa=11\\,11,bbbbb=2222, cccc=3333") +"|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111,bbbbb=2222, cccc=3333}") +"|.");
+		System.out.println("MAP=|" + parseCommaStrToMap("{aaa=1111, bbbbb=2222, cccc=3333,}") +"|.");
 
-    	System.out.println("MMAP.toCommaStrMultiMap(useKey)=|" + toCommaStrMultiMap(t1Map, "=", ",", true, false) +"|.");
-    	System.out.println("MMAP.toCommaStrMultiMap(useVal)=|" + toCommaStrMultiMap(t1Map, "=", ",", false, true) +"|.");
+		String t1Str = "{aaa=1111, bbb=2222, bbb=3333,}";
+		Map<String,List<String>> t1Map = parseCommaStrToMultiMap(t1Str);
+		System.out.println("MMAP=|" + t1Map +"|.");
+		System.out.println("MMAP.toCommaStrMultiMap=|" + toCommaStrMultiMap(t1Map) +"|.");
 
-    	System.out.println("MMAP.toCommaStrMultiMapKey=|" + toCommaStrMultiMapKey(t1Map) +"|.");
-    	System.out.println("MMAP.toCommaStrMultiMapVal=|" + toCommaStrMultiMapVal(t1Map) +"|.");
-    	System.exit(0);
+		System.out.println("MMAP.toCommaStrMultiMap(useKey)=|" + toCommaStrMultiMap(t1Map, "=", ",", true, false) +"|.");
+		System.out.println("MMAP.toCommaStrMultiMap(useVal)=|" + toCommaStrMultiMap(t1Map, "=", ",", false, true) +"|.");
 
-    	System.out.println("TEST: StringUtil BEGIN.");
+		System.out.println("MMAP.toCommaStrMultiMapKey=|" + toCommaStrMultiMapKey(t1Map) +"|.");
+		System.out.println("MMAP.toCommaStrMultiMapVal=|" + toCommaStrMultiMapVal(t1Map) +"|.");
+//		System.exit(0);
+
+		System.out.println("TEST: StringUtil BEGIN.");
 
 		if ( ! StringUtil.lastWord(" 1 2 3 ").equals("3") )
-    		System.out.println("FAILED:  test-1: StringUtil.lastWord()");
+			System.out.println("FAILED:  test-1: StringUtil.lastWord()");
 
-    	if ( ! StringUtil.lastWord("").equals("") )
-    		System.out.println("FAILED:  test-2: StringUtil.lastWord()");
+		if ( ! StringUtil.lastWord("").equals("") )
+			System.out.println("FAILED:  test-2: StringUtil.lastWord()");
 
-    	if ( ! StringUtil.lastWord(" 1 2\t 3 ").equals("3") )
-    		System.out.println("FAILED:  test-3: StringUtil.lastWord()");
+		if ( ! StringUtil.lastWord(" 1 2\t 3 ").equals("3") )
+			System.out.println("FAILED:  test-3: StringUtil.lastWord()");
 
-    	if ( ! StringUtil.lastWord(" 1 2 \n3").equals("3") )
-    		System.out.println("FAILED:  test-4: StringUtil.lastWord()");
+		if ( ! StringUtil.lastWord(" 1 2 \n3").equals("3") )
+			System.out.println("FAILED:  test-4: StringUtil.lastWord()");
 
-    	if ( ! StringUtil.left("123", 5).equals("123  ") )
-    		System.out.println("FAILED:  test-1: StringUtil.left()");
+		if ( ! StringUtil.left("123", 5).equals("123  ") )
+			System.out.println("FAILED:  test-1: StringUtil.left()");
 
-    	if ( ! StringUtil.right("  123", 5).equals("  123") )
-    		System.out.println("FAILED:  test-1: StringUtil.right()");
+		if ( ! StringUtil.right("  123", 5).equals("  123") )
+			System.out.println("FAILED:  test-1: StringUtil.right()");
 
-    	if ( ! (StringUtil.fill("123", 1).length() == 3))
-    		System.out.println("FAILED:  test-1: StringUtil.fill()");
+		if ( ! (StringUtil.fill("123", 1).length() == 3))
+			System.out.println("FAILED:  test-1: StringUtil.fill()");
 
-    	if ( ! (StringUtil.fill("123", 50).length() == 50))
-    		System.out.println("FAILED:  test-2: StringUtil.fill(\"123\", 50)");
+		if ( ! (StringUtil.fill("123", 50).length() == 50))
+			System.out.println("FAILED:  test-2: StringUtil.fill(\"123\", 50)");
 
-    	if ( ! (StringUtil.fill("123", 5000).length() == 5000))
-    		System.out.println("FAILED:  test-3: StringUtil.fill(\"123\", 5000)");
+		if ( ! (StringUtil.fill("123", 5000).length() == 5000))
+			System.out.println("FAILED:  test-3: StringUtil.fill(\"123\", 5000)");
 
 
-    	if ( ! (StringUtil.stripHtml("123<html>-<b>B</b>.<xml xx=xxx, z=z>").indexOf("<") == -1) )
-    		System.out.println("FAILED:  test-1: StringUtil.stripHtml()");
+		if ( ! (StringUtil.stripHtml("123<html>-<b>B</b>.<xml xx=xxx, z=z>").indexOf("<") == -1) )
+			System.out.println("FAILED:  test-1: StringUtil.stripHtml()");
 
 		System.out.println("TEST: StringUtil END.");
-    }
+	}
 }

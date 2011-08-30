@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.asetune.GetCounters;
 import com.asetune.gui.SummaryPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PropPropEntry;
@@ -13,86 +14,90 @@ import com.asetune.utils.PropPropEntry;
 
 public class CounterSetTemplates
 {
-	private static LinkedHashMap<String, String>_nameShortToLongMap; 
-	private static LinkedHashMap<String, String>_nameLongToShortMap; 
+	private static LinkedHashMap<String, String>_nameShortToLongMap;
+	private static LinkedHashMap<String, String>_nameLongToShortMap;
 	static
 	{
 		_nameShortToLongMap = new LinkedHashMap<String, String>();
 		_nameLongToShortMap = new LinkedHashMap<String, String>();
 
 		// SHORT -> LONG
-		_nameShortToLongMap.put(SummaryPanel.CM_NAME      , "Summary"                 );
-		_nameShortToLongMap.put("CMobjActivity"           , "Objects"                 );
-		_nameShortToLongMap.put("CMprocActivity"          , "Processes"               );
-		_nameShortToLongMap.put("CMdbActivity"            , "Databases"               );
-		_nameShortToLongMap.put("CMTmpdbActivity"         , "Temp Db"                 );
-		_nameShortToLongMap.put("CMsysWaitActivity"       , "Waits"                   );
-		_nameShortToLongMap.put("CMengineActivity"        , "Engines"                 );
-		_nameShortToLongMap.put("CMSysLoad"               , "System Load"             );
-		_nameShortToLongMap.put("CMcacheActivity"         , "Data Caches"             );
-		_nameShortToLongMap.put("CMpoolActivity"          , "Pools"                   );
-		_nameShortToLongMap.put("CMdeviceActivity"        , "Devices"                 );
-		_nameShortToLongMap.put("CMioQueueSumAct"         , "IO Sum"                  );
-		_nameShortToLongMap.put("CMioQueueActivity"       , "IO Queue"                );
-		_nameShortToLongMap.put("CMspinlockSum"           , "Spinlock Sum"            );
-		_nameShortToLongMap.put("CMsysmon"                , "Sysmon Raw"              );
-		_nameShortToLongMap.put("CMrepAgent"              , "RepAgent"                );
-		_nameShortToLongMap.put("CMcachedProcs"           , "Cached Procedures"       );
-		_nameShortToLongMap.put("CMprocCache"             , "Procedure Cache"         );
-		_nameShortToLongMap.put("CMprocCallStack"         , "Procedure Call Stack"    );
-		_nameShortToLongMap.put("CMcachedObjects"         , "Cached Objects"          );
-		_nameShortToLongMap.put("CMerrolog"               , "Errorlog"                );
-		_nameShortToLongMap.put("CMdeadlock"              , "Deadlock"                );
-		_nameShortToLongMap.put("CMpCacheModuleUsage"     , "Proc Cache Module Usage" );
-		_nameShortToLongMap.put("CMpCacheMemoryUsage"     , "Proc Cache Memory Usage" );
-		_nameShortToLongMap.put("CMstatementCache"        , "Statement Cache"         );
-		_nameShortToLongMap.put("CMstmntCacheDetails"     , "Statement Cache Details" );
-		_nameShortToLongMap.put("CMActiveObjects"         , "Active Objects"          );
-		_nameShortToLongMap.put("CMActiveStatements"          , "Active Statements"       );
-		_nameShortToLongMap.put("CMblocking"              , "Blocking"                );
-		_nameShortToLongMap.put("CMmissingStats"          , "Missing Statistics"      );
-		_nameShortToLongMap.put("CMspMonitorConfig"       , "sp_monitorconfig"        );
-		_nameShortToLongMap.put("CMosIostat"              , "OS Disk Stat"            );
-		_nameShortToLongMap.put("CMosVmstat"              , "OS CPU(vmstat)"          );
-		_nameShortToLongMap.put("CMosMpstat"              , "OS CPU(mpstat)"          );
-		
-		// LONG -> SHORT
-		_nameLongToShortMap.put("Summary"                 , SummaryPanel.CM_NAME      );
-		_nameLongToShortMap.put("Objects"                 , "CMobjActivity"           );
-		_nameLongToShortMap.put("Processes"               , "CMprocActivity"          );
-		_nameLongToShortMap.put("Databases"               , "CMdbActivity"            );
-		_nameLongToShortMap.put("Temp Db"                 , "CMTmpdbActivity"         );
-		_nameLongToShortMap.put("Waits"                   , "CMsysWaitActivity"       );
-		_nameLongToShortMap.put("Engines"                 , "CMengineActivity"        );
-		_nameLongToShortMap.put("System Load"             , "CMSysLoad"               );
-		_nameLongToShortMap.put("Data Caches"             , "CMcacheActivity"         );
-		_nameLongToShortMap.put("Pools"                   , "CMpoolActivity"          );
-		_nameLongToShortMap.put("Devices"                 , "CMdeviceActivity"        );
-		_nameLongToShortMap.put("IO Sum"                  , "CMioQueueSumAct"         );
-		_nameLongToShortMap.put("IO Queue"                , "CMioQueueActivity"       );
-		_nameLongToShortMap.put("Spinlock Sum"            , "CMspinlockSum"           );
-		_nameLongToShortMap.put("Sysmon Raw"              , "CMsysmon"                );
-		_nameLongToShortMap.put("RepAgent"                , "CMrepAgent"              );
-		_nameLongToShortMap.put("Cached Procedures"       , "CMcachedProcs"           );
-		_nameLongToShortMap.put("Procedure Cache"         , "CMprocCache"             );
-		_nameLongToShortMap.put("Procedure Call Stack"    , "CMprocCallStack"         );
-		_nameLongToShortMap.put("Cached Objects"          , "CMcachedObjects"         );
-		_nameLongToShortMap.put("Errorlog"                , "CMerrolog"               );
-		_nameLongToShortMap.put("Deadlock"                , "CMdeadlock"              );
-		_nameLongToShortMap.put("Proc Cache Module Usage" , "CMpCacheModuleUsage"     );
-		_nameLongToShortMap.put("Proc Cache Memory Usage" , "CMpCacheMemoryUsage"     );
-		_nameLongToShortMap.put("Statement Cache"         , "CMstatementCache"        );
-		_nameLongToShortMap.put("Statement Cache Details" , "CMstmntCacheDetails"     );
-		_nameLongToShortMap.put("Active Objects"          , "CMActiveObjects"         );
-		_nameLongToShortMap.put("Active Statements"       , "CMActiveStatements"      );
-		_nameLongToShortMap.put("Blocking"                , "CMblocking"              );
-		_nameLongToShortMap.put("Missing Statistics"      , "CMmissingStats"          );
-		_nameLongToShortMap.put("sp_monitorconfig"        , "CMspMonitorConfig"       );
-		_nameLongToShortMap.put("OS Disk Stat"            , "CMosIostat"              );
-		_nameLongToShortMap.put("OS CPU(vmstat)"          , "CMosVmstat"              );
-		_nameLongToShortMap.put("OS CPU(mpstat)"          , "CMosMpstat"              );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SUMMARY                 , GetCounters.CM_DESC__SUMMARY                 );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OBJECT_ACTIVITY         , GetCounters.CM_DESC__OBJECT_ACTIVITY         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROCESS_ACTIVITY        , GetCounters.CM_DESC__PROCESS_ACTIVITY        );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OPEN_DATABASES          , GetCounters.CM_DESC__OPEN_DATABASES          );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__TEMPDB_ACTIVITY         , GetCounters.CM_DESC__TEMPDB_ACTIVITY         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SYS_WAIT                , GetCounters.CM_DESC__SYS_WAIT                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__ENGINE                  , GetCounters.CM_DESC__ENGINE                  );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SYS_LOAD                , GetCounters.CM_DESC__SYS_LOAD                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__DATA_CACHE              , GetCounters.CM_DESC__DATA_CACHE              );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__CACHE_POOL              , GetCounters.CM_DESC__CACHE_POOL              );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__DEVICE_IO               , GetCounters.CM_DESC__DEVICE_IO               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__IO_QUEUE_SUM            , GetCounters.CM_DESC__IO_QUEUE_SUM            );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__IO_QUEUE                , GetCounters.CM_DESC__IO_QUEUE                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SPINLOCK_SUM            , GetCounters.CM_DESC__SPINLOCK_SUM            );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SYSMON                  , GetCounters.CM_DESC__SYSMON                  );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__REP_AGENT               , GetCounters.CM_DESC__REP_AGENT               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__CACHED_PROC             , GetCounters.CM_DESC__CACHED_PROC             );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_LOAD         , GetCounters.CM_DESC__PROC_CACHE_LOAD         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CALL_STACK         , GetCounters.CM_DESC__PROC_CALL_STACK         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__CACHED_OBJECTS          , GetCounters.CM_DESC__CACHED_OBJECTS          );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__ERRORLOG                , GetCounters.CM_DESC__ERRORLOG                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__DEADLOCK                , GetCounters.CM_DESC__DEADLOCK                );
+//		_nameShortToLongMap.put(GetCounters.CM_NAME__LOCK_TIMEOUT            , GetCounters.CM_DESC__LOCK_TIMEOUT            );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE , GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_MEMORY_USAGE , GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__STATEMENT_CACHE         , GetCounters.CM_DESC__STATEMENT_CACHE         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__STATEMENT_CACHE_DETAILS , GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__ACTIVE_OBJECTS          , GetCounters.CM_DESC__ACTIVE_OBJECTS          );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__ACTIVE_STATEMENTS       , GetCounters.CM_DESC__ACTIVE_STATEMENTS       );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__BLOCKING                , GetCounters.CM_DESC__BLOCKING                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__MISSING_STATISTICS      , GetCounters.CM_DESC__MISSING_STATISTICS      );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__QP_METRICS              , GetCounters.CM_DESC__QP_METRICS              );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__SP_MONITOR_CONFIG       , GetCounters.CM_DESC__SP_MONITOR_CONFIG       );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_IOSTAT               , GetCounters.CM_DESC__OS_IOSTAT               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_VMSTAT               , GetCounters.CM_DESC__OS_VMSTAT               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_MPSTAT               , GetCounters.CM_DESC__OS_MPSTAT               );
 
-		
+		// LONG -> SHORT
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SUMMARY                 , GetCounters.CM_NAME__SUMMARY                 );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OBJECT_ACTIVITY         , GetCounters.CM_NAME__OBJECT_ACTIVITY         );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROCESS_ACTIVITY        , GetCounters.CM_NAME__PROCESS_ACTIVITY        );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OPEN_DATABASES          , GetCounters.CM_NAME__OPEN_DATABASES          );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__TEMPDB_ACTIVITY         , GetCounters.CM_NAME__TEMPDB_ACTIVITY         );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SYS_WAIT                , GetCounters.CM_NAME__SYS_WAIT                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__ENGINE                  , GetCounters.CM_NAME__ENGINE                  );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SYS_LOAD                , GetCounters.CM_NAME__SYS_LOAD                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__DATA_CACHE              , GetCounters.CM_NAME__DATA_CACHE              );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__CACHE_POOL              , GetCounters.CM_NAME__CACHE_POOL              );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__DEVICE_IO               , GetCounters.CM_NAME__DEVICE_IO               );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__IO_QUEUE_SUM            , GetCounters.CM_NAME__IO_QUEUE_SUM            );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__IO_QUEUE                , GetCounters.CM_NAME__IO_QUEUE                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SPINLOCK_SUM            , GetCounters.CM_NAME__SPINLOCK_SUM            );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SYSMON                  , GetCounters.CM_NAME__SYSMON                  );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__REP_AGENT               , GetCounters.CM_NAME__REP_AGENT               );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__CACHED_PROC             , GetCounters.CM_NAME__CACHED_PROC             );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_LOAD         , GetCounters.CM_NAME__PROC_CACHE_LOAD         );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CALL_STACK         , GetCounters.CM_NAME__PROC_CALL_STACK         );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__CACHED_OBJECTS          , GetCounters.CM_NAME__CACHED_OBJECTS          );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__ERRORLOG                , GetCounters.CM_NAME__ERRORLOG                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__DEADLOCK                , GetCounters.CM_NAME__DEADLOCK                );
+//		_nameLongToShortMap.put(GetCounters.CM_DESC__LOCK_TIMEOUT            , GetCounters.CM_NAME__LOCK_TIMEOUT            );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE , GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE , GetCounters.CM_NAME__PROC_CACHE_MEMORY_USAGE );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__STATEMENT_CACHE         , GetCounters.CM_NAME__STATEMENT_CACHE         );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS , GetCounters.CM_NAME__STATEMENT_CACHE_DETAILS );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__ACTIVE_OBJECTS          , GetCounters.CM_NAME__ACTIVE_OBJECTS          );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__ACTIVE_STATEMENTS       , GetCounters.CM_NAME__ACTIVE_STATEMENTS       );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__BLOCKING                , GetCounters.CM_NAME__BLOCKING                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__MISSING_STATISTICS      , GetCounters.CM_NAME__MISSING_STATISTICS      );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__QP_METRICS              , GetCounters.CM_NAME__QP_METRICS              );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__SP_MONITOR_CONFIG       , GetCounters.CM_NAME__SP_MONITOR_CONFIG       );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_IOSTAT               , GetCounters.CM_NAME__OS_IOSTAT               );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_VMSTAT               , GetCounters.CM_NAME__OS_VMSTAT               );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_MPSTAT               , GetCounters.CM_NAME__OS_MPSTAT               );
+
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		// SQL: USER DEFINED COUNTERS
@@ -116,14 +121,14 @@ public class CounterSetTemplates
 			String startKey = prefix + name + ".";
 
 			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", name);
-			
+
 			_nameShortToLongMap.put(name,           udcDisplayName);
 			_nameLongToShortMap.put(udcDisplayName, name);
 		}
 	}
 
 	/**
-	 * get the "short" name of a Performance Counter based on it's "long" name 
+	 * get the "short" name of a Performance Counter based on it's "long" name
 	 * @param longName The long name of the Performance Counter
 	 * @return The "short" name of the Performance Counter, null if it can't be found.
 	 */
@@ -133,7 +138,7 @@ public class CounterSetTemplates
 	}
 
 	/**
-	 * get the "long" name of a Performance Counter based on it's "short" name 
+	 * get the "long" name of a Performance Counter based on it's "short" name
 	 * @param shortName The short name of the Performance Counter
 	 * @return The "long" name of the Performance Counter, null if it can't be found.
 	 */
@@ -177,7 +182,7 @@ public class CounterSetTemplates
 	}
 
 	/**
-	 * 
+	 *
 	 * @param templateName
 	 * @return
 	 * @throws Exception
@@ -227,149 +232,157 @@ public class CounterSetTemplates
 
 		return activeCmList;
 	}
-	
-	public final static String systemSummaryCm = 
-		"Summary                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; ";
 
-	public final static String systemTemplatePcsOnSmall = 
-		"Objects                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemSummaryCm =
+		GetCounters.CM_DESC__SUMMARY                 +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; ";
 
-	public final static String systemTemplatePcsOnMedium = 
-		"Objects                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOnSmall =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
-	public final static String systemTemplatePcsOnLarge = 
-		"Objects                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOnMedium =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
-	public final static String systemTemplatePcsOnAll = 
-		"Objects                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOnLarge =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+
+	public final static String systemTemplatePcsOnAll =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 
 
@@ -377,145 +390,153 @@ public class CounterSetTemplates
 	// PCS OFF
 	//----------------------------------------------------------------
 
-	public final static String systemTemplatePcsOffSmall = 
-		"Objects                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOffSmall =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
-	public final static String systemTemplatePcsOffMedium = 
-		"Objects                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOffMedium =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
-	public final static String systemTemplatePcsOffLarge = 
-		"Objects                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOffLarge =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
-	public final static String systemTemplatePcsOffAll = 
-		"Objects                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Processes               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Databases               ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Temp Db                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Waits                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Engines                 ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"System Load             ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Data Caches             ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Pools                   ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Devices                 ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Sum                  ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"IO Queue                ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Spinlock Sum            ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Sysmon Raw              ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"RepAgent                ={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Procedures       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Cache         ={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Procedure Call Stack    ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Cached Objects          ={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Errorlog                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Deadlock                ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"Proc Cache Module Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Proc Cache Memory Usage ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache         ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Statement Cache Details ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Objects          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Active Statements       ={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Blocking                ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"Missing Statistics      ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"sp_monitorconfig        ={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		"OS Disk Stat            ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(vmstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		"OS CPU(mpstat)          ={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+	public final static String systemTemplatePcsOffAll =
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 
 	public final static PropPropEntry SYSTEM_TEMPLATE_SUMMARY_CM     = new PropPropEntry(systemSummaryCm);

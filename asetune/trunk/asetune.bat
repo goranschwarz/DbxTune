@@ -1,7 +1,9 @@
 @echo off
-title AseTune-console
 setlocal
 rem mode con:cols=800 lines=3000
+
+set title=AseTune-console
+title %title%
 
 rem ------------------------------------------------------------------------
 rem --- set ASETUNE_HOME to current directory if NOT already set
@@ -20,6 +22,16 @@ if not _%ASETUNE_HOME:~-1%==_\ goto afterStripHome
 set ASETUNE_HOME=%ASETUNE_HOME:~0,-1%
 goto stripHome
 :afterStripHome
+
+
+
+rem ------------------------------------------------------------------------
+rem --- set some CONSOLE windows and buffer size
+rem ------------------------------------------------------------------------
+rem ---set /a "winsize=(64 << 16) + 80"
+rem ---set /a "bufsize=(3000 << 16) + 800"
+rem --->nul reg add "hkcu\console\%title%" /v WindowSize /t REG_DWORD /d "%winsize%" /f
+rem --->nul reg add "hkcu\console\%title%" /v ScreenBufferSize /t REG_DWORD /d "%bufsize%" /f
 
 
 

@@ -99,7 +99,7 @@ public class ProcessDetailFrame extends JFrame
 
 	private   JPanel           planPanel                    = new JPanel();
 	private   JPanel           batchPanel                   = new JPanel();
-	private   JCheckBox        planShowEnableCheckbox       = new JCheckBox("Sample showplan text", true);
+	private   JCheckBox        planShowEnableCheckbox       = new JCheckBox("Sample showplan text", false);
 	private   JCheckBox        batchShowEnableCheckbox      = new JCheckBox("Sample SQL batch text", true);
 	protected JCheckBox        sqlTextShowProcSrcCheckbox   = new JCheckBox("Show Stored Procedure source code in Batch text window", true);
 

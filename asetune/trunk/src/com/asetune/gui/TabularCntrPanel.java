@@ -240,8 +240,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 ** BEGIN: constructors
 	 **---------------------------------------------------
 	 */
-	public TabularCntrPanel(String displayName)
+	public TabularCntrPanel(String displayName, CountersModel cm)
 	{
+		_cm          = cm;
 		_displayName = displayName;
 
 		// Initialize various table filters
@@ -264,6 +265,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_indicatorToLeft = true;
 		if ( lookAndFeelName != null && lookAndFeelName.equals("GTK look and feel") )
 			_indicatorToLeft = false;
+	}
+	public TabularCntrPanel(String displayName)
+	{
+		this(displayName, null);
 	}
 
 	/*---------------------------------------------------
