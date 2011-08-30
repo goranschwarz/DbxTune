@@ -8,9 +8,9 @@ go
 -------------------------------------------------------------
 --
 -- If you change anything in here, do NOT forget to change
--- the field 'SP_MISSING_STATS_CR_STR' in 'asemon.cm.sql.VersionInfo'
+-- the field 'SP_MISSING_STATS_CR_STR' in 'com.asetune.cm.sql.VersionInfo'
 --
--- Otherwise it will NOT be recreated... when asemon starts...
+-- Otherwise it will NOT be recreated... when asetune starts...
 --
 -------------------------------------------------------------
 
@@ -39,21 +39,21 @@ go
 
 
 -------------------------------------------------------------
--- Procedure: sp_asemon_ra_stats
+-- Procedure: sp_asetune_ra_stats
 -------------------------------------------------------------
-if (select object_id('sp_asemon_ra_stats')) is not null
+if (select object_id('sp_asetune_ra_stats')) is not null
 begin
-	drop procedure sp_asemon_ra_stats
-	print "Dropping procedure sp_asemon_ra_stats"
+	drop procedure sp_asetune_ra_stats
+	print "Dropping procedure sp_asetune_ra_stats"
 end
 go
 
 declare @dbname varchar(255)
 select @dbname = db_name()
-print "Creating procedure '%1!.%2!.%3!'.", @dbname, "dbo", "sp_asemon_ra_stats"
+print "Creating procedure '%1!.%2!.%3!'.", @dbname, "dbo", "sp_asetune_ra_stats"
 go
 
-create procedure sp_asemon_ra_stats
+create procedure sp_asetune_ra_stats
 (
 	@resultSetType int = 2  -- 0=High(OneRowPerCounter), 1=Wide(OneColumnPerCounter), 2=DynamicWide
 )
@@ -284,13 +284,14 @@ begin
 end
 go
 
-grant exec on sp_asemon_ra_stats to public
+grant exec on sp_asetune_ra_stats to public
 go
 
 
 --set statistics io on
 go
---exec sp_asemon_ra_stats 1
+--exec sp_asetune_ra_stats 1
 go
---exec sp_asemon_ra_stats 2
+--exec sp_asetune_ra_stats 2
 go
+

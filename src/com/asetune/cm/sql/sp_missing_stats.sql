@@ -8,9 +8,9 @@ go
 -------------------------------------------------------------
 --
 -- If you change anything in here, do NOT forget to change
--- the field 'SP_MISSING_STATS_CR_STR' in 'asemon.cm.sql.VersionInfo'
+-- the field 'SP_MISSING_STATS_CR_STR' in 'com.asetune.cm.sql.VersionInfo'
 --
--- Otherwise it will NOT be recreated... when asemon starts...
+-- Otherwise it will NOT be recreated... when asetune starts...
 --
 -------------------------------------------------------------
 
@@ -158,11 +158,16 @@ as
 begin
 	declare @c_dbname varchar(30), @c_dbid int
 
+	-- master..sysdatabases.status
+	-- 32 = Database created with for load option, or crashed while loading database, instructs recovery not to proceed
+	-- 256 = Database suspect | Not recovered | Cannot be opened or used | Can be dropped only with dbcc dbrepair
+
 	declare db_curs cursor for 
 		select name, dbid 
 		from master..sysdatabases 
 --		where name not in('master', 'tempdb', 'model', 'sybsystemdb', 'sybsystemprocs', 'sybpcidb', 'sybmgmtdb', 'sybpcidb')
 		where name not in(          'tempdb', 'model', 'sybsystemdb', 'sybsystemprocs', 'sybpcidb', 'sybmgmtdb', 'sybpcidb')
+		  and (status & 32 != 32) and (status & 256 != 256) 
 		order by dbid
 		for read only
 	open db_curs

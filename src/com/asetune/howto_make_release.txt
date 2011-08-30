@@ -14,11 +14,11 @@ history.html
 
 -----------------------------------------------------------
 in Eclipse: (get rid of unnecessary import)
-- Organize Import: at the asemon level: Ctrl+Shift+o
+- Organize Import: at the asetune level: Ctrl+Shift+o
 
 -----------------------------------------------------------
 Check that all files are ADDED to SVN:
-cd C:\projects\asemon
+cd C:\projects\asetune
 svn st
 
 -----------------------------------------------------------
@@ -26,14 +26,14 @@ ANT BUILD
 set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
 ant
 cd dist
-asemon.bat
+asetune.bat
 -- Check if everything is working
 cd ..
 ant clean
 
 -----------------------------------------------------------
 CLEANUP configuratin
-C:\projects\asemon\asemon.properties
+C:\projects\asetune\asetune.properties
 
 
 
@@ -43,15 +43,15 @@ C:\projects\asemon\asemon.properties
 CHECKIN
 - use turtoiseAVN in the explorer, or svn:
 	c:
-	cd C:\projects\asemon
+	cd C:\projects\asetune
 	svn commit 
 
 
 ###########################################################
 ## Subversion TAG the release
 ###########################################################
-svn copy https://gorans.no-ip.org/projects/asemon/trunk \
- https://gorans.no-ip.org/projects/asemon/tags/YYYY-MM-DD -m "Tagging the release."
+svn copy https://svn.gorans.no-ip.org/projects/asetune/trunk \
+ https://svn.gorans.no-ip.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
 
 
 ###########################################################
@@ -59,13 +59,13 @@ svn copy https://gorans.no-ip.org/projects/asemon/trunk \
 ###########################################################
 c:
 cd c:\tmpsvn
-svn co https://gorans.no-ip.org/projects/asemon/tags/YYYY-MM-DD release
+svn co https://svn.gorans.no-ip.org/projects/asetune/tags/YYYY-MM-DD release
 cd release
 
 set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
 ant
 cd dist
-asemon.bat
+asetune.bat
 -- Check if everything is working
 cd ..
 
@@ -79,8 +79,8 @@ cd ..
 -----------------------------------------------------------
 Sourceforge
 
-- ftp asemon_YYYY-MM-DD.zip (from: cd c:\tmpsvn\release)
-- ftp history.html          (from: cd c:\tmpsvn\release\src\asemon)
+- ftp asetune_YYYY-MM-DD.zip (from: cd c:\tmpsvn\release)
+- ftp history.html           (from: cd c:\tmpsvn\release\src\com\asetune)
 
 -----------------------------------------------------------
 done at asemon.se
@@ -89,13 +89,13 @@ ftp: history.html
 - ftp history.html
 
 update: download.html
-- set the new asemon_YYYY-MM-DD.zip in 2 places 
+- set the new asetune_YYYY-MM-DD.zip in 2 places 
 
 update: check_for_update.php
-- source version string/id (notepad c:\tmpsvn\release\src\asemon\Version.java :SOURCE_REV_STRING)
-	$ASEMON_LATEST_VERSION_SRC = nnn;
-	$ASEMON_LATEST_VERSION_STR = "x.y.z";
-	$ASEMON_LATEST_VERSION_STR = "YYYY-MM-DD";
+- source version string/id (notepad c:\tmpsvn\release\src\com\asetune\Version.java :SOURCE_REV_STRING)
+	$ASETUNE_LATEST_VERSION_SRC = nnn;
+	$ASETUNE_LATEST_VERSION_STR = "x.y.z";
+	$ASETUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
 
 
 ###########################################################

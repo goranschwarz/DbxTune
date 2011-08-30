@@ -64,15 +64,12 @@ import com.btr.proxy.search.ProxySearch.Strategy;
  * for more details...<br>
  * Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ProxyEnable
  * If this is set to 0, then the whole thing is more or less not used...
- * 
+ *
  * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
  */
 public class CheckForUpdates
 {
 	private static Logger _logger = Logger.getLogger(CheckForUpdates.class);
-
-// The redirect from www.asetune.com -> www.asemon.se seems like it's stripping all the parameters
-// So this is a bit problematic...
 
 	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
 	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
@@ -82,7 +79,7 @@ public class CheckForUpdates
 
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
-	
+
 
 	private static boolean _sendConnectInfo      = true;
 	private static boolean _sendUdcInfo          = true;
@@ -90,7 +87,7 @@ public class CheckForUpdates
 
 	/** What PHP variables will be used to pick up variables <br>
 	 *  true  = _POST[], HTTP POST will be used, "no" limit in size... <br>
-	 *  false = _GET[], send as: http://www.site.com?param1=var1&param2=var2 approximately 2000 chars is max<br> 
+	 *  false = _GET[], send as: http://www.site.com?param1=var1&param2=var2 approximately 2000 chars is max<br>
 	 */
 	private boolean        _useHttpPost    = false;
 	// Note: when redirecting URL from www.asetune.com -> www.asemon.se, it looses the POST entries
@@ -98,7 +95,7 @@ public class CheckForUpdates
 
 //	private URL	           _url;
 	private String         _action        = "";
-	
+
 	// The below is protected, just because test purposes, it should be private
 	protected String       _asetuneVersion = "";
 	protected String       _downloadUrl    = "";
@@ -109,12 +106,12 @@ public class CheckForUpdates
 	protected String       _feedbackUrl     = "";
 	protected String       _feedbackDateStr = "";
 	protected java.util.Date _feedbackDate  = null;
-	
+
 	private static boolean _initialized = false;
-	
+
 	private static int     _checkId = -1;
 
-//	static 
+//	static
 //	{
 //		_logger.setLevel(Level.DEBUG);
 //	}
@@ -139,7 +136,7 @@ public class CheckForUpdates
 	**---------------------------------------------------
 	*/
 
-	
+
 	/*---------------------------------------------------
 	** BEGIN: private helper methods
 	**---------------------------------------------------
@@ -187,7 +184,7 @@ public class CheckForUpdates
 	{
 		return sendHttpPost(urlStr, urlParams, 3*1000);
 	}
-	private InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs) 
+	private InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs)
 	throws MalformedURLException, IOException
 	{
 		if (_logger.isDebugEnabled())
@@ -221,8 +218,8 @@ public class CheckForUpdates
 	**---------------------------------------------------
 	*/
 
-	
-	
+
+
 	/*---------------------------------------------------
 	** BEGIN: public methods
 	**---------------------------------------------------
@@ -256,7 +253,7 @@ public class CheckForUpdates
 		_initialized = true;
 	}
 
-	
+
 	/**
 	 * Check for a later version of the software
 	 * @param owner A JFrame or similar
@@ -264,7 +261,7 @@ public class CheckForUpdates
 	 */
 	public static void noBlockCheck(final Component owner, final boolean showNoUpgrade, final boolean showFailure)
 	{
-		Runnable checkLater = new Runnable() 
+		Runnable checkLater = new Runnable()
 		{
 			public void run()
 			{
@@ -286,7 +283,7 @@ public class CheckForUpdates
 				{
 					if (owner != null)
 						CheckDialog.showDialog(owner, chk);
-					
+
 					_logger.info("New Upgrade is Available. New version is '"+chk.getNewAppVersionStr()+"' " +
 							"and can be downloaded here '"+chk.getDownloadUrl()+"'.");
 				}
@@ -333,23 +330,23 @@ public class CheckForUpdates
 
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
-			
+
 		urlParams.add("clientCheckTime",     clientTime);
 
 		urlParams.add("clientSourceDate",     Version.getSourceDate());
 		urlParams.add("clientSourceVersion",  Version.getSourceRev());
 		urlParams.add("clientAseTuneVersion", Version.getVersionStr());
 
-		try 
+		try
 		{
 			InetAddress addr = InetAddress.getLocalHost();
-			
+
 			urlParams.add("clientHostName",          addr.getHostName());
 			urlParams.add("clientHostAddress",       addr.getHostAddress());
 			urlParams.add("clientCanonicalHostName", addr.getCanonicalHostName());
 
 		}
-		catch (UnknownHostException e) 
+		catch (UnknownHostException e)
 		{
 		}
 
@@ -464,7 +461,7 @@ public class CheckForUpdates
 					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
 					String feedback = line.substring("FEEDBACK:".length()).trim();
 					_logger.debug("Receiving feedback from server '"+feedback+"'.");
-					
+
 					if ( ! "".equals(feedback) )
 					{
 						String[] sa = feedback.split(":");
@@ -478,7 +475,7 @@ public class CheckForUpdates
 							SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 							_feedbackDate = sdf.parse(_feedbackDateStr);
 						}
-						catch (ParseException e) 
+						catch (ParseException e)
 						{
 						}
 					}
@@ -536,7 +533,7 @@ public class CheckForUpdates
 			{
 				_logger.warn("When checking for new version, no 'ACTION:' response was found. The responce rows was '" + responseLines + "'.");
 			}
-				
+
 			_checkSucceed = true;
 		}
 		catch (IOException ex)
@@ -549,24 +546,24 @@ public class CheckForUpdates
 	 * Did the check succeed
 	 */
 	public boolean checkSucceed()
-	{ 
-		return _checkSucceed; 
+	{
+		return _checkSucceed;
 	}
 
 	/**
 	 * If there is a newer release for download, this would return true
 	 */
 	public boolean hasUpgrade()
-	{ 
-		return _hasUpgrade; 
+	{
+		return _hasUpgrade;
 	}
 
 	/**
 	 * If there is an upgrade available, what version is the new one
 	 */
-	public String  getNewAppVersionStr() 
-	{ 
-		return _asetuneVersion; 
+	public String  getNewAppVersionStr()
+	{
+		return _asetuneVersion;
 	}
 
 	/**
@@ -576,7 +573,7 @@ public class CheckForUpdates
 	{
 		if (_downloadUrl == null || _downloadUrl.trim().equals(""))
 			return DEFAULT_DOWNLOAD_URL;
-		return _downloadUrl; 
+		return _downloadUrl;
 	}
 
 	/**
@@ -604,7 +601,7 @@ public class CheckForUpdates
 	 */
 	public boolean hasFeedback()
 	{
-		return (getFeedbackUrl() != null); 
+		return (getFeedbackUrl() != null);
 	}
 
 	/**
@@ -628,7 +625,7 @@ public class CheckForUpdates
 //		return _url;
 //	}
 
-	
+
 	/**
 	 */
 	public static void sendConnectInfoNoBlock()
@@ -639,7 +636,7 @@ public class CheckForUpdates
 			return;
 		}
 
-		Runnable doLater = new Runnable() 
+		Runnable doLater = new Runnable()
 		{
 			public void run()
 			{
@@ -715,10 +712,10 @@ public class CheckForUpdates
 		if (srvIpPort     != null) srvIpPort.trim();
 		if (srvUser       != null) srvUser.trim();
 		if (srvVersionStr != null) srvVersionStr.trim();
-		
+
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
-			
+
 		urlParams.add("checkId",             checkId);
 		urlParams.add("clientTime",          clientTime);
 		urlParams.add("userName",            System.getProperty("user.name"));
@@ -768,11 +765,11 @@ public class CheckForUpdates
 		}
 	}
 
-	
-	
-	
 
-	
+
+
+
+
 	/**
 	 */
 	public static void sendUdcInfoNoBlock()
@@ -783,7 +780,7 @@ public class CheckForUpdates
 			return;
 		}
 
-		Runnable doLater = new Runnable() 
+		Runnable doLater = new Runnable()
 		{
 			public void run()
 			{
@@ -842,7 +839,7 @@ public class CheckForUpdates
 		urlParams.add("userName",            System.getProperty("user.name"));
 
 		int udcRows = 0;
-		// key: UDC 
+		// key: UDC
 		for (String key : conf.getKeys("udc."))
 		{
 			String val = conf.getPropertyRaw(key);
@@ -900,11 +897,11 @@ public class CheckForUpdates
 		}
 	}
 
-	
-	
-	
 
-	
+
+
+
+
 	/**
 	 */
 	private static boolean _sendCounterUsage_done = false;
@@ -918,7 +915,7 @@ public class CheckForUpdates
 		}
 
 // Hmmm... skip the noblock thread... since this is done just before the JVM exits.
-//		Runnable doLater = new Runnable() 
+//		Runnable doLater = new Runnable()
 //		{
 //			public void run()
 //			{
@@ -927,7 +924,7 @@ public class CheckForUpdates
 					_sendCounterUsage_done = true;
 
 					CheckForUpdates chk = new CheckForUpdates();
-	
+
 					// Go and check
 					chk.sendCounterUsageInfo();
 				}
@@ -1039,24 +1036,24 @@ public class CheckForUpdates
 		}
 	}
 
-	
-	
-	
+
+
+
 	/*---------------------------------------------------
 	**---------------------------------------------------
-	**---- SUBCLASSES ---- SUBCLASES ---- SUBCLASES ----- 
+	**---- SUBCLASSES ---- SUBCLASES ---- SUBCLASES -----
 	**---------------------------------------------------
 	**---------------------------------------------------
 	*/
-	private static class OnlyHttpProxySelector 
+	private static class OnlyHttpProxySelector
 	extends ProxySelector
 	{
 		ProxySelector _defsel = null;
 		ProxySelector _proxyVole = null;
 
-		public OnlyHttpProxySelector(ProxySelector def) 
+		public OnlyHttpProxySelector(ProxySelector def)
 		{
-			if (def == null) 
+			if (def == null)
 			{
 				throw new IllegalArgumentException("ProxySelector can't be null.");
 			}
@@ -1064,10 +1061,10 @@ public class CheckForUpdates
 			_logger.debug("Installing a new ProxySelector, but I will save and use the default '"+_defsel.getClass().getName()+"'.");
 
 			//===============================================
-			// Use proxy-vole project: 
+			// Use proxy-vole project:
 			//-----------------------------------------------
 			// install the log backend implementation
-			com.btr.proxy.util.Logger.setBackend(new com.btr.proxy.util.Logger.LogBackEnd() 
+			com.btr.proxy.util.Logger.setBackend(new com.btr.proxy.util.Logger.LogBackEnd()
 			{
 				@Override
 				public boolean isLogginEnabled(com.btr.proxy.util.Logger.LogLevel logLevel)
@@ -1115,19 +1112,19 @@ public class CheckForUpdates
 
 				// Test if we are a server or a client.
 				boolean headless = GraphicsEnvironment.isHeadless();
-				
-				if (headless) 
-				{ 
+
+				if (headless)
+				{
 					proxySearch.addStrategy(Strategy.JAVA);
 					proxySearch.addStrategy(Strategy.OS_DEFAULT);
 					proxySearch.addStrategy(Strategy.ENV_VAR);
-				} 
-				else 
+				}
+				else
 				{
 					proxySearch.addStrategy(Strategy.JAVA);
 					if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
 					{
-						// the below, changes from default to add IE & FIREFOX... 
+						// the below, changes from default to add IE & FIREFOX...
 						// the default for windows is just IE
 						proxySearch.addStrategy(Strategy.IE);
 						proxySearch.addStrategy(Strategy.FIREFOX);
@@ -1168,7 +1165,7 @@ public class CheckForUpdates
 		@Override
 		public List<Proxy> select(URI uri)
 		{
-			if (uri == null) 
+			if (uri == null)
 			{
 				throw new IllegalArgumentException("URI can't be null.");
 			}
@@ -1215,11 +1212,11 @@ public class CheckForUpdates
 
 				return proxyList;
 			}
-        }		
+        }
 	}
 
 
-	
+
 	private static class QueryString
 	{
 
@@ -1245,7 +1242,7 @@ public class CheckForUpdates
 		{
 			if (value == null)
 			value = "";
-		
+
 			// replace all '\', with '/', which makes some fields more readable.
 			value = value.replace('\\', '/');
 
@@ -1274,7 +1271,7 @@ public class CheckForUpdates
 
 	/*----------------------------------------------
 	**----------------------------------------------
-	**---- TEST ---- TEST ---- TEST ----- TEST ----- 
+	**---- TEST ---- TEST ---- TEST ----- TEST -----
 	**----------------------------------------------
 	**----------------------------------------------
 	*/
@@ -1300,7 +1297,7 @@ public class CheckForUpdates
 //		System.setProperty("http.proxyPort", "8080");
 
 		CheckForUpdates check = new CheckForUpdates();
-		
+
 		System.out.println("-- DO CHECK");
 		check.check();
 		if ( check.checkSucceed() )
@@ -1322,7 +1319,7 @@ public class CheckForUpdates
 			System.out.println("-- CHECK FAILED...");
 		}
 
-	
+
 		CheckForUpdates udcCheck = new CheckForUpdates();
 		udcCheck.sendUdcInfo();
 	}
