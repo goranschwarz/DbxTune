@@ -706,19 +706,38 @@ public class StringUtil
 	}
 
 	/**
-	 * Check if 'searchStr' is part of the 'searchArr'
-	 * @param searchStr
-	 * @param searchArr
-	 * @return true if part of the array
+	 * Check if 'inStr' is part of the 'regexArr'
+	 * @param inStr String to match in any of Strings in the Array
+	 * @param regexArr Array of regex Strings that we match towards <code>inStr</code>
+	 * @return true if inStr matches any of the regex Strings of the regexArr
 	 */
-	public static boolean contains(String searchStr, String[] searchArr)
+	public static boolean matchesRegexArr(String inStr, String[] regexArr)
 	{
-		for (String str : searchArr)
+		for (String str : regexArr)
 		{
-			if (str.equals(searchStr))
+//			if (str.equals(searchStr))
+			if (inStr.matches(str))
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Remove last ','
+	 * @param str
+	 * @return the origin string but last ',' is stripped. 
+	 */
+	public static String getRidOfLastComma(String str)
+	{
+		if (str == null)
+			return null;
+
+		str = str.trim();
+
+		if (str.endsWith(","))
+			str = str.substring(0, str.length()-1);
+
+		return str;
 	}
 
 	/////////////////////////////////////////////////////////////////////////////
@@ -729,6 +748,13 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		String[] str = {"abc", "abc ", "abc,", "abc, ", "abc,\t", "abc,\n", "abc,\t\t", "abc,\n\n", "abc,\t\n"};
+		for (String s : str)
+		{
+			System.out.println("str1='"+getRidOfLastComma(s)+"'.");
+		}
+		System.exit(0);
+
 		String[] strArr = commaStrToArray("");
 		System.out.println("length="+strArr.length);
 		for (int i=0; i<strArr.length; i++)

@@ -177,6 +177,7 @@ li   {margin-bottom: 6px}
 	The default skip list is: <code>master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs</code><br>
 	The default size limit is: <code>300</code><br>
 	If you <b>always</b> want a database present in the graphs, add database to property <code>CMopenDatabases.keepDbsInGraphs=db1, db2...</code><br>
+	Note: string in the "skip/keep" lists is java regex patterns.<br>
 	New Table Background colors:
 	<ul>
 	    <li>BLUE - A Database backup is in progress</li>
@@ -185,6 +186,22 @@ li   {margin-bottom: 6px}
 	</ul>
 	</LI>
 
+	<LI>
+	Added ASE 15.7 MDA columns to Performance Counters<br>
+	<ul>
+		<li> Processes </li>
+		<li> Active Statements </li>
+		<li> Objects </li>
+		<li> Procedure Call Stack </li>
+		<li> Caches </li>
+		<li> Pools </li>
+		<li> Cached Procedures </li>
+		<li> Statement Cache Details </li>
+	</ul>
+	Note: I used a preliminary document for what's new on 15.7, so I have NOT tested this yet.
+	</LI>
+
+	
 </UL>
 
 <!-- ========================================================================== -->

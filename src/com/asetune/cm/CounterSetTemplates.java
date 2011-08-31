@@ -44,7 +44,7 @@ public class CounterSetTemplates
 		_nameShortToLongMap.put(GetCounters.CM_NAME__CACHED_OBJECTS          , GetCounters.CM_DESC__CACHED_OBJECTS          );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__ERRORLOG                , GetCounters.CM_DESC__ERRORLOG                );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__DEADLOCK                , GetCounters.CM_DESC__DEADLOCK                );
-//		_nameShortToLongMap.put(GetCounters.CM_NAME__LOCK_TIMEOUT            , GetCounters.CM_DESC__LOCK_TIMEOUT            );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__LOCK_TIMEOUT            , GetCounters.CM_DESC__LOCK_TIMEOUT            );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE , GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_MEMORY_USAGE , GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__STATEMENT_CACHE         , GetCounters.CM_DESC__STATEMENT_CACHE         );
@@ -82,7 +82,7 @@ public class CounterSetTemplates
 		_nameLongToShortMap.put(GetCounters.CM_DESC__CACHED_OBJECTS          , GetCounters.CM_NAME__CACHED_OBJECTS          );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__ERRORLOG                , GetCounters.CM_NAME__ERRORLOG                );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__DEADLOCK                , GetCounters.CM_NAME__DEADLOCK                );
-//		_nameLongToShortMap.put(GetCounters.CM_DESC__LOCK_TIMEOUT            , GetCounters.CM_NAME__LOCK_TIMEOUT            );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__LOCK_TIMEOUT            , GetCounters.CM_NAME__LOCK_TIMEOUT            );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE , GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE , GetCounters.CM_NAME__PROC_CACHE_MEMORY_USAGE );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__STATEMENT_CACHE         , GetCounters.CM_NAME__STATEMENT_CACHE         );
@@ -258,7 +258,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -295,7 +295,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -332,7 +332,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -369,7 +369,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -412,7 +412,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -449,7 +449,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -486,7 +486,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -523,7 +523,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-//		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
