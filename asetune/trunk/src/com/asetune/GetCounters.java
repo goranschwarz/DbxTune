@@ -1175,6 +1175,20 @@ extends Thread
 //
 //		(43 rows affected)
 
+		//==================================================================================================
+        // 12.5.0.3: Description of: monOpenObjectActivity
+        // 
+        //---------------------------------------------------------------------------------------------------
+        // Column changes in various versions:
+        //
+        // Version     Action  Name                      Datatype    Attributes          Description
+        // ----------- ------- ------------------------- ----------- ------------------- ----------------------------------
+        // NOT RECORDED BEFORE: ASE 15.7
+        // 15.7    3B  added   SharedLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for a shared lock
+        // 15.7    3B  added   ExclusiveLockWaitTime     int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an exclusive lock
+        // 15.7    3B  added   UpdateLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an update lock
+        //---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__OBJECT_ACTIVITY;
 		displayName  = CM_DESC__OBJECT_ACTIVITY;
 		description  = "<html>" +
@@ -1193,7 +1207,7 @@ extends Thread
 		monTables    = new String[] {"monOpenObjectActivity"};
 		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {"enable monitoring=1", "object lockwait timing=1", "per object statistics active=1"};
-		colsCalcDiff = new String[] {"LogicalReads","PhysicalReads", "APFReads", "PagesRead", "PhysicalWrites", "PagesWritten", "UsedCount", "RowsInsUpdDel", "RowsInserted", "RowsDeleted", "RowsUpdated", "Operations", "LockRequests", "LockWaits", "HkgcRequests", "HkgcPending", "HkgcOverflows", "OptSelectCount", "PhysicalLocks", "PhysicalLocksRetained", "PhysicalLocksRetainWaited", "PhysicalLocksDeadlocks", "PhysicalLocksWaited", "PhysicalLocksPageTransfer", "TransferReqWaited", "TotalServiceRequests", "PhysicalLocksDowngraded", "PagesTransferred", "ClusterPageWrites"};
+		colsCalcDiff = new String[] {"LogicalReads","PhysicalReads", "APFReads", "PagesRead", "PhysicalWrites", "PagesWritten", "UsedCount", "RowsInsUpdDel", "RowsInserted", "RowsDeleted", "RowsUpdated", "Operations", "LockRequests", "LockWaits", "HkgcRequests", "HkgcPending", "HkgcOverflows", "OptSelectCount", "PhysicalLocks", "PhysicalLocksRetained", "PhysicalLocksRetainWaited", "PhysicalLocksDeadlocks", "PhysicalLocksWaited", "PhysicalLocksPageTransfer", "TransferReqWaited", "TotalServiceRequests", "PhysicalLocksDowngraded", "PagesTransferred", "ClusterPageWrites", "SharedLockWaitTime", "ExclusiveLockWaitTime", "UpdateLockWaitTime"};
 		colsCalcPCT  = new String[] {"LockContPct"};
 		pkList       = new LinkedList<String>();
 			pkList.add("DBName");
@@ -1251,6 +1265,11 @@ extends Thread
 				String tabRowCount = "";
 				String dbNameCol   = "DBName=db_name(A.DBID)";
 				String objNameCol  = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
+				// ASE 15.7
+				String SharedLockWaitTime    = "";
+				String ExclusiveLockWaitTime = "";
+				String UpdateLockWaitTime    = "";
+
 				if (aseVersion >= 15020)
 				{
 					tabRowCount = "TabRowCount = convert(bigint,row_count(A.DBID, A.ObjectID)), \n";
@@ -1271,6 +1290,12 @@ extends Thread
 						_logger.info("CMobjActivity.TabRowCount=false, Disabling the column 'TabRowCount'.");
 					}
 				}
+				if (aseVersion >= 15700)
+				{
+					SharedLockWaitTime    = "SharedLockWaitTime, ";
+					ExclusiveLockWaitTime = "ExclusiveLockWaitTime, ";
+					UpdateLockWaitTime    = "UpdateLockWaitTime, ";
+				}
 
 				if (isClusterEnabled())
 				{
@@ -1287,6 +1312,7 @@ extends Thread
 				         "                   THEN convert(numeric(10,1), ((LockWaits+0.0)/(LockRequests+0.0)) * 100.0) \n" +
 				         "                   ELSE convert(numeric(10,1), 0.0) \n" +
 				         "              END, \n" +
+				         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + "\n" +
 				         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
 				         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 				         tabRowCount +
@@ -2172,13 +2198,13 @@ extends Thread
 
 					boolean keepDb = true;
 
-					if (StringUtil.contains(dbname, _skipDbsInGraphs))
+					if (StringUtil.matchesRegexArr(dbname, _skipDbsInGraphs))
 						keepDb = false;
 
 					if (dbsize < _skipDbsWithSizeLtInGraphs)
 						keepDb = false;
 
-					if (StringUtil.contains(dbname, _keepDbsInGraphs))
+					if (StringUtil.matchesRegexArr(dbname, _keepDbsInGraphs))
 						keepDb = true;
 						
 					if (keepDb)
@@ -3181,6 +3207,24 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+        // 12.5.0.3: Description of: monDataCache
+        // 
+        //---------------------------------------------------------------------------------------------------
+        // Column changes in various versions:
+        //
+        // Version     Action  Name                      Datatype     Attributes          Description
+        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
+        // NOT RECORDED BEFORE: ASE 15.7
+        // 15.7    3B  added   Status                    varchar(30)  null                Status of cache. One of:* Active, * Pending/Active, * Pending/Delete, * Update Cache, * Cache Create, * Cache Delete, * Cache Skip (Cluster Edition only)
+        // 15.7    3B  added   Type                      varchar(30)  null                Type of cache. One of: * Default, * Mixed, * Mixed, HK Ignore, * Log Only, * In-Memory Storage
+        // 15.7    3B  added   CacheSize                 int                              Total size of cache, in kilobytes
+        // 15.7    3B  added   ReplacementStrategy       varchar(30)  null                Cache replacement strategy
+        // 15.7    3B  added   APFReads                  int                              Counter Number of asynchronous prefetch (APF) reads for this data cache
+        // 15.7    3B  added   Overhead                  int                              Cache overhead
+        //---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__DATA_CACHE;
 		displayName  = CM_DESC__DATA_CACHE;
 		description  = "What (user defined) data caches have we got and how many 'chache misses' goes out to disk...";
@@ -3192,7 +3236,7 @@ extends Thread
 		monTables    = new String[] {"monDataCache"};
 		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {"enable monitoring=1"};
-		colsCalcDiff = new String[] {"CacheHitRate", "CacheSearches", "PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls"};
+		colsCalcDiff = new String[] {"CacheHitRate", "CacheSearches", "PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls", "APFReads"};
 		colsCalcPCT  = new String[] {"CacheHitRate"};
 		pkList       = new LinkedList<String>();
 		     pkList.add("CacheName");
@@ -3250,15 +3294,36 @@ extends Thread
 
 
 				
+				// ASE 15.7
+				String Status              = "";
+				String Type                = "";
+				String CacheSize           = "";
+				String ReplacementStrategy = "";
+				String APFReads            = "";
+				String Overhead            = "";
+
+				if (aseVersion >= 15700)
+				{
+					Status              = "Status, ";
+					Type                = "Type, ";
+					CacheSize           = "CacheSize, ";
+					ReplacementStrategy = "ReplacementStrategy, ";
+					APFReads            = "APFReads, ";
+					Overhead            = "Overhead, ";
+				}
+
 				if (isClusterEnabled())
 				{
 					cols1 += "InstanceID, ";
 					this.getPk().add("InstanceID");
 				}
 
-				cols1 += "CacheName, CacheID, RelaxedReplacement, CachePartitions, BufferPools" +
-				         ", CacheSearches, PhysicalReads, LogicalReads, PhysicalWrites, Stalls" +
-				         ", CacheHitRate = convert(numeric(10,1), 100 - (PhysicalReads*1.0/(CacheSearches+1)) * 100.0)" +
+				cols1 += "CacheName, CacheID, " +
+				         Status + Type + CacheSize + ReplacementStrategy + 
+				         "RelaxedReplacement, CachePartitions, BufferPools, " +
+				         "CacheSearches, PhysicalReads, LogicalReads, PhysicalWrites, Stalls, " +
+				         APFReads + Overhead +
+				         "CacheHitRate = convert(numeric(10,1), 100 - (PhysicalReads*1.0/(CacheSearches+1)) * 100.0)" +
 //				         ", HitRate    = convert(numeric(10,1), (CacheSearches * 1.0 / LogicalReads) * 100)" +
 //				         ", Misses     = convert(numeric(10,1), (CacheSearches * 1.0 / PhysicalReads) * 1)" +
 //				         ", Volatility = convert(numeric(10,1), PhysicalWrites * 1.0 / (PhysicalReads + LogicalReads)* 1)"
@@ -3429,7 +3494,7 @@ extends Thread
 		monTables    = new String[] {"monCachePool"};
 		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {"enable monitoring=1"};
-		colsCalcDiff = new String[] {"PagesRead", "PhysicalReads", "Stalls", "PagesTouched", "BuffersToMRU", "BuffersToLRU"};
+		colsCalcDiff = new String[] {"PagesRead", "PhysicalReads", "Stalls", "PagesTouched", "BuffersToMRU", "BuffersToLRU", "LogicalReads", "PhysicalWrites", "APFReads"};
 		colsCalcPCT  = new String[] {"CacheUtilization", "CacheEfficiency"};
 		pkList       = new LinkedList<String>();
 		     pkList.add("CacheName");
@@ -3497,15 +3562,43 @@ extends Thread
 					this.getPk().add("InstanceID");
 				}
 
-				cols1 += "CacheName, CacheID \n" +
-				         ", SrvPageSize = @@maxpagesize \n" +
-				         ", IOBufferSize \n" +
-				         ", PagesPerIO = IOBufferSize/@@maxpagesize \n" +
-				         ", AllocatedKB \n" +
-				         ", AllocatedPages = convert(int,AllocatedKB*(1024.0/@@maxpagesize)) \n" +
-				         ", PagesRead, PhysicalReads, Stalls, PagesTouched, BuffersToMRU, BuffersToLRU \n" +
-				         ", CacheUtilization = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0) \n" +
-				         ", CacheEfficiency  = CASE WHEN PagesRead > 0 THEN convert(numeric(12,1), (AllocatedKB*(1024.0/@@maxpagesize)) / PagesRead    * 100.0) ELSE 0.0 END\n" +
+				// ASE 15.7
+				String LogicalReads    = "";
+				String PhysicalWrites  = "";
+				String APFReads        = "";
+				String APFPercentage   = "";
+				String WashSize        = "";
+
+
+				if (aseVersion >= 15700)
+				{
+					LogicalReads    = "LogicalReads, \n";
+					PhysicalWrites  = "PhysicalWrites, \n";
+					APFReads        = "APFReads, \n";
+					APFPercentage   = "APFPercentage, \n";
+					WashSize        = "WashSize, \n";
+				}
+
+				cols1 += "CacheName, \n" +
+				         "CacheID, \n" +
+				         "SrvPageSize = @@maxpagesize, \n" +
+				         "IOBufferSize, \n" +
+				         WashSize +
+				         APFPercentage +
+				         "PagesPerIO = IOBufferSize/@@maxpagesize, \n" +
+				         "AllocatedKB, \n" +
+				         "AllocatedPages = convert(int,AllocatedKB*(1024.0/@@maxpagesize)), \n" +
+				         "PagesRead, \n" +
+				         LogicalReads + 
+				         APFReads +
+				         "PhysicalReads, \n" +
+				         PhysicalWrites +
+				         "Stalls, \n" +
+				         "PagesTouched, \n" +
+				         "BuffersToMRU, \n" +
+				         "BuffersToLRU, \n" +
+				         "CacheUtilization = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0), \n" +
+				         "CacheEfficiency  = CASE WHEN PagesRead > 0 THEN convert(numeric(12,1), (AllocatedKB*(1024.0/@@maxpagesize)) / PagesRead    * 100.0) ELSE 0.0 END \n" +
 				         "";
 				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
 				{
@@ -4727,6 +4820,25 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+        //==================================================================================================
+        // 12.5.0.3: Description of: monCachedProcedures
+        // 
+        //---------------------------------------------------------------------------------------------------
+        // Column changes in various versions:
+        //
+        // Version     Action  Name                      Datatype     Attributes          Description
+        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
+        // NOT RECORDED BEFORE: ASE 15.7
+        // 15.7    3B  added   ExecutionCount            int                              Counter Number of times Adaptive Server executed the stored procedure plan or tree since it was cached
+        // 15.7    3B  added   CPUTime                   int                              Counter Total number of milliseconds of CPU time used
+        // 15.7    3B  added   ExecutionTime             int                              Counter Total amount of elapsed time (in milliseconds) Adaptive Server spent executing the stored procedure plan or tree
+        // 15.7    3B  added   PhysicalReads             int                              Counter Number of physical reads performed
+        // 15.7    3B  added   LogicalReads              int                              Counter Number of pages read
+        // 15.7    3B  added   PhysicalWrites            int                              Counter Number of physical writes performed
+        // 15.7    3B  added   PagesWritten              int                              Counter Number of pages written
+        //---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__CACHED_PROC;
 		displayName  = CM_DESC__CACHED_PROC;
 		description  = "What Objects is located in the 'procedure cache'.";
@@ -4737,8 +4849,8 @@ extends Thread
 		needCeVersion= 0;
 		monTables    = new String[] {"monCachedProcedures"};
 		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"per object statistics active=1"};
-		colsCalcDiff = new String[] {"RequestCnt", "TempdbRemapCnt"};
+		needConfig   = new String[] {"per object statistics active=1", "statement statistics active=1"};
+		colsCalcDiff = new String[] {"RequestCnt", "TempdbRemapCnt", "ExecutionCount", "CPUTime", "ExecutionTime", "PhysicalReads", "LogicalReads", "PhysicalWrites", "PagesWritten"};
 		colsCalcPCT  = new String[] {};
 		pkList       = new LinkedList<String>();
 		     pkList.add("PlanID");
@@ -4757,26 +4869,61 @@ extends Thread
 			{
 				int aseVersion = getServerVersion();
 
-				String cols1, cols2, cols3;
-				cols1 = cols2 = cols3 = "";
+				String cols = "";
+
+				// ASE cluster edition
+				String InstanceID = "";
+
+				// ASE 15.5 or (15.0.3 in cluster edition) 
+				String RequestCnt         = "";
+				String TempdbRemapCnt     = "";
+				String AvgTempdbRemapTime = "";
+
+				// ASE 15.7
+				String ExecutionCount = "";
+				String CPUTime        = "";
+				String ExecutionTime  = "";
+				String PhysicalReads  = "";
+				String LogicalReads   = "";
+				String PhysicalWrites = "";
+				String PagesWritten   = "";
 
 				if (isClusterEnabled())
 				{
-					cols1 += "InstanceID, ";
+					InstanceID = "InstanceID, ";
 					this.getPk().add("InstanceID");
 				}
 
-				cols1 += "PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate";
-				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-				{
-				}
 				if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled()) )
 				{
-					cols2 += ", RequestCnt, TempdbRemapCnt, AvgTempdbRemapTime";
+					RequestCnt         = "RequestCnt, ";
+					TempdbRemapCnt     = "TempdbRemapCnt, ";
+					AvgTempdbRemapTime = "AvgTempdbRemapTime, ";
 				}
 
+				if (aseVersion >= 15700)
+				{
+					ExecutionCount = "ExecutionCount, ";
+					CPUTime        = "CPUTime, ";
+					ExecutionTime  = "ExecutionTime, ";
+					PhysicalReads  = "PhysicalReads, ";
+					LogicalReads   = "LogicalReads, ";
+					PhysicalWrites = "PhysicalWrites, ";
+					PagesWritten   = "PagesWritten, ";
+				}
+				
+				cols = 
+					InstanceID + 
+					"PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate, " +
+					RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +
+					ExecutionCount + CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
+					"";
+
+				// remove last comma
+				cols = StringUtil.getRidOfLastComma(cols);
+
 				String sql = 
-					"select " + cols1 + cols2 + cols3 + "\n" +
+					"select " + cols + "\n" +
 					"from monCachedProcedures \n" +
 					"order by DBName, ObjectName, ObjectType\n";
 
@@ -5038,13 +5185,19 @@ extends Thread
 		//---------------------------------------------------------------------------------------------------
 		// Column changes in various versions:
 		//
-		// Version     Action  Name            Description
-		// ----------- ------- --------------- ---------------------------------
-		// 
-		// 12.5.3      added   LineNumber      the line in the procedure currently being executed 
-		// 15.0.2.5    added   StatementNumber the statement in the stored procedure currently being executed
-		// 15.0.2(CE)  added   InstanceID      Cluster instance ID
-		// 15.5        added   InstanceID      Cluster instance ID
+		// Version     Action  Name            Datatype Attributes Description
+		// ----------- ------- --------------- -------- ---------- ----------------------------------
+		// 12.5.3      added   LineNumber      int                 the line in the procedure currently being executed 
+		// 15.0.2.5    added   StatementNumber int                 the statement in the stored procedure currently being executed
+		// 15.0.2(CE)  added   InstanceID      int                 Cluster instance ID
+		// 15.5        added   InstanceID      int                 Cluster instance ID
+		// 15.7    3B  added   ExecutionCount  int      Counter    Number of times Adaptive Server executed this instance of the stored procedure held in the procedure cache
+		// 15.7    3B  added   CPUTime         int      Counter    The amount of CPU time (in milliseconds) that Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7    3B  added   ExecutionTime   int      Counter    Total amount of time (in milliseconds) Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7    3B  added   PhysicalReads   int      Counter    Number of physical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7    3B  added   LogicalReads    int      Counter    Number of logical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7    3B  added   PhysicalWrites  int      Counter    Number of physical writes performed by the instance of this stored procedure held in the procedure cache
+		// 15.7    3B  added   PagesWritten    int      Counter    Number of pages read by the instance of this stored procedure held in the procedure cache
 		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__PROC_CALL_STACK;
@@ -5064,8 +5217,8 @@ extends Thread
 		needCeVersion= 0;
 		monTables    = new String[] {"monProcessProcedures"};
 		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {};
-		colsCalcDiff = new String[] {};
+		needConfig   = new String[] {"enable monitoring=1", "statement statistics active=1"};
+		colsCalcDiff = new String[] {};// need to test for 15.7: {"ExecutionCount", "CPUTime", "ExecutionTime", "PhysicalReads", "LogicalReads", "PhysicalWrites", "PagesWritten"};
 		colsCalcPCT  = new String[] {};
 //		pkList       = new LinkedList<String>();
 		pkList       = null;
@@ -5090,13 +5243,32 @@ extends Thread
 				String InstanceID      = "";
 				String StatementNumber = "";
 				String LineNumber      = "";
+				// ase 15.7
+				String ExecutionCount = "";
+				String CPUTime        = "";
+				String ExecutionTime  = "";
+				String PhysicalReads  = "";
+				String LogicalReads   = "";
+				String PhysicalWrites = "";
+				String PagesWritten   = "";
 
 				if (isClusterEnabled())  InstanceID      = "InstanceID, ";
 				if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
 				if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
+				if (aseVersion >= 15700)
+				{
+					ExecutionCount = "ExecutionCount, ";
+					CPUTime        = "CPUTime, ";
+					ExecutionTime  = "ExecutionTime, ";
+					PhysicalReads  = "PhysicalReads, ";
+					LogicalReads   = "LogicalReads, ";
+					PhysicalWrites = "PhysicalWrites, ";
+					PagesWritten   = "PagesWritten, ";
+				}
 
 				cols1 += "SPID, " + InstanceID + "DBName, OwnerName, ObjectName, " + 
 				         LineNumber + StatementNumber + "ContextID, ObjectType, " +
+				         ExecutionCount + CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
 				         "PlanID, MemUsageKB, CompileDate, KPID, DBID, OwnerUID, ObjectID, " +
 				         "MaxContextID = convert(int, -1)";
 				//"MaxContextID = (select max(ContextID) from monProcessProcedures i where o.SPID = i.SPID)";
@@ -5570,57 +5742,57 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-//		name         = CM_NAME__LOCK_TIMEOUT;
-//		displayName  = CM_DESC__LOCK_TIMEOUT;
-//		description  = "What SQL Statements caused a lock timeout";
-//		
-//		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
-//		
-//		needVersion  = 15700;
-//		needCeVersion= 0;
-//		monTables    = new String[] {"monLockTimeout"};
-//		needRole     = new String[] {"mon_role"};
-//		needConfig   = new String[] {"enable monitoring=1", "lock timeout pipe active=1", "lock timeout pipe max messages=500"};
-//
-//		tmp = new CountersModelAppend( name, null, monTables, needRole, needConfig, needVersion, needCeVersion, true)
-//		// OVERRIDE SOME DEFAULT METHODS
-//		{
-//			private static final long serialVersionUID = 1L;
-//
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//			//	int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				cols1 = "*";
-//				cols2 = "";
-//				cols3 = "";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monLockTimeout\n";
-//
-//				setSql(sql);
-//			}
-//		};
-//	
-//		tmp.setDisplayName(displayName);
-//		tmp.setDescription(description);
-//		if (AseTune.hasGUI())
-//		{
-//			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
-//			tcp.setToolTipText( description );
-//			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_lock_timeout_activity.png") );
-//			tcp.setCm(tmp);
-//			MainFrame.addTcp( tcp );
-//
-//			tmp.setTabPanel( tcp );
-//		}
-//
-//		_CMList.add(tmp);
+		name         = CM_NAME__LOCK_TIMEOUT;
+		displayName  = CM_DESC__LOCK_TIMEOUT;
+		description  = "What SQL Statements caused a lock timeout";
+		
+		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
+		
+		needVersion  = 15700;
+		needCeVersion= 0;
+		monTables    = new String[] {"monLockTimeout"};
+		needRole     = new String[] {"mon_role"};
+		needConfig   = new String[] {"enable monitoring=1", "lock timeout pipe active=1", "lock timeout pipe max messages=500"};
+
+		tmp = new CountersModelAppend( name, null, monTables, needRole, needConfig, needVersion, needCeVersion, true)
+		// OVERRIDE SOME DEFAULT METHODS
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void initSql(Connection conn)
+			{
+			//	int aseVersion = getServerVersion();
+
+				String cols1, cols2, cols3;
+				cols1 = cols2 = cols3 = "";
+
+				cols1 = "*";
+				cols2 = "";
+				cols3 = "";
+
+				String sql = 
+					"select " + cols1 + cols2 + cols3 + "\n" +
+					"from monLockTimeout\n";
+
+				setSql(sql);
+			}
+		};
+	
+		tmp.setDisplayName(displayName);
+		tmp.setDescription(description);
+		if (AseTune.hasGUI())
+		{
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			tcp.setToolTipText( description );
+			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_lock_timeout_activity.png") );
+			tcp.setCm(tmp);
+			MainFrame.addTcp( tcp );
+
+			tmp.setTabPanel( tcp );
+		}
+
+		_CMList.add(tmp);
 
 		
 
@@ -6103,12 +6275,14 @@ extends Thread
 		//---------------------------------------------------------------------------------------------------
 		// Column changes in various versions:
 		//
-		// Version       Action  Name            Description
-		// ------------- ------- --------------- ---------------------------------
-		// 15.0.2 ESD#4  added   DBName          Name of the database (will be NULL if the database is no longer open)
-		// 15.0.2 ESD#6  removed TableCount      in the "SessionSettings" section...
-		// 15.0.2(CE)    added   InstanceID      Cluster instance ID
-		// 15.5          added   InstanceID      Cluster instance ID
+        // Version       Action  Name                      Datatype     Attributes  Description
+        // ------------- ------- ------------------------- ------------ ----------- ----------------------------------
+		// 15.0.2 ESD#4  added   DBName                                              Name of the database (will be NULL if the database is no longer open)
+		// 15.0.2 ESD#6  removed TableCount                                          in the "SessionSettings" section...
+		// 15.0.2(CE)    added   InstanceID                                          Cluster instance ID
+		// 15.5          added   InstanceID                                          Cluster instance ID
+        // 15.7 (3B)     added   OptimizationGoal          varchar(30)               The optimization goal stored in the statement cache
+        // 15.7 (3B)     added   OptimizerLevel            varchar(30)               The optimizer level stored in the statement cache
 		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__STATEMENT_CACHE_DETAILS;
@@ -6194,6 +6368,8 @@ extends Thread
 					" Hashkey, \n" +                    // The hashkey over the statement's text.
 //					" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
 //					" HasSqltext    = convert(bit,1), \n" +
+					(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+					(aseVersion >= 15700 ? " OptimizerLevel, " : "") + // The optimizer level stored in the statement cache
 					" HasShowplan   = RUNTIME_REPLACE::HAS_SHOWPLAN, \n" +
 					" HasSqltext    = RUNTIME_REPLACE::HAS_SQL_TEXT, \n" +
 					" UseCount, \n" +                   // The number of times this statement was used.
@@ -6552,6 +6728,24 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+        //==================================================================================================
+        // 12.5.0.3: Description of: monProcess
+        // 
+        //---------------------------------------------------------------------------------------------------
+        // Column changes in various versions:
+        //
+        // Version     Action  Name                      Datatype     Attributes          Description
+        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
+        // NOT RECORDED BEFORE: ASE 15.7
+        // 15.7 (3A)   added   ProgramName               varchar(30)         Null         Name of the program on which the process is running.
+        // 15.7 (3B)   deleted ProgramName               varchar(30)         Null         Name of the program on which the process is running.
+        // 15.7 (3B)   added   HostName                  varchar(30)         Null         Name of the host machine on which the application that started the process is running.
+        // 15.7 (3B)   added   ClientName                varchar(30)         Null         Value of the clientname property set by the application.
+        // 15.7 (3B)   added   ClientHostName            varchar(30)         Null         Value of the clienthostname property set by the application.
+        // 15.7 (3B)   added   ClientApplName            varchar(30)         Null         Value of the clientapplname property set by the application.
+        //---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__ACTIVE_STATEMENTS;
 		displayName  = CM_DESC__ACTIVE_STATEMENTS;
 		description  = "<html>" +
@@ -6623,6 +6817,20 @@ extends Thread
 				// IMPORTANT: when you add a column to the FIRST you need to add it to the SECOND as well
 				////////////////////////////
 
+				// ASE 15.7
+				String HostName       = "";
+				String ClientName     = "";
+				String ClientHostName = "";
+				String ClientApplName = "";
+
+				if (aseVersion >= 15700)
+				{
+					HostName       = "P.HostName, ";
+					ClientName     = "P.ClientName, ";
+					ClientHostName = "P.ClientHostName, ";
+					ClientApplName = "P.ClientApplName, ";
+				}
+
 				String optGoalPlan = "";
 				if (aseVersion >= 15020)
 				{
@@ -6647,6 +6855,7 @@ extends Thread
 				         "S.BatchID, S.LineNumber, \n" +
 				         dbNameCol+", procname=isnull(object_name(S.ProcedureID,S.DBID),''), linenum=S.LineNumber, \n" +
 				         "P.Command, P.Application, \n" +
+				         HostName + ClientName + ClientHostName + ClientApplName +
 				         "S.CpuTime, S.WaitTime, ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n" +
 				         "UsefullExecTime = (datediff(ms, S.StartTime, getdate()) - S.WaitTime), \n" +
 				         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
@@ -6711,6 +6920,7 @@ extends Thread
 				         "multiSampled=convert(varchar(10),''), \n" +
 				         "P.BatchID, P.LineNumber, \n" +
 				         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
+				         HostName + ClientName + ClientHostName + ClientApplName +
 				         "P.Command, P.Application, \n" +
 				         "CpuTime=-1, WaitTime=-1, ExecTimeInMs=-1, \n" +
 				         "UsefullExecTime = -1, \n" +

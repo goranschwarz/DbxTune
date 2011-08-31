@@ -2725,8 +2725,11 @@ implements Cloneable
 		}
 
 		// increment counter
-		incRefreshCounter();
-		incSumRowCount(rowsFetched);
+		if (rowsFetched > 0)
+		{
+			incRefreshCounter();
+			incSumRowCount(rowsFetched);
+		}
 		setInitialized(true);
 
 		// Set last refresh time
