@@ -1184,9 +1184,9 @@ extends Thread
         // Version     Action  Name                      Datatype    Attributes          Description
         // ----------- ------- ------------------------- ----------- ------------------- ----------------------------------
         // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7    3B  added   SharedLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for a shared lock
-        // 15.7    3B  added   ExclusiveLockWaitTime     int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an exclusive lock
-        // 15.7    3B  added   UpdateLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an update lock
+        // 15.7 (3B)   added   SharedLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for a shared lock
+        // 15.7 (3B)   added   ExclusiveLockWaitTime     int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an exclusive lock
+        // 15.7 (3B)   added   UpdateLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an update lock
         //---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__OBJECT_ACTIVITY;
@@ -3217,12 +3217,12 @@ extends Thread
         // Version     Action  Name                      Datatype     Attributes          Description
         // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
         // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7    3B  added   Status                    varchar(30)  null                Status of cache. One of:* Active, * Pending/Active, * Pending/Delete, * Update Cache, * Cache Create, * Cache Delete, * Cache Skip (Cluster Edition only)
-        // 15.7    3B  added   Type                      varchar(30)  null                Type of cache. One of: * Default, * Mixed, * Mixed, HK Ignore, * Log Only, * In-Memory Storage
-        // 15.7    3B  added   CacheSize                 int                              Total size of cache, in kilobytes
-        // 15.7    3B  added   ReplacementStrategy       varchar(30)  null                Cache replacement strategy
-        // 15.7    3B  added   APFReads                  int                              Counter Number of asynchronous prefetch (APF) reads for this data cache
-        // 15.7    3B  added   Overhead                  int                              Cache overhead
+        // 15.7 (3B)   added   Status                    varchar(30)  null                Status of cache. One of:* Active, * Pending/Active, * Pending/Delete, * Update Cache, * Cache Create, * Cache Delete, * Cache Skip (Cluster Edition only)
+        // 15.7 (3B)   added   Type                      varchar(30)  null                Type of cache. One of: * Default, * Mixed, * Mixed, HK Ignore, * Log Only, * In-Memory Storage
+        // 15.7 (3B)   added   CacheSize                 int                              Total size of cache, in kilobytes
+        // 15.7 (3B)   added   ReplacementStrategy       varchar(30)  null                Cache replacement strategy
+        // 15.7 (3B)   added   APFReads                  int                              Counter Number of asynchronous prefetch (APF) reads for this data cache
+        // 15.7 (3B)   added   Overhead                  int                              Cache overhead
         //---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__DATA_CACHE;
@@ -4830,13 +4830,13 @@ extends Thread
         // Version     Action  Name                      Datatype     Attributes          Description
         // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
         // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7    3B  added   ExecutionCount            int                              Counter Number of times Adaptive Server executed the stored procedure plan or tree since it was cached
-        // 15.7    3B  added   CPUTime                   int                              Counter Total number of milliseconds of CPU time used
-        // 15.7    3B  added   ExecutionTime             int                              Counter Total amount of elapsed time (in milliseconds) Adaptive Server spent executing the stored procedure plan or tree
-        // 15.7    3B  added   PhysicalReads             int                              Counter Number of physical reads performed
-        // 15.7    3B  added   LogicalReads              int                              Counter Number of pages read
-        // 15.7    3B  added   PhysicalWrites            int                              Counter Number of physical writes performed
-        // 15.7    3B  added   PagesWritten              int                              Counter Number of pages written
+        // 15.7 (3B)   added   ExecutionCount            int                              Counter Number of times Adaptive Server executed the stored procedure plan or tree since it was cached
+        // 15.7 (3B)   added   CPUTime                   int                              Counter Total number of milliseconds of CPU time used
+        // 15.7 (3B)   added   ExecutionTime             int                              Counter Total amount of elapsed time (in milliseconds) Adaptive Server spent executing the stored procedure plan or tree
+        // 15.7 (3B)   added   PhysicalReads             int                              Counter Number of physical reads performed
+        // 15.7 (3B)   added   LogicalReads              int                              Counter Number of pages read
+        // 15.7 (3B)   added   PhysicalWrites            int                              Counter Number of physical writes performed
+        // 15.7 (3B)   added   PagesWritten              int                              Counter Number of pages written
         //---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__CACHED_PROC;
@@ -5191,13 +5191,13 @@ extends Thread
 		// 15.0.2.5    added   StatementNumber int                 the statement in the stored procedure currently being executed
 		// 15.0.2(CE)  added   InstanceID      int                 Cluster instance ID
 		// 15.5        added   InstanceID      int                 Cluster instance ID
-		// 15.7    3B  added   ExecutionCount  int      Counter    Number of times Adaptive Server executed this instance of the stored procedure held in the procedure cache
-		// 15.7    3B  added   CPUTime         int      Counter    The amount of CPU time (in milliseconds) that Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
-		// 15.7    3B  added   ExecutionTime   int      Counter    Total amount of time (in milliseconds) Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
-		// 15.7    3B  added   PhysicalReads   int      Counter    Number of physical reads performed by the instance of this stored procedure held in the procedure cache
-		// 15.7    3B  added   LogicalReads    int      Counter    Number of logical reads performed by the instance of this stored procedure held in the procedure cache
-		// 15.7    3B  added   PhysicalWrites  int      Counter    Number of physical writes performed by the instance of this stored procedure held in the procedure cache
-		// 15.7    3B  added   PagesWritten    int      Counter    Number of pages read by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   ExecutionCount  int      Counter    Number of times Adaptive Server executed this instance of the stored procedure held in the procedure cache
+		// 15.7 (3B)   added   CPUTime         int      Counter    The amount of CPU time (in milliseconds) that Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   ExecutionTime   int      Counter    Total amount of time (in milliseconds) Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   PhysicalReads   int      Counter    Number of physical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   LogicalReads    int      Counter    Number of logical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   PhysicalWrites  int      Counter    Number of physical writes performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)   added   PagesWritten    int      Counter    Number of pages read by the instance of this stored procedure held in the procedure cache
 		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__PROC_CALL_STACK;
@@ -7859,7 +7859,7 @@ extends Thread
 					mtd.addColumn("sysquerymetrics", "pio_avg",      "<html>Average physical IO</html>");
 					mtd.addColumn("sysquerymetrics", "cnt",          "<html>Number of times the query has been executed.</html>");
 					mtd.addColumn("sysquerymetrics", "abort_cnt",    "<html>Number of times a query was aborted by Resource Governor as a resource limit was exceeded.</html>");
-					mtd.addColumn("sysquerymetrics", "text",         "<html>query text</html>");
+					mtd.addColumn("sysquerymetrics", "qtext",        "<html>query text</html>");
 				}
 				catch (NameNotFoundException e) {/*ignore*/}
 

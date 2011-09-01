@@ -137,8 +137,8 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	New: Added ASE configuration 'capture missing statistics', 'enable metrics capture', 
-	'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max' in the 
+	New: Added ASE configuration 'capture missing statistics', 'enable metrics capture',
+	'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max' in the
 	dialog 'Configure ASE for Monitoring'. <br>
 	Also moved this dialog to the 'tools' menu instead of 'view'.
 	</LI>
@@ -146,7 +146,7 @@ li   {margin-bottom: 6px}
 	<LI>
 	New tab: QP Metrics<br>
 	This gets information from the view 'sysquerymetrics' in all databases.<br>
-	Note: Use sp_configure 'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max' 
+	Note: Use sp_configure 'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max'
 	to set the <b>server side filtering</b>. Otherwise you will probably end up with full transaction log etc in all smaller databases.<br>
 	Extra functionality that are supported on the 'tab'
 	<ul>
@@ -201,7 +201,13 @@ li   {margin-bottom: 6px}
 	Note: I used a preliminary document for what's new on 15.7, so I have NOT tested this yet.
 	</LI>
 
-	
+	<LI>
+	Upgraded some of the third party libraries/jars<br>
+	<ul>
+	  <li>To version 4.0, Component: MIGLayout</li>
+	  <li>To version 1.3.159, Component: H2 database</li>
+	</ul>
+	</LI>
 </UL>
 
 <!-- ========================================================================== -->
