@@ -734,7 +734,7 @@ Admin:<BR>
 				logMessage,
 				logStacktrace
 			FROM asemon_error_info
-			ORDER BY checkId desc, serverAddTime
+			ORDER BY checkId desc, sendCounter
 			LIMIT 500
 		";
 

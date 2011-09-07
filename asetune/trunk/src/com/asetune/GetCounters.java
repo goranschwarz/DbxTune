@@ -4022,6 +4022,13 @@ extends Thread
 					tgdp.setDate(this.getTimestamp());
 					tgdp.setData(arr);
 				}
+//				SamplingCnt sAbs  = (SamplingCnt)getCounterDataAbs();
+//				SamplingCnt sDiff = (SamplingCnt)getCounterDataDiff();
+//				SamplingCnt sRate = (SamplingCnt)getCounterDataRate();
+//				
+//				System.out.println(sAbs .debugToString());
+//				System.out.println(sDiff.debugToString());
+//				System.out.println(sRate.debugToString());
 			}
 			@Override
 			public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
