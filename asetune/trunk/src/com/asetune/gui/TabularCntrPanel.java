@@ -3509,12 +3509,28 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			JPanel panel = new JPanel();
 			panel.setLayout(new MigLayout("ins 0", "[fill]", ""));
 
-			// JScrollPane scroll = new JScrollPane( init() );
-			// scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			JPanel xpanel = init();
+			JScrollPane xscroll = new JScrollPane( xpanel );
 
-			panel.add(init(), "height 100%, wrap 15");
+//			xscroll.setMinimumSize(new Dimension(500, 1000));
+//			xscroll.setPreferredSize(new Dimension(500, 1000));
+//			xscroll.setMinimumSize(xpanel.getMinimumSize());
+//			xscroll.setPreferredSize(xpanel.getPreferredSize());
+
+			Dimension screenSize  = Toolkit.getDefaultToolkit().getScreenSize();
+//			Dimension xPrefSize = xpanel.getPreferredSize();
+//			Dimension xMinSize  = xpanel.getMinimumSize();
+
+			int width  = Math.min(screenSize.width  - 100, 500);
+			int height = Math.min(screenSize.height - 100, 1000);
+			xscroll.setPreferredSize(new Dimension(width, height));
+			xscroll.setMinimumSize  (new Dimension(width, height));
+			
+
+			panel.add(xscroll, "height 100%, wrap 15");
+//			panel.add(init(), "height 100%, wrap 15");
 			panel.add(_ok_but, "tag ok, gapright 15, bottom, right, pushx, wrap 15");
-
+			
 			setContentPane(panel);
 
 			// ADD ACTIONS TO COMPONENTS

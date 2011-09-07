@@ -13,6 +13,8 @@ import org.apache.log4j.lf5.LogLevelFormatException;
 import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
 
+import com.asetune.check.CheckForUpdates;
+
 
 public class GuiLogAppender
     extends AppenderSkeleton
@@ -90,6 +92,11 @@ public class GuiLogAppender
 
 		if (_logTable != null)
 			_logTable.addMessage(record);
+		
+		// Yes this can be done better
+		// for example with a listener, but I was in a hurry...
+		if (record.isSevereLevel() || record.isWarningLevel())
+			CheckForUpdates.sendLogInfoNoBlock(record);
 	}
 
 	public void close()

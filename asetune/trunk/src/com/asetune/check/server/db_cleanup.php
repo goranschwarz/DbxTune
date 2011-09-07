@@ -48,9 +48,11 @@
 	doCleanup("delete from asemon_connect_info       where userName  = 'gorans' ");
 	doCleanup("delete from asemon_udc_info           where userName  = 'gorans' ");
 	doCleanup("delete from asemon_counter_usage_info where userName  = 'gorans' ");
+	doCleanup("delete from asemon_error_info         where userName  = 'gorans' ");
 
 	// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 	// doCleanup("delete from asemon_udc_info");
+	// doCleanup("update asemon_usage set clientAsemonVersion = '2.1.0.1.dev' where clientAsemonVersion = '2.1.1.dev'");
 
 	// doCleanup("alter table asemon_connect_info add column usePcs     varchar(5)");
 	// doCleanup("alter table asemon_connect_info add column pcsConfig  varchar(400)");

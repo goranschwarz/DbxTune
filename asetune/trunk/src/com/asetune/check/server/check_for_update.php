@@ -41,7 +41,7 @@
 	$ASEMON_LATEST_VERSION_STR = "2011-07-15";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asemon-gui/files/";
 	$WHATSNEW_URL              = "www.asemon.se/history.html";
-	$SEND_OPTIONS              = "sendConnectInfo=true, sendUdcInfo=true, sendCounterUsageInfo=true";
+	$SEND_OPTIONS              = "sendConnectInfo=true, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL              = "";
 

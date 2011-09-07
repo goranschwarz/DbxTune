@@ -109,6 +109,7 @@ implements ActionListener, TableModelListener
 	private JLabel             _maxLogRecords_lbl  = new JLabel("Max log records");
 	private JSpinner           _maxLogRecords_sp   = null;
 	private SpinnerNumberModel _maxLogRecords_spm  = null;
+	private JCheckBox          _openOnErrors_chk   = new JCheckBox("Open This Window on Errors", true);
 	
 	//-------------------------------------------------
 	// DATA TABLE panel
@@ -266,16 +267,18 @@ implements ActionListener, TableModelListener
 		_test_but         .setToolTipText("Generate one log record for each log level. This Button will only be visible when we are in log level DEBUG.");
 		_logLevel_but     .setToolTipText("Open a dialog where you can change log level for classes that has registered themself with log4j.");
 		_clearAll_but     .setToolTipText("Clear all records from the table.");
+		_openOnErrors_chk .setToolTipText("Open this dialog when any messages with level ERROR or higher happens");
 
 		
-		panel.add(_optionTail_cb, "wrap");
+		panel.add(_openOnErrors_chk,  "wrap");
+		panel.add(_optionTail_cb,     "wrap");
 
 		panel.add(_maxLogRecords_lbl, "split");
 		panel.add(_maxLogRecords_sp,  "wrap");
 
-		panel.add(_test_but, "wrap");
-		panel.add(_logLevel_but,  "bottom, left, push, split");
-		panel.add(_clearAll_but,  "bottom, right, push, wrap");
+		panel.add(_test_but,          "hidemode 3, wrap");
+		panel.add(_logLevel_but,      "bottom, left, push, split");
+		panel.add(_clearAll_but,      "bottom, right, push, wrap");
 		
 
 		return panel;
@@ -571,6 +574,11 @@ implements ActionListener, TableModelListener
 	*/
 
 
+	public boolean doOpenOnErrors()
+	{
+		return _openOnErrors_chk.isSelected();
+	}
+
 	public LogLevel getLogLevelForRow(int row)
 	{
 		// set column position to the filter
@@ -585,6 +593,8 @@ implements ActionListener, TableModelListener
 
 		if (conf != null)
 		{
+			conf.setProperty(base + "openOnErrors", _openOnErrors_chk.isSelected());
+
 			conf.setProperty(base + "window.width", this.getSize().width);
 			conf.setProperty(base + "window.height", this.getSize().height);
 			conf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
@@ -608,6 +618,9 @@ implements ActionListener, TableModelListener
 		if (conf == null)
 			return;
 
+		boolean openOnErrors = conf.getBooleanProperty(base + "openOnErrors", _openOnErrors_chk.isSelected());
+		_openOnErrors_chk.setSelected(openOnErrors);
+		
 		// Set initial size
 		int defWidth  = (3 * Toolkit.getDefaultToolkit().getScreenSize().width)  / 4;
 		int defHeight = (3 * Toolkit.getDefaultToolkit().getScreenSize().height) / 4;
@@ -1016,5 +1029,4 @@ implements ActionListener, TableModelListener
 		}
 		
 	}
-
 }

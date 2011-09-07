@@ -384,6 +384,17 @@ public class QueryWindow
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'Monitoring'",                                 "Check Monitor configuration"));
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'nondefault'",                                 "Get changed configuration parameters"));
 
+		// monTables
+		provider.addCompletion(new ShorthandCompletion(provider, 
+				"monTables",  
+				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
+				"Get monitor tables in this system."));
+		// monColumns
+		provider.addCompletion(new ShorthandCompletion(provider, 
+				"monColumns", 
+				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
+				"Get monitor tables and columns in this system."));
+		
 		return provider;
 	}
 

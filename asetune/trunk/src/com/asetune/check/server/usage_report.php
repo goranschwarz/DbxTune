@@ -31,6 +31,7 @@
 <A HREF="http://www.asemon.se/usage_report.php?conn=true"           >Connection Info Report</A>           <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A><BR>
 <A HREF="http://www.asemon.se/usage_report.php?usage=true"          >Counter Usage Info Report</A>        <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=true"      >Error Info Report</A>                <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (last 300)</A>           <BR>
 <BR>
 Admin:<BR>
@@ -48,7 +49,10 @@ Admin:<BR>
 	$rpt_conn               = $_GET['conn'];
 	$rpt_udc                = $_GET['udc'];
 	$rpt_usage              = $_GET['usage'];
+	$rpt_errorInfo          = $_GET['errorInfo'];
 	$rpt_full               = $_GET['full'];
+
+	$del_deleteLogId        = $_GET['deleteLogId'];
 
 	// sub command
 	$rpt_onDomain           = $_GET['onDomain'];
@@ -100,8 +104,14 @@ Admin:<BR>
 
 				else if ( $colname == "checkId" || $colname == "rowid")
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "deleteLogId" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?deleteLogId=" . $cell . "\">$cell</A></td>";
 				else
-					echo "<td nowrap>$cell</td>";
+				{
+					$cellCont = nl2br($cell, false);
+					echo "<td nowrap>$cellCont</td>";
+				}
 			}
 
 			echo "</tr>\n";
@@ -687,6 +697,53 @@ Admin:<BR>
 			die("Query to show fields from table failed");
 		}
 		htmlResultset($result, "Counter Usage Info Report");
+	}
+
+
+
+	//-------------------------------------------
+	// ERROR INFO
+	//-------------------------------------------
+	if ( $rpt_errorInfo == "true" || !empty($del_deleteLogId) )
+	{
+		if ( !empty($del_deleteLogId) )
+		{
+			$sql = "DELETE from asemon_error_info where checkId = $del_deleteLogId";
+
+			echo "<br><br><br><br>\n";
+			echo "<h4>Cleaning up table 'asemon_error_info' for checkId: $del_deleteLogId </h4>\n";
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysql_query($sql) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+		}
+
+		$sql = "
+			SELECT checkId, 
+				checkId as deleteLogId,
+				sendCounter,
+				serverAddTime,
+				clientTime,
+				userName,
+				srvVersion,
+				appVersion,
+				logLevel,
+				logThreadName,
+				logClassName,
+				logLocation,
+				logMessage,
+				logStacktrace
+			FROM asemon_error_info
+			ORDER BY checkId desc, serverAddTime
+			LIMIT 500
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, "500 first ERROR Info Report");
 	}
 
 

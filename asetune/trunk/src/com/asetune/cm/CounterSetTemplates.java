@@ -234,7 +234,7 @@ public class CounterSetTemplates
 	}
 
 	public final static String systemSummaryCm =
-		GetCounters.CM_DESC__SUMMARY                 +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; ";
+		GetCounters.CM_DESC__SUMMARY                 +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; ";
 
 	public final static String systemTemplatePcsOnSmall =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -242,18 +242,18 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -274,24 +274,24 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnMedium =
-		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -301,88 +301,88 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnLarge =
-		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnAll =
-		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__DEADLOCK                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__LOCK_TIMEOUT            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=true,  resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__PROC_CACHE_MODULE_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_MEMORY_USAGE +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE         +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__STATEMENT_CACHE_DETAILS +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__BLOCKING                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__MISSING_STATISTICS      +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__QP_METRICS              +"={postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__OS_IOSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_VMSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_MPSTAT               +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 
 
@@ -396,18 +396,18 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -433,18 +433,18 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -470,18 +470,18 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -507,18 +507,18 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__ENGINE                  +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_LOAD                +"={postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__DATA_CACHE              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHE_POOL              +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__DEVICE_IO               +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE_SUM            +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__IO_QUEUE                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__REP_AGENT               +"={postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=true,  resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_OBJECTS          +"={postpone=600, paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ERRORLOG                +"={postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
@@ -565,4 +565,5 @@ public class CounterSetTemplates
 		System.out.println("SYSTEM_TEMPLATE_PCS_OFF_ALL   : "+SYSTEM_TEMPLATE_PCS_OFF_ALL);
 	}
 }
+
 
