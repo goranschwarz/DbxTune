@@ -888,7 +888,7 @@ public class MainFrame
 	/** called when the lowView table is appended */
 	public void tableChanged(TableModelEvent e) 
 	{
-		if ( _guiInitTime == 0 ) // setVisible has not ben called
+		if ( _guiInitTime == 0 ) // setVisible has not been called
 			return;
 
 		// Start to react to changes after X seconds after initialization.
@@ -918,8 +918,11 @@ public class MainFrame
 			// even if it's not visible for the moment
 			if (logLevel != null && ! logLevel.encompasses(LogLevel.WARN))
 			{
-				if ( ! _logView.isVisible() )
-					_logView.setVisible(true);
+				if (_logView.doOpenOnErrors())
+				{
+					if ( ! _logView.isVisible() )
+						_logView.setVisible(true);
+				}
 			}
 		}
 		catch (RuntimeException rex) { /*Skip runtime exceptions*/ }

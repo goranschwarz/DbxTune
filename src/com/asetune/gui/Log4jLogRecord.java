@@ -21,6 +21,14 @@ extends LogRecord
 	{
 	}
 
+	public boolean isWarningLevel()
+	{
+		boolean isWarning = false;
+		if ( LogLevel.WARN.equals(getLevel()) )
+			isWarning = true;
+		return isWarning;
+	}
+
 	public boolean isSevereLevel()
 	{
 		boolean isSevere = false;

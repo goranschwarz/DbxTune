@@ -102,3 +102,24 @@ CREATE TABLE asemon_counter_usage_info
 
         PRIMARY KEY (checkId, cmName)
 );
+
+CREATE TABLE asemon_error_info
+(
+	checkId                 int,
+	sendCounter             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+
+	srvVersion              varchar(30),
+	appVersion              varchar(30),
+
+	logLevel                varchar(10),
+	logThreadName           varchar(50),
+	logClassName            varchar(50),
+	logLocation             varchar(100),
+	logMessage              varchar(500),
+	logStacktrace           varchar(4096),
+
+	PRIMARY KEY (checkId, serverAddTime)
+);

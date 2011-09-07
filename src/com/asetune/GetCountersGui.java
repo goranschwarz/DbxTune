@@ -334,8 +334,6 @@ public class GetCountersGui
 				//----------------------
 				checkForFullTransLogInMaster(getMonConnection());
 
-				
-				
 				setRefreshingCounters(true);
 				//Component comp = MainFrame.getActiveTab();
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");

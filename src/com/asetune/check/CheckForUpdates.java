@@ -35,6 +35,7 @@ import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.Log4jLogRecord;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
@@ -76,6 +77,7 @@ public class CheckForUpdates
 	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
 	private   static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
 	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
+	private   static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
 
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
@@ -84,6 +86,11 @@ public class CheckForUpdates
 	private static boolean _sendConnectInfo      = true;
 	private static boolean _sendUdcInfo          = true;
 	private static boolean _sendCounterUsageInfo = true;
+	private static boolean _sendLogInfoWarning   = false;
+	private static boolean _sendLogInfoError     = false;
+
+	private static int     _sendLogInfoThreshold = 100;
+	private static int     _sendLogInfoCount     = 0;
 
 	/** What PHP variables will be used to pick up variables <br>
 	 *  true  = _POST[], HTTP POST will be used, "no" limit in size... <br>
@@ -446,6 +453,28 @@ public class CheckForUpdates
 							{
 								_sendUdcInfo = bVal;
 								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
+							{
+								_sendLogInfoWarning = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoError"))
+							{
+								_sendLogInfoError = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoThreshold"))
+							{
+								try
+								{
+									_sendLogInfoThreshold = Integer.parseInt(val);
+									_logger.debug("Setting option '"+key+"' to '"+val+"'.");
+								}
+								catch (NumberFormatException e)
+								{
+									_logger.debug("NumberFormatException: Setting option '"+key+"' to '"+val+"'.");
+								}
 							}
 							else
 							{
@@ -1035,6 +1064,153 @@ public class CheckForUpdates
 			_logger.debug("when trying to send 'Counter Usage' info, we had problems", ex);
 		}
 	}
+
+
+	
+	
+	
+	/**
+	 */
+	public static void sendLogInfoNoBlock(final Log4jLogRecord record)
+	{
+		if (_checkId < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send ERROR info, skipping this.");
+			return;
+		}
+
+		if (record == null)
+			return;
+		
+		if ( record.isWarningLevel() && ! _sendLogInfoWarning )
+		{
+			_logger.debug("Send 'LOG WARNING info' has been disabled.");
+			return;
+		}
+		if ( record.isSevereLevel() && ! _sendLogInfoError )
+		{
+			_logger.debug("Send 'LOG ERROR info' has been disabled.");
+			return;
+		}
+
+		if (_sendLogInfoCount > _sendLogInfoThreshold)
+		{
+			_logger.debug("Send 'LOG info' has exceed sendLogInfoThreshold="+_sendLogInfoThreshold+", sendLogInfoCount="+_sendLogInfoCount);
+			return;
+		}
+		// NOTE: we may need to synchronize this, but on the other hand it's just a counter incrementation
+		final int sendLogInfoCount = _sendLogInfoCount++;
+
+		// SEND This using a thread
+		Runnable doLater = new Runnable()
+		{
+			public void run()
+			{
+				CheckForUpdates errorInfo = new CheckForUpdates();
+				errorInfo.sendLogInfo(record, sendLogInfoCount);
+			}
+		};
+		Thread checkThread = new Thread(doLater);
+		checkThread.setName("sendLogInfo");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Send info on ERRORs
+	 */
+	public void sendLogInfo(final Log4jLogRecord record, int sendLogInfoCount)
+	{
+		// URL TO USE
+		String urlStr = ASETUNE_ERROR_INFO_URL;
+
+		if (_checkId < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send LOG info, skipping this.");
+			return;
+		}
+
+		if (record == null)
+			return;
+		
+		if ( record.isWarningLevel() && ! _sendLogInfoWarning )
+		{
+			_logger.debug("Send 'LOG WARNING info' has been disabled.");
+			return;
+		}
+		if ( record.isSevereLevel() && ! _sendLogInfoError )
+		{
+			_logger.debug("Send 'LOG ERROR info' has been disabled.");
+			return;
+		}
+
+		String srvVersion = "not-connected";
+		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		if (mtd != null)
+		{
+			srvVersion = mtd.aseVersionNum + "";
+		}
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId          = _checkId + "";
+		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("checkId",       checkId);
+		urlParams.add("sendCounter",   sendLogInfoCount +"");
+		urlParams.add("clientTime",    clientTime);
+		urlParams.add("userName",      System.getProperty("user.name"));
+
+		urlParams.add("srvVersion",    srvVersion);
+		urlParams.add("appVersion",    Version.getVersionStr());
+
+		urlParams.add("logLevel",      record.getLevel().toString());
+		urlParams.add("logThreadName", record.getThreadDescription());
+		urlParams.add("logClassName",  record.getCategory());
+		urlParams.add("logLocation",   record.getLocation());
+		urlParams.add("logMessage",    record.getMessage());
+		urlParams.add("logStacktrace", record.getThrownStackTrace());
+
+		try
+		{
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams, 750); // timeout after 750 ms
+			else
+				in = sendHttpParams(urlStr, urlParams, 750); // timeout after 750 ms
+
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.info("When doing LOG info 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("DONE:"))
+				{
+				}
+			}
+			in.close();
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("when trying to send LOG info, we had problems", ex);
+		}
+	}
+
+
+
 
 
 
