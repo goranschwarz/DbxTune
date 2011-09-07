@@ -34,7 +34,8 @@ Watch:
 	- Tool; Capture SQL:     identify what proc/SQL statement that is responsible + SHOWPLAN
 	- Object Tab + right click: sp_help / sp_helpindex
 FIX:
-	- create nonclustered index DummyLookupTab2_ix1 on DummyLookupTab2(intCol1)
+	- create: nonclustered index DummyLookupTab2_ix1 on DummyLookupTab2(intCol1)
+	          exec sp_recompile DummyLookupTab2
 Result:
 	- Everyting now works much faster... 
 		- NOT so much Logical IO
@@ -53,7 +54,8 @@ Watch:
 	- Proc Call Stack
 FIX:
 	- fix trigger to do waitfor delay "00:00:00"
-	- create nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
+	- create: nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
+	          exec sp_recompile DummyLookupTab1
 
 
 
@@ -89,7 +91,7 @@ FIX:
 		truncate table DestTab3
 		dump tran perfdemo with truncate_only
 	- try add more engines
-		sp_engine "online"
+		exec sp_engine "online"
 		select * from master..sysengines
 
 ------------------------------------------------------------

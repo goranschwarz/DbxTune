@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.StringUtil;
 
 
 public  class SamplingCnt 
@@ -833,11 +834,14 @@ extends CounterTableModel
 //			if (_colIsPk != null)
 			if (pkList != null)
 			{
-				_keysToRowid.put(keyStr, new Integer(getRowCount()));
+				// This is current size, because _rows.add() is done AFTER this
+				int rowId = _rows.size();
+
+				_keysToRowid.put(keyStr, new Integer(rowId));
 				_rowidToKey.add(keyStr);
 				if (_logger.isTraceEnabled())
 				{
-					_logger.trace("   >> key='"+key+"', rowId="+getRowCount()+", _rowidToKey.addPos="+(_rowidToKey.size()-1));
+					_logger.trace("   >> key='"+key+"', rowId="+rowId+", _rowidToKey.addPos="+(_rowidToKey.size()-1));
 				}
 			}
 
@@ -950,6 +954,7 @@ extends CounterTableModel
 		// ADD the row
 		_rows.add(row);
 
+		// This is current size-1, because _rows.add() is done BEFORE this
 		int rowId = _rows.size()-1;
 
 		if (_logger.isDebugEnabled())
@@ -958,7 +963,7 @@ extends CounterTableModel
 		// save HKEY with corresponding row
 		if (_colIsPk != null)
 		{
-			_keysToRowid.put(keyStr, new Integer(getRowCount()));
+			_keysToRowid.put(keyStr, new Integer(rowId));
 			_rowidToKey.add(keyStr);
 		}
 
@@ -1438,4 +1443,63 @@ extends CounterTableModel
 		return enabled;
 	}
 
+	public String debugToString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("\n");
+
+		// Calculate with size for display
+		int[] dlen = new int[getColumnCount()];
+		// col headers
+		List<String> colNames = getColNames();
+		for (int i=0; i<dlen.length; i++)
+		{
+			if (i<colNames.size())
+				dlen[i] = colNames.get(i).length();
+		}
+		// rows
+		for (List<Object> rl : _rows)
+		{
+			for (int i=0; i<rl.size(); i++)
+				dlen[i] = Math.max(dlen[i], rl.get(i).toString().length());
+		}
+
+		sb.append("#########################################################################\n");
+		sb.append("name     = '").append(getName()       ).append("'\n");
+		sb.append("colCount = ").append(getColumnCount() ).append("\n");
+		sb.append("rowCount = ").append(getRowCount()    ).append("\n");
+		sb.append("\n");
+		sb.append("ColNames = ").append(getColNames()    ).append("\n");
+
+		sb.append("\n");
+		sb.append("RowId -> PkStr\n");
+		for (int i=0; i<_rowidToKey.size(); i++)
+			sb.append(i).append(" -> ").append(_rowidToKey.get(i)).append("\n");
+
+		sb.append("\n");
+		sb.append("PkStr -> RowId\n");
+		for (String key : _keysToRowid.keySet())
+			sb.append(StringUtil.left(key, 30, true)).append(" -> ").append(_keysToRowid.get(key)).append("\n");
+
+		sb.append("\n");
+		sb.append("Table Content\n");
+		// colnames
+		for (int i=0; i<colNames.size(); i++)
+			sb.append(" ").append(StringUtil.left(colNames.get(i), dlen[i]));
+		sb.append("\n");
+		// -------
+		for (int i=0; i<colNames.size(); i++)
+			sb.append(" ").append(StringUtil.replicate("-", dlen[i]));
+		sb.append("\n");
+		for (List<Object> rl : _rows)
+		{
+			for (int i=0; i<rl.size(); i++)
+				sb.append(" ").append(StringUtil.left(rl.get(i).toString(), dlen[i]));
+			sb.append("\n");
+		}
+		sb.append("#########################################################################\n");
+		
+		sb.append("\n");
+		return sb.toString();
+	}
 }
