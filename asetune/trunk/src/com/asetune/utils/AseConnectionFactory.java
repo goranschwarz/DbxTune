@@ -1026,6 +1026,10 @@ public class AseConnectionFactory
 		{
 			hostname = getHostname();
 		}
+
+		// If password is "null", then make it an empty password
+		if (password != null && password.equalsIgnoreCase("null"))
+			password = "";
 		
 		Properties props = new Properties(_props);
 		if (props.getProperty("user")            == null) props.put("user",            username);
@@ -1058,6 +1062,10 @@ public class AseConnectionFactory
 	{
 		String hostname = getHostname();
 
+		// If password is "null", then make it an empty password
+		if (password != null && password.equalsIgnoreCase("null"))
+			password = "";
+		
 		Properties props = new Properties(_props);
 		if (props.getProperty("user")            == null) props.put("user",            username);
 		if (props.getProperty("password")        == null) props.put("password",        password);

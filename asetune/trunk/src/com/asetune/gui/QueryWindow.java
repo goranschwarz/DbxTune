@@ -9,6 +9,7 @@ import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
@@ -21,12 +22,17 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.swing.AbstractAction;
@@ -54,12 +60,20 @@ import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.SwingWorker.StateValue;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.table.JTableHeader;
 
 import net.miginfocom.swing.MigLayout;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.autocomplete.AutoCompletion;
@@ -72,13 +86,16 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
+import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionFactory;
+import com.asetune.utils.Debug;
+import com.asetune.utils.Logging;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
-import com.asetune.utils.SwingWorker;
 import com.asetune.xmenu.TablePopupFactory;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -99,6 +116,9 @@ public class QueryWindow
 
 	public enum WindowType 
 	{
+		/** Create the QueryWindow using a JFrame, meaning it would have a Icon in the Task bar, but from CmdLine */
+		CMDLINE_JFRAME, 
+
 		/** Create the QueryWindow using a JFrame, meaning it would have a Icon in the Task bar */
 		JFRAME, 
 
@@ -133,6 +153,102 @@ public class QueryWindow
 	private JDialog     _jdialog         = null;
 
 	/**
+	 * Constructor for CommandLine parameters
+	 * @param cmd
+	 * @throws Exception
+	 */
+	public QueryWindow(CommandLine cmd)
+	throws Exception
+	{
+		Version.setAppName("AseSqlWindow");
+		
+		String aseUsername = System.getProperty("user.name"); 
+		String asePassword = "";
+		String aseServer   = System.getenv("DSQUERY");
+		String aseDbname   = "";
+		String sqlQuery    = "";
+		if (cmd.hasOption('U'))	aseUsername = cmd.getOptionValue('U');
+		if (cmd.hasOption('P'))	asePassword = cmd.getOptionValue('P');
+		if (cmd.hasOption('S'))	aseServer   = cmd.getOptionValue('S');
+		if (cmd.hasOption('D'))	aseDbname   = cmd.getOptionValue('D');
+		if (cmd.hasOption('q'))	sqlQuery    = cmd.getOptionValue('q');
+
+		if (aseServer == null)
+			aseServer = "SYBASE";
+
+		DebugOptions.init();
+		if (cmd.hasOption('x'))
+		{
+			String cmdLineDebug = cmd.getOptionValue('x');
+			String[] sa = cmdLineDebug.split(",");
+			for (int i=0; i<sa.length; i++)
+			{
+				String str = sa[i].trim();
+
+				if (str.equalsIgnoreCase("list"))
+				{
+					System.out.println();
+					System.out.println(" Option          Description");
+					System.out.println(" --------------- -------------------------------------------------------------");
+					for (Map.Entry<String,String> entry : Debug.getKnownDebugs().entrySet()) 
+					{
+						String debugOption = entry.getKey();
+						String description = entry.getValue();
+
+						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+					}
+					System.out.println();
+					// Get of of here if it was a list option
+					throw new NormalExitException("List of debug options");
+				}
+				else
+				{
+					// add debug option
+					Debug.addDebug(str);
+				}
+			}
+		}
+
+//		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
+//		Logging.init("asesqlw.", propFile);
+		Logging.init();
+		
+    	try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		String hostPortStr = "";
+		if (aseServer.indexOf(":") == -1)
+			hostPortStr = AseConnectionFactory.getIHostPortStr(aseServer);
+		else
+			hostPortStr = aseServer;
+
+		_logger.info("Connecting as user '"+aseUsername+"' to server='"+aseServer+"'. Which is located on '"+hostPortStr+"'.");
+		Connection conn = null;
+		try
+		{
+			Properties props = new Properties();
+//			props.put("CHARSET", "iso_1");
+			conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "AseSqlWindow", null, props, null);
+
+			// Set the correct dbname, if it hasnt already been done
+			AseConnectionUtils.useDbname(conn, aseDbname);
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems connecting: " + AseConnectionUtils.sqlExceptionToString(e));
+			throw e;
+		}
+
+
+		// Create a QueryWindow component that uses the factory object.
+		QueryWindow qw = new QueryWindow(conn, sqlQuery, true, QueryWindow.WindowType.CMDLINE_JFRAME);
+		qw.openTheWindow();
+	}
+
+	/**
 	 * This constructor method creates a simple GUI and hooks up an event
 	 * listener that updates the table when the user enters a new query.
 	 **/
@@ -150,6 +266,12 @@ public class QueryWindow
 	}
 	public QueryWindow(Connection conn, String sql, boolean closeConnOnExit, WindowType winType)
 	{
+		if (winType == WindowType.CMDLINE_JFRAME)
+		{
+			_jframe  = new JFrame(Version.getAppName()+" Query Window");
+			_jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			_window  = _jframe;
+		}
 		if (winType == WindowType.JFRAME)
 		{
 			_jframe  = new JFrame(Version.getAppName()+" Query");
@@ -769,39 +891,90 @@ public class QueryWindow
 
 	public void displayQueryResults(final String sql)
 	{
-		// If the SQL take a long time, we do not want to block other
-		// user activities, so do the db access in a thread.
-		SwingWorker w = new SwingWorker()
+		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
 		{
-			public Object construct()
+			@Override
+			protected String doInBackground() throws Exception
 			{
 				if (_showplan.isSelected())
 					new AsePlanViewer(_conn, sql);
 				else
 					displayQueryResults(_conn, sql);
 				return null;
-			}			
+			}
+
 		};
-		w.start();
-		
-//		SwingWorker<Integer, Integer> w = new SwingWorker<Integer, Integer>()
-//		{
-//			@Override
-//			protected Integer doInBackground() throws Exception
-//			{
-//				displayQueryResults(_conn, _tmpSql);
-//				return 1;
-//			}
-//		};
-//		w.execute();
-//		SwingUtilities.invokeLater(new Runnable()
-//		{
-//			public void run()
-//			{
-//				displayQueryResults(_conn, _tmpSql);
-//			}
-//		});
+		JDialog dialog = new JDialog((Frame)null, "Waiting for server...", true);
+		JLabel label = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
+		label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+		dialog.add(label);
+		dialog.pack();
+		dialog.setSize( dialog.getSize().width + 100, dialog.getSize().height + 70);
+		dialog.setLocationRelativeTo(_window);
+
+		doBgThread.addPropertyChangeListener(new SwingWorkerCompletionWaiter(dialog));
+		doBgThread.execute();
+
+		//the dialog will be visible until the SwingWorker is done
+		dialog.setVisible(true); 
+
+		// We will continue here, when results has been sent by server
+		//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 	}
+	private class SwingWorkerCompletionWaiter implements PropertyChangeListener
+	{
+		private JDialog m_dialog;
+	 
+		public SwingWorkerCompletionWaiter(JDialog dialog) 
+		{
+			m_dialog = dialog;
+		}
+	 
+		public void propertyChange(PropertyChangeEvent event) 
+		{
+			if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
+			{
+				m_dialog.setVisible(false);
+				m_dialog.dispose();
+			}
+		}
+	}
+
+//	public void OLD_displayQueryResults(final String sql)
+//	{
+//		// If the SQL take a long time, we do not want to block other
+//		// user activities, so do the db access in a thread.
+//		SwingWorker w = new SwingWorker()
+//		{
+//			public Object construct()
+//			{
+//				if (_showplan.isSelected())
+//					new AsePlanViewer(_conn, sql);
+//				else
+//					displayQueryResults(_conn, sql);
+//				return null;
+//			}			
+//		};
+//		w.start();
+//		
+////		SwingWorker<Integer, Integer> w = new SwingWorker<Integer, Integer>()
+////		{
+////			@Override
+////			protected Integer doInBackground() throws Exception
+////			{
+////				displayQueryResults(_conn, _tmpSql);
+////				return 1;
+////			}
+////		};
+////		w.execute();
+////		SwingUtilities.invokeLater(new Runnable()
+////		{
+////			public void run()
+////			{
+////				displayQueryResults(_conn, _tmpSql);
+////			}
+////		});
+//	}
 
 //	/**
 //	 * This method uses the supplied SQL query string, and the
@@ -1752,8 +1925,10 @@ public class QueryWindow
 	 * arguments: the driver classname, the database URL, the username, and
 	 * the password
 	 **/
-	public static void main(String args[]) throws Exception
+	public static void test_main(String args[]) throws Exception
 	{
+		// FIXME: parse input parameters
+
 		Properties log4jProps = new Properties();
 		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
 		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
@@ -1796,7 +1971,7 @@ public class QueryWindow
 
 
 		// Create a QueryWindow component that uses the factory object.
-		QueryWindow qf = new QueryWindow(conn, 
+		QueryWindow qw = new QueryWindow(conn, 
 				"print 'a very long string that starts here.......................and continues,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,with some more characters------------------------and some more++++++++++++++++++++++++++++++++++++ yes even more 00000 0 0 0 0 0 000000000 0 00000000 00000, lets do some more.......................... end it ends here. -END-'\n" +
 				"print '11111111'\n" +
 				"select getdate()\n" +
@@ -1826,6 +2001,168 @@ public class QueryWindow
 				"select * from sysobjects \n" +
 				"select * from sysprocesses ",
 				true, QueryWindow.WindowType.JFRAME);
-		qf.openTheWindow();
+		qw.openTheWindow();
 	}	
+	/**
+	 * Print command line options.
+	 * @param options
+	 */
+	private static void printHelp(Options options, String errorStr)
+	{
+		PrintWriter pw = new PrintWriter(System.out);
+
+		if (errorStr != null)
+		{
+			pw.println();
+			pw.println(errorStr);
+			pw.println();
+		}
+
+		pw.println("usage: asesqlw [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
+		pw.println("               [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
+		pw.println("  ");
+		pw.println("options:");
+		pw.println("  -h,--help                 Usage information.");
+		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
+		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
+		pw.println("                            To get available option, do -x list");
+		pw.println("  ");
+		pw.println("  -U,--user <user>          Username when connecting to server.");
+		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
+		pw.println("  -S,--server <server>      Server to connect to.");
+		pw.println("  -D,--dbname <dbname>      Database to use when connecting");
+		pw.println("  -q,--query <sqlStatement> SQL Statement to execute");
+		pw.println("");
+		pw.flush();
+	}
+
+	/**
+	 * Build the options parser. Has to be synchronized because of the way
+	 * Options are constructed.
+	 * 
+	 * @return an options parser.
+	 */
+	private static synchronized Options buildCommandLineOptions()
+	{
+		Options options = new Options();
+
+		// create the Options
+		options.addOption( "h", "help",        false, "Usage information." );
+		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
+		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
+
+		options.addOption( "U", "user",        true, "Username when connecting to server." );
+		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
+		options.addOption( "S", "server",      true, "Server to connect to." );
+		options.addOption( "D", "dbname",      true, "Database use when connecting" );
+		options.addOption( "q", "sqlStatement",true, "SQL statement to execute" );
+
+		return options;
+	}
+
+
+	//---------------------------------------------------
+	// Command Line Parsing
+	//---------------------------------------------------
+	private static CommandLine parseCommandLine(String[] args, Options options)
+	throws ParseException
+	{
+		// create the command line parser
+		CommandLineParser parser = new PosixParser();	
+	
+		// parse the command line arguments
+		CommandLine cmd = parser.parse( options, args );
+
+		// Validate any mandatory options or dependencies of switches
+		
+
+		if (_logger.isDebugEnabled())
+		{
+			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
+			{
+				Option opt = it.next();
+				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+			}
+		}
+
+		return cmd;
+	}
+
+	//---------------------------------------------------
+	// MAIN
+	//---------------------------------------------------
+	public static void main(String[] args)
+	{
+		Options options = buildCommandLineOptions();
+		try
+		{
+			CommandLine cmd = parseCommandLine(args, options);
+
+			//-------------------------------
+			// HELP
+			//-------------------------------
+			if ( cmd.hasOption("help") )
+			{
+				printHelp(options, "The option '--help' was passed.");
+			}
+			//-------------------------------
+			// VERSION
+			//-------------------------------
+			else if ( cmd.hasOption("version") )
+			{
+				System.out.println();
+				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println();
+			}
+			//-------------------------------
+			// Check for correct number of cmd line parameters
+			//-------------------------------
+			else if ( cmd.getArgs() != null && cmd.getArgs().length > 0 )
+			{
+				String error = "Unknown options: " + StringUtil.toCommaStr(cmd.getArgs());
+				printHelp(options, error);
+			}
+			//-------------------------------
+			// Start AseTune, GUI/NOGUI will be determined later on.
+			//-------------------------------
+			else
+			{
+				new QueryWindow(cmd);
+			}
+		}
+		catch (ParseException pe)
+		{
+			String error = "Error: " + pe.getMessage();
+			printHelp(options, error);
+		}
+		catch (NormalExitException e)
+		{
+			// This was probably throws when checking command line parameters
+			// do normal exit
+		}
+		catch (Exception e)
+		{
+			System.out.println();
+			System.out.println("Error: " + e.getMessage());
+			System.out.println();
+			System.out.println("Printing a stacktrace, where the error occurred.");
+			System.out.println("--------------------------------------------------------------------");
+			e.printStackTrace();
+			System.out.println("--------------------------------------------------------------------");
+		}
+	}
+}
+
+class NormalExitException
+extends Exception
+{
+	private static final long serialVersionUID = 1L;
+	public NormalExitException()
+	{
+		super();
+	}
+	public NormalExitException(String msg)
+	{
+		super(msg);
+	}
 }

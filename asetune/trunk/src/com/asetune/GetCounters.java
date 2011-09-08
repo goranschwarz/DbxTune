@@ -914,7 +914,8 @@ extends Thread
 
 						// 32 = Database created with for load option, or crashed while loading database, instructs recovery not to proceed
 						// 256 = Database suspect | Not recovered | Cannot be opened or used | Can be dropped only with dbcc dbrepair
-						", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) from sysdatabases where (status & 32 != 32) and (status & 256 != 256))" + 
+						// model is used during create database... so skip this one to
+						", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) from sysdatabases where (status & 32 != 32) and (status & 256 != 256) and name != 'model')" + 
 
 						", pack_received      = @@pack_received" +
 						", pack_sent          = @@pack_sent" +

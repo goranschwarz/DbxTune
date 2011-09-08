@@ -1,4 +1,20 @@
+------------------------------------------------------------
+PRE: reset configuration
+------------------------------------------------------------
+exec sp_configure 'global cache partition number', 1
+exec sp_cacheconfig 'default data cache', 'cache_partitions=1'
+exec sp_cacheconfig 'default data cache', '20M'
+sp_configure "statement cache size", 0
+
+
+
+
 - RECORD the things, so we can "view offline" later on.
+
+use perfdemo
+go
+update statistics TestQueue
+go
 
 ------------------------------------------------------------
 0: Just a smell of what they are going to get...
@@ -54,7 +70,8 @@ Watch:
 	- Proc Call Stack
 FIX:
 	- fix trigger to do waitfor delay "00:00:00"
-	- create: nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
+	  or: drop trigger xxxx
+	- create nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
 	          exec sp_recompile DummyLookupTab1
 
 
