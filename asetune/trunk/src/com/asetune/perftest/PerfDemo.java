@@ -101,6 +101,7 @@ implements ActionListener
 	private JTextField _qProdGenNum    = new JTextField();
 	private JComboBox  _qProdGenHow_cbx= new JComboBox(new String[] {"<Choose Type>", QTYPE_ALL, QTYPE_1, QTYPE_2, QTYPE_3});
 	private JButton    _qProdGen_but   = new JButton("Generate new values");
+	private JButton    _qTruncate_but  = new JButton("Truncate Queue");
 
 	// Queue Consumer PANEL
 	private final String RESUME_CONSUMERS     = "Resume All Consumers";
@@ -311,10 +312,14 @@ implements ActionListener
 		panel.add(_qProdGenHow_cbx, "pushx, growx, wrap");
 		_qProdGenHow_cbx.addActionListener(this);
 
-		panel.add(_qProdGen_but, "span, split, tag right");
+		panel.add(_qProdGen_but, "span, split, tag right, wrap");
 		_qProdGen_but.addActionListener(this);
 		_qProdGen_but.setEnabled(false);
-		
+
+		panel.add(_qTruncate_but, "span, split, tag right, wrap");
+		_qTruncate_but.addActionListener(this);
+		_qTruncate_but.setEnabled(false);
+				
 		return panel;
 	}
 	
@@ -499,6 +504,7 @@ implements ActionListener
 				qControllerAction("RESUME");
 
 				_qProdGen_but   .setEnabled(true);
+				_qTruncate_but  .setEnabled(true);
 				_qConsStart_but .setEnabled(true);
 				_qConsStatus_cbx.setEnabled(true);
 				_qConsStop_but  .setEnabled(true);
@@ -627,6 +633,20 @@ implements ActionListener
 			doIt.start();
 		}
 
+		if (_qTruncate_but.equals(source))
+		{
+			PerfDemoInfoThread doIt = new PerfDemoInfoThread("qTruncate", this)
+			{
+				@Override
+				public boolean doWork()
+				{
+					_perfDemo.qTruncate();
+					return false; // do NOT execute again
+				}
+			};
+			doIt.start();
+		}
+
 		if (_qStatType_cbx.equals(source))
 		{
 			String str = (String) _qStatType_cbx.getSelectedItem();
@@ -663,6 +683,25 @@ implements ActionListener
 			_logger.error("qProducerGenerate(): problems exec sql: "+sql);
 		}
 		System.out.println("END: qProducerGenerate() sql: "+sql);
+	}
+
+	protected void qTruncate()
+	{
+		Connection conn = _qProdGenConn;
+		String sql = "truncate table TestQueue";
+
+		System.out.println("BEGIN: qTruncate() sql: "+sql);
+		try
+		{
+			Statement stmnt = conn.createStatement();
+			stmnt.executeUpdate(sql);
+			stmnt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.error("qTruncate(): problems exec sql: "+sql);
+		}
+		System.out.println("END: qTruncate() sql: "+sql);
 	}
 
 	private void qControllerAction(String action)

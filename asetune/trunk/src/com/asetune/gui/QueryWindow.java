@@ -904,10 +904,33 @@ public class QueryWindow
 			}
 
 		};
+//		JDialog dialog = new JDialog((Frame)null, "Waiting for server...", true);
+//		JLabel label = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
+//		label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+//		dialog.add(label);
+//		dialog.pack();
+//		dialog.setSize( dialog.getSize().width + 100, dialog.getSize().height + 70);
+//		dialog.setLocationRelativeTo(_window);
+
 		JDialog dialog = new JDialog((Frame)null, "Waiting for server...", true);
+		dialog.setLayout(new MigLayout());
 		JLabel label = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
 		label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
-		dialog.add(label);
+
+//		JTextPane sql_txt = new JTextPane();
+//		sql_txt.setText(sql);
+		RSyntaxTextArea sql_txt   = new RSyntaxTextArea();
+		RTextScrollPane sql_sroll = new RTextScrollPane(sql_txt);
+
+		sql_txt.setText(sql);
+		sql_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		sql_txt.setHighlightCurrentLine(false);
+		//sql_txt.setLineWrap(true);
+		//sql_sroll.setLineNumbersEnabled(true);
+
+		dialog.add(label,     "push, grow, wrap");
+		dialog.add(sql_sroll, "push, grow, wrap");
+
 		dialog.pack();
 		dialog.setSize( dialog.getSize().width + 100, dialog.getSize().height + 70);
 		dialog.setLocationRelativeTo(_window);

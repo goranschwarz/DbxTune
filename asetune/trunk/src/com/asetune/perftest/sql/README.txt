@@ -27,7 +27,7 @@ isql -Usa -P -SGORAN_1_DS -w999 -i qsystem.sql
 
 
 
-
+c:
 cd C:\projects\asetune\src\com\asetune\perftest\sql
 
 isql -Usa -P -SGORAN_1_DS -w999 -i db.sql

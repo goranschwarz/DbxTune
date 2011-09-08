@@ -2345,16 +2345,16 @@ extends Thread
 					true, tmp, false, -1);
 			tmp.addTrendGraph(tg.getName(), tg, true);
 			
-			// RED = FULL TRANSACTION LOG
-			if (conf != null) colorStr = conf.getProperty(name+".color.fullTranslog");
+			// BLUE = in 'DUMP DATABASE'
+			if (conf != null) colorStr = conf.getProperty(name+".color.dumpdb");
 			tcp.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 			{
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
-					Number isLogFull = (Number) adapter.getValue(adapter.getColumnIndex("TransactionLogFull"));
-					return isLogFull != null && isLogFull.intValue() > 0;
+					Number backupInProg = (Number) adapter.getValue(adapter.getColumnIndex("BackupInProgress"));
+					return backupInProg != null && backupInProg.intValue() > 0;
 				}
-			}, SwingUtils.parseColor(colorStr, Color.RED), null));
+			}, SwingUtils.parseColor(colorStr, Color.BLUE), null));
 
 			// PINK = TRANSACTION LOG at 90%
 			if (conf != null) colorStr = conf.getProperty(name+".color.almostFullTranslog");
@@ -2367,16 +2367,16 @@ extends Thread
 				}
 			}, SwingUtils.parseColor(colorStr, Color.PINK), null));
 
-			// BLUE = in 'DUMP DATABASE'
-			if (conf != null) colorStr = conf.getProperty(name+".color.dumpdb");
+			// RED = FULL TRANSACTION LOG
+			if (conf != null) colorStr = conf.getProperty(name+".color.fullTranslog");
 			tcp.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 			{
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
-					Number backupInProg = (Number) adapter.getValue(adapter.getColumnIndex("BackupInProgress"));
-					return backupInProg != null && backupInProg.intValue() > 0;
+					Number isLogFull = (Number) adapter.getValue(adapter.getColumnIndex("TransactionLogFull"));
+					return isLogFull != null && isLogFull.intValue() > 0;
 				}
-			}, SwingUtils.parseColor(colorStr, Color.BLUE), null));
+			}, SwingUtils.parseColor(colorStr, Color.RED), null));
 		}
 
 		_CMList.add(tmp);

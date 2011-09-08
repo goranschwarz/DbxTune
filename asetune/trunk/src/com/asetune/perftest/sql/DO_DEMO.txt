@@ -1,10 +1,10 @@
 ------------------------------------------------------------
-PRE: reset configuration
+Before you start: reset configuration + reboot ASE
 ------------------------------------------------------------
 exec sp_configure 'global cache partition number', 1
 exec sp_cacheconfig 'default data cache', 'cache_partitions=1'
 exec sp_cacheconfig 'default data cache', '20M'
-sp_configure "statement cache size", 0
+exec sp_configure "statement cache size", 0
 
 
 
@@ -17,7 +17,7 @@ update statistics TestQueue
 go
 
 ------------------------------------------------------------
-0: Just a smell of what they are going to get...
+0: Just a smell of what they are going to get... DEST-3
 ------------------------------------------------------------
 - Start with a small cache 20M: sp_cacheconfig "default data cache", "20M"
 - Generate 'dest3' type....
@@ -27,7 +27,7 @@ Watch:
 	- What table is this on... how many insert per second
 
 ------------------------------------------------------------
-1: To small cache
+1: To small cache                                 DEST-2
 ------------------------------------------------------------
 - Start with a small cache 20M
 - Generate 'dest2' type....
@@ -41,7 +41,7 @@ Result:
 	- all physical IO's goes to logical IO (in memory table scan)
 
 ------------------------------------------------------------
-2: Fix in-memory table scan
+2: Fix in-memory table scan                       DEST-2
 ------------------------------------------------------------
 - Continue from the above... (dest2)
 Watch:
@@ -50,8 +50,8 @@ Watch:
 	- Tool; Capture SQL:     identify what proc/SQL statement that is responsible + SHOWPLAN
 	- Object Tab + right click: sp_help / sp_helpindex
 FIX:
-	- create: nonclustered index DummyLookupTab2_ix1 on DummyLookupTab2(intCol1)
-	          exec sp_recompile DummyLookupTab2
+	- do: create nonclustered index DummyLookupTab2_ix1 on DummyLookupTab2(intCol1)
+	      exec sp_recompile DummyLookupTab2
 Result:
 	- Everyting now works much faster... 
 		- NOT so much Logical IO
@@ -59,7 +59,7 @@ Result:
 
 
 ------------------------------------------------------------
-3: Find long running SQL Statement
+3: Find long running SQL Statement                 DEST-1
 ------------------------------------------------------------
 - Generate 'dest1' type....
 - Start 1-3 worker
@@ -70,14 +70,21 @@ Watch:
 	- Proc Call Stack
 FIX:
 	- fix trigger to do waitfor delay "00:00:00"
-	  or: drop trigger xxxx
-	- create nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
+	  or: drop trigger DestTab1Hist_tr
+
+		- This might already have been done (in the install):
+	          create nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
 	          exec sp_recompile DummyLookupTab1
+
+	- The below you can do, but really part of NEXT step in demo...
+	  alter table DestTab1     lock datarows    
+	  alter table DestTab1Hist lock datarows
+	  alter table qStatInfo    lock datarows
 
 
 
 ------------------------------------------------------------
-4: Find locking statements
+4: Find locking statements (if this was NOT done in above step) DEST-1
 ------------------------------------------------------------
 - Continue from 3, since this is a add-on to exercise 3
 Watch:
@@ -92,7 +99,7 @@ FIX:
 dump tran perfdemo with truncate_only
 
 ------------------------------------------------------------
-5: Time to add more engines
+5: Time to add more engines                         DEST-1
 ------------------------------------------------------------
 - Continue from 4, since this is a add-on to privious exercise
 
@@ -101,7 +108,7 @@ Watch:
 	- Processes, check Checkpoint... and HK...
 	- Cached Procedure: EXEC COUNT
 FIX:
-	HK,Checkpoint: 
+	CacheIsFlushing + HK,Checkpoint: so get rid of some data
 		truncate table DestTab1
 		truncate table DestTab1Hist
 		truncate table DestTab2
