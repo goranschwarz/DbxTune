@@ -4,7 +4,6 @@
 package com.asetune.xmenu;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -24,10 +23,13 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-import com.asetune.gui.LineNumberedPaper;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+
+import com.asetune.gui.QueryWindow;
 
 
 /**
@@ -64,28 +66,39 @@ extends XmenuActionBase
 		_linenum  = Integer.parseInt( getParamValue(2,"0") );
 		_closeConnOnExit = isCloseConnOnExit();
 
-		showText(_conn, _dbname, _procname, _linenum);
+		showText(_conn, _dbname, _procname, _linenum, true);
 	}
 
 
-	public void showText(Connection conn, String dbname, String procName, int line)
+	public void showText(Connection conn, String dbname, String procName, int line, boolean closeConn)
 	{
 		JPanel textPanel = new JPanel();
 		//final JTextArea procText = new JTextArea();
-		final JTextArea procText = new LineNumberedPaper(0,0);
+//		final JTextArea procText = new LineNumberedPaper(0,0);
+		final RSyntaxTextArea procText      = new RSyntaxTextArea();
+		final RTextScrollPane procTextSroll = new RTextScrollPane(procText);
 		final JFrame textFrame = new JFrame(procName);
 
-		textFrame.addWindowListener(new WindowAdapter()
+		//procText.setText(sql);
+		procText.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		procText.setHighlightCurrentLine(true);
+		//procText.setLineWrap(true);
+		//procTextSroll.setLineNumbersEnabled(true);
+
+		if (closeConn)
 		{
-			public void windowClosing(WindowEvent e)
+			textFrame.addWindowListener(new WindowAdapter()
 			{
-				if (_closeConnOnExit)
+				public void windowClosing(WindowEvent e)
 				{
-					try { _conn.close(); }
-					catch(SQLException sqle) { /*ignore*/ }
+					if (_closeConnOnExit)
+					{
+						try { _conn.close(); }
+						catch(SQLException sqle) { /*ignore*/ }
+					}
 				}
-			}
-		});
+			});
+		}
 
 		createRightClickMenyPopup(procText);
 
@@ -97,9 +110,9 @@ extends XmenuActionBase
 			}
 		};
 
-		JScrollPane scrollPane = new JScrollPane(procText);
+//		JScrollPane scrollPane = new JScrollPane(procText);
 		textPanel.setLayout(new BorderLayout());
-		procText.setBackground(Color.white);
+//		procText.setBackground(Color.white);
 		procText.setEnabled(true);
 		procText.setEditable(false);
 
@@ -126,7 +139,7 @@ extends XmenuActionBase
 		{
 			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
-		textPanel.add("Center", scrollPane);
+		textPanel.add("Center", procTextSroll);
 		JPanel buttonPanel = new JPanel();
 		JButton closeButton = new JButton("Close");
 		closeButton.addActionListener(action);
@@ -137,7 +150,7 @@ extends XmenuActionBase
 
 		if ( ! found )
 		{
-			JOptionPane.showMessageDialog(null, "The stored procedure '"+procName+"' cant be found in database '"+dbname+"'.", "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "The stored procedure '"+procName+"' can't be found in database '"+dbname+"'.", "Error", JOptionPane.ERROR_MESSAGE);
 		}
 		else
 		{
@@ -200,14 +213,16 @@ extends XmenuActionBase
 					int    linenum  = 0;
 
 					// split: dbname.owner.procname
-					String ss[] = selectedText.split("\\.");
-					if (ss.length == 3)
+					if (selectedText != null)
 					{
-						dbname   = ss[0];
-						procname = ss[2];
+						String ss[] = selectedText.split("\\.");
+						if (ss.length == 3)
+						{
+							dbname   = ss[0];
+							procname = ss[2];
+						}
 					}
-
-					showText(_conn, dbname, procname, linenum);
+					showText(_conn, dbname, procname, linenum, false);
 	            }
 			}
 		});
@@ -218,10 +233,35 @@ extends XmenuActionBase
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				String dbname   = "sybsystemprocs";
-				String tabname  = "sysobjects";
-				System.out.println("SHOW:Table Information:dbname='"+dbname+"', tablename='"+tabname+"'.");
-				//new AseTableInfo(_conn, dbname, tabname);
+//				String dbname   = "sybsystemprocs";
+//				String tabname  = "sysobjects";
+//				System.out.println("SHOW:Table Information:dbname='"+dbname+"', tablename='"+tabname+"'.");
+//				//new AseTableInfo(_conn, dbname, tabname);
+
+				JComponent comp = _rightClickComponent;
+				if (comp instanceof JTextArea)
+	            {
+					JTextArea text = (JTextArea) comp;
+					String selectedText = text.getSelectedText();
+
+					String dbname   = _dbname;
+					String tabname  = selectedText;
+
+					// split: dbname.owner.procname
+					if (selectedText != null)
+					{
+						String ss[] = selectedText.split("\\.");
+						if (ss.length == 3)
+						{
+							dbname  = ss[0];
+							tabname = ss[2];
+						}
+					}
+					String sql = "exec "+dbname+"..sp_help '"+tabname+"'";
+
+					QueryWindow qw = new QueryWindow(_conn, sql, false, QueryWindow.WindowType.JFRAME);
+					qw.openTheWindow();
+	            }
 			}
 		});
 		_rightClickPopupMenu.add(menuItem);
