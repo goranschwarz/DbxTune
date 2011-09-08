@@ -24,6 +24,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -93,6 +95,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionFactory;
 import com.asetune.utils.Debug;
+import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -162,6 +165,79 @@ public class QueryWindow
 	{
 		Version.setAppName("AseSqlWindow");
 		
+		// Create store dir if it did not exists.
+		File appStoreDir = new File(Version.APP_STORE_DIR);
+		if ( ! appStoreDir.exists() )
+		{
+			if (appStoreDir.mkdir())
+				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
+		}
+
+		
+		// -----------------------------------------------------------------
+		// CHECK/SETUP information from the CommandLine switches
+		// -----------------------------------------------------------------
+		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "asetune.properties");
+		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "asetune.user.properties");
+		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "asesqlw.save.properties");
+		final String ASESQLW_HOME          = System.getProperty("ASESQLW_HOME");
+		
+		String defaultPropsFile     = (ASESQLW_HOME          != null) ? ASESQLW_HOME          + "/" + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + "/" + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + "/" + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+
+		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
+		String filename = Version.APP_STORE_DIR + "/" + CONFIG_FILE_NAME;
+		if ( (new File(filename)).exists() )
+			defaultPropsFile = filename;
+
+		String propFile        = cmd.getOptionValue("config",     defaultPropsFile);
+		String userPropFile    = cmd.getOptionValue("userConfig", defaultUserPropsFile);
+		String tmpPropFile     = cmd.getOptionValue("tmpConfig",  defaultTmpPropsFile);
+
+		// Check if the configuration file exists
+		if ( ! (new File(propFile)).exists() )
+			throw new FileNotFoundException("The configuration file '"+propFile+"' doesn't exists.");
+
+		// -----------------------------------------------------------------
+		// CHECK JAVA JVM VERSION
+		// -----------------------------------------------------------------
+		int javaVersionInt = JavaVersion.getVersion();
+		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
+		    && javaVersionInt <  JavaVersion.VERSION_1_6
+		   )
+		{
+			System.out.println("");
+			System.out.println("===============================================================");
+			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			System.out.println(" java.version = " + System.getProperty("java.version"));
+			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
+			System.out.println("---------------------------------------------------------------");
+			System.out.println("");
+			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+		}
+
+		// The SAVE Properties...
+		Configuration appSaveProps = new Configuration(tmpPropFile);
+		Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
+
+		// Get the USER properties that could override CONF
+		Configuration appUserProps = new Configuration(userPropFile);
+		Configuration.setInstance(Configuration.USER_CONF, appUserProps);
+
+		// Get the "OTHER" properties that has to do with LOGGING etc...
+		Configuration appProps = new Configuration(propFile);
+		Configuration.setInstance(Configuration.SYSTEM_CONF, appProps);
+
+		// Set the Configuration search order when using the: Configuration.getCombinedConfiguration()
+		Configuration.setSearchOrder(
+			Configuration.USER_TEMP,    // First
+			Configuration.USER_CONF,    // second
+			Configuration.SYSTEM_CONF); // Third
+
+		//---------------------------------------------------------------
+		// OK, lets get ASE user/passwd/server/dbname
+		//---------------------------------------------------------------
 		String aseUsername = System.getProperty("user.name"); 
 		String asePassword = "";
 		String aseServer   = System.getenv("DSQUERY");
@@ -210,8 +286,7 @@ public class QueryWindow
 		}
 
 //		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
-//		Logging.init("asesqlw.", propFile);
-		Logging.init();
+		Logging.init("asesqlw.", propFile);
 		
     	try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
