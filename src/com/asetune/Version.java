@@ -9,7 +9,7 @@ import java.util.Date;
 
 public class Version
 {
-	public static final String PRODUCT_STRING     = "AseTune"; // Do not have spaces etc in this one
+	public static       String PRODUCT_STRING     = "AseTune"; // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "2.5.0";
 	public static final String VERSION_STRING     = "2.5.0.dev";
 	public static final String BUILD_STRING       = "2011-09-07/build 88";
@@ -34,6 +34,12 @@ public class Version
 		{
 			System.out.println(e.getMessage());
 		}
+	}
+
+	/** This normally NOT used */
+	public static void setAppName(String appname)
+	{
+		PRODUCT_STRING = appname;
 	}
 
 	public static String getAppName()
