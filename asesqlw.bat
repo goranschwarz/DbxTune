@@ -174,5 +174,5 @@ echo -----------------------------------------------------------------------
 goto exit_asesqlw
 
 :exit_asesqlw
-pause
+rem pause
 endlocal

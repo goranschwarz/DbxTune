@@ -55,6 +55,11 @@ create table DummyLookupTab1
 	charCol7	char(255)			not null,
 )
 go
+-- in "demo 3": Find long running SQL Statement
+-- It might be stupid to have "another" table scan problem...
+-- If you want to have the problem, COMMENT OUT the index creation below
+create nonclustered index DummyLookupTab1_ix1 on DummyLookupTab1(intCol1)
+go
 
 print "Inserting data into 'DummyLookupTab1': approx 18000 rows, which would be 36 MB data"
 print "The column 'intCol1', containes values between 0-99999, so index on that col would be almost unique..."

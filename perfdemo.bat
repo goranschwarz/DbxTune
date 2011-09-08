@@ -136,5 +136,5 @@ echo -----------------------------------------------------------------------
 goto exit_perfdemo
 
 :exit_perfdemo
-pause
+rem pause
 endlocal
