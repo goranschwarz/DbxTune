@@ -36,10 +36,10 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 229;
-	$ASEMON_LATEST_VERSION_STR = "2.1.0";
-	$ASEMON_LATEST_VERSION_STR = "2011-07-15";
-	$DOWNLOAD_URL              = "sourceforge.net/projects/asemon-gui/files/";
+	$ASEMON_LATEST_VERSION_SRC = 253;
+	$ASEMON_LATEST_VERSION_STR = "2.5.0";
+	$ASEMON_LATEST_VERSION_STR = "2011-09-09";
+	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asemon.se/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
