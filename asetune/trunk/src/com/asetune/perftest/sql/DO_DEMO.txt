@@ -58,6 +58,7 @@ Result:
 		- Dequeue per second & Trans per second is higher 
 
 
+
 ------------------------------------------------------------
 3: Find long running SQL Statement                 DEST-1
 ------------------------------------------------------------
@@ -82,7 +83,6 @@ FIX:
 	  alter table qStatInfo    lock datarows
 
 
-
 ------------------------------------------------------------
 4: Find locking statements (if this was NOT done in above step) DEST-1
 ------------------------------------------------------------
