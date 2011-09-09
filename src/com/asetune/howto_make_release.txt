@@ -18,6 +18,7 @@ in Eclipse: (get rid of unnecessary import)
 
 -----------------------------------------------------------
 Check that all files are ADDED to SVN:
+c:
 cd C:\projects\asetune
 svn st
 
