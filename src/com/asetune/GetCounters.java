@@ -825,6 +825,37 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 
+		//==================================================================================================
+		// 12.5.0.3: Description of: monState
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// LockWaitThreshold              int                        0 Time (in seconds) that processes must have waited for locks in order to be reported
+		// LockWaits                      int                        0 Number of processes that have waited longer than LockWaitThreshold seconds
+		// StartDate                      datetime                   0 Date and time that the ASE was started
+		// DaysRunning                    int                        0 Number of days that the ASE has been running for
+		// CountersCleared                datetime                   0 Date and time at which the monitor counters were last cleared
+		// CheckPoints                    int                        0 Whether any checkpoint is currently running
+		// NumDeadlocks                   int                        1 Total number of deadlocks that have occurred
+		// DiagnosticDumps                int                        0 Whether the Sybmon diagnostic utility is performing a shared memory dump
+		// Connections                    int                        0 Number of active inbound connections
+		// MaxRecovery                    int                        0 The maximum time (in minutes), per database, that ASE uses to complete its recovery procedures in case of a system failure, the current 'Run Value' for the 'recovery interval in minutes' configuration option
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// none so far
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.3       add    Transactions      int                   Total number of transactions that have been committed on the server
+		//---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__SUMMARY;
 		displayName  = CM_DESC__SUMMARY;
 		description  = "Overview of how the system performs.";
@@ -1116,6 +1147,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		
 		// 12.5.4 version
 		//DBID        ObjectID    IndexID     LogicalReads PhysicalReads APFReads    PagesRead   PhysicalWrites PagesWritten OptSelectCount UsedCount   RowsInserted RowsDeleted RowsUpdated Operations  LockRequests LockWaits   LastOptSelectDate              LastUsedDate                   
 		//----------- ----------- ----------- ------------ ------------- ----------- ----------- -------------- ------------ -------------- ----------- ------------ ----------- ----------- ----------- ------------ ----------- -----------------              ------------                   
@@ -1177,17 +1210,77 @@ extends Thread
 //		(43 rows affected)
 
 		//==================================================================================================
-        // 12.5.0.3: Description of: monOpenObjectActivity
-        // 
-        //---------------------------------------------------------------------------------------------------
-        // Column changes in various versions:
-        //
-        // Version     Action  Name                      Datatype    Attributes          Description
-        // ----------- ------- ------------------------- ----------- ------------------- ----------------------------------
-        // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7 (3B)   added   SharedLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for a shared lock
-        // 15.7 (3B)   added   ExclusiveLockWaitTime     int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an exclusive lock
-        // 15.7 (3B)   added   UpdateLockWaitTime        int         Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an update lock
+		// 12.5.0.3: Description of: monOpenObjectActivity
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// DBID                           int                        0 Unique identifier for the database
+		// ObjectID                       int                        0 Unique identifier for the object
+		// IndexID                        int                        0 Unique identifier for the index
+		// LogicalReads                   int                        1 Total number of buffers read
+		// PhysicalReads                  int                        1 Number of buffers read from disk
+		// APFReads                       int                        1 Number of APF buffers read
+		// PagesRead                      int                        1 Total number of pages read
+		// PhysicalWrites                 int                        1 Total number of buffers written to disk
+		// PagesWritten                   int                        1 Total number of pages written to disk
+		// OptSelectCount                 int                        0 Number of times object was selected for plan during compilation
+		// LastOptSelectDate              datetime                   0 Last date the object was selected for plan during compilation
+		// UsedCount                      int                        0 Number of times object was used in plan during execution
+		// LastUsedDate                   datetime                   0 Last date the object was used in plan during execution
+		// RowsInserted                   intn                       1 Number of rows inserted
+		// RowsDeleted                    intn                       1 Number of rows deleted
+		// RowsUpdated                    intn                       1 Number of updates
+		// Operations                     intn                       1 Number of times that the object was accessed
+		// LockRequests                   intn                       1 Number of requests for a lock on the object
+		// LockWaits                      intn                       1 Number of times a task waited for a lock for the object
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.3       >>>>>> change behaviour on the table <<<<<<<<< monOpenObjectActivity contains details about tables and indexes only. Prior to 12.5.3, this table could contain rowsa row for an executed stored procedure, but these details (like the Operations column) were not reliable. 
+		// 15.0         add    DBName            varchar(30)           Name of the database in which the object resides
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2       add    HkgcRequests      int                   Total number of events of the object that were queued in Housekeeper Garbage Collection(HKGC) queues
+		// 15.0.2       add    HkgcPending       int                   Number of events of the object that are still pending in Housekeeper Garbage Collection(HKGC) queues
+		// 15.0.2       add    HkgcOverflows     int                   Number of events of the object that overflowed due to lack of space in Housekeeper Garbage Collection(HKGC) queues
+		// 15.0.2       >>>>>> change behaviour on the table <<<<<<<<< Among various bugfixes in 15.0.2, one that is worth mentioning is the number of table scans or index scans on a table can now be reliably derived from monOpenObjectActivity.UsedCount for rows with IndexID = 0. Previously, this value was not correct as it included accesses via a clustered index as well. 
+		// 15.5         add    PhysicalLocks             int           only CE: Number of physical locks requested
+		// 15.5         add    PhysicalLocksRetained     int           only CE: Number of physical locks retained
+		// 15.5         add    PhysicalLocksRetainWaited int           only CE: Number of physical lock requests waited before lock is retained
+		// 15.5         add    PhysicalLocksDeadlocks    int           only CE: Number of times physical lock requests returned deadlock
+		// 15.5         add    PhysicalLocksWaited       int           only CE: Number of times physical lock requests waited
+		// 15.5         add    PhysicalLocksPageTransfer int           only CE: Number of times page transfer was requested by a client at this instance
+		// 15.5         add    TransferReqWaited         int           only CE: Number of times physical lock requests waited to receive page transfers
+		// 15.5         add    AvgPhysicalLockWaitTime   float         only CE: Average time waited to get physical lock granted (ms)
+		// 15.5         add    AvgTransferReqWaitTime    float         only CE: Average time physical lock requests waited to receive page transfers (ms)
+		// 15.5         add    TotalServiceRequests      int           only CE: Number of physical lock requests serviced by Cluster Cache Manager
+		// 15.5         add    PhysicalLocksDowngraded   int           only CE: Number of physical lock downgrade requests serviced by Cluster Cache Manager
+		// 15.5         add    PagesTransferred          int           only CE: Number of pages transferred by Cluster Cache Manager
+		// 15.5         add    ClusterPageWrites         int           only CE: Number of pages written to disk by Cluster Cache Manager
+		// 15.5         add    AvgServiceTime            int           only CE: Average service time taken by Cluster Cache Manager (ms)
+		// 15.5         add    AvgTimeWaitedOnLocalUsers float         only CE: Average time taken to service requests due to page in use by local users (ms)
+		// 15.5         add    AvgTransferSendWaitTime   float         only CE: Average time waited by Cluster Cache Manager for page transfer (ms)
+		// 15.5         add    AvgIOServiceTime          float         only CE: Average service time taken by Cluster Cache Manager for writing page to disk (ms)
+		// 15.5         add    AvgDowngradeServiceTime   float         only CE: Average service time taken by Cluster Cache Manager for downgrading physical lock (ms)
+		// 15.5 esd#1   add    MaxPhysicalLockWaitTime   float         only CE: Maximum time waited to get physical lock granted (ms)
+		// 15.5 esd#1   add    MaxTransferReqWaitTime    float         only CE: Maximum time physical lock requests waited to receive page transfers (ms)
+		// 15.5 esd#1   add    MaxServiceTime            float         only CE: Maximum service time taken by Cluster Cache Manager for downgrading physical lock (ms)
+		// 15.5 esd#1   add    AvgQueueWaitTime          float         only CE: Average wait time in Cluster Cache Manager queue before request is serviced (ms)
+		// 15.5 esd#1   add    MaxQueueWaitTime          float         only CE: Maximum wait time in Cluster Cache Manager queue before request is serviced (ms)
+		// 15.5 esd#1   add    MaxTimeWaitedOnLocalUsers float         only CE: Maximum time taken to service requests due to page in use by local users (ms)
+		// 15.5 esd#1   add    MaxTransferSendWaitTime   float         only CE: Maximum time waited by Cluster Cache Manager for page transfer (ms)
+		// 15.5 esd#1   add    MaxIOServiceTime          float         only CE: Maximum service time taken by Cluster Cache Manager for writing page to disk (ms)
+		// 15.5 esd#1   add    MaxDowngradeServiceTime   float         only CE: Maximum service time taken by Cluster Cache Manager for downgrading physical lock (ms)
+        // 15.7 (3B)    add    SharedLockWaitTime        int           Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for a shared lock
+        // 15.7 (3B)    add    ExclusiveLockWaitTime     int           Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an exclusive lock
+        // 15.7 (3B)    add    UpdateLockWaitTime        int           Counter,reset,null  The total amount of time (in milliseconds) that all tasks spent waiting for an update lock
         //---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__OBJECT_ACTIVITY;
@@ -1328,19 +1421,103 @@ extends Thread
 					cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
 				}
 //				if ( (aseVersion >= 15030 && isClusterEnabled()) || aseVersion >= 15500)
+
+
+				//-------------------------------------------
+				// Adding Cluster Edition Specific Counters
+				//-------------------------------------------
+
+				// ASE 15.0.3 CE
+				String PhysicalLocks             = "";
+				String PhysicalLocksRetained     = "";
+				String PhysicalLocksRetainWaited = "";
+				String PhysicalLocksDeadlocks    = "";
+				String PhysicalLocksWaited       = "";
+				String PhysicalLocksPageTransfer = "";
+				String TransferReqWaited         = "";
+				String AvgPhysicalLockWaitTime   = "";
+				String AvgTransferReqWaitTime    = "";
+				String TotalServiceRequests      = "";
+				String PhysicalLocksDowngraded   = "";
+				String PagesTransferred          = "";
+				String ClusterPageWrites         = "";
+				String AvgServiceTime            = "";
+				String AvgTimeWaitedOnLocalUsers = "";
+				String AvgTransferSendWaitTime   = "";
+				String AvgIOServiceTime          = "";
+				String AvgDowngradeServiceTime   = "";
+
+				// ASE 15.5.0 ESD#1 CE
+				String MaxPhysicalLockWaitTime   = "";
+				String MaxTransferReqWaitTime    = "";
+				String MaxServiceTime            = "";
+				String AvgQueueWaitTime          = "";
+				String MaxQueueWaitTime          = "";
+				String MaxTimeWaitedOnLocalUsers = "";
+				String MaxTransferSendWaitTime   = "";
+				String MaxIOServiceTime          = "";
+				String MaxDowngradeServiceTime   = "";
+
 				if ( aseVersion >= 15030 && isClusterEnabled() )
 				{
-					cols2 += "PhysicalLocks, PhysicalLocksRetained, PhysicalLocksRetainWaited, \n";
-					cols2 += "PhysicalLocksDeadlocks, PhysicalLocksWaited, PhysicalLocksPageTransfer, \n";
-					cols2 += "TransferReqWaited, \n";
-					cols2 += "AvgPhysicalLockWaitTime, AvgTransferReqWaitTime, \n";
-					cols2 += "TotalServiceRequests, \n";
-					cols2 += "PhysicalLocksDowngraded, \n";
-					cols2 += "PagesTransferred, \n";
-					cols2 += "ClusterPageWrites, \n";
-					cols2 += "AvgServiceTime, AvgTimeWaitedOnLocalUsers, AvgTransferSendWaitTime, \n";
-					cols2 += "AvgIOServiceTime, AvgDowngradeServiceTime, \n";
+					PhysicalLocks             = "PhysicalLocks, ";
+					PhysicalLocksRetained     = "PhysicalLocksRetained, ";
+					PhysicalLocksRetainWaited = "PhysicalLocksRetainWaited, ";
+					PhysicalLocksDeadlocks    = "PhysicalLocksDeadlocks, ";
+					PhysicalLocksWaited       = "PhysicalLocksWaited, ";
+					PhysicalLocksPageTransfer = "PhysicalLocksPageTransfer, ";
+					TransferReqWaited         = "TransferReqWaited, ";
+					AvgPhysicalLockWaitTime   = "AvgPhysicalLockWaitTime, ";
+					AvgTransferReqWaitTime    = "AvgTransferReqWaitTime, ";
+					TotalServiceRequests      = "TotalServiceRequests, ";
+					PhysicalLocksDowngraded   = "PhysicalLocksDowngraded, ";
+					PagesTransferred          = "PagesTransferred, ";
+					ClusterPageWrites         = "ClusterPageWrites, ";
+					AvgServiceTime            = "AvgServiceTime, ";
+					AvgTimeWaitedOnLocalUsers = "AvgTimeWaitedOnLocalUsers, ";
+					AvgTransferSendWaitTime   = "AvgTransferSendWaitTime, ";
+					AvgIOServiceTime          = "AvgIOServiceTime, ";
+					AvgDowngradeServiceTime   = "AvgDowngradeServiceTime, ";
 				}
+				if ( aseVersion >= 15501 && isClusterEnabled() )
+				{
+					MaxPhysicalLockWaitTime   = "MaxPhysicalLockWaitTime, ";
+					MaxTransferReqWaitTime    = "MaxTransferReqWaitTime, ";
+					MaxServiceTime            = "MaxServiceTime, ";
+					AvgQueueWaitTime          = "AvgQueueWaitTime, ";
+					MaxQueueWaitTime          = "MaxQueueWaitTime, ";
+					MaxTimeWaitedOnLocalUsers = "MaxTimeWaitedOnLocalUsers, ";
+					MaxTransferSendWaitTime   = "MaxTransferSendWaitTime, ";
+					MaxIOServiceTime          = "MaxIOServiceTime, ";
+					MaxDowngradeServiceTime   = "MaxDowngradeServiceTime, ";
+				}
+				cols2 += PhysicalLocks;
+				cols2 += PhysicalLocksRetained;
+				cols2 += PhysicalLocksRetainWaited;
+				cols2 += PhysicalLocksDeadlocks;
+				cols2 += PhysicalLocksWaited;
+				cols2 += PhysicalLocksPageTransfer;
+				cols2 += TransferReqWaited;
+				cols2 += AvgPhysicalLockWaitTime;
+				cols2 += MaxPhysicalLockWaitTime;
+				cols2 += AvgTransferReqWaitTime;
+				cols2 += MaxTransferReqWaitTime;
+				cols2 += TotalServiceRequests;
+				cols2 += PhysicalLocksDowngraded;
+				cols2 += PagesTransferred;
+				cols2 += ClusterPageWrites;
+				cols2 += AvgServiceTime;
+				cols2 += MaxServiceTime;
+				cols2 += AvgTimeWaitedOnLocalUsers;
+				cols2 += MaxTimeWaitedOnLocalUsers;
+				cols2 += AvgTransferSendWaitTime;
+				cols2 += MaxTransferSendWaitTime;
+				cols2 += AvgIOServiceTime;
+				cols2 += MaxIOServiceTime;
+				cols2 += AvgDowngradeServiceTime;
+				cols2 += MaxDowngradeServiceTime;
+				cols2 += AvgQueueWaitTime;
+				cols2 += MaxQueueWaitTime;
 
 				String sql = 
 					"select " + cols1 + cols2 + cols3 + "\n" +
@@ -1450,6 +1627,55 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		//==================================================================================================
+		// 12.5.0.3: Description of: monProcess
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// FamilyID                       smallint                   0 The SPID of the parent process, if this is a worker process
+		// BatchID                        int                        0 Unique identifier for the SQL batch containing the statement being executed
+		// ContextID                      int                        0 The stack frame of the procedure, if a procedure
+		// LineNumber                     int                        0 Line number of the current statement within the SQL Batch
+		// SecondsConnected               int                        0 The number of seconds since this connection was established
+		// WaitEventID                    smallint                   0 Unique identifier for the event that the process is waiting for, if the process is currently in a wait state
+		// BlockingSPID                   smallint                   0 Session Process identifier of the process holding the lock that this process has requested, if waiting for a lock
+		// DBID                           int                        0 Unique identifier of the process' current database
+		// EngineNumber                   smallint                   0 Unique identifier of the engine that the process is executing on
+		// Priority                       int                        0 Priority at which the process is executing
+		// Login                          varchar(30)                0 Login user name
+		// Application                    varchar(30)                0 Application name
+		// Command                        varchar(30)                0 Category of process or command that the process is currently executing
+		// NumChildren                    intn                       0 Number of child processes, if executing a parallel query
+		// SecondsWaiting                 intn                       0 Amount of time in seconds that process has been waiting, if the process is currently in a wait state
+		// BlockingXLOID                  intn                       0 Unique Lock Identifier for the lock that this process has requested, if waiting for a lock
+		// DBName                         varchar(30)                0 Name of process' current database
+		// EngineGroupName                varchar(30)                0 Engine group for the process
+		// ExecutionClass                 varchar(30)                0 Execution class for the process
+		// MasterTransactionID            varchar(255)               0 Unique Transaction Identifier for the current transaction, if in a transaction
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    ServerUserID      int                   Server User Identifier of the user running this process. This matches the syslogins.suid column. The corresponding name can be obtained using the 'suser_name' function
+		// 15.7 3a      add    ProgramName       varchar(30)      Null Name of the program on which the process is running.
+		// 15.7 3b      remove ProgramName       varchar(30)      Null Name of the program on which the process is running.
+		// 15.7 3a      add    HostName          varchar(30)      Null Name of the host machine on which the application that started the process is running.
+		// 15.7 3a      add    ClientName        varchar(30)      Null Value of the clientname property set by the application.
+		// 15.7 3a      add    ClientHostName    varchar(30)      Null Value of the clienthostname property set by the application.
+		// 15.7 3a      add    ClientApplName    varchar(30)      Null Value of the clientapplname property set by the application.
+		//---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__PROCESS_ACTIVITY;
 		displayName  = CM_DESC__PROCESS_ACTIVITY;
 		description  = "<html>" +
@@ -1915,6 +2141,38 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monOpenDatabases
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// DBID                           int                        0 Unique identifier for the database
+		// BackupStartTime                datetime                   0 Date that the last backup started for the database
+		// BackupInProgress               int                        0 Whether a backup is currently in progress for the database
+		// LastBackupFailed               int                        0 Whether the last back-up of the database failed
+		// TransactionLogFull             int                        0 Whether the database transaction log is full
+		// AppendLogRequests              int                        1 Number of semaphore requests when attempting to append to the database transaction log
+		// AppendLogWaits                 int                        1 Number of times a task had to wait for the append log semaphore to be granted
+		// DBName                         varchar(30)                0 Name of the database
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.1       add    QuiesceTag          varchar(30)         Quiesce Database tag, if applicable
+		// 12.5.1       add    SuspendedProcesses  int                 The number of processes currently suspended due to the database transaction log being full
+		// 15.0.1CE/15.5 add   InstanceId          int                 The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    LastCheckpointTime  datetime            date/time of the start of the last checkpoint for this database 
+		// 15.0.2 esd#5 add    LastTranLogDumpTime datetime            date/time of the start of the last log dump for this database 
+		//---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__OPEN_DATABASES;
 		displayName  = CM_DESC__OPEN_DATABASES;
 		description  = "<html>" +
@@ -2390,6 +2648,8 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		// FIXME: fix description
 		//
 		// TableName                      Description
 		// ------------------------------ -------------------------------------------------------------------------------------------------------
@@ -2592,6 +2852,29 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monSysWaits
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// WaitEventID                    smallint                   0 Unique identifier for the wait event
+		// WaitTime                       int                        1 Amount of time (in seconds) that tasks have spent waiting for the event
+		// Waits                          int                        0 Number of times tasks have waited for the event
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+
 		name         = CM_NAME__SYS_WAIT;
 		displayName  = CM_DESC__SYS_WAIT;
 		description  = "What different resources are the ASE Server waiting for.";
@@ -2740,10 +3023,54 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		// Engines Activity
-		// EngineNumber CurrentKPID PreviousKPID CPUTime     SystemCPUTime UserCPUTime IdleCPUTime Yields      Connections DiskIOChecks DiskIOPolled DiskIOCompleted ProcessesAffinitied ContextSwitches HkgcMaxQSize HkgcPendingItems HkgcHWMItems HkgcOverflows Status               StartTime                      StopTime                       AffinitiedToCPU OSPID       
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monEngine
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// EngineNumber                   smallint                   0 Number of the ASE engine
+		// StartTime                      datetime                   0 The date that the engine came online
+		// StopTime                       datetime                   0 The date that the engine went offline
+		// CurrentKPID                    int                        0 Kernel Process Identifier for the currently executing process
+		// PreviousKPID                   int                        0 Kernel Process Identifier for the previously executed process
+		// CPUTime                        int                        3 Total time (in seconds) the engine has been running
+		// SystemCPUTime                  int                        3 Time (in seconds) the engine has been executing database system services
+		// UserCPUTime                    int                        3 Time (in seconds) the engine has been executing user commands
+		// IdleCPUTime                    int                        3 Time (in seconds) the engine has been in idle spin mode
+		// ContextSwitches                int                        3 Number of context switches
+		// Connections                    int                        1 Number of connections handled
+		// ProcessesAffinitied            int                        0 Number of processes that have been affinitied to this Engine
+		// Status                         varchar(20)                0 Status of the engine, e.g. online, offline, e.t.c.
+		// AffinitiedToCPU                intn                       0 The number of the CPU that the engine is affinitied to
+		// OSPID                          intn                       0 Identifier for the Operating System process executing the engine
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.3 esd#2 add    Yields            int                   Number of times this engine yielded to the operating system. The rate of yielding during idle periods can be modified using the 'runnable process search count' configuration option
+		// 12.5.3 esd#2 add    DiskIOChecks      int                   Number of times the engine checked for asynchronous disk I/O. The frequency of these checks can be modified using the 'i/o polling process count' configuration option
+		// 12.5.3 esd#2 add    DiskIOPolled      int                   Number of times the engine polled for completion of outstanding asynchronous disk I/O. This occurs whenever disk I/O checks indicate that asynchronous I/O has been posted and is not yet completed
+		// 12.5.3 esd#2 add    DiskIOCompleted   int                   Number of asynchronous disk I/Os that were completed when the engine polled for outstanding asynchronous disk I/O
+		// 15.0         add    HkgcMaxQSize      int                   Maximum number of items that can be queued for housekeeper garbage collection in this engine
+		// 15.0         add    HkgcPendingItems  int                   Number of items yet to be garbage collected by housekeeper garbage collector on this engine
+		// 15.0         add    HkgcHWMItems      int                   Maximum number of pending items queued for housekeeper garbage collector at any instant of time since server started
+		// 15.0         add    HkgcOverflows     int                   Number of items that could not be queued to housekeeper garbage collector due to queue overflows
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    MaxOutstandingIOs int                   The maximum number of I/Os pending for each Adaptive Server engine
+		// 15.5         add    IOCPUTime         int                   This contains the time (in seconds) the engine has been waiting for the issued IOs to finish. 
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__ENGINE;
 		displayName  = CM_DESC__ENGINE;
 		description  = "What ASE Server engine is working. In here we can also se what engines are doing/checking for IO's.";
@@ -3019,6 +3346,9 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		// FIXME: table description
+		
 		name         = CM_NAME__SYS_LOAD;
 		displayName  = CM_DESC__SYS_LOAD;
 		description  = "<html>" +
@@ -3210,21 +3540,39 @@ extends Thread
 		//-----------------------------------------
 
 		//==================================================================================================
-        // 12.5.0.3: Description of: monDataCache
-        // 
-        //---------------------------------------------------------------------------------------------------
-        // Column changes in various versions:
-        //
-        // Version     Action  Name                      Datatype     Attributes          Description
-        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
-        // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7 (3B)   added   Status                    varchar(30)  null                Status of cache. One of:* Active, * Pending/Active, * Pending/Delete, * Update Cache, * Cache Create, * Cache Delete, * Cache Skip (Cluster Edition only)
-        // 15.7 (3B)   added   Type                      varchar(30)  null                Type of cache. One of: * Default, * Mixed, * Mixed, HK Ignore, * Log Only, * In-Memory Storage
-        // 15.7 (3B)   added   CacheSize                 int                              Total size of cache, in kilobytes
-        // 15.7 (3B)   added   ReplacementStrategy       varchar(30)  null                Cache replacement strategy
-        // 15.7 (3B)   added   APFReads                  int                              Counter Number of asynchronous prefetch (APF) reads for this data cache
-        // 15.7 (3B)   added   Overhead                  int                              Cache overhead
-        //---------------------------------------------------------------------------------------------------
+		// 12.5.0.3: Description of: monDataCache
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// CacheID                        int                        0 Unique identifier for the cache
+		// RelaxedReplacement             int                        0 Whether the cache is using Relaxed cached replacement strategy
+		// BufferPools                    int                        0 The number of buffer pools within the cache
+		// CacheSearches                  int                        1 Cache searches directed to the cache
+		// PhysicalReads                  int                        1 Number of buffers read into the cache from disk
+		// LogicalReads                   int                        1 Number of buffers retrieved from the cache
+		// PhysicalWrites                 int                        1 Number of buffers written from the cache to disk
+		// Stalls                         int                        1 Number of 'dirty' buffer retrievals
+		// CachePartitions                smallint                   0 Number of partitions currently configured for the cache
+		// CacheName                      varchar(30)                0 Name of the cache
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId          int                 The Server Instance Identifier (cluster only)
+		// 15.7 (3B)    add    Status              varchar(30)    null Status of cache. One of:* Active, * Pending/Active, * Pending/Delete, * Update Cache, * Cache Create, * Cache Delete, * Cache Skip (Cluster Edition only)
+		// 15.7 (3B)    add    Type                varchar(30)    null Type of cache. One of: * Default, * Mixed, * Mixed, HK Ignore, * Log Only, * In-Memory Storage
+		// 15.7 (3B)    add    CacheSize           int                 Total size of cache, in kilobytes
+		// 15.7 (3B)    add    ReplacementStrategy varchar(30)    null Cache replacement strategy
+		// 15.7 (3B)    add    APFReads            int                 Counter Number of asynchronous prefetch (APF) reads for this data cache
+		// 15.7 (3B)    add    Overhead            int                 Cache overhead
+		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__DATA_CACHE;
 		displayName  = CM_DESC__DATA_CACHE;
@@ -3484,6 +3832,41 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monCachePool
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// CacheID                        int                        0 Unique identifier for the cache
+		// IOBufferSize                   int                        0 Size (in bytes) of the I/O buffer for the pool
+		// AllocatedKB                    int                        0 Number of kilobytes that have been allocated for the pool
+		// PhysicalReads                  int                        1 The number of buffers that have been read from disk into the pool
+		// Stalls                         int                        1 Number of 'dirty' buffer retrievals
+		// PagesTouched                   int                        1 Number of pages used within the pool
+		// PagesRead                      int                        1 Number of pages read into the pool
+		// BuffersToMRU                   int                        1 The number of buffers that were fetched and re-placed at the most recently used portion of the pool
+		// BuffersToLRU                   int                        1 The number of buffers that were fetched and re-placed at the least recently used portion of the pool: fetch-and-discard
+		// CacheName                      varchar(30)                0 Name of the cache
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.7 (3B)    add    LogicalReads      int                   Counter Number of buffers read from the pool
+		// 15.7 (3B)    add    PhysicalWrites    int                   Counter Number of write operations performed for data in this pool (one write operation may include multiple pages)
+		// 15.7 (3B)    add    APFReads          int                   Counter Number of APF read operations that loaded pages into this pool
+		// 15.7 (3B)    add    APFPercentage     int                   The configured asynchronous prefetch limit for this pool
+		// 15.7 (3B)    add    WashSize          int                   The wash size (in kilobytes) for a memory pool
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__CACHE_POOL;
 		displayName  = CM_DESC__CACHE_POOL;
 		description  = "The cahces has 2K or 16K pools, how are they behaving?";
@@ -3710,6 +4093,34 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monDeviceIO
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// Reads                          int                        3 Number of reads from the device (excluding APF)
+		// APFReads                       int                        3 Number of APF reads from the device
+		// Writes                         int                        3 Number of writes to the device
+		// DevSemaphoreRequests           int                        3 Number of I/O requests
+		// DevSemaphoreWaits              int                        3 Number of tasks forced to wait for synchronization of an I/O request
+		// IOTime                         int                        1 Total amount of time (in milliseconds) spent waiting for I/O requests to be satisfied
+		// LogicalName                    varchar(30)                0 Logical name of the device
+		// PhysicalName                   varchar(128)               0 Full hierarchic file name of the device
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__DEVICE_IO;
 		displayName  = CM_DESC__DEVICE_IO;
 		description  = 
@@ -3946,6 +4357,30 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monIOQueue
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// IOs                            int                        1 Total number of I/O operations
+		// IOTime                         int                        1 Total amount of time (in milliseconds) spent waiting for I/O requests to be satisfied
+		// LogicalName                    varchar(30)                0 Logical name of the device
+		// IOType                         varchar(12)                0 Category for grouping I/O ['UserData', 'UserLog', 'TempdbData', 'TempdbLog']
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__IO_QUEUE_SUM;
 		displayName  = CM_DESC__IO_QUEUE_SUM;
 		description  = 
@@ -4103,6 +4538,30 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monIOQueue
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// IOs                            int                        1 Total number of I/O operations
+		// IOTime                         int                        1 Total amount of time (in milliseconds) spent waiting for I/O requests to be satisfied
+		// LogicalName                    varchar(30)                0 Logical name of the device
+		// IOType                         varchar(12)                0 Category for grouping I/O ['UserData', 'UserLog', 'TempdbData', 'TempdbLog']
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__IO_QUEUE;
 		displayName  = CM_DESC__IO_QUEUE;
 		description  = 
@@ -4829,23 +5288,44 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		
-        //==================================================================================================
-        // 12.5.0.3: Description of: monCachedProcedures
-        // 
-        //---------------------------------------------------------------------------------------------------
-        // Column changes in various versions:
-        //
-        // Version     Action  Name                      Datatype     Attributes          Description
-        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
-        // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7 (3B)   added   ExecutionCount            int                              Counter Number of times Adaptive Server executed the stored procedure plan or tree since it was cached
-        // 15.7 (3B)   added   CPUTime                   int                              Counter Total number of milliseconds of CPU time used
-        // 15.7 (3B)   added   ExecutionTime             int                              Counter Total amount of elapsed time (in milliseconds) Adaptive Server spent executing the stored procedure plan or tree
-        // 15.7 (3B)   added   PhysicalReads             int                              Counter Number of physical reads performed
-        // 15.7 (3B)   added   LogicalReads              int                              Counter Number of pages read
-        // 15.7 (3B)   added   PhysicalWrites            int                              Counter Number of physical writes performed
-        // 15.7 (3B)   added   PagesWritten              int                              Counter Number of pages written
-        //---------------------------------------------------------------------------------------------------
+		//==================================================================================================
+		// 12.5.0.3: Description of: monCachedProcedures
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// ObjectID                       int                        0 Unique identifier for the procedure
+		// OwnerUID                       int                        0 Unique identifier for the database owner
+		// DBID                           int                        0 Unique identifier for the database
+		// PlanID                         int                        0 Unique identifier for the query plan
+		// MemUsageKB                     int                        0 Number of kilobytes of memory used by the procedure
+		// CompileDate                    datetime                   0 Date that the procedure was compiled
+		// ObjectName                     varchar(30)                0 Name of the Procedure
+		// ObjectType                     varchar(32)                0 The type of procedure, e.g. 'stored procedure', 'trigger'
+		// OwnerName                      varchar(30)                0 The name of the owner of the object
+		// DBName                         varchar(30)                0 Name of the database
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.5         add    RequestCnt        int                   contains the number of times a stored procedure was executed since the plan was compiled
+		// 15.5         add    TempdbRemapCnt    int                   contain the number of times an existing stored proc plan was remapped due to being executed in a different temporary database
+		// 15.5         add    AvgTempdbRemapTime int                  the average time (in milliseconds) this remapping took, respectively. 
+		// 15.7 (3B)    add    ExecutionCount    int                   Counter Number of times Adaptive Server executed the stored procedure plan or tree since it was cached
+		// 15.7 (3B)    add    CPUTime           int                   Counter Total number of milliseconds of CPU time used
+		// 15.7 (3B)    add    ExecutionTime     int                   Counter Total amount of elapsed time (in milliseconds) Adaptive Server spent executing the stored procedure plan or tree
+		// 15.7 (3B)    add    PhysicalReads     int                   Counter Number of physical reads performed
+		// 15.7 (3B)    add    LogicalReads      int                   Counter Number of pages read
+		// 15.7 (3B)    add    PhysicalWrites    int                   Counter Number of physical writes performed
+		// 15.7 (3B)    add    PagesWritten      int                   Counter Number of pages written
+		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__CACHED_PROC;
 		displayName  = CM_DESC__CACHED_PROC;
@@ -5061,6 +5541,30 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monProcedureCache
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// Requests                       int                        3 Number of stored procedures requested
+		// Loads                          int                        3 Number of stored procedures loaded into cache
+		// Writes                         int                        3 Number of times a procedure was normalized and the tree written back to sysprocedures
+		// Stalls                         int                        3 Number of times a process had to wait for a free procedure cache buffer when installing a stored procedure into cache
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__PROC_CACHE_LOAD;
 		displayName  = CM_DESC__PROC_CACHE_LOAD;
 		description  = "This is just a short one to see if we have 'stored procedure' swapping for some reason. The reason is for the moment not known.";
@@ -5172,40 +5676,42 @@ extends Thread
 		//==================================================================================================
 		// 12.5.0.3: Description of: monProcessProcedures
 		// 
-		// Returns a list of all procedures that are being executed by processes. 
-		// monProcessProcedures does not require any configuration options. 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
 		// 
-		// Name             Datatype     Attributes  Description
-		// ---------------- ------------ ----------- ------------------------------------------------------------
-		// SPID             smallint                 Session process identifier
-		// KPID             int                      Kernel process identifier
-		// DBID             int                      Unique identifier for the database
-		// OwnerUID         int                      Unique identifier for the object owner
-		// ObjectID         int                      Unique identifier for the procedure
-		// PlanID           int                      Unique identifier for the query plan
-		// MemUsageKB       int                      Number of kilobytes of memory used by the procedure
-		// CompileDate      datetime                 Compile date of the procedure
-		// ContextID        int                      Stack frame of the procedure
-		// DBName           varchar(30)  null        Name of the database that contains the procedure
-		// OwnerName        varchar(30)  null        Name of the object owner
-		// ObjectName       varchar(30)  null        Name of the procedure
-		// ObjectType       varchar(32)  null        Type of procedure (stored procedure, trigger procedure, and so on)
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// DBID                           int                        0 Unique identifier for the database
+		// OwnerUID                       int                        0 Unique identifier for the object owner
+		// ObjectID                       int                        0 Unique identifier for the procedure
+		// PlanID                         int                        0 Unique identifier for the query plan
+		// MemUsageKB                     int                        0 Number of kilobytes of memory used by the procedure
+		// CompileDate                    datetime                   0 Date that the procedure was compiled
+		// ContextID                      int                        0 The stack frame of the procedure
+		// DBName                         varchar(30)                0 Name of the database the object resides in
+		// OwnerName                      varchar(30)                0 The name of the owner of the object
+		// ObjectName                     varchar(30)                0 Name of the procedure
+		// ObjectType                     varchar(32)                0 The type of procedure, e.g. 'stored procedure', 'trigger'
 		//---------------------------------------------------------------------------------------------------
 		// Column changes in various versions:
 		//
-		// Version     Action  Name            Datatype Attributes Description
-		// ----------- ------- --------------- -------- ---------- ----------------------------------
-		// 12.5.3      added   LineNumber      int                 the line in the procedure currently being executed 
-		// 15.0.2.5    added   StatementNumber int                 the statement in the stored procedure currently being executed
-		// 15.0.2(CE)  added   InstanceID      int                 Cluster instance ID
-		// 15.5        added   InstanceID      int                 Cluster instance ID
-		// 15.7 (3B)   added   ExecutionCount  int      Counter    Number of times Adaptive Server executed this instance of the stored procedure held in the procedure cache
-		// 15.7 (3B)   added   CPUTime         int      Counter    The amount of CPU time (in milliseconds) that Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
-		// 15.7 (3B)   added   ExecutionTime   int      Counter    Total amount of time (in milliseconds) Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
-		// 15.7 (3B)   added   PhysicalReads   int      Counter    Number of physical reads performed by the instance of this stored procedure held in the procedure cache
-		// 15.7 (3B)   added   LogicalReads    int      Counter    Number of logical reads performed by the instance of this stored procedure held in the procedure cache
-		// 15.7 (3B)   added   PhysicalWrites  int      Counter    Number of physical writes performed by the instance of this stored procedure held in the procedure cache
-		// 15.7 (3B)   added   PagesWritten    int      Counter    Number of pages read by the instance of this stored procedure held in the procedure cache
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.3       add    LineNumber        int                   The line in the procedure currently being executed
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    StatementNumber   int                   the statement in the stored procedure currently being executed 
+		// 15.7 (3B)    add    ExecutionCount    int           Counter Number of times Adaptive Server executed this instance of the stored procedure held in the procedure cache
+		// 15.7 (3B)    add    CPUTime           int           Counter The amount of CPU time (in milliseconds) that Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)    add    ExecutionTime     int           Counter Total amount of time (in milliseconds) Adaptive Server spent executing the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)    add    PhysicalReads     int           Counter Number of physical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)    add    LogicalReads      int           Counter Number of logical reads performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)    add    PhysicalWrites    int           Counter Number of physical writes performed by the instance of this stored procedure held in the procedure cache
+		// 15.7 (3B)    add    PagesWritten      int           Counter Number of pages read by the instance of this stored procedure held in the procedure cache
 		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__PROC_CALL_STACK;
@@ -5467,6 +5973,41 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		//==================================================================================================
+		// 12.5.0.3: Description of: monCachedObject
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// CacheID                        int                        0 Unique identifier for the cache
+		// ObjectID                       int                        0 Unique identifier for the object
+		// IndexID                        int                        0 Unique identifier for the index
+		// DBID                           int                        0 Unique identifier for the database
+		// OwnerUserID                    int                        0 Unique identifier for the user who owns the object
+		// CachedKB                       int                        0 Number of kilobytes of the cache that the object is occupying
+		// ProcessesAccessing             int                        0 Number of processes currently accessing the object
+		// CacheName                      varchar(30)                0 Name of the cache
+		// DBName                         varchar(30)                0 Name of the database
+		// OwnerName                      varchar(30)                0 Name of the user who owns the object
+		// ObjectName                     varchar(30)                0 Name of the object
+		// ObjectType                     varchar(30)                0 The type of the object
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0         add    PartitionID       int                   Unique identifier for the partition. This is the same as ObjectID for non-partitioned objects.
+		// 15.0         add    PartitionName     varchar(30)           Name of the object partition (will be NULL if the partition is no longer open)
+		// 15.0         add    TotalSizeKB       int                   Partition size in kilobytes (KB)
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__CACHED_OBJECTS;
 		displayName  = CM_DESC__CACHED_OBJECTS;
 		description  = "";
@@ -5597,6 +6138,35 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monErrorLog
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// FamilyID                       smallint                   0 SPID of the parent process
+		// EngineNumber                   smallint                   0 Engine on which process was running
+		// ErrorNumber                    int                        0 Error message number
+		// Severity                       int                        0 Severity of error
+		// Time                           datetime                   0 Timestamp when error occurred
+		// ErrorMessage                   varchar(512)               0 Text of the error message
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.1       add    State             int                   State of error
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__ERRORLOG;
 		displayName  = CM_DESC__ERRORLOG;
 		description  = "Look at the ASE Servers errorlog.";
@@ -5675,6 +6245,54 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monDeadLock
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// DeadlockID                     int                        0 Unique identifier for the deadlock
+		// VictimKPID                     int                        0 KPID of the victim process for the deadlock
+		// ResolveTime                    datetime                   0 Time at which the deadlock was resolved
+		// ObjectDBID                     int                        0 Unique database identifier for database where the object resides
+		// PageNumber                     int                        0 Page number for which the lock was requested, if applicable
+		// RowNumber                      int                        0 Row number for which the lock was requested, if applicable
+		// HeldFamilyID                   smallint                   0 SPID of the parent process of the process holding the lock
+		// HeldSPID                       smallint                   0 SPID of process holding the lock
+		// HeldKPID                       int                        0 KPID of process holding the lock
+		// HeldProcDBID                   int                        0 Unique identifier for the database where the stored procedure that caused the lock to be held resides, if applicable
+		// HeldProcedureID                int                        0 Unique object identifier for the stored procedure that caused the lock to be held, if applicable
+		// HeldBatchID                    int                        0 Unique batch identifier for the SQL being executed by the process holding the lock when it was blocked by another process (not when it acquired the lock)
+		// HeldContextID                  int                        0 Unique context identifier for the process holding the lock when it was blocked by another process (not when it acquired the lock)
+		// HeldLineNumber                 int                        0 Line number within the batch of the statement being executed by the process holding the lock when it was blocked by another process (not when it acquired the lock)
+		// WaitFamilyID                   smallint                   0 SPID of the parent process of the process waiting for the lock
+		// WaitSPID                       smallint                   0 SPID of the process waiting for the lock
+		// WaitKPID                       int                        0 KPID of the process waiting for the lock
+		// WaitTime                       int                        0 Amount of time in milliseconds that the waiting process was blocked before the deadlock was resolved
+		// ObjectName                     varchar(30)                0 Name of the object
+		// HeldUserName                   varchar(30)                0 Name of the user for whom the lock is being held
+		// HeldApplName                   varchar(30)                0 Name of the application holding the lock
+		// HeldTranName                   varchar(255)               0 The name of the transaction in which the lock was acquired
+		// HeldLockType                   varchar(20)                0 The type of lock being held
+		// HeldCommand                    varchar(30)                0 Category of process or command that the process was executing when it was blocked
+		// WaitUserName                   varchar(30)                0 Name of the user for whom the lock is being requested
+		// WaitLockType                   varchar(20)                0 The type of lock requested
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2       add    HeldSourceCodeID  varchar(30)           Location in the source code at which the owning lock was acquired. For internal use only
+		// 15.0.2       add    WaitSourceCodeID  varchar(30)           Location in the source code at which the waiting lock was requested. For internal use only
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__DEADLOCK;
 		displayName  = CM_DESC__DEADLOCK;
 		description  = "Have we had any deadlocks in the system?";
@@ -5750,6 +6368,9 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		// FIXME: fix table description
+		
 		name         = CM_NAME__LOCK_TIMEOUT;
 		displayName  = CM_DESC__LOCK_TIMEOUT;
 		description  = "What SQL Statements caused a lock timeout";
@@ -5814,6 +6435,9 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		// FIXME: fix table description
+		
 		name         = CM_NAME__PROC_CACHE_MODULE_USAGE;
 		displayName  = CM_DESC__PROC_CACHE_MODULE_USAGE;
 		description  = "What module of the ASE Server is using the 'procedure cache' or 'dynamic memory pool'";
@@ -5915,6 +6539,9 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+		
+		// FIXME: fix table description
+		
 		name         = CM_NAME__PROC_CACHE_MEMORY_USAGE;
 		displayName  = CM_DESC__PROC_CACHE_MEMORY_USAGE;
 		description  = "What module and what 'part' of the modules are using the 'procedure cache' or 'dynamic memory pool'.";
@@ -5998,6 +6625,28 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		// FIXME: fix table description
+
+		//==================================================================================================
+		// 15.0.2: monStatementCache  (new in 15.0.2)
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration: 'enable stmt cache monitoring'
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// x                              x            x             x x
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// none so far
+		//---------------------------------------------------------------------------------------------------
 
 		//==================================================================================================
 		// 15.0.2: Description of: monStatementCache
@@ -6231,6 +6880,29 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		// FIXME: fix table description
+
+		//==================================================================================================
+		// 15.0.2: monCachedStatement (new in 15.0.2)
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration: 'enable stmt cache monitoring'
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// x                              x            x             x x
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.2 esd#5 add    DBName            varchar(30)           Name of the database
+		// 15.0.2 esd#6 remove TableCount
+		//---------------------------------------------------------------------------------------------------
 
 		//==================================================================================================
 		// 15.0.2: Description of: monCachedStatement
@@ -6566,35 +7238,37 @@ extends Thread
 		//==================================================================================================
 		// 12.5.0.3: Description of: monProcessObject
 		// 
-		// Provides statistical information regarding objects that have been accessed by processes. 
-		// monProcessObject requires the enable monitoring and per object statistics active configuration parameters to be enabled.
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
 		// 
-		// Name             Datatype Attributes  Description
-		// ---------------- -------- ----------- ------------------------------------------------------------
-		// SPID             smallint             Session process identifier
-		// KPID             int                  Kernel process identifier
-		// DBID             int                  Unique identifier for the database where the object resides
-		// ObjectID         int                  Unique identifier for the object
-		// IndexID          int                  Unique identifier for the index
-		// OwnerUserID      int                  User identifier for the object owner
-		// LogicalReads     int          counter Number of buffers read from cache
-		// PhysicalReads    int          counter Number of buffers read from disk
-		// PhysicalAPFReads int          counter Number of APF buffers read from disk
-		// DBName           varchar(30)  null    Name of database
-		// ObjectName       varchar(30)  null    Name of the object
-		// ObjectType       varchar(30)  null    Type of object
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// DBID                           int                        0 Unique identifier for the database where the object resides
+		// ObjectID                       int                        0 Unique identifier for the object
+		// IndexID                        int                        0 Unique identifier for the index
+		// OwnerUserID                    int                        0 User identifier for the object owner
+		// LogicalReads                   int                        1 Number of buffers read from cache
+		// PhysicalReads                  int                        1 Number of buffers read from disk
+		// PhysicalAPFReads               int                        1 Number of APF buffers read from disk
+		// DBName                         varchar(30)                0 Name of database
+		// ObjectName                     varchar(30)                0 Name of the object
+		// ObjectType                     varchar(30)                0 Type of object
 		//---------------------------------------------------------------------------------------------------
 		// Column changes in various versions:
 		//
-		// Version     Action  Name            Description
-		// ----------- ------- --------------- ---------------------------------
-		// 12.5.2      added   TableSize       table size in Kbyte
-		// 15.0        changed TableSize       This column was deleted/cahnged into PartitionSize
-		// 15.0        added   PartitionSize   this reflects the size of the partition for the object
-		// 15.0        added   PartitionID     partition name
-		// 15.0        added   PartitionName   partition ID
-		// 15.0.2(CE)  added   InstanceID      Cluster instance ID
-		// 15.5        added   InstanceID      Cluster instance ID
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 12.5.2       add    TableSize         int                   table size in Kbyte 
+		// 15.0         add    PartitionID       int                   Unique identifier for the partition
+		// 15.0         add    PartitionName     varchar(30)           Name of the partition
+		// 15.0         delete TableSize         int                   >>> has been changed to PartitionSize - this reflects the size of the partition for the object 
+		// 15.0         add    PartitionSize     int                   Partition size in kilobytes (KB)
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
 		//---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__ACTIVE_OBJECTS;
@@ -6737,21 +7411,98 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 
-        //==================================================================================================
-        // 12.5.0.3: Description of: monProcess
-        // 
-        //---------------------------------------------------------------------------------------------------
-        // Column changes in various versions:
-        //
-        // Version     Action  Name                      Datatype     Attributes          Description
-        // ----------- ------- ------------------------- ------------ ------------------- ----------------------------------
-        // NOT RECORDED BEFORE: ASE 15.7
-        // 15.7 (3A)   added   ProgramName               varchar(30)         Null         Name of the program on which the process is running.
-        // 15.7 (3B)   deleted ProgramName               varchar(30)         Null         Name of the program on which the process is running.
-        // 15.7 (3B)   added   HostName                  varchar(30)         Null         Name of the host machine on which the application that started the process is running.
-        // 15.7 (3B)   added   ClientName                varchar(30)         Null         Value of the clientname property set by the application.
-        // 15.7 (3B)   added   ClientHostName            varchar(30)         Null         Value of the clienthostname property set by the application.
-        // 15.7 (3B)   added   ClientApplName            varchar(30)         Null         Value of the clientapplname property set by the application.
+		//==================================================================================================
+		// 12.5.0.3: Description of: monProcessStatement
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// DBID                           int                        0 Unique identifier for the database
+		// ProcedureID                    int                        0 Unique identifier for the procedure
+		// PlanID                         int                        0 Unique identifier for the stored plan for the procedure
+		// BatchID                        int                        0 Unique identifier for the SQL batch containing the statement
+		// ContextID                      int                        0 The stack frame of the procedure, if a procedure
+		// LineNumber                     int                        0 Line number of the statement within the SQL Batch
+		// StartTime                      datetime                   0 Date when the statement began execution
+		// CpuTime                        int                        1 Number of milliseconds of CPU used by the statement
+		// WaitTime                       int                        1 Number of milliseconds the task has waited during execution of the statement
+		// MemUsageKB                     int                        0 Number of kilobytes of memory used for execution of the statement
+		// PhysicalReads                  int                        1 Number of buffers read from disk
+		// LogicalReads                   int                        1 Number of buffers read from cache
+		// PagesModified                  int                        1 Number of pages modified by the statement
+		// PacketsSent                    int                        1 Number of network packets sent by ASE
+		// PacketsReceived                int                        1 Number of network packets received by ASE
+		// NetworkPacketSize              int                        0 Size (in bytes) of the network packet currently configured for the session
+		// PlansAltered                   int                        1 The number of plans altered at  execution time.
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0 ESD#2   add    RowsAffected      int                   The number of rows affected by the statement.
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    DBName            varchar(30)           Name of the database
+		//---------------------------------------------------------------------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monProcess
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// FamilyID                       smallint                   0 The SPID of the parent process, if this is a worker process
+		// BatchID                        int                        0 Unique identifier for the SQL batch containing the statement being executed
+		// ContextID                      int                        0 The stack frame of the procedure, if a procedure
+		// LineNumber                     int                        0 Line number of the current statement within the SQL Batch
+		// SecondsConnected               int                        0 The number of seconds since this connection was established
+		// WaitEventID                    smallint                   0 Unique identifier for the event that the process is waiting for, if the process is currently in a wait state
+		// BlockingSPID                   smallint                   0 Session Process identifier of the process holding the lock that this process has requested, if waiting for a lock
+		// DBID                           int                        0 Unique identifier of the process' current database
+		// EngineNumber                   smallint                   0 Unique identifier of the engine that the process is executing on
+		// Priority                       int                        0 Priority at which the process is executing
+		// Login                          varchar(30)                0 Login user name
+		// Application                    varchar(30)                0 Application name
+		// Command                        varchar(30)                0 Category of process or command that the process is currently executing
+		// NumChildren                    intn                       0 Number of child processes, if executing a parallel query
+		// SecondsWaiting                 intn                       0 Amount of time in seconds that process has been waiting, if the process is currently in a wait state
+		// BlockingXLOID                  intn                       0 Unique Lock Identifier for the lock that this process has requested, if waiting for a lock
+		// DBName                         varchar(30)                0 Name of process' current database
+		// EngineGroupName                varchar(30)                0 Engine group for the process
+		// ExecutionClass                 varchar(30)                0 Execution class for the process
+		// MasterTransactionID            varchar(255)               0 Unique Transaction Identifier for the current transaction, if in a transaction
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2 esd#5 add    ServerUserID      int                   Server User Identifier of the user running this process. This matches the syslogins.suid column. The corresponding name can be obtained using the 'suser_name' function
+		// 15.7 3a      add    ProgramName       varchar(30)      Null Name of the program on which the process is running.
+		// 15.7 3b      remove ProgramName       varchar(30)      Null Name of the program on which the process is running.
+		// 15.7 3a      add    HostName          varchar(30)      Null Name of the host machine on which the application that started the process is running.
+		// 15.7 3a      add    ClientName        varchar(30)      Null Value of the clientname property set by the application.
+		// 15.7 3a      add    ClientHostName    varchar(30)      Null Value of the clienthostname property set by the application.
+		// 15.7 3a      add    ClientApplName    varchar(30)      Null Value of the clientapplname property set by the application.
+        // 15.7 (3A)    add    ProgramName       varchar(30)      Null Name of the program on which the process is running.
+        // 15.7 (3B)    remove ProgramName       varchar(30)      Null Name of the program on which the process is running.
+        // 15.7 (3B)    add    HostName          varchar(30)      Null Name of the host machine on which the application that started the process is running.
+        // 15.7 (3B)    add    ClientName        varchar(30)      Null Value of the clientname property set by the application.
+        // 15.7 (3B)    add    ClientHostName    varchar(30)      Null Value of the clienthostname property set by the application.
+        // 15.7 (3B)    add    ClientApplName    varchar(30)      Null Value of the clientapplname property set by the application.
         //---------------------------------------------------------------------------------------------------
 
 		name         = CM_NAME__ACTIVE_STATEMENTS;
@@ -7583,6 +8334,43 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monLocks
+		// 
+		// Description:
+		//
+		//
+		// Needs Configuration:
+		// none
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session Process Identifier
+		// KPID                           int                        0 Kernel Process Identifier
+		// DBID                           int                        0 Unique identifier for the database
+		// ParentSPID                     smallint                   0 Parent Process ID
+		// LockID                         int                        0 Lock Object ID (loid)
+		// Context                        int                        0 Lock context (bitfield)
+		// ObjectID                       intn                       0 Unique identifier for the object
+		// LockState                      varchar(20)                0 Whether the lock has been granted ['Hold', 'Wait']
+		// LockType                       varchar(20)                0 Type of lock ['Exclusive', 'Shared', 'Update', e.t.c]
+		// LockLevel                      varchar(30)                0 The type of object for which the lock was requested ['Row', 'Page', 'Table', 'Address']
+		// WaitTime                       intn                       0 The time (in seconds) that the lock request has not been granted
+		// PageNumber                     intn                       0 Page that is locked when LockLevel = 'Page'
+		// RowNumber                      intn                       0 Row that is locked when LockLevel = 'Row'
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0 ESD#2   add    BlockedState      varchar(64)           Lock status information (bitfield)
+		// 15.0 ESD#2   add    BlockedBy         int                   LockID of lock blocking this lock request or zero if not blocked
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		// 15.0.2       add    SourceCodeID      varchar(30)           Location in the source code at which the lock was requested. For internal use only
+		// 15.0.2 esd#5 add    DBName            varchar(30)           Name of the database
+		//---------------------------------------------------------------------------------------------------
+		
 		name         = CM_NAME__BLOCKING;
 		displayName  = CM_DESC__BLOCKING;
 		description  = "<html>" +
