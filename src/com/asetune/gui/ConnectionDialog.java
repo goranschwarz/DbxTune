@@ -1516,6 +1516,12 @@ public class ConnectionDialog
 			int currentVersion = mtd.aseVersionNum;
 			int newVersion     = AseConnectionUtils.getAseVersionNumber(conn);
 	
+			if (currentVersion <= 0)
+			{
+				_logger.info("checkReconnectVersion(): MonTablesDictionary.hasInstance()=true, Are we checking this a bit early... currentVersion='"+currentVersion+"', newVersion='"+newVersion+"'. since currentVersion is <= 0, I'll just return true here...");
+				return true;
+			}
+
 			if (currentVersion != newVersion)
 			{
 				String msg = "<html>" +
