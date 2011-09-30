@@ -432,7 +432,7 @@ public class PersistWriterJdbc
 			}
 
 			// IF H2, add hard coded stuff to URL
-			if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
+			if ( _jdbcDriver.equals("org.h2.Driver") )
 			{
 				// Database short names are converted to uppercase for the DATABASE() function, 
 				// and in the CATALOG column of all database meta data methods. 

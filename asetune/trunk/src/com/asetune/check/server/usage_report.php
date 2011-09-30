@@ -31,7 +31,8 @@
 <A HREF="http://www.asemon.se/usage_report.php?conn=true"           >Connection Info Report</A>           <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A><BR>
 <A HREF="http://www.asemon.se/usage_report.php?usage=true"          >Counter Usage Info Report</A>        <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=true"      >Error Info Report</A>                <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>       <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report, first 500</A>     <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (last 300)</A>           <BR>
 <BR>
 Admin:<BR>
@@ -105,8 +106,11 @@ Admin:<BR>
 				else if ( $colname == "checkId" || $colname == "rowid")
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
 
+				else if ( $colname == "showLogId" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";
+
 				else if ( $colname == "deleteLogId" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?deleteLogId=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
@@ -155,7 +159,7 @@ Admin:<BR>
 	//		CREATE TABLE xxx
 	//		(
 	//				col1                 int,
-	//		
+	//
 	//				PRIMARY KEY (xxx, yyy)
 	//		);
 	//	";
@@ -188,7 +192,7 @@ Admin:<BR>
 //			usageCount        int,
 //			lastStarted       datetime,
 //			pollTime          datetime,
-//		
+//
 //			PRIMARY KEY (domainName)
 //		)
 //	") or die("ERROR: " . mysql_error());
@@ -200,7 +204,7 @@ Admin:<BR>
 //			usageCount        int,
 //			lastStarted       datetime,
 //			pollTime          datetime,
-//		
+//
 //			PRIMARY KEY (domainName)
 //		)
 //	") or die("ERROR: " . mysql_error());
@@ -212,7 +216,7 @@ Admin:<BR>
 //			usageCount        int,
 //			lastStarted       datetime,
 //			pollTime          datetime,
-//		
+//
 //			PRIMARY KEY (userName)
 //		)
 //	") or die("ERROR: " . mysql_error());
@@ -224,7 +228,7 @@ Admin:<BR>
 //			usageCount        int,
 //			lastStarted       datetime,
 //			pollTime          datetime,
-//		
+//
 //			PRIMARY KEY (userName)
 //		)
 //	") or die("ERROR: " . mysql_error());
@@ -384,7 +388,7 @@ Admin:<BR>
 //			ORDER BY
 //				2 desc
 
-		//----------- Trunacte NOW table and pupulate it again 
+		//----------- Trunacte NOW table and pupulate it again
 		mysql_query("TRUNCATE TABLE sumDomainStartNow") or die("ERROR: " . mysql_error());
 		mysql_query("INSERT INTO    sumDomainStartNow(domainName, usageCount, lastStarted, pollTime)
 			SELECT
@@ -399,11 +403,11 @@ Admin:<BR>
 
 		//----------- GET RESULTS & PRINT IT
 		$result = mysql_query("
-			SELECT n.domainName, 
-				CONCAT('www.', n.domainName) AS wwwDomainName, 
-				n.usageCount AS usageNow, 
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff, 
-				n.lastStarted, 
+			SELECT n.domainName,
+				CONCAT('www.', n.domainName) AS wwwDomainName,
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumDomainStartNow n LEFT JOIN sumDomainStartPriv p ON n.domainName = p.domainName
 			ORDER BY 5 desc, 4 desc, 3 desc
@@ -417,11 +421,11 @@ Admin:<BR>
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
-			SELECT n.domainName, 
-				CONCAT('www.', n.domainName) AS wwwDomainName, 
-				n.usageCount AS usageNow, 
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff, 
-				n.lastStarted, 
+			SELECT n.domainName,
+				CONCAT('www.', n.domainName) AS wwwDomainName,
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumDomainStartNow n LEFT JOIN sumDomainStartPriv p ON n.domainName = p.domainName
 			ORDER BY 4 desc, 3 desc, 5 desc");
@@ -432,7 +436,7 @@ Admin:<BR>
 		}
 		htmlResultset($result, "Domain Count");
 
-		//----------- Move NOW table into PREV 
+		//----------- Move NOW table into PREV
 		mysql_query("TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysql_error());
 		mysql_query("INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysql_error());
 
@@ -440,7 +444,7 @@ Admin:<BR>
 		//------------------------------------------
 		// FROM sybase.com
 		//------------------------------------------
-		//----------- Trunacte NOW table and pupulate it again 
+		//----------- Trunacte NOW table and pupulate it again
 		mysql_query("TRUNCATE TABLE sumSybaseUsersStartNow") or die("ERROR: " . mysql_error());
 		mysql_query("INSERT INTO    sumSybaseUsersStartNow(userName, usageCount, lastStarted, pollTime)
 			SELECT
@@ -457,11 +461,11 @@ Admin:<BR>
 
 		//----------- GET RESULTS & PRINT IT
 		$result = mysql_query("
-			SELECT n.userName as sybUserName, 
+			SELECT n.userName as sybUserName,
 				n.userName as userNameUsage,
-				n.usageCount AS usageNow, 
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff, 
-				n.lastStarted, 
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
 			ORDER BY 5 desc, 4 desc, 3 desc");
@@ -474,11 +478,11 @@ Admin:<BR>
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
-			SELECT n.userName as sybUserName, 
+			SELECT n.userName as sybUserName,
 				n.userName as userNameUsage,
-				n.usageCount AS usageNow, 
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff, 
-				n.lastStarted, 
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
 			ORDER BY 4 desc, 3 desc");
@@ -489,7 +493,7 @@ Admin:<BR>
 		}
 		htmlResultset($result, "Sybase users, Start Count");
 
-		//----------- Move NOW table into PREV 
+		//----------- Move NOW table into PREV
 		mysql_query("TRUNCATE TABLE sumSybaseUsersStartPriv") or die("ERROR: " . mysql_error());
 		mysql_query("INSERT INTO    sumSybaseUsersStartPriv (SELECT * FROM sumSybaseUsersStartNow)") or die("ERROR: " . mysql_error());
 	}
@@ -635,7 +639,7 @@ Admin:<BR>
 	if ( $rpt_conn == "true" )
 	{
 		$sql = "
-			SELECT * 
+			SELECT *
 			FROM asemon_connect_info
 			ORDER BY checkId desc
 		";
@@ -656,7 +660,7 @@ Admin:<BR>
 	if ( $rpt_udc == "true" )
 	{
 		$sql = "
-			SELECT * 
+			SELECT *
 			FROM asemon_udc_info
 			ORDER BY userName, udcKey
 		";
@@ -677,7 +681,7 @@ Admin:<BR>
 	if ( $rpt_usage == "true" )
 	{
 		$sql = "
-			SELECT 
+			SELECT
 				checkId,
 				serverAddTime,
 				clientTime,
@@ -704,9 +708,9 @@ Admin:<BR>
 	//-------------------------------------------
 	// ERROR INFO
 	//-------------------------------------------
-	if ( $rpt_errorInfo == "true" || !empty($del_deleteLogId) )
+	if ( !empty($rpt_errorInfo) || !empty($del_deleteLogId) )
 	{
-		if ( !empty($del_deleteLogId) )
+		if ( is_numeric($del_deleteLogId) )
 		{
 			$sql = "DELETE from asemon_error_info where checkId = $del_deleteLogId";
 
@@ -718,25 +722,71 @@ Admin:<BR>
 			printf("<br>\n");
 		}
 
-		$sql = "
-			SELECT checkId, 
-				checkId as deleteLogId,
-				sendCounter,
-				serverAddTime,
-				clientTime,
-				userName,
-				srvVersion,
-				appVersion,
-				logLevel,
-				logThreadName,
-				logClassName,
-				logLocation,
-				logMessage,
-				logStacktrace
-			FROM asemon_error_info
-			ORDER BY checkId desc, sendCounter
-			LIMIT 500
-		";
+		if ( $rpt_errorInfo == "sum" )
+		{
+			$sql = "
+				SELECT
+					checkId,
+					checkId            as showLogId,
+					max(serverAddTime) as maxServerAddTime,
+					checkId            as deleteLogId,
+					userName,
+					srvVersion,
+					appVersion,
+					count(sendCounter) as records,
+					max(sendCounter)   as maxSendCounter
+				FROM asemon_error_info
+				GROUP BY checkId, userName, srvVersion, appVersion
+				ORDER BY checkId desc
+				LIMIT 500
+			";
+		}
+
+		if ( is_numeric($rpt_errorInfo) )
+		{
+			$sql = "
+				SELECT checkId,
+					checkId as deleteLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					logStacktrace
+				FROM asemon_error_info
+				WHERE checkId = $rpt_errorInfo
+				ORDER BY sendCounter
+			";
+		}
+
+		if ( $rpt_errorInfo == "first" )
+		{
+			$sql = "
+				SELECT checkId,
+					checkId as deleteLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					logStacktrace
+				FROM asemon_error_info
+				ORDER BY checkId desc, sendCounter
+				LIMIT 500
+			";
+		}
 
 		// sending query
 		$result = mysql_query($sql) or die("ERROR: " . mysql_error());

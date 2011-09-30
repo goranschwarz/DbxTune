@@ -36,14 +36,16 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 253;
-	$ASEMON_LATEST_VERSION_STR = "2.5.0";
-	$ASEMON_LATEST_VERSION_STR = "2011-09-09";
+	$ASEMON_LATEST_VERSION_SRC = 260;
+	$ASEMON_LATEST_VERSION_STR = "2.6.0";
+	$ASEMON_LATEST_VERSION_STR = "2011-09-30";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asemon.se/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL              = "";
+	$PROBLEM_URL               = "2011-10-10:www.asemon.se/asetune_problem.html";
+	$PROBLEM_URL               = "";
 
 
 	//------------------------------------------
@@ -93,6 +95,7 @@
 		echo "ACTION:NO-UPGRADE\n";
 		echo "OPTIONS: $SEND_OPTIONS\n";
 		echo "FEEDBACK: $FEEDBACK_URL\n";
+	//	echo "FEEDBACK: $PROBLEM_URL\n";
 	}
 
 
