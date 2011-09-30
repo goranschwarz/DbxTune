@@ -3,6 +3,7 @@
  */
 package com.asetune;
 
+import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -10,9 +11,9 @@ import java.util.Date;
 public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune"; // Do not have spaces etc in this one
-//	public static final String VERSION_STRING     = "2.5.0";
-	public static final String VERSION_STRING     = "2.5.0.1.dev";
-	public static final String BUILD_STRING       = "2011-09-15/build 89";
+//	public static final String VERSION_STRING     = "2.6.0";
+	public static final String VERSION_STRING     = "2.6.0.dev";
+	public static final String BUILD_STRING       = "2011-09-30/build 91";
 
 	public static final boolean IS_DEVELOPMENT_VERSION   = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2012-02-30";  // "YYYY-MM-DD"
@@ -21,7 +22,7 @@ public class Version
 	public static final String SOURCE_DATE_STRING = "$Date$";
 	public static final String SOURCE_REV_STRING  = "$Revision$";
 
-	public static final String APP_STORE_DIR = System.getProperty("user.home") + "/.asetune";
+	public static final String APP_STORE_DIR = System.getProperty("user.home") + File.separator + ".asetune";
 
 	static
 	{

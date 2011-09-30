@@ -823,7 +823,7 @@ implements TableModelListener
 		String currClusterName = _clusterInstanceName_txt.getText();
 		if (clusterId != null && currClusterName.equals(""))
 		{
-			if (MonTablesDictionary.getInstance() != null && MonTablesDictionary.getInstance().isClusterEnabled)
+			if (MonTablesDictionary.hasInstance() && MonTablesDictionary.getInstance().isClusterEnabled)
 			{
 				refreshClusterInfo();
 			}

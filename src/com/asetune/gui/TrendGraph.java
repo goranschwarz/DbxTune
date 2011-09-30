@@ -406,14 +406,15 @@ implements ActionListener, MouseListener
 						ITrace2D prevTrace = _series[i];
 						ITrace2D newTrace = new Trace2DLtd(chartMaxSamples);
 						_series[i] = newTrace;
+
+						_chart.removeTrace(prevTrace);
+						_chart.addTrace(newTrace);
+						
 						newTrace.setColor(prevTrace.getColor());
 						newTrace.setName( prevTrace.getName());
 						newTrace.setZIndex(prevTrace.getZIndex());
 						newTrace.addTracePainter(_tracePainter);
 
-						_chart.removeTrace(prevTrace);
-						_chart.addTrace(newTrace);
-						
 						long pointTime = 0;
 						Iterator<ITracePoint2D> iter = prevTrace.iterator();
 						int cnt = chartMaxSamples;

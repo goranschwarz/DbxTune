@@ -3,6 +3,10 @@
  */
 package com.asetune.utils;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
@@ -22,6 +26,7 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.sybase.util.ds.interfaces.Service;
 import com.sybase.util.ds.interfaces.SyInterfacesDriver;
@@ -70,8 +75,11 @@ public class AseConnectionFactory
 		}
 
 		
-		String envSybase = System.getProperty("SYBASE");
+		// Get SYBASE ENV and check if the interfaces file exist
+//		String envSybase = System.getProperty("SYBASE");
+		String envSybase = System.getenv("SYBASE");
 		String interfacesFile = null;
+		boolean interfacesFileExist = false;
 		if (envSybase != null)
 		{
 			envSybase = envSybase.trim();
@@ -84,22 +92,95 @@ public class AseConnectionFactory
 				interfacesFile = envSybase + "\\ini\\sql.ini";
 			else
 				interfacesFile = envSybase + "/interfaces";
-		}
-		if (interfacesFile != null)
-			System.setProperty("interfaces.file", interfacesFile);
 
+			// Check if the interfaces file exists.
+			File ifile = new File(interfacesFile);
+			interfacesFileExist = ifile.exists();
+			if ( ! interfacesFileExist )
+				_logger.info("The SYBASE environment variable was found, but the interfaces file '"+interfacesFile+"' didn't exists.");
+		}
+
+		if ( ! interfacesFileExist )
+		{
+			String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : "";
+			if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+				interfacesFile = tmpSybaseEnvLocation + "\\sql.ini";
+			else
+				interfacesFile = tmpSybaseEnvLocation + "/interfaces";
+
+			if (envSybase == null)
+			{
+				_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
+				System.setProperty("sybase.home", tmpSybaseEnvLocation);
+			}
+
+			_logger.info("I will try to use the interfaces file '"+interfacesFile+"'.");
+
+			// Check if the interfaces file exists.
+			File ifile = new File(interfacesFile);
+			interfacesFileExist = ifile.exists();
+			if ( ! interfacesFileExist )
+				_logger.info("The interfaces file '"+interfacesFile+"' didn't exists.");
+		}
+
+		// Create a dummy interfaces if we can't find one.
+		if ( ! interfacesFileExist )
+		{
+			_logger.info("Creating a dummy interfaces file named '"+interfacesFile+"'.");
+			try
+			{
+				BufferedWriter out = new BufferedWriter(new FileWriter(interfacesFile));
+				if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+				{
+					String nl = System.getProperty("line.separator");
+					out.write(";; ----------------------------------------------- " + nl);
+					out.write(";; Server - DUMMY_ASE " + nl);
+					out.write(";; This entry was added by '"+Version.getAppName()+"' " + nl);
+					out.write(";; ----------------------------------------------- " + nl);
+					out.write("[DUMMY_ASE]" + nl);
+					out.write("query=TCP, localhost, 5000" + nl);
+					out.write(nl);
+				}
+				else
+				{
+					String nl = System.getProperty("line.separator");
+					out.write("# ----------------------------------------------- " + nl);
+					out.write("# Server - DUMMY_ASE " + nl);
+					out.write("# This entry was added by '"+Version.getAppName()+"' " + nl);
+					out.write("# ----------------------------------------------- " + nl);
+					out.write("DUMMY_ASE" + nl);
+					out.write("\tquery tcp ether localhost 5000" + nl);
+					out.write(nl);
+				}
+				out.close();
+			}
+			catch (IOException e)
+			{
+				interfacesFile = null;
+				_logger.error("Problems when creating the interfaces file named '"+interfacesFile+"', continuing anyway. Caught: "+e);
+			}
+		}
+
+		// Try to open the assigned interfaces file.
 		try 
 		{
-			_interfacesDriver = new SyInterfacesDriver();
-			_interfacesDriver.open();
+			if (interfacesFile != null)
+			{
+				System.setProperty("interfaces.file", interfacesFile);
+				_interfacesDriver = new SyInterfacesDriver(interfacesFile);
+				_interfacesDriver.open(interfacesFile);
+			}
+			else
+			{
+				_interfacesDriver = new SyInterfacesDriver();
+				_interfacesDriver.open();
+			}
+
 		}
 		catch(Exception ex)
 		{
-			if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
-				_logger.warn("Problems reading '%SYBASE%\\ini\\sql.ini' '"+interfacesFile+"'.");
-			else
-				_logger.warn("Problems reading '$SYBASE/interfaces' file '"+interfacesFile+"'.");
-			_logger.warn("SyInterfacesDriver error: "+ex.getMessage());
+			_logger.warn("Problems reading SYBASE Name/Directory Service file '"+interfacesFile+"'.");
+			_logger.warn("SyInterfacesDriver Problem: "+ex);
 		}
 
 		if (_interfacesDriver != null)
@@ -760,6 +841,8 @@ public class AseConnectionFactory
 	public static String getIServerName(String hostPortStr)
 	{
 		Map<String,List<String>> hostPortMap = StringUtil.parseCommaStrToMultiMap(hostPortStr, ":", ",");
+		if (hostPortMap.size() == 0)
+			return null;
 		return getIServerName(hostPortMap);
 	}
 
@@ -1037,6 +1120,15 @@ public class AseConnectionFactory
 		if (props.getProperty("APPLICATIONNAME") == null) props.put("APPLICATIONNAME", appname);
 		if (props.getProperty("HOSTNAME")        == null) props.put("HOSTNAME",        hostname);
 
+		// Forces jConnect to cancel all Statements on a Connection when a
+		// read timeout is encountered. This behavior can be used when a
+		// client has calls execute() and the timeout occurs because of a
+		// deadlock (for example, trying to read from a table that is currently
+		// being updated in another transaction). 
+		// The default value is false.
+		if (props.getProperty("QUERY_TIMEOUT_CANCELS_ALL") == null) 
+			props.put("QUERY_TIMEOUT_CANCELS_ALL", "true");
+
 		// if host,port is in the interfaces/sql.ini, set the SERVICENAME property
 //		String serverName = AseConnectionFactory.getIServerName(hostPortStr);
 //		if ( serverName != null && ! serverName.trim().equals("") )
@@ -1072,6 +1164,15 @@ public class AseConnectionFactory
 		if (props.getProperty("APPLICATIONNAME") == null) props.put("APPLICATIONNAME", _appname);
 		if (props.getProperty("HOSTNAME")        == null) props.put("HOSTNAME",        hostname);
 //		if (props.getProperty("DISABLE_UNPROCESSED_PARAM_WARNINGS") == null) props.put("DISABLE_UNPROCESSED_PARAM_WARNINGS", "true");
+
+		// Forces jConnect to cancel all Statements on a Connection when a
+		// read timeout is encountered. This behavior can be used when a
+		// client has calls execute() and the timeout occurs because of a
+		// deadlock (for example, trying to read from a table that is currently
+		// being updated in another transaction). 
+		// The default value is false.
+		if (props.getProperty("QUERY_TIMEOUT_CANCELS_ALL") == null) 
+			props.put("QUERY_TIMEOUT_CANCELS_ALL", "true");
 
 		if (connProps != null)
 			props.putAll(connProps);

@@ -6,6 +6,7 @@ package com.asetune;
 import java.awt.event.ActionEvent;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
@@ -23,6 +24,7 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
 
@@ -348,20 +350,37 @@ public class GetCountersGui
 				Timestamp mainSampleTime   = null;
 				Timestamp counterClearTime = null;
 
-				Statement stmt = getMonConnection().createStatement();
-				String sql = "select getdate(), @@servername, 'ONLY_ABOVE_ASE_1502', CountersCleared from master..monState";
+				String sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
+				// If version is above 15.0.2 and you have 'sa_role' 
+				// then: use ASE function asehostname() to get on which OSHOST the ASE is running
 				if (MonTablesDictionary.getInstance().aseVersionNum >= 15020)
-					sql =    "select getdate(), @@servername, asehostname(),         CountersCleared from master..monState";
-				ResultSet rs = stmt.executeQuery(sql);
-				while (rs.next())
 				{
-					mainSampleTime   = rs.getTimestamp(1);
-					aseServerName    = rs.getString(2);
-					aseHostname      = rs.getString(3);
-					counterClearTime = rs.getTimestamp(4);
+					if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
+						sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
 				}
-				rs.close();
-				stmt.close();
+
+				try
+				{
+					Statement stmt = getMonConnection().createStatement();
+					ResultSet rs = stmt.executeQuery(sql);
+					while (rs.next())
+					{
+						mainSampleTime   = rs.getTimestamp(1);
+						aseServerName    = rs.getString(2);
+						aseHostname      = rs.getString(3);
+						counterClearTime = rs.getTimestamp(4);
+					}
+					rs.close();
+					stmt.close();
+				}
+				catch (SQLException sqlex)
+				{
+					_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+					mainSampleTime   = new Timestamp(System.currentTimeMillis());
+					aseServerName    = "unknown";
+					aseHostname      = "unknown";
+					counterClearTime = new Timestamp(0);
+				}
 
 				// PCS
 				PersistContainer pc = null;

@@ -196,7 +196,7 @@ public class MainFrame
 	private JMenuItem           _refreshRate_mi         = new JMenuItem("Refresh Rate...");
 	private JCheckBoxMenuItem   _autoResizePcTable_mi   = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
 	private JMenuItem           _aseConfigView_mi       = new JMenuItem("View ASE Configuration...");
-	private JMenuItem           _tcpSettingsConf_mi     = new JMenuItem("Change 'Counter Table' Parameters...");
+	private JMenuItem           _tcpSettingsConf_mi     = new JMenuItem("Change 'Performance Counter' Options...");
 	private JMenuItem           _counterTabView_mi      = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
 	private JMenuItem           _graphView_mi           = new JMenuItem("Change 'Graph' Order and Visibility...");
 	private static JMenu        _graphs_m               = new JMenu("Active Graphs");
@@ -1736,6 +1736,10 @@ public class MainFrame
 	}
 
 
+	/**
+	 * TODO: use the action_disconnectWithProgress() instead, but this needs more work before it's used...
+	 * @param e
+	 */
 	private void action_disconnect(ActionEvent e)
 	{
 		AseConnectionFactory.reset();
@@ -1767,6 +1771,119 @@ public class MainFrame
 //		GetCounters.reset();              // Which does reset on all CM objects
 	}
 
+//	/**
+//	 * FIXME: this needs to be implemented in a good manner... Tasks... JTable... status update of the JTable...
+//	 * @author gorans
+//	 */
+//	private static class DisconnectProgressDialog
+//	extends JDialog
+//	implements PropertyChangeListener
+//	{
+//		private static final long serialVersionUID = 1L;
+//
+//		private JLabel _label = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
+//
+//		private JLabel _state_lbl = new JLabel();
+//		private RSyntaxTextArea _allSql_txt   = new RSyntaxTextArea();
+//		private RTextScrollPane _allSql_sroll = new RTextScrollPane(_allSql_txt);
+//
+//		public DisconnectProgressDialog(Window owner)
+//		{
+//			super((Frame)null, "Disconnecting server...", true);
+//			setLayout(new MigLayout());
+//
+//			_label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+//
+//			_allSql_txt.setText("disconnect");
+//			_allSql_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+//			_allSql_txt.setHighlightCurrentLine(false);
+//
+//			add(_label,        "push, grow, wrap");
+//			add(_state_lbl,    "wrap");
+//			add(_allSql_sroll, "push, grow, wrap");
+//
+//			pack();
+//			setSize( getSize().width + 100, getSize().height + 70);
+//			setLocationRelativeTo(owner);
+//		}
+//		
+//		public void setCurrentSqlText(String sql)
+//		{
+//			if ( ! StringUtil.isNullOrBlank(sql) )
+//				_allSql_txt.markAll(sql, false, false, false);
+//		}
+//
+//		public void setState(String string)
+//		{
+//			_state_lbl.setText(string);
+//		}
+//		
+//		/**
+//		 * Called by SwingWorker on completion<br>
+//		 * Note: need to register on the SwingWorker using: workerThread.addPropertyChangeListener( "this SqlProgressDialog" );
+//		 */
+//		public void propertyChange(PropertyChangeEvent event) 
+//		{
+//			// Close this window when the Swing worker has completed
+//			if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
+//			{
+//				setVisible(false);
+//				dispose();
+//			}
+//		}
+//	}
+//
+//	private void action_disconnectWithProgress(ActionEvent e)
+//	{
+//		final DisconnectProgressDialog progress = new DisconnectProgressDialog(this);
+//
+//		// Execute in a Swing Thread
+//		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
+//		{
+//			@Override
+//			protected String doInBackground() throws Exception
+//			{
+//				AseConnectionFactory.reset();
+//				terminateConnection();
+//
+//				// If we have a PersistentCounterHandler, stop it...
+//				if ( PersistentCounterHandler.hasInstance() )
+//				{
+//					PersistentCounterHandler.getInstance().stop();
+//				}
+//
+//				// If we have a Reader, stop it...
+//				if ( PersistReader.hasInstance() )
+//				{
+//					PersistReader.getInstance().shutdown();
+//					PersistReader.setInstance(null);
+//				}
+//				
+//				// Possible
+//				// Clear all tabs, online/offline-slider, (graphs) 
+//
+////FIXME: need much more work
+////				// Call all Dictionaries to empty them
+////				// this enables us to reconnect to any version...
+//				AseConfig.reset();
+//				AseConfigText.reset();
+////				MonTablesDictionary.reset();      // Most probably need to work more on this one...
+////			//	MonWaitEventIdDictionary.reset(); // Do not need to be reset, it's not getting anything from DB
+////				GetCounters.reset();              // Which does reset on all CM objects
+//				return null;
+//			}
+//
+//		};
+//		doBgThread.addPropertyChangeListener(progress);
+//		doBgThread.execute();
+//
+//		//the dialog will be visible until the SwingWorker is done
+//		progress.setVisible(true); 
+//
+//		// We will continue here, when results has been sent by server
+//		//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+//	}
+	
 
 	private void action_exit(ActionEvent e)
 	{
@@ -2058,7 +2175,7 @@ public class MainFrame
 	 */
 	public static void terminateConnection()
 	{
-		_logger.info("Starting a thread that will do disconnect after this sample session is finnished.");
+		_logger.info("Starting a thread that will do disconnect after this sample session is finished.");
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		Thread terminateConnectionTask = new Thread()

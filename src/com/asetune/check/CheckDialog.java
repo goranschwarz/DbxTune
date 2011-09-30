@@ -56,7 +56,7 @@ public class CheckDialog
 	private JLabel     _proxyPort_lbl      = new JLabel("HTTP Proxy Port");
 	private JTextField _proxyPort_txt      = new JTextField();
 	private JCheckBox  _doNotShow_chk      = new JCheckBox("Do not show this again.");
-	private JCheckBox  _doNotShowFeedback_chk = new JCheckBox("Do not show this feedback again.");
+	private JCheckBox  _doNotShowFeedback_chk = new JCheckBox("Do not show this message again.");
 
 	private CheckForUpdates _cfu = null;
 
@@ -324,15 +324,20 @@ public class CheckDialog
 		else
 		{
 			msg = "<b>The Update Check failed.</b><br><br>" +
-			      "This could happen for two reasons:<br>" +
-			      "- You do <b>not</b> have internet access from this machine.<br>" +
-			      "- You sit behind a proxy server.<br>" +
+			      "This could happen for the following reasons:<br>" +
+			      "<ul>" +
+			         "<li>You do <b>not</b> have Internet access from this machine.</li>" +
+			         "<li>You sit behind a Proxy server.</li>" +
+			         "<li>Or simply because <A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A> is down for the moment.</li>" +
+			      "</ul>" +
 			      "<br>" +
-			      "If you do not have internet access from this machine,<br>" +
+			      "<HR size=\"1\">" +
+			      "If you do not have Internet access from this machine,<br>" +
 			      "please do manual checks for new releases at:<br>" +
 			      "<A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A><br>" +
 			      "<br>" +
-			      "If you normally have internet access from this machine<br>" +
+			      "<HR size=\"1\">" +
+			      "If you normally have Internet access from this machine<br>" +
 			      "I'm guessing you sit behind a Proxy Server and<br>" +
 			      "you are using i PAC file for proxy lookups<br>" +
 			      "Sorry! I do not support that right now.<br>" +

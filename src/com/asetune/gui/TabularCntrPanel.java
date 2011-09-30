@@ -218,6 +218,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	private JCheckBox				_optionPersistCountersDiff_chk		= new JCheckBox("Diff");
 	private JCheckBox				_optionPersistCountersRate_chk		= new JCheckBox("Rate");
 	private JCheckBox				_optionNegativeDiffCntToZero_chk	= new JCheckBox("Reset negative Delta and Rate counters to zero");
+	private JLabel					_optionQueryTimeout_lbl             = new JLabel("Query Timeout");
+	private JTextField				_optionQueryTimeout_txt             = new JTextField();
 
 	// LOCAL OPTIONS panel
 	private JPanel					_localOptionsPanel;
@@ -313,6 +315,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			_timeOfflineRewind_but.setVisible(false);
 			_timeOfflineFastForward_but.setVisible(false);
 
+			_optionQueryTimeout_lbl.setVisible(true);
+			_optionQueryTimeout_txt.setVisible(true);
+
 			_cmDisplay = null;
 
 			// Restore old CM
@@ -350,6 +355,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				_timeOfflineRewind_but.setVisible(true);
 				_timeOfflineFastForward_but.setVisible(true);
 			}
+			_optionQueryTimeout_lbl.setVisible(false);
+			_optionQueryTimeout_txt.setVisible(false);
 
 			if ( _cmDisplay != null )
 			{
@@ -427,6 +434,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			_optionPersistCountersDiff_chk  .setSelected(_cm.isPersistCountersDiffEnabled());
 			_optionPersistCountersRate_chk  .setSelected(_cm.isPersistCountersRateEnabled());
 			_optionNegativeDiffCntToZero_chk.setSelected(_cm.isNegativeDiffCountersToZero());
+			setQueryTimeout(_cm.getQueryTimeout());
 
 			_optionPersistCountersAbs_chk   .setEnabled(_cm.isPersistCountersAbsEditable());
 			_optionPersistCountersDiff_chk  .setEnabled(_cm.isPersistCountersDiffEditable());
@@ -713,6 +721,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		String timeIntervall = (intervall == 0) ? "" : Long.toString(intervall);
 		_timeIntervall_txt.setText(timeIntervall);
+	}
+
+	public void setQueryTimeout(int queryTimeout)
+	{
+		if ( queryTimeout == 0 )
+			_optionQueryTimeout_txt.setText("none");
+		else
+			_optionQueryTimeout_txt.setText(Integer.toString(queryTimeout));
 	}
 
 	public void setPostponeTime(int postponeTime)
@@ -1610,6 +1626,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_optionPersistCountersDiff_chk  .setToolTipText("<html>Store Difference Calculation between two samples.</html>");
 		_optionPersistCountersRate_chk  .setToolTipText("<html>Store the Calculated Numers per Second.</html>");
 		_optionNegativeDiffCntToZero_chk.setToolTipText("<html>If the differance between 'this' and 'previous' data sample has negative counter values, reset them to be <b>zero</b>" + "<p>This is good for most data tables, meaning if sp_sysmon resets the counters or counters wrap..." + "<p>It's not good for data tables where we want to watch counters that grows and shrinks, for example \"procedure cache memory usage\".</html>");
+		_optionQueryTimeout_lbl         .setToolTipText("<html>How long do we wait for ASE to deliver results for this Performance Counter.<br>Empty value = set to the default value.</html>");
+		_optionQueryTimeout_txt         .setToolTipText("<html>How long do we wait for ASE to deliver results for this Performance Counter.<br>Empty value = set to the default value.</html>");
 
 		// Fix up the _optionTrendGraphs_but
 		TrendGraph.createGraphAccessButton(_optionTrendGraphs_but, _displayName);
@@ -1621,8 +1639,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		panel.add(_optionPauseDataPolling_chk,      "push, grow, left, split");
 		panel.add(_optionHasActiveGraphs_lbl,       "top");
 		panel.add(_optionTrendGraphs_but,           "top, wrap");
-		panel.add(_optionEnableBgPolling_chk,       "wrap");
-		panel.add(_optionPersistCounters_chk,       "split 4");
+		panel.add(_optionEnableBgPolling_chk,       "push, grow, left, split");
+		panel.add(_optionQueryTimeout_lbl,          "");
+		panel.add(_optionQueryTimeout_txt,          "width 40:40, wrap");
+		panel.add(_optionPersistCounters_chk,       "split");
 		panel.add(_optionPersistCountersAbs_chk,    "");
 		panel.add(_optionPersistCountersDiff_chk,   "");
 		panel.add(_optionPersistCountersRate_chk,   "wrap");
@@ -1975,7 +1995,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				int postponeTime = parsePostponeTime(_timePostpone_txt.getText(), true);
+				int postponeTime = parseHourMinuteTime(_timePostpone_txt.getText(), 0, true);
 				if ( postponeTime >= 0 )
 				{
 					CountersModel cm = _cm;
@@ -2079,6 +2099,23 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			{
 				if ( _cm != null )
 					_cm.setBackgroundDataPollingEnabled(_optionEnableBgPolling_chk.isSelected(), true);
+			}
+		});
+
+		_optionQueryTimeout_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				int queryTimeout = parseHourMinuteTime(_optionQueryTimeout_txt.getText(), -1, true);
+				if (queryTimeout < 0)
+					queryTimeout = CountersModel.DEFAULT_sqlQueryTimeout;
+				if ( queryTimeout >= 0 )
+				{
+					CountersModel cm = _cm;
+					if ( cm != null )
+						cm.setQueryTimeout(queryTimeout, true);
+				}
 			}
 		});
 
@@ -2269,13 +2306,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 * <li>'10h' is 10 Hours which is translated into 36000</li>
 	 * </ul>
 	 */
-	public static int parsePostponeTime(String postponeStr, boolean guiError)
+	public static int parseHourMinuteTime(String postponeStr, int emptyVal, boolean guiError)
 	{
 		if ( postponeStr == null )
-			return 0;
+			return emptyVal;
 		postponeStr = postponeStr.trim();
 		if ( postponeStr.equals("") )
-			return 0;
+			return emptyVal;
 
 		try
 		{
@@ -2298,9 +2335,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		catch (NumberFormatException ex)
 		{
 			if ( guiError )
-				SwingUtils.showInfoMessage(null, "Not a Number", "The postpone needs to be specified as a number.");
+				SwingUtils.showInfoMessage(null, "Not a Number", "The value needs to be specified as a number.");
 			else
-				_logger.warn("The postpone needs to be specified as a number.");
+				_logger.warn("The value needs to be specified as a number.");
 		}
 		return -1;
 	}
@@ -3565,9 +3602,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			if ( sqlClose == null )
 				sqlClose = "";
 
-			List<String> pkList = _cm.getPk();
-			String[] diffCols = _cm.getDiffColumns();
-			String[] pctCols = _cm.getPctColumns();
+			List<String> pkList           = _cm.getPk();
+			String[]     diffCols         = _cm.getDiffColumns();
+			String[]     pctCols          = _cm.getPctColumns();
+			String[]     needConfig       = _cm.getDependsOnConfig();
+			String[]     needRole         = _cm.getDependsOnRole();
+			String       needAseVersion   = _cm.getDependsOnVersionStr();
+			String       needAseCeVersion = _cm.getDependsOnCeVersionStr();
+			List<String> dependsOnCm      = _cm.getDependsOnCm();
 
 			// Lets COLOR code some stuff
 			if ( pkList != null )
@@ -3593,6 +3635,12 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			"<H2>Diff Columns</H2>" + Arrays.deepToString(diffCols) +
 
 			"<H2>Pct Columns</H2>" + Arrays.deepToString(pctCols) +
+
+			"<H3>Depends On ASE Configuration</H3>" + Arrays.deepToString(needConfig) +
+			"<H3>Depends On ASE Role</H3>" + Arrays.deepToString(needRole) +
+			"<H3>Depends On Other Performance Counter</H3>" + dependsOnCm +
+			"<H3>Needs ASE Version</H3>" + needAseVersion +
+			"<H3>Needs ASE CE Version</H3>" + needAseCeVersion +
 
 			"</html>";
 
