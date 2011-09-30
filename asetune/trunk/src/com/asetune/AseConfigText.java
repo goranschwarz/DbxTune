@@ -8,8 +8,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -221,6 +223,15 @@ public abstract class AseConfigText
 	}
 
 	/**
+	 * We need any of the roles to access information.
+	 * @return List<String> of role(s) we must be apart of to get config. null = do not need any role.
+	 */
+	public List<String> needRole()
+	{
+		return null;
+	}
+
+	/**
 	 * refresh 
 	 * @param conn
 	 */
@@ -233,36 +244,58 @@ public abstract class AseConfigText
 
 		if ( ! _offline )
 		{
-			int aseVersion  = AseConnectionUtils.getAseVersionNumber(conn);
-			int needVersion = needVersion();
+			int          aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+
+			int          needVersion = needVersion();
+			List<String> needRole    = needRole();
 
 			// Check if we can get the configuration, due to compatible version.
-			if (aseVersion > 0 && aseVersion < needVersion)
+			if (needVersion > 0 && aseVersion < needVersion)
 			{
 				_configStr = "This info is only available if the Server Version is above " + AseConnectionUtils.versionIntToStr(needVersion);
 				return;
 			}
 
+			// Check if we can get the configuration, due to enough rights/role based.
+			if (needRole != null)
+			{
+				List<String> hasRoles = AseConnectionUtils.getActiveRoles(conn);
+
+				boolean haveRole = false;
+				for (String role : needRole)
+				{
+					if (hasRoles.contains(role))
+						haveRole = true;
+				}
+				if ( ! haveRole )
+				{
+					_configStr = "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
+					return;
+				}
+			}
+
 			// Get the SQL to execute.
 			String sql = getSqlCurrentConfig(aseVersion);
 			
+			AseSqlScript script = null;
 			try
 			{
-				AseSqlScript script = new AseSqlScript(conn);
+				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
+				script = new AseSqlScript(conn, 10); 
 				_configStr = script.executeSqlStr(sql);
 			}
 			catch (SQLException ex)
 			{
-//				if (offline && ex.getMessage().contains("not found"))
-//				{
-//					_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
-//					return;
-//				}
 				_logger.error("AseConfigText:initialize:sql='"+sql+"'", ex);
 				if (_hasGui)
 					SwingUtils.showErrorMessage("AseConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
 				_configStr = null;
 				return;
+			}
+			finally
+			{
+				if (script != null)
+					script.close();
 			}
 		}
 		else 
@@ -428,10 +461,21 @@ public abstract class AseConfigText
 		@Override public ConfigType getConfigType() { return ConfigType.AseTraceflags; }
 
 		@Override 
+		public List<String> needRole()
+		{
+			ArrayList<String> needAnyRole = new ArrayList<String>();
+
+			// show switch: needs any of the following roles
+			needAnyRole.add("sa_role");
+			needAnyRole.add("sso_role");
+
+			return needAnyRole;
+		}
+		@Override 
 		protected String getSqlCurrentConfig(int aseVersion) 
 		{
-			// 12.5.4 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-			if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
+			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
+			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion <= 15000) )
 				return "show switch"; 
 			else
 				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 

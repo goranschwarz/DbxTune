@@ -146,6 +146,7 @@ public class ConnectionDialog
 	private JTextField         _aseIfile_txt       = new JTextField(AseConnectionFactory.getIFileName());
 	private String             _aseIfile_save      = AseConnectionFactory.getIFileName();
 	private JButton            _aseIfile_but       = new JButton("...");
+	private JButton            _aseEditIfile_but   = new JButton("Edit");
 
 	private JCheckBox          _aseConnUrl_chk     = new JCheckBox("Use URL", false);
 	private JTextField         _aseConnUrl_txt     = new JTextField();
@@ -517,6 +518,7 @@ public class ConnectionDialog
 		_aseIfile_lbl  .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving ASE name into hostname and port number");
 		_aseIfile_txt  .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving ASE name into hostname and port number");
 		_aseIfile_but  .setToolTipText("Open a File Dialog to locate a Directory Service file.");
+		_aseEditIfile_but.setToolTipText("Edit the Name/Directory Service file. Just opens a text editor.");
 		_aseServer_lbl .setToolTipText("Name of the ASE you are connecting to");
 		_aseServer_cbx .setToolTipText("Name of the ASE you are connecting to");
 		_aseHost_lbl   .setToolTipText("<html>Hostname or IP address of the ASE you are connecting to<br>Syntax: host1[,host2,...]</html>");
@@ -535,7 +537,9 @@ public class ConnectionDialog
 //		_ifile_txt.setEditable(false);
 		panel.add(_aseIfile_lbl,     "");
 		panel.add(_aseIfile_txt,     "push, grow, split");
-		panel.add(_aseIfile_but,     "wrap");
+//		panel.add(_aseIfile_but,     "wrap");
+		panel.add(_aseIfile_but,     "");
+		panel.add(_aseEditIfile_but, "wrap");
 
 		panel.add(_aseServer_lbl,   "");
 		panel.add(_aseServer_cbx,   "push, grow");
@@ -564,13 +568,14 @@ public class ConnectionDialog
 		AutoCompleteDecorator.decorate(_aseServer_cbx);
 
 		// ADD ACTION LISTENERS
-		_aseServer_cbx .addActionListener(this);
-		_aseOptions_txt.addActionListener(this);
-		_aseOptions_but.addActionListener(this);
-		_aseIfile_but  .addActionListener(this);
-		_aseIfile_txt  .addActionListener(this);
-		_aseConnUrl_chk.addActionListener(this);
-		_aseConnUrl_txt.addActionListener(this);
+		_aseServer_cbx   .addActionListener(this);
+		_aseOptions_txt  .addActionListener(this);
+		_aseOptions_but  .addActionListener(this);
+		_aseIfile_but    .addActionListener(this);
+		_aseEditIfile_but.addActionListener(this);
+		_aseIfile_txt    .addActionListener(this);
+		_aseConnUrl_chk  .addActionListener(this);
+		_aseConnUrl_txt  .addActionListener(this);
 
 		// If write in host/port, create the combined host:port and show that...
 		_aseHost_txt.addKeyListener(this);
@@ -1513,12 +1518,17 @@ public class ConnectionDialog
 		if (MonTablesDictionary.hasInstance())
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			if ( ! mtd.isInitialized() )
+			{
+				_logger.debug("checkReconnectVersion(): MonTablesDictionary.isInitialized()=false. I'll just return true here...");
+				return true;
+			}
 			int currentVersion = mtd.aseVersionNum;
 			int newVersion     = AseConnectionUtils.getAseVersionNumber(conn);
 	
 			if (currentVersion <= 0)
 			{
-				_logger.info("checkReconnectVersion(): MonTablesDictionary.hasInstance()=true, Are we checking this a bit early... currentVersion='"+currentVersion+"', newVersion='"+newVersion+"'. since currentVersion is <= 0, I'll just return true here...");
+				_logger.debug("checkReconnectVersion(): MonTablesDictionary.hasInstance()=true, Are we checking this a bit early... currentVersion='"+currentVersion+"', newVersion='"+newVersion+"'. since currentVersion is <= 0, I'll just return true here...", new Exception("Dummy Exception to get call stack..."));
 				return true;
 			}
 
@@ -2006,6 +2016,20 @@ public class ConnectionDialog
 			{
 				_aseIfile_txt.setText( fc.getSelectedFile().getAbsolutePath() );
 				loadNewInterfaces( _aseIfile_txt.getText() );
+			}
+		}
+		
+		// --- ASE: BUTTON: "Edit" edit interfaces/sql.ini file ---
+		if (_aseEditIfile_but.equals(source))
+		{
+			String currentSrvName = _aseServer_cbx.getSelectedItem().toString(); 
+			String ifile = _aseIfile_txt.getText(); 
+			InterfaceFileEditor ife = new InterfaceFileEditor(this, ifile);
+			int rc = ife.open();
+			if (rc == InterfaceFileEditor.OK)
+			{
+				loadNewInterfaces( ifile );
+				_aseServer_cbx.setSelectedItem(currentSrvName);
 			}
 		}
 		
@@ -3112,8 +3136,8 @@ public class ConnectionDialog
 		final String TMP_CONFIG_FILE_NAME = System.getProperty("TMP_CONFIG_FILE_NAME", "asetune.save.properties");
 		final String ASETUNE_HOME         = System.getProperty("ASETUNE_HOME");
 		
-		String defaultPropsFile    = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + "/" + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
-		String defaultTmpPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + "/" + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile    = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
+		String defaultTmpPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

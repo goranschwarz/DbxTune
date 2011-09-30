@@ -25,7 +25,6 @@ import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.SwingUtils;
 import com.sybase.ase.planviewer.ASEPlanViewer;
-import com.sybase.jdbcx.SybConnection;
 
 public class AsePlanViewer
 extends JFrame
@@ -59,7 +58,8 @@ implements ActionListener
 		_sql  = sql;
 
 		// Setup a message handler
-		((SybConnection)_conn).setSybMessageHandler(_aseMsg);
+//FIXME: should this be here or NOT
+//		((SybConnection)_conn).setSybMessageHandler(_aseMsg);
 
 		_planPanel = getPlanViewer();
 

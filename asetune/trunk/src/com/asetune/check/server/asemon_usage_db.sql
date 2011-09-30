@@ -121,5 +121,5 @@ CREATE TABLE asemon_error_info
 	logMessage              varchar(500),
 	logStacktrace           varchar(4096),
 
-	PRIMARY KEY (checkId, serverAddTime)
+	PRIMARY KEY (checkId, sendCounter, serverAddTime)
 );

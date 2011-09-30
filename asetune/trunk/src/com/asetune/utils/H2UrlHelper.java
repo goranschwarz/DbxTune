@@ -124,7 +124,7 @@ public class H2UrlHelper
 	 */
 	public File getFile()
 	{
-		return new File(_extFileName);
+		return (_extFileName == null) ? null : new File(_extFileName);
 	}
 
 	/**
@@ -143,7 +143,8 @@ public class H2UrlHelper
 	 */
 	public File getDir(String defaultDir)
 	{
-		if ("".equals(_extFileName))
+//		if ("".equals(_extFileName))
+		if (StringUtil.isNullOrBlank(_extFileName))
 		{
 			if (defaultDir != null)
 				return new File(defaultDir);

@@ -84,7 +84,8 @@ public class AseConfigMonitoringDialog
 
 	
 	// PANEL: MONITORING
-	private JPanel             _monitoringPanel               = null;
+	private JPanel             _monitoringPanel_1             = null;
+	private JPanel             _monitoringPanel_2             = null;
 	private JCheckBox          _enableMonitoring_chk          = new JCheckBox("Enable monitoring");
 	private JCheckBox          _perObjectStatisticsActive_chk = new JCheckBox("Per object statistics active");
 	private JCheckBox          _statementStatisticsActive_chk = new JCheckBox("Statement statistics active");
@@ -129,7 +130,8 @@ public class AseConfigMonitoringDialog
 
 	// PANEL: OTHER
 	private JCheckBox          _cfgCapMissingStatistics_chk   = new JCheckBox("Capture Missing Statistics");
-	private JCheckBox          _cfgEnableMetricsCapture_chk   = new JCheckBox("Enable Metrics Capture");
+
+	private JCheckBox          _cfgEnableMetricsCapture_chk   = new JCheckBox("Enable QP Metrics Capture");
 
 	private JLabel             _cfgMetricsElapMax_lbl         = new JLabel("metrics elap max");
 	private SpinnerNumberModel _cfgMetricsElapMax_spm         = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
@@ -270,13 +272,14 @@ public class AseConfigMonitoringDialog
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
 
-		_monitoringPanel = createMonitoringPanel();
+		_monitoringPanel_1 = createMonitoringPanel();
+		_monitoringPanel_2 = createOtherMonitorConfigPanel();
 
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_monitoringPanel,                "growx");
-		panel.add(createOtherMonitorConfigPanel(), "growx");
-		panel.add(createOnExitPanel(),             "growx");
-		panel.add(createOkCancelPanel(),           "bottom, right, push");
+		panel.add(_monitoringPanel_1,    "growx");
+		panel.add(_monitoringPanel_2,    "growx");
+		panel.add(createOnExitPanel(),   "growx");
+		panel.add(createOkCancelPanel(), "bottom, right, push");
 
 		loadProps();
 
@@ -294,7 +297,7 @@ public class AseConfigMonitoringDialog
 		_enableMonitoring_chk          .setToolTipText(_tts.add(_enableMonitoring_chk,          "enable monitoring specifies whether the Adaptive Server will collect information for the Monitoring and Diagnostic System."));
 		_perObjectStatisticsActive_chk .setToolTipText(_tts.add(_perObjectStatisticsActive_chk, "per object statistics active determines whether the Adaptive Server will collect monitoring information on a per object basis."));
 		_statementStatisticsActive_chk .setToolTipText(_tts.add(_statementStatisticsActive_chk, "statement statistics active indicates whether ASE will collect ad-hoc statement monitoring information."));
-		_statementCacheMonitoring_chk  .setToolTipText(_tts.add(_statementCacheMonitoring_chk,  "Use 'enable stmt cache monitoring' to configure Adaptive Server to collect the monitoring information on the statement cache.."));
+		_statementCacheMonitoring_chk  .setToolTipText(_tts.add(_statementCacheMonitoring_chk,  "<html>Use 'enable stmt cache monitoring' to configure Adaptive Server to collect the monitoring information on the statement cache.<br><b>Note:</b> This is available in ASE 12.5.2 and above.</html>"));
 		_objectLockwaitTiming_chk      .setToolTipText(_tts.add(_objectLockwaitTiming_chk,      "object lockwait timing specifies whether the Adaptive Server will collect timing data on lock requests."));
 		_processWaitEvents_chk         .setToolTipText(_tts.add(_processWaitEvents_chk,         "process event timing specifies whether the Adaptive Server will collect monitoring data on wait events for individual processes."));
 		_sqlBatchCapture_chk           .setToolTipText(_tts.add(_sqlBatchCapture_chk,           "SQL batch capture indicates whether the Adaptive Server will collect sql batch text for each process."));
@@ -386,7 +389,8 @@ public class AseConfigMonitoringDialog
 		toolTipText	= "<html>" +
 			"Missing Statistics are captured in the system catalogs, and can be view from <i>dbname</i>..sysstatistics <br>" +
 			"<br>" +
-			"This metrics is used in the Performance Counter Tab 'Missing Statistics'." +
+			"This metrics is used in the Performance Counter Tab 'Missing Statistics'.<br>" +
+			"<b>Note:</b> This is available in ASE 15.0.3 ESD#1 and above.</html>" +
 			"</html>";
 		_cfgCapMissingStatistics_chk   .setToolTipText(_tts.add(_cfgCapMissingStatistics_chk, toolTipText));
 
@@ -396,7 +400,8 @@ public class AseConfigMonitoringDialog
 			"Metrics for ad hoc statements are captured in the system catalogs, and can be view from <i>dbname</i>..sysquerymetrics <br>" +
 			"metrics for statements in a stored procedure are saved in the procedure cache.<br>" +
 			"<br>" +
-			"This metrics is used in the Performance Counter Tab 'QP Metrics'." +
+			"This metrics is used in the Performance Counter Tab 'QP Metrics'.<br>" +
+			"<b>Note:</b> This is available in ASE 15.0.2 and above.</html>" +
 			"</html>";
 		_cfgEnableMetricsCapture_chk.setToolTipText(_tts.add(_cfgEnableMetricsCapture_chk, toolTipText));
 
@@ -405,7 +410,8 @@ public class AseConfigMonitoringDialog
 			"If the elapsed time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
 			"<br>" +
 			"Unit: milliseconds<br>" +
-			"Note: <code><b>metrics elap max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"Note: <code><b>metrics elap max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
+			"Note: This is available in ASE 15.0.2 and above.</html>" +
 			"</html>";
 		_cfgMetricsElapMax_lbl.setToolTipText(_tts.add(_cfgMetricsElapMax_lbl, toolTipText));
 		_cfgMetricsElapMax_sp .setToolTipText(_tts.add(_cfgMetricsElapMax_sp,  toolTipText));
@@ -415,7 +421,8 @@ public class AseConfigMonitoringDialog
 			"If the execution time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
 			"<br>" +
 			"Unit: milliseconds<br>" +
-			"Note: <code><b>metrics exec max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"Note: <code><b>metrics exec max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
+			"Note: This is available in ASE 15.0.2 and above.</html>" +
 			"</html>";
 		_cfgMetricsExecMax_lbl.setToolTipText(_tts.add(_cfgMetricsExecMax_lbl, toolTipText));
 		_cfgMetricsExecMax_sp .setToolTipText(_tts.add(_cfgMetricsExecMax_sp,  toolTipText));
@@ -425,7 +432,8 @@ public class AseConfigMonitoringDialog
 			"If the logical IO time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
 			"<br>" +
 			"Unit: logical pages<br>" +
-			"Note: <code><b>metrics lio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"Note: <code><b>metrics lio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
+			"Note: This is available in ASE 15.0.2 and above.</html>" +
 			"</html>";
 		_cfgMetricsLioMax_lbl .setToolTipText(_tts.add(_cfgMetricsLioMax_lbl, toolTipText));
 		_cfgMetricsLioMax_sp  .setToolTipText(_tts.add(_cfgMetricsLioMax_sp,  toolTipText));
@@ -435,7 +443,8 @@ public class AseConfigMonitoringDialog
 			"If the physical IO time of the query is less than the value of this configuration parameter, then the query metrics associated <br>with this query are <b>not</b> written to the system tables, avoiding excessive catalog writes for simple queries.<br>" +
 			"<br>" +
 			"Unit: logical pages<br>" +
-			"Note: <code><b>metrics pio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. " +
+			"Note: <code><b>metrics pio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
+			"Note: This is available in ASE 15.0.2 and above.</html>" +
 			"</html>";
 		_cfgMetricsPioMax_lbl .setToolTipText(_tts.add(_cfgMetricsPioMax_lbl, toolTipText));
 		_cfgMetricsPioMax_sp  .setToolTipText(_tts.add(_cfgMetricsPioMax_sp,  toolTipText));
@@ -543,10 +552,40 @@ public class AseConfigMonitoringDialog
 			}
 
 			_predefinedConfigs_cbx.setSelectedIndex(PDC_FROM_ASE);
-			_monitoringPanel.setEnabled(true);
-			for (int i=0; i<_monitoringPanel.getComponentCount(); i++)
+			setVisibleForJPanel(_monitoringPanel_1, visible);
+			setVisibleForJPanel(_monitoringPanel_2, visible);
+		}
+		else
+		{
+			_predefinedConfigs_cbx.setSelectedIndex(PDC_NONE);
+			setVisibleForJPanel(_monitoringPanel_1, visible);
+			setVisibleForJPanel(_monitoringPanel_2, visible);
+		}
+
+		if (visible)
+			loadProps();
+
+		super.setVisible(visible);
+	}
+	/*---------------------------------------------------
+	** END: override methods
+	**---------------------------------------------------
+	*/
+	/** Helper method to setVisible() */
+	private void setVisibleForJPanel(JPanel jpanel, boolean visible)
+	{
+		if (jpanel == null)
+			throw new RuntimeException("The passed JPanel can't be null");
+
+		if ( visible )
+		{
+			// Set the panel to visibility
+			jpanel.setEnabled(true);
+
+			// Check each component inside the JPanel
+			for (int i=0; i<jpanel.getComponentCount(); i++)
 			{
-				Component comp = _monitoringPanel.getComponent(i);
+				Component comp = jpanel.getComponent(i);
 
 				// Simplifies things if we always set this to FALSE first
 				// and then set the various components to true.
@@ -595,24 +634,16 @@ public class AseConfigMonitoringDialog
 		}
 		else
 		{
-			_predefinedConfigs_cbx.setSelectedIndex(PDC_NONE);
-			_monitoringPanel.setEnabled(false);
-			for (int i=0; i<_monitoringPanel.getComponentCount(); i++)
+			// Set the panel to visibility
+			jpanel.setEnabled(false);
+
+			// Check each component inside the JPanel
+			for (int i=0; i<jpanel.getComponentCount(); i++)
 			{
-				_monitoringPanel.getComponent(i).setEnabled(false);
+				jpanel.getComponent(i).setEnabled(false);
 			}
 		}
-
-		if (visible)
-			loadProps();
-
-		super.setVisible(visible);
 	}
-	/*---------------------------------------------------
-	** END: override methods
-	**---------------------------------------------------
-	*/
-
 	
 	
 	
@@ -1137,7 +1168,7 @@ public class AseConfigMonitoringDialog
 	{
 		if (conn == null)
 		{
-			if ( _monitoringPanel.isEnabled() )
+			if ( _monitoringPanel_1.isEnabled() )
 			{
 				SwingUtils.showInfoMessage(this, msgDialogTitle, "Not connected to any ASE server.");
 			}

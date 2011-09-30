@@ -456,49 +456,52 @@ implements ActionListener, TableModelListener
 	{
 		for (int r=0; r<_table.getRowCount(); r++)
 		{
-			String  tabName   = (String)  _table.getValueAt(r, TAB_POS_TAB_NAME);
+			String  tabName      = (String)  _table.getValueAt(r, TAB_POS_TAB_NAME);
 
-			int     postpone  = ((Integer) _table.getValueAt(r, TAB_POS_POSTPONE)).intValue();
-			boolean paused    = ((Boolean) _table.getValueAt(r, TAB_POS_PAUSED)).booleanValue();
-			boolean bgPoll    = ((Boolean) _table.getValueAt(r, TAB_POS_BG)).booleanValue();
-			boolean rnc20     = ((Boolean) _table.getValueAt(r, TAB_POS_RNC20)).booleanValue();
+			int     queryTimeout = ((Integer) _table.getValueAt(r, TAB_POS_QUERY_TIMEOUT)).intValue();
+			int     postpone     = ((Integer) _table.getValueAt(r, TAB_POS_POSTPONE)).intValue();
+			boolean paused       = ((Boolean) _table.getValueAt(r, TAB_POS_PAUSED)).booleanValue();
+			boolean bgPoll       = ((Boolean) _table.getValueAt(r, TAB_POS_BG)).booleanValue();
+			boolean rnc20        = ((Boolean) _table.getValueAt(r, TAB_POS_RNC20)).booleanValue();
 
-			boolean storePcs  = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_PCS)).booleanValue();
-			boolean storeAbs  = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_ABS)).booleanValue();
-			boolean storeDiff = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
-			boolean storeRate = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
+			boolean storePcs     = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_PCS)).booleanValue();
+			boolean storeAbs     = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_ABS)).booleanValue();
+			boolean storeDiff    = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
+			boolean storeRate    = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
 
 			CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
 			
 			if (cm == null)
 			{
-				_logger.warn("The cm named '"+tabName+"' cant be found in the 'GetCounters' object.");
+				_logger.warn("The cm named '"+tabName+"' can't be found in the 'GetCounters' object.");
 				continue;
 			}
 
 			if (_logger.isDebugEnabled())
 			{
 				String debugStr = "doApply() name="+StringUtil.left("'"+tabName+"'", 30) +
-					" postpone="+(_table.isCellChanged(r, TAB_POS_POSTPONE  ) ? "X":" ") +
-					" paused="  +(_table.isCellChanged(r, TAB_POS_PAUSED    ) ? "X":" ") +
-					" bg="      +(_table.isCellChanged(r, TAB_POS_BG        ) ? "X":" ") +
-					" rnc20="   +(_table.isCellChanged(r, TAB_POS_RNC20     ) ? "X":" ") +
-					" pcs="     +(_table.isCellChanged(r, TAB_POS_STORE_PCS ) ? "X":" ") +
-					" pcsAbs="  +(_table.isCellChanged(r, TAB_POS_STORE_ABS ) ? "X":" ") +
-					" pcsDiff=" +(_table.isCellChanged(r, TAB_POS_STORE_DIFF) ? "X":" ") +
-					" pcsRate=" +(_table.isCellChanged(r, TAB_POS_STORE_RATE) ? "X":" ");
+					" queryTimeout="+(_table.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
+					" postpone="    +(_table.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
+					" paused="      +(_table.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
+					" bg="          +(_table.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
+					" rnc20="       +(_table.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
+					" pcs="         +(_table.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
+					" pcsAbs="      +(_table.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
+					" pcsDiff="     +(_table.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
+					" pcsRate="     +(_table.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
 				_logger.debug(debugStr);
 			}
 
-			if (_table.isCellChanged(r, TAB_POS_POSTPONE  )) cm.setPostponeTime(                 postpone, true);
-			if (_table.isCellChanged(r, TAB_POS_PAUSED    )) cm.setPauseDataPolling(             paused,   true);
-			if (_table.isCellChanged(r, TAB_POS_BG        )) cm.setBackgroundDataPollingEnabled( bgPoll,   true);
-			if (_table.isCellChanged(r, TAB_POS_RNC20     )) cm.setNegativeDiffCountersToZero(   rnc20,    true);
+			if (_table.isCellChanged(r, TAB_POS_QUERY_TIMEOUT)) cm.setQueryTimeout(                 queryTimeout, true);
+			if (_table.isCellChanged(r, TAB_POS_POSTPONE     )) cm.setPostponeTime(                 postpone,   true);
+			if (_table.isCellChanged(r, TAB_POS_PAUSED       )) cm.setPauseDataPolling(             paused,     true);
+			if (_table.isCellChanged(r, TAB_POS_BG           )) cm.setBackgroundDataPollingEnabled( bgPoll,     true);
+			if (_table.isCellChanged(r, TAB_POS_RNC20        )) cm.setNegativeDiffCountersToZero(   rnc20,      true);
 
-			if (_table.isCellChanged(r, TAB_POS_STORE_PCS )) cm.setPersistCounters(    storePcs,  true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_ABS )) cm.setPersistCountersAbs( storeAbs,  true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_DIFF)) cm.setPersistCountersDiff(storeDiff, true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_RATE)) cm.setPersistCountersRate(storeRate, true);
+			if (_table.isCellChanged(r, TAB_POS_STORE_PCS    )) cm.setPersistCounters(    storePcs,  true);
+			if (_table.isCellChanged(r, TAB_POS_STORE_ABS    )) cm.setPersistCountersAbs( storeAbs,  true);
+			if (_table.isCellChanged(r, TAB_POS_STORE_DIFF   )) cm.setPersistCountersDiff(storeDiff, true);
+			if (_table.isCellChanged(r, TAB_POS_STORE_RATE   )) cm.setPersistCountersRate(storeRate, true);
 		}
 
 		_table.resetCellChanges();
@@ -541,7 +544,7 @@ implements ActionListener, TableModelListener
 
   	private void loadProps()
   	{
-		int     width     = 675;  // initial window with   if not opened before
+		int     width     = 735;  // initial window with   if not opened before
 		int     height    = 630;  // initial window height if not opened before
 		int     x         = -1;
 		int     y         = -1;
@@ -711,14 +714,15 @@ implements ActionListener, TableModelListener
 //System.out.println("PPE: for name '"+name+"'.");
 			try
 			{
-				int     postpone  = ppe.getIntMandatoryProperty(    name, "postpone");
-				boolean paused    = ppe.getBooleanMandatoryProperty(name, "paused");
-				boolean bg        = ppe.getBooleanMandatoryProperty(name, "bg");
-				boolean resetNC20 = ppe.getBooleanMandatoryProperty(name, "resetNC20");
-				boolean storePcs  = ppe.getBooleanMandatoryProperty(name, "storePcs");
-				boolean pcsAbs    = ppe.getBooleanMandatoryProperty(name, "pcsAbs");
-				boolean pcsDiff   = ppe.getBooleanMandatoryProperty(name, "pcsDiff");
-				boolean pcsRate   = ppe.getBooleanMandatoryProperty(name, "pcsRate");
+				int     queryTimeout = ppe.getIntMandatoryProperty(    name, "queryTimeout");
+				int     postpone     = ppe.getIntMandatoryProperty(    name, "postpone");
+				boolean paused       = ppe.getBooleanMandatoryProperty(name, "paused");
+				boolean bg           = ppe.getBooleanMandatoryProperty(name, "bg");
+				boolean resetNC20    = ppe.getBooleanMandatoryProperty(name, "resetNC20");
+				boolean storePcs     = ppe.getBooleanMandatoryProperty(name, "storePcs");
+				boolean pcsAbs       = ppe.getBooleanMandatoryProperty(name, "pcsAbs");
+				boolean pcsDiff      = ppe.getBooleanMandatoryProperty(name, "pcsDiff");
+				boolean pcsRate      = ppe.getBooleanMandatoryProperty(name, "pcsRate");
 	
 				for (int r=0; r<_table.getRowCount(); r++)
 				{
@@ -726,14 +730,15 @@ implements ActionListener, TableModelListener
 					if (tabName.equals(name))
 					{
 //System.out.println("PPE: Setting values for tab '"+tabName+"'.");
-						_table.setValueAt(postpone,  r, TAB_POS_POSTPONE);
-						_table.setValueAt(paused,    r, TAB_POS_PAUSED);
-						_table.setValueAt(bg,        r, TAB_POS_BG);
-						_table.setValueAt(resetNC20, r, TAB_POS_RNC20);
-						_table.setValueAt(storePcs,  r, TAB_POS_STORE_PCS);
-						_table.setValueAt(pcsAbs,    r, TAB_POS_STORE_ABS);
-						_table.setValueAt(pcsDiff,   r, TAB_POS_STORE_DIFF);
-						_table.setValueAt(pcsRate,   r, TAB_POS_STORE_RATE);
+						_table.setValueAt(queryTimeout, r, TAB_POS_QUERY_TIMEOUT);
+						_table.setValueAt(postpone,     r, TAB_POS_POSTPONE);
+						_table.setValueAt(paused,       r, TAB_POS_PAUSED);
+						_table.setValueAt(bg,           r, TAB_POS_BG);
+						_table.setValueAt(resetNC20,    r, TAB_POS_RNC20);
+						_table.setValueAt(storePcs,     r, TAB_POS_STORE_PCS);
+						_table.setValueAt(pcsAbs,       r, TAB_POS_STORE_ABS);
+						_table.setValueAt(pcsDiff,      r, TAB_POS_STORE_DIFF);
+						_table.setValueAt(pcsRate,      r, TAB_POS_STORE_RATE);
 					}	
 				}
 			}
@@ -753,14 +758,15 @@ implements ActionListener, TableModelListener
 		for (int r=0; r<_table.getRowCount(); r++)
 		{
 			String tabName = _table.getValueAt(r, TAB_POS_TAB_NAME).toString();
-			ppe.put(tabName, "postpone",  _table.getValueAt(r, TAB_POS_POSTPONE)  .toString());
-			ppe.put(tabName, "paused",    _table.getValueAt(r, TAB_POS_PAUSED)    .toString());
-			ppe.put(tabName, "bg",        _table.getValueAt(r, TAB_POS_BG)        .toString());
-			ppe.put(tabName, "resetNC20", _table.getValueAt(r, TAB_POS_RNC20)     .toString());
-			ppe.put(tabName, "storePcs",  _table.getValueAt(r, TAB_POS_STORE_PCS) .toString());
-			ppe.put(tabName, "pcsAbs",    _table.getValueAt(r, TAB_POS_STORE_ABS) .toString());
-			ppe.put(tabName, "pcsDiff",   _table.getValueAt(r, TAB_POS_STORE_DIFF).toString());
-			ppe.put(tabName, "pcsRate",   _table.getValueAt(r, TAB_POS_STORE_RATE).toString());
+			ppe.put(tabName, "queryTimeout", _table.getValueAt(r, TAB_POS_QUERY_TIMEOUT).toString());
+			ppe.put(tabName, "postpone",     _table.getValueAt(r, TAB_POS_POSTPONE)     .toString());
+			ppe.put(tabName, "paused",       _table.getValueAt(r, TAB_POS_PAUSED)       .toString());
+			ppe.put(tabName, "bg",           _table.getValueAt(r, TAB_POS_BG)           .toString());
+			ppe.put(tabName, "resetNC20",    _table.getValueAt(r, TAB_POS_RNC20)        .toString());
+			ppe.put(tabName, "storePcs",     _table.getValueAt(r, TAB_POS_STORE_PCS)    .toString());
+			ppe.put(tabName, "pcsAbs",       _table.getValueAt(r, TAB_POS_STORE_ABS)    .toString());
+			ppe.put(tabName, "pcsDiff",      _table.getValueAt(r, TAB_POS_STORE_DIFF)   .toString());
+			ppe.put(tabName, "pcsRate",      _table.getValueAt(r, TAB_POS_STORE_RATE)   .toString());
 		}
 		return ppe;
 	}
@@ -956,17 +962,18 @@ implements ActionListener, TableModelListener
 	**---------------------------------------------------
 	*/
 
-	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
-	private static final int TAB_POS_ICON       = 0;
-	private static final int TAB_POS_TAB_NAME   = 1;
-	private static final int TAB_POS_POSTPONE   = 2;
-	private static final int TAB_POS_PAUSED     = 3;
-	private static final int TAB_POS_BG         = 4;
-	private static final int TAB_POS_RNC20      = 5;
-	private static final int TAB_POS_STORE_PCS  = 6;
-	private static final int TAB_POS_STORE_ABS  = 7;
-	private static final int TAB_POS_STORE_DIFF = 8;
-	private static final int TAB_POS_STORE_RATE = 9;
+	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
+	private static final int TAB_POS_ICON          = 0;
+	private static final int TAB_POS_TAB_NAME      = 1;
+	private static final int TAB_POS_QUERY_TIMEOUT = 2;
+	private static final int TAB_POS_POSTPONE      = 3;
+	private static final int TAB_POS_PAUSED        = 4;
+	private static final int TAB_POS_BG            = 5;
+	private static final int TAB_POS_RNC20         = 6;
+	private static final int TAB_POS_STORE_PCS     = 7;
+	private static final int TAB_POS_STORE_ABS     = 8;
+	private static final int TAB_POS_STORE_DIFF    = 9;
+	private static final int TAB_POS_STORE_RATE    = 10;
 
 	private static final Color TAB_PCS_COL_BG = new Color(240, 240, 240);
 //	private static final Color TAB_PCS_COL_BG = new Color(243, 243, 243);
@@ -1035,9 +1042,10 @@ implements ActionListener, TableModelListener
 
 		public Class<?> getColumnClass(int column)
 		{
-			if (column == TAB_POS_ICON)     return Icon.class;
-			if (column == TAB_POS_POSTPONE) return Integer.class;
-			if (column  > TAB_POS_POSTPONE) return Boolean.class;
+			if (column == TAB_POS_ICON)          return Icon.class;
+			if (column == TAB_POS_QUERY_TIMEOUT) return Integer.class;
+			if (column == TAB_POS_POSTPONE)      return Integer.class;
+			if (column  > TAB_POS_POSTPONE)      return Boolean.class;
 			return Object.class;
 		}
 
@@ -1064,7 +1072,7 @@ implements ActionListener, TableModelListener
 				}
 			}
 
-			return col >= TAB_POS_POSTPONE;
+			return col >= TAB_POS_QUERY_TIMEOUT;
 		}
 	}
 	/*---------------------------------------------------
@@ -1132,16 +1140,17 @@ implements ActionListener, TableModelListener
 
 					switch(col)
 					{
-					case TAB_POS_ICON:       tip = null; break;
-					case TAB_POS_TAB_NAME:   tip = "Name of Tab/Collector."; break;
-					case TAB_POS_POSTPONE:   tip = "If you want to skip some intermediate samples, Here you can specify minimum seconds between samples."; break;
-					case TAB_POS_PAUSED:     tip = "Pause data polling for this Tab. This makes the values easier to read..."; break;
-					case TAB_POS_BG:         tip = "Sample this panel even when this Tab is not active."; break;
-					case TAB_POS_RNC20:      tip = "If the difference between 'this' and 'previous' data sample has negative counter values, reset them to be <b>zero</b>"; break;
-					case TAB_POS_STORE_PCS:  tip = "Save this Counter Set to a Persistent Storage, even when we are in GUI mode.<br>Note: This is only enabled/available if you specified a Counter Storage when you connected."; break;
-					case TAB_POS_STORE_ABS:  tip = "Save the Absolute Counters in the Persistent Counter Storage"; break;
-					case TAB_POS_STORE_DIFF: tip = "Save the Difference Counters in the Persistent Counter Storage"; break;
-					case TAB_POS_STORE_RATE: tip = "Save the Rate Counters in the Persistent Counter Storage"; break;
+					case TAB_POS_ICON:          tip = null; break;
+					case TAB_POS_TAB_NAME:      tip = "Name of Tab/Collector."; break;
+					case TAB_POS_QUERY_TIMEOUT: tip = "The SQL Query Timeout value in seconds. For how long should we wait for a replay from the ASE Server for this specific Performance Counter."; break;
+					case TAB_POS_POSTPONE:      tip = "If you want to skip some intermediate samples, Here you can specify minimum seconds between samples."; break;
+					case TAB_POS_PAUSED:        tip = "Pause data polling for this Tab. This makes the values easier to read..."; break;
+					case TAB_POS_BG:            tip = "Sample this panel even when this Tab is not active."; break;
+					case TAB_POS_RNC20:         tip = "If the difference between 'this' and 'previous' data sample has negative counter values, reset them to be <b>zero</b>"; break;
+					case TAB_POS_STORE_PCS:     tip = "Save this Counter Set to a Persistent Storage, even when we are in GUI mode.<br>Note: This is only enabled/available if you specified a Counter Storage when you connected."; break;
+					case TAB_POS_STORE_ABS:     tip = "Save the Absolute Counters in the Persistent Counter Storage"; break;
+					case TAB_POS_STORE_DIFF:    tip = "Save the Difference Counters in the Persistent Counter Storage"; break;
+					case TAB_POS_STORE_RATE:    tip = "Save the Rate Counters in the Persistent Counter Storage"; break;
 					}
 
 					if (tip == null)
@@ -1237,6 +1246,7 @@ implements ActionListener, TableModelListener
 						row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
 						row.add(cm.getDisplayName());   // TAB_POS_TAB_NAME
 
+						row.add(new Integer( cm.getQueryTimeout()) );
 						row.add(new Integer( cm.getPostponeTime()) );
 						row.add(new Boolean( cm.isDataPollingPaused() ));
 						row.add(new Boolean( cm.isBackgroundDataPollingEnabled() ));

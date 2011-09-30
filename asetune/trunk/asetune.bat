@@ -49,7 +49,7 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 rem ------------------------------------------------------------------------
 rem --- set JVM parameters   and   DEBUG stuff
 rem ------------------------------------------------------------------------
-set JVM_PARAMS=-Xmx700m
+set JVM_PARAMS=-Xmx1024m
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.ericsson.se -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dcom.sun.management.jmxremote
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
@@ -68,7 +68,7 @@ rem ------------------------------------------------------------------------
 rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
 rem ------------------------------------------------------------------------
-IF "%SYBASE%"=="" GOTO no_sybase
+rem IF "%SYBASE%"=="" GOTO no_sybase
 IF "%ASETUNE_HOME%"=="" GOTO no_asetunehome
 rem --- IF "%JAVA_HOME%"=="" GOTO no_javahome
 

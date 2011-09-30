@@ -317,6 +317,10 @@ extends Thread
 
 	/** is sp_configure 'enable metrics capture' set or not */
 	protected boolean _config_enableMetricsCapture = false;
+	
+	/** A list of roles which the connected user has */
+	protected List<String> _activeRoleList = null;
+
 
 	
 	public static final String TRANLOG_DISK_IO_TOOLTIP =
@@ -612,7 +616,8 @@ extends Thread
 		_logger.info("Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
 
 		// Get active ASE Roles
-		List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		_activeRoleList = AseConnectionUtils.getActiveRoles(conn);
 		
 		// Get active Monitor Configuration
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
@@ -645,7 +650,7 @@ extends Thread
 				cm.setClusterEnabled(isClusterEnabled);
 				
 				// set the active roles, so it can be used in initSql()
-				cm.setActiveRoles(activeRoleList);
+				cm.setActiveRoles(_activeRoleList);
 
 				// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
 				cm.setMonitorConfigs(monitorConfigMap);
@@ -727,7 +732,7 @@ extends Thread
 		try
 		{
 			int aseVersion = 0;
-			if (MonTablesDictionary.getInstance() != null)
+			if (MonTablesDictionary.hasInstance())
 				aseVersion = MonTablesDictionary.getInstance().aseVersionNum;
 
 //			if (    aseVersion >= 15031 && aseVersion <= 15033
@@ -1369,19 +1374,18 @@ extends Thread
 					tabRowCount = "TabRowCount = convert(bigint,row_count(A.DBID, A.ObjectID)), \n";
 					dbNameCol  = "DBName";
 					objNameCol = "ObjectName";
-					objNameCol = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
 
 					// debug/trace
 					Configuration conf = Configuration.getCombinedConfiguration();
-					if (conf.getBooleanProperty("CMobjActivity.ObjectName", false))
+					if (conf.getBooleanProperty(getName()+".ObjectName", false))
 					{
-						objNameCol = "ObjectName";
-						_logger.info("CMobjActivity.ObjectName=true, using the string '"+objNameCol+"' for ObjectName lookup.");
+						objNameCol = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
+						_logger.info(getName()+".ObjectName=true, using the string '"+objNameCol+"' for ObjectName lookup.");
 					}
-					if ( ! conf.getBooleanProperty("CMobjActivity.TabRowCount", true))
+					if (conf.getBooleanProperty(getName()+".TabRowCount", false))
 					{
 						tabRowCount = "";
-						_logger.info("CMobjActivity.TabRowCount=false, Disabling the column 'TabRowCount'.");
+						_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount'.");
 					}
 				}
 				if (aseVersion >= 15700)
@@ -1717,7 +1721,7 @@ extends Thread
 			private HashMap<Number,Object> _blockingSpids = new HashMap<Number,Object>(); // <(SPID)Integer> <null> indicator that the SPID is BLOCKING some other SPID
 
 //			private Configuration _conf = Configuration.getInstance(Configuration.CONF);
-//			private boolean _sampleSystemThreads = _conf.getBooleanProperty("CMprocActivity.sample.systemThreads", true);
+//			private boolean _sampleSystemThreads = _conf.getBooleanProperty(getName()+".sample.systemThreads", true);
 
 			@Override
 			public void initSql(Connection conn)
@@ -1800,7 +1804,7 @@ extends Thread
 				
 //				Configuration conf = Configuration.getInstance(Configuration.TEMP);
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean sampleSystemThreads_chk = (conf == null) ? true : conf.getBooleanProperty("CMprocActivity.sample.systemThreads", true);
+				boolean sampleSystemThreads_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.systemThreads", true);
 
 				String sampleSystemThreadSql = "";
 				if ( sampleSystemThreads_chk == false )
@@ -2001,6 +2005,7 @@ extends Thread
 		tmp.addTrendGraphData("ChkptHkGraph", new TrendGraphDataPoint("ChkptHkGraph", new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }));
 		if (AseTune.hasGUI())
 		{
+			final String localName = name;
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long	serialVersionUID	= 1L;
@@ -2012,9 +2017,9 @@ extends Thread
 
 //					Configuration conf = Configuration.getInstance(Configuration.TEMP);
 					Configuration conf = Configuration.getCombinedConfiguration();
-					JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? true : conf.getBooleanProperty("CMprocActivity.sample.systemThreads", true));
+					JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? true : conf.getBooleanProperty(getName()+".sample.systemThreads", true));
 
-					sampleSystemThreads_chk.setName("CMprocActivity.sample.systemThreads");
+					sampleSystemThreads_chk.setName(getName()+".sample.systemThreads");
 					sampleSystemThreads_chk.setToolTipText("<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
 					panel.add(sampleSystemThreads_chk, "wrap");
 
@@ -2026,7 +2031,7 @@ extends Thread
 							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 //							Configuration conf = Configuration.getCombinedConfiguration();
 							if (conf == null) return;
-							conf.setProperty("CMprocActivity.sample.systemThreads", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.systemThreads", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -3379,7 +3384,7 @@ extends Thread
 			@Override
 			public void initSql(Connection conn)
 			{
-				//int aseVersion = getServerVersion();
+				int aseVersion = getServerVersion();
 
 				String cols1 = "";
 				if (isClusterEnabled())
@@ -3397,8 +3402,12 @@ extends Thread
 					"       Max_1min_Time,  Max_1min, \n" + // try add a SQl that shows number of minutes ago this happened, "Days-HH:MM:SS
 					"       Max_5min_Time,  Max_5min, \n" +
 					"       Max_15min_Time, Max_15min \n" +
-					"from monSysLoad \n" +
-					"order by StatisticID, EngineNumber" + (isClusterEnabled() ? ", InstanceID" : "");
+					"from monSysLoad \n";
+				
+				// in ASE 15.7, we get problems if we do the order by
+				// com.sybase.jdbc3.jdbc.SybSQLException: Domain error occurred.
+				if (aseVersion < 15700)
+					sql += "order by StatisticID, EngineNumber" + (isClusterEnabled() ? ", InstanceID" : "");
 
 				setSql(sql);
 			}
@@ -4731,7 +4740,7 @@ extends Thread
 		colsCalcDiff = new String[] {"grabs", "waits", "spins"};
 		colsCalcPCT  = new String[] {"contention"};
 		pkList       = new LinkedList<String>();
-		     pkList.add("name");
+		     pkList.add("spinName");
 
 		tmp = new CountersModel(name, null, 
 				pkList, colsCalcDiff, colsCalcPCT, 
@@ -4750,6 +4759,20 @@ extends Thread
 //
 //				return msgHandler;
 //			}
+			@Override
+			protected CmSybMessageHandler createSybMessageHandler()
+			{
+				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
+
+				// in some ASE 15.5 ESD#4 versions message 'spin_type, spin_name' is thrown...
+				// this in conjunction when dbcc traceon(3604) has been enabled.
+				// I dont know why this is happening, most likly a bug...
+				// So just discard this message
+				msgHandler.addDiscardMsgStr("spin_type, spin_name");
+
+				return msgHandler;
+			}
+
 
 			@Override
 			public void initSql(Connection conn)
@@ -4774,47 +4797,18 @@ extends Thread
 				{
 					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 				}
-//				if (aseVersion >= 15031)
-//				{
-//					// move this to the ASE CONNECT instead
-//					compatibilityModeCheck = 
-//						"-- check if we are in 'compatibility_mode', introduced in 15.0.3 esd#1 \n" +
-//						"declare @compatibility_mode_is_on int, @compatibility_mode_restore int \n" +
-//						"select @compatibility_mode_is_on = 0,  @compatibility_mode_restore = 0 \n" +
-//						"    \n" +
-//						"select @compatibility_mode_is_on = sign(convert(tinyint,substring(@@options, c.low, 1)) & c.high) \n" +
-//						"  from master.dbo.spt_values a, master.dbo.spt_values c \n" +
-//						"  where a.number = c.number \n" +
-//						"    and c.type = 'P' \n" +
-//						"    and a.type = 'N' \n" +
-//						"    and c.low <= datalength(@@options) \n" +
-//						"    and a.number = 93 \n" +
-//						"    and a.name = 'compatibility_mode' \n" +
-//						"if (@compatibility_mode_is_on = 1) \n" +
-//						"begin \n" +
-//						"    set compatibility_mode off\n" +
-//						"    select @compatibility_mode_restore = 1 \n" +
-//						"end \n" +
-//						"\n";
-//
-//					compatibilityModeRestore = "\n" +
-//						"if (@compatibility_mode_restore = 1) \n" +
-//						"begin \n" +
-//						"    set compatibility_mode on\n" +
-//						"end \n" +
-//						"\n";
-//				}
 
 				/*
 				 * Retrieve the spinlocks. There are three spinlock counters collected by dbcc monitor:
-				 *	- spinlock_p_0 -> Spinlock "grabs" as in attempted grabs for the spinlock - includes waits
-				 *	- spinlock_w_0 -> Spinlock waits - usually a good sign of contention
-				 *	- spinlock_s_0 -> Spinlock spins - this is the CPU spins that drives up CPU utilization
+				 *	- spinlock_p_0 -> Spinlock "grabs" - as in attempted grabs for the spinlock - includes waits
+				 *	- spinlock_w_0 -> Spinlock "waits" - usually a good sign of contention
+				 *	- spinlock_s_0 -> Spinlock "spins" - this is the CPU spins that drives up CPU utilization
 				 *	                  The higher the spin count, the more CPU usage and the more serious
 				 *	                  the performance impact of the spinlock on other processes not waiting
 				 */
 				String sqlCreateTmpTabCache = 
 					"\n " +
+					"/*------ temp table to hold 'cache names' and other 'named' stuff -------*/ \n" +
 					"create table #spin_names     \n " +
 					"(                            \n " +
 					"  spin_name  varchar(50),    \n " +
@@ -4835,18 +4829,47 @@ extends Thread
 					"\n" +
 					"/*------ SET start_id -------*/ \n" +
 					"update #spin_names \n" +
-					"   set start_id = (select min(M.field_id) \n" +
-					"                   from master..sysmonitors M\n" +
-					"                   where #spin_names.spin_name = M.field_name) \n" +
+					"   set start_id = isnull((select min(M.field_id) \n" +
+					"                          from master..sysmonitors M\n" +
+					"                          where #spin_names.spin_name = M.field_name) \n" +
+					"                  ,start_id) \n" +
 					"\n";
 
-				String sqlDropTmpTabCache = "\n drop table #spin_names \n";
+				String sqlDropTmpTabCache = 
+					"\n" +
+					"drop table #spin_names \n";
 
-				String sqlSampleSpins = 
+
+				String instanceid = ""; // If cluster, we need to use column 'instanceid' as well
+				if (isClusterEnabled()) 
+					instanceid = ", instanceid";
+
+				String sqlCreateTmpSysmonitors = 
+					"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
+					"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' \n" +
+					"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' \n" +
+					"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' \n";
+				if (aseVersion >= 15700)
+					sqlCreateTmpSysmonitors =
+						"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
+						"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' \n" +
+						"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' \n" +
+						"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' \n";
+
+				String sqlDropTmpTabPWS   = 
+					"\n" +
+					"drop table #sysmonitorsP \n"+
+					"drop table #sysmonitorsW \n" +
+					"drop table #sysmonitorsS \n";
+				
+				String sqlSampleSpins =
+					"/*------ SAMPLE THE monitors to master..sysmonitors -------*/ \n" +
 					"DBCC monitor('sample', 'all',        'on') \n" +
 					"DBCC monitor('sample', 'spinlock_s', 'on') \n" +
 					"\n" +
-//					compatibilityModeCheck +
+					sqlCreateTmpSysmonitors +
+					" \n" +
+					"/*------ get data: for all spinlocks -------*/ \n" +
 					"SELECT \n" +
 					"  type         = \n" +
 					"    CASE \n" +
@@ -4859,9 +4882,8 @@ extends Thread
 					"                                           THEN convert(varchar(20), 'CACHE') \n" +
 					"      ELSE convert(varchar(20), 'OTHER')  \n" +
 					"    END, \n" +
-//					"  type         = convert(varchar(20), 'Other'), \n" +
 					(isClusterEnabled() ? "P.instanceid, \n" : "") +
-					"  name         = convert(varchar(50), P.field_name), \n" +
+					"  spinName     = convert(varchar(50), P.field_name), \n" +
 					"  instances    = count(P.field_id), \n" +
 					"  grabs        = sum(convert("+datatype+",P.value)), \n" +
 					"  waits        = sum(convert("+datatype+",W.value)), \n" +
@@ -4869,11 +4891,8 @@ extends Thread
 					"  contention   = convert(numeric(4,1), null), \n" +
 					"  spinsPerWait = convert(numeric(9,1), null), \n" +
 					"  description  = convert(varchar(100), '') \n" +
-					"FROM master..sysmonitors P, master..sysmonitors W, master..sysmonitors S \n" +
-					"WHERE P.group_name = 'spinlock_p_0' \n" +
-					"  AND W.group_name = 'spinlock_w_0' \n" +
-					"  AND S.group_name = 'spinlock_s_0' \n" +
-					"  AND P.field_id = W.field_id \n" +
+					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S \n" +
+					"WHERE P.field_id = W.field_id \n" +
 					"  AND P.field_id = S.field_id \n";
 				if (isClusterEnabled()) 
 				{
@@ -4883,7 +4902,6 @@ extends Thread
 					"GROUP BY P.instanceid, P.field_name \n" +
 					"ORDER BY 3, 2 \n" +
 					optGoalPlan;
-	//				compatibilityModeRestore;
 				}
 				else 
 				{
@@ -4891,7 +4909,6 @@ extends Thread
 					"GROUP BY P.field_name \n" +
 					"ORDER BY 2 \n" +
 					optGoalPlan;
-//					compatibilityModeRestore;
 				}
 
 				//---------------------------------------------
@@ -4899,10 +4916,12 @@ extends Thread
 				// do the calculation on EACH Cache partition or spinlock instance
 				//---------------------------------------------
 				String sqlForCaches =
+					"\n" +
+					"/*------ get data: For some selected spinlocks with multiple instances -------*/ \n" +
 					"SELECT \n" + 
 					"  type         = N.spin_type, \n" +
 					(isClusterEnabled() ? "P.instanceid, \n" : "") +
-					"  name         = convert(varchar(50), convert(varchar(40),P.field_name) + ' # ' + convert(varchar(5), P.field_id-N.start_id)), \n" +
+					"  spinName     = convert(varchar(50), convert(varchar(40),P.field_name) + ' # ' + convert(varchar(5), P.field_id-N.start_id)), \n" +
 					"  instances    = convert(int,1), \n" +
 					"  grabs        = convert("+datatype+",P.value), \n" +
 					"  waits        = convert("+datatype+",W.value), \n" +
@@ -4910,11 +4929,8 @@ extends Thread
 					"  contention   = convert(numeric(4,1), null), \n" +
 					"  spinsPerWait = convert(numeric(9,1), null), \n" +
 					"  description  = N.spin_desc \n" +
-					"FROM master..sysmonitors P, master..sysmonitors W, master..sysmonitors S, #spin_names N \n" +
-					"WHERE P.group_name = 'spinlock_p_0' \n" +
-					"  AND W.group_name = 'spinlock_w_0' \n" +
-					"  AND S.group_name = 'spinlock_s_0' \n" +
-					"  AND P.field_id = W.field_id \n" +
+					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S, #spin_names N \n" +
+					"WHERE P.field_id = W.field_id \n" +
 					"  AND P.field_id = S.field_id \n" +
 				    "  AND P.field_name = N.spin_name \n";
 				if (isClusterEnabled()) 
@@ -4932,7 +4948,7 @@ extends Thread
 					optGoalPlan;
 				}
 
-				setSql(sqlCreateTmpTabCache + sqlSampleSpins + sqlForCaches + sqlDropTmpTabCache);
+				setSql(sqlCreateTmpTabCache + sqlSampleSpins + sqlForCaches + sqlDropTmpTabCache + sqlDropTmpTabPWS);
 
 
 				//---------------------------------------------
@@ -5028,6 +5044,10 @@ extends Thread
 			}
 		};
 
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
+
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
@@ -5096,6 +5116,10 @@ extends Thread
 					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 				}
 
+				String discardSpinlocks = "group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0')";
+				if (aseVersion >= 15700)
+					discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
+
 				String sql =   
 					"SELECT \n" +
 					(isClusterEnabled() ? "instanceid, \n" : "") +
@@ -5105,7 +5129,7 @@ extends Thread
 					"  value, \n" +
 					"  description  = convert(varchar(255), description) \n" +
 					"FROM master..sysmonitors \n" +
-					"WHERE group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0') \n" +
+					"WHERE " + discardSpinlocks + " \n" +
 					"  AND value > 100 \n" +
 					"ORDER BY group_name, field_name" + (isClusterEnabled() ? ", instanceid" : "") + "\n" +
 					optGoalPlan;
@@ -5114,7 +5138,11 @@ extends Thread
 			}
 		};
 
-		tmp.addDependsOnCm("CMspinlockSum"); // CMspinlockSum must have been executed before this cm
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
+
+		tmp.addDependsOnCm(CM_NAME__SPINLOCK_SUM); // CMspinlockSum must have been executed before this cm
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
@@ -5259,7 +5287,11 @@ extends Thread
 		// check if it exists: if not it will be created in super.init(conn)
 		tmp.addDependsOnStoredProc("sybsystemprocs", "sp_asetune_ra_stats", VersionInfo.SP_ASETUNE_RA_STATS_CRDATE, VersionInfo.class, "sp_asetune_ra_stats.sql", AseConnectionUtils.SA_ROLE);
 
-		tmp.addDependsOnCm("CMspinlockSum"); // CMspinlockSum must have been executed before this cm
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
+
+		tmp.addDependsOnCm(CM_NAME__SPINLOCK_SUM); // CMspinlockSum must have been executed before this cm
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
@@ -6045,7 +6077,7 @@ extends Thread
 		tmp = new CountersModel(name, null, 
 				pkList, colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, 
-				false, true) // "CachedKB", "TotalSizeKB" goes UP and DOWN: so wee want negative count values
+				false, true, 600) // "CachedKB", "TotalSizeKB" goes UP and DOWN: so wee want negative count values
 		// OVERRIDE SOME DEFAULT METHODS
 		{
 			private static final long serialVersionUID = 1725558024113511209L;
@@ -6089,9 +6121,14 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
+
 		// If POSTPONE time is not set, set this to 10 minutes (600 sec), because this is HEAVY 
 		if (tmp.getPostponeTime() == 0)
 			tmp.setPostponeTime(600, false);
+
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
 
 		if (AseTune.hasGUI())
 		{
@@ -6740,7 +6777,7 @@ extends Thread
 					"  TotalSizeKB, \n" +
 					"  UsedSizeKB, \n" +
 					"  UnusedSizeKB      = TotalSizeKB - UsedSizeKB, \n" +
-					"  AvgStmntSizeInKB  = UsedSizeKB / NumStatements, \n" +
+					"  AvgStmntSizeInKB  = CASE WHEN NumStatements>0 THEN UsedSizeKB / NumStatements ELSE 0 END, \n" +
 					"  NumStatements, \n" +
 					"  NumStatementsDiff = NumStatements, \n" +
 					"  CacheHitPct       = CASE WHEN NumSearches  >0 THEN convert(numeric(10,1), ((HitCount+0.0)/(NumSearches+0.0))  *100.0 ) ELSE convert(numeric(10,1), 0) END, \n" +
@@ -7090,8 +7127,8 @@ extends Thread
 				String sql = super.getSql();
 				
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean sampleSqlText_chk = (conf == null) ? true : conf.getBooleanProperty("CMstmntCacheDetails.sample.sqlText", true);
-				boolean sampleShowplan_chk = (conf == null) ? true : conf.getBooleanProperty("CMstmntCacheDetails.sample.showplan", true);
+				boolean sampleSqlText_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.sqlText", true);
+				boolean sampleShowplan_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.showplan", true);
 
 				//----- SQL TEXT
 				String hasSqlText = "convert(bit,1)";
@@ -7159,6 +7196,10 @@ extends Thread
 				return "<html><pre>" + str + "</pre></html>";
 			}
 		};
+
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
@@ -7859,11 +7900,11 @@ extends Thread
 
 //				Configuration conf = Configuration.getInstance(Configuration.TEMP);
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean getShowplan       = conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.showplan",       true);
-				boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.monSqltext",     true);
-				boolean getDbccSqltext    = conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.dbccSqltext",    true);
-				boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.procCallStack",  true);
-				boolean getDbccStacktrace = conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.dbccStacktrace", true);
+				boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true);
+				boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true);
+				boolean getDbccSqltext    = conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    true);
+				boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
+				boolean getDbccStacktrace = conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", true);
 
 				// Where are various columns located in the Vector 
 				int pos_WaitEventID        = -1, pos_WaitEventDesc  = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
@@ -7882,9 +7923,9 @@ extends Thread
 //				SamplingCnt prevSample = this.oldSample;
 //				SamplingCnt counters = chosenData;
 
-				MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-				if (mtd == null)
+				if ( ! MonTablesDictionary.hasInstance() )
 					return;
+				MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 
 				if (counters == null)
 					return;
@@ -8159,6 +8200,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
+			final String localName = name;
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long	serialVersionUID	= 1L;
@@ -8178,17 +8220,17 @@ extends Thread
 
 //					Configuration conf = Configuration.getInstance(Configuration.TEMP);
 					Configuration conf = Configuration.getCombinedConfiguration();
-					JCheckBox sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.monSqltext",     true));
-					JCheckBox sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.dbccSqltext",    true));
-					JCheckBox sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.procCallStack",  true));
-					JCheckBox sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.showplan",       true));
-					JCheckBox sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty("CMActiveStatements.sample.dbccStacktrace", true));
+					JCheckBox sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
+					JCheckBox sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    true));
+					JCheckBox sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
+					JCheckBox sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
+					JCheckBox sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", true));
 
-					sampleMonSqltext_chk    .setName("CMActiveStatements.sample.monSqltext");
-					sampleDbccSqltext_chk   .setName("CMActiveStatements.sample.dbccSqltext");
-					sampleProcCallStack_chk .setName("CMActiveStatements.sample.procCallStack");
-					sampleShowplan_chk      .setName("CMActiveStatements.sample.showplan");
-					sampleDbccStacktrace_chk.setName("CMActiveStatements.sample.dbccStacktrace");
+					sampleMonSqltext_chk    .setName(getName()+".sample.monSqltext");
+					sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
+					sampleProcCallStack_chk .setName(getName()+".sample.procCallStack");
+					sampleShowplan_chk      .setName(getName()+".sample.showplan");
+					sampleDbccStacktrace_chk.setName(getName()+".sample.dbccStacktrace");
 					
 					sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
 					sampleDbccSqltext_chk   .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.</html>");
@@ -8206,10 +8248,10 @@ extends Thread
 					{
 						public void actionPerformed(ActionEvent e)
 						{
-//							Configuration conf = Configuration.getInstance(Configuration.TEMP);
-							Configuration conf = Configuration.getCombinedConfiguration();
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (conf == null) return;
-							conf.setProperty("CMActiveStatements.sample.monSqltext", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.monSqltext", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -8217,10 +8259,10 @@ extends Thread
 					{
 						public void actionPerformed(ActionEvent e)
 						{
-//							Configuration conf = Configuration.getInstance(Configuration.TEMP);
-							Configuration conf = Configuration.getCombinedConfiguration();
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (conf == null) return;
-							conf.setProperty("CMActiveStatements.sample.dbccSqltext", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.dbccSqltext", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -8228,10 +8270,10 @@ extends Thread
 					{
 						public void actionPerformed(ActionEvent e)
 						{
-//							Configuration conf = Configuration.getInstance(Configuration.TEMP);
-							Configuration conf = Configuration.getCombinedConfiguration();
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (conf == null) return;
-							conf.setProperty("CMActiveStatements.sample.procCallStack", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.procCallStack", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -8239,10 +8281,10 @@ extends Thread
 					{
 						public void actionPerformed(ActionEvent e)
 						{
-//							Configuration conf = Configuration.getInstance(Configuration.TEMP);
-							Configuration conf = Configuration.getCombinedConfiguration();
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (conf == null) return;
-							conf.setProperty("CMActiveStatements.sample.showplan", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.showplan", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -8250,10 +8292,10 @@ extends Thread
 					{
 						public void actionPerformed(ActionEvent e)
 						{
-//							Configuration conf = Configuration.getInstance(Configuration.TEMP);
-							Configuration conf = Configuration.getCombinedConfiguration();
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (conf == null) return;
-							conf.setProperty("CMActiveStatements.sample.dbccStacktrace", ((JCheckBox)e.getSource()).isSelected());
+							conf.setProperty(localName+".sample.dbccStacktrace", ((JCheckBox)e.getSource()).isSelected());
 							conf.save();
 						}
 					});
@@ -8562,6 +8604,10 @@ extends Thread
 		// check if it exists: if not it will be created in super.init(conn)
 		tmp.addDependsOnStoredProc("sybsystemprocs", "sp_missing_stats", VersionInfo.SP_MISSING_STATS_CRDATE, VersionInfo.class, "sp_missing_stats.sql", AseConnectionUtils.SA_ROLE);
 
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
+
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
@@ -8670,10 +8716,15 @@ extends Thread
 		// check if it exists: if not it will be created in super.init(conn)
 		tmp.addDependsOnStoredProc("sybsystemprocs", "sp_asetune_qp_metrics", VersionInfo.SP_ASETUNE_QP_METRICS_CRDATE, VersionInfo.class, "sp_asetune_qp_metrics.sql", AseConnectionUtils.SA_ROLE);
 
+		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
+		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
+			tmp.setQueryTimeout(30);
+
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
+			final String localName = name;
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), tmp)
 			{
 				private static final long	serialVersionUID	= 1L;
@@ -8691,7 +8742,7 @@ extends Thread
 					String filterStr = "lio_avg > 100 and elap_max > 10";
 					Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 					if (tmpConf != null)
-						filterStr = tmpConf.getProperty(CM_NAME__QP_METRICS+".show.filter", "");
+						filterStr = tmpConf.getProperty(localName+".show.filter", "");
 
 					if ( ! filterStr.trim().equals("") )
 						getCm().setSqlWhere("'show', '"+filterStr+"'");
@@ -8747,7 +8798,7 @@ extends Thread
 							Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 							if (tmpConf != null)
 							{
-								tmpConf.setProperty(CM_NAME__QP_METRICS+".show.filter", filterStr);
+								tmpConf.setProperty(localName+".show.filter", filterStr);
 								tmpConf.save();
 							}
 						}

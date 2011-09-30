@@ -501,7 +501,7 @@ public class MonTablesDictionary
 		// is installmaster fully installed.
 		if (installmasterStatus.equals("incomplete"))
 		{
-			String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";			
+			String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";
 			if (_hasGui)
 				JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
 			_logger.error(msg);
@@ -513,8 +513,18 @@ public class MonTablesDictionary
 			if (aseVersionNum != installmasterVersionNum)
 			{
 				String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+				String msgHtml = 
+					"<html>" +
+					"ASE 'installmaster' script may be of a faulty version. <br>" +
+					"<br>" +
+					"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
+					"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
+					"<br>" +
+					"Do the following on the machine that hosts the ASE:<br>" +
+					"<code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+					"</html>";
 				if (_hasGui)
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
 				_logger.error(msg);
 			}
 		}

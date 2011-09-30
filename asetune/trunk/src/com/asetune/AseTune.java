@@ -51,7 +51,7 @@ public class AseTune
 
 	private static boolean _gui = true;
 //	private static CommandLine _cmdLine = null;
-	
+
 	public AseTune(CommandLine cmd)
 	throws Exception
 	{
@@ -84,7 +84,7 @@ public class AseTune
 				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
 		}
 
-		
+
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
@@ -92,13 +92,13 @@ public class AseTune
 		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "asetune.user.properties");
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "asetune.save.properties");
 		final String ASETUNE_HOME          = System.getProperty("ASETUNE_HOME");
-		
-		String defaultPropsFile     = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + "/" + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + "/" + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + "/" + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+
+		String defaultPropsFile     = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-		String filename = Version.APP_STORE_DIR + "/" + CONFIG_FILE_NAME;
+		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -121,7 +121,7 @@ public class AseTune
 		// CHECK JAVA JVM VERSION
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
-		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
+		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND
 		    && javaVersionInt <  JavaVersion.VERSION_1_6
 		   )
 		{
@@ -156,7 +156,7 @@ public class AseTune
 			Configuration.USER_TEMP,    // First
 			Configuration.USER_CONF,    // second
 			Configuration.SYSTEM_CONF); // Third
-		
+
 		//-------------------------------
 		// LIST CM
 		//-------------------------------
@@ -169,7 +169,7 @@ public class AseTune
 			System.out.println("Here is a list of all available Performance Counters:");
 			System.out.println("Short name           Long Name");
 			System.out.println("-------------------- ------------------------------------------------------");
-			for (Map.Entry<String,String> entry : shortToLongCmMap.entrySet()) 
+			for (Map.Entry<String,String> entry : shortToLongCmMap.entrySet())
 			{
 				String shortName = entry.getKey();
 				String longName  = entry.getValue();
@@ -182,7 +182,7 @@ public class AseTune
 			printTemplate("medium");
 			printTemplate("large");
 			printTemplate("all");
-			
+
 			throw new NormalExitException("Done after -l switch.");
 		}
 
@@ -203,7 +203,7 @@ public class AseTune
 					System.out.println();
 					System.out.println(" Option          Description");
 					System.out.println(" --------------- -------------------------------------------------------------");
-					for (Map.Entry<String,String> entry : Debug.getKnownDebugs().entrySet()) 
+					for (Map.Entry<String,String> entry : Debug.getKnownDebugs().entrySet())
 					{
 						String debugOption = entry.getKey();
 						String description = entry.getValue();
@@ -238,7 +238,7 @@ public class AseTune
 					if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
 						throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
 				}
-				else 
+				else
 				{
 					if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
 						throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
@@ -247,7 +247,7 @@ public class AseTune
 
 			if (cmd.hasOption('u'))	storeConfigProps.setProperty("cmdLine.sshUsername", cmd.getOptionValue('u'));
 			if (cmd.hasOption('p'))	storeConfigProps.setProperty("cmdLine.sshPassword", cmd.getOptionValue('p'));
-			if (cmd.hasOption('s'))	
+			if (cmd.hasOption('s'))
 			{
 				storeConfigProps.setProperty("cmdLine.sshHostname", cmd.getOptionValue('s'));
 				storeConfigProps.setProperty("cmdLine.sshPort", 22);
@@ -280,10 +280,10 @@ public class AseTune
 			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.aseUsername", cmd.getOptionValue('U'));
 			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'));
 			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.aseName",     cmd.getOptionValue('S'));
-	
+
 			if (cmd.hasOption('u'))	storeConfigProps.setProperty("conn.sshUsername", cmd.getOptionValue('u'));
 			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'));
-			if (cmd.hasOption('s'))	
+			if (cmd.hasOption('s'))
 			{
 				storeConfigProps.setProperty("conn.sshHostname", cmd.getOptionValue('s'));
 				storeConfigProps.setProperty("conn.sshPort", 22);
@@ -298,19 +298,19 @@ public class AseTune
 			}
 
 			// -r, --reconfigure: Offline: if monitored ASE is not properly configured, try to configure it.
-			if (cmd.hasOption('r'))	
+			if (cmd.hasOption('r'))
 			{
 				storeConfigProps.setProperty("offline.configuration.fix", true);
 			}
 
 			// -i, --interval: Offline: time between samples.
-			if (cmd.hasOption('i'))	
+			if (cmd.hasOption('i'))
 			{
 				storeConfigProps.setProperty("offline.sampleTime", cmd.getOptionValue('i'));
 			}
 
 			// -f, --finish: Offline: shutdown/stop the no-gui service after # hours.
-			if (cmd.hasOption('f'))	
+			if (cmd.hasOption('f'))
 			{
 				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
 			}
@@ -342,7 +342,7 @@ public class AseTune
 					opt_D = "H2";
 					_logger.info("Command Line Option '-D|--dbtype' was NOT specified, using the default 'H2'.");
 				}
-				
+
 				if (opt_D.equals("H2"))
 				{
 					String jdbcDriver = "org.h2.Driver";
@@ -355,7 +355,7 @@ public class AseTune
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
 					storeConfigProps.setProperty("PersistWriterJdbc.startH2NetworkServer", true);
-		
+
 					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
@@ -374,7 +374,7 @@ public class AseTune
 					if (asePasswd.trim().equalsIgnoreCase("null"))
 						asePasswd = "";
 
-					String urlOptions = 
+					String urlOptions =
 						"?APPLICATIONNAME="+Version.getAppName()+"-Writer" +
 						"&HOSTNAME=" + Version.VERSION_STRING +
 						"&DYNAMIC_PREPARE=true" +
@@ -391,7 +391,7 @@ public class AseTune
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUrl",    jdbcUrl);
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
-		
+
 					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
@@ -412,7 +412,7 @@ public class AseTune
 
 					if ( ! asaDbname.equals("") )
 						asaDbname = "/" + asaDbname;
-						
+
 
 					String jdbcDriver = AseConnectionFactory.getDriver();
 					String jdbcUrl    = "jdbc:sybase:Tds:"+asaHost+":"+asaPort+asaDbname;
@@ -423,7 +423,7 @@ public class AseTune
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUrl",    jdbcUrl);
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
 					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
-		
+
 					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
@@ -435,7 +435,7 @@ public class AseTune
 			}
 		}
 
-		
+
 //		// Check if we are in NO-GUI mode
 //		_gui = System.getProperty("asetune.gui", "true").trim().equalsIgnoreCase("true");
 
@@ -450,7 +450,7 @@ public class AseTune
 		{
 			SplashWindow.close();
 		}
-		
+
 		// Setup HARDCODED, configuration for LOG4J, if not found in config file
 		if (_gui)
 			Logging.init(null, propFile);
@@ -463,16 +463,26 @@ public class AseTune
 		SplashWindow.drawProgress("Initializing.");
 
 		//--------------------------------------------------------------------
-		// Set some SYSTEM properties
+		// BEGIN: Set some SYSTEM properties
 		// - Mainly for H2 database specific settings
 		// - But any system setting could be set here
-		System.setProperty("h2.lobInDatabase", "true"); // H2 database version 1.2.134, can store BLOBS inside the database using this system property
+		//--------------------------------------------------------------------
+		// H2 settings: http://code.google.com/p/h2database/source/browse/trunk/h2/src/main/org/h2/constant/SysProperties.java
+		//--------------------------------------------------------------------
+		System.setProperty("h2.lobInDatabase", "true");  // H2 database version 1.2.134, can store BLOBS inside the database using this system property
 
+		//System.setProperty("h2.databaseToUpper", false); // this wont work after release X, needs to be in URL, damit
+		//System.setProperty("h2.maxCompactTime", 1000);   // this wont work after release X, needs to be in URL, damit
+		//--------------------------------------------------------------------
+		// Other setting below here
+		//--------------------------------------------------------------------
+		// END: Set some SYSTEM properties
+		//--------------------------------------------------------------------
 
 		// Check for System/localStored proxy settings
 		String httpProxyHost = System.getProperty("http.proxyHost");
 		String httpProxyPort = System.getProperty("http.proxyPort");
-		
+
 		if (httpProxyHost == null)
 			httpProxyHost = appSaveProps.getProperty("http.proxyHost");
 		if (httpProxyPort == null)
@@ -499,8 +509,8 @@ public class AseTune
 			// Calling this would make GuiLogAppender, to register itself in log4j.
 			GuiLogAppender.getInstance();
 
-			// How long should a ToolTip be displayed... 
-			// this is especially good for WaitEventID tooltip help, which could be much text to read. 
+			// How long should a ToolTip be displayed...
+			// this is especially good for WaitEventID tooltip help, which could be much text to read.
 //			ToolTipManager.sharedInstance().setDismissDelay(120*1000); // 2 minutes
 		}
 
@@ -514,7 +524,7 @@ public class AseTune
 		//	System.out.println("Appender.getName="+a.getName());
 		//}
 
-		
+
 		SplashWindow.drawProgress("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
 
 		// Print out the memory configuration
@@ -538,14 +548,14 @@ public class AseTune
 		_logger.info("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
 		_logger.info("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
 		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
-		
+
 		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
 		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
 		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
 		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
 		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
 		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
-		
+
 		_logger.info("System configuration file is '"+propFile+"'.");
 		_logger.info("User configuration file is '"+userPropFile+"'.");
 		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
@@ -580,7 +590,7 @@ public class AseTune
 				Exception ex = new Exception(msg);
 				if (_gui)
 				{
-					SwingUtils.showErrorMessage(Version.getAppName()+" - This DEVELOPMENT VERSION has expired", 
+					SwingUtils.showErrorMessage(Version.getAppName()+" - This DEVELOPMENT VERSION has expired",
 							"This DEVELOPMENT VERSION has expired.\n" +
 							"\n" +
 							"The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. \n" +
@@ -598,7 +608,7 @@ public class AseTune
 				}
 				else
 				{
-					// NO-GUI mode is NOT allowed to start if it's a OLD DEVELOPMENT Version 
+					// NO-GUI mode is NOT allowed to start if it's a OLD DEVELOPMENT Version
 					throw ex;
 				}
 			}
@@ -622,8 +632,8 @@ public class AseTune
 		else
 		{
 			_logger.info("Starting "+Version.getAppName()+" in GUI mode.");
-			
-			// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time 
+
+			// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time
 			// consuming operations on the EDT (Event Dispatch Thread)
 			// A WARN message will be written to the error log starting with 'Swing EDT-DEBUG - Hang: '
 			if (Debug.hasDebug(DebugOptions.EDT_HANG))
@@ -633,9 +643,9 @@ public class AseTune
 			}
 
 			// Construct a starter that will be passed to the Swing Event Dispatcher Thread
-	        Runnable runGui = new Runnable() 
+	        Runnable runGui = new Runnable()
 			{
-				public void run() 
+				public void run()
 				{
 					try
 					{
@@ -645,7 +655,7 @@ public class AseTune
 //						UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel"); // Windows
 //						UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel"); // GNOME - Linux
 //						UIManager.setLookAndFeel("com.sun.java.swing.plaf.motif.MotifLookAndFeel"); // MOTIF
-						
+
 						_logger.info("Using Look And Feel named '"+UIManager.getLookAndFeel().getName()+"', classname='"+UIManager.getLookAndFeel().getClass().getName()+"', toString='"+UIManager.getLookAndFeel()+"'.");
 					}
 					catch (Exception e)
@@ -739,7 +749,7 @@ public class AseTune
 //
 //		HelpFormatter formatter = new HelpFormatter();
 //
-//		formatter.printHelp(pw, 80, "asetune", "options:", options, 2, 4, 
+//		formatter.printHelp(pw, 80, "asetune", "options:", options, 2, 4,
 //				null, // footer
 //				true);
 //
@@ -817,7 +827,7 @@ public class AseTune
 	/**
 	 * Build the options parser. Has to be synchronized because of the way
 	 * Options are constructed.
-	 * 
+	 *
 	 * @return an options parser.
 	 */
 	private static synchronized Options buildCommandLineOptions()
@@ -871,15 +881,15 @@ public class AseTune
 	throws ParseException
 	{
 		// create the command line parser
-		CommandLineParser parser = new PosixParser();	
-	
+		CommandLineParser parser = new PosixParser();
+
 		// parse the command line arguments
 		CommandLine cmd = parser.parse( options, args );
 
 		// Validate any mandatory options or dependencies of switches
-		
+
 		// validate that -N has been specified if -noGui
-//		if( cmd.hasOption( "noGui" ) ) 
+//		if( cmd.hasOption( "noGui" ) )
 //		{
 //			if ( ! cmd.hasOption("noGuiConfig") )
 //				throw new ParseException("You have specified -noGui but not any -noGuiConfig option.");
@@ -930,7 +940,7 @@ public class AseTune
 			String name;
 			name = CounterSetTemplates.getShortName(cmName);
 			String shortName = (name == null) ? cmName : name;
-			
+
 			name = CounterSetTemplates.getLongName(cmName);
 			String longName = (name == null) ? cmName : name;
 

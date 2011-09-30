@@ -3,7 +3,7 @@
 # NOTE: This one needs more work...
 #-----------------------------------------------------------------------
 
-SYBASE=${SYBASE:-/opt/sybase}
+#SYBASE=${SYBASE:-/opt/sybase}
 ASETUNE_HOME=${ASETUNE_HOME:-./}
 
 export ASETUNE_SAVE_DIR=$ASETUNE_HOME/data
@@ -11,7 +11,7 @@ export JCONNECT_HOME=$SYBASE/jConnect-6_0
 
 export JAVA_HOME=${JAVA_HOME:-$SYBASE_JRE6}
 
-export JVM_PARAMS=-Xmx500m
+export JVM_PARAMS=-Xmx1024m
 #export JVM_PARAMS=$JVM_PARAMS -Dhttp.proxyHost=www-proxy.ericsson.se -Dhttp.proxyPort=8080
 #export JVM_PARAMS=$JVM_PARAMS -Dcom.sun.management.jmxremote
 #export JVM_PARAMS=$JVM_PARAMS -Djava.net.useSystemProxies=true

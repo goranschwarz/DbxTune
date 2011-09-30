@@ -702,6 +702,11 @@ public class CheckForUpdates
 			return;
 		}
 
+		if ( ! MonTablesDictionary.hasInstance() )
+		{
+			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
+			return;
+		}
 		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 		if (mtd == null)
 		{
@@ -1070,8 +1075,14 @@ public class CheckForUpdates
 	
 	
 	/**
+	 * Note: Since this is synchronized, make sure that no _logger.{warn|error} is done inside the 
+	 * synchronized block, because then we will have a deadlock.
+	 * <p>
+	 * If we don't synchronize, then error/warn messages that are issued rapidly will be discarded, 
+	 * this due to _sendLogInfoCount is "global" and will be incremented... at least that's what I think.<br>
+	 * Another way of doing this would be to have a synchronized List where messages are pushed to.
 	 */
-	public static void sendLogInfoNoBlock(final Log4jLogRecord record)
+	public static synchronized void sendLogInfoNoBlock(final Log4jLogRecord record)
 	{
 		if (_checkId < 0)
 		{
@@ -1093,6 +1104,20 @@ public class CheckForUpdates
 			return;
 		}
 
+		// DISCARD VARIOUS MESSAGES
+		String msg = record.getMessage();
+		if (msg != null)
+		{
+			// Filter out following messages:
+			//_logger.warn("When trying to initialize Counters Models ("+getName()+") The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
+			//_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
+			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersionStr()+", I need atleast ASE Version "+getDependsOnVersionStr()+" for that.");
+			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Cluster Edition Version "+getServerVersionStr()+", I need atleast ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
+			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+			if (msg.startsWith("When trying to initialize Counters Model")) 
+				return;
+		}
+		
 		if (_sendLogInfoCount > _sendLogInfoThreshold)
 		{
 			_logger.debug("Send 'LOG info' has exceed sendLogInfoThreshold="+_sendLogInfoThreshold+", sendLogInfoCount="+_sendLogInfoCount);
@@ -1145,10 +1170,10 @@ public class CheckForUpdates
 		}
 
 		String srvVersion = "not-connected";
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-		if (mtd != null)
+		if ( MonTablesDictionary.hasInstance() )
 		{
-			srvVersion = mtd.aseVersionNum + "";
+			if ( MonTablesDictionary.getInstance().isInitialized() )
+				srvVersion = MonTablesDictionary.getInstance().aseVersionNum + "";
 		}
 
 		// COMPOSE: parameters to send to HTTP server
@@ -1266,8 +1291,11 @@ public class CheckForUpdates
 					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(msg);
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(msg);
 					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info(msg);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn(msg);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(msg);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn(msg);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(msg);
+					// downgrade WAR and ERROR to INFO, this so it wont open the log window
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info(msg);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info(msg);
 					else _logger.info("Unhandled loglevel("+logLevel+"): " + msg);
 				}
 			});

@@ -106,7 +106,8 @@ implements Cloneable
 	private List<String>       _pkCols            = null;
 	private List<String>       _pkColsOrigin      = null;
 
-	private int                _sqlQueryTimeout   = 10;
+	public  static final int   DEFAULT_sqlQueryTimeout = 10;
+	private int                _sqlQueryTimeout   = DEFAULT_sqlQueryTimeout;
 
 	private String[]           _monTablesInQuery     = null;
 	
@@ -720,6 +721,21 @@ implements Cloneable
 	public void setQueryTimeout(int queryTimeout)
 	{
 		_sqlQueryTimeout = queryTimeout;
+	}
+	/**  */
+	public void setQueryTimeout(int queryTimeout, boolean saveProps) 
+	{ 
+		// No need to continue if we are not changing it
+		if (getQueryTimeout() == queryTimeout)
+			return;
+
+		setQueryTimeout(queryTimeout);
+		
+		if (saveProps)
+			saveProps();
+
+		if (getTabPanel() != null)
+			getTabPanel().setQueryTimeout(queryTimeout);
 	}
 
 	/**
@@ -2081,7 +2097,7 @@ implements Cloneable
 			String reconfigOptionStr = " or using the nogui mode: --reconfigure switch";
 			if (reConfigValue == null)
 				reconfigOptionStr = "";
-			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
+			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
 
 			String problemDesc = getProblemDesc();
 			if (problemDesc == null)
@@ -2172,7 +2188,7 @@ implements Cloneable
 		else
 		{
 			_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersionStr()+", I need atleast ASE Version "+getDependsOnVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersionStr()+", I need at least ASE Version "+getDependsOnVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Server Version is above " + getDependsOnVersionStr());
 
@@ -2199,7 +2215,7 @@ implements Cloneable
 		else
 		{
 			_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Cluster Edition Version "+getServerVersionStr()+", I need atleast ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Cluster Edition Version "+getServerVersionStr()+", I need at least ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
 
@@ -2265,9 +2281,10 @@ implements Cloneable
 			}
 			else
 			{
-				AseSqlScript script = new AseSqlScript(conn);
+				AseSqlScript script = null;
 				try
 				{
+					script = new AseSqlScript(conn, 30); // 30 sec timeout
 					_logger.info("Creating procedure '"+procName+"' in '"+dbname+"'.");
 					script.setMsgPrefix(scriptName+": ");
 					script.execute(scriptLocation, scriptName);
@@ -2277,7 +2294,11 @@ implements Cloneable
 				{
 					_logger.error("Problem loading the script '"+scriptName+"'.", e);
 				}
-				script.close();
+				finally
+				{
+					if (script != null)
+						script.close();
+				}
 			}
 
 			if ( ! hasProc )
@@ -4051,6 +4072,7 @@ implements Cloneable
 			tempProps.setProperty(base + PROP_persistCounters_rate,       isPersistCountersRateEnabled());
 
 			tempProps.setProperty(base + PROP_postponeTime,               getPostponeTime());
+			tempProps.setProperty(base + PROP_queryTimeout,               getQueryTimeout());
 
 			tempProps.save();
 		}
@@ -4090,7 +4112,6 @@ implements Cloneable
 			_inLoadProps = false;
 		}
 	}
-	public static final String PROP_queryTimeout               = "queryTimeout";
 
 	public static final String PROP_filterAllZeroDiffCounters  = "filterAllZeroDiffCounters";
 	public static final String PROP_sampleDataIsPaused         = "sampleDataIsPaused";
@@ -4101,6 +4122,7 @@ implements Cloneable
 	public static final String PROP_persistCounters_diff       = "persistCounters.diff";
 	public static final String PROP_persistCounters_rate       = "persistCounters.rate";
 	public static final String PROP_postponeTime               = "postponeTime";
+	public static final String PROP_queryTimeout               = "queryTimeout";
 
 
 	

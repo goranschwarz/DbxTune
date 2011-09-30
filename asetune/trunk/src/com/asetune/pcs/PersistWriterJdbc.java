@@ -35,6 +35,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -430,6 +431,24 @@ public class PersistWriterJdbc
 				setSessionStarted(false);
 			}
 
+			// IF H2, add hard coded stuff to URL
+			if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
+			{
+				// Database short names are converted to uppercase for the DATABASE() function, 
+				// and in the CATALOG column of all database meta data methods. 
+				// Setting this to "false" is experimental. 
+				// When set to false, all identifier names (table names, column names) are case 
+				// sensitive (except aggregate, built-in functions, data types, and keywords).
+//				if (localJdbcUrl.indexOf("DATABASE_TO_UPPER") > 0) // default to true
+//					 do something;
+
+				// The maximum time in milliseconds used to compact a database when closing.
+//				if (localJdbcUrl.indexOf("MAX_COMPACT_TIME") > 0) // default to 200ms
+//					 do something;
+
+//				new ConnectionInfo(localJdbcUrl);
+			}
+
 			_conn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
 
 			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened, using driver '"+_jdbcDriver+"'.");
@@ -502,6 +521,24 @@ public class PersistWriterJdbc
 			{
 				_logger.debug("Connected to ASE, do some specific settings 'set arithabort numeric_truncation off'.");
 				dbExec("set arithabort numeric_truncation off ");
+				
+				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
+				if (aseVersion < 15000)
+				{
+					String msg = "The PCS storage is ASE Version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
+					_logger.error(msg);
+					_conn.close();
+					_conn = null;
+					
+					throw new Exception(msg);
+					//return null;
+				}
+
+				int asePageSize = AseConnectionUtils.getAsePageSize(_conn);
+				if (asePageSize < 4096)
+				{
+					_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
+				}
 			}
 		}
 		catch (SQLException ev)
@@ -827,6 +864,10 @@ public class PersistWriterJdbc
 				{
 					String val = conf.getPropertyRaw(key);
 	
+					// Skip some key values... just because they are probably to long...
+					if (key.endsWith(".gui.column.header.props"))
+						continue;
+
 					insertSessionParam(ts, "temp.config", key, val);
 				}
 			}

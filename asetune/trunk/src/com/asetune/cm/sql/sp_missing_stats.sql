@@ -1,3 +1,10 @@
+/*
+** Started to use Rob Verschoor function/procedure for this
+** My original code is still in here, but as comments
+**
+** Rob Verschoor article/code can be found at:
+** http://blogs.sybase.com/database/2010/05/making-good-on-my-exercise-for-the-reader/
+*/
 use sybsystemprocs
 go
 set nocount on
@@ -41,45 +48,116 @@ go
 -------------------------------------------------------------
 -- Function: decodeColIdArray
 -------------------------------------------------------------
-if (select object_id('decodeColIdArray')) is not null
+--if (select object_id('decodeColIdArray')) is not null
+--begin
+--	drop function decodeColIdArray
+--	print "Dropping function decodeColIdArray"
+--end
+go
+
+--declare @dbname varchar(255)
+--select @dbname = db_name()
+--print "Creating function '%1!.%2!.%3!'.", @dbname, "dbo", "decodeColIdArray"
+go
+
+--create function decodeColIdArray(@colIdArray varbinary(100), @tabId int, @dbId int)
+--returns varchar(1024)
+--as
+--begin
+--	declare @outStr varchar(1024)
+--
+--	if (@dbId is null)
+--		select @dbId = db_id()
+--
+--	while(@colIdArray != null)
+--	begin
+--		-- Get the colname
+--		select  @outStr = @outStr + col_name(@tabId, convert(smallint, left(@colIdArray, 2)), @dbId)
+--
+--		-- get NEXT colId from the array, if empty get out of there
+--		select @colIdArray = substring(@colIdArray, 3, 255)
+--		if (@colIdArray = null)
+--			break
+--
+--		-- Append ", "
+--		select  @outStr = @outStr + ", "
+--	end
+--	return @outStr
+--end
+go
+
+--grant exec on decodeColIdArray to public
+go
+
+
+
+
+-------------------------------------------------------------
+-- Function: sp_decode_colidarray
+-------------------------------------------------------------
+create table #ixcols
+(
+	id int,
+	ixname longsysname,
+	colname longsysname,
+	n int)
+go
+
+if (select object_id('sp_decode_colidarray')) is not null
 begin
-	drop function decodeColIdArray
-	print "Dropping function decodeColIdArray"
+	drop function sp_decode_colidarray
+	print "Dropping function sp_decode_colidarray"
 end
 go
 
 declare @dbname varchar(255)
 select @dbname = db_name()
-print "Creating function '%1!.%2!.%3!'.", @dbname, "dbo", "decodeColIdArray"
+print "Creating function '%1!.%2!.%3!'.", @dbname, "dbo", "sp_decode_colidarray"
 go
 
-create function decodeColIdArray(@colIdArray varbinary(100), @tabId int, @dbId int)
-returns varchar(1024)
+create function sp_decode_colidarray(@colidarray varbinary(100), @id int)
+	returns varchar (1500)
 as
 begin
-	declare @outStr varchar(1024)
+	declare @s varchar (1500) -- assuming this is long enough for the result
+	declare @len int, @colid int, @colname longsysname
+	declare @ixname longsysname, @n int, @ixcol longsysname
 
-	if (@dbId is null)
-		select @dbId = db_id()
-
-	while(@colIdArray != null)
+	if datalength(@colidarray)%2 = 1
 	begin
-		-- Get the colname
-		select  @outStr = @outStr + col_name(@tabId, convert(smallint, left(@colIdArray, 2)), @dbId)
-
-		-- get NEXT colId from the array, if empty get out of there
-		select @colIdArray = substring(@colIdArray, 3, 255)
-		if (@colIdArray = null)
-			break
-
-		-- Append ", "
-		select  @outStr = @outStr + ", "
+	    set @colidarray = @colidarray + 0x00
 	end
-	return @outStr
+
+	set @len = 1
+	while @len < datalength(@colidarray)
+	begin
+		set @colid = convert(smallint, substring(@colidarray, @len, 2))
+		set @colname = col_name(@id, @colid)
+
+		-- determine which index this column is part of
+		select top 1 @n = n, @ixname = ixname
+		from #ixcols
+		where id = @id
+		and colname = @colname
+		order by id, colname, n
+
+		if @@rowcount = 0
+		   set @ixcol = "not indexed!"
+		else
+		   set @ixcol = @ixname + ':col#' + convert(varchar,@n)
+
+		set @s = @s + case @s when NULL then NULL else ', ' end
+		     + @colname + '(' + @ixcol + ')'
+		set @len = @len + 2
+	end
+	return @s
 end
 go
 
-grant exec on decodeColIdArray to public
+grant exec on sp_decode_colidarray to public
+go
+
+drop table #ixcols
 go
 
 
@@ -100,9 +178,78 @@ select @dbname = db_name()
 print "Creating procedure '%1!.%2!.%3!'.", @dbname, "dbo", "sp_missing_stats_in_db"
 go
 
-create procedure sp_missing_stats_in_db
+--create procedure sp_missing_stats_in_db
+--as
+--begin
+--	declare @dbid int
+--	select @dbid = db_id()
+--
+--	select	
+--		DBName          = db_name(), 
+--		ObjectName      = object_name(s.id, @dbid), 
+--		LockScheme      = lockscheme(s.id, @dbid),
+--		colList         = sybsystemprocs.dbo.decodeColIdArray(s.colidarray, s.id, @dbid), 
+--		miss_counter    = convert(int, c0), 
+--		tableRowCount   = row_count(@dbid, s.id),
+--		tableDataPages  = data_pages(@dbid, s.id),
+--		rowsPerDataPage = case
+--		                    when data_pages(@dbid, s.id) = 0 then convert(numeric(16,1), 0)
+--		                    else convert(numeric(16,1), row_count(@dbid, s.id) / data_pages(@dbid, s.id))
+--		                  end,
+--		s.partitionid, 
+--		s.indid, 
+--		datachange      = datachange(o.name, null, null),
+--		s.moddate
+--	from sysstatistics s, sysobjects o
+--	where s.id = o.id
+--	  and o.type = 'U'
+----	  and o.type in('U', 'S')
+--	  and not (o.sysstat2 & 1024 = 1024 or o.sysstat2 & 2048 = 2048)
+--	  and s.formatid = 110
+--end
+go
+
+create proc sp_missing_stats_in_db
+(
+	@tabname varchar (100) = '%'
+)
 as
 begin
+	declare @n int
+
+	select top 31 n=identity(int) into #n from syscolumns
+
+	-- Get a list of all indexed columns for the qualifiying table(s);
+	-- this list will be used inside the SQL function 'sp_decode_colidarray'
+	-- Note how a Cartesian product is deliberately used for table #n
+	select
+		id=o.id,
+		ixname=i.name,
+		colname=index_col(o.name, i.indid, #n.n, o.uid),
+		#n.n
+	into #ixcols
+	from sysindexes i, #n, sysstatistics s, sysobjects o
+	where s.id = o.id
+	and o.id = i.id
+	and o.type = "U"
+	and i.indid > 0 and i.indid < 255   /* this line updated June 23rd */
+
+--	select
+--		DBname     = db_name(),
+--		Tabname    = object_name(s.id),
+--		NrRows     = row_count(db_id(), s.id),
+--		ColumnList = dbo.sp_decode_colidarray(colidarray, s.id),
+--		Captured   = moddate,
+--		Occurs     = convert (smallint,c0)
+--	into #missing
+--	from sysstatistics s, sysobjects o
+--	where s.id = o.id
+--	and o.name like @tabname
+--	and formatid = 110
+--	and datalength(colidarray) > 0
+--
+--	exec sp_autoformat #missing,@orderby='order by 2'
+
 	declare @dbid int
 	select @dbid = db_id()
 
@@ -110,7 +257,8 @@ begin
 		DBName          = db_name(), 
 		ObjectName      = object_name(s.id, @dbid), 
 		LockScheme      = lockscheme(s.id, @dbid),
-		colList         = sybsystemprocs.dbo.decodeColIdArray(s.colidarray, s.id, @dbid), 
+--		colList         = sybsystemprocs.dbo.decodeColIdArray(s.colidarray, s.id, @dbid), 
+		colList         = dbo.sp_decode_colidarray(s.colidarray, s.id),
 		miss_counter    = convert(int, c0), 
 		tableRowCount   = row_count(@dbid, s.id),
 		tableDataPages  = data_pages(@dbid, s.id),
@@ -121,13 +269,16 @@ begin
 		s.partitionid, 
 		s.indid, 
 		datachange      = datachange(o.name, null, null),
-		s.moddate
+		updStatDate     = isnull((select convert(varchar(30),s2.moddate,109) from sysstatistics s2 where s2.id = s.id and s2.formatid = 100),'not found') -- formatid = 100 seems to be 'update statistics info'
 	from sysstatistics s, sysobjects o
 	where s.id = o.id
+	  and o.name like @tabname
 	  and o.type = 'U'
 --	  and o.type in('U', 'S')
-	  and not (o.sysstat2 & 1024 = 1024 or o.sysstat2 & 2048 = 2048)
+	  and not (o.sysstat2 & 1024 = 1024 or o.sysstat2 & 2048 = 2048) -- proxy tables
 	  and s.formatid = 110
+	  and datalength(s.colidarray) > 0
+
 end
 go
 

@@ -320,6 +320,7 @@ extends AbstractTableModel
 		try
 		{
 			Statement stmt = conn.createStatement();
+			stmt.setQueryTimeout(10);
 
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )

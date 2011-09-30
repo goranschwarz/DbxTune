@@ -124,6 +124,7 @@ implements ActionListener, ConnectionProgressCallback
 
 	private static final String EXTRA_TASK_CHECK_MONITOR_CONFIG   = "Check Monitor Configuration";
 	private static final String EXTRA_TASK_INIT_MONITOR_DICT      = "Init Monitor Dictionary";
+	private static final String EXTRA_TASK_INIT_ASE_CONFIG_DICT   = "Init ASE Configuration Dictionary";
 	private static final String EXTRA_TASK_INIT_COUNTER_COLLECTOR = "Init Counter Collector";
 	private boolean      _doExtraTasks     = true;
 
@@ -207,7 +208,11 @@ implements ActionListener, ConnectionProgressCallback
 		//	GetCounters.initExtraMonTablesDictionary();
 
 		// Extra tasks, that happens after the connection.
-		String[] extraTasks = {EXTRA_TASK_CHECK_MONITOR_CONFIG, EXTRA_TASK_INIT_MONITOR_DICT, EXTRA_TASK_INIT_COUNTER_COLLECTOR};
+		String[] extraTasks = {
+			EXTRA_TASK_CHECK_MONITOR_CONFIG, 
+			EXTRA_TASK_INIT_MONITOR_DICT, 
+			EXTRA_TASK_INIT_ASE_CONFIG_DICT, 
+			EXTRA_TASK_INIT_COUNTER_COLLECTOR};
 		if ( ! _doExtraTasks )
 			extraTasks = null;
 
@@ -870,6 +875,7 @@ implements ActionListener, ConnectionProgressCallback
 								Exception ex = new Exception("The system is not properly configured for monitoring.");
 								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+								setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 								throw ex;
 							}
@@ -882,13 +888,19 @@ implements ActionListener, ConnectionProgressCallback
 							{
 								Exception ex = new Exception("Connecting to a different ASE Version, This is NOT supported now...");
 								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
 								throw ex;
 							}
 							MonTablesDictionary.getInstance().initialize(conn, true);
 							GetCounters.initExtraMonTablesDictionary();
+
+							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 								
-							// initialize ASE Config Dictionary (NOT PART OF THE TASK LIST, NO GUI RESPONCE)
+							//-------------------------
+							//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_ASE_CONFIG_DICT)
+							//-------------------------
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
 							AseConfig aseCfg = AseConfig.getInstance();
 							if ( ! aseCfg.isInitialized() )
 							{
@@ -904,7 +916,7 @@ implements ActionListener, ConnectionProgressCallback
 							// initialize ASE Config Text Dictionary
 							AseConfigText.initializeAll(conn, true, false, null);
 
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 
 							//-------------------------
 							//---- DO 'Init Counter Collector' (EXTRA_TASK_INIT_COUNTER_COLLECTOR)

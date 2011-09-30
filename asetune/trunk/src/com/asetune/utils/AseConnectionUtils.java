@@ -532,6 +532,8 @@ public class AseConnectionUtils
 				name = rs.getString(1);
 				name = (name == null) ? "" : name.trim();
 			}
+			rs.close();
+			stmt.close();
 
 			return name;
 		}
@@ -572,12 +574,50 @@ public class AseConnectionUtils
 				else
 					hostname = host;
 			}
+			rs.close();
+			stmt.close();
 
 			return hostname;
 		}
 		catch (SQLException e)
 		{
 			_logger.debug("When getting asehostname(), Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	/**
+	 * Get the @@maxpagesize from the ASE server
+	 * 
+	 * @param conn
+	 * @return @@maxpagesize from the ASE, or -1 on problems, it's delivered in bytes 2048, 4096, 8192 or 16384
+	 */
+	public static int getAsePageSize(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			int pgsize = UNKNOWN;
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select @@maxpagesize");
+			while (rs.next())
+			{
+				pgsize = rs.getInt(1);
+			}
+			rs.close();
+			stmt.close();
+
+			return pgsize;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting @@maxpagesize, Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -861,14 +901,14 @@ public class AseConnectionUtils
 							int start = aseEsdStr.indexOf("ESD#");
 							if (start >= 0)
 								start += "ESD#".length();
-							int end = aseEsdStr.indexOf(" ", start);
-							if (end == -1) end = aseEsdStr.indexOf(".", start);
-							if (end == -1) end = aseEsdStr.indexOf(",", start);
-							if (end == -1) end = aseEsdStr.indexOf(":", start);
-							if (end == -1) end = aseEsdStr.indexOf(";", start);
-							if (end == -1) end = aseEsdStr.indexOf("-", start);
-							if (end == -1) end = aseEsdStr.indexOf("_", start);
-							if (end == -1) end = aseEsdStr.length();
+
+							// set end to first NON digit (or end of string)
+							int end = start;
+							for (; end<aseEsdStr.length(); end++)
+							{
+								if ( ! Character.isDigit(aseEsdStr.charAt(end)) )
+									break;
+							}
 
 							if (start != -1)
 							{
@@ -1170,6 +1210,8 @@ public class AseConnectionUtils
 				// Try to grant access to current user
 				if (has_sa_role)
 				{
+					_logger.info("User '"+user+"' has NOT got role 'mon_role', but since this users do have 'sa_role', I will automatically try to grant 'mon_role' to the user '"+user+"'.");
+
 					String sql = "sp_role 'grant', 'mon_role', '"+user+"'";
 					stmt.execute(sql);
 					_logger.info("Executed: "+sql);
@@ -1195,8 +1237,20 @@ public class AseConnectionUtils
 					_logger.error(msg);
 					if (gui)
 					{
+						String msgHtml = 
+							"<html>" +
+							"You need 'mon_role' to access monitoring tables<br>" +
+							"<br>" +
+							"Have your system administrator grant 'mon_role' to the login '"+user+"'.<br>" +
+							"<br>" +
+							"This can be done with the following command:<br>" +
+							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+							"<code>1> sp_role 'grant', 'mon_role', '"+user+"'</code><br>" +
+							"<code>2> go</code><br>" +
+							"</html>";
+
 						SwingUtils.showErrorMessage(parent, "Problems when checking 'Monitor Role'", 
-								msg, null);
+								msgHtml, null);
 					}
 					return false;
 				}
@@ -1206,6 +1260,8 @@ public class AseConnectionUtils
 				// Try to grant access to current user
 				if (has_sa_role)
 				{
+					_logger.info("User '"+user+"' has NOT got role 'sybase_ts_role', but since this users do have 'sa_role', I will automatically try to grant 'sybase_ts_role' to the user '"+user+"'.");
+
 					String sql = "sp_role 'grant', 'sybase_ts_role', '"+user+"'";
 					stmt.execute(sql);
 					_logger.info("Executed: "+sql);
@@ -1227,7 +1283,7 @@ public class AseConnectionUtils
 				// If mon_role was still unsuccessfull
 				if (!has_sybase_ts_role)
 				{
-					String msg = "You may need 'sybase_ts_role' to access monitoring tables";
+					String msg = "You may need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.";
 					_logger.warn(msg);
 //					if (gui)
 //					{
@@ -1249,11 +1305,30 @@ public class AseConnectionUtils
 			{
 				if (rs.getInt(1) == 0)
 				{
-					String msg = "Monitoring tables must be installed ( execute '$SYBASE/scripts/installmontables' )";
+					String scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmontables";
+					if (aseVersionNum >= 15000)
+						scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
+
+					String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
 					_logger.error(msg);
 					if (gui)
 					{
-						SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check",	msg, null);
+						String msgHtml = 
+							"<html>" +
+							"ASE Monitoring tables hasn't been installed. <br>" +
+							"<br>" +
+							"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"'. <br>" +
+							"Please apply '"+scriptName+"'.<br>" +
+							"" +
+							"<br>" +
+							"Do the following on the machine that hosts the ASE:<br>" +
+							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+							"<code>1> sp_addserver loopback, null, @@servername</code><br>" +
+							"<code>2> go</code><br>" +
+							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 -i"+scriptName+"</code><br>" +
+							"</html>";
+
+						SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
 					}
 					return false;
 				}
@@ -2189,6 +2264,9 @@ public class AseConnectionUtils
 			sqlSb.append("from monProcess \n");
 			sqlSb.append("where SPID = @spid \n");
 			sqlSb.append("     \n");
+			sqlSb.append("if (@@rowcount = 0) \n");
+			sqlSb.append("    return \n"); // if the SPID is not around anymore, get out of there
+			sqlSb.append("     \n");
 			sqlSb.append("if (@nowWaitEventId is NULL) \n");
 			sqlSb.append("    select @nowWaitEventId = 0\n");
 			sqlSb.append("     \n");
@@ -2337,9 +2415,11 @@ public class AseConnectionUtils
 			}
 			else
 			{
-				AseSqlScript script = new AseSqlScript(conn);
+				AseSqlScript script = null;
 				try
 				{
+					script = new AseSqlScript(conn, 30); // 30 seconds timeout
+
 					_logger.info("Creating procedure '"+procName+"' in '"+dbname+"'.");
 					script.setMsgPrefix(scriptName+": ");
 					if (scriptLocation == null)
@@ -2354,7 +2434,11 @@ public class AseConnectionUtils
 					_logger.error(msg, e);
 					throw new Exception(msg, e);
 				}
-				script.close();
+				finally
+				{
+					if (script != null)
+					script.close();
+				}
 			}
 
 			if ( ! hasProc )

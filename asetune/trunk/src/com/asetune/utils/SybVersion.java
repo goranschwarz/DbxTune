@@ -348,14 +348,14 @@ implements Comparable<SybVersion>
 							int start = sybEsdStr.indexOf("ESD#");
 							if (start >= 0)
 								start += "ESD#".length();
-							int end = sybEsdStr.indexOf(" ", start);
-							if (end == -1) end = sybEsdStr.indexOf(".", start);
-							if (end == -1) end = sybEsdStr.indexOf(",", start);
-							if (end == -1) end = sybEsdStr.indexOf(":", start);
-							if (end == -1) end = sybEsdStr.indexOf(";", start);
-							if (end == -1) end = sybEsdStr.indexOf("-", start);
-							if (end == -1) end = sybEsdStr.indexOf("_", start);
-							if (end == -1) end = sybEsdStr.length();
+
+							// set end to first NON digit (or end of string)
+							int end = start;
+							for (; end<sybEsdStr.length(); end++)
+							{
+								if ( ! Character.isDigit(sybEsdStr.charAt(end)) )
+									break;
+							}
 
 							if (start != -1)
 							{
@@ -494,5 +494,8 @@ implements Comparable<SybVersion>
 		test("15.5.0.1012.1000/Tue 04-06-2010 20:23:52.35");
 		test("Replication Server/15.2/P/NT (IX86)/Windows 2003/1/OPT/Thu Feb 05 18:34:37 2009");
 		test("Adaptive Server Enterprise/12.5.4/EBF 15400 ESD#7.1/P/Sun_svr4/OS 5.8/ase1254/2097/64-bit/FBO/Thu Jan 17 07:42:59 2008");
+		test("Adaptive Server Enterprise/15.0.3/EBF 17686 ESD#1.1 RELSE/P/Sun_svr4/OS 5.8/ase1503/2681/64-bit/FBO/Thu Aug 20 14:20:57 2009");
+		test("Adaptive Server Enterprise/15.0.3/EBF 17686 ESD#10 RELSE/P/Sun_svr4/OS 5.8/ase1503/2681/64-bit/FBO/Thu Aug 20 14:20:57 2009");
+		test("Adaptive Server Enterprise/15.0.3/EBF 17686 ESD#99.5 RELSE/P/Sun_svr4/OS 5.8/ase1503/2681/64-bit/FBO/Thu Aug 20 14:20:57 2009");
 	}
 }

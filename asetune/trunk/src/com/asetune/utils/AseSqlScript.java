@@ -39,10 +39,17 @@ implements SybMessageHandler
 	private String                          _dbnameBeforeScript = null;
 	private ArrayList<ResultSetTableModel>  _resultCompList     = null;
 	private String                          _msgPrefix          = "";
+	private int                             _queryTimeout       = 0;
 
-	public AseSqlScript(Connection conn)
+	/** 
+	 * On open current database and message handler are saved, which is restored by close()
+	 * @param conn The Connection 
+	 * @param queryTimeout Query timeout in seconds, 0 = no timeout
+	 */
+	public AseSqlScript(Connection conn, int queryTimeout)
 	{
 		_conn = conn;
+		_queryTimeout = queryTimeout;
 
 		_saveMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
 		((SybConnection)_conn).setSybMessageHandler(this);
@@ -61,7 +68,22 @@ implements SybMessageHandler
 		}
 
 	}
-	
+
+	/** SQL Timeout in seconds, 0 = no timeout */
+	public void setQueryTimeout(int queryTimeout)
+	{
+		_queryTimeout = queryTimeout;
+	}
+	/** SQL Timeout in seconds, 0 = no timeout */
+	public int getQueryTimeout()
+	{
+		return _queryTimeout;
+	}
+
+	/**
+	 * This just restores the Message Handler, and dbname to what it was priviously.<br>
+	 * This does NOT close the database connection.
+	 */
 	public void close()
 	{
 		// Restore autoCommit
@@ -172,14 +194,21 @@ implements SybMessageHandler
 //		Dbg.wassert(conn != null, "Null SQL connection parameter.");
 //		Dbg.wassert(filename != null && filename.length() > 0, "Null or empty SQL script name.");
 
-		for(String sql = readCommand(br); sql != null && sql.length() > 0; sql = readCommand(br))
+		for(String sql=readCommand(br); sql!=null; sql=readCommand(br))
 		{
+			// This can't be part of the for loop, then it just stops if empty row
+			if ( StringUtil.isNullOrBlank(sql) )
+				continue;
+
 			try
 			{
 				SQLWarning sqlw  = null;
 				Statement stmnt  = _conn.createStatement();
 				ResultSet  rs    = null;
 				int rowsAffected = 0;
+
+				if (_queryTimeout > 0)
+					stmnt.setQueryTimeout(_queryTimeout);
 
 				if (_logger.isDebugEnabled()) 
 					_logger.debug("EXECUTING: "+sql);
@@ -340,26 +369,35 @@ implements SybMessageHandler
 	{
 		StringBuilder sb = new StringBuilder();
 
-		for(String sql = readCommand(br); sql != null && sql.length() > 0; sql = readCommand(br))
+		SybMessageHandler oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
+		((SybConnection)_conn).setSybMessageHandler(new SybMessageHandler()
 		{
-			SybMessageHandler oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
-			((SybConnection)_conn).setSybMessageHandler(new SybMessageHandler()
+			@Override
+			public SQLException messageHandler(SQLException sqle)
 			{
-				@Override
-				public SQLException messageHandler(SQLException sqle)
-				{
-					if (AseConnectionUtils.isInLoadDbException(sqle))
-						return AseConnectionUtils.sqlExceptionToWarning(sqle);
-					return sqle;
-				}
-			});
+				if (AseConnectionUtils.isInLoadDbException(sqle))
+					return AseConnectionUtils.sqlExceptionToWarning(sqle);
+				return sqle;
+			}
+		});
 
-			try
+		String sql = "";
+		try
+		{
+			for(String sqlChunc=readCommand(br); sqlChunc!=null; sqlChunc=readCommand(br))
 			{
+				// This can't be part of the for loop, then it just stops if empty row
+				if ( StringUtil.isNullOrBlank(sqlChunc) )
+					continue;
+
 				Statement stmnt  = _conn.createStatement();
 				ResultSet  rs    = null;
 				int rowsAffected = 0;
 
+				if (_queryTimeout > 0)
+					stmnt.setQueryTimeout(_queryTimeout);
+
+				sql = sqlChunc;
 				if (_logger.isDebugEnabled()) 
 					_logger.debug("EXECUTING: "+sql);
 
@@ -412,14 +450,14 @@ implements SybMessageHandler
 				// Close the statement
 				stmnt.close();
 			}
-			catch(SQLWarning w)
-			{
-				_logger.warn("Problems when executing sql: "+sql, w);
-			}
-			finally
-			{
-				((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
-			}
+		}
+		catch(SQLWarning w)
+		{
+			_logger.warn("Problems when executing sql: "+sql, w);
+		}
+		finally
+		{
+			((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
 		}
 		return sb.toString();
 	}
@@ -489,24 +527,73 @@ implements SybMessageHandler
 		return sb.toString();
 	}
 
-    private String readCommand(BufferedReader br) 
+	/**
+	 *  count number of "statements" in a SQL string which constrains 'go' separators.
+	 */
+	public static int countSqlGoBatches(String sql)
+	{
+		int cmdCount = 0;
+		try
+		{
+			BufferedReader br = new BufferedReader( new StringReader(sql) );
+			for(String s1=AseSqlScript.readCommand(br); s1!=null; s1=AseSqlScript.readCommand(br))
+				cmdCount++;
+			br.close();
+		}
+		catch (IOException ex) 
+		{
+			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+		}
+		return cmdCount;
+	}
+
+
+	/**
+	 * Read from the buffer streamer untill we see 'go' on a separate row, the return the string<br>
+	 * When end of file has been reached, and nothing has been read, return null.
+	 * @param br
+	 * @return see description above
+	 * @throws IOException
+	 */
+	public static String readCommand(BufferedReader br) 
 	throws IOException 
 	{
-		String s = "";
+		String outStr = "";
 		try 
 		{
-			for (String s1=br.readLine(); s1!=null && !s1.trim().equalsIgnoreCase("go"); s1=br.readLine()) 
+			String row = null;
+			for (row=br.readLine(); row!=null && !row.trim().equalsIgnoreCase("go"); row=br.readLine()) 
 			{
-				s = s + s1 + "\n";
+				outStr = outStr + row + "\n";
 			}
+			if ( row == null && outStr.length() == 0)
+				return null;
 		} 
 		catch (IOException e) 
 		{
-			s = null;
+			outStr = null;
 			throw e;
 		}
-		return s.trim();
+		return (outStr == null) ? null : outStr.trim();
 	}
+//	private String readCommand(BufferedReader br) 
+//	throws IOException 
+//	{
+//		String s = "";
+//		try 
+//		{
+//			for (String s1=br.readLine(); s1!=null && !s1.trim().equalsIgnoreCase("go"); s1=br.readLine()) 
+//			{
+//				s = s + s1 + "\n";
+//			}
+//		} 
+//		catch (IOException e) 
+//		{
+//			s = null;
+//			throw e;
+//		}
+//		return s.trim();
+//	}
 //	private String readCommand(BufferedReader br)
 //	throws IOException
 //	{
@@ -648,6 +735,10 @@ implements SybMessageHandler
 		}
 		m.append(".");
 
+		// Write a dummy message so we can trece from where this happened.
+		if (_logger.isTraceEnabled())
+			_logger.trace("Dummy Trace Message to locate from WHERE this was called.", new Exception("Dummy Trace Message to locate from WHERE this was called."));
+
 		if (sqe instanceof SQLWarning)
 		{
 			if (isInformational)
@@ -785,13 +876,17 @@ implements SybMessageHandler
 				stmt.setQueryTimeout( timeout );
 
 			BufferedReader br = new BufferedReader( new StringReader(goStr) );
-			for(String s1=readCommand(br); s1!=null && s1.length()>0; s1=readCommand(br))
+			for(String s1=readCommand(br); s1!=null; s1=readCommand(br))
 			{
+				// This can't be part of the for loop, then it just stops if empty row
+				if ( StringUtil.isNullOrBlank(s1) )
+					continue;
+
 				cmd = s1;
+
 				_logger.debug("EXECUTING: "+cmd);
 				stmt.executeUpdate(cmd);
 			}
-
 			br.close();
 			
 			stmt.close();
