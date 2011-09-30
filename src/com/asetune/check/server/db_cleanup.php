@@ -57,6 +57,10 @@
 	// doCleanup("alter table asemon_connect_info add column usePcs     varchar(5)");
 	// doCleanup("alter table asemon_connect_info add column pcsConfig  varchar(400)");
 
+	// doCleanup("ALTER TABLE asemon_error_info DROP PRIMARY KEY");
+	// doCleanup("ALTER TABLE asemon_error_info ADD PRIMARY KEY (checkId, sendCounter, serverAddTime)");
+
+
 	//------------------------------------------
 	// Close connection to the database
 	//-----
