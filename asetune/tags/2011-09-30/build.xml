@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ================================================ -->
+<!--  Sample buildfile for jar components             -->
+<!--                                                  -->
+<!-- ================================================ -->
+<project name="asetune" default="dist" basedir=".">
+	<description>Build file for AseTune</description>
+
+	<!-- - - - - - - - - - - - - - - - - - - - -->
+	<!-- set global properties for this build  -->
+	<!-- - - - - - - - - - - - - - - - - - - - -->
+	<property name="src"          location="src"/>
+	<property name="build"        location="build"/>
+	<property name="dist"         location="dist"/>
+	<property name="launch4j.dir" location="c:/Program Files/Launch4j" />
+
+	<path id="project.class.path">
+		<fileset dir="lib" includes="*.jar"/>
+<!--
+		<pathelement location="lib/"/>
+		<pathelement path="${java.class.path}/"/>
+		<pathelement path="${additional.path}"/>
+-->
+	</path>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: init             -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="init">
+		<!-- Create the time stamp -->
+		<tstamp>
+			<format property="DSTAMP" pattern="yyyy-MM-dd"/>
+			<format property="TODAY" pattern="yyyy-MM-dd HH:mm:ss" />
+		</tstamp>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: build            -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="build" depends="init" description="--> compile and jar this component">
+
+		<javac srcdir="${src.home}" destdir="${build.home}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}">
+<!--			<classpath refid="compile.classpath" />-->
+			<classpath refid="project.class.path"/>
+		</javac>
+
+		<jar destfile="${dist.home}/${app.name}.jar" basedir="${build.home}" excludes="**/*UT.class" />
+	</target>
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: compile          -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="compile" depends="init" description="compile the source " >
+
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${build}"/>
+
+		<!-- Compile the java code from ${src} into ${build} -->
+		<javac source="1.6" target="1.6" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
+			<classpath refid="project.class.path"/>
+		</javac>
+
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: dist             -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="dist" depends="compile" description="generate the distribution" >
+		<!-- Create the distribution directory -->
+		<mkdir dir="${dist}/lib"/>
+		<mkdir dir="${dist}/data"/>
+		<mkdir dir="${dist}/classes"/>
+
+<!--		<launch4j configFile="./launch4j.xml" />-->
+
+		<copy file="asetune.bat"                                  toFile="${dist}/asetune.bat"/>
+		<copy file="perfdemo.bat"                                 toFile="${dist}/perfdemo.bat"/>
+		<copy file="asetune.sh"                                   toFile="${dist}/asetune.sh"/>
+		<copy file="asetune.properties"                           toFile="${dist}/asetune.properties"/>
+		<copy file="${src}/com/asetune/history.html"              toFile="${dist}/history.html"/>
+		<copy file="${src}/com/asetune/images/asetune_splash.jpg" toFile="${dist}/lib/asetune_splash.jpg"/>
+		<copy todir="${dist}/lib">
+			<fileset dir="lib">
+				<include name="*.jar"/>
+			</fileset>
+		</copy>
+
+		<!-- Put everything in ${build} into the asetune.jar file -->
+		<jar destfile="${dist}/lib/asetune.jar">
+			<fileset dir="${build}"/>
+			<fileset dir="${src}" excludes="**/*.java"/>
+
+			<manifest>
+				<attribute name="Built-By"               value="${user.name}"/>
+				<attribute name="Main-Class"             value="com.asetune.AseTune"/>
+				<attribute name="Built-Date"             value="${TODAY}"/>
+				<!--
+				<attribute name="Implementation-Vendor"  value="Goran Schwarz"/>
+				<attribute name="Implementation-Title"   value="AseTune - Sybase Performance Monitor Tool"/>
+				<attribute name="Implementation-Version" value="FIXME - ASA example: build 3152 J2SE"/>
+				<attribute name="Implementation-Version" value="${version.num}-b${build.number}"/>
+				<attribute name="Specification-Vendor"   value="Goran Schwarz"/>
+				<attribute name="Specification-Title"    value="AseTune - Sybase Performance Monitor Tool"/>
+				<attribute name="Specification-Version"  value="FIXME - ASA example: 12.0.1"/>
+				-->
+			</manifest>
+		</jar>
+
+		<!-- make a zip file asetune_${DSTAMP}.jar -->
+		<zip destfile="asetune_${DSTAMP}.zip"
+			basedir="${dist}"
+		/>
+
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: clean            -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="clean" depends="init" description="clean up" >
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+		<delete>
+			<fileset dir="." includes="asetune_*.zip"/> 
+		</delete>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: exe              -->
+	<!-- - - - - - - - - - - - - - -->
+<!--
+	<taskdef name="launch4j" 
+		classname="net.sf.launch4j.ant.Launch4jTask"
+		classpath="${launch4j.dir}/launch4j.jar:${launch4j.dir}/lib/xstream.jar" />
+	<target name="exe" description="Use launch4j to generate an EXE for AseTune" depends="dist" >
+		<launch4j configFile="./launch4j.xml" />
+	</target>
+-->
+
+	
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: strip_svn        -->
+	<!-- - - - - - - - - - - - - - -->
+<!--
+	<target name="strip_svn" description="Strip Subversion directories... WARNING..." >
+		<delete includeemptydirs="true">
+			<fileset dir="." includes="**/.svn" defaultexcludes="false"/>
+		</delete>	
+	</target>
+-->
+</project>
+
