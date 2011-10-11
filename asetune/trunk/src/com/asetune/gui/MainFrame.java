@@ -128,7 +128,8 @@ public class MainFrame
 
 	public static final String ACTION_OPEN_LOG_VIEW             = "OPEN_LOG_VIEW";
 	public static final String ACTION_OPEN_OFFLINE_SESSION_VIEW = "OPEN_OFFLINE_SESSION_VIEW";
-	public static final String ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES = "TOGGLE_AUTO_RESIZE_PC_TABLES";
+	public static final String ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES      = "TOGGLE_AUTO_RESIZE_PC_TABLES";
+	public static final String ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE = "TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE";
 	public static final String ACTION_OPEN_REFRESH_RATE         = "OPEN_REFRESH_RATE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW     = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW     = "OPEN_GRAPH_GRAPH_VIEW";
@@ -195,6 +196,7 @@ public class MainFrame
 	private JMenu               _preferences_m          = new JMenu("Preferences");
 	private JMenuItem           _refreshRate_mi         = new JMenuItem("Refresh Rate...");
 	private JCheckBoxMenuItem   _autoResizePcTable_mi   = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
+	private JCheckBoxMenuItem   _autoRefreshOnTabChange_mi = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
 	private JMenuItem           _aseConfigView_mi       = new JMenuItem("View ASE Configuration...");
 	private JMenuItem           _tcpSettingsConf_mi     = new JMenuItem("Change 'Performance Counter' Options...");
 	private JMenuItem           _counterTabView_mi      = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
@@ -368,29 +370,30 @@ public class MainFrame
 
 		//--------------------------
 		// MENU - Icons
-		_connect_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect16.gif"));
-		_disconnect_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect16.gif"));
-		_exit_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
+		_connect_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect16.gif"));
+		_disconnect_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect16.gif"));
+		_exit_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
 
-		_logView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
-		_offlineSessionsView_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
-		_autoResizePcTable_mi  .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
-		_refreshRate_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
-		_aseConfigView_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
-		_tcpSettingsConf_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
-		_counterTabView_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.gif"));
-		_graphView_mi          .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
-		_graphs_m              .setIcon(SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
+		_logView_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
+		_offlineSessionsView_mi   .setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
+		_autoResizePcTable_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
+		_autoRefreshOnTabChange_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_on_tab_change.png"));
+		_refreshRate_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
+		_aseConfigView_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
+		_tcpSettingsConf_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
+		_counterTabView_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.gif"));
+		_graphView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
+		_graphs_m                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
 		
-		_aseConfMon_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
-		_captureSql_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
-		_sqlQuery_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
-//		_lockTool_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
-		_createOffline_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/pcs_write_16.png"));
-		_wizardCrUdCm_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
-//		_doGc_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/xxx.gif"));
+		_aseConfMon_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
+		_captureSql_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
+		_sqlQuery_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
+//		_lockTool_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
+		_createOffline_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/pcs_write_16.png"));
+		_wizardCrUdCm_mi          .setIcon(SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
+//		_doGc_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/xxx.gif"));
 		
-		_about_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/about.png"));
+		_about_mi                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/about.png"));
 
 		
 		//--------------------------
@@ -410,6 +413,7 @@ public class MainFrame
 		_view_m.add(_offlineSessionsView_mi);
 		_view_m.add(_preferences_m);
 			_preferences_m.add(_autoResizePcTable_mi);
+			_preferences_m.add(_autoRefreshOnTabChange_mi);
 			_preferences_m.add(_refreshRate_mi);
 		_view_m.add(_aseConfigView_mi);
 		_view_m.add(_tcpSettingsConf_mi);
@@ -431,53 +435,55 @@ public class MainFrame
 
 		//--------------------------
 		// MENU - Actions
-		_connect_mi            .setActionCommand(ACTION_CONNECT);
-		_disconnect_mi         .setActionCommand(ACTION_DISCONNECT);
-		_exit_mi               .setActionCommand(ACTION_EXIT);
+		_connect_mi               .setActionCommand(ACTION_CONNECT);
+		_disconnect_mi            .setActionCommand(ACTION_DISCONNECT);
+		_exit_mi                  .setActionCommand(ACTION_EXIT);
 
-		_logView_mi            .setActionCommand(ACTION_OPEN_LOG_VIEW);
-		_offlineSessionsView_mi.setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
-		_autoResizePcTable_mi  .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
-		_refreshRate_mi        .setActionCommand(ACTION_OPEN_REFRESH_RATE);
-		_aseConfigView_mi      .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
-		_tcpSettingsConf_mi    .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
-		_counterTabView_mi     .setActionCommand(ACTION_OPEN_COUNTER_TAB_VIEW);
-		_graphView_mi          .setActionCommand(ACTION_OPEN_GRAPH_GRAPH_VIEW);
+		_logView_mi               .setActionCommand(ACTION_OPEN_LOG_VIEW);
+		_offlineSessionsView_mi   .setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
+		_autoResizePcTable_mi     .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
+		_autoRefreshOnTabChange_mi.setActionCommand(ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE);
+		_refreshRate_mi           .setActionCommand(ACTION_OPEN_REFRESH_RATE);
+		_aseConfigView_mi         .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
+		_tcpSettingsConf_mi       .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
+		_counterTabView_mi        .setActionCommand(ACTION_OPEN_COUNTER_TAB_VIEW);
+		_graphView_mi             .setActionCommand(ACTION_OPEN_GRAPH_GRAPH_VIEW);
 
-		_aseConfMon_mi         .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
-		_captureSql_mi         .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
-		_sqlQuery_mi           .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
-//		_lockTool_mi           .setActionCommand(ACTION_OPEN_LOCK_TOOL);
-		_createOffline_mi      .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
-		_wizardCrUdCm_mi       .setActionCommand(ACTION_OPEN_WIZARD_UDCM);
-		_doGc_mi               .setActionCommand(ACTION_GARBAGE_COLLECT);
+		_aseConfMon_mi            .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
+		_captureSql_mi            .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
+		_sqlQuery_mi              .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
+//		_lockTool_mi              .setActionCommand(ACTION_OPEN_LOCK_TOOL);
+		_createOffline_mi         .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
+		_wizardCrUdCm_mi          .setActionCommand(ACTION_OPEN_WIZARD_UDCM);
+		_doGc_mi                  .setActionCommand(ACTION_GARBAGE_COLLECT);
 		
-		_about_mi              .setActionCommand(ACTION_OPEN_ABOUT);
+		_about_mi                 .setActionCommand(ACTION_OPEN_ABOUT);
 
 		//--------------------------
 		// And the action listener
-		_connect_mi            .addActionListener(this);
-		_disconnect_mi         .addActionListener(this);
-		_exit_mi               .addActionListener(this);
+		_connect_mi               .addActionListener(this);
+		_disconnect_mi            .addActionListener(this);
+		_exit_mi                  .addActionListener(this);
 
-		_logView_mi            .addActionListener(this);
-		_offlineSessionsView_mi.addActionListener(this);
-		_autoResizePcTable_mi  .addActionListener(this);
-		_refreshRate_mi        .addActionListener(this);
-		_aseConfigView_mi      .addActionListener(this);
-		_tcpSettingsConf_mi    .addActionListener(this);
-		_counterTabView_mi     .addActionListener(this);
-		_graphView_mi          .addActionListener(this);
+		_logView_mi               .addActionListener(this);
+		_offlineSessionsView_mi   .addActionListener(this);
+		_autoResizePcTable_mi     .addActionListener(this);
+		_autoRefreshOnTabChange_mi.addActionListener(this);
+		_refreshRate_mi           .addActionListener(this);
+		_aseConfigView_mi         .addActionListener(this);
+		_tcpSettingsConf_mi       .addActionListener(this);
+		_counterTabView_mi        .addActionListener(this);
+		_graphView_mi             .addActionListener(this);
 
-		_aseConfMon_mi         .addActionListener(this);
-		_captureSql_mi         .addActionListener(this);
-		_sqlQuery_mi           .addActionListener(this);
-//		_lockTool_mi           .addActionListener(this);
-		_createOffline_mi      .addActionListener(this);
-		_wizardCrUdCm_mi       .addActionListener(this);
-		_doGc_mi               .addActionListener(this);
+		_aseConfMon_mi            .addActionListener(this);
+		_captureSql_mi            .addActionListener(this);
+		_sqlQuery_mi              .addActionListener(this);
+//		_lockTool_mi              .addActionListener(this);
+		_createOffline_mi         .addActionListener(this);
+		_wizardCrUdCm_mi          .addActionListener(this);
+		_doGc_mi                  .addActionListener(this);
 		
-		_about_mi              .addActionListener(this);
+		_about_mi                 .addActionListener(this);
 
 		//--------------------------
 		// Keyboard shortcuts
@@ -493,6 +499,7 @@ public class MainFrame
 		_tcpSettingsConf_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.ALT_MASK));
 		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, ActionEvent.ALT_MASK));
 
+		_refreshNow_but.setMnemonic(KeyEvent.VK_R);
 		
 		//--------------------------
 		// TOOLBAR
@@ -677,7 +684,7 @@ public class MainFrame
 		// STATUS PANEL
 		_blockAlert_but       .setToolTipText("<html>You have SPID(s) that <b>blocks</b> other SPID(s) from working. Click here to the 'Blocking' tab to find out more.</html>");
 		_fullTranlogAlert_but .setToolTipText("<html>The Transaction log in one/several databases are <b>full</b> other SPID(s) are probably <b>blocked</b> by this. Click here to the 'Database' tab to find out more.</html>");
-		_refreshNow_but       .setToolTipText("Abort the \"sleep for next refresh\" and make a new refresh of data NOW.");
+		_refreshNow_but       .setToolTipText("Abort the \"sleep for next refresh\" and make a new refresh of data NOW (shortcut Alt+r).");
 		_samplePause_but      .setToolTipText("Pause ALL sampling activity.");
 		_samplePlay_but       .setToolTipText("Continue to sample counters again.");
 		_gcNow_but            .setToolTipText("Do Java Garbage Collection.");
@@ -979,6 +986,9 @@ public class MainFrame
 		if (ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES.equals(actionCmd))
 			action_toggleAutoResizePcTables(e);
 
+		if (ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE.equals(actionCmd))
+			action_toggleAutoRefreshOnTabChange(e);
+
 		if (ACTION_OPEN_REFRESH_RATE.equals(actionCmd))
 			action_refreshRate(e);
 
@@ -1092,7 +1102,7 @@ public class MainFrame
 
 			GetCounters getCnt = AseTune.getCounterCollector();
 			if (getCnt != null)
-				getCnt.doInterrupt();
+				getCnt.doRefresh();
 		}
 
 		if (ACTION_GOTO_BLOCKED_TAB.equals(actionCmd))
@@ -1148,10 +1158,13 @@ public class MainFrame
 
 		if (ACTION_SCREENSHOT.equals(actionCmd))
 		{
+//			final String NL = System.getProperty("line.separator");
+			final String NL = "\n";
+
 			String fileList = "";
 			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
 			String main = Screenshot.windowScreenshot(this, Version.APP_STORE_DIR, "asetune.main", true, extraInfo);
-			fileList += main;
+			fileList += main + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
 			for (CountersModel cm : GetCounters.getCmList())
@@ -1169,26 +1182,24 @@ public class MainFrame
 						{
 							JFrame frame = gtp.getTabUnDockedFrame(cm.getDisplayName());
 							String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, "asetune."+cm.getName(), true, extraInfo);
-							fileList += "\n"+fn;
+							fileList += fn + NL;
 						}
 					}
 				}
 			}
 
 			// TODO: grab "all" other windows as well: SQL Windows, Capture SQL...
-			
-			JOptionPane.showMessageDialog(this, 
-					"Screenshot was captured. \n" +
-					"\n" +
-					"The file(s) was stored as: \n" +
-					fileList + "\n" +
-					"\n" +
-//					"Note: If you want to store screen captures in a different directory.\n" +
-//					"bla bla bla.\n" +
-					"",
 
-					"Screenshot captured", 
-					JOptionPane.INFORMATION_MESSAGE);
+			String msg = 
+				"<html>" +
+				"<b>Screenshot was captured.</b> <br>" +
+				"Copy + Paste from the list below, for fast access.<br>" +
+				"<br>" +
+				"<b>The file(s) was stored as:</b>" +
+				"<pre>" + fileList + "</pre>" +
+				"<br>" +
+				"</html>";
+			SwingUtils.showInfoMessage(this, "Screenshot captured", msg);
 		}
 
 		if (ACTION_SAMPLING_PAUSE.equals(actionCmd))
@@ -1199,7 +1210,7 @@ public class MainFrame
 			_samplePlay_but   .setVisible(   _isSamplingPaused );
 			_samplePlayTb_but .setVisible(   _isSamplingPaused );
 
-			GetCounters.getInstance().doInterrupt();
+			GetCounters.getInstance().doInterruptSleep();
 		}
 
 		if (ACTION_SAMPLING_PLAY.equals(actionCmd))
@@ -1210,7 +1221,7 @@ public class MainFrame
 			_samplePlay_but   .setVisible(   _isSamplingPaused );
 			_samplePlayTb_but .setVisible(   _isSamplingPaused );
 
-			GetCounters.getInstance().doInterrupt();
+			GetCounters.getInstance().doInterruptSleep();
 		}
 
 		if (ACTION_TAB_SELECTOR.equals(actionCmd))
@@ -1253,7 +1264,7 @@ public class MainFrame
 			String currentTab = _mainTabbedPane.getTitleAt(selectedTab);
 			if (_logger.isDebugEnabled())
 			{
-				_logger.debug("state changed for pannel named '" + currentTab + "'.");
+				_logger.debug("state changed for panel named '" + currentTab + "'.");
 			}
 	
 	
@@ -1278,6 +1289,15 @@ public class MainFrame
 			{
 				GetCounters.setWaitEvent("data to be initialization in the panel '"+_currentPanel.getPanelName()+"'...");
 				//statusFld.setText("Waiting for data to be initialization in the panel '"+currentPanel.getPanelName()+"'...");
+			}
+
+			// Automatically do "refresh" when tab is changed
+			if (AseTune.hasCounterCollector() && AseTune.getCounterCollector().isMonConnected())
+			{
+				if (_autoRefreshOnTabChange_mi.isSelected())
+				{
+					_refreshNow_but.doClick();
+				}
 			}
 		} // end: _mainTabbedPane
 		
@@ -1894,6 +1914,11 @@ public class MainFrame
 	}
 
 	private void action_toggleAutoResizePcTables(ActionEvent e)
+	{
+		saveProps();
+	}
+
+	private void action_toggleAutoRefreshOnTabChange(ActionEvent e)
 	{
 		saveProps();
 	}
@@ -3091,6 +3116,7 @@ public class MainFrame
 		tmpConf.setProperty("nogui.sleepTime",       _refreshNoGuiInterval);
 
 		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
+		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 
 		tmpConf.setProperty("window.width",  getSize().width);
 		tmpConf.setProperty("window.height", getSize().height);
@@ -3146,8 +3172,12 @@ public class MainFrame
 		_refreshInterval      = tmpConf.getIntProperty("main.refresh.interval", _refreshInterval);
 		_refreshNoGuiInterval = tmpConf.getIntProperty("nogui.sleepTime",       _refreshNoGuiInterval);
 
-		boolean bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
+		boolean bool; 
+		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
 		_autoResizePcTable_mi.setSelected(bool);
+
+		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
+		_autoRefreshOnTabChange_mi.setSelected(bool);
 
 	}
 	/*---------------------------------------------------

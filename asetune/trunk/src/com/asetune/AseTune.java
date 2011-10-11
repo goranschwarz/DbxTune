@@ -728,6 +728,15 @@ public class AseTune
 	}
 
 	/**
+	 * has any counter collector been assigned yet
+	 * @return
+	 */
+	public static boolean hasCounterCollector()
+	{
+		return getCnt != null;
+	}
+
+	/**
 	 * Do we have GUI mode enabled
 	 * @return
 	 */

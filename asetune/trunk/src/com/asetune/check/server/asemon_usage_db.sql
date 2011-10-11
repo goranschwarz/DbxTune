@@ -118,7 +118,7 @@ CREATE TABLE asemon_error_info
 	logThreadName           varchar(50),
 	logClassName            varchar(50),
 	logLocation             varchar(100),
-	logMessage              varchar(500),
+	logMessage              varchar(4096),
 	logStacktrace           varchar(4096),
 
 	PRIMARY KEY (checkId, sendCounter, serverAddTime)

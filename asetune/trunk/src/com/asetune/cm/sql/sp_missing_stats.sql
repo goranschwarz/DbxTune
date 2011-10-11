@@ -230,9 +230,12 @@ begin
 	into #ixcols
 	from sysindexes i, #n, sysstatistics s, sysobjects o
 	where s.id = o.id
-	and o.id = i.id
-	and o.type = "U"
-	and i.indid > 0 and i.indid < 255   /* this line updated June 23rd */
+	  and o.id = i.id
+	  and o.type = "U"
+	  and i.indid > 0 and i.indid < 255   /* this line updated June 23rd */
+	  and not (o.sysstat2 & 1024 = 1024 or o.sysstat2 & 2048 = 2048) -- proxy tables /* gorans, added 2011-10-10 */
+	  and s.formatid = 110                                                           /* gorans, added 2011-10-10 */
+	  and datalength(s.colidarray) > 0                                               /* gorans, added 2011-10-10 */
 
 --	select
 --		DBname     = db_name(),

@@ -710,7 +710,9 @@ implements Cloneable
 	public long getLcRefreshTime()      { return _lcRefreshTime; }
 	/** Used by the PersistReader to set refresh time */
 	public void setLcRefreshTime(int t) { _lcRefreshTime = t; }
+	/** Begin time of Local Calculation */
 	public void beginLcRefresh() { _lcRefreshStartTime = System.currentTimeMillis(); }
+	/** End time of Local Calculation */
 	public void endLcRefresh()   {	_lcRefreshTime = System.currentTimeMillis() - _lcRefreshStartTime; }
 
 	public int getQueryTimeout()
@@ -807,7 +809,7 @@ implements Cloneable
 
 			// If we are not connected anymore, do not try to refresh
 			if (refresh)
-				refresh = AseTune.getCounterCollector().isMonConnected(true, true);
+				refresh = AseTune.getCounterCollector().isMonConnected(false, true);
 
 			if ( ! refresh)
 				setValidSampleData(false);

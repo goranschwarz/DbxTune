@@ -54,6 +54,9 @@ import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -63,6 +66,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
@@ -118,7 +122,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class QueryWindow
 //	extends JFrame
 //	extends JDialog
-	implements SybMessageHandler, ConnectionFactory
+	implements ActionListener, SybMessageHandler, ConnectionFactory
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
 	private static final long serialVersionUID = 1L;
@@ -137,6 +141,12 @@ public class QueryWindow
 		/** Create the QueryWindow using a JDialog, with modal option set to true. */
 		JDIALOG_MODAL 
 	}
+
+	//-------------------------------------------------
+	// Actions
+	public static final String ACTION_CONNECT                   = "CONNECT";
+	public static final String ACTION_DISCONNECT                = "DISCONNECT";
+	public static final String ACTION_EXIT                      = "EXIT";
 
 	private Connection  _conn            = null;
 //	private JTextArea	_query           = new JTextArea();           // A field to enter a query in
@@ -164,6 +174,19 @@ public class QueryWindow
 	private Window      _window          = null;
 	private JFrame      _jframe          = null;
 	private JDialog     _jdialog         = null;
+
+	// if we start from the CMD Line, add a few extra stuff
+	//---------------------------------------
+	private JMenuBar            _main_mb                = new JMenuBar();
+
+	private JToolBar            _toolbar                = new JToolBar();
+
+	// File
+	private JMenu               _file_m                 = new JMenu("File");
+	private JMenuItem           _connect_mi             = new JMenuItem("Connect...");
+	private JMenuItem           _disconnect_mi          = new JMenuItem("Disconnect");
+	private JMenuItem           _exit_mi                = new JMenuItem("Exit");
+	//---------------------------------------
 
 	/**
 	 * Constructor for CommandLine parameters
@@ -324,7 +347,7 @@ public class QueryWindow
 		catch (SQLException e)
 		{
 			_logger.error("Problems connecting: " + AseConnectionUtils.sqlExceptionToString(e));
-			throw e;
+//			throw e;
 		}
 
 
@@ -375,6 +398,52 @@ public class QueryWindow
 		if (_window == null)
 			throw new RuntimeException("_window is null, this should never happen.");
 
+		//--------------------------
+		// MENU - composition
+//		if (_jframe != null)
+		if (winType == WindowType.CMDLINE_JFRAME)
+		{
+			_jframe.setJMenuBar(_main_mb);
+	
+			_main_mb.add(_file_m);
+	
+			_file_m.add(_connect_mi);
+			_file_m.add(_disconnect_mi);
+			_file_m.add(_exit_mi);
+	
+			_file_m .setMnemonic(KeyEvent.VK_F);
+	
+			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.ALT_MASK));
+			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, ActionEvent.ALT_MASK));
+
+			// TOOLBAR
+			JButton connect    = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+			JButton disConnect = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+
+			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
+			_toolbar.add(connect);
+			_toolbar.add(disConnect);
+
+			//--------------------------
+			// MENU - Icons
+			_connect_mi   .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect16.gif"));
+			_disconnect_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect16.gif"));
+			_exit_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
+
+			//--------------------------
+			// MENU - Actions
+			_connect_mi   .setActionCommand(ACTION_CONNECT);
+			_disconnect_mi.setActionCommand(ACTION_DISCONNECT);
+			_exit_mi      .setActionCommand(ACTION_EXIT);
+
+			//--------------------------
+			// And the action listener
+			_connect_mi   .addActionListener(this);
+			_disconnect_mi.addActionListener(this);
+			_exit_mi      .addActionListener(this);
+		}
+
+
 		//super();
 		//super.setTitle(Version.getAppName()+" Query"); // Set window title
 //		ImageIcon icon = new ImageIcon(getClass().getResource("swing/images/query16.gif"));
@@ -396,12 +465,15 @@ public class QueryWindow
 			}
 		});
 
-		// Remember the factory object that was passed to us
-		_conn = conn;
-
-		// Setup a message handler
-//		((SybConnection)_conn).setSybMessageHandler(this);
-		_aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+		if (AseConnectionUtils.isConnectionOk(conn, false, null))
+		{
+			// Remember the factory object that was passed to us
+			_conn = conn;
+	
+			// Setup a message handler
+	//		((SybConnection)_conn).setSybMessageHandler(this);
+			_aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+		}
 
 		// Set various components
 		_exec.setToolTipText("Executes the select sql statement above (Ctrl-e)(Alt+e)(F5)(F9)."); 
@@ -487,6 +559,9 @@ public class QueryWindow
 		_splitPane.setBottomComponent(bottom);
 		_splitPane.setContinuousLayout(true);
 //		_splitPane.setOneTouchExpandable(true);
+
+		if (winType == WindowType.CMDLINE_JFRAME)
+			contentPane.add(_toolbar, BorderLayout.NORTH);
 		contentPane.add(_splitPane);
 
 		top.add(_queryScroll, BorderLayout.CENTER);
@@ -507,7 +582,24 @@ public class QueryWindow
 
 		_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
 //		_showplan.setEnabled( (aseVersion >= 15000) );
+		if (_conn == null)
+		{
+			_dbs_cobx       .setEnabled(false);
+			_exec           .setEnabled(false);
+			_rsInTabs       .setEnabled(false);
+			_setOptions     .setEnabled(false);
+			_execGuiShowplan.setEnabled(false);
+		}
+		else
+		{
+			_dbs_cobx       .setEnabled(true);
+			_exec           .setEnabled(true);
+			_rsInTabs       .setEnabled(true);
+			_setOptions     .setEnabled(true);
+			_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+		}
 
+		
 		// ADD Ctrl+e, F5, F9
 		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.CTRL_DOWN_MASK), "execute");
 		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), "execute");
@@ -561,7 +653,8 @@ public class QueryWindow
 				useDb( (String) _dbs_cobx.getSelectedItem() );
 			}
 		});
-		setDbNames();
+		if (_conn != null)
+			setDbNames();
 
 		// ACTION for "copy"
 		_copy.addActionListener(new ActionListener()
@@ -573,17 +666,18 @@ public class QueryWindow
 		});
 
 		// Kick of a initial SQL query, if one is specified.
-		if (sql != null && !sql.equals(""))
-		{
-			_query.setText(sql);
-			displayQueryResults(sql, false);
-		}
-		else
+		if (StringUtil.isNullOrBlank(sql))
 		{
 			String helper = "Write your SQL query here";
 			_query.setText(helper);
 			_query.setSelectionStart(0);
 			_query.setSelectionEnd(helper.length());
+		}
+		else
+		{
+			_query.setText(sql);
+			if (_conn != null)
+				displayQueryResults(sql, false);
 		}
 
 		// Set initial size of the JFrame, and make it visable
@@ -618,7 +712,105 @@ public class QueryWindow
 		_window.setVisible(b);
 	}
 
-	
+
+	/*---------------------------------------------------
+	** BEGIN: implementing ActionListener
+	**--------------------------------------------------*/
+	public void actionPerformed(ActionEvent e)
+	{
+//		Object source    = e.getSource();
+		String actionCmd = e.getActionCommand();
+
+		_logger.debug("ACTION '"+actionCmd+"'.");
+
+		if (ACTION_CONNECT.equals(actionCmd))
+			action_connect(e);
+
+		if (ACTION_DISCONNECT.equals(actionCmd))
+			action_disconnect(e);
+
+		if (ACTION_EXIT.equals(actionCmd))
+			action_exit(e);
+	}
+	/*---------------------------------------------------
+	** END: implementing ActionListener
+	**--------------------------------------------------*/
+
+
+
+	private void action_connect(ActionEvent e)
+	{
+		// Create a new dialog Window
+		boolean checkAseCfg    = false;
+		boolean showAseTab     = true;
+		boolean showAseOptions = false;
+		boolean showHostmonTab = false;
+		boolean showPcsTab     = false;
+		boolean showOfflineTab = false;
+
+		ConnectionDialog connDialog = new ConnectionDialog(_jframe, checkAseCfg, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab);
+		// Show the dialog and wait for response
+		connDialog.setVisible(true);
+		connDialog.dispose();
+
+		// Get what was connected to...
+		int connType = connDialog.getConnectionType();
+
+		if ( connType == ConnectionDialog.CANCEL)
+			return;
+		
+		if ( connType == ConnectionDialog.ASE_CONN)
+		{
+			_conn = connDialog.getAseConn();
+
+//			if (_conn != null)
+			if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
+			{
+				
+				setDbNames();
+				_aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
+
+				_dbs_cobx       .setEnabled(true);
+				_exec           .setEnabled(true);
+				_rsInTabs       .setEnabled(true);
+				_setOptions     .setEnabled(true);
+				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+
+				_setOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
+
+//				_summaryPanel.setLocalServerName(AseConnectionFactory.getServer());
+			}
+		}
+	}
+
+	private void action_disconnect(ActionEvent e)
+	{
+		if (_conn != null)
+		{
+			try
+			{
+				_conn.close();
+				_conn = null;
+
+				_dbs_cobx       .setEnabled(false);
+				_exec           .setEnabled(false);
+				_rsInTabs       .setEnabled(false);
+				_setOptions     .setEnabled(false);
+				_execGuiShowplan.setEnabled(false);
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems closing database connection.", ex);
+			}
+		}
+	}
+
+	private void action_exit(ActionEvent e)
+	{
+		_jframe.dispatchEvent(new WindowEvent(_jframe, WindowEvent.WINDOW_CLOSING));
+	}
+
+
 	private void actionExecute(ActionEvent e, boolean guiExec)
 	{
 		// If we had an JTabbedPane, what was the last index
@@ -1674,20 +1866,10 @@ public class QueryWindow
 		public boolean getDefVal()  { return _defVal; }
 		public String  getTooltip() { return _tooltip; } 
 	}
-	/**
-	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
-	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
-	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
-	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
-	 */
-	private JButton createSetOptionButton(JButton button, final int aseVersion)
+
+	
+	private JPopupMenu createSetOptionButtonPopupMenu(final int aseVersion)
 	{
-		if (button == null)
-			button = new JButton();
-
-		button.setToolTipText("<html>Set various options, for example: set showplan on|off.</html>");
-		button.setText("Set");
-
 		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
 
 		if (aseVersion >= 15020) 
@@ -1786,7 +1968,7 @@ public class QueryWindow
 		
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
-		button.setComponentPopupMenu(popupMenu);
+//		button.setComponentPopupMenu(popupMenu);
 		
 		for (AseOptionOrSwitch opt : options)
 		{
@@ -1849,7 +2031,6 @@ public class QueryWindow
 			popupMenu.add(mi);
 		}
 
-
 		//
 		// If we want to get what switches are enabled, and 'x' check the box or not...
 		// Lets do this LATER
@@ -1906,6 +2087,27 @@ public class QueryWindow
 //				public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
 //			});
 //		}
+
+		
+		return popupMenu;
+	}
+
+	/**
+	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
+	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
+	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
+	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
+	 */
+	private JButton createSetOptionButton(JButton button, final int aseVersion)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setToolTipText("<html>Set various options, for example: set showplan on|off.</html>");
+		button.setText("Set");
+
+		JPopupMenu popupMenu = createSetOptionButtonPopupMenu(aseVersion);
+		button.setComponentPopupMenu(popupMenu);
 
 		// If we click on the button, display the popup menu
 		button.addActionListener(new ActionListener()

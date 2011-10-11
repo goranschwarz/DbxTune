@@ -65,7 +65,6 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
-import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
@@ -86,8 +85,6 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -221,6 +218,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	private JLabel					_optionQueryTimeout_lbl             = new JLabel("Query Timeout");
 	private JTextField				_optionQueryTimeout_txt             = new JTextField();
 
+	private JSplitPane              _mainSplitPane     = null;
+	private JPanel                  _dataPanel         = null;
+	private JPanel                  _extendedInfoPanel = null;
 	// LOCAL OPTIONS panel
 	private JPanel					_localOptionsPanel;
 	// This panel will be used for any checkboxes etc that is local to any specific tables.
@@ -277,6 +277,11 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 ** END: constructors
 	 **---------------------------------------------------
 	 */
+
+	protected JXTable getDataTable()
+	{
+		return _dataTable;
+	}
 
 	public void setGraphTimeLineMarker(CountersModel cm)
 	{
@@ -404,6 +409,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				setTimeInfo(_cmDisplay.getCounterClearTime(), _cmDisplay.getSampleTime(), _cmDisplay.getSampleInterval());
 			else
 				setTimeInfo(null, null, 0);
+			
+			// wonder if the tableChanged() is kicked off or not...
+			// meaning do I need to call this one here?
+			updateExtendedInfoPanel();
 		}
 		setWatermark();
 	}
@@ -540,7 +549,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 //		}
 	}
 
-	/** Get the CM name */
+	/** Get the short CM name of the connected CM, if no CM is connected null will be returned. */
 	@Override
 	public String getName()
 	{
@@ -619,6 +628,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			// NOTE: this should be done at teh START of this method
 			//_dataTable.tableChanged(e);
 		}
+		
+		// Call other things that might need to be updated.
+		updateExtendedInfoPanel();
 	}
 
 	public void refreshFilterColumns(TableModel tm)
@@ -637,6 +649,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		}
 	}
 
+	/** Get the name of the panel, probably also the 'tab' header name */
 	public String getPanelName()
 	{
 		return _displayName;
@@ -706,6 +719,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_icon = icon;
 	}
 
+	/** Get the 'tooltip' text of the "tab" header */
 	public String getDescription()
 	{
 		return _description;
@@ -778,20 +792,24 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		// setLayout(layout);
 		setLayout(new BorderLayout());
 
-		JSplitPane _mainSplitPan = new JSplitPane();
-		_mainSplitPan.setOrientation(JSplitPane.VERTICAL_SPLIT);
-		_mainSplitPan.setBorder(null);
-		_mainSplitPan.add(createExtendedInfoPanel(), JSplitPane.TOP);
-		_mainSplitPan.add(createTablePanel(), JSplitPane.BOTTOM);
-		_mainSplitPan.setDividerSize(3);
+		_mainSplitPane     = new JSplitPane();
+		_dataPanel         = createTablePanel();
+		_extendedInfoPanel = createExtendedInfoPanel();
+		
+		_mainSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+		_mainSplitPane.setBorder(null);
+		_mainSplitPane.add(_extendedInfoPanel, JSplitPane.TOP);
+		_mainSplitPane.add(_dataPanel,         JSplitPane.BOTTOM);
+		_mainSplitPane.setDividerSize(3);
 		// add(createTopPanel(), "wrap");
 		// add(_mainSplitPan, "");
 		add(createTopPanel(), BorderLayout.NORTH);
-		add(_mainSplitPan, BorderLayout.CENTER);
+		add(_mainSplitPane, BorderLayout.CENTER);
 
 		_tablePopupMenu = createDataTablePopupMenu();
 		_dataTable.setComponentPopupMenu(_tablePopupMenu);
 
+		loadProps();
 		initComponentActions();
 	}
 
@@ -1664,198 +1682,59 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		return null;
 	}
 
-	private JPanel createExtendedInfoPanel()
+	/**
+	 * Update the panel that sit's "above" the JTable, this can include various information that 
+	 * extends the JTable with alternate graphical representation.
+	 */
+	protected void updateExtendedInfoPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Extended Information", false);
-		// panel.setLayout(new MigLayout(true?"debug, ":""+"wrap 2",
-		// "[grow] []",
-		// "[grow,:100:]"));
+	}
 
-		// panel.add(new
-		// JTextArea("DUMMY text fileld...Extended Information......................"));
+	/**
+	 * Create a panel that sit's "above" the JTable, this can include various information that 
+	 * extends the JTable with alternate graphical representation.
+	 * @return a JPanel
+	 */
+	protected JPanel createExtendedInfoPanel()
+	{
+		JSplitPane mainSplitPane = getMainSplitPane();
+		JPanel panel = SwingUtils.createPanel("Extended Information", false);
+
 		panel.setLayout(new BorderLayout());
-		panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
+		panel.add(new JLabel("Empty Extended Info Panel", JLabel.CENTER), BorderLayout.CENTER);
+//		panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
+//		panel.add(new JScrollPane(createExtendedInfoPanelXXX()), BorderLayout.CENTER);
 
 		panel.setPreferredSize(new Dimension(0, 0));
 		panel.setMinimumSize(new Dimension(0, 0));
+		mainSplitPane.setDividerLocation(0);
+
 		return panel;
 	}
-
-	private JTree createTreeSpSysmon()
+	/** 
+	 * Get the Panel where you can have graphs or other extra information that is based on the data 
+	 */
+	protected JPanel getExtendedInfoPanel()
 	{
-		DefaultMutableTreeNode top = new DefaultMutableTreeNode("sp_sysmon");
-		DefaultMutableTreeNode heading = new DefaultMutableTreeNode("");
-		DefaultMutableTreeNode subHead = new DefaultMutableTreeNode("");
-
-		heading = new DefaultMutableTreeNode("Kernel Utilization");
-		top.add(heading);
-		subHead = new DefaultMutableTreeNode("Config");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Runnable Process Search Count"));
-		subHead.add(new DefaultMutableTreeNode("I/O Polling Process Count"));
-
-		subHead = new DefaultMutableTreeNode("Engine Busy Utilization");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Engine 0"));
-
-		subHead = new DefaultMutableTreeNode("CPU Yields by Engine");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Engine 0"));
-
-		subHead = new DefaultMutableTreeNode("Network Checks");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Non-Blocking"));
-		subHead.add(new DefaultMutableTreeNode("Blocking"));
-		subHead.add(new DefaultMutableTreeNode("Total Network I/O Checks"));
-		subHead.add(new DefaultMutableTreeNode("Avg Net I/Os per Check"));
-
-		subHead = new DefaultMutableTreeNode("Disk I/O Checks");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Total Disk I/O Checks"));
-		subHead.add(new DefaultMutableTreeNode("Checks Returning I/O"));
-		subHead.add(new DefaultMutableTreeNode("Avg Disk I/Os Returned"));
-
-		heading = new DefaultMutableTreeNode("Worker Process Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Parallel Query Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Task Management");
-		top.add(heading);
-
-		subHead = new DefaultMutableTreeNode("Task Context Switches by Engine");
-		heading.add(subHead);
-		subHead.add(new DefaultMutableTreeNode("Engine 0"));
-
-		subHead = new DefaultMutableTreeNode("Task Context Switches Due To");
-		heading.add(subHead);
-
-		subHead.add(new DefaultMutableTreeNode("Voluntary Yields"));
-		subHead.add(new DefaultMutableTreeNode("Cache Search Misses"));
-		subHead.add(new DefaultMutableTreeNode("Exceeding I/O batch size"));
-		subHead.add(new DefaultMutableTreeNode("System Disk Writes"));
-		subHead.add(new DefaultMutableTreeNode("Logical Lock Contention"));
-		subHead.add(new DefaultMutableTreeNode("Address Lock Contention"));
-		subHead.add(new DefaultMutableTreeNode("Latch Contention"));
-		subHead.add(new DefaultMutableTreeNode("Log Semaphore Contention"));
-		subHead.add(new DefaultMutableTreeNode("PLC Lock Contention"));
-		subHead.add(new DefaultMutableTreeNode("Group Commit Sleeps"));
-		subHead.add(new DefaultMutableTreeNode("Last Log Page Writes"));
-		subHead.add(new DefaultMutableTreeNode("Modify Conflicts"));
-		subHead.add(new DefaultMutableTreeNode("I/O Device Contention"));
-		subHead.add(new DefaultMutableTreeNode("Network Packet Received"));
-		subHead.add(new DefaultMutableTreeNode("Network Packet Sent"));
-		subHead.add(new DefaultMutableTreeNode("Network services"));
-		subHead.add(new DefaultMutableTreeNode("Other Causes"));
-
-		heading = new DefaultMutableTreeNode("Application Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("ESP Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Transaction Profile");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Transaction Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Index Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Metadata Cache Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Lock Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Data Cache Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Procedure Cache Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Memory Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Recovery Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Disk I/O Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Network I/O Management");
-		top.add(heading);
-
-		heading = new DefaultMutableTreeNode("Replication Agent");
-		top.add(heading);
-
-		return new JTree(new DefaultTreeModel(top));
+		return _extendedInfoPanel;
 	}
 
+	/** 
+	 * Get the Panel where you can have graphs or other extra information that is based on the data 
+	 */
+	protected JSplitPane getMainSplitPane()
+	{
+		return _mainSplitPane;
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
 	private JPanel createTablePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Actual Data Table", false);
-		// panel.setLayout(new MigLayout(true?"debug, ":""+"wrap 2",
-		// "[grow] []",
-		// "[grow,:100:]"));
 		panel.setLayout(new BorderLayout());
-		// String[] columns = {
-		// "Col1 - asfkjha lkajhf alkjfhd askflakhf",
-		// "Col2 - kljhafaskjgfa kjfhkas fkajhs fgkaj faksjfdhg",
-		// "Col3 - hgfjhagdfkdjhg kjahgs fkjahg fkjagh kjgf kajgh fdkasj gf",
-		// "Col4 - alskjdfhah gfdakj gfkjahg fkjasgh kdfjaghd f"};
-		// Object[][] rows = {
-		// {"r1-Col-1", "r1-Col-2", "r1-Col-3", "r1-Col-4"},
-		// {"r2-Col-1", "r2-Col-2", "r2-Col-3", "r2-Col-4"},
-		// {"r3-Col-1", "r3-Col-2", "r3-Col-3", "r3-Col-4"},
-		// {"r4-Col-1", "r4-Col-2", "r4-Col-3", "r4-Col-4"},
-		// };
-
-		// ResultSetTableModel tm = null;
-		// try
-		// {
-		// Connection conn = AseConnectionFactory.getConnection("goransxp",
-		// 5000, null, "sa", "", Version.getAppName()+"-TCP-Test");
-		//
-		// Statement stmnt = conn.createStatement();
-		// ResultSet rs = null;
-		// if ( _displayName.startsWith("0-"))
-		// rs = stmnt.executeQuery("select * from master..monState");
-		// else if (_displayName.startsWith("1-"))
-		// rs =
-		// stmnt.executeQuery("select * from master..monOpenObjectActivity");
-		// else if (_displayName.startsWith("2-"))
-		// rs = stmnt.executeQuery("select * from master..monProcess");
-		// else if (_displayName.startsWith("3-"))
-		// rs = stmnt.executeQuery("select * from master..sysdatabases");
-		// else if (_displayName.startsWith("4-"))
-		// rs = stmnt.executeQuery("select * from master..monLocks");
-		// else if (_displayName.startsWith("5-"))
-		// rs = stmnt.executeQuery("select * from master..monEngine");
-		// else if (_displayName.startsWith("6-"))
-		// rs = stmnt.executeQuery("select version=@@version");
-		// else if (_displayName.startsWith("7-"))
-		// rs = stmnt.executeQuery("select * from master..monTableColumns");
-		// else if (_displayName.startsWith("8-"))
-		// rs = stmnt.executeQuery("select * from monDeviceIO");
-		// else
-		// rs = stmnt.executeQuery("select * from master..syslogins");
-		//				
-		// tm = new ResultSetTableModel(rs);
-		//			
-		// // first values should be FILTER_NO_COLUMN_IS_SELECTED
-		// _filterColumn_cb.addItem(FILTER_NO_COLUMN_IS_SELECTED);
-		// for (int i=0; i<tm.getColumnCount(); i++)
-		// {
-		// _filterColumn_cb.addItem(tm.getColumnName(i));
-		// }
-		// }
-		// catch (Exception e)
-		// {
-		// e.printStackTrace();
-		// }
 
 		_dataTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_dataTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -2345,9 +2224,41 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	/** called from MainFrame when the main window closes */
 	protected void saveProps()
 	{
-		// This is now done in the TCPTable, when columns are moved or removed
-		//if (_dataTable != null)
-		//_dataTable.saveColumnLayout();
+		// Get prefix name to use
+		String name = getPanelName();
+		String keyPrefix = name + ".";
+
+		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (tmpConf == null)
+			return;
+		
+		JSplitPane mainSplitPane = getMainSplitPane();
+		if (mainSplitPane != null)
+			tmpConf.setProperty(keyPrefix+"mainSplitPane.dividerLocation",  _mainSplitPane.getDividerLocation());
+
+		tmpConf.save();
+	}
+
+	/** called from MainFrame when the main window closes */
+	protected void loadProps()
+	{
+		// Get prefix name to use
+		String name = getPanelName();
+		String keyPrefix = name + ".";
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if (conf == null)
+			return;
+
+		int defaultDividerLocation = 0;
+		JSplitPane mainSplitPane = getMainSplitPane();
+		if (mainSplitPane != null)
+		{
+			defaultDividerLocation = mainSplitPane.getDividerLocation();
+			int dividerLocation  = conf.getIntProperty(keyPrefix+"mainSplitPane.dividerLocation",  defaultDividerLocation);
+
+			_mainSplitPane.setDividerLocation(dividerLocation);
+		}
 	}
 
 	/**  */

@@ -297,12 +297,14 @@ public class RefreshProcess extends Thread
 	}
 	private void refreshStmt() 
 	{
+		// Used at the end to printout SQL statement, when SQLExceptions are thrown.
+		String currentSql = "";
 		try
 		{
 			if (kpid > 0)
 			{
 				// Refresh process information
-				rs = stmt.executeQuery(
+				currentSql = 
 					"select P.spid, P.enginenum, P.status, P.suid, suser_name(P.suid), P.hostname, P.hostprocess, P.cmd, P.cpu, " + 
 					"   P.physical_io, P.memusage, LocksHeld, P.blocked, P.dbid, db_name(P.dbid), P.uid, '' /*user_name(P.uid)*/, P.gid, " + 
 					"   P.tran_name, P.time_blocked, P.network_pktsz, P.fid, P.execlass, P.priority, P.affinity, P.id, object_name(P.id,P.dbid), " + 
@@ -315,7 +317,8 @@ public class RefreshProcess extends Thread
 					"from sysprocesses P , monProcessActivity A, monProcessNetIO N " + 
 					"where P.kpid=A.KPID " +
 					"  and N.KPID=P.kpid " +
-					"  and P.kpid=" + Integer.toString(kpid));
+					"  and P.kpid=" + Integer.toString(kpid);
+				rs = stmt.executeQuery(currentSql);
 	
 				rs.next();
 				if (rs.getRow() > 0)
@@ -433,6 +436,7 @@ public class RefreshProcess extends Thread
 				else
 					sql += "and S.SPID != @@spid order by S.LogicalReads desc\n";
 
+				currentSql = sql;
 				rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmdCurStmt = rs.getMetaData();
 				int nbColsCurStmt = rsmdCurStmt.getColumnCount();
@@ -606,6 +610,7 @@ public class RefreshProcess extends Thread
 				// SequenceInBatch is just what 255 chunk we are reading...
 				// -----------------------------------------------------
 
+				currentSql = sql;
 				rs = stmt.executeQuery(sql);
 				int saveLineNumber = 1;
 				String sqlText = "";
@@ -672,7 +677,10 @@ public class RefreshProcess extends Thread
 //					if ()
 					_logger.debug("EXEC sp_showplanfull " + currentSpid);
 
-					stmt.executeUpdate("sp_showplanfull " + currentSpid);
+					String showplanSql = "sp_showplanfull " + currentSpid; 
+					currentSql = showplanSql;
+					stmt.executeUpdate(showplanSql);
+
 					StringBuffer planSb = null;
 					SQLWarning sqlw = stmt.getWarnings();
 					while (true)
@@ -787,7 +795,8 @@ public class RefreshProcess extends Thread
 					long startTime = System.currentTimeMillis();
 					_logger.info("BEGIN: Discarding everything in the transient monSysStatement table in the first sample.");
 
-					rs = stmt.executeQuery("select count(*) from monSysStatement");
+					currentSql = "select count(*) from monSysStatement";
+					rs = stmt.executeQuery(currentSql);
 					while(rs.next()) 
 					{
 						// DO nothing, we are "emptying" the table
@@ -796,6 +805,7 @@ public class RefreshProcess extends Thread
 					_logger.info("END:   Discarding everything in the transient monSysStatement table in the first sample. this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
 				}
 
+				currentSql = sql;
 				rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmd = rs.getMetaData();
 				int nbCols = rsmd.getColumnCount();
@@ -869,7 +879,8 @@ public class RefreshProcess extends Thread
 					long startTime = System.currentTimeMillis();
 					_logger.info("BEGIN: Discarding everything in the transient monSysSQLText table in the first sample.");
 
-					rs = stmt.executeQuery("select count(*) from monSysSQLText");
+					currentSql = "select count(*) from monSysSQLText";
+					rs = stmt.executeQuery(currentSql);
 					while(rs.next()) 
 					{
 						// DO nothing, we are "emptying" the table
@@ -880,6 +891,7 @@ public class RefreshProcess extends Thread
 
 				sql += " order by SPID, KPID, BatchID, SequenceInBatch";
 
+				currentSql = sql;
 				rs = stmt.executeQuery(sql);
 				String       lastKey = "";
 				Batch        batch   = null;
@@ -1071,6 +1083,7 @@ public class RefreshProcess extends Thread
 //				}
 
 				
+				currentSql = sql;
 				rs = stmt.executeQuery(sql);
 				String       lastKey = "";
 				Batch        batch   = null;
@@ -1204,9 +1217,8 @@ public class RefreshProcess extends Thread
 		}
 		catch (SQLException SQLEx)
 		{
-			_logger.error("RefreshProcess : " + SQLEx);
-			_logger.error("Error Code=" + SQLEx.getErrorCode());
-			_logger.error("Got SQL error(s) when refreshing information.", SQLEx);
+			_logger.error("SQL Capture Tool, RefreshProcess: Msg="+SQLEx.getErrorCode()+", caught:" + SQLEx);
+			_logger.error("Got SQL error(s) when refreshing information. SQL="+currentSql, SQLEx);
 
 			pdf.setRefreshError(SQLEx);
 			

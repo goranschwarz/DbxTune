@@ -173,8 +173,9 @@ public class GetCountersGui
 				MainFrame.setStatus(MainFrame.ST_OFFLINE_CONNECT);
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Offline read mode, use the offline window to navigate.");
 
-				try { Thread.sleep(500); }
-				catch (InterruptedException ignore) {}
+				sleep(500);
+//				try { Thread.sleep(500); }
+//				catch (InterruptedException ignore) {}
 
 				// START AT THE TOP, wait for a CONNECT
 				continue;
@@ -190,8 +191,9 @@ public class GetCountersGui
 				MainFrame.setStatus(MainFrame.ST_DISCONNECT);
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Not connected to any server. Please connect now!");
 
-				try { Thread.sleep(500); }
-				catch (InterruptedException ignore) {}
+				sleep(500);
+//				try { Thread.sleep(500); }
+//				catch (InterruptedException ignore) {}
 
 				// maybe do reconnect if the connection has been lost
 				if (canDoReconnect)
@@ -231,8 +233,9 @@ public class GetCountersGui
 								MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Re-connect FAILED, I will soon try again.");
 
 								// On connect failure sleep for a little longer
-								try { Thread.sleep(5000); }
-								catch (InterruptedException ignore) {}
+								sleep(5000);
+//								try { Thread.sleep(5000); }
+//								catch (InterruptedException ignore) {}
 							}
 						}
 					}
@@ -284,13 +287,16 @@ public class GetCountersGui
 							}
 						}
 
-						// Now SLEEP
-						try { Thread.sleep(1000); }
-						catch (InterruptedException ignore)
-						{
-							// leave the sleep loop
+						// Now SLEEP, return true on success, false on interrupted.
+						boolean ok = sleep(1000);
+						if (!ok)
 							break;
-						}
+//						try { Thread.sleep(1000); }
+//						catch (InterruptedException ignore)
+//						{
+//							// leave the sleep loop
+//							break;
+//						}
 					} // end: sleep loop
 				}
 				firstLoopAfterConnect = false;
@@ -300,8 +306,9 @@ public class GetCountersGui
 				while (MainFrame.isSamplingPaused())
 				{
 					MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "PAUSED the data sampling. Press |> to continue...");
-					try { Thread.sleep(10000); }
-					catch (InterruptedException ignore)	{}
+					sleep(10000);
+//					try { Thread.sleep(10000); }
+//					catch (InterruptedException ignore)	{}
 				}
 
 
