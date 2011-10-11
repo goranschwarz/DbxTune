@@ -14,13 +14,27 @@ rem --- IF "%SYBASE%"=="" set SYBASE=c:\sybase
 
 
 rem ------------------------------------------------------------------------
-rem --- remove last '\' char
+rem --- remove last '\' char from: ASESQLW_HOME and SYBASE
+rem --- ASESQLW_HOME exists every time, while SYBASE is NOT mandatory
+rem --- Also for SYBASE
+rem ---    Trim begin/end Quote (") character from the SYBASE environment variable 
+rem ---    The FOR command can be used to safely remove quotes surrounding a string. 
+rem ---    If SYBASE does not have quotes then it will remain unchanged.
+rem ---    If SYBASE is not set, it will still NOT be set after this
+rem --- Tested the below with SYBASE set to:
+rem --- set SYBASE=
+rem --- set SYBASE=c:\Program Files\sybase
+rem --- set SYBASE=c:\Program Files\sybase\
+rem --- set SYBASE="c:\Program Files\sybase"
+rem --- set SYBASE="c:\Program Files\sybase\"
+rem --- set SYBASE=c:\sybase
 rem ------------------------------------------------------------------------
-:stripHome
-if not _%ASESQLW_HOME:~-1%==_\ goto afterStripHome
-set ASESQLW_HOME=%ASESQLW_HOME:~0,-1%
-goto stripHome
-:afterStripHome
+IF %ASESQLW_HOME:~-1%==\ SET ASESQLW_HOME=%ASESQLW_HOME:~0,-1%
+
+IF NOT DEFINED SYBASE goto afterStripSybase
+for /f "useback tokens=*" %%a in ('%SYBASE%') do set SYBASE=%%~a
+IF %SYBASE:~-1%==\ SET SYBASE=%SYBASE:~0,-1%
+:afterStripSybase
 
 
 
@@ -67,9 +81,9 @@ rem ------------------------------------------------------------------------
 rem --- if environment is not properly set, do something about it
 rem --- this might mean goto an exit point
 rem ------------------------------------------------------------------------
-IF "%SYBASE%"=="" GOTO no_sybase
-IF "%ASESQLW_HOME%"=="" GOTO no_asesqlwhome
-rem --- IF "%JAVA_HOME%"=="" GOTO no_javahome
+rem IF NOT DEFINED SYBASE GOTO no_sybase
+IF NOT DEFINED ASESQLW_HOME GOTO no_asetunehome
+rem IF NOT DEFINED JAVA_HOME GOTO no_javahome
 
 
 
@@ -93,6 +107,8 @@ set classpath=%classpath%;%ASESQLW_HOME%\lib\proxy-vole_20110515.jar
 set classpath=%classpath%;%ASESQLW_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%ASESQLW_HOME%\lib\rsyntaxtextarea.jar
 set classpath=%classpath%;%ASESQLW_HOME%\lib\autocomplete.jar
+set classpath=%classpath%;%ASESQLW_HOME%\lib\jcommon-1.0.16.jar
+set classpath=%classpath%;%ASESQLW_HOME%\lib\jfreechart-1.0.13.jar
 
 rem set classpath=%classpath%;%ASESQLW_HOME%\lib\h2.jar
 rem set classpath=%classpath%;%ASESQLW_HOME%\lib\miglayout-3.6.jar
@@ -126,6 +142,7 @@ REM echo %CLASSPATH%
 
 java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASESQLW_HOME="%ASESQLW_HOME%" -DASESQLW_SAVE_DIR="%ASESQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.gui.QueryWindow %*
 
+IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_asesqlw
 
 
@@ -158,6 +175,20 @@ echo The java installation can be pointed out using the variable JAVA_HOME
 echo Current JAVA_HOME variable is set to %JAVA_HOME%
 echo -----------------------------------------------------------------------
 goto exit_asesqlw
+
+:unexpected_error
+echo .
+echo -----------------------------------------------------------------------
+echo Unexpected Error: Return code from java was NOT 0
+echo -----------------------------------------------------------------------
+echo If you have problems to start the tool, please email me the above output
+echo And I will make sure to solve the issue for you!
+echo -----------------------------------------------------------------------
+echo Mail to: goran_schwarz@hotmail.com
+echo Subject: AseSqlW starting problem
+echo -----------------------------------------------------------------------
+echo .
+goto exit_asetune
 
 :no_sybase
 echo -----------------------------------------------------------------------

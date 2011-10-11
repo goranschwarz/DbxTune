@@ -41,6 +41,8 @@ export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/proxy-vole_20110515.jar
 export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/ganymed-ssh2-build251beta1.jar
 export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/rsyntaxtextarea.jar
 export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/autocomplete.jar
+export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/jcommon-1.0.16.jar
+export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/jfreechart-1.0.13.jar
 
 
 export PATH=$JAVA_HOME/bin:$PATH

@@ -4,6 +4,7 @@
 
 
 package com.asetune;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
@@ -15,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -26,17 +28,42 @@ import javax.naming.NameNotFoundException;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.JTree;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.IconHighlighter;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.labels.ItemLabelAnchor;
+import org.jfree.chart.labels.ItemLabelPosition;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.renderer.category.StackedBarRenderer;
+import org.jfree.chart.title.TextTitle;
+import org.jfree.data.category.CategoryDataset;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.ui.TextAnchor;
 
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -48,6 +75,7 @@ import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.AseConfigMonitoringDialog;
 import com.asetune.gui.ChangeToJTabDialog;
+import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.SummaryPanel;
@@ -55,6 +83,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.SshConnection;
+import com.asetune.sp_sysmon.SpSysmon;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -2180,31 +2209,22 @@ extends Thread
 
 		name         = CM_NAME__OPEN_DATABASES;
 		displayName  = CM_DESC__OPEN_DATABASES;
-		description  = "<html>" +
-				"Various information on a database level.<br>" +
-				"<br>" +
-				"<b>Note:</b><br>" +
-				"Databases in the attached Graphs can be excluded<br>" +
-				"Exclude a database from graphs is based on:<br>" +
-				"<ul>" +
-				"    <li>Part of the skip list</li>" +
-				"    <li>Database size is lower than the skip limit</li>" +
-				"</ul>" +
-				"Db skip list can be changed with the property <code>"+CM_NAME__OPEN_DATABASES+".skipDbsInGraphs=db1ToSkip, db2ToSkip...</code><br>" +
-				"Db size limit can be changed with the property <code>"+CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs=#mb</code><br>" +
-				"In the file '<code>"+Configuration.getInstance(Configuration.USER_CONF).getFilename()+"</code>'.<br>" +
-				"The default skip list is: <code>master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs</code><br>" +
-				"The default size limit is: <code>300</code><br>" +
-				"If you <b>always</b> want a database present in the graphs, add database to property <code>"+CM_NAME__OPEN_DATABASES+".keepDbsInGraphs=db1, db2...</code><br>" +
-				"<br><br>" +
-				"Table Background colors:" +
-				"<ul>" +
-				"    <li>BLUE - A Database backup is in progress</li>" +
-				"    <li>PINK - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
-				"    <li>RED  - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
-				"</ul>" +
-				"</html>";
-		
+		description  =
+			"<html>" +
+			"Various information on a database level.<br>" +
+			"<br>" +
+			"<b>Note:</b><br>" +
+			"Databases in the attached Graphs can be included or excluded<br>" +
+			"Click button \"Set 'Graph' databases\"" +
+			"<br><br>" +
+			"Table Background colors:" +
+			"<ul>" +
+			"    <li>BLUE - A Database backup is in progress</li>" +
+			"    <li>PINK - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
+			"    <li>RED  - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
+			"</ul>" +
+			"</html>";
+
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
 		
 		needVersion  = 0;
@@ -2225,18 +2245,18 @@ extends Thread
 		{
 			private static final long serialVersionUID = 5078336367667465709L;
 
-			/** databases that should ALWAYS be part of the graphs */
-			private String[] _keepDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
-					.getProperty(CM_NAME__OPEN_DATABASES+".keepDbsInGraphs", ""));
-
-			/** databases that should be left OUT in the graphs */
-			private String[] _skipDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
-					.getProperty(CM_NAME__OPEN_DATABASES+".skipDbsInGraphs", 
-					"master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs"));
-
-			/** databases size smaller than this should be left OUT in the graphs */
-			private int _skipDbsWithSizeLtInGraphs = Configuration.getCombinedConfiguration()
-					.getIntProperty(CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs", 300);
+//			/** databases that should ALWAYS be part of the graphs */
+//			private String[] _keepDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
+//					.getProperty(CM_NAME__OPEN_DATABASES+".keepDbsInGraphs", ""));
+//
+//			/** databases that should be left OUT in the graphs */
+//			private String[] _skipDbsInGraphs = StringUtil.commaStrToArray(Configuration.getCombinedConfiguration()
+//					.getProperty(CM_NAME__OPEN_DATABASES+".skipDbsInGraphs", 
+//					"master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs"));
+//
+//			/** databases size smaller than this should be left OUT in the graphs */
+//			private int _skipDbsWithSizeLtInGraphs = Configuration.getCombinedConfiguration()
+//					.getIntProperty(CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs", 300);
 
 			@Override
 			public void initSql(Connection conn)
@@ -2413,75 +2433,21 @@ extends Thread
 					else
 						diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, pos_LogSizeUsedPct);
 				}
-
-// DELETE THIS ONE... it's in CmSummary now
-				//-----------------------------------------------------------------
-				// NOTE: mabe create a new method called alarmHandling()
-				//-----------------------------------------------------------------
-//				if (AseTune.hasGUI())
-//				{
-//					int fullLogCount = 0;
-//					int suspendedSpidCount = 0;
-//	
-//					// Loop on all diffData rows
-//					for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
-//					{
-//						TransactionLogFull = ((Number)diffData.getValueAt(rowId, TransactionLogFullId)).intValue();
-//						if (SuspendedProcessesId >= 0)
-//							SuspendedProcesses = ((Number)diffData.getValueAt(rowId, SuspendedProcessesId)).intValue();
-//						
-//						fullLogCount       += TransactionLogFull;
-//						suspendedSpidCount += SuspendedProcesses;
-//					}
-//					_logger.debug("TRANSLOG-FULL="+fullLogCount+", SuspenedSpidCount="+suspendedSpidCount);
-//					if (fullLogCount > 0)
-//					{
-//						MainFrame.getInstance().setFullTransactionLog(true, fullLogCount, suspendedSpidCount);
-//	
-//						//BELOW IS NOT TESTED and needs to be changed, implemeted and tested
-//						//String toTabName = "Databases";
-//						//if ( _focusToDatabasesTab == null )
-//						//	_focusToDatabasesTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the ASE Server", MainFrame.getTabbedPane(), toTabName);
-//						//_focusToDatabasesTab.setVisible(true);
-//					}
-//					else
-//						MainFrame.getInstance().setFullTransactionLog(false, 0, 0);
-//				}
 			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				// Filter out rows we do NOT want in the list
-				// For rows we want to look at: put the row'ids in a list
-				ArrayList<Integer> rowList = new ArrayList<Integer>();
-				for (int i=0; i<this.size(); i++)
-				{
-					String dbname = this.getAbsString(i, "DBName");
-					int    dbsize = ((Number)this.getAbsValue (i, "DbSizeInMb")).intValue();
-
-					boolean keepDb = true;
-
-					if (StringUtil.matchesRegexArr(dbname, _skipDbsInGraphs))
-						keepDb = false;
-
-					if (dbsize < _skipDbsWithSizeLtInGraphs)
-						keepDb = false;
-
-					if (StringUtil.matchesRegexArr(dbname, _keepDbsInGraphs))
-						keepDb = true;
-						
-					if (keepDb)
-						rowList.add(new Integer(i));
-				}
+				// Get what databases should be part of the graphs
+				Map<String, Integer> dbMap = DbSelectionForGraphsDialog.getDbsInGraphList(this);
 
 				if ("DbLogSemapContGraph".equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
-					Double[] dArray = new Double[rowList.size()];
-					String[] lArray = new String[rowList.size()];
+					Double[] dArray = new Double[dbMap.size()];
+					String[] lArray = new String[dbMap.size()];
 					int d = 0;
-					for (int row : rowList)
+					for (int row : dbMap.values())
 					{
 						String dbname = this.getAbsString        (row, "DBName");
 						Double dvalue = this.getDiffValueAsDouble(row, "AppendLogContPct");
@@ -2499,10 +2465,10 @@ extends Thread
 				if ("DbLogSizeLeftGraph".equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
-					Double[] dArray = new Double[rowList.size()];
-					String[] lArray = new String[rowList.size()];
+					Double[] dArray = new Double[dbMap.size()];
+					String[] lArray = new String[dbMap.size()];
 					int d = 0;
-					for (int row : rowList)
+					for (int row : dbMap.values())
 					{
 						String dbname = this.getAbsString       (row, "DBName");
 						Double dvalue = this.getAbsValueAsDouble(row, "LogSizeFreeInMb");
@@ -2520,10 +2486,10 @@ extends Thread
 				if ("DbLogSizeUsedPctGraph".equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
-					Double[] dArray = new Double[rowList.size()];
-					String[] lArray = new String[rowList.size()];
+					Double[] dArray = new Double[dbMap.size()];
+					String[] lArray = new String[dbMap.size()];
 					int d = 0;
-					for (int row : rowList)
+					for (int row : dbMap.values())
 					{
 						String dbname = this.getAbsString        (row, "DBName");
 						Double dvalue = this.getDiffValueAsDouble(row, "LogSizeUsedPct");
@@ -2552,19 +2518,214 @@ extends Thread
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long	serialVersionUID	= 1L;
+				
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					DefaultCategoryDataset categoryDataset = new DefaultCategoryDataset();
 
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int DBName_pos          = tm.findColumn("DBName");
+						int LogSizeFreeInMb_pos = tm.findColumn("LogSizeFreeInMb"); // numeric(10,1)
+						int LogSizeUsedPct_pos  = tm.findColumn("LogSizeUsedPct");  // numeric(10,1)
+
+						CountersModel cm = getCm();
+						if (cm != null)
+						{
+							Map<String, Integer> dbList = DbSelectionForGraphsDialog.getDbsInGraphList(cm);
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String DBName          = (String)dataTable.getValueAt(r, DBName_pos);
+								Number LogSizeFreeInMb = (Number)dataTable.getValueAt(r, LogSizeFreeInMb_pos);
+								Number LogSizeUsedPct  = (Number)dataTable.getValueAt(r, LogSizeUsedPct_pos);
+	
+								if (dbList.keySet().contains(DBName))
+									categoryDataset.addValue(LogSizeUsedPct, LogSizeFreeInMb+" MB FREE", DBName);
+							}
+						}
+					}
+					else
+					{
+						for(int i=1; i<=30; i++)
+						{
+							double freePct = Math.random() * 100.0;
+							double usedPct = 100.0 - freePct;
+							BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+							categoryDataset.addValue(usedPct, freeMb+" MB FREE", "dummy_db_"+i);
+						}
+					}
+
+					return categoryDataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					// Get Graph Orientation: VERTICAL or HORIZONTAL
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
+
+					PlotOrientation orientation = PlotOrientation.VERTICAL;
+					if (orientationStr.equals("VERTICAL"))   orientation = PlotOrientation.VERTICAL;
+					if (orientationStr.equals("HORIZONTAL")) orientation = PlotOrientation.HORIZONTAL;
+					if (orientationStr.equals("AUTO"))
+					{
+						if (dataset.getRowCount() <= 10)
+							orientation = PlotOrientation.HORIZONTAL;
+					}
+
+					JFreeChart chart = ChartFactory.createStackedBarChart(
+							null,                     // Title
+							null,                     // categoryAxisLabel
+							null,                     // valueAxisLabel
+							dataset,                  // dataset
+							orientation,              // orientation
+							false,                    // legend
+							true,                     // tooltips
+							false);                   // urls
+
+					chart.setBackgroundPaint(getBackground());
+					chart.setTitle(new TextTitle("Transaction Log Space Usage in Percent", TextTitle.DEFAULT_FONT));
+
+					//------------------------------------------------
+					// code from TabularCntrlPanel
+					//------------------------------------------------
+					CategoryPlot plot = chart.getCategoryPlot();
+					StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+
+					if (orientation.equals(PlotOrientation.VERTICAL))
+					{
+						ItemLabelPosition p1 = new ItemLabelPosition(ItemLabelAnchor.INSIDE12, TextAnchor.CENTER_RIGHT, TextAnchor.CENTER_RIGHT, -Math.PI / 2.0);
+						renderer.setBasePositiveItemLabelPosition(p1);
+						
+						ItemLabelPosition p2 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE12, TextAnchor.CENTER_LEFT, TextAnchor.CENTER_LEFT, -Math.PI / 2.0);
+						renderer.setPositiveItemLabelPositionFallback(p2);
+
+						// Tilt DBName 45 degree left
+						CategoryAxis domainAxis = plot.getDomainAxis();
+						if (orientation.equals(PlotOrientation.VERTICAL))
+							domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+					}
+					else
+					{
+						ItemLabelPosition p1 = new ItemLabelPosition(ItemLabelAnchor.OUTSIDE3, TextAnchor.CENTER_RIGHT, TextAnchor.CENTER_RIGHT, 0);
+						renderer.setBasePositiveItemLabelPosition(p1);
+						
+						ItemLabelPosition p2 = new ItemLabelPosition(ItemLabelAnchor.INSIDE3, TextAnchor.CENTER_LEFT, TextAnchor.CENTER_LEFT, 0);
+						renderer.setPositiveItemLabelPositionFallback(p2);
+					}
+
+					
+					StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{0}", NumberFormat.getInstance());
+					renderer.setBaseItemLabelGenerator(scilg);
+					
+					renderer.setBaseItemLabelsVisible(true);
+
+					NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+					rangeAxis.setUpperBound(100);
+
+//					for (int r=0; r<dataset.getRowCount(); r++)
+//						for (int c=0; c<dataset.getColumnCount(); c++)
+//							System.out.println("dataset investigate: r="+r+", c="+c+", val="+dataset.getValue(r, c));
+
+					for (int r=0; r<dataset.getRowCount(); r++)
+					{
+						Number val = dataset.getValue(r, r);
+						if (val == null)
+							continue;
+						if (val.intValue() >= 90)
+							renderer.setSeriesPaint(r, Color.RED);
+						else if (val.intValue() >= 80)
+							renderer.setSeriesPaint(r, Color.ORANGE);
+						else
+							renderer.setSeriesPaint(r, Color.GREEN);
+					}
+
+					return chart;
+				}
+
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Create Graph
+					JFreeChart chart = createChart(createDataset(null));
+					panel.add( new ChartPanel(chart) );
+
+					// Size of the panel
+					mainSplitPane.setDividerLocation(150);
+					return panel;
+				}
+
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, that is not visible, don't update the graph
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+						return;
+					
+					if ( ! isMonConnected() )
+						dataTable = null;
+
+					panel.removeAll();
+
+					// Create Graph
+					JFreeChart chart = createChart(createDataset(dataTable));
+					panel.add( new ChartPanel(chart) );
+				}
+
+				@Override
 				protected JPanel createLocalOptionsPanel()
 				{
 					JPanel panel = SwingUtils.createPanel("Local Options", true);
 					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-					JButton resetMoveToTab_but = new JButton("Reset 'Move to Tab' settings.");
+					final JButton resetMoveToTab_but = new JButton("Reset 'Move to Tab' settings");
+					final JButton dblist_but         = new JButton("Set 'Graph' databases");
 
-					resetMoveToTab_but.setToolTipText(
-							"<html>" +
-							"Reset the option: To automatically switch to this tab when any Database(s) Transaction log is <b>full</b>.<br>" +
-							"Next time this happens, a popup will ask you what you want to do." +
-							"</html>");
+					String[] graphTypeArr = {"Auto", "Vertical", "Horizontal"};
+					final JLabel    graphType_lbl    = new JLabel("Graph Orientation");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip =
+						"<html>" +
+						"Reset the option: To automatically switch to this tab when any Database(s) Transaction log is <b>full</b>.<br>" +
+						"Next time this happens, a popup will ask you what you want to do." +
+						"</html>";
+					resetMoveToTab_but.setToolTipText(tooltip);
+
+					dblist_but   .setToolTipText("<html>What databases should be apart of the graphs, both in the Summary Panel, and this local graph area.<br></html>");
+					tooltip = 
+						"<html>" +
+						"Do you want the 'Transaction Log Size Graph' to be presented 'Standing' or 'Laying'.<br>" +
+						"'Auto' means: " +
+						"<ul>" +
+						"    <li>'Laying' if <b>less</b> than 10 databases is included.</li>" +
+						"    <li>'Standing' if <b>more</b> than 10 databases is included.</li>" +
+						"</ul>" +
+						"</html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					// Set initial value for Graph Orientation
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals("AUTO"))       orientation = graphTypeArr[0];
+					if (orientationStr.equals("VERTICAL"))   orientation = graphTypeArr[1];
+					if (orientationStr.equals("HORIZONTAL")) orientation = graphTypeArr[2];
+					graphType_cbx.setSelectedItem(orientation);
+					
+					// ACTION events
 					resetMoveToTab_but.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
@@ -2572,8 +2733,36 @@ extends Thread
 							ChangeToJTabDialog.resetSavedSettings(finalDisplayName);
 						}
 					});
-					
-					panel.add(resetMoveToTab_but, "wrap");
+					dblist_but.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							int rc = DbSelectionForGraphsDialog.showDialog(MainFrame.getInstance(), getCm());
+							if (rc == JOptionPane.OK_OPTION)
+								updateExtendedInfoPanel();
+						}
+					});
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Auto"))       conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
+							if (type.equals("Vertical"))   conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "VERTICAL");
+							if (type.equals("Horizontal")) conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "HORIZONTAL");
+							conf.save();
+							
+							updateExtendedInfoPanel();
+						}
+					});
+
+					// ADD to panel
+					panel.add(resetMoveToTab_but, "wrap 5");
+					panel.add(dblist_but,         "wrap 5");
+					panel.add(graphType_lbl,      "split");
+					panel.add(graphType_cbx,      "wrap 5");
 
 					return panel;
 				}
@@ -5147,7 +5336,166 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long	serialVersionUID	= 1L;
+				
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel = getExtendedInfoPanel();
+					if (panel == null) 
+						return;
+
+					// If the panel is so small, that is not visible, don't update the graph
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+						return;
+					
+					if ( ! isMonConnected() )
+						return;
+
+					CountersModel cm = getCm();
+					if (cm == null)
+						return;
+
+					if ( ! cm.hasDiffData() )
+						return;
+
+//					SpSysmon sysmon = new SpSysmon(cm);
+//					sysmon.calc();
+//					sysmon.printReport();
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+	
+					panel.setLayout(new BorderLayout());
+					panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
+	
+//					panel.setPreferredSize(new Dimension(0, 0));
+//					panel.setMinimumSize(new Dimension(0, 0));
+//					panel.setSize(new Dimension(0, 500));
+					mainSplitPane.setDividerLocation(150);
+					return panel;
+				}
+				private JTree createTreeSpSysmon()
+				{
+					DefaultMutableTreeNode top = new DefaultMutableTreeNode("sp_sysmon");
+					DefaultMutableTreeNode heading = new DefaultMutableTreeNode("");
+					DefaultMutableTreeNode subHead = new DefaultMutableTreeNode("");
+	
+					heading = new DefaultMutableTreeNode("Kernel Utilization");
+					top.add(heading);
+					subHead = new DefaultMutableTreeNode("Config");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Runnable Process Search Count"));
+					subHead.add(new DefaultMutableTreeNode("I/O Polling Process Count"));
+	
+					subHead = new DefaultMutableTreeNode("Engine Busy Utilization");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+	
+					subHead = new DefaultMutableTreeNode("CPU Yields by Engine");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+	
+					subHead = new DefaultMutableTreeNode("Network Checks");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Non-Blocking"));
+					subHead.add(new DefaultMutableTreeNode("Blocking"));
+					subHead.add(new DefaultMutableTreeNode("Total Network I/O Checks"));
+					subHead.add(new DefaultMutableTreeNode("Avg Net I/Os per Check"));
+	
+					subHead = new DefaultMutableTreeNode("Disk I/O Checks");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Total Disk I/O Checks"));
+					subHead.add(new DefaultMutableTreeNode("Checks Returning I/O"));
+					subHead.add(new DefaultMutableTreeNode("Avg Disk I/Os Returned"));
+	
+					heading = new DefaultMutableTreeNode("Worker Process Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Parallel Query Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Task Management");
+					top.add(heading);
+	
+					subHead = new DefaultMutableTreeNode("Task Context Switches by Engine");
+					heading.add(subHead);
+					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+	
+					subHead = new DefaultMutableTreeNode("Task Context Switches Due To");
+					heading.add(subHead);
+	
+					subHead.add(new DefaultMutableTreeNode("Voluntary Yields"));
+					subHead.add(new DefaultMutableTreeNode("Cache Search Misses"));
+					subHead.add(new DefaultMutableTreeNode("Exceeding I/O batch size"));
+					subHead.add(new DefaultMutableTreeNode("System Disk Writes"));
+					subHead.add(new DefaultMutableTreeNode("Logical Lock Contention"));
+					subHead.add(new DefaultMutableTreeNode("Address Lock Contention"));
+					subHead.add(new DefaultMutableTreeNode("Latch Contention"));
+					subHead.add(new DefaultMutableTreeNode("Log Semaphore Contention"));
+					subHead.add(new DefaultMutableTreeNode("PLC Lock Contention"));
+					subHead.add(new DefaultMutableTreeNode("Group Commit Sleeps"));
+					subHead.add(new DefaultMutableTreeNode("Last Log Page Writes"));
+					subHead.add(new DefaultMutableTreeNode("Modify Conflicts"));
+					subHead.add(new DefaultMutableTreeNode("I/O Device Contention"));
+					subHead.add(new DefaultMutableTreeNode("Network Packet Received"));
+					subHead.add(new DefaultMutableTreeNode("Network Packet Sent"));
+					subHead.add(new DefaultMutableTreeNode("Network services"));
+					subHead.add(new DefaultMutableTreeNode("Other Causes"));
+	
+					heading = new DefaultMutableTreeNode("Application Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("ESP Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Transaction Profile");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Transaction Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Index Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Metadata Cache Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Lock Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Data Cache Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Procedure Cache Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Memory Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Recovery Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Disk I/O Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Network I/O Management");
+					top.add(heading);
+	
+					heading = new DefaultMutableTreeNode("Replication Agent");
+					top.add(heading);
+	
+					return new JTree(new DefaultTreeModel(top));
+				}
+			};
+			
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_sysmon_activity.png") );
 			tcp.setCm(tmp);
@@ -5440,7 +5788,7 @@ extends Thread
 					"";
 
 				// remove last comma
-				cols = StringUtil.getRidOfLastComma(cols);
+				cols = StringUtil.removeLastComma(cols);
 
 				String sql = 
 					"select " + cols + "\n" +
@@ -10084,6 +10432,18 @@ extends Thread
 	}
 
 	/**
+	 * Interrupt the sleep and request a new refresh.<br>
+	 * Note: this will be disregarded if we not sleeping waiting for a new refresh.
+	 */
+	public void doRefresh()
+	{
+		if ( isRefreshingCounters() )
+			_logger.info("Sorry, can't do refresh now, we are already in a Performance Counter Refresh");
+		else
+			doInterrupt();
+	}
+
+	/**
 	 * calls interrupt() on the refresh thread.<br>
 	 * So if the refresh thread is asleap waiting for next refresh it will be interupted and
 	 * start to do a new refresh of data.
@@ -10098,6 +10458,49 @@ extends Thread
 		}
 	}
 
+	private boolean _isSleeping = false;
+	/** Check if we are sleeping by calling the method sleep() in this class. */
+	public boolean isSleeping()
+	{
+		return _isSleeping;
+	}
+	/**
+	 * Sleep for X ms, should only be used when GUI should be able to be interrupted.
+	 * @param ms sleep time
+	 * @return true if we were sleept the whole time, false if we were interrupted.
+	 */
+	public boolean sleep(int ms)
+	{
+		try 
+		{
+			_isSleeping = true;
+			Thread.sleep(ms); 
+			return true;
+		}
+		catch (InterruptedException ignore)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("Thread '"+Thread.currentThread().getName()+"' was interrupted.", new Exception("Dummy exception, to get callstack from where this happened."));
+			return false;
+		}
+		finally
+		{
+			_isSleeping = false;
+		}
+	}
+
+	/** 
+	 * Interrupt the thread if it's sleeping using the sleep() method in this class.<br>
+	 * If Thread:sleep() has been used it wont do interrupts, just skipping your request.
+	 */
+	public void doInterruptSleep()
+	{
+		if ( isSleeping() )
+			doInterrupt();
+		else
+			_logger.info("Sorry, can't interrupt sleep now, because WE ARE NOT SLEEPING.");
+	}
+	
 	/** enable/continue refreshing of monitor counters from the monitored server */
 	public void enableRefresh()
 	{
@@ -10184,7 +10587,8 @@ extends Thread
 	 */
 	public boolean isMonConnected()
 	{
-		return isMonConnected(false, false);
+//		return isMonConnected(false, false);
+		return isMonConnected(false, true);
 	}
 	/**
 	 * Do we have a connection to the database?
@@ -10195,12 +10599,14 @@ extends Thread
 		if (_conn == null) 
 			return false;
 
+		//DEBUG: System.out.print("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+")");
 		// Cache the last call for X ms (default 1200 ms)
 		if ( ! forceConnectionCheck )
 		{
 			long diff = System.currentTimeMillis() - _lastIsClosedCheck;
 			if ( diff < _lastIsClosedRefreshTime)
 			{
+				//DEBUG: System.out.println("    <<--- isMonConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
 				return true;
 			}
 		}
@@ -10208,6 +10614,7 @@ extends Thread
 		// check the connection itself
 		try
 		{
+			//DEBUG: System.out.println("    DO: isClosed");
 			// jConnect issues RPC: sp_mda 0, 7 on isClosed()
 			if (_conn.isClosed())
 			{

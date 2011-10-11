@@ -24,6 +24,69 @@ NOT YET DONE
 -->
 
 <!-- ========================================================================== -->
+<H2>2011-xx-xx</H2>
+<UL>
+	<LI>
+	<b>Change: Screen capture.</b><br>
+	The text in the Dialog can now be Copy+Paste.<br>
+	This makes it easier to access the storage directory.<br>
+	</LI>
+
+	<LI>
+	<b>New functionality in Tab: Databases</b><br>
+	A local bar graph "Transaction Log Space Usage in Percent". Colors of the bars 
+	(green = less than 80% usage, orange = between 80-90% usage, red = above 90% usage)<br>
+	A Dialog has also been created to choose what databases should be part of both the local
+	bar graph and the attached trend graphs. This is on the button "Set 'Graph' databases".<br>
+	</LI>
+
+	<LI>
+	<b>New functionality in Tab: Sysmon Raw</b><br>
+	Calculating some of the ordinary "sp_sysmon" calculation.<br>
+	The goal is to present some kind of sp_sysmon report simulation in the "Extended Info Panel".<br>
+	Maybe a TreeTable or similar will present the information, but a lot of work is still needed here.<br>
+	</LI>
+
+	<LI>
+	<b>Change: "Extended Info Panel" on all Performance Counter tabs.</b><br>
+	The "Extended Info Panel" on each 'tab' has previously always been invisible/minimized. Now the 
+	divider location is saved to the user temporary properties. This so we can remember how
+	large the Extended Info Panel is for the 'Databases' or other Performance Counter tabs.<br>
+	</LI>
+
+	<LI>
+	<b>Add/Changes to: SQL Window, stand alone utility</b><br>
+	When starting the SQL Window tool as an external java process, using asesqlw.bat. A menu bar and
+	a toolbar panel is created. This so you can connect/disconnect to ASE servers using the Connection Dialog.<br>
+	The stand alone utility 'asesqlw' can soon be released.
+	</LI>
+
+	<LI>
+	<b>bug fix: check if connection is still open, done to often</b><br>
+	I called isMonConnected() with forceCheck to often, this has been changed in CountersModel.isRefreshable()<br>
+	So less calls to ASE procedure sp_mda is done.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Missing Statistics</b><br>
+	This used to much CPU resources for checking if column was part of any index.<br>
+	It uses a little less CPU now, but I still need to tune it in more detailed.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: asetune.bat, problems with quote and backslash chars in Env Variables</b><br>
+	problems if SYBASE was set to:
+	<ul>
+	    <li>set SYBASE="c:\Program Files\sybase"</li>
+	    <li>set SYBASE="c:\Program Files\sybase\"</li>
+	    <li>set SYBASE=c:\Program Files\sybase\</li>
+	</ul>
+	The trailing \ will be stripped, also the surrounding quotes...
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2011-09-30</H2>
 <UL>
 	<LI>

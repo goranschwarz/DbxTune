@@ -578,9 +578,10 @@ public class GetCountersNoGui
 				if ( ! isMonConnected(true, true) )
 				{
 					_logger.error("Problems connecting to ASE server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
-					
-					try { Thread.sleep( _sleepTime * 1000 ); }
-					catch (InterruptedException ignore) {}
+
+					sleep(_sleepTime * 1000);
+//					try { Thread.sleep( _sleepTime * 1000 ); }
+//					catch (InterruptedException ignore) {}
 
 					// START AT THE TOP AGAIN
 					continue;
@@ -785,8 +786,9 @@ public class GetCountersNoGui
 			}
 
 			// Sleep
-			try { Thread.sleep( _sleepTime * 1000 ); }
-			catch (InterruptedException ignore) {}
+			sleep(_sleepTime * 1000);
+//			try { Thread.sleep( _sleepTime * 1000 ); }
+//			catch (InterruptedException ignore) {}
 		}
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending...");
 

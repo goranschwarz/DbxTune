@@ -11,10 +11,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -353,6 +355,26 @@ public class StringUtil
 		return sa;
 	}
 
+	/**
+	 * splits every part of a comma separated string into a LinkedHashSet<String>, since it's a Set duplicates will be removed
+	 * @param str "db1,db2,db2" returns LinkedHashSet ["db1"]["db2"]
+	 * @return a String[]
+	 */
+	public static Set<String> commaStrToSet(String str)
+	{
+		String[] sa = commaStrToArray(str);
+		LinkedHashSet<String> retSet = new LinkedHashSet<String>();
+		for (String s : sa)
+			retSet.add(s);
+		return retSet;
+	}
+
+	/**
+	 * 
+	 * @param oa
+	 * @param o
+	 * @return
+	 */
 	public static boolean arrayContains(Object[] oa, Object o)
 	{
 		if (oa == null)
@@ -369,7 +391,7 @@ public class StringUtil
 	}
 
 	/**
-	 * Counts the number of occurrances of the String <code>occurs</code> in the
+	 * Counts the number of occurrences of the String <code>occurs</code> in the
 	 * String <code>s</code>.
 	 *
 	 * @param occurs The String to count
@@ -715,7 +737,22 @@ public class StringUtil
 	{
 		for (String str : regexArr)
 		{
-//			if (str.equals(searchStr))
+			if (inStr.matches(str))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Check if 'inStr' is part of the 'regexSet'
+	 * @param inStr String to match in any of Strings in the Set
+	 * @param regexSet of regex Strings that we match towards <code>inStr</code>
+	 * @return true if inStr matches any of the regex Strings of the regexSet
+	 */
+	public static boolean matchesRegexSet(String inStr, Set<String> regexSet)
+	{
+		for (String str : regexSet)
+		{
 			if (inStr.matches(str))
 				return true;
 		}
@@ -727,7 +764,7 @@ public class StringUtil
 	 * @param str
 	 * @return the origin string but last ',' is stripped. 
 	 */
-	public static String getRidOfLastComma(String str)
+	public static String removeLastComma(String str)
 	{
 		if (str == null)
 			return null;
@@ -751,7 +788,7 @@ public class StringUtil
 		String[] str = {"abc", "abc ", "abc,", "abc, ", "abc,\t", "abc,\n", "abc,\t\t", "abc,\n\n", "abc,\t\n"};
 		for (String s : str)
 		{
-			System.out.println("str1='"+getRidOfLastComma(s)+"'.");
+			System.out.println("str1='"+removeLastComma(s)+"'.");
 		}
 		System.exit(0);
 
