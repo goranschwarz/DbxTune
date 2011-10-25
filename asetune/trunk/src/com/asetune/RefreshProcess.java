@@ -2173,6 +2173,7 @@ public class RefreshProcess extends Thread
 		     pkList.add("DBName");
 		     pkList.add("ObjectID");
 		     pkList.add("IndexID");
+		     pkList.add("OwnerUserID");
 
 		cols1 = cols2 = cols3 = "";
 		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";

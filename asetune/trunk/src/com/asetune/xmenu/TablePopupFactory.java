@@ -73,7 +73,8 @@ public class TablePopupFactory
 				if (invoker instanceof JTable)
 				{
 					JTable table = (JTable)invoker;
-					String selection = SwingUtils.tableToString(table.getModel());
+//					String selection = SwingUtils.tableToString(table.getModel());
+					String selection = SwingUtils.tableToString(table);
 
 					StringSelection data = new StringSelection(selection);
 					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -94,7 +95,8 @@ public class TablePopupFactory
 				{
 					JTable table = (JTable)invoker;
 					int selectedRow = table.getSelectedRow();
-					String selection = SwingUtils.tableToString(table.getModel(), selectedRow);
+//					String selection = SwingUtils.tableToString(table.getModel(), selectedRow);
+					String selection = SwingUtils.tableToString(table, selectedRow);
 
 					StringSelection data = new StringSelection(selection);
 					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();

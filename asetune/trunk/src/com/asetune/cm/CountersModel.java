@@ -104,7 +104,7 @@ implements Cloneable
 	private String             _sqlWhere          = "";
 	private TabularCntrPanel   tabPanel           = null;
 	private List<String>       _pkCols            = null;
-	private List<String>       _pkColsOrigin      = null;
+//	private List<String>       _pkColsOrigin      = null;
 
 	public  static final int   DEFAULT_sqlQueryTimeout = 10;
 	private int                _sqlQueryTimeout   = DEFAULT_sqlQueryTimeout;
@@ -228,6 +228,83 @@ implements Cloneable
 	//-------------------------------------------------------
 
 
+	/**
+	 * Reset this CM, this so we build new SQL statements if we connect to a different ASE version<br>
+	 * Called from GetCounters.reset(), which most possible was called from disconnect() or similar
+	 */
+	public void reset()
+	{
+		// Problem stuff
+		_problemDesc       = "";    // Can be used for tool tips etc
+		_sampleException   = null;
+
+		// Sample info, this members are set by the "main" sample thread 
+		_serverName        = "";
+		_sampleTimeHead    = null;
+		_counterClearTime  = null;
+		_sampleTime        = null;
+		_sampleInterval    = 0;
+
+		// basic stuff
+		setInitialized(false);
+		setRuntimeInitialized(false);
+		_serverVersion     = 0;
+		_isClusterEnabled  = false;
+		_activeRoleList    = null;
+		_monitorConfigsMap = null;
+		_sqlInit           = null;
+		_sqlClose          = null; // Not used yet
+		_sqlRequest        = null;
+		_sqlWhere          = "";
+		_pkCols            = null;
+
+		// Structure for storing list of columns to compute difference between two samples
+		//_diffColumns = null; // set by the constructor
+		_isDiffCol   = null;   // this will be refreshed
+
+		// Structure for storing list of columns to display rate as PCT rather than pure rate
+		//_pctColumns  = null; // set by the constructor
+		_isPctCol    = null;   // this will be refreshed
+
+		// In the filter (check for nonZeroValues) disregards these column(s)
+		//_diffDissColumns = null; // set by the constructor
+		_isDiffDissCol   = null;   // this will be refreshed
+
+		
+		// incremented every time a refresh() happens, done by incRefreshCounter()
+		//_refreshCounter  = 0;  // probably NOT reset, then send counter info will show 0
+		// incremented every time a refresh() happens, summary of how many rows collected
+		//_sumRowCount     = 0;  // probably NOT reset, then send counter info will show 0
+
+		// if this CM has valid data for last sample
+		_hasValidSampleData = false;
+
+		// If this CM is valid, the connected ASE Server might not support 
+		// this CM due to to early version or not configured properly.
+		_isActive = true;
+
+
+		// data 
+		_prevSample = null;      // Contains old raw data (previous sample)
+		_newSample  = null;      // Contains new raw data
+		_diffData   = null;       // diff between newSample and oldSample data (not filtered)
+		_rateData   = null;       // diffData / sampleInterval
+		
+		// _dataSource = DATA_RATE;  // lets keep current view
+
+		// more basic stuff
+		dataInitialized = false;
+		firstTimeSample = true;
+		_sqlInitDone    = false;
+
+		maxRowSeen      = 0; // this isn't used ???
+
+		// reset panel, if we got one
+		if (tabPanel != null)
+			tabPanel.reset();
+	}
+
+
 	/*---------------------------------------------------
 	** BEGIN: constructors
 	**---------------------------------------------------
@@ -312,7 +389,7 @@ implements Cloneable
 		_sqlRequest         = sql;
 		_sqlWhere           = "";
 		_pkCols             = pkList;
-		_pkColsOrigin       = pkList == null ? null : new ArrayList<String>(pkList); // Copy the list
+//		_pkColsOrigin       = pkList == null ? null : new ArrayList<String>(pkList); // Copy the list
 		_diffColumns        = diffColumns;
 		_pctColumns         = pctColumns;
 		_monTablesInQuery   = monTables;
@@ -418,7 +495,7 @@ implements Cloneable
 		c._sqlWhere                   = this._sqlWhere;
 		c.tabPanel                    = this.tabPanel;
 		c._pkCols                     = this._pkCols;
-		c._pkColsOrigin               = this._pkColsOrigin;
+//		c._pkColsOrigin               = this._pkColsOrigin;
 
 		c._monTablesInQuery           = this._monTablesInQuery;
 
@@ -1087,6 +1164,15 @@ implements Cloneable
 	{
 		return _pkCols;
 	}
+	/**
+	 * Set the list of columns that should be used as a primary key for this Performance Counter.<br>
+	 * set it to null if the Performance Counter only generates 1 row.
+	 * @param pkCols
+	 */
+	public void setPk(List<String> pkCols)
+	{
+		_pkCols = pkCols;
+	}
 
 	/**
 	 * Get the raw data from the underlying TableModel<br>
@@ -1747,6 +1833,62 @@ implements Cloneable
 	 */
 	public void initSql(Connection conn)
 	{
+		// Get what version we are connected to.
+		int     aseVersion       = getServerVersion();
+		boolean isClusterEnabled = isClusterEnabled();
+
+		// Generate the SQL, for the specific ASE version
+		String sql = getSqlForVersion(conn, aseVersion, isClusterEnabled);
+		setSql(sql);
+
+		// Generate the SQL INIT, for the specific ASE version
+		String sqlInit = getSqlInitForVersion(conn, aseVersion, isClusterEnabled);
+		setSqlInit(sqlInit);
+
+		// Generate the SQL CLOSE, for the specific ASE version
+		String sqlClose = getSqlCloseForVersion(conn, aseVersion, isClusterEnabled);
+		setSqlClose(sqlClose);
+
+		// Generate PrimaryKey, for the specific ASE version
+		List<String> pkList = getPkForVersion(conn, aseVersion, isClusterEnabled);
+		setPk(pkList);
+	}
+
+	/**
+	 * This one could or <br>should</b> be called to get a SQL string that will be used
+	 * to get data for a specific Performance Counter.
+	 * <p>
+	 * It could also be used check what SQL that will be generated for a specific ASE version.
+	 * <p>
+	 * This method would typically be called from initSql(), which will set the correct SQL 
+	 * (by calling setSql()) for the desired ASE version.
+	 */
+	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
+	// public abstract String getSqlForVersion(int srvVersion, boolean isClusterEnabled);
+	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		throw new RuntimeException("The method CountersModel.getSqlForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+	}
+
+	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		return null;
+	}
+
+	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		return null;
+	}
+
+	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
+	// public abstract List<String> getPkForVersion(int srvVersion, boolean isClusterEnabled);
+	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		throw new RuntimeException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+	}
+
+	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
 	}
 
 	/** 
@@ -1803,47 +1945,6 @@ implements Cloneable
 	{
 		_runtimeInitialized = init;
 	}
-
-//FIXME: need much more work
-//	/**
-//	 * Reset this CM, this so we build new SQL statements if we connect to a different ASE version<br>
-//	 * Called from GetCounters.reset(), which most possible was called from disconnect() or similar
-//	 */
-//	public void reset()
-//	{
-//		// FIXME: need much more work
-//		_isDiffDissCol = null;
-//		_isDiffCol     = null;
-//		_isPctCol      = null;
-//
-//		_prevSample         = null;      // Contains old raw data (previous sample)
-//		_newSample          = null;      // Contains new raw data
-//		_diffData           = null;       // diff between newSample and oldSample data (not filtered)
-//		_rateData           = null;       // diffData / sampleInterval
-//		_refreshCounter     = 0;
-//		_sumRowCount        = 0;
-//		_hasValidSampleData = false;
-//		dataInitialized     = false;
-//		firstTimeSample     = true;
-//		
-//		setInitialized(false);
-//		setRuntimeInitialized(false);
-//
-//		if (tabPanel != null)
-//			tabPanel.reset();
-//		// FIXME: there has to be more we need to reset here
-//
-//		// We need to think about _pkCols as well
-//		// - we add pk column when we connects to Cluster Instance or a higher release
-//		//   so we need to store the "initial" values for PK... or a similar solution
-//		//   there are probably more fields we need to think about
-//		_pkCols = _pkColsOrigin == null ? null : new ArrayList<String>(_pkColsOrigin); // take a copy of the list, it will/might change when re initializing the CM
-//
-//		// Also the MonTablesDictionary needs to be changed...
-//		// - we can to 
-
-//	}
-
 
 	/** If this method returns FALSE, this CounterModel is disabled.<br>
 	 *  This due to that during initialization, it found out that it should 
@@ -2808,7 +2909,7 @@ implements Cloneable
 			}
 		}
 
-		if (_sqlRequest == null)
+		if (getSql() == null)
 		{
 			initSql(conn);
 		}

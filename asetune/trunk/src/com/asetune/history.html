@@ -15,17 +15,22 @@ li   {margin-bottom: 6px}
 
 <H1>History of what has been done so far</H1>
 
-<!--
-NOT YET DONE
-	<LI>
-	Changed behavior: Connecting to different ASE Version<br>
-	It's now supported to connect to ASE Version X, disconnect, then connect to ASE Version Y
-	</LI>
--->
-
 <!-- ========================================================================== -->
 <H2>2011-xx-xx</H2>
 <UL>
+	<LI>
+	<b>Change: Performance Counter Properties Dialog.</b><br>
+	When you right click on the JTabbedPane, you can choose Properties.<br>
+	This Dialog was previously a Simple HTML based Dialog.<br>
+	Now it's Swing based components with following functionality<br>
+	<ul>
+		<li>Check generated SQL, even if the Performance Counter is <b>not</b> initialized.</li>
+		<li>Simulate other ASE Versions: check what SQL will be generated for another ASE release, and in ASE Cluster Edition</li>
+		<li>Syntax highlighted SQL area</li>
+		<li>Color highlights in SQL area for PrimaryKey, Difference and Percent columns</li>
+	</ul>
+	</LI>
+
 	<LI>
 	<b>Change: Screen capture.</b><br>
 	The text in the Dialog can now be Copy+Paste.<br>
@@ -58,7 +63,35 @@ NOT YET DONE
 	<b>Add/Changes to: SQL Window, stand alone utility</b><br>
 	When starting the SQL Window tool as an external java process, using asesqlw.bat. A menu bar and
 	a toolbar panel is created. This so you can connect/disconnect to ASE servers using the Connection Dialog.<br>
-	The stand alone utility 'asesqlw' can soon be released.
+	The stand alone utility 'asesqlw' can soon be released.<br>
+	</LI>
+
+	<LI>
+	<b>Changes to: Menu enable/disabled</b><br>
+	Menus is now more context sensitive of what mode we are in. When connected etc, some menus will be enabled and disabled.<br>
+	</LI>
+
+	<LI>
+	<b>Changes to: Disconnect</b><br>
+	Now when we disconnect from ASE or the offline database, a dialog is popping up telling you what
+	it for the moment is doing.<br>
+	</LI>
+
+	<LI>
+	<b>Changed behavior: Connecting to different ASE Version, no need to restart AseTune</b><br>
+	It's now supported to connect to ASE Version X, then disconnect and connect to another ASE Version<br>
+	</LI>
+
+	<LI>
+	<b>Add: include servername in Window Title</b><br>
+	Show the ASE servername, or host:port number which this instance of AseTune is connected to<br>
+	format: 'AseTune - SrvName - extra information string'<br>
+	If we are NOT connected, no server name will be specified.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Databases</b><br>
+	In offline mode, when reading the Performance Counters from the offline database, the local bar graph wasn't updated.<br>
 	</LI>
 
 	<LI>
@@ -74,6 +107,49 @@ NOT YET DONE
 	</LI>
 
 	<LI>
+	<b>bug fix: Tab Spinlock Sum</b><br>
+	in pre 15.0 ASE, 'Arithmetic overflow occurred' could happen due to sum(many 'int' rows), now converting counters to numeric(12,0) before doing sum.<br>
+	In ASE 15.0 and higher, convert to bigint is done<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Processes</b><br>
+	On highly utilized systems, timeouts happened. I guess this is due to joining with the monX proxy tables.<br>
+	So now I snapshot monProcessActivity, monProcess, monProcessNetIO into temp tables and join from there.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Objects</b><br>
+	Some customers receives CM Duplicate Key when doing difference calculation.<br>
+	I guess it's because there are same table names owned by different users or similar.<br>
+	So lets make the primary key '[InstanceID,] DBID, ObjectId, IndexId, DBName, ObjectName'<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Copy + Paste as 'Ascii Table' from JTables, now sorted</b><br>
+	Now the copied table will be in the same sorted order as the JTable.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Summary, Databases: Timeout when creating new databases.</b><br>
+	Added 'readpast' to sub selects on sysdatabases & sysusages, this will hopefully just
+	skipping reading this row from the ASE Version where locking schema 'datarows' has been 
+	used for System tables. If I remember correctly this is ASE 15.x<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Performance Counter Tables, save/restore column layout</b><br>
+	Previously only 1 layout was saved, so if we connected to several different ASE versions, this wasn't working very well<br>
+	Now only column layout will be saved for each ASE Server version.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Spinlock Sum, for ASE Cluster Edition</b><br>
+	For cache partitions (cachelets) to many rows was returned, causing the "difference" calculation
+	found "Duplicate key" and logged error messages about that.<br>
+	</LI>
+
+	<LI>
 	<b>bug fix: asetune.bat, problems with quote and backslash chars in Env Variables</b><br>
 	problems if SYBASE was set to:
 	<ul>
@@ -81,8 +157,21 @@ NOT YET DONE
 	    <li>set SYBASE="c:\Program Files\sybase\"</li>
 	    <li>set SYBASE=c:\Program Files\sybase\</li>
 	</ul>
-	The trailing \ will be stripped, also the surrounding quotes...
+	The trailing \ will be stripped, also the surrounding quotes...<br>
 	</LI>
+
+	<LI>
+	<b>Changed text in error message: Connection Dialog</b><br>
+	Some users had problems connecting, simply due to a faulty password.<br>
+	They just interpreted the "raw" JDBC error message in faulty way... It was to complicated<br>
+	So I added extra text in case the main exception was 'JZ00L'.<br>
+	</LI>
+
+	<LI>
+	<b>Add Messages: Wait Event Dictionary</b><br>
+	Added 5 new 'Wait Event Descriptions' from ASE Documentation 'Performance and Tuning Series: Monitoring Tables', Document ID 'DC00848-01-1570-01'<br>
+	</LI>
+
 </UL>
 
 

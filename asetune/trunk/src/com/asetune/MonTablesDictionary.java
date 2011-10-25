@@ -513,6 +513,8 @@ public class MonTablesDictionary
 			if (aseVersionNum != installmasterVersionNum)
 			{
 				String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+				_logger.error(msg);
+
 				String msgHtml = 
 					"<html>" +
 					"ASE 'installmaster' script may be of a faulty version. <br>" +
@@ -522,10 +524,13 @@ public class MonTablesDictionary
 					"<br>" +
 					"Do the following on the machine that hosts the ASE:<br>" +
 					"<code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+					"<br>" +
+					"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
+					"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 					"</html>";
 				if (_hasGui)
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
-				_logger.error(msg);
+					SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
+					//JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}

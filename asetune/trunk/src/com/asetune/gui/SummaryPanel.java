@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -46,6 +47,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -55,7 +57,7 @@ import com.asetune.utils.SwingUtils;
 
 public class SummaryPanel
 extends JPanel
-implements TableModelListener
+implements TableModelListener, GTabbedPane.ShowProperties
 {
 	static Logger _logger = Logger.getLogger(SummaryPanel.class);
 
@@ -65,6 +67,8 @@ implements TableModelListener
 	private ChangeToJTabDialog _focusToBlockingTab = null;
 	private ChangeToJTabDialog _focusToDatabasesTab = null;
 	private Watermark          _watermark;
+
+	private Icon             _icon = SwingUtils.readImageIcon(Version.class, "images/summary_tab.png");
 
 	private JPanel           _clusterInfoPanel;
 	private JPanel           _serverInfoPanel;
@@ -214,6 +218,11 @@ implements TableModelListener
 		{
 			_logger.error("Cant create the summary panel", ex);
 		}
+	}
+
+	public Icon getIcon()
+	{
+		return _icon;
 	}
 
 	private void initComponents() 
@@ -986,7 +995,8 @@ implements TableModelListener
 		_transactions_txt      .setText("");
 		_transactionsDiff_txt  .setText("");
 		_transactionsRate_txt  .setText("");
-
+		_fullTranslog_txt      .setText("");
+		
 		_bootcount_txt         .setText("");
 		_recoveryState_txt     .setText("");
 		_cpuTime_txt           .setText("");
@@ -1073,7 +1083,7 @@ implements TableModelListener
 			else
 				setWatermarkText(offlineSamplePeriod);
 		}
-		else if ( ! AseTune.getCounterCollector().isMonConnected() )
+		else if ( ! AseTune.hasCounterCollector() || ! AseTune.getCounterCollector().isMonConnected() )
 		{
 			setWatermarkText("Not Connected...");
 		}
@@ -1135,4 +1145,20 @@ implements TableModelListener
 			repaint();
 		}
 	}
+
+	/*---------------------------------------------------
+	 ** BEGIN: implementing: GTabbedPane.ShowProperties
+	 **---------------------------------------------------
+	 */
+	@Override
+	public void showProperties()
+	{
+		CountersModel cm = GetCounters.getCmByName(CM_NAME);
+		new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
+	}
+	/*---------------------------------------------------
+	 ** END: implementing: GTabbedPane.ShowProperties
+	 **---------------------------------------------------
+	 */
+
 }

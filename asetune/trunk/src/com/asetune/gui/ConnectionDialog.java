@@ -1654,6 +1654,7 @@ public class ConnectionDialog
 		}
 		catch (SQLException e)
 		{
+			// The below shows a showErrorMessage
 			String msg = AseConnectionUtils.showSqlExceptionMessage(this, "Problems Connecting", "Problems when connecting to the data server.", e); 
 			_logger.error("Problems when connecting to a ASE Server. "+msg);
 			return false;

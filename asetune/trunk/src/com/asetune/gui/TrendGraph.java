@@ -1496,10 +1496,18 @@ implements ActionListener, MouseListener
 			// What is the last point we have requested q tooltip for
 			_lastToolTipPoint = point;
 
+			if (point == null)
+				return "TrendGraph.getToolTipText(): point=null, can't continue.";
+
 			// We need the axes of the point for correct formatting (expensive...).
 			ITrace2D trace = point.getListener();
 			IAxis xAxis = chart.getAxisX(trace);
 			IAxis yAxis = chart.getAxisY(trace);
+
+			if (xAxis == null)
+				return "TrendGraph.getToolTipText(): xAxis=null, can't continue.";
+			if (yAxis == null)
+				return "TrendGraph.getToolTipText(): yAxis=null, can't continue.";
 
 			chart.setRequestedRepaint(true);
 

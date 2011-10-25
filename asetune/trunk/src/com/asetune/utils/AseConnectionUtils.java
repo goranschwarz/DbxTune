@@ -641,7 +641,7 @@ public class AseConnectionUtils
 			// LIST WHAT hostnames port(s) the ASE server is listening on.
 			String listenersStr = "";
 			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("select * from syslisteners");
+			ResultSet rs = stmt.executeQuery("select distinct * from master..syslisteners");
 			while (rs.next())
 			{
 				if (addType)
@@ -660,8 +660,7 @@ public class AseConnectionUtils
 				listenersStr += ", ";
 			}
 			// Take away last ", "
-			if (listenersStr.endsWith(", "))
-			listenersStr = listenersStr.substring(0, listenersStr.length()-2);
+			listenersStr = StringUtil.removeLastComma(listenersStr);
 			
 			return listenersStr;
 		}
@@ -717,12 +716,39 @@ public class AseConnectionUtils
 		return true;
 	}
 
+//	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
+//	{
+//		String exMsg = getMessageFromSQLException(sqlex);
+//
+//		SwingUtils.showErrorMessage(owner, title, 
+//			msg + "\n\n" + exMsg, sqlex);
+//		
+//		return exMsg;
+//	}
 	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
 	{
 		String exMsg = getMessageFromSQLException(sqlex);
 
-		SwingUtils.showErrorMessage(owner, title, 
-			msg + "\n\n" + exMsg, sqlex);
+		String extraInfo = ""; 
+		if ( "JZ00L".equals(sqlex.getSQLState()) )
+		{
+			extraInfo  = "<br>" +
+					"<b>Are you sure about the password</b><br>" +
+					"The first Exception 'JZ00L' in <b>most</b> cases means: wrong user or password<br>" +
+					"Before you begin searching for strange reasons, please try to login again and make sure you use the correct password.<br>" +
+					"<br>" +
+					"Below is all Exceptions that happened during the login attempt.<br>" +
+					"<HR NOSHADE>";
+		}
+		String htmlStr = 
+			"<html>" +
+			  msg + "<br>" +
+			  extraInfo + 
+			  "<br>" + 
+			  exMsg.replace("\n", "<br>") + 
+			"</html>"; 
+
+		SwingUtils.showErrorMessage(owner, title, htmlStr, sqlex);
 		
 		return exMsg;
 	}
@@ -1300,7 +1326,7 @@ public class AseConnectionUtils
 			_logger.debug("Verify monTables existance");
 
 			// Check if montables are configured
-			rs = stmt.executeQuery("select count(*) from sysobjects where name ='monTables'");
+			rs = stmt.executeQuery("select count(*) from master..sysobjects where name ='monTables'");
 			while (rs.next())
 			{
 				if (rs.getInt(1) == 0)

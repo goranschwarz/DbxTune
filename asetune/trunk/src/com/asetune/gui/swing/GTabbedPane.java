@@ -1640,7 +1640,6 @@ public class GTabbedPane
 //					System.out.println("SHOW_OR_HIDE MENU="+showHideMenu);
 					if (showHideMenu != null)
 					{
-						System.out.println("SHOW_OR_HIDE: ");
 						showHideMenu.removeAll();
 						for(int modelIndex=0; modelIndex<getModelTabCount(); modelIndex++)
 						{
