@@ -37,7 +37,6 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +51,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
-import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -432,6 +430,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		if ( _cm != null )
 		{
 			_dataTable.setName(_cm.getName());
+//			_dataTable.setSrvVersion(_cm.getServerVersion());
 
 			_filterNoZeroCounters_chk       .setSelected(_cm.isFilterAllZero());
 			_optionPauseDataPolling_chk     .setSelected(_cm.isDataPollingPaused());
@@ -1038,7 +1037,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				extraColNames = new String[] { "ServerName", "SampleTime", "SampleIntervall" };
 				extraColData = new String[] { cm.getServerName(), cm.getSampleTime() + "", cm.getSampleInterval() + "" };
 			}
-			sb.append(SwingUtils.tableToString(tm, true, extraColNames, extraColData));
+//			sb.append(SwingUtils.tableToString(tm, true, extraColNames, extraColData));
+			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData));
 		}
 
 		String data = sb.toString();
@@ -1391,17 +1391,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	@Override
 	public void showProperties()
 	{
-		if ( !_cm.isRuntimeInitialized() )
-		{
-			SwingUtils.showInfoMessage(this, "Show Properties", "Not yet connected to any ASE Server, try later.");
-			return;
-		}
-
-		new ShowPropertiesDialog(null);
+		CountersModel cm = getDisplayCm();
+		if (cm == null)
+			cm = getCm();
+		new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
 	}
-
 	/*---------------------------------------------------
-	 ** BEGIN: implementing: GTabbedPane.ShowProperties
+	 ** END: implementing: GTabbedPane.ShowProperties
 	 **---------------------------------------------------
 	 */
 
@@ -2169,7 +2165,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		// If the proprty 'XXXXXX.gui.column.header.props' has NOT been written, then DO auto adjust.
 		// This means that it's probably the first time we see data...
-		String headerProps = conf.getProperty(getName()+".gui.column.header.props");
+		CountersModel cm = getDisplayCm();
+		if (cm == null)
+			cm = getCm();
+		String headerProps = null;
+		if (cm != null)
+			if (cm.isRuntimeInitialized())
+				headerProps = conf.getProperty(getName() + ".gui.column.header.props." + cm.getServerVersion());
 		if (headerProps == null)
 			doAdjust = true;
 
@@ -2414,6 +2416,16 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		{
 //			_hasNewModel = true;
 			super.setModel(newModel);
+			
+			if (newModel instanceof CountersModel)
+			{
+				String tabName = _thisTable.getName();
+				if (StringUtil.isNullOrBlank(tabName))
+				{
+					CountersModel cm = (CountersModel) newModel;
+					_thisTable.setName(cm.getName());
+				}
+			}
 			loadColumnLayout();
 		}
 
@@ -2602,9 +2614,22 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				return;
 			}
 
+			int srvVersion = 0;
+			if (getModel() instanceof CountersModel)
+			{
+				CountersModel cm = (CountersModel) getModel();
+				if (cm.isRuntimeInitialized())
+					srvVersion = cm.getServerVersion();
+			}
 			// get the values from configuration
-			String confKey = cmName + ".gui.column.header.props";
+			String confKey = cmName + ".gui.column.header.props." + srvVersion;
 			String confVal = conf.getProperty(confKey);
+			if (confVal == null)
+			{
+				// Revert back to "previous" version
+				confKey = cmName + ".gui.column.header.props";
+				confVal = conf.getProperty(confKey);
+			}
 			if (confVal == null)
 				return;
 
@@ -2780,7 +2805,15 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				return;
 			}
 
-			String confKey = cmName + ".gui.column.header.props";
+			int srvVersion = 0;
+			if (getModel() instanceof CountersModel)
+			{
+				CountersModel cm = (CountersModel) getModel();
+				if (cm.isRuntimeInitialized())
+					srvVersion = cm.getServerVersion();
+			}
+			String confKeyBase    = cmName + ".gui.column.header.props";
+			String confKeyVersion = cmName + ".gui.column.header.props." + srvVersion;
 			String confVal = "";
 
 			TableColumnModel tcm = getColumnModel();
@@ -2824,9 +2857,11 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				confVal += chpe+"; ";
 			}
 			confVal = confVal.substring(0, confVal.length()-2);
-			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKey+"="+confVal);
+			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyBase+"="+confVal);
+			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyVersion+"="+confVal);
 
-			conf.setProperty(confKey, confVal);
+			conf.setProperty(confKeyBase,    confVal);
+			conf.setProperty(confKeyVersion, confVal);
 			conf.save();
 		}
 		
@@ -2945,9 +2980,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			// So try to set it back to where it previously was!
 			if ( modelRowBefore >= 0 )
 			{
-				int viewRowNow = convertRowIndexToView(modelRowBefore);
-				if ( viewRowNow >= 0 )
-					getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
+				// If no rows in model, no need to restore selected row.
+				if (getRowCount() > 0 && modelRowBefore < getRowCount())
+				{
+					int viewRowNow = convertRowIndexToView(modelRowBefore);
+					if ( viewRowNow >= 0 )
+						getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
+				}
 			}
 
 			// event: AbstactTableModel.fireTableStructureChanged
@@ -3412,172 +3451,6 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 **---------------------------------------------------
 	 */
 
-	/*---------------------------------------------------
-	 ** BEGIN: ShowPropertiesDialog
-	 **---------------------------------------------------
-	 */
-	private class ShowPropertiesDialog extends JDialog implements ActionListener
-	{
-		private static final long	serialVersionUID	= 1L;
-		private JButton				_ok_but				= new JButton("OK");
-
-		private ShowPropertiesDialog(Frame owner)
-		{
-			super(owner);
-
-			if ( _icon != null && _icon instanceof ImageIcon )
-				((Frame) this.getOwner()).setIconImage(((ImageIcon) _icon).getImage());
-
-			initComponents();
-
-			// Set initial size
-			// int width = (3 *
-			// Toolkit.getDefaultToolkit().getScreenSize().width) / 4;
-			// int height = (3 *
-			// Toolkit.getDefaultToolkit().getScreenSize().height) / 4;
-			// setSize(width, height);
-			pack();
-
-			Dimension size = getPreferredSize();
-			size.width = 700;
-
-			setPreferredSize(size);
-			// setMinimumSize(size);
-			setSize(size);
-
-			setLocationRelativeTo(owner);
-
-			setVisible(true);
-		}
-
-		protected void initComponents()
-		{
-			setTitle("Properties: " + _cm.getName());
-
-			JPanel panel = new JPanel();
-			panel.setLayout(new MigLayout("ins 0", "[fill]", ""));
-
-			JPanel xpanel = init();
-			JScrollPane xscroll = new JScrollPane( xpanel );
-
-//			xscroll.setMinimumSize(new Dimension(500, 1000));
-//			xscroll.setPreferredSize(new Dimension(500, 1000));
-//			xscroll.setMinimumSize(xpanel.getMinimumSize());
-//			xscroll.setPreferredSize(xpanel.getPreferredSize());
-
-			Dimension screenSize  = Toolkit.getDefaultToolkit().getScreenSize();
-//			Dimension xPrefSize = xpanel.getPreferredSize();
-//			Dimension xMinSize  = xpanel.getMinimumSize();
-
-			int width  = Math.min(screenSize.width  - 100, 500);
-			int height = Math.min(screenSize.height - 100, 1000);
-			xscroll.setPreferredSize(new Dimension(width, height));
-			xscroll.setMinimumSize  (new Dimension(width, height));
-			
-
-			panel.add(xscroll, "height 100%, wrap 15");
-//			panel.add(init(), "height 100%, wrap 15");
-			panel.add(_ok_but, "tag ok, gapright 15, bottom, right, pushx, wrap 15");
-			
-			setContentPane(panel);
-
-			// ADD ACTIONS TO COMPONENTS
-			_ok_but.addActionListener(this);
-		}
-
-		protected JPanel init()
-		{
-			JPanel panel = new JPanel();
-			panel.setLayout(new MigLayout("insets 20 20 20 20", "[grow]", ""));
-
-			String sqlInit = _cm.getSqlInit();
-			String sqlExec = _cm.getSql();
-			String sqlWhere = _cm.getSqlWhere();
-			String sqlClose = _cm.getSqlClose();
-
-			if ( sqlInit != null )
-				sqlInit = sqlInit.replaceAll("\\n", "<br>");
-			if ( sqlExec != null )
-				sqlExec = sqlExec.replaceAll("\\n", "<br>");
-			if ( sqlWhere != null )
-				sqlWhere = sqlWhere.replaceAll("\\n", "<br>");
-			if ( sqlClose != null )
-				sqlClose = sqlClose.replaceAll("\\n", "<br>");
-
-			if ( sqlInit == null )
-				sqlInit = "";
-			if ( sqlExec == null )
-				sqlExec = "";
-			if ( sqlWhere == null )
-				sqlWhere = "";
-			if ( sqlClose == null )
-				sqlClose = "";
-
-			List<String> pkList           = _cm.getPk();
-			String[]     diffCols         = _cm.getDiffColumns();
-			String[]     pctCols          = _cm.getPctColumns();
-			String[]     needConfig       = _cm.getDependsOnConfig();
-			String[]     needRole         = _cm.getDependsOnRole();
-			String       needAseVersion   = _cm.getDependsOnVersionStr();
-			String       needAseCeVersion = _cm.getDependsOnCeVersionStr();
-			List<String> dependsOnCm      = _cm.getDependsOnCm();
-
-			// Lets COLOR code some stuff
-			if ( pkList != null )
-				for (String col : pkList)
-					sqlExec = sqlExec.replaceFirst(col, "<b>" + col + "</b>");
-
-			// BLUE: <font color="#0000FF">True</font>
-			for (String col : diffCols)
-				sqlExec = sqlExec.replaceFirst(col, "<font color=\"#0000FF\">" + col + "</font>");
-
-			// RED: <font color="#FF0000">True</font>
-			for (String col : pctCols)
-				sqlExec = sqlExec.replaceFirst(col, "<font color=\"#FF0000\">" + col + "</font>");
-
-			String str = "<html>" + "<HEAD> " + "<style type=\"text/css\"> " + "<!-- " + "body {font-family: Arial, Helvetica, sans-serif;} " + "--> " + "</style> " + "</HEAD> " +
-
-			"<H1>" + _cm.getName() + "</H1>" +
-
-			"<H2>SQL Init</H2>" + sqlInit + "<H2>SQL</H2>" + sqlExec + "<br><b>Color Code Explanation:</b> <br>" + "- Primary Key Columns in <b>BOLD</b><br>" + "- Diff Columns in <font color=\"#0000FF\">BLUE</font><br>" + "- Pct Columns in <font color=\"#FF0000\">RED</font>)" + "<H2>Extra Where clauses</H2>" + sqlWhere + "<H2>SQL Close</H2>" + sqlClose +
-
-			"<H2>Primary Key Columns</H2>" + pkList +
-
-			"<H2>Diff Columns</H2>" + Arrays.deepToString(diffCols) +
-
-			"<H2>Pct Columns</H2>" + Arrays.deepToString(pctCols) +
-
-			"<H3>Depends On ASE Configuration</H3>" + Arrays.deepToString(needConfig) +
-			"<H3>Depends On ASE Role</H3>" + Arrays.deepToString(needRole) +
-			"<H3>Depends On Other Performance Counter</H3>" + dependsOnCm +
-			"<H3>Needs ASE Version</H3>" + needAseVersion +
-			"<H3>Needs ASE CE Version</H3>" + needAseCeVersion +
-
-			"</html>";
-
-			JEditorPane feedback = new JEditorPane("text/html", str);
-			feedback.setEditable(false);
-			feedback.setOpaque(false);
-
-			panel.add(feedback, "wrap 20");
-
-			return panel;
-		}
-
-		@Override
-		public void actionPerformed(ActionEvent e)
-		{
-			if ( _ok_but.equals(e.getSource()) )
-			{
-				dispose();
-			}
-		}
-	}
-
-	/*---------------------------------------------------
-	 ** END: ShowPropertiesDialog
-	 **---------------------------------------------------
-	 */
 
 	/**
 	 * Method is called by the <code>MainFrame.stateChanged(ChangeEvent)</code>

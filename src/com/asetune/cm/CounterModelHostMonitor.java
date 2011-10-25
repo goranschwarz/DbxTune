@@ -471,6 +471,14 @@ extends CountersModel
 		return rowsFetched;
 	}
 
+	
+	/**
+	 * SQL is not used here, so simply override this method with "nothing"
+	 */
+	@Override
+	public void initSql(Connection conn)
+	{
+	}
 
 	@Override
 	public void clearForRead()

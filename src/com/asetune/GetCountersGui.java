@@ -343,7 +343,7 @@ public class GetCountersGui
 				//----------------------
 				checkForFullTransLogInMaster(getMonConnection());
 
-				setRefreshingCounters(true);
+				setInRefresh(true);
 				//Component comp = MainFrame.getActiveTab();
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");
 
@@ -509,7 +509,7 @@ public class GetCountersGui
 					}
 				}
 
-				setRefreshingCounters(false);
+				setInRefresh(false);
 				setWaitEvent("next sample period...");
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
 			}
@@ -517,7 +517,7 @@ public class GetCountersGui
 			{
 				//        System.out.println(Version.getAppName()+" : error in GetCounters loop. "+e);
 				_logger.error(Version.getAppName()+" : error in GetCounters loop ("+e.getMessage()+").", e);
-				setRefreshingCounters(false);
+				setInRefresh(false);
 				//System.exit(1);
 			}
 		}

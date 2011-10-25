@@ -9,7 +9,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -55,30 +54,35 @@ implements ActionListener, TableModelListener
 	private static Logger _logger = Logger.getLogger(DbSelectionForGraphsDialog.class);
 	private static final long serialVersionUID = 1L;
 	
-	private final static String COLNAME_DBName     = "DBName";
-	private final static String COLNAME_DbSizeInMb = "DbSizeInMb";
+	private final static String COLNAME_DBName         = "DBName";
+	private final static String COLNAME_DbSizeInMb     = "DbSizeInMb";
+	private final static String COLNAME_LogSizeUsedPct = "LogSizeUsedPct";
 
 	private MultiLineLabel          _description1   = new MultiLineLabel("<html>Choose what databases that should included or exluded in attached graphs.</html>");
 	private MultiLineLabel          _description2   = new MultiLineLabel("<html>In the '<b>Keep</b>' and '<b>Skip</b>' fields, you may use Java Regular Expression, for example '<code>syb.*</code>' to keep/skip databases that starts with 'syb'</html>");
 	private MultiLineLabel          _description3   = new MultiLineLabel("<html>Below is a table which reflects what databases will be part of the attached graphs.<br>Clicking the columns '<b>Keep</b>' and '<b>Skip</b>' will add or remove records from the above text fields.</html>");
 
-	private JLabel                  _keepDbsInGraphs_lbl = new JLabel("Keep DB's");
-	private JTextField              _keepDbsInGraphs_txt = new JTextField();
-	private JLabel                  _skipDbsInGraphs_lbl = new JLabel("Skip DB's");
-	private JTextField              _skipDbsInGraphs_txt = new JTextField();
-	private JLabel                  _skipDbsWithSizeLtInGraphs_lbl = new JLabel("Skip DB's With Size Less Than");
-//	private JFormattedTextField     _skipDbsWithSizeLtInGraphs_txt = new JFormattedTextField(new DefaultFormatterFactory(new NumberFormatter()));
-	private JTextField              _skipDbsWithSizeLtInGraphs_txt = new JTextField();
+	private JLabel                  _keepDbsInGraphs_lbl               = new JLabel("Keep DB's");
+	private JTextField              _keepDbsInGraphs_txt               = new JTextField();
+	private JLabel                  _skipDbsInGraphs_lbl               = new JLabel("Skip DB's");
+	private JTextField              _skipDbsInGraphs_txt               = new JTextField();
+	private JLabel                  _skipDbsWithSizeLtInGraphs_lbl     = new JLabel("Skip DB's With Size Less Than");
+//	private JFormattedTextField     _skipDbsWithSizeLtInGraphs_txt     = new JFormattedTextField(new DefaultFormatterFactory(new NumberFormatter()));
+	private JTextField              _skipDbsWithSizeLtInGraphs_txt     = new JTextField();
+	private JLabel                  _keepDbsWithPctUsageGtInGraphs_lbl = new JLabel("Keep DB's With Log Percent Usage Greater Than");
+	private JTextField              _keepDbsWithPctUsageGtInGraphs_txt = new JTextField();
 
 	// Used to check if "apply" should be visible or not.
-	private String                  _save_keepDbsInGraphs = "";
-	private String                  _save_skipDbsInGraphs = "";
-	private String                  _save_skipDbsWithSizeLtInGraphs = "";
+	private String                  _save_keepDbsInGraphs               = "";
+	private String                  _save_skipDbsInGraphs               = "";
+	private String                  _save_skipDbsWithSizeLtInGraphs     = "";
+	private String                  _save_keepDbsWithPctUsageGtInGraphs = "";
 
 	// Used to set "to start order"
-	private String                  _start_keepDbsInGraphs = "";
-	private String                  _start_skipDbsInGraphs = "";
-	private String                  _start_skipDbsWithSizeLtInGraphs = "";
+	private String                  _start_keepDbsInGraphs               = "";
+	private String                  _start_skipDbsInGraphs               = "";
+	private String                  _start_skipDbsWithSizeLtInGraphs     = "";
+	private String                  _start_keepDbsWithPctUsageGtInGraphs = "";
 
 	private JButton                 _toStartOrder   = new JButton("To Start Order");
 	private JButton                 _clearSavedInfo = new JButton("Clear saved info");
@@ -92,7 +96,7 @@ implements ActionListener, TableModelListener
 
 	private CountersModel           _cm             = null;
 	
-	private enum TabPos {VisibleInGraphs, DbName, DbSizeInMb, KeepDb, SkipDb, Description}; 
+	private enum TabPos {VisibleInGraphs, DbName, DbSizeInMb, LogSizeUsedPct, KeepDb, SkipDb, Description}; 
 
 	private DbSelectionForGraphsDialog(Frame owner, CountersModel cm)
 	{
@@ -108,8 +112,10 @@ implements ActionListener, TableModelListener
 		// Try to fit all rows on the open window
 		Dimension size = getSize();
 		size.height += (_table.getRowCount() - 6) * 18; // lets say 6 rows is the default showed AND each row takes 18 pixels
-//		size.width = Math.min(size.width, 700);
-		size.width = 720;
+		size.width = 812;
+		
+		size = SwingUtils.getSizeWithingScreenLimit(size.width, size.height, 10);
+
 		setSize(size);
 	}
 
@@ -162,6 +168,7 @@ implements ActionListener, TableModelListener
 			"<ul>" +
 			"    <li>Part of the 'keep' list</li>" +
 			"    <li>Database size is <b>above</b> the 'skip size' limit</li>" +
+			"    <li>Database Transaction Log Usage is <b>above</b> the Percent Threshold</li>" +
 			"</ul>" +
 			"Exclude a database from graphs is based on:" +
 			"<ul>" +
@@ -174,10 +181,12 @@ implements ActionListener, TableModelListener
 			"    <li>DB Keep List can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsInGraphs+"=db1ToKeep, db2ToKeep...</code></li>" +
 			"    <li>DB Skip List can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_skipDbsInGraphs+"=db1ToSkip, db2ToSkip...</code></li>" +
 			"    <li>DB Size Limit can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_skipDbsWithSizeLtInGraphs+"=#mb</code></li>" +
+			"    <li>DB Tranlog Usage Percent Limit can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs+"=#pct</code></li>" +
 			"</ul>" +
 			"The default keep list is: <code>"+DEFAULT_keepDbsInGraphs+"</code><br>" +
 			"The default skip list is: <code>"+DEFAULT_skipDbsInGraphs+"</code><br>" +
 			"The default size limit is: <code>"+DEFAULT_skipDbsWithSizeLtInGraphs+"</code><br>" +
+			"The default PercentUsage limit is: <code>"+DEFAULT_keepDbsWithPctUsageGtInGraphs+"</code><br>" +
 			"<br>" +
 			"Note: If you <b>always</b> want a database present in the graphs, add database to property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsInGraphs+"=db1, db2...</code><br>" +
 			"</html>";
@@ -186,12 +195,14 @@ implements ActionListener, TableModelListener
 		panel.add(_description1, "grow, wrap");
 		panel.add(_description2, "grow, wrap 10");
 
-		panel.add(_keepDbsInGraphs_lbl,           "split");
-		panel.add(_keepDbsInGraphs_txt,           "push, grow, wrap");
-		panel.add(_skipDbsInGraphs_lbl,           "split");
-		panel.add(_skipDbsInGraphs_txt,           "push, grow, wrap");
-		panel.add(_skipDbsWithSizeLtInGraphs_lbl, "split");
-		panel.add(_skipDbsWithSizeLtInGraphs_txt, "push, grow, wrap 10");
+		panel.add(_keepDbsInGraphs_lbl,               "w 50px, split");
+		panel.add(_keepDbsInGraphs_txt,               "push, grow, wrap");
+		panel.add(_skipDbsInGraphs_lbl,               "w 50px, split");
+		panel.add(_skipDbsInGraphs_txt,               "push, grow, wrap");
+		panel.add(_skipDbsWithSizeLtInGraphs_lbl,     "w 235px, split");
+		panel.add(_skipDbsWithSizeLtInGraphs_txt,     "push, grow, wrap");
+		panel.add(_keepDbsWithPctUsageGtInGraphs_lbl, "w 235px, split");
+		panel.add(_keepDbsWithPctUsageGtInGraphs_txt, "push, grow, wrap 10");
 
 		panel.add(_toStartOrder,   "split");
 		panel.add(_clearSavedInfo, "wrap 10");
@@ -217,16 +228,18 @@ implements ActionListener, TableModelListener
 		setContentPane(panel);
 
 		// ADD ACTIONS TO COMPONENTS
-		_keepDbsInGraphs_txt          .addActionListener(this);
-		_skipDbsInGraphs_txt          .addActionListener(this);
-		_skipDbsWithSizeLtInGraphs_txt.addActionListener(this);
-		_toStartOrder                 .addActionListener(this);
-		_clearSavedInfo               .addActionListener(this);
+		_keepDbsInGraphs_txt              .addActionListener(this);
+		_skipDbsInGraphs_txt              .addActionListener(this);
+		_skipDbsWithSizeLtInGraphs_txt    .addActionListener(this);
+		_keepDbsWithPctUsageGtInGraphs_txt.addActionListener(this);
+		_toStartOrder                     .addActionListener(this);
+		_clearSavedInfo                   .addActionListener(this);
 		
 		// enable/disable "apply" button if TXT fields chnages
-		_keepDbsInGraphs_txt          .addKeyListener(_keyListener);
-		_skipDbsInGraphs_txt          .addKeyListener(_keyListener);
-		_skipDbsWithSizeLtInGraphs_txt.addKeyListener(_keyListener);
+		_keepDbsInGraphs_txt              .addKeyListener(_keyListener);
+		_skipDbsInGraphs_txt              .addKeyListener(_keyListener);
+		_skipDbsWithSizeLtInGraphs_txt    .addKeyListener(_keyListener);
+		_keepDbsWithPctUsageGtInGraphs_txt.addKeyListener(_keyListener);
 		
 		// Set some tooltip
 		tooltip = "<html>If you always want a database <b>included</b> in the graphs.<br>This is a comma separated list of database names.<br>Java Regular Expression can be used, most common usage would be 'xxx.*' to specify databases starting with 'xxx'.</html>";
@@ -240,6 +253,10 @@ implements ActionListener, TableModelListener
 		tooltip = "<html>If you want to <b>exclude</b> databases with a size <b>less than</b> from the graphs.<br>This is specified in number of MB.</html>";
 		_skipDbsWithSizeLtInGraphs_lbl.setToolTipText(tooltip);
 		_skipDbsWithSizeLtInGraphs_txt.setToolTipText(tooltip);
+
+		tooltip = "<html>If you want to <b>include</b> databases with a Log size usage in Percent <b>greater than</b> in the graphs.<br>This is specified in Percent usage of the transaction log.</html>";
+		_keepDbsWithPctUsageGtInGraphs_lbl.setToolTipText(tooltip);
+		_keepDbsWithPctUsageGtInGraphs_txt.setToolTipText(tooltip);
 
 		_toStartOrder  .setToolTipText("Restore the \"selection\" it had when this dialog was opened.");
 		_clearSavedInfo.setToolTipText("<html>" +
@@ -277,9 +294,10 @@ implements ActionListener, TableModelListener
 		if (conf == null)
 			return;
 
-		String keepDbsStr           = _keepDbsInGraphs_txt.getText();
-		String skipDbsStr           = _skipDbsInGraphs_txt.getText();
-		String skipDbsWithSizeLtStr = _skipDbsWithSizeLtInGraphs_txt.getText();
+		String keepDbsStr               = _keepDbsInGraphs_txt.getText();
+		String skipDbsStr               = _skipDbsInGraphs_txt.getText();
+		String skipDbsWithSizeLtStr     = _skipDbsWithSizeLtInGraphs_txt.getText();
+		String keepDbsWithPctUsageGtStr = _keepDbsWithPctUsageGtInGraphs_txt.getText();
 
 		String cmShortName = _cm.getName();
 
@@ -300,6 +318,12 @@ implements ActionListener, TableModelListener
 			conf.remove(cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs);
 		else
 			conf.setProperty(cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs, skipDbsWithSizeLtStr);
+
+		// keepDbsWithPctUsageGtInGraphs
+		if (keepDbsWithPctUsageGtStr.equals(DEFAULT_keepDbsWithPctUsageGtInGraphs))
+			conf.remove(cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs);
+		else
+			conf.setProperty(cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs, keepDbsWithPctUsageGtStr);
 
 		conf.save();
 		saveAfterApply();
@@ -333,12 +357,19 @@ implements ActionListener, TableModelListener
 			updateSelectionTable();
 		}
 
+		// --- FIELD:  ---
+		if (_keepDbsWithPctUsageGtInGraphs_txt.equals(source))
+		{
+			updateSelectionTable();
+		}
+
 		// --- BUTTON: TO_START_ORDER ---
 		if (_toStartOrder.equals(source))
 		{
-			_keepDbsInGraphs_txt          .setText(_start_keepDbsInGraphs);
-			_skipDbsInGraphs_txt          .setText(_start_skipDbsInGraphs);
-			_skipDbsWithSizeLtInGraphs_txt.setText(_start_skipDbsWithSizeLtInGraphs);
+			_keepDbsInGraphs_txt              .setText(_start_keepDbsInGraphs);
+			_skipDbsInGraphs_txt              .setText(_start_skipDbsInGraphs);
+			_skipDbsWithSizeLtInGraphs_txt    .setText(_start_skipDbsWithSizeLtInGraphs);
+			_keepDbsWithPctUsageGtInGraphs_txt.setText(_start_keepDbsWithPctUsageGtInGraphs);
 
 			updateSelectionTable();
 		}
@@ -354,6 +385,7 @@ implements ActionListener, TableModelListener
 			conf.remove(cmShortName+"."+PROPERTY_keepDbsInGraphs);
 			conf.remove(cmShortName+"."+PROPERTY_skipDbsInGraphs);
 			conf.remove(cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs);
+			conf.remove(cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs);
 			conf.save();
 			
 			readPropsFromConfig();
@@ -384,16 +416,18 @@ implements ActionListener, TableModelListener
 
 	private void setStartOrder()
 	{
-		_start_keepDbsInGraphs           = _keepDbsInGraphs_txt.getText();
-		_start_skipDbsInGraphs           = _skipDbsInGraphs_txt.getText();
-		_start_skipDbsWithSizeLtInGraphs = _skipDbsWithSizeLtInGraphs_txt.getText();
+		_start_keepDbsInGraphs               = _keepDbsInGraphs_txt.getText();
+		_start_skipDbsInGraphs               = _skipDbsInGraphs_txt.getText();
+		_start_skipDbsWithSizeLtInGraphs     = _skipDbsWithSizeLtInGraphs_txt.getText();
+		_start_keepDbsWithPctUsageGtInGraphs = _keepDbsWithPctUsageGtInGraphs_txt.getText();
 	}
 	
 	private void saveAfterApply()
 	{
-		_save_keepDbsInGraphs           = _keepDbsInGraphs_txt.getText();
-		_save_skipDbsInGraphs           = _skipDbsInGraphs_txt.getText();
-		_save_skipDbsWithSizeLtInGraphs = _skipDbsWithSizeLtInGraphs_txt.getText();
+		_save_keepDbsInGraphs               = _keepDbsInGraphs_txt.getText();
+		_save_skipDbsInGraphs               = _skipDbsInGraphs_txt.getText();
+		_save_skipDbsWithSizeLtInGraphs     = _skipDbsWithSizeLtInGraphs_txt.getText();
+		_save_keepDbsWithPctUsageGtInGraphs = _keepDbsWithPctUsageGtInGraphs_txt.getText();
 	}
 	
 	private void readPropsFromConfig()
@@ -414,10 +448,15 @@ implements ActionListener, TableModelListener
 		propName = cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs;
 		int skipDbsWithSizeLtInGraphs = conf.getIntProperty(propName, DEFAULT_skipDbsWithSizeLtInGraphs);
 
+		// 
+		propName = cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs;
+		int keepDbsWithPctUsageGtInGraphs = conf.getIntProperty(propName, DEFAULT_keepDbsWithPctUsageGtInGraphs);
+
 		// set the GUI fields
-		_keepDbsInGraphs_txt          .setText(keepDbsInGraphs);
-		_skipDbsInGraphs_txt          .setText(skipDbsInGraphs);
-		_skipDbsWithSizeLtInGraphs_txt.setText(skipDbsWithSizeLtInGraphs+"");
+		_keepDbsInGraphs_txt              .setText(keepDbsInGraphs);
+		_skipDbsInGraphs_txt              .setText(skipDbsInGraphs);
+		_skipDbsWithSizeLtInGraphs_txt    .setText(skipDbsWithSizeLtInGraphs+"");
+		_keepDbsWithPctUsageGtInGraphs_txt.setText(keepDbsWithPctUsageGtInGraphs+"");
 	}
 
 	private void checkForChanges()
@@ -431,6 +470,9 @@ implements ActionListener, TableModelListener
 			enabled = true;
 
 		if ( ! _save_skipDbsWithSizeLtInGraphs.equals(_skipDbsWithSizeLtInGraphs_txt.getText()) ) 
+			enabled = true;
+		
+		if ( ! _save_keepDbsWithPctUsageGtInGraphs.equals(_keepDbsWithPctUsageGtInGraphs_txt.getText()) ) 
 			enabled = true;
 		
 		_apply.setEnabled(enabled);
@@ -478,6 +520,20 @@ implements ActionListener, TableModelListener
 			_skipDbsWithSizeLtInGraphs_txt.setText(skipDbsWithSizeLt+"");
 		}
 		_skipDbsWithSizeLtInGraphs_txt.setText(skipDbsWithSizeLt+"");
+
+		// Keep PCT
+		int keepDbsWithPctUsageGt = DEFAULT_keepDbsWithPctUsageGtInGraphs;
+		numStr = _keepDbsWithPctUsageGtInGraphs_txt.getText();
+		try 
+		{
+			keepDbsWithPctUsageGt = Integer.parseInt(numStr);
+		}
+		catch (NumberFormatException ignore) 
+		{
+			SwingUtils.showErrorMessage("Not a number", "Expected the Percent Usage '"+numStr+"' to be a Number, resetting to default value of "+keepDbsWithPctUsageGt, ignore);
+			_keepDbsWithPctUsageGtInGraphs_txt.setText(skipDbsWithSizeLt+"");
+		}
+		_keepDbsWithPctUsageGtInGraphs_txt.setText(keepDbsWithPctUsageGt+"");
 	}
 
 	private void updateSelectionTable()
@@ -503,6 +559,19 @@ implements ActionListener, TableModelListener
 			_skipDbsWithSizeLtInGraphs_txt.setText(skipDbsWithSizeLtInGraphs+"");
 		}
 
+		// Keep PCT
+		int keepDbsWithPctUsageGtInGraphs = DEFAULT_keepDbsWithPctUsageGtInGraphs;
+		numStr = _keepDbsWithPctUsageGtInGraphs_txt.getText();
+		try 
+		{
+			keepDbsWithPctUsageGtInGraphs = Integer.parseInt(numStr);
+		}
+		catch (NumberFormatException ignore) 
+		{
+			SwingUtils.showErrorMessage("Not a number", "Expected the Percent Usage '"+numStr+"' to be a Number, resetting to default value of "+keepDbsWithPctUsageGtInGraphs, ignore);
+			_keepDbsWithPctUsageGtInGraphs_txt.setText(keepDbsWithPctUsageGtInGraphs+"");
+		}
+
 		DefaultTableModel tm = _tableModel;
 		if (tm == null)
 		{
@@ -518,12 +587,18 @@ implements ActionListener, TableModelListener
 			
 			for (int r=0; r<tm.getRowCount(); r++)
 			{
-				String reason = "";
-				String dbname    = tm.getValueAt(r, TabPos.DbName    .ordinal())+"";
-				Object dbsizeObj = tm.getValueAt(r, TabPos.DbSizeInMb.ordinal());
-				int    dbsize    = -1;
-				if (dbsizeObj != null && dbsizeObj instanceof Number)
-					dbsize = ((Number)dbsizeObj).intValue();
+				String reason            = "";
+				String dbname            = tm.getValueAt(r, TabPos.DbName        .ordinal())+"";
+				Object dbSizeInMbObj     = tm.getValueAt(r, TabPos.DbSizeInMb    .ordinal());
+				Object logSizeUsedPctObj = tm.getValueAt(r, TabPos.LogSizeUsedPct.ordinal());
+				int    dbSizeInMb        = -1;
+				int    logSizeUsedPct    = -1;
+
+				if (dbSizeInMbObj != null && dbSizeInMbObj instanceof Number)
+					dbSizeInMb = ((Number)dbSizeInMbObj).intValue();
+	
+				if (logSizeUsedPctObj != null && logSizeUsedPctObj instanceof Number)
+					logSizeUsedPct = ((Number)logSizeUsedPctObj).intValue();
 	
 				boolean visibleInGraphs = true;
 				boolean skipFlag = false;
@@ -536,11 +611,18 @@ implements ActionListener, TableModelListener
 					reason         += "DB in the SKIP section, ";
 				}
 	
-				// dbsize -1: column wasn't found
-				if (dbsize != -1 && dbsize < skipDbsWithSizeLtInGraphs)
+				// dbSizeInMb -1: column wasn't found
+				if (dbSizeInMb != -1 && dbSizeInMb < skipDbsWithSizeLtInGraphs)
 				{
 					visibleInGraphs = false;
 					reason         += "DB Size is below "+skipDbsWithSizeLtInGraphs+" MB, ";
+				}
+	
+				// logSizeUsedPct -1: column wasn't found
+				if (logSizeUsedPct != -1 && logSizeUsedPct >= keepDbsWithPctUsageGtInGraphs)
+				{
+					visibleInGraphs = true;
+					reason         += "TranLog Usage is above "+keepDbsWithPctUsageGtInGraphs+"%, ";
 				}
 	
 				if (StringUtil.matchesRegexSet(dbname, keepDbsInGraphs))
@@ -549,6 +631,7 @@ implements ActionListener, TableModelListener
 					keepFlag        = true;
 					reason         += "DB in the KEEP section, ";
 				}
+
 				if (reason.length() > 0)
 				{
 					reason = (visibleInGraphs ? "<b>KEEP:</b> " : "<b>SKIP:</b> ") + reason;
@@ -650,6 +733,7 @@ implements ActionListener, TableModelListener
 		tabHead.set(TabPos.VisibleInGraphs.ordinal(), "Visible In Graphs");
 		tabHead.set(TabPos.DbName         .ordinal(), "DB Name");
 		tabHead.set(TabPos.DbSizeInMb     .ordinal(), "DB Size");
+		tabHead.set(TabPos.LogSizeUsedPct .ordinal(), "Log Usage");
 		tabHead.set(TabPos.KeepDb         .ordinal(), "Keep");
 		tabHead.set(TabPos.SkipDb         .ordinal(), "Skip");
 		tabHead.set(TabPos.Description    .ordinal(), "Description");
@@ -669,6 +753,7 @@ implements ActionListener, TableModelListener
 				else if (column == TabPos.KeepDb         .ordinal()) return Boolean.class;
 				else if (column == TabPos.SkipDb         .ordinal()) return Boolean.class;
 				else if (column == TabPos.DbSizeInMb     .ordinal()) return Number.class;
+				else if (column == TabPos.LogSizeUsedPct .ordinal()) return Number.class;
 				else return Object.class;
 			}
 			public boolean isCellEditable(int row, int col)
@@ -714,6 +799,7 @@ implements ActionListener, TableModelListener
 						if      (col == TabPos.VisibleInGraphs.ordinal()) tip = "<b>ReadOnly:</b> Indicates that this database will be part of the selection.";
 						else if (col == TabPos.DbName         .ordinal()) tip = "Name of the database to included or excluded";
 						else if (col == TabPos.DbSizeInMb     .ordinal()) tip = "The full database size in MB";
+						else if (col == TabPos.LogSizeUsedPct .ordinal()) tip = "The transaction log usage in Percent";
 						else if (col == TabPos.KeepDb         .ordinal()) tip = "Click this to <b>include</b> this database in the selection.";
 						else if (col == TabPos.SkipDb         .ordinal()) tip = "Click this to <b>exclude</b> this database in the selection. ";
 						else if (col == TabPos.Description    .ordinal()) tip = "What is the cause why this database was included or not in the selection";
@@ -763,8 +849,8 @@ implements ActionListener, TableModelListener
 		{
 			// make the 'max' string fit in Description.
 			// KEEP: DB in the SKIP section, DB Size is below ### MB, DB in the KEEP section
-			tcx.setPreferredWidth(400);
-			tcx.setWidth(400);
+			tcx.setPreferredWidth(430);
+			tcx.setWidth(430);
 		}
 
 		return table;
@@ -784,17 +870,24 @@ implements ActionListener, TableModelListener
 			row = new Vector<Object>();
 			row.setSize(TabPos.values().length);
 			
-			String dbname    = cm.getAbsString(r, COLNAME_DBName);
-			Object dbsizeObj = cm.getAbsValue (r, COLNAME_DbSizeInMb);
-			int    dbsize    = -1;
-			if (dbsizeObj != null && dbsizeObj instanceof Number)
-				dbsize = ((Number)dbsizeObj).intValue();
+			String dbname            = cm.getRateString(r, COLNAME_DBName);
+			Object dbSizeInMbObj     = cm.getRateValue (r, COLNAME_DbSizeInMb);
+			Object logSizeUsedPctObj = cm.getRateValue (r, COLNAME_LogSizeUsedPct);
+			int    dbSizeInMb        = -1;
+			int    logSizeUsedPct    = -1;
+
+			if (dbSizeInMbObj != null && dbSizeInMbObj instanceof Number)
+				dbSizeInMb = ((Number)dbSizeInMbObj).intValue();
+
+			if (logSizeUsedPctObj != null && logSizeUsedPctObj instanceof Number)
+				logSizeUsedPct = ((Number)logSizeUsedPctObj).intValue();
 
 			boolean visibleInGraphs = visibleDbMap.containsKey(dbname);
 
 			row.set(TabPos.VisibleInGraphs.ordinal(), visibleInGraphs);
 			row.set(TabPos.DbName         .ordinal(), dbname);
-			row.set(TabPos.DbSizeInMb     .ordinal(), dbsize);
+			row.set(TabPos.DbSizeInMb     .ordinal(), dbSizeInMb);
+			row.set(TabPos.LogSizeUsedPct .ordinal(), logSizeUsedPct);
 			row.set(TabPos.KeepDb         .ordinal(), false);
 			row.set(TabPos.SkipDb         .ordinal(), false);
 			row.set(TabPos.Description    .ordinal(), "");
@@ -833,13 +926,15 @@ implements ActionListener, TableModelListener
 	//--------------------------------------------------
 	//--------------------------------------------------
 	//--------------------------------------------------
-	public final static String PROPERTY_keepDbsInGraphs           = "keepDbsInGraphs";
-	public final static String PROPERTY_skipDbsInGraphs           = "skipDbsInGraphs";
-	public final static String PROPERTY_skipDbsWithSizeLtInGraphs = "skipDbsWithSizeLtInGraphs";
+	public final static String PROPERTY_keepDbsInGraphs               = "keepDbsInGraphs";
+	public final static String PROPERTY_skipDbsInGraphs               = "skipDbsInGraphs";
+	public final static String PROPERTY_skipDbsWithSizeLtInGraphs     = "skipDbsWithSizeLtInGraphs";
+	public final static String PROPERTY_keepDbsWithPctUsageGtInGraphs = "keepDbsWithPctUsageGtInGraphs";
 
-	public final static String DEFAULT_keepDbsInGraphs           = "";
-	public final static String DEFAULT_skipDbsInGraphs           = "master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs";
-	public final static int    DEFAULT_skipDbsWithSizeLtInGraphs = 300;
+	public final static String DEFAULT_keepDbsInGraphs                = "";
+	public final static String DEFAULT_skipDbsInGraphs                = "master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs";
+	public final static int    DEFAULT_skipDbsWithSizeLtInGraphs      = 300;
+	public final static int    DEFAULT_keepDbsWithPctUsageGtInGraphs  = 80;
 
 	/**
 	 * 
@@ -864,7 +959,11 @@ implements ActionListener, TableModelListener
 		propName = cmShortName+"."+PROPERTY_skipDbsWithSizeLtInGraphs;
 		int skipDbsWithSizeLtInGraphs = conf.getIntProperty(propName, DEFAULT_skipDbsWithSizeLtInGraphs);
 		
-		return getDbsInGraphList(cm, keepDbsInGraphs, skipDbsInGraphs, skipDbsWithSizeLtInGraphs);
+		// databases size smaller than this should be left OUT in the graphs
+		propName = cmShortName+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs;
+		int keepDbsWithPctUsageGtInGraphs = conf.getIntProperty(propName, DEFAULT_keepDbsWithPctUsageGtInGraphs);
+
+		return getDbsInGraphList(cm, keepDbsInGraphs, skipDbsInGraphs, skipDbsWithSizeLtInGraphs, keepDbsWithPctUsageGtInGraphs);
 	}
 
 	/**
@@ -872,7 +971,7 @@ implements ActionListener, TableModelListener
 	 * @param cm
 	 * @return
 	 */
-	public static Map<String, Integer> getDbsInGraphList(CountersModel cm, String[] keepDbsInGraphs, String[] skipDbsInGraphs, int skipDbsWithSizeLtInGraphs)
+	public static Map<String, Integer> getDbsInGraphList(CountersModel cm, String[] keepDbsInGraphs, String[] skipDbsInGraphs, int skipDbsWithSizeLtInGraphs, int keepDbsWithPctUsageGtInGraphs)
 	{
 
 		// Filter out rows we do NOT want in the list
@@ -881,20 +980,31 @@ implements ActionListener, TableModelListener
 
 		for (int r=0; r<cm.size(); r++)
 		{
-			String dbname    = cm.getAbsString(r, COLNAME_DBName);
-			Object dbsizeObj = cm.getAbsValue (r, COLNAME_DbSizeInMb);
-			int    dbsize    = -1;
-			if (dbsizeObj != null && dbsizeObj instanceof Number)
-				dbsize = ((Number)dbsizeObj).intValue();
+			String dbname            = cm.getRateString(r, COLNAME_DBName);
+			Object dbSizeInMbObj     = cm.getRateValue (r, COLNAME_DbSizeInMb);
+			Object logSizeUsedPctObj = cm.getRateValue (r, COLNAME_LogSizeUsedPct);
+
+			int    dbSizeInMb        = -1;
+			int    logSizeUsedPct    = -1;
+
+			if (dbSizeInMbObj != null && dbSizeInMbObj instanceof Number)
+				dbSizeInMb = ((Number)dbSizeInMbObj).intValue();
+
+			if (logSizeUsedPctObj != null && logSizeUsedPctObj instanceof Number)
+				logSizeUsedPct = ((Number)logSizeUsedPctObj).intValue();
 
 			boolean keepDb = true;
 
 			if (StringUtil.matchesRegexArr(dbname, skipDbsInGraphs))
 				keepDb = false;
 
-			// dbsize -1: column wasn't found
-			if (dbsize != -1 && dbsize < skipDbsWithSizeLtInGraphs)
+			// dbSizeInMb -1: column wasn't found
+			if (dbSizeInMb != -1 && dbSizeInMb < skipDbsWithSizeLtInGraphs)
 				keepDb = false;
+
+			// logSizeUsedPct -1: column wasn't found
+			if (logSizeUsedPct != -1 && logSizeUsedPct >= keepDbsWithPctUsageGtInGraphs)
+				keepDb = true;
 
 			if (StringUtil.matchesRegexArr(dbname, keepDbsInGraphs))
 				keepDb = true;
@@ -906,19 +1016,19 @@ implements ActionListener, TableModelListener
 		return dbMap;
 	}
 
-	/**
-	 * set the configuration 'cmName.keepDbsInGraphs=db1, db2, db3' etc...
-	 * @param cmShortName
-	 * @param dbList
-	 */
-	public static void saveKeepDbsInGraphs(String cmShortName, Collection<String> dbList)
-	{
-		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-		if (conf == null)
-			return;
-
-		conf.setProperty(cmShortName+"."+PROPERTY_keepDbsInGraphs, StringUtil.toCommaStr(dbList));
-		conf.save();
-	}
+//	/**
+//	 * set the configuration 'cmName.keepDbsInGraphs=db1, db2, db3' etc...
+//	 * @param cmShortName
+//	 * @param dbList
+//	 */
+//	public static void saveKeepDbsInGraphs(String cmShortName, Collection<String> dbList)
+//	{
+//		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+//		if (conf == null)
+//			return;
+//
+//		conf.setProperty(cmShortName+"."+PROPERTY_keepDbsInGraphs, StringUtil.toCommaStr(dbList));
+//		conf.save();
+//	}
 
 }

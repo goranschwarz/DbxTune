@@ -865,7 +865,7 @@ public class PersistWriterJdbc
 					String val = conf.getPropertyRaw(key);
 	
 					// Skip some key values... just because they are probably to long...
-					if (key.endsWith(".gui.column.header.props"))
+					if (key.indexOf(".gui.column.header.props") >= 0)
 						continue;
 
 					insertSessionParam(ts, "temp.config", key, val);

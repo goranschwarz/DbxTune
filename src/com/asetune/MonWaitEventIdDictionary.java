@@ -167,8 +167,8 @@ public class MonWaitEventIdDictionary
 				{
 					str += "<BR><HR><B>Text Source:</B>  for 'Description' and 'Action'<BR>" +
 						"<B>Sybase Manual:</B> <I>Performance and Tuning Series: Monitoring Tables</I><BR>" +
-						"<B>Document ID:</B> DC00848-01-1502-01<BR>" +
-						"<B>Last Revised:</B> December 2008";
+						"<B>Document ID:</B> DC00848-01-1570-01<BR>" +
+						"<B>Last Revised:</B> September 2011";
 				}
 				if (_comment != null || _mostCommonCause != null)
 				{
@@ -910,6 +910,70 @@ public class MonWaitEventIdDictionary
 		slogan = "waiting for Lava pipe buffer for write";
 		desc   = new String[] {"Adaptive Server version 15.0 introduced the lava query execution engine. When this engine executes a parallel query, it uses an internal structure called a \"pipe buffer\" to pass data between the worker processes. Event 334 measures the amount of time Adaptive Server spends waiting for a pipe buffer to be available."};
 		action = new String[] {"The value for <CODE>WaitTime</CODE> should be low when processes execute properly. If this is not the case, contact Sybase Technical Support."};
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 374;
+		slogan = "wait for lock pending/data pending to be cleared";
+		desc   = new String[] {"A lock request is blocked because a required lock is unavailable at the local node and a currently pending request."};
+		action = new String[] {"A high number of conflicting requests for the same lock across different nodes indicates that the application is issuing conflicting lock requests on the same object from multiple nodes. The lock emanates from the object coherency manager, which manages the metadata describing database objects across all of the instances in the cluster.",
+		                       "You may improve performance by directing most requests for the object in question to a single node."};
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 375;
+		slogan = "OCM wait for finishing BAST handling";
+		desc   = new String[] {"One or more <code>ocm_lock</code> requests are blocked by a conflicting <code>ocm_lock</code> request from a different node."};
+		action = new String[] {"A high value for this wait event means that different nodes are sending a high number of conflicting requests for the same <code>ocm_lock</code>. The application is probably issuing these conflicting lock requests from multiple nodes. You may improve performance by directing most requests for the <code>ocm_lock</code> to a single node."};
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 380;
+		slogan = "lock/data pending to reset when OCM_ERR_DIDNTWAIT";
+		desc   = new String[] {"If the cluster lock manager cannot immediately grant a lock request, it returns a <code>LOCK_DIDNTWAIT</code> message, which Adaptive Server translates as <code>OCM_ERR_DIDNT_WAIT</code>. The <code>ocm_lock</code> request goes to sleep until the AST returns from the master database with a response for the lock-request."};
+		action = new String[] {"A high value for this wait event indicates there are numerous conflicting requests for the same <code>ocm_lock</code> across different nodes. This may be caused by the application issuing conflicting lock requests on the same object frommultiple nodes. You may improve performance by directing requests for the object in question to a single node."};
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 389;
+		slogan = "OCM wait for pushing data flag to be cleared";
+		desc   = new String[] {"Adaptive Server cannot process one or more <code>ocm_lock</code> requests because:",
+		                       "<UL>",
+		                       "<LI>Another lock request is holding the lock<BR>" +
+		                         "   In this situation, a high value indicates there are numerous exclusive lock requests that need to perform heavy operations without losing the <code>ocm_lock</code>. This is an internal issue. <BR>" +
+		                         "   To improve performance, determine why Adaptive Server is holding the lock for so long.<BR>" +
+		                         "</LI>",
+		                       "<LI>Another request is pushing the data. <BR>" +
+		                         "   In this situation, a high value may indicate that data resides only in memory and Adaptive Server must regularly push this data to other nodes to avoid loosing data in the case of node failure. This adversely affects performance because Adaptive Server performs no useful work while it is pushing the data to other nodes. This is an internal isssue. <BR>" +
+		                         "   To improve performance, determine why Adaptive Server is holding the lock or pushing the data for so long.<BR>" +
+		                         "</LI>",
+		                       "<LI>A canceled transaction is pending (the requested data is probably not being delivered, and the OCM on this node is taking corrective action).<BR>" +
+		                         "   This wait event is rare (usually when an instance is expecting data from a node that just crashed). A high value for this wait event may result from a high rate of node or hardware failure. <BR>" +
+		                         "</LI>",
+		                       "</UL>"};
+		action = null;
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 483;
+		slogan = "Waiting for ack of a multicast synchronous message";
+		desc   = new String[] {"Although this wait event occurs with some frequency, it is a result of normal activity."};
+		action = new String[] {"No action required."};
 		comment= null;
 		mcc    = null;
 		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));

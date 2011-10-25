@@ -174,6 +174,7 @@ public class QueryWindow
 	private Window      _window          = null;
 	private JFrame      _jframe          = null;
 	private JDialog     _jdialog         = null;
+	private String      _titlePrefix     = null;
 
 	// if we start from the CMD Line, add a few extra stuff
 	//---------------------------------------
@@ -376,23 +377,28 @@ public class QueryWindow
 	{
 		if (winType == WindowType.CMDLINE_JFRAME)
 		{
-			_jframe  = new JFrame(Version.getAppName()+" Query Window");
+			//_titlePrefix = Version.getAppName()+" Query Window";
+			_titlePrefix = Version.getAppName();
+			_jframe  = new JFrame(_titlePrefix);
 			_jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			_window  = _jframe;
 		}
 		if (winType == WindowType.JFRAME)
 		{
-			_jframe  = new JFrame(Version.getAppName()+" Query");
+			_titlePrefix = Version.getAppName()+" Query";
+			_jframe  = new JFrame(_titlePrefix);
 			_window  = _jframe;
 		}
 		if (winType == WindowType.JDIALOG)
 		{
-			_jdialog = new JDialog((Dialog)null, Version.getAppName()+" Query");
+			_titlePrefix = Version.getAppName()+" Query";
+			_jdialog = new JDialog((Dialog)null, _titlePrefix);
 			_window  = _jdialog;
 		}
 		if (winType == WindowType.JDIALOG_MODAL)
 		{
-			_jdialog = new JDialog((Dialog)null, Version.getAppName()+" Query", true);
+			_titlePrefix = Version.getAppName()+" Query";
+			_jdialog = new JDialog((Dialog)null, _titlePrefix, true);
 			_window  = _jdialog;
 		}
 		if (_window == null)
@@ -738,6 +744,20 @@ public class QueryWindow
 
 
 
+	/**
+	 * Set the windws title
+	 * @param srvStr servername we are connected to, null = not connected.
+	 */
+	private void setSrvInTitle(String srvStr)
+	{
+		String title = _titlePrefix;
+		if (srvStr != null)
+			title += " - " + srvStr;
+		
+		if (_jframe  != null) _jframe .setTitle(title);
+		if (_jdialog != null) _jdialog.setTitle(title);
+	}
+
 	private void action_connect(ActionEvent e)
 	{
 		// Create a new dialog Window
@@ -779,6 +799,11 @@ public class QueryWindow
 				_setOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
 
 //				_summaryPanel.setLocalServerName(AseConnectionFactory.getServer());
+				// Set servername in windows - title
+				String aseSrv      = AseConnectionFactory.getServer();
+				String aseHostPort = AseConnectionFactory.getHostPortStr();
+				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
+				setSrvInTitle(srvStr);
 			}
 		}
 	}
@@ -797,6 +822,8 @@ public class QueryWindow
 				_rsInTabs       .setEnabled(false);
 				_setOptions     .setEnabled(false);
 				_execGuiShowplan.setEnabled(false);
+
+				setSrvInTitle(null);
 			}
 			catch (SQLException ex)
 			{
@@ -889,7 +916,8 @@ public class QueryWindow
 			else if (comp instanceof JTable)
 			{
 				JTable table = (JTable)comp;
-				String textTable = SwingUtils.tableToString(table.getModel());
+//				String textTable = SwingUtils.tableToString(table.getModel());
+				String textTable = SwingUtils.tableToString(table);
 				sb.append( textTable );
 				if ( ! textTable.endsWith("\n") )
 					sb.append("\n");
@@ -1091,7 +1119,7 @@ public class QueryWindow
 		try
 		{
 			Statement stmnt   = _conn.createStatement();
-			ResultSet rs      = stmnt.executeQuery("select name, db_name() from master..sysdatabases order by name");
+			ResultSet rs      = stmnt.executeQuery("select name, db_name() from master..sysdatabases readpast order by name");
 			DefaultComboBoxModel cbm = new DefaultComboBoxModel();
 			String cwdb = "";
 			while (rs.next())
@@ -1808,6 +1836,9 @@ public class QueryWindow
 		// require the input text to be the same thing as the replacement text.
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', '#G'",                 "Cache Size"));
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'", "Cache Partitions"));
+		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']", "Pool Size"));
+		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'", "Pool Wash Size"));
+		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'memory'",                                     "Memory left for reconfigure"));
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'Monitoring'",                                 "Check Monitor configuration"));
 		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'nondefault'",                                 "Get changed configuration parameters"));

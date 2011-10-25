@@ -40,7 +40,7 @@
 			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar">
+	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/rsyntaxtextarea_1.5.1_Source/src">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
 		</attributes>

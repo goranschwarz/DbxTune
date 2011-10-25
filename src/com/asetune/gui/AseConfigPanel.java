@@ -5,11 +5,15 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -58,6 +62,7 @@ implements ActionListener
 	private JLabel     _config_lbl              = new JLabel("Config Name");
 	private JTextField _config_txt              = new JTextField();
 	private JCheckBox  _showOnlyNonDefaults_chk = new JCheckBox("Show Only Non Default Values", false);
+	private JButton    _copy_but                = new JButton("Copy");
 
 	public AseConfigPanel()
 	{
@@ -95,6 +100,7 @@ implements ActionListener
 		_config_lbl             .setToolTipText("Show only config name with this name.");
 		_config_txt             .setToolTipText("Show only config name with this name.");
 		_showOnlyNonDefaults_chk.setToolTipText("Show only modified configuration values (same as sp_configure 'nondefault')");
+		_copy_but               .setToolTipText("Copy the ASE Configuration table into the clip board as ascii table.");
 
 		panel.add(_section_lbl,             "");
 		panel.add(_section_cbx,             "");
@@ -105,7 +111,8 @@ implements ActionListener
 		panel.add(_config_lbl,              "");
 		panel.add(_config_txt,              "span, push, grow, wrap");
 
-		panel.add(_showOnlyNonDefaults_chk, "span, wrap");
+		panel.add(_showOnlyNonDefaults_chk, "span, split, push, grow");
+		panel.add(_copy_but,                "wrap");
 
 		// disable input to some fields
 		_timestamp_txt.setEnabled(false);
@@ -122,6 +129,7 @@ implements ActionListener
 		_section_cbx            .addActionListener(this);
 		_config_txt             .addActionListener(this);
 		_showOnlyNonDefaults_chk.addActionListener(this);
+		_copy_but               .addActionListener(this);
 
 		// set auto completion
 		AutoCompleteDecorator.decorate(_section_cbx);
@@ -232,6 +240,19 @@ implements ActionListener
 		if (_showOnlyNonDefaults_chk.equals(source))
 		{
 			setTableFilter();
+		}
+
+		// --- BUT: COPY ---
+		if (_copy_but.equals(source))
+		{
+			String textTable = SwingUtils.tableToString(_table);
+
+			if (textTable != null)
+			{
+				StringSelection data = new StringSelection(textTable);
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				clipboard.setContents(data, data);
+			}
 		}
 	}
 

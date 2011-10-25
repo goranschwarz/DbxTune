@@ -518,17 +518,17 @@ public class SwingUtils
 		throw new ParseException("Color string '"+colorStr+"' can't be parsed. I tried 'int' & 'r,g,b[,a]|r.g.b[.a]' & '#rrggbb[aa]|0xrrggbb[aa]' & 'java colors' (out of parser implementations).", -1);
 	}
 
-	public static String tableToString(TableModel model, int justRowNumber)
+	public static String tableToString(JTable jtable, int justRowNumber)
 	{
-		return tableToString(model, false, null, null, justRowNumber, justRowNumber+1);
+		return tableToString(jtable, false, null, null, justRowNumber, justRowNumber+1);
 	}
-	public static String tableToString(TableModel model)
+	public static String tableToString(JTable jtable)
 	{
-		return tableToString(model, false, null, null, -1, -1);
+		return tableToString(jtable, false, null, null, -1, -1);
 	}
-	public static String tableToString(TableModel model, boolean stripHtml, String[] prefixColName, Object[] prefixColData)
+	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData)
 	{
-		return tableToString(model, stripHtml, prefixColName, prefixColData, -1, -1);
+		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1);
 	}
 	/**
 	 * Turn a JTable's TableModel into a String table, can be used for putting into the copy/paste buffer.
@@ -552,7 +552,7 @@ public class SwingUtils
 	 * Rows 2
 	 * </pre>
 	 */
-	public static String tableToString(TableModel model, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow)
+	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow)
 	{
 		String colSepOther = "+";
 		String colSepData  = "|";
@@ -574,10 +574,10 @@ public class SwingUtils
 			doPrefix = true;
 		}
 
-		int cols = model.getColumnCount();
-//		int rows = model.getRowCount();
+		int cols = jtable.getColumnCount();
+//		int rows = jtable.getRowCount();
 		if (firstRow < 0) firstRow = 0;
-		if (lastRow  < 0) lastRow = model.getRowCount();
+		if (lastRow  < 0) lastRow = jtable.getRowCount();
 		int copiedRows = 0;
 
 		//------------------------------------
@@ -588,7 +588,7 @@ public class SwingUtils
 				tableHead.add(prefixColName[c]);
 
 		for (int c=0; c<cols; c++)
-			tableHead.add(model.getColumnName(c));
+			tableHead.add(jtable.getColumnName(c));
 
 		//------------------------------------
 		// Copy ROWS (from firstRow to lastRow)
@@ -602,7 +602,7 @@ public class SwingUtils
 
 			for (int c=0; c<cols; c++)
 			{
-				Object obj = model.getValueAt(r, c);
+				Object obj = jtable.getValueAt(r, c);
 				
 				// Strip of '\n' at the end of Strings
 				if (obj != null && obj instanceof String)
@@ -787,6 +787,23 @@ public class SwingUtils
 				newModel.setValueAt(copyFrom.getValueAt(r, c), r, c);
 
 		return newModel;
+	}
+
+	/**
+	 * If the input parameters are smaller than the screen size then they will be used<br>
+	 * Otherwise the screen size will be used
+	 * 
+	 * @param width
+	 * @param height
+	 * @param marginPixels Number of pixels to the border of the screen. 0 means no margin space
+	 * @return a Dimension
+	 */
+	public static Dimension getSizeWithingScreenLimit(int width, int height, int marginPixels)
+	{
+		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		int screenWidth  = screenSize.width  - (marginPixels * 3); // *3 = right and left margin + some extra
+		int screenHeight = screenSize.height - (marginPixels * 2); // *2 = right and left margin
+		return new Dimension(Math.min(width, screenWidth), Math.min(height, screenHeight));
 	}
 
 

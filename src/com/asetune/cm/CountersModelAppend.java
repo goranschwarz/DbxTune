@@ -364,6 +364,14 @@ public class CountersModelAppend
 		return rowsFetched;
 	}
 
+	/**
+	 * NO PK is needed, we are NOT going to do DIFF calculations
+	 */
+	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		// NO PK is needed, we are NOT going to do DIFF calculations
+		return null;
+	}
 
 	@Override
 	public void clearForRead()
