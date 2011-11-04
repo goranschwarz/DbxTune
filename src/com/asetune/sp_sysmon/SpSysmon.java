@@ -103,4 +103,15 @@ public class SpSysmon
 	public void printReport()
 	{
 	}
+
+	public String getReportText()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append(kernel  .getReport());
+		sb.append(taskmgmt.getReport());
+		sb.append(pcache  .getReport());
+
+		return sb.toString();
+	}
 }

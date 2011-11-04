@@ -6,7 +6,7 @@ package com.asetune.xmenu;
 import java.sql.Connection;
 import java.util.HashMap;
 
-import com.asetune.gui.QueryWindow;
+import com.asetune.tools.QueryWindow;
 
 
 /**

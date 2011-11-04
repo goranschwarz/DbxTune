@@ -140,7 +140,7 @@ rem ------------------------------------------------------------------------
 cd %ASESQLW_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASESQLW_HOME="%ASESQLW_HOME%" -DASESQLW_SAVE_DIR="%ASESQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.gui.QueryWindow %*
+java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASESQLW_HOME="%ASESQLW_HOME%" -DASESQLW_SAVE_DIR="%ASESQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.QueryWindow %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_asesqlw

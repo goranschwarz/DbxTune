@@ -1537,6 +1537,16 @@ public class PersistWriterJdbc
 //			sqlSb.append(", ?");
 //		sqlSb.append(")");
 
+		ResultSetMetaData rsmd = null;
+		try
+		{
+			rsmd = cm.getResultSetMetaData();
+			
+			if ( rsmd != null && rsmd.getColumnCount() == 0 )
+				rsmd = null;
+		}
+		catch (SQLException ignore) { /*ignore*/ }
+		
 		try
 		{
 			String sql = getTableInsertStr(whatData, cm, true);
@@ -1589,6 +1599,36 @@ public class PersistWriterJdbc
 						{
 							pstmt.setString(col++, dateStr);
 						}
+					}
+					// STRING values, check if we need to truncate trailing/overflowing space. 
+					else if (colObj != null && colObj instanceof String)
+					{
+						String str = (String)colObj;
+
+						// if str length is longer than column length, truncate the value...
+						if (rsmd != null)
+						{
+							// Should we check for storage type as well???, lets skip this for now...
+//							String typeDatatype = rsmd.getColumnTypeName( c + 1 );
+//							if ( type.equals("char") || type.equals("varchar") )
+//							int allowedLength = rsmd.getPrecision( c + 1 ); // seems to be zero for strings
+
+							// NOTE: column in JDBC starts at 1, not 0
+							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+							if (str != null && str.length() > allowedLength)
+							{
+								int dataLength = str.length();
+								String colName = cols.get(c);
+
+								String truncStr = str.substring(0, allowedLength - 3) + "...";
+
+								_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
+								
+								str = truncStr;
+							}
+						}
+
+						pstmt.setString(col++, str);
 					}
 					else
 						pstmt.setObject(col++, colObj);

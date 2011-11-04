@@ -35,6 +35,7 @@ import com.asetune.AseTune;
 import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.MonWaitEventIdDictionary;
+import com.asetune.RemarkDictionary;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SummaryPanel;
@@ -487,38 +488,40 @@ implements Cloneable
 		c._runtimeInitialized         = this._runtimeInitialized;
 		c._serverVersion              = this._serverVersion;
 		c._isClusterEnabled           = this._isClusterEnabled;
-		c._activeRoleList             = this._activeRoleList;
-		c._monitorConfigsMap          = this._monitorConfigsMap;
+		c._activeRoleList             = this._activeRoleList;      // no need to full copy, static usage
+		c._monitorConfigsMap          = this._monitorConfigsMap;   // no need to full copy, static usage
 		c._sqlInit                    = this._sqlInit;
 		c._sqlClose                   = this._sqlClose;
 		c._sqlRequest                 = this._sqlRequest;
 		c._sqlWhere                   = this._sqlWhere;
-		c.tabPanel                    = this.tabPanel;
-		c._pkCols                     = this._pkCols;
+		c.tabPanel                    = this.tabPanel;           // do we really need to copy this one?
+		c._pkCols                     = this._pkCols;              // no need to full copy, static usage
 //		c._pkColsOrigin               = this._pkColsOrigin;
 
-		c._monTablesInQuery           = this._monTablesInQuery;
+		c._monTablesInQuery           = this._monTablesInQuery;    // no need to full copy, static usage
 
-		c._dependsOnCm                = this._dependsOnCm;
-		c._dependsOnRole              = this._dependsOnRole;
-		c._dependsOnConfig            = this._dependsOnConfig;
+		c._dependsOnCm                = this._dependsOnCm;         // no need to full copy, static usage
+		c._dependsOnRole              = this._dependsOnRole;       // no need to full copy, static usage
+		c._dependsOnConfig            = this._dependsOnConfig;     // no need to full copy, static usage
 		c._dependsOnVersion           = this._dependsOnVersion;
 		c._dependsOnCeVersion         = this._dependsOnCeVersion;
-		c._dependsOnStoredProc        = this._dependsOnStoredProc;
+		c._dependsOnStoredProc        = this._dependsOnStoredProc; // no need to full copy, static usage
 
 		c._postponeTime               = this._postponeTime;
 		c._lastLocalRefreshTime       = this._lastLocalRefreshTime;
 
+		// Do we need to clone this, I think it's safe not to...
+		// in SampleCnt we do: cm.setResultSetMetaData(rs.getMetaData());  so a new one will be created
 		c._rsmd                       = this._rsmd;
 
-		c._diffColumns                = this._diffColumns;
-		c._isDiffCol                  = this._isDiffCol;
+		c._diffColumns                = this._diffColumns;     // no need to full copy, static usage, i think
+		c._isDiffCol                  = this._isDiffCol;       // no need to full copy, static usage, i think
 
-		c._pctColumns                 = this._pctColumns;
-		c._isPctCol                   = this._isPctCol;
+		c._pctColumns                 = this._pctColumns;      // no need to full copy, static usage, i think
+		c._isPctCol                   = this._isPctCol;        // no need to full copy, static usage, i think
 
-		c._diffDissColumns            = this._diffDissColumns;
-		c._isDiffDissCol              = this._isDiffDissCol;
+		c._diffDissColumns            = this._diffDissColumns; // no need to full copy, static usage, i think
+		c._isDiffDissCol              = this._isDiffDissCol;   // no need to full copy, static usage, i think
 		
 		c._hasValidSampleData         = this._hasValidSampleData;
 		
@@ -537,10 +540,15 @@ implements Cloneable
 		c._persistCountersRate        = this._persistCountersRate;
 
 
-		c._prevSample                 = this._prevSample;
-		c._newSample                  = this._newSample;
-		c._diffData                   = this._diffData;
-		c._rateData                   = this._rateData;
+		// Shouldn't these ones has to be copied/cloned, wont they be overwritten if the PersistHandler takes to long time...
+//		c._prevSample                 = this._prevSample;
+//		c._newSample                  = this._newSample;
+//		c._diffData                   = this._diffData;
+//		c._rateData                   = this._rateData;
+		c._prevSample                 = this._prevSample == null ? null : new SamplingCnt(this._prevSample, true);
+		c._newSample                  = this._newSample  == null ? null : new SamplingCnt(this._newSample,  true);
+		c._diffData                   = this._diffData   == null ? null : new SamplingCnt(this._diffData,   true);
+		c._rateData                   = this._rateData   == null ? null : new SamplingCnt(this._rateData,   true);
 		
 		c._dataSource                 = this._dataSource;
 
@@ -1318,6 +1326,18 @@ implements Cloneable
 			}
 		}
 
+		// Get tip on Remark (at least in CMobjectActivity/CM_NAME__OBJECT_ACTIVITY)
+		if ("Remark".equals(colName))
+		{
+			//Object cellVal = getValueAt(modelRow, modelCol);
+			if (cellValue instanceof String)
+			{
+				String key = (String)cellValue;
+				if ( ! StringUtil.isNullOrBlank(key) )
+					return RemarkDictionary.getInstance().getToolTipText(key);
+			}
+		}
+
 		// If we are CONNECTED and we have a USER DEFINED TOOLTIP for this columns
 		if (cellValue != null)
 		{
@@ -1837,6 +1857,10 @@ implements Cloneable
 		int     aseVersion       = getServerVersion();
 		boolean isClusterEnabled = isClusterEnabled();
 
+		// Get what configuration we depends on
+		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
+		setDependsOnConfig(dependsOnConfig);
+		
 		// Generate the SQL, for the specific ASE version
 		String sql = getSqlForVersion(conn, aseVersion, isClusterEnabled);
 		setSql(sql);
@@ -1852,6 +1876,9 @@ implements Cloneable
 		// Generate PrimaryKey, for the specific ASE version
 		List<String> pkList = getPkForVersion(conn, aseVersion, isClusterEnabled);
 		setPk(pkList);
+		
+		// Set specific column descriptions
+		addMonTableDictForVersion(conn, aseVersion, isClusterEnabled);
 	}
 
 	/**
@@ -1885,6 +1912,11 @@ implements Cloneable
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		throw new RuntimeException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+	}
+
+	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		return null;
 	}
 
 	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
@@ -2121,14 +2153,12 @@ implements Cloneable
 	}
 	public void setDependsOnConfig(String[] dependsOnConfig)
 	{
-		_dependsOnConfig = dependsOnConfig;
-		if (_dependsOnConfig == null)
-		{
-			String[] emptyArray = {};
-			_dependsOnConfig = emptyArray;
-		}
+		if (dependsOnConfig == null)
+			dependsOnConfig = new String[] {};
 
+		_dependsOnConfig = dependsOnConfig;
 	}
+
 	
 	/** Check a specific configuration parameter */
 	public boolean checkDependsOnConfig(Connection conn, String configNameVal)

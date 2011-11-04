@@ -76,6 +76,21 @@ extends CounterTableModel
 		_negativeDiffCountersToZero = negativeDiffCountersToZero;
 		_diffColNames = diffColNames;
 	}
+	/**
+	 * Used to clone the object
+	 * @param sc the object to clone
+	 * @param cloneRows Should we clear or copy the data rows
+	 */
+	public SamplingCnt(SamplingCnt sc, boolean cloneRows)
+	{
+		this(sc, cloneRows, sc._name);
+	}
+	/**
+	 * Used internally to clone the object with a new name...
+	 * @param sc the object to clone
+	 * @param cloneRows Should we clear or copy the data rows
+	 * @param name Set a new name to the created object 
+	 */
 	private SamplingCnt(SamplingCnt sc, boolean cloneRows, String name)
 	{
 		_name                       = name;
@@ -94,14 +109,15 @@ extends CounterTableModel
 
 		if (cloneRows)
 		{
-//			_rows = sc._rows.clone();
-			_rows = new ArrayList<List<Object>>(sc._rows);
+			_rows        = new ArrayList<List<Object>>(sc._rows);
+			_keysToRowid = new HashMap<String,Integer>(sc._keysToRowid);
+			_rowidToKey  = new ArrayList<String>      (sc._rowidToKey);
 		}
 		else
 		{
+			_rows        = new ArrayList<List<Object>>();
 			_keysToRowid = new HashMap<String,Integer>();
 			_rowidToKey  = new ArrayList<String>();
-			_rows        = new ArrayList<List<Object>>();
 		}
 	}
 

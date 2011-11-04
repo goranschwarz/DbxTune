@@ -190,6 +190,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	private String					_timeEmptyConstant					= "                       ";
 	private JLabel					_timeClear_lbl						= new JLabel("Clear time");
 	private JTextField				_timeClear_txt						= new JTextField(_timeEmptyConstant);
+	private JLabel					_timeHeadSample_lbl					= new JLabel("Head time");
+	private JTextField				_timeHeadSample_txt					= new JTextField(_timeEmptyConstant);
 	private JLabel					_timeSample_lbl						= new JLabel("Sample time");
 	private JTextField				_timeSample_txt						= new JTextField(_timeEmptyConstant);
 	private JLabel					_timeIntervall_lbl					= new JLabel("Intervall (ms)");
@@ -312,14 +314,20 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		if ( _tailMode )
 		{
-			_timePostpone_lbl.setVisible(true);
-			_timePostpone_txt.setVisible(true);
-			_timeViewStored_lbl.setVisible(false);
-			_timeOfflineRewind_but.setVisible(false);
+			_timeClear_lbl             .setVisible(true);
+			_timeClear_txt             .setVisible(true);
+			_timeHeadSample_lbl        .setVisible(false);
+			_timeHeadSample_txt        .setVisible(false);
+			_timePostpone_lbl          .setVisible(true);
+			_timePostpone_txt          .setVisible(true);
+			_timeViewStored_lbl        .setVisible(false);
+			_timeOfflineRewind_but     .setVisible(false);
 			_timeOfflineFastForward_but.setVisible(false);
 
-			_optionQueryTimeout_lbl.setVisible(true);
-			_optionQueryTimeout_txt.setVisible(true);
+			_optionQueryTimeout_lbl    .setVisible(true);
+			_optionQueryTimeout_txt    .setVisible(true);
+
+			setEnableOptionsPanel(true);
 
 			_cmDisplay = null;
 
@@ -350,20 +358,25 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		}
 		else
 		{
-			_timePostpone_lbl.setVisible(false);
-			_timePostpone_txt.setVisible(false);
-			_timeViewStored_lbl.setVisible(true);
+			_timeClear_lbl             .setVisible(false);
+			_timeClear_txt             .setVisible(false);
+			_timeHeadSample_lbl        .setVisible(true);
+			_timeHeadSample_txt        .setVisible(true);
+			_timePostpone_lbl          .setVisible(false);
+			_timePostpone_txt          .setVisible(false);
+			_timeViewStored_lbl        .setVisible(true);
 			if (MainFrame.isOfflineConnected())
 			{
-				_timeOfflineRewind_but.setVisible(true);
+				_timeOfflineRewind_but     .setVisible(true);
 				_timeOfflineFastForward_but.setVisible(true);
 			}
 			_optionQueryTimeout_lbl.setVisible(false);
 			_optionQueryTimeout_txt.setVisible(false);
 
+			setEnableOptionsPanel(false);
+
 			if ( _cmDisplay != null )
 			{
-//System.out.println(Thread.currentThread().getName()+": _cmDisplay, rows="+_cmDisplay.getRowCount()+", name='"+_cmDisplay.getName()+"'.");
 				// Set what data to show according to what is chosen in the GUI
 				if ( _counterAbs_rb.isSelected() )
 					_cmDisplay.setDataSource(CountersModel.DATA_ABS);
@@ -372,14 +385,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				if ( _counterRate_rb.isSelected() )
 					_cmDisplay.setDataSource(CountersModel.DATA_RATE);
 
-//if ("CMobjActivity".equals(getName()))
-//_dataTable.printColumnLayout("BEFORE setModel(): ");
 				_dataTable.setModel(_cmDisplay);
-//if ("CMobjActivity".equals(getName()))
-//_dataTable.printColumnLayout("after setModel(): ");
+				refreshFilterColumns(_cmDisplay);
 				loadFilterProps();
-//if ("CMobjActivity".equals(getName()))
-//_dataTable.printColumnLayout("after loadFilterProps(): ");
 
 				if ( _cm.hasTrendGraph() )
 				{
@@ -404,9 +412,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			adjustTableColumnWidth();
 
 			if ( _cmDisplay != null )
-				setTimeInfo(_cmDisplay.getCounterClearTime(), _cmDisplay.getSampleTime(), _cmDisplay.getSampleInterval());
+				setTimeInfo(_cmDisplay.getCounterClearTime(), _cmDisplay.getSampleTimeHead(), _cmDisplay.getSampleTime(), _cmDisplay.getSampleInterval());
 			else
-				setTimeInfo(null, null, 0);
+				setTimeInfo(null, null, null, 0);
 			
 			// wonder if the tableChanged() is kicked off or not...
 			// meaning do I need to call this one here?
@@ -621,7 +629,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 			// Update sample time info
 			if ( _cm != null )
-				setTimeInfo(_cm.getCounterClearTime(), _cm.getSampleTime(), _cm.getSampleInterval());
+				setTimeInfo(_cm.getCounterClearTime(), _cm.getSampleTimeHead(), _cm.getSampleTime(), _cm.getSampleInterval());
 
 			// Kick off the changes in the JXTable
 			// NOTE: this should be done at teh START of this method
@@ -634,6 +642,19 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 	public void refreshFilterColumns(TableModel tm)
 	{
+		if (tm != null)
+		{
+			int tmSize = tm.getColumnCount();
+			int cbSize = _filterColumn_cb.getModel().getSize() - 1;
+			
+			// get out of here if same size, then it hasn't changed
+			// of course it would be safer to check all values to...
+			if (tmSize == cbSize)
+			{
+				_logger.debug("refreshFilterColumns(): " + getName() + "no change in count, skipping refresh, tmSize="+tmSize+", cbxSize="+cbSize);
+				return;
+			}
+		}
 		_filterColumn_cb.removeAllItems();
 
 		// first values should be FILTER_NO_COLUMN_IS_SELECTED
@@ -674,6 +695,19 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		for (int i = 0; i < _filterPanel.getComponentCount(); i++)
 		{
 			_filterPanel.getComponent(i).setEnabled(b);
+		}
+	}
+
+	public void setEnableOptionsPanel(boolean b)
+	{
+		_optionsPanel.setEnabled(b);
+		for (int i = 0; i < _optionsPanel.getComponentCount(); i++)
+		{
+			Component comp = _optionsPanel.getComponent(i);
+
+			// All components but, the graph button.
+			if ( ! comp.equals(_optionTrendGraphs_but) )
+				comp.setEnabled(b);
 		}
 	}
 
@@ -724,10 +758,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		return _description;
 	}
 
-	public void setTimeInfo(Timestamp clearTime, Timestamp sampleTime, long intervall)
+	public void setTimeInfo(Timestamp clearTime, Timestamp headSampleTime, Timestamp sampleTime, long intervall)
 	{
 		String timeClear = (clearTime == null) ? _timeEmptyConstant : clearTime.toString();
 		_timeClear_txt.setText(timeClear);
+
+		String timeHeadSample = (headSampleTime == null) ? _timeEmptyConstant : headSampleTime.toString();
+		_timeHeadSample_txt.setText(timeHeadSample);
 
 		String timeSample = (sampleTime == null) ? _timeEmptyConstant : sampleTime.toString();
 		_timeSample_txt.setText(timeSample);
@@ -760,8 +797,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 	public void reset()
 	{
-		setTimeInfo(null, null, 0);
-//		setDisplayCm(null, _tailMode); // hmmm.. this did not "reset" the jtable etc...
+		setTimeInfo(null, null, null, 0);
+		setDisplayCm(null, true); // set it to tail mode (as it is when initializing the panel)
 	}
 
 	public void putTableClientProperty(Object key, Object value)
@@ -794,12 +831,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_mainSplitPane     = new JSplitPane();
 		_dataPanel         = createTablePanel();
 		_extendedInfoPanel = createExtendedInfoPanel();
-		
-		_mainSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-		_mainSplitPane.setBorder(null);
-		_mainSplitPane.add(_extendedInfoPanel, JSplitPane.TOP);
-		_mainSplitPane.add(_dataPanel,         JSplitPane.BOTTOM);
-		_mainSplitPane.setDividerSize(3);
+
+		setSplitPaneOptions(_mainSplitPane, _dataPanel, _extendedInfoPanel);
+
 		// add(createTopPanel(), "wrap");
 		// add(_mainSplitPan, "");
 		add(createTopPanel(), BorderLayout.NORTH);
@@ -810,6 +844,15 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		loadProps();
 		initComponentActions();
+	}
+
+	protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+	{
+		mainSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+		mainSplitPane.setBorder(null);
+		mainSplitPane.add(extendedInfoPanel, JSplitPane.TOP);
+		mainSplitPane.add(dataPanel,         JSplitPane.BOTTOM);
+		mainSplitPane.setDividerSize(3);
 	}
 
 	private JPanel createTopPanel()
@@ -1579,15 +1622,20 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 //		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "wrap 2, ins 0", "[growx] [growx]", ""));
 		panel.setLayout(new MigLayout("wrap 2, ins 0", "[fill] [fill]", ""));
 
-		_timeClear_txt.setEditable(false);
-		_timeSample_txt.setEditable(false);
-		_timeIntervall_txt.setEditable(false);
+		_timeClear_txt     .setEditable(false);
+		_timeHeadSample_txt.setEditable(false);
+		_timeSample_txt    .setEditable(false);
+		_timeIntervall_txt .setEditable(false);
+		
+		_timeHeadSample_lbl.setVisible(false);
+		_timeHeadSample_txt.setVisible(false);
 
 		_timeViewStored_lbl.setVisible(false);
 		_timeViewStored_lbl.setFont(_timeViewStored_lbl.getFont().deriveFont(Font.BOLD));
 		_timeViewStored_lbl.setHorizontalTextPosition(JLabel.CENTER);
 
 		_timeClear_txt     .setToolTipText("If sp_sysmon is executed and clears the counters, it could be nice to know that...");
+		_timeHeadSample_txt.setToolTipText("This is the Head/Main sample time, which is when we started to sample all individual Performance Counters. Also this would be the time in the 'slider'");
 		_timeSample_txt    .setToolTipText("Date when the data showned in the table was sampled.");
 		_timeIntervall_txt .setToolTipText("Milliseconds since last sample period.");
 		_timePostpone_txt  .setToolTipText("<html>If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples.<br>tip: '10m' is 10 minutes, '24h' is 24 hours</html>");
@@ -1607,17 +1655,20 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_timeOfflineFastForward_but.setMargin( new Insets(0,0,0,0) );
 		_timeOfflineFastForward_but.setVisible(false);
 		
-		panel.add(_timeClear_lbl, "");
-		panel.add(_timeClear_txt, "width 132lp!, growx, wrap");
+		panel.add(_timeClear_lbl,      "hidemode 3");
+		panel.add(_timeClear_txt,      "hidemode 3, width 132lp!, growx, wrap");
 
-		panel.add(_timeSample_lbl, "");
-		panel.add(_timeSample_txt, "width 132lp!, growx, wrap");
+		panel.add(_timeHeadSample_lbl, "hidemode 3");
+		panel.add(_timeHeadSample_txt, "hidemode 3, width 132lp!, growx, wrap");
 
-		panel.add(_timeIntervall_lbl, "");
-		panel.add(_timeIntervall_txt, "width 132lp!, growx, wrap");
+		panel.add(_timeSample_lbl,     "");
+		panel.add(_timeSample_txt,     "width 132lp!, growx, wrap");
 
-		panel.add(_timePostpone_lbl, "hidemode 3");
-		panel.add(_timePostpone_txt, "hidemode 3, growx, wrap");
+		panel.add(_timeIntervall_lbl,  "");
+		panel.add(_timeIntervall_txt,  "width 132lp!, growx, wrap");
+
+		panel.add(_timePostpone_lbl,   "hidemode 3");
+		panel.add(_timePostpone_txt,   "hidemode 3, growx, wrap");
 
 		panel.add(_timeOfflineRewind_but,      "hidemode 3, left, bottom, span 2, split 3");
 		panel.add(_timeViewStored_lbl,         "hidemode 3, growx, center, bottom");
@@ -2968,6 +3019,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		private void privateTableChanged(TableModelEvent e)
 		{
 			// new Exception().printStackTrace();
+
+			// TODO: try to get PK from the CounterModel (or SamplingCnt.getPkForRow()) 
+			//       then restore: row=SamplingCnt.getRowForPk(); convertModelToView(); setSelectionInterval()
+
 			int viewSelectedRow = getSelectedRow();
 			int modelRowBefore = -1;
 			if ( viewSelectedRow >= 0 )
@@ -3639,7 +3694,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		if ( _offlineSampleTime == null )
 		{
-			_logger.warn("Offline Sample Time has not been set...");
+			_logger.info("Offline Sample Time has not been set...");
 			return;
 		}
 
@@ -3658,7 +3713,6 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				_offlineCm = read.getCmForSample(name, _offlineSampleTime);
 				return _offlineCm == null ? "FAILED" : "SUCCEED";
 			}
-
 		};
 		JDialog dialog = new JDialog((Frame)null, "Waiting for offline read...", true);
 		JLabel label = new JLabel("Reading data from offline storage", JLabel.CENTER);
@@ -3675,7 +3729,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		//the dialog will be visible until the SwingWorker is done
 		dialog.setVisible(true); 
 
-		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+//		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 //		MainFrame.getInstance().setBusyCursor(false);
 
 		setDisplayCm(_offlineCm, false);
@@ -3730,7 +3784,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		if ( _offlineSampleTime == null )
 		{
-			_logger.warn("Offline Sample Time has not been set...");
+			_logger.info("Offline Sample Time has not been set...");
 			return;
 		}
 

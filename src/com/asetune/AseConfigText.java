@@ -542,7 +542,12 @@ public abstract class AseConfigText
 			{
 				try
 				{
-					int intTrace = Integer.parseInt(str.replace(",", ""));
+					str = str.replace(",", ""); // remove ',' - commas can be in str
+					str = str.replace(".", ""); // remove '.' - dot can be in str, especially at the end
+					str = str.replace(";", ""); // remove ';' - don't know if this can exists
+					str = str.replace(":", ""); // remove ':' - don't know if this can exists
+
+					int intTrace = Integer.parseInt(str);
 					flags.add(intTrace);
 					//System.out.println("Found trace flag '"+intTrace+"'.");
 				}

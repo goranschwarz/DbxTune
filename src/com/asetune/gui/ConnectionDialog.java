@@ -921,6 +921,7 @@ public class ConnectionDialog
 
 		// http://www.h2database.com/html/features.html#database_url
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
+		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");

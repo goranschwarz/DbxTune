@@ -18,6 +18,14 @@ extends AbstractSysmonType
 	}
 
 	@Override
+	public String getReportHead()
+	{
+		return "======================================================================\n" +
+		       " Procedure Cache \n" +
+		       "----------------------------------------------------------------------\n";
+	}
+
+	@Override
 	public void calc()
 	{
 		String fieldName  = "";

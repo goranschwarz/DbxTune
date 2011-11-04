@@ -1,7 +1,7 @@
 /**
  * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
  */
-package com.asetune.gui;
+package com.asetune.tools;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -99,6 +99,9 @@ import org.jdesktop.swingx.JXTable;
 
 import com.asetune.DebugOptions;
 import com.asetune.Version;
+import com.asetune.gui.AsePlanViewer;
+import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;

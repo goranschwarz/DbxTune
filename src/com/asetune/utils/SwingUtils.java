@@ -552,6 +552,13 @@ public class SwingUtils
 	 * Rows 2
 	 * </pre>
 	 */
+	private static String REGEXP_NEW_LINE = "\\r?\\n|\\r";
+//	private static String REGEXP_NEW_LINE = "[\n\r]";
+//	private static String REGEXP_NEW_LINE = "\\r?\\n";
+//	private static String REGEXP_NEW_LINE = "\n";
+//	private static String REGEXP_NEW_LINE = "[\\r\\n]+";
+//	private static String REGEXP_NEW_LINE = "[\\n\\x0B\\f\\r]+";
+
 	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow)
 	{
 		String colSepOther = "+";
@@ -575,7 +582,6 @@ public class SwingUtils
 		}
 
 		int cols = jtable.getColumnCount();
-//		int rows = jtable.getRowCount();
 		if (firstRow < 0) firstRow = 0;
 		if (lastRow  < 0) lastRow = jtable.getRowCount();
 		int copiedRows = 0;
@@ -603,13 +609,29 @@ public class SwingUtils
 			for (int c=0; c<cols; c++)
 			{
 				Object obj = jtable.getValueAt(r, c);
-				
+
 				// Strip of '\n' at the end of Strings
 				if (obj != null && obj instanceof String)
 				{
 					String str = (String) obj;
-					if (str.endsWith("\n"))
-						obj = str.subSequence(0, str.length()-1);
+					
+					// strip off HTML chars
+					if (stripHtml)
+						str = StringUtil.stripHtml(str);
+
+					// if the string ENDS with a newline, remove it
+					while (str.endsWith("\r") || str.endsWith("\n"))
+						str = str.substring(0, str.length()-1);
+
+					// replace all tab's with 8 spaces
+					if (str.indexOf('\t') >= 0)
+						str = str.replace("\t", "        ");
+
+					// if we have a "multiple row/line cell"
+					if (str.indexOf('\r') >= 0 || str.indexOf('\n') >= 0)
+						obj = str.split(REGEXP_NEW_LINE); // object "type" would be String[]
+					else
+						obj = str;
 				}
 				row.add(obj);
 			}
@@ -624,8 +646,12 @@ public class SwingUtils
 
 		//------------------------------------
 		// Get MAX column length and store in colLength[]
+		// Get MAX newLines/numberOfRows in each cell...
 		//------------------------------------
-		int[] colLength = new int[cols];
+		boolean tableHasMultiLineCells = false;
+		int[]   colLength           = new int[cols];
+		int[][] rowColCellLineCount = new int[copiedRows][cols];
+//		int[]   rowMaxLineCount     = new int[copiedRows];
 		for (int c=0; c<cols; c++)
 		{
 			int maxLen = 0;
@@ -634,16 +660,28 @@ public class SwingUtils
 			String cellName = tableHead.get(c);
 			maxLen = Math.max(maxLen, cellName.length());
 			
-			// All the rows
+			// All the rows, for this column
 			for (int r=0; r<copiedRows; r++)
 			{
-//				ArrayList row = tableData.get(r);
-//				Object cellObj = row.get(c);
-				
 				Object cellObj = tableData.get(r).get(c);
-//				Object cellObj = model.getValueAt(r, c);
 				String cellStr = cellObj == null ? "" : cellObj.toString();
-				maxLen = Math.max(maxLen, cellStr.length());
+
+				// Set number of "rows" within the cell
+				rowColCellLineCount[r][c] = 0;
+				if (cellObj instanceof String[])
+				{
+					String[]sa = (String[]) cellObj;
+					tableHasMultiLineCells = true;
+
+					rowColCellLineCount[r][c] = sa.length;
+
+					for (int l=0; l<sa.length; l++)
+						maxLen = Math.max(maxLen, sa[l].length());
+				}
+				else
+				{
+					maxLen = Math.max(maxLen, cellStr.length());
+				}
 			}
 			
 			colLength[c] = maxLen;
@@ -665,7 +703,6 @@ public class SwingUtils
 		for (int c=0; c<cols; c++)
 		{
 			String cellName = tableHead.get(c);
-//			String cellName = model.getColumnName(c);
 			String data = StringUtil.fill(cellName, colLength[c]);
 			sb.append(colSepData).append(data);
 		}
@@ -685,19 +722,85 @@ public class SwingUtils
 		//-------------------------------------------
 		for (int r=0; r<copiedRows; r++)
 		{
-			// |col1|col2   |col3|\n
+			// First loop cols on this row and check for any multiple lines in any o the cells
+			int maxCellLineCountOnThisRow = 0;
 			for (int c=0; c<cols; c++)
 			{
-				Object cellObj = tableData.get(r).get(c);
-//				Object cellObj = model.getValueAt(r, c);
-				String cellStr = cellObj == null ? "" : cellObj.toString();
-				if (stripHtml)
-					cellStr = StringUtil.stripHtml(cellStr);
-
-				String data = StringUtil.fill(cellStr, colLength[c]);
-				sb.append(colSepData).append(data);
+				maxCellLineCountOnThisRow = Math.max(maxCellLineCountOnThisRow, rowColCellLineCount[r][c]);
 			}
-			sb.append(colSepData).append(newLine);
+
+			// Add a extra "row" separator if any cells has multiple lines
+			if (tableHasMultiLineCells && r > 0)
+			{
+				// +------+------+-----+\n
+				for (int c=0; c<cols; c++)
+				{
+					String line = StringUtil.replicate(lineSpace, colLength[c]);
+					sb.append(colSepOther).append(line);
+				}
+				sb.append(colSepOther).append(newLine);
+			}
+
+			// NO multiple lines for any cells on this row
+			if (maxCellLineCountOnThisRow == 0)
+			{
+				// |col1|col2   |col3|\n
+				for (int c=0; c<cols; c++)
+				{
+					Object cellObj = tableData.get(r).get(c);
+					String cellStr = cellObj == null ? "" : cellObj.toString();
+	
+					String data = StringUtil.fill(cellStr, colLength[c]);
+					sb.append(colSepData).append(data);
+				}
+				sb.append(colSepData).append(newLine);
+			}
+			// MULTIPLE line in one or more cells
+			else
+			{
+				for (int l=0; l<maxCellLineCountOnThisRow; l++)
+				{
+					// |col1|col2   |col3|\n
+					for (int c=0; c<cols; c++)
+					{
+						Object cellObj = tableData.get(r).get(c);
+						String cellStr = cellObj == null ? "" : cellObj.toString();
+
+						// first line
+						if (l == 0)
+						{
+							// this cell has multiple lines, so just choose first line
+							if ( cellObj instanceof String[] )
+							{
+								String[]sa = (String[]) cellObj;
+
+								cellStr = sa[0];
+							}
+							String data = StringUtil.fill(cellStr, colLength[c]);
+							sb.append(colSepData).append(data);
+						}
+						else // next of the lines
+						{
+							// this cell has multiple lines
+							if ( cellObj instanceof String[] )
+							{
+								String[]sa = (String[]) cellObj;
+
+								cellStr = "";
+								if (l < sa.length)
+									cellStr = sa[l];
+							}
+							else
+							{
+								cellStr = "";
+							}
+							String data = StringUtil.fill(cellStr, colLength[c]);
+							sb.append(colSepData).append(data);
+						}
+					}
+					sb.append(colSepData).append(newLine);
+				}
+			}
 		}
 
 		//-------------------------------------------
@@ -807,4 +910,30 @@ public class SwingUtils
 	}
 
 
+	/////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
+	//// TEST CODE
+	/////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
+
+	public static void main(String[] args)
+	{
+		String[] columnNames = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
+
+		Object[][] data = { 
+				{ "row 1", "no newlines in this row",      "Snowboarding",                  new Integer(5),  new Boolean(false) }, 
+				{ "row 2", "2-rows:Ro(ln)wing",            "Ro\r\n\rwing",                      new Integer(3),  new Boolean(true) }, 
+				{ "row 3", "8-rows,after each char",       "K\nn\ni\nt\nt\ni\nn\ng\n",      new Integer(2),  new Boolean(false) }, 
+				{ "row 4", "2-rows:Speed(ln) reading",     "Speed\n reading",               new Integer(20), new Boolean(true) }, 
+				{ "row 5", "Pool(ln)             xxx   -", "Pool\n             xxx   -",    new Integer(10), new Boolean(false) }, 
+				{ "row 6", "no newlines, 2 lead space",    "  last Row .-.",                 new Integer(5),  new Boolean(false) }, 
+			};
+
+		JTable jtable = new JTable(data, columnNames);
+		
+		String xxx = tableToString(jtable);
+		System.out.println("##################################");
+		System.out.println(xxx);
+		System.out.println("##################################");
+	}
 }

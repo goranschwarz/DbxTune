@@ -32,7 +32,6 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
@@ -43,6 +42,8 @@ import javax.swing.tree.DefaultTreeModel;
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.rtextarea.RTextArea;
+import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -83,8 +84,10 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.SshConnection;
+import com.asetune.sp_sysmon.SpSysmon;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -948,6 +951,12 @@ extends Thread
 			}
 			
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -962,8 +971,9 @@ extends Thread
 				{
 					if (isRoleActive(AseConnectionUtils.SA_ROLE))
 					{
+						Component guiOwner = AseTune.hasGUI() ? MainFrame.getInstance() : null;
 //						nwAddrInfo = "(select min(convert(varchar(255),address_info)) from syslisteners where address_info not like 'localhost%')";
-						nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, MainFrame.getInstance()) + "'";
+						nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, guiOwner) + "'";
 					}
 				}
 				else
@@ -1034,82 +1044,6 @@ extends Thread
 				return sql;
 			}
 			
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String nwAddrInfo = "'no sa_role'";
-//				if (isRoleActive(AseConnectionUtils.SA_ROLE))
-//				{
-////					nwAddrInfo = "(select min(convert(varchar(255),address_info)) from syslisteners where address_info not like 'localhost%')";
-//					nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, MainFrame.getInstance()) + "'";
-//				}
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				// get all the columns for SMP servers
-//				// if Cluster is enabled, one row for every instance will appear
-//				//                        so lets try to min, max or sum the rows into 1 row...
-//				//                        which will "simulate" a SMP environment
-//				cols1 = "*";
-//				if (isClusterEnabled())
-//				{
-//					cols1 = "";
-//					cols1 += "  LockWaitThreshold   = max(LockWaitThreshold) \n";
-//					cols1 += ", LockWaits           = sum(LockWaits) \n";
-//					cols1 += ", DaysRunning         = max(DaysRunning) \n";
-//					cols1 += ", CheckPoints         = sum(CheckPoints) \n";
-//					cols1 += ", NumDeadlocks        = sum(NumDeadlocks) \n";
-//					cols1 += ", DiagnosticDumps     = sum(DiagnosticDumps) \n";
-//					cols1 += ", Connections         = sum(Connections) \n";
-//					cols1 += ", MaxRecovery         = avg(MaxRecovery) \n";
-//					cols1 += ", Transactions        = sum(Transactions) \n";
-//					cols1 += ", StartDate           = min(StartDate) \n";
-//					cols1 += ", CountersCleared     = max(CountersCleared) \n";
-//				}
-//
-//				cols2 = ", aseVersion         = @@version" +
-//						", atAtServerName     = @@servername" +
-//						", clusterInstanceId  = " + (isClusterEnabled() ? "convert(varchar(15),@@instanceid)"     : "'Not Enabled'") + 
-//						", clusterCoordId     = " + (isClusterEnabled() ? "convert(varchar(3), @@clustercoordid)" : "'Not Enabled'") + 
-//						", timeIsNow          = getdate()" +
-//						", NetworkAddressInfo = " + nwAddrInfo +
-//
-//						", bootcount          = @@bootcount" + // from 12.5.0.3
-//						", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + 
-//
-//						", cpu_busy           = @@cpu_busy" +
-//						", cpu_io             = @@io_busy" +
-//						", cpu_idle           = @@idle" +
-//						", io_total_read      = @@total_read" +
-//						", io_total_write     = @@total_write" +
-//
-//						", aaConnections      = @@connections" +
-//						", distinctLogins     = (select count(distinct suid) from sysprocesses)" +
-//
-//						// 32 = Database created with for load option, or crashed while loading database, instructs recovery not to proceed
-//						// 256 = Database suspect | Not recovered | Cannot be opened or used | Can be dropped only with dbcc dbrepair
-//						// model is used during create database... so skip this one to
-//						", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) from sysdatabases where (status & 32 != 32) and (status & 256 != 256) and name != 'model')" + 
-//
-//						", pack_received      = @@pack_received" +
-//						", pack_sent          = @@pack_sent" +
-//
-//						", packet_errors      = @@packet_errors" +
-//						", total_errors       = @@total_errors" +
-//						"";
-//
-//				cols3 = "";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" + 
-//					"from monState A \n";
-//
-//				setSql(sql);
-//			}
-
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
@@ -1450,11 +1384,11 @@ extends Thread
 		colsCalcDiff = new String[] {"LogicalReads","PhysicalReads", "APFReads", "PagesRead", "PhysicalWrites", "PagesWritten", "UsedCount", "RowsInsUpdDel", "RowsInserted", "RowsDeleted", "RowsUpdated", "Operations", "LockRequests", "LockWaits", "HkgcRequests", "HkgcPending", "HkgcOverflows", "OptSelectCount", "PhysicalLocks", "PhysicalLocksRetained", "PhysicalLocksRetainWaited", "PhysicalLocksDeadlocks", "PhysicalLocksWaited", "PhysicalLocksPageTransfer", "TransferReqWaited", "TotalServiceRequests", "PhysicalLocksDowngraded", "PagesTransferred", "ClusterPageWrites", "SharedLockWaitTime", "ExclusiveLockWaitTime", "UpdateLockWaitTime"};
 		colsCalcPCT  = new String[] {"LockContPct"};
 		pkList       = new LinkedList<String>();
-			pkList.add("DBName");
-			pkList.add("ObjectName");
-			pkList.add("IndexID");
+//			pkList.add("DBName");
+//			pkList.add("ObjectName");
 			pkList.add("DBID");
 			pkList.add("ObjectID");
+			pkList.add("IndexID");
 
 
 		tmp = new CountersModel(name, null, 
@@ -1471,8 +1405,12 @@ extends Thread
 				{
 					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 					mtd.addColumn("monOpenObjectActivity", "LockContPct"                    ,"<html>How many Lock Requests in percent was Blocked by another concurrent SPID's due to incompatible locking issues.<br><b>Note</b>: Do also considder number of LockWaits and not only the percentage.<br><b>Formula</b>: LockWaits / LockRequests * 100.0<br></html>");
-					mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br>Note: If this takes to much resources, it can be disable in any of the configuration files using <code>CMobjActivity.TabRowCount=false</code>.</html>");
+					mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+CM_NAME__OBJECT_ACTIVITY+".TabRowCount=false</code>.</html>");
+					mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+CM_NAME__OBJECT_ACTIVITY+".TabRowCount=false</code>.</html>");
+					mtd.addColumn("monOpenObjectActivity", "RowsPerPage"                    ,"<html>Number of rows per page.<br><b>Formula</b>: TabRowCount/NumUsedPages</html>");
 					mtd.addColumn("monOpenObjectActivity", "RowsInsUpdDel"                  ,"<html>RowsInsUpdDel = RowsInserted + RowsDeleted + RowsUpdated<br>So this is simply a summary of all DML changes on this table.</html>");
+					mtd.addColumn("monOpenObjectActivity", "Remark"                         ,"<html>Some tip of what's happening with this table<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
+					mtd.addColumn("monOpenObjectActivity", "IndexName"                      ,"<html>Name of the index.<br><b>Formula</b>: using ASE Function index_name(DBID, ObjectID, IndexID) to get the name of the index.</html>");
 
 //					mtd.addColumn("monOpenObjectActivity", "PhysicalLocks"                  ,"<html>Number of physical locks requested per object.</html>");
 					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksRetained"          ,"<html>Number of physical locks retained. <br>You can use this to identify the lock hit ratio for each object. " +
@@ -1500,6 +1438,12 @@ extends Thread
 			}
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "object lockwait timing=1", "per object statistics active=1"};
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -1507,11 +1451,11 @@ extends Thread
 				if (isClusterEnabled)
 					pkCols.add("InstanceID");
 
-				pkCols.add("DBName");
-				pkCols.add("ObjectName");
-				pkCols.add("IndexID");
+//				pkCols.add("DBName");
+//				pkCols.add("ObjectName");
 				pkCols.add("DBID");
 				pkCols.add("ObjectID");
+				pkCols.add("IndexID");
 
 				return pkCols;
 			}
@@ -1522,32 +1466,57 @@ extends Thread
 				String cols1, cols2, cols3;
 				cols1 = cols2 = cols3 = "";
 
-				String tabRowCount = "";
-				String dbNameCol   = "DBName=db_name(A.DBID)";
-				String objNameCol  = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
+				// this is used for, sum() or columns concatinated that will overflowing the 4 byte boundary
+				//
+				// In PRE 15.x, we use numeric, in post 15 we use bigint
+				// well max for a bigint (8 byte int) is really: 9223372036854775807
+				// which is equivalent to a numeric(19,0), but lets cahnge that in the future
+				// I think 10,0 is fine, bacuase int (4 byte int) max is 2147483647 (0x7fffffff)
+				// so concatinate at least 3 int should be possible... 
+				String bigint = "numeric(10,0)"; // bigint if above 15.0
+
+				String TabRowCount  = "";
+				String NumUsedPages = "";
+				String RowsPerPage  = "";
+				String DBName       = "DBName=db_name(A.DBID), \n";
+				String ObjectName   = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID)), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
+				String IndexName    = "";
+
 				// ASE 15.7
 				String SharedLockWaitTime    = "";
 				String ExclusiveLockWaitTime = "";
 				String UpdateLockWaitTime    = "";
 				String ase15700_nl           = ""; // NL for this section
 
+				if (aseVersion >= 15000)
+					bigint = "bigint";
+
 				if (aseVersion >= 15020)
 				{
-					tabRowCount = "TabRowCount = convert(bigint,row_count(A.DBID, A.ObjectID)), \n";
-					dbNameCol  = "DBName";
-					objNameCol = "ObjectName";
+					TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)), \n";
+					NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), \n";
+					RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0), \n";
+					DBName       = "A.DBName, \n";
+//					ObjectName   = "A.ObjectName, \n";
+					ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
+					IndexName    = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
+					               "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
+					               "            END, \n";
 
 					// debug/trace
 					Configuration conf = Configuration.getCombinedConfiguration();
 					if (conf.getBooleanProperty(getName()+".ObjectName", false))
 					{
-						objNameCol = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-						_logger.info(getName()+".ObjectName=true, using the string '"+objNameCol+"' for ObjectName lookup.");
+						ObjectName = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
+						_logger.info(getName()+".ObjectName=true, using the string '"+ObjectName+"' for ObjectName lookup.");
+						ObjectName += ", \n";
 					}
 					if (conf.getBooleanProperty(getName()+".TabRowCount", false))
 					{
-						tabRowCount = "";
-						_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount'.");
+						TabRowCount  = "";
+						NumUsedPages = "";
+						RowsPerPage  = "";
+						_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
 					}
 				}
 				if (aseVersion >= 15700)
@@ -1564,9 +1533,12 @@ extends Thread
 					cols1 += "InstanceID, ";
 				}
 
-				cols1 += dbNameCol + ", \n" +
-				         objNameCol +  ", \n" + 
+				cols1 += "A.DBID, A.ObjectID, \n" +
+				         DBName +
+				         ObjectName + 
 				         "A.IndexID, \n" +
+				         IndexName +
+//				         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
 				         "LockScheme = lockscheme(A.ObjectID, A.DBID), \n" +
 				         "LockRequests=isnull(LockRequests,0), LockWaits=isnull(LockWaits,0), \n" +
 				         "LockContPct = CASE WHEN isnull(LockRequests,0) > 0 \n" +
@@ -1576,11 +1548,14 @@ extends Thread
 				         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + ase15700_nl +
 				         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
 				         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
-				         tabRowCount +
-				         "RowsInsUpdDel=RowsInserted+RowsDeleted+RowsUpdated, \n" +
+				         TabRowCount +
+				         NumUsedPages +
+				         RowsPerPage +
+				         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
+				         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
 				         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n";
 				cols2 += "";
-				cols3 += "LastOptSelectDate, LastUsedDate, A.DBID, A.ObjectID";
+				cols3 += "LastOptSelectDate, LastUsedDate, Remark = convert(varchar(60), '')";
 			//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 			// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
 				if (aseVersion >= 15020)
@@ -1702,227 +1677,27 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				// Override defaults from monTableColumns descriptions
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monOpenObjectActivity", "LockContPct"                    ,"<html>How many Lock Requests in percent was Blocked by another concurrent SPID's due to incompatible locking issues.<br><b>Note</b>: Do also considder number of LockWaits and not only the percentage.<br><b>Formula</b>: LockWaits / LockRequests * 100.0<br></html>");
-//					mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br>Note: If this takes to much resources, it can be disable in any of the configuration files using <code>CMobjActivity.TabRowCount=false</code>.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "RowsInsUpdDel"                  ,"<html>RowsInsUpdDel = RowsInserted + RowsDeleted + RowsUpdated<br>So this is simply a summary of all DML changes on this table.</html>");
-//
-////					mtd.addColumn("monOpenObjectActivity", "PhysicalLocks"                  ,"<html>Number of physical locks requested per object.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksRetained"          ,"<html>Number of physical locks retained. <br>You can use this to identify the lock hit ratio for each object. " +
-//					                                                                           "<br>Good hit ratios imply balanced partitioning for this object.</html>");
-////					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksRetainWaited"      ,"<html>Number of physical lock requests waiting before a lock is retained.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksDeadlocks"         ,"<html>Number of times a physical lock requested returned a deadlock. " +
-//					                                                                           "<br>The Cluster Physical Locks subsection of sp_sysmon uses this counter to report deadlocks while acquiring physical locks for each object.</html>");
-////					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksWaited"            ,"<html>Number of times an instance waits for a physical lock request.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksPageTransfer"      ,"<html>Number of page transfers that occurred when an instance requests a physical lock. " +
-//					                                                                           "<br>The Cluster Physical Locks subsection of sp_sysmon uses this counter to report the node-to-node transfer and physical-lock acquisition as a node affinity ratio for this object.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "TransferReqWaited"              ,"<html>Number of times physical lock requests waiting before receiving page transfers.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgPhysicalLockWaitTime"        ,"<html>The average amount of time clients spend before the physical lock is granted.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgTransferReqWaitTime"         ,"<html>The average amount of time physical lock requests wait before receiving page transfers.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "TotalServiceRequests"           ,"<html>Number of physical lock requests serviced by the Cluster Cache Manager of an instance.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "PhysicalLocksDowngraded"        ,"<html>Number of physical lock downgrade requests serviced by the Cluster Cache Manager of an instance.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "PagesTransferred"               ,"<html>Number of pages transferred at an instance by the Cluster Cache Manager.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "ClusterPageWrites"              ,"<html>Number of pages written to disk by the Cluster Cache Manager of an instance.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgServiceTime"                 ,"<html>The average amount of service time spent by the Cluster Cache Manager of an instance.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgTimeWaitedOnLocalUsers"      ,"<html>The average amount of service time an instance’s Cluster Cache Manager waits due to page use by users on this instance.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgTransferSendWaitTime"        ,"<html>The average amount of service time an instance’s Cluster Cache Manager spends for page transfer.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgIOServiceTime"               ,"<html>The average amount of service time used by an instance’s Cluster Cache Manager for page transfer.</html>");
-//					mtd.addColumn("monOpenObjectActivity", "AvgDowngradeServiceTime"        ,"<html>The average amount of service time the Cluster Cache Manager uses to downgrade physical locks.</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				String tabRowCount = "";
-//				String dbNameCol   = "DBName=db_name(A.DBID)";
-//				String objNameCol  = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-//				// ASE 15.7
-//				String SharedLockWaitTime    = "";
-//				String ExclusiveLockWaitTime = "";
-//				String UpdateLockWaitTime    = "";
-//
-//				if (aseVersion >= 15020)
-//				{
-//					tabRowCount = "TabRowCount = convert(bigint,row_count(A.DBID, A.ObjectID)), \n";
-//					dbNameCol  = "DBName";
-//					objNameCol = "ObjectName";
-//
-//					// debug/trace
-//					Configuration conf = Configuration.getCombinedConfiguration();
-//					if (conf.getBooleanProperty(getName()+".ObjectName", false))
-//					{
-//						objNameCol = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-//						_logger.info(getName()+".ObjectName=true, using the string '"+objNameCol+"' for ObjectName lookup.");
-//					}
-//					if (conf.getBooleanProperty(getName()+".TabRowCount", false))
-//					{
-//						tabRowCount = "";
-//						_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount'.");
-//					}
-//				}
-//				if (aseVersion >= 15700)
-//				{
-//					SharedLockWaitTime    = "SharedLockWaitTime, ";
-//					ExclusiveLockWaitTime = "ExclusiveLockWaitTime, ";
-//					UpdateLockWaitTime    = "UpdateLockWaitTime, ";
-//				}
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += dbNameCol + ", \n" +
-//				         objNameCol +  ", \n" + 
-//				         "A.IndexID, \n" +
-//				         "LockScheme = lockscheme(A.ObjectID, A.DBID), \n" +
-//				         "LockRequests=isnull(LockRequests,0), LockWaits=isnull(LockWaits,0), \n" +
-//				         "LockContPct = CASE WHEN isnull(LockRequests,0) > 0 \n" +
-//				         "                   THEN convert(numeric(10,1), ((LockWaits+0.0)/(LockRequests+0.0)) * 100.0) \n" +
-//				         "                   ELSE convert(numeric(10,1), 0.0) \n" +
-//				         "              END, \n" +
-//				         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + "\n" +
-//				         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
-//				         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
-//				         tabRowCount +
-//				         "RowsInsUpdDel=RowsInserted+RowsDeleted+RowsUpdated, \n" +
-//				         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n";
-//				cols2 += "";
-//				cols3 += "LastOptSelectDate, LastUsedDate, A.DBID, A.ObjectID \n";
-//			//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
-//			// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
-//				if (aseVersion >= 15020)
-//				{
-//					cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
-//				}
-////				if ( (aseVersion >= 15030 && isClusterEnabled()) || aseVersion >= 15500)
-//
-//
-//				//-------------------------------------------
-//				// Adding Cluster Edition Specific Counters
-//				//-------------------------------------------
-//
-//				// ASE 15.0.3 CE
-//				String PhysicalLocks             = "";
-//				String PhysicalLocksRetained     = "";
-//				String PhysicalLocksRetainWaited = "";
-//				String PhysicalLocksDeadlocks    = "";
-//				String PhysicalLocksWaited       = "";
-//				String PhysicalLocksPageTransfer = "";
-//				String TransferReqWaited         = "";
-//				String AvgPhysicalLockWaitTime   = "";
-//				String AvgTransferReqWaitTime    = "";
-//				String TotalServiceRequests      = "";
-//				String PhysicalLocksDowngraded   = "";
-//				String PagesTransferred          = "";
-//				String ClusterPageWrites         = "";
-//				String AvgServiceTime            = "";
-//				String AvgTimeWaitedOnLocalUsers = "";
-//				String AvgTransferSendWaitTime   = "";
-//				String AvgIOServiceTime          = "";
-//				String AvgDowngradeServiceTime   = "";
-//
-//				// ASE 15.5.0 ESD#1 CE
-//				String MaxPhysicalLockWaitTime   = "";
-//				String MaxTransferReqWaitTime    = "";
-//				String MaxServiceTime            = "";
-//				String AvgQueueWaitTime          = "";
-//				String MaxQueueWaitTime          = "";
-//				String MaxTimeWaitedOnLocalUsers = "";
-//				String MaxTransferSendWaitTime   = "";
-//				String MaxIOServiceTime          = "";
-//				String MaxDowngradeServiceTime   = "";
-//
-//				if ( aseVersion >= 15030 && isClusterEnabled() )
-//				{
-//					PhysicalLocks             = "PhysicalLocks, ";
-//					PhysicalLocksRetained     = "PhysicalLocksRetained, ";
-//					PhysicalLocksRetainWaited = "PhysicalLocksRetainWaited, ";
-//					PhysicalLocksDeadlocks    = "PhysicalLocksDeadlocks, ";
-//					PhysicalLocksWaited       = "PhysicalLocksWaited, ";
-//					PhysicalLocksPageTransfer = "PhysicalLocksPageTransfer, ";
-//					TransferReqWaited         = "TransferReqWaited, ";
-//					AvgPhysicalLockWaitTime   = "AvgPhysicalLockWaitTime, ";
-//					AvgTransferReqWaitTime    = "AvgTransferReqWaitTime, ";
-//					TotalServiceRequests      = "TotalServiceRequests, ";
-//					PhysicalLocksDowngraded   = "PhysicalLocksDowngraded, ";
-//					PagesTransferred          = "PagesTransferred, ";
-//					ClusterPageWrites         = "ClusterPageWrites, ";
-//					AvgServiceTime            = "AvgServiceTime, ";
-//					AvgTimeWaitedOnLocalUsers = "AvgTimeWaitedOnLocalUsers, ";
-//					AvgTransferSendWaitTime   = "AvgTransferSendWaitTime, ";
-//					AvgIOServiceTime          = "AvgIOServiceTime, ";
-//					AvgDowngradeServiceTime   = "AvgDowngradeServiceTime, ";
-//				}
-//				if ( aseVersion >= 15501 && isClusterEnabled() )
-//				{
-//					MaxPhysicalLockWaitTime   = "MaxPhysicalLockWaitTime, ";
-//					MaxTransferReqWaitTime    = "MaxTransferReqWaitTime, ";
-//					MaxServiceTime            = "MaxServiceTime, ";
-//					AvgQueueWaitTime          = "AvgQueueWaitTime, ";
-//					MaxQueueWaitTime          = "MaxQueueWaitTime, ";
-//					MaxTimeWaitedOnLocalUsers = "MaxTimeWaitedOnLocalUsers, ";
-//					MaxTransferSendWaitTime   = "MaxTransferSendWaitTime, ";
-//					MaxIOServiceTime          = "MaxIOServiceTime, ";
-//					MaxDowngradeServiceTime   = "MaxDowngradeServiceTime, ";
-//				}
-//				cols2 += PhysicalLocks;
-//				cols2 += PhysicalLocksRetained;
-//				cols2 += PhysicalLocksRetainWaited;
-//				cols2 += PhysicalLocksDeadlocks;
-//				cols2 += PhysicalLocksWaited;
-//				cols2 += PhysicalLocksPageTransfer;
-//				cols2 += TransferReqWaited;
-//				cols2 += AvgPhysicalLockWaitTime;
-//				cols2 += MaxPhysicalLockWaitTime;
-//				cols2 += AvgTransferReqWaitTime;
-//				cols2 += MaxTransferReqWaitTime;
-//				cols2 += TotalServiceRequests;
-//				cols2 += PhysicalLocksDowngraded;
-//				cols2 += PagesTransferred;
-//				cols2 += ClusterPageWrites;
-//				cols2 += AvgServiceTime;
-//				cols2 += MaxServiceTime;
-//				cols2 += AvgTimeWaitedOnLocalUsers;
-//				cols2 += MaxTimeWaitedOnLocalUsers;
-//				cols2 += AvgTransferSendWaitTime;
-//				cols2 += MaxTransferSendWaitTime;
-//				cols2 += AvgIOServiceTime;
-//				cols2 += MaxIOServiceTime;
-//				cols2 += AvgDowngradeServiceTime;
-//				cols2 += MaxDowngradeServiceTime;
-//				cols2 += AvgQueueWaitTime;
-//				cols2 += MaxQueueWaitTime;
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monOpenObjectActivity A \n" +
-//					"where UsedCount > 0 OR LockRequests > 0 OR LogicalReads > 100 \n" +
-//					(isClusterEnabled() ? "order by 2,3,4" : "order by 1,2,3") + "\n";
-//
-//				setSql(sql);
-//			}
-
 			/** 
 			 * Compute the LockContPct for DIFF values
 			 */
 			public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 			{
-				int LockContPctId = -1;
+				int LockContPct_pos = -1;
 
-				int LockRequests,        LockWaits;
-				int LockRequestsId = -1, LockWaitsId = -1;
+				int LockRequests,          LockWaits;
+				int LockRequests_pos = -1, LockWaits_pos = -1;
+				
+				int TabRowCount_pos  = -1; long TabRowCount;
+				int NumUsedPages_pos = -1; long NumUsedPages;
+				int RowsPerPage_pos  = -1; // we will SET this value, so only need the position
 
+				// set some "Remark", below is columns user to draw some conclutions 
+				int Remark_pos       = -1;
+				int UsedCount_pos    = -1;
+				int IndexID_pos      = -1;
+				int LogicalReads_pos = -1;
+				int RowsInserted_pos = -1;
+				
 				// Find column Id's
 				List<String> colNames = diffData.getColNames();
 				if (colNames == null)
@@ -1931,14 +1706,30 @@ extends Thread
 				for (int colId=0; colId < colNames.size(); colId++) 
 				{
 					String colName = colNames.get(colId);
-					if      (colName.equals("LockRequests")) LockRequestsId = colId;
-					else if (colName.equals("LockWaits"))    LockWaitsId    = colId;
-					else if (colName.equals("LockContPct"))  LockContPctId  = colId;
+					if      (colName.equals("LockRequests")) LockRequests_pos = colId;
+					else if (colName.equals("LockWaits"))    LockWaits_pos    = colId;
+					else if (colName.equals("LockContPct"))  LockContPct_pos  = colId;
+					else if (colName.equals("TabRowCount"))  TabRowCount_pos  = colId;
+					else if (colName.equals("NumUsedPages")) NumUsedPages_pos = colId;
+					else if (colName.equals("RowsPerPage"))  RowsPerPage_pos  = colId;
+					else if (colName.equals("Remark"))       Remark_pos       = colId;
+					else if (colName.equals("UsedCount"))    UsedCount_pos    = colId;
+					else if (colName.equals("IndexID"))      IndexID_pos      = colId;
+					else if (colName.equals("LogicalReads")) LogicalReads_pos = colId;
+					else if (colName.equals("RowsInserted")) RowsInserted_pos = colId;
 
 					// Noo need to continue, we got all our columns
-					if (    LockRequestsId  >= 0 
-					     && LockWaitsId     >= 0 
-					     && LockContPctId   >= 0  
+					if (    LockRequests_pos  >= 0 
+					     && LockWaits_pos     >= 0 
+					     && LockContPct_pos   >= 0  
+					     && TabRowCount_pos   >= 0  
+					     && NumUsedPages_pos  >= 0  
+					     && RowsPerPage_pos   >= 0  
+					     && Remark_pos        >= 0  
+					     && UsedCount_pos     >= 0  
+					     && IndexID_pos       >= 0  
+					     && LogicalReads_pos  >= 0  
+					     && RowsInserted_pos  >= 0  
 					   )
 						break;
 				}
@@ -1946,14 +1737,15 @@ extends Thread
 				// Loop on all diffData rows
 				for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 				{
-					LockRequests = ((Number)diffData.getValueAt(rowId, LockRequestsId)).intValue();
-					LockWaits    = ((Number)diffData.getValueAt(rowId, LockWaitsId   )).intValue();
+					LockRequests = ((Number)diffData.getValueAt(rowId, LockRequests_pos)).intValue();
+					LockWaits    = ((Number)diffData.getValueAt(rowId, LockWaits_pos   )).intValue();
 
-					// int totIo = Reads + APFReads + Writes;
-					int colPos = LockContPctId;
+					//------------------------------
+					// CALC: LockContPct
+					int colPos = LockContPct_pos;
 					if (LockRequests > 0)
 					{
-						// WaitTimePerWait = WaitTime / Waits;
+						// LockWaits / LockRequests * 100;
 						double calc = ((LockWaits+0.0) / (LockRequests+0.0)) * 100.0;
 
 						BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
@@ -1961,6 +1753,55 @@ extends Thread
 					}
 					else
 						diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+
+					//------------------------------
+					// CALC: RowsPerPage
+					// If we got all columns: RowsPerPage, TabRowCount, NumUsedPages
+					if (RowsPerPage_pos >= 0 && TabRowCount_pos >= 0 && NumUsedPages_pos >= 0 )
+					{
+						TabRowCount  = ((Number)diffData.getValueAt(rowId, TabRowCount_pos )).longValue();
+						NumUsedPages = ((Number)diffData.getValueAt(rowId, NumUsedPages_pos)).longValue();
+
+						colPos = RowsPerPage_pos;
+						if (NumUsedPages > 0)
+						{
+							// RowsPerPage = TabRowCount / NumUsedPages;
+							double calc = ((TabRowCount+0.0) / (NumUsedPages+0.0));
+
+							BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+							diffData.setValueAt(newVal, rowId, colPos);
+						}
+						else
+							diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+					}
+
+					//------------------------------
+					// CALC: Remark
+					// A LOT of stuff can be included here...
+					if (Remark_pos >= 0 && UsedCount_pos >= 0 && IndexID_pos >= 0 )
+					{
+						int UsedCount    = ((Number)diffData.getValueAt(rowId, UsedCount_pos   )).intValue();;
+						int IndexID      = ((Number)diffData.getValueAt(rowId, IndexID_pos     )).intValue();;
+						int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();;
+						int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();;
+						
+						String remark = null;
+						if (IndexID == 0 && UsedCount > 0 && LogicalReads > 0)
+						{
+//							remark = RemarkDictionary.T_SCAN_OR_HTAB_INS;
+							remark = RemarkDictionary.TABLE_SCAN;
+
+							if ( MathUtils.pctNear(10, UsedCount, RowsInserted) )
+								remark = RemarkDictionary.HEAP_TAB_INS;
+						}
+						
+						// If we got any remarks, set it...
+						if ( ! StringUtil.isNullOrBlank(remark) )
+						{
+							colPos = Remark_pos;
+							diffData.setValueAt(remark, rowId, colPos);
+						}
+					}
 				}
 			}
 		};
@@ -2105,6 +1946,12 @@ extends Thread
 //			private boolean _sampleSystemThreads = _conf.getBooleanProperty(getName()+".sample.systemThreads", true);
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "object lockwait timing=1", "wait event timing=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 			}
@@ -2217,104 +2064,6 @@ extends Thread
 				return preDropTempTables + createTempTables + sql + dropTempTables;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				String optGoalPlan = "";
-//				if (aseVersion >= 15020)
-//				{
-//					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				}
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "MP.InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String preDropTempTables =
-//					"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
-//					"if ((select object_id('#monProcessActivity')) is not null) drop table #monProcessActivity \n" +
-//					"if ((select object_id('#monProcess'))         is not null) drop table #monProcess         \n" +
-//					"if ((select object_id('#monProcessNetIO'))    is not null) drop table #monProcessNetIO    \n" +
-//					"\n";
-//
-//				String createTempTables =
-//					"/*------ Snapshot, the monXXX tables, hopefully this is less expensive than doing the join via CIS -------*/ \n" +
-//					"select * into #monProcessActivity from monProcessActivity \n" +
-//					"select * into #monProcess         from monProcess         \n" +
-//					"select * into #monProcessNetIO    from monProcessNetIO    \n" +
-//					"\n";
-//
-//				String dropTempTables = 
-//					"\n" +
-//					"/*------ drop tempdb objects -------*/ \n" +
-//					"drop table #monProcessActivity \n" +
-//					"drop table #monProcess         \n" +
-//					"drop table #monProcessNetIO    \n" +
-//					"\n";
-//
-//				
-//				cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
-//					+ "  SP.status, MP.WaitEventID, \n"
-//					+ "  WaitClassDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
-//					+ "  WaitEventDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
-//					+ "  MP.SecondsWaiting, MP.BlockingSPID, MP.Command, \n"
-//					+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
-//					+ "  procName = object_name(SP.id, SP.dbid), SP.stmtnum, SP.linenum, \n"
-//					+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
-//					+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"
-//					+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
-//					+ "  SP.tran_name, SP.cpu, SP.physical_io, \n"
-//					+ "  A.CPUTime, A.WaitTime, A.LogicalReads, \n"
-//					+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n";
-//				cols2 += "";
-//				if (aseVersion >= 12520)
-//				{
-//					cols2+="  A.WorkTables,  \n";
-//				}
-//				if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//					cols2+="  tempdb_name = db_name(tempdb_id(SP.spid)), pssinfo_tempdb_pages = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
-//				}
-//				if (aseVersion >= 15025)
-//				{
-//					cols2+="  N.NetworkEngineNumber, MP.ServerUserID, \n";
-//				}
-//				cols3+=" A.TableAccesses, A.IndexAccesses, A.TempDbObjects, \n"
-//					+ "  A.ULCBytesWritten, A.ULCFlushes, A.ULCFlushFull, \n"
-//					+ "  A.Transactions, A.Commits, A.Rollbacks, \n"
-//					+ "  MP.EngineNumber, MP.Priority, \n"
-//					+ "  N.PacketsSent, N.PacketsReceived, N.BytesSent, N.BytesReceived, \n"
-//					+ "  MP.ExecutionClass, MP.EngineGroupName";
-//				
-//				String sql = 
-//					"/*------ SQL to get data -------*/ \n" +
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from #monProcessActivity A, #monProcess MP, sysprocesses SP, #monProcessNetIO N \n" +
-//					"where MP.KPID = SP.kpid \n" +
-//					"  and MP.KPID = A.KPID \n" +
-//					"  and MP.KPID = N.KPID \n" +
-//					"  RUNTIME_REPLACE::SAMPLE_SYSTEM_THREADS \n"; // this is replaced in getSql()
-////				if (_sampleSystemThreads == false)
-////					sql += "  and MP.ServerUserID > 0 \n";
-//				if (isClusterEnabled())
-//					sql +=
-//						"  and MP.InstanceID = SP.instanceid \n" + // FIXME: Need to check if this is working...
-//						"  and MP.InstanceID = A.InstanceID \n" +
-//						"  and MP.InstanceID = N.InstanceID \n";
-//
-//				sql += "order by MP.SPID \n" + 
-//				       optGoalPlan;
-//
-//
-//				setSql(preDropTempTables + createTempTables + sql + dropTempTables);
-//			}
 			@Override
 			public String getSql()
 			{
@@ -2748,6 +2497,12 @@ extends Thread
 //					.getIntProperty(CM_NAME__OPEN_DATABASES+".skipDbsWithSizeLtInGraphs", 300);
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -2859,110 +2614,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monOpenDatabases", "CeDbRecoveryStatus", "<html>" +
-//					                                                             "1 = The database is currently undergoing <B>node-failure</B> recovery.<br> " +
-//					                                                             "0 = Normal, <B>not</B> in node-failure recovery." +
-//					                                                        "</html>");
-//					mtd.addColumn("monOpenDatabases", "AppendLogContPct",   "<html>" +
-//					                                                             "Log Semaphore Contention in percent.<br> " +
-//					                                                             "<b>Formula</b>: Pct = (AppendLogWaits / AppendLogRequests) * 100<br>" +
-//					                                                        "</html>");
-//					mtd.addColumn("monOpenDatabases", "DbSizeInMb",         "<html>Database size in MB</html>");
-//					mtd.addColumn("monOpenDatabases", "LogSizeInMb",        "<html>" +
-//					                                                             "Size in MB of the transaction log in the database. <br>" +
-//					                                                             "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & 4) = 4<br>" +
-//					                                                        "</html>");
-//					mtd.addColumn("monOpenDatabases", "LogSizeFreeInMb",    "<html>" +
-//					                                                             "How many MB have we got left in the Transaction log.<br> " +
-//					                                                             "<b>Formula</b>: (lct_admin('logsegment_freepages',DBID)-lct_admin('reserved_for_rollbacks',DBID)) / (1024.0*1024.0/@@maxpagesize)<br>" +
-//					                                                             "<b>Note 1</b>: This is the same formula as sp_helpdb 'dbname' uses to calculate space left.<br>" +
-//					                                                             "<b>Note 2</b>: This might not work correct for databases with mixed data and log.<br>" +
-//					                                                        "</html>");
-//					mtd.addColumn("monOpenDatabases", "LogSizeUsedPct",     "<html>" +
-//					                                                            "How many percent have we <b>used</b> of the transaction log. near 100% = Full<br> " +
-//					                                                            "<b>Formula</b>: Pct = 100.0 - ((oval_LogSizeFreeInMb / oval_LogSizeInMb) * 100.0)<br>" +
-//					                                                        "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String ceDbRecoveryStatus = ""; // 
-//				String QuiesceTag         = "";
-//				String SuspendedProcesses = "";
-//				if (aseVersion >= 12510)
-//				{
-//					QuiesceTag         = "QuiesceTag, ";
-//					SuspendedProcesses = "SuspendedProcesses, ";
-//				}
-//				if (isClusterEnabled())
-//				{
-//					ceDbRecoveryStatus = "CeDbRecoveryStatus = db_recovery_status(DBID), ";
-//				}
-//
-//				// If we implement the FreeLogSize, then we need to take away databases that are in recovery etc...
-//				// Also calculate it into MB...
-//				// The calculation is stolen from: sp_helpdb dbname
-//				// declare	@pgsPerMb                int
-//				// select  @pgsPerMb           = 1024*1024 / @@maxpagesize
-//				// select @pgsPerMb   : 512=2K, 256=4K, 128=8K, 64=16K 
-//				// select mbUsed = pagesUsed / @pgsPerMb
-//
-//				String DbSizeInMb      = "DbSizeInMb      = (select sum(u.size) from master..sysusages u where u.dbid = mond.DBID)                                   / (1024*1024/@@maxpagesize), \n";
-//				String LogSizeInMb     = "LogSizeInMb     = (select sum(u.size) from master..sysusages u where u.dbid = mond.DBID and (segmap & 4) = 4)              / (1024*1024/@@maxpagesize), \n";
-//				String LogSizeFreeInMb = "LogSizeFreeInMb = convert(numeric(10,1), (lct_admin('logsegment_freepages',DBID)-lct_admin('reserved_for_rollbacks',DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
-//				String LogSizeUsedPct  = "LogSizeUsedPct  = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
-//
-//				cols1 += "DBName, DBID, " + ceDbRecoveryStatus + "AppendLogRequests, AppendLogWaits, \n" +
-//				         "AppendLogContPct = CASE \n" +
-//				         "                      WHEN AppendLogRequests > 0 \n" +
-//				         "                      THEN convert(numeric(10,2), ((AppendLogWaits+0.0)/AppendLogRequests)*100.0) \n" +
-//				         "                      ELSE convert(numeric(10,2), 0.0) \n" +
-//				         "                   END, \n" +
-//				         DbSizeInMb + LogSizeInMb + LogSizeFreeInMb + LogSizeUsedPct + 
-//				         "TransactionLogFull, " + SuspendedProcesses + "BackupInProgress, LastBackupFailed, BackupStartTime, ";
-//				cols2 += "";
-//				cols3 += QuiesceTag;
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//				if (aseVersion >= 15025)
-//				{
-//					cols2 += "LastTranLogDumpTime, LastCheckpointTime, ";
-//				}
-//				String cols = cols1 + cols2 + cols3;
-//				if (cols.endsWith(", "))
-//					cols = cols.substring(0, cols.length()-2);
-//
-////				String sql = 
-////					"select " + cols + "\n" +
-////					"from monOpenDatabases \n" +
-////					"order by DBName \n";
-//
-//				String sql = 
-//					"select " + cols + "\n" +
-//					"from monOpenDatabases mond\n" +
-//					"where DBID in (select db.dbid from master..sysdatabases db where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
-//					"order by DBName \n";
-//
-//				setSql(sql);
-//			}
-			
 			/** 
 			 * Compute the AppendLogContPct for DIFF values
 			 */
@@ -3027,6 +2678,8 @@ extends Thread
 					{
 						// Formula: 
 						calc_LogSizeUsedPct = 100.0 - (((oval_LogSizeFreeInMb + 0.0) / oval_LogSizeInMb) * 100.0);
+						if (calc_LogSizeUsedPct < 0.0)
+							calc_LogSizeUsedPct = 0.0;
 
 						BigDecimal newVal = new BigDecimal(calc_LogSizeUsedPct).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 						diffData.setValueAt(newVal, rowId, pos_LogSizeUsedPct);
@@ -3514,6 +3167,12 @@ extends Thread
 			private static final long serialVersionUID = 5078336367667465709L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "object lockwait timing=1", "per object statistics active=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -3574,53 +3233,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monTempdbActivity", "AppendLogContPct",  "<html>" +
-//					                                                             "Log Semaphore Contention in percent.<br> " +
-//					                                                             "<b>Formula</b>: Pct = (AppendLogWaits / AppendLogRequests) * 100<br>" +
-//					                                                        "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-////				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += "DBID, DBName, " +
-//				         "SharableTabCnt, " +
-//				         "AppendLogRequests, AppendLogWaits, " +
-//				         "AppendLogContPct = CASE " +
-//				                                 "WHEN AppendLogRequests > 0 " +
-//				                                 "THEN convert(numeric(10,2), ((AppendLogWaits+0.0)/AppendLogRequests)*100.0) " +
-//				                                 "ELSE convert(numeric(10,2), 0.0) " +
-//				                                 "END, " +
-//				         "LogicalReads, PhysicalReads, APFReads, " +
-//				         "PagesRead, PhysicalWrites, PagesWritten, " +
-//				         "LockRequests, LockWaits, " +
-//				         "CatLockRequests, CatLockWaits, AssignedCnt";
-//				cols2 += "";
-//				cols3 += "";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monTempdbActivity \n" +
-//					"order by DBName \n";
-//
-//				setSql(sql);
-//			}
-			
 			/** 
 			 * Compute the AppendLogContPct for DIFF values
 			 */
@@ -3769,6 +3381,13 @@ extends Thread
 			private static final long serialVersionUID = -945885495581439333L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "wait event timing=1"};
+
+			}
+
+			@Override
 			protected CmSybMessageHandler createSybMessageHandler()
 			{
 				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
@@ -3853,72 +3472,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monSysWaits", "WaitTimePerWait", "<html>" +
-//					                                                   "Wait time in seconds per wait. formula: diff.WaitTime / diff.Waits<br>" +
-//					                                                   "Since WaitTime here is in seconds, this value will also be in seconds." +
-//					                                                "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//// FIXME: do something like the below, but create #monWaitEventInfo, #monWaitClassInfo during init()
-////				String preDropTempTables =
-////					"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
-////					"if ((select object_id('#monSysWaits'))      is not null) drop table #monSysWaits      \n" +
-////					"if ((select object_id('#monWaitEventInfo')) is not null) drop table #monWaitEventInfo \n" +
-////					"if ((select object_id('#monWaitClassInfo')) is not null) drop table #monWaitClassInfo \n" +
-////					"\n";
-////
-////				String createTempTables =
-////					"/*------ Snapshot, the monXXX tables, hopefully this is less expensive than doing the join via CIS -------*/ \n" +
-////					"select * into #monSysWaits      from monSysWaits      \n" +
-////					"select * into #monWaitEventInfo from monWaitEventInfo \n" +
-////					"select * into #monWaitClassInfo from monWaitClassInfo \n" +
-////					"\n";
-////
-////				String dropTempTables = 
-////					"\n" +
-////					"/*------ drop tempdb objects -------*/ \n" +
-////					"drop table #monSysWaits      \n" +
-////					"drop table #monWaitEventInfo \n" +
-////					"drop table #monWaitClassInfo \n" +
-////					"\n";
-//
-//				cols1 += "Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//				cols2 += ", WaitTimePerWait = CASE WHEN Waits > 0 \n" +
-//				         "                         THEN convert(numeric(10,3), (WaitTime + 0.0) / Waits) \n" +
-//				         "                         ELSE convert(numeric(10,3), 0.0) \n" +
-//				         "                     END \n";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monSysWaits W, monWaitEventInfo I, monWaitClassInfo C \n" +
-//					"where W.WaitEventID=I.WaitEventID and I.WaitClassID=C.WaitClassID \n" +
-//					"order by " + (isClusterEnabled() ? "W.WaitEventID, InstanceID" : "W.WaitEventID") + "\n";
-//
-//				setSql(sql);
-//			}
-			
 			/** 
 			 * Compute the WaitTimePerWait for diff values
 			 */
@@ -4061,6 +3614,13 @@ extends Thread
 			private static final long serialVersionUID = 3975695722601723795L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -4113,50 +3673,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += "EngineNumber, CurrentKPID, PreviousKPID, CPUTime, SystemCPUTime, UserCPUTime, ";
-//				if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled()) )
-//					cols1 += "IOCPUTime, ";
-//				cols1 += "IdleCPUTime, ContextSwitches, Connections, ";
-//
-//				cols2 += "";
-//				cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, OSPID";
-//
-//				if (aseVersion >= 12532)
-//				{
-//					cols2 += "Yields, DiskIOChecks, DiskIOPolled, DiskIOCompleted, ";
-//				}
-//				if (aseVersion >= 15025)
-//				{
-//					cols2 += "MaxOutstandingIOs, ";
-//				}
-//				if (aseVersion >= 15000)
-//				{
-//					cols2 += "HkgcMaxQSize, HkgcPendingItems, HkgcHWMItems, HkgcOverflows, ";
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monEngine \n" +
-//					"where Status = 'online' \n" +
-//					"order by 1,2\n";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -4395,6 +3911,12 @@ extends Thread
 			private static final long serialVersionUID = -1842749890597642593L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -4435,37 +3957,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1 = "";
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String sql = 
-//					"select "+cols1+"StatisticID, Statistic, EngineNumber, \n" +
-//					"       Sample, \n" +
-//					"       Avg_1min, Avg_5min, Avg_15min, " +
-//					"       SteadyState, \n" +
-//					"       Peak_Time, Peak, \n" +
-//					"       Max_1min_Time,  Max_1min, \n" + // try add a SQl that shows number of minutes ago this happened, "Days-HH:MM:SS
-//					"       Max_5min_Time,  Max_5min, \n" +
-//					"       Max_15min_Time, Max_15min \n" +
-//					"from monSysLoad \n";
-//				
-//				// in ASE 15.7, we get problems if we do the order by
-//				// com.sybase.jdbc3.jdbc.SybSQLException: Domain error occurred.
-//				if (aseVersion < 15700)
-//					sql += "order by StatisticID, EngineNumber" + (isClusterEnabled() ? ", InstanceID" : "");
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -4663,6 +4154,12 @@ extends Thread
 			private static final long serialVersionUID = -2185972180915326688L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -4746,97 +4243,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monDataCache",  "Stalls",       "Number of times I/O operations were delayed because no clean buffers were available in the wash area");
-//
-//					mtd.addColumn("monDataCache",  "CacheHitRate", "<html>" +
-//					                                               "Percent calculation of how many pages was fetched from the cache.<br>" +
-//					                                               "<b>Note</b>: APF reads could already be in memory, counted as a 'cache hit', check also 'devices' and APFReads.<br>" +
-//					                                               "<b>Formula</b>: 100 - (PhysicalReads/CacheSearches) * 100.0" +
-//					                                               "</html>");
-////					mtd.addColumn("monDataCache",  "Misses",       "fixme");
-////					mtd.addColumn("monDataCache",  "Volatility",   "fixme");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				// 1> select * from monTableColumns where TableName = 'monDataCache'
-//				// 2> go
-//				// ColumnName          TypeName  Description
-//				// ------------------- --------- --------------------------------------------------------------
-//				// CacheID             int       Unique identifier for the cache
-//				// RelaxedReplacement  int       Whether the cache is using Relaxed cached replacement strategy
-//				// BufferPools         int       The number of buffer pools within the cache
-//				// CacheSearches       int       Cache searches directed to the cache
-//				// PhysicalReads       int       Number of buffers read into the cache from disk
-//				// LogicalReads        int       Number of buffers retrieved from the cache
-//				// PhysicalWrites      int       Number of buffers written from the cache to disk
-//				// Stalls              int       Number of 'dirty' buffer retrievals
-//				// CachePartitions     smallint  Number of partitions currently configured for the cache
-//				// CacheName           varchar   Name of the cache
-//				// 
-//				//------------- NEEDS TO BE CALCULATED AFTER EACH SAMPLE
-//				// HitRate    = CacheSearches  / Logical Reads
-//				// Misses     = CacheSearches  / Physical Reads
-//				// Volatility = PhysicalWrites / (PhysicalReads + LogicalReads)
-//
-//
-//				
-//				// ASE 15.7
-//				String Status              = "";
-//				String Type                = "";
-//				String CacheSize           = "";
-//				String ReplacementStrategy = "";
-//				String APFReads            = "";
-//				String Overhead            = "";
-//
-//				if (aseVersion >= 15700)
-//				{
-//					Status              = "Status, ";
-//					Type                = "Type, ";
-//					CacheSize           = "CacheSize, ";
-//					ReplacementStrategy = "ReplacementStrategy, ";
-//					APFReads            = "APFReads, ";
-//					Overhead            = "Overhead, ";
-//				}
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += "CacheName, CacheID, " +
-//				         Status + Type + CacheSize + ReplacementStrategy + 
-//				         "RelaxedReplacement, CachePartitions, BufferPools, " +
-//				         "CacheSearches, PhysicalReads, LogicalReads, PhysicalWrites, Stalls, " +
-//				         APFReads + Overhead +
-//				         "CacheHitRate = convert(numeric(10,1), 100 - (PhysicalReads*1.0/(CacheSearches+1)) * 100.0)" +
-////				         ", HitRate    = convert(numeric(10,1), (CacheSearches * 1.0 / LogicalReads) * 100)" +
-////				         ", Misses     = convert(numeric(10,1), (CacheSearches * 1.0 / PhysicalReads) * 1)" +
-////				         ", Volatility = convert(numeric(10,1), PhysicalWrites * 1.0 / (PhysicalReads + LogicalReads)* 1)"
-//				         "";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monDataCache \n" +
-//					"order by 1,2\n";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -5042,6 +4448,12 @@ extends Thread
 			private static final long serialVersionUID = -6929175820005726806L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -5146,110 +4558,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monCachePool",  "Stalls",         "Number of times I/O operations were delayed because no clean buffers were available in the wash area");
-//
-//					mtd.addColumn("monCachePool",  "SrvPageSize",    "ASE Servers page size (@@maxpagesize)");
-//					mtd.addColumn("monCachePool",  "PagesPerIO",     "This pools page size (1=SinglePage, 2=, 4=, 8=Extent IO)");
-//					mtd.addColumn("monCachePool",  "AllocatedPages", "Number of actual pages allocated to this pool. same as 'AllocatedKB' but in pages instead of KB.");
-//					
-//					mtd.addColumn("monCachePool",  "CacheUtilization", "<html>" +
-//					                                                       "If not 100% the cache has to much memory allocated to it.<br>" +
-//					                                                       "<b>Formula</b>: abs.PagesTouched / abs.AllocatedPages * 100<br>" +
-//					                                                   "</html>");
-//					mtd.addColumn("monCachePool",  "CacheEfficiency",  "<html>" +
-//					                                                       "If less than 100, the cache is to small (pages has been flushed ou from the cache).<br> " +
-//					                                                       "Pages are read in from the disk, could be by APF Reads (so cacheHitRate is high) but the pages still had to be read from disk.<br>" +
-//					                                                       "<b>Formula</b>: abs.AllocatedPages / diff.PagesRead * 100<br>" +
-//					                                                   "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				// 1> select * from monTableColumns where TableName = 'monCachePool'
-//				// 2> go
-//				// ColumnName      TypeName  Description
-//				// --------------- --------- ------------------------------------------------------------------------------------------------------------------------
-//				// CacheID         int       Unique identifier for the cache
-//				// IOBufferSize    int       Size (in bytes) of the I/O buffer for the pool
-//				// AllocatedKB     int       Number of kilobytes that have been allocated for the pool
-//				// PhysicalReads   int       The number of buffers that have been read from disk into the pool
-//				// Stalls          int       Number of 'dirty' buffer retrievals
-//				// PagesTouched    int       Number of pages used within the pool
-//				// PagesRead       int       Number of pages read into the pool
-//				// BuffersToMRU    int       The number of buffers that were fetched and re-placed at the most recently used portion of the pool
-//				// BuffersToLRU    int       The number of buffers that were fetched and re-placed at the least recently used portion of the pool: fetch-and-discard
-//				// CacheName       varchar   Name of the cache
-//
-//				//------------- NEEDS TO BE CALCULATED AFTER EACH SAMPLE
-//				// CacheUsage%      = AllocatedKB / (PagesTouched * @@maxpagesize)
-//				// CacheEfficiency% = PagesRead   / (PagesTouched * @@mxapagesize)
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				// ASE 15.7
-//				String LogicalReads    = "";
-//				String PhysicalWrites  = "";
-//				String APFReads        = "";
-//				String APFPercentage   = "";
-//				String WashSize        = "";
-//
-//
-//				if (aseVersion >= 15700)
-//				{
-//					LogicalReads    = "LogicalReads, \n";
-//					PhysicalWrites  = "PhysicalWrites, \n";
-//					APFReads        = "APFReads, \n";
-//					APFPercentage   = "APFPercentage, \n";
-//					WashSize        = "WashSize, \n";
-//				}
-//
-//				cols1 += "CacheName, \n" +
-//				         "CacheID, \n" +
-//				         "SrvPageSize = @@maxpagesize, \n" +
-//				         "IOBufferSize, \n" +
-//				         WashSize +
-//				         APFPercentage +
-//				         "PagesPerIO = IOBufferSize/@@maxpagesize, \n" +
-//				         "AllocatedKB, \n" +
-//				         "AllocatedPages = convert(int,AllocatedKB*(1024.0/@@maxpagesize)), \n" +
-//				         "PagesRead, \n" +
-//				         LogicalReads + 
-//				         APFReads +
-//				         "PhysicalReads, \n" +
-//				         PhysicalWrites +
-//				         "Stalls, \n" +
-//				         "PagesTouched, \n" +
-//				         "BuffersToMRU, \n" +
-//				         "BuffersToLRU, \n" +
-//				         "CacheUtilization = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0), \n" +
-//				         "CacheEfficiency  = CASE WHEN PagesRead > 0 THEN convert(numeric(12,1), (AllocatedKB*(1024.0/@@maxpagesize)) / PagesRead    * 100.0) ELSE 0.0 END \n" +
-//				         "";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monCachePool \n" +
-//					"order by CacheName, IOBufferSize\n";
-//
-//				setSql(sql);
-//			}
-			
 			/** 
 			 * Compute 
 			 */
@@ -5406,6 +4714,12 @@ extends Thread
 			private static final long serialVersionUID = 688571813560006014L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -5509,96 +4823,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monDeviceIO",  "TotalIOs",     "<html>" +
-//					                                                   "Total number of IO's issued on this device.<br>" +
-//					                                                   "<b>Formula</b>: Reads + Writes<br>" +
-//					                                              "</html>");
-//					mtd.addColumn("monDeviceIO",  "APFReadsPct",  "<html>" +
-//					                                                   "Of all the issued Reads, what's the Asynch Prefetch Reads percentage.<br>" +
-//					                                                   "<b>Formula</b>: APFReads / Reads * 100<br>" +
-//					                                              "</html>");
-//					mtd.addColumn("monDeviceIO",  "WritesPct",    "<html>" +
-//					                                                   "Of all the issued IO's, what's the Write percentage.<br>" +
-//					                                                   "<b>Formula</b>: Writes / (Reads + Writes) * 100<br>" +
-//					                                              "</html>");
-//					mtd.addColumn("monDeviceIO",  "AvgServ_ms",   "<html>" +
-//					                                                   "Service time on the disk.<br>" +
-//					                                                   "This is basically the average time it took to make a disk IO on this device.<br>" +
-//					                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
-//					                                                   "<b>Formula</b>: IOTime / (Reads + Writes) <br>" +
-//					                                                   "<b>Note</b>: If there is few I/O's this value might be a bit off, this due to 'click ticks' is 100 ms by default.<br>" +
-//					                                              "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String TotalIOs = "TotalIOs = (Reads + Writes)";
-//				if (aseVersion > 15000) 
-//					TotalIOs = "TotalIOs = convert(bigint,Reads) + convert(bigint,Writes)";
-//
-//				String DeviceType = "";
-//				if (aseVersion >= 15020) 
-//				{
-//					DeviceType = 
-//						"DeviceType = CASE \n" +
-//						"               WHEN getdevicetype(PhysicalName) = 1 THEN 'RAW Device  '\n" +
-//						"               WHEN getdevicetype(PhysicalName) = 2 THEN 'BLOCK Device'\n" +
-//						"               WHEN getdevicetype(PhysicalName) = 3 THEN 'File        '\n" +
-//						"               ELSE '-unknown-'+convert(varchar(5), getdevicetype(PhysicalName))+'-'\n" +
-//						"             END,\n";
-//				}
-//				
-//				cols1 += "LogicalName, "+TotalIOs+", \n" +
-//				         "Reads, \n" +
-//				         "ReadsPct = CASE WHEN Reads + Writes > 0 \n" +
-//				         "                THEN convert(numeric(10,1), (Reads + 0.0) / (Reads + Writes + 0.0) * 100.0 ) \n" +
-//				         "                ELSE convert(numeric(10,1), 0.0 ) \n" +
-//				         "           END, \n" +
-//				         "APFReads, \n" +
-//				         "APFReadsPct = CASE WHEN Reads > 0 \n" +
-//				         "                   THEN convert(numeric(10,1), (APFReads + 0.0) / (Reads + 0.0) * 100.0 ) \n" +
-//				         "                   ELSE convert(numeric(10,1), 0.0 ) \n" +
-//				         "              END, \n" +
-//				         "Writes, \n" +
-//				         "WritesPct = CASE WHEN Reads + Writes > 0 \n" +
-//				         "                 THEN convert(numeric(10,1), (Writes + 0.0) / (Reads + Writes + 0.0) * 100.0 ) \n" +
-//				         "                 ELSE convert(numeric(10,1), 0.0 ) \n" +
-//				         "            END, \n" +
-//				         "DevSemaphoreRequests, DevSemaphoreWaits, IOTime, \n";
-//				cols2 += "AvgServ_ms = CASE \n" +
-//						 "               WHEN Reads+Writes>0 \n" +
-//						 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), Reads+Writes)) \n" +
-//						 "               ELSE convert(numeric(10,1), null) \n" +
-//						 "             END \n";
-//				cols3 += ", "+DeviceType+" PhysicalName";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monDeviceIO\n" +
-//					"order by LogicalName" + (isClusterEnabled() ? ", InstanceID" : "") + "\n";
-//
-//				setSql(sql);
-//			}
-				
 			/** 
 			 * Compute the avgServ column, which is IOTime/(Reads+Writes)
 			 */
@@ -5770,6 +4994,12 @@ extends Thread
 			private static final long serialVersionUID = -8676587973889879799L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -5809,36 +5039,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				cols1 = "IOType, " +
-//				        "IOs        = sum(convert(numeric(18,0), IOs)), " +
-//				        "IOTime     = sum(convert(numeric(18,0), IOTime)), " +
-////				        "AvgServ_ms = convert(numeric(10,1), null)";
-//				        "AvgServ_ms = \n" +
-//				        "case \n" +
-//				        "  when sum(convert(numeric(18,0), IOs)) > 0 then convert(numeric(18,1), sum(convert(numeric(18,0), IOTime))/sum(convert(numeric(18,0), IOs))) \n" +
-//				        "  else                                           convert(numeric(18,1), null) \n" +
-//				        "end";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monIOQueue \n" +
-//					"group by IOType \n" +
-//					"order by 1\n";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -5993,6 +5193,12 @@ extends Thread
 			private static final long serialVersionUID = 989816816267986305L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -6031,39 +5237,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += "LogicalName, IOType, IOs, IOTime, \n" +
-////				         "AvgServ_ms = convert(numeric(10,1),null)"
-//		                 "AvgServ_ms = \n" +
-//		                 "case \n" +
-//		                 "  when IOs > 0 then convert(numeric(10,1), IOTime/convert(numeric(10,0),IOs)) \n" +
-//		                 "  else               convert(numeric(10,1), null) \n" +
-//		                 "end";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monIOQueue \n" +
-//					"order by LogicalName, IOType" + (isClusterEnabled() ? ", InstanceID" : "") + "\n";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -6179,6 +5352,12 @@ extends Thread
 		// OVERRIDE SOME DEFAULT METHODS
 		{
 			private static final long serialVersionUID = -925512251960490929L;
+
+			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
 
 //			@Override
 //			protected CmSybMessageHandler createSybMessageHandler()
@@ -6432,212 +5611,6 @@ extends Thread
 				return sqlInit;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				//String cols1, cols2, cols3;
-//				//cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//					this.getPk().add("instanceid");
-//
-//				// sum(int) may cause: "Arithmetic overflow occurred"
-//				// max int is: 2147483647, so if we sum several rows we may overflow the integer
-//				// so on pre 15.0 use numeric instead, over 15.0 use bigint
-//				String datatype    = "numeric(12,0)"; 
-//				String optGoalPlan = "";
-//
-//				if (aseVersion >= 15000)
-//				{
-//					datatype    = "bigint";
-//				}
-//				if (aseVersion >= 15020)
-//				{
-//					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				}
-//
-//				/*
-//				 * Retrieve the spinlocks. There are three spinlock counters collected by dbcc monitor:
-//				 *	- spinlock_p_0 -> Spinlock "grabs" - as in attempted grabs for the spinlock - includes waits
-//				 *	- spinlock_w_0 -> Spinlock "waits" - usually a good sign of contention
-//				 *	- spinlock_s_0 -> Spinlock "spins" - this is the CPU spins that drives up CPU utilization
-//				 *	                  The higher the spin count, the more CPU usage and the more serious
-//				 *	                  the performance impact of the spinlock on other processes not waiting
-//				 */
-//				String preDropTmpTables =
-//					"\n " +
-//					"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
-//					"if ((select object_id('#spin_names'))   is not null) drop table #spin_names \n" +
-//					"if ((select object_id('#sysmonitorsP')) is not null) drop table #sysmonitorsP \n" +
-//					"if ((select object_id('#sysmonitorsW')) is not null) drop table #sysmonitorsW \n" +
-//					"if ((select object_id('#sysmonitorsS')) is not null) drop table #sysmonitorsS \n" +
-//					"\n";
-//				
-//				String sqlCreateTmpTabCache = 
-//					"\n " +
-//					"/*------ temp table to hold 'cache names' and other 'named' stuff -------*/ \n" +
-//					"create table #spin_names     \n " +
-//					"(                            \n " +
-//					"  spin_name  varchar(50),    \n " +
-//					"  spin_type  varchar(20),    \n " +
-//					"  spin_desc  varchar(100),   \n " +
-//					"  start_id   int             \n " +
-//					")                            \n " +
-//					"\n" +
-//					"/*------ DATA CACHES -------*/ \n" +
-//					"insert into #spin_names(spin_name, spin_type, spin_desc, start_id) \n" +
-//					"select comment, 'CACHELET', 'Data cache, spinlock instance', 0 \n" + 
-//					"  from master..syscurconfigs \n" +
-//					" where config=19 and value > 0 \n" +
-//					"\n" +
-//					"/*------ SPINLOCK INSTANCES -------*/ \n" +
-//					"insert into #spin_names(spin_name, spin_type, spin_desc, start_id) \n" +
-//					"values ('Kernel->erunqspinlock', 'KERNEL-INST', 'Engine Runqueue, spinlock instance', 0)\n" + 
-//					"\n" +
-//					"/*------ SET start_id -------*/ \n" +
-//					"update #spin_names \n" +
-//					"   set start_id = isnull((select min(M.field_id) \n" +
-//					"                          from master..sysmonitors M\n" +
-//					"                          where #spin_names.spin_name = M.field_name) \n" +
-//					"                  ,start_id) \n" +
-//					"\n";
-//
-//				String sqlDropTmpTabCache = 
-//					"\n" +
-//					"drop table #spin_names \n";
-//
-//
-//				String instanceid = ""; // If cluster, we need to use column 'instanceid' as well
-//				if (isClusterEnabled()) 
-//					instanceid = ", instanceid";
-//
-//				String sqlCreateTmpSysmonitors = 
-//					"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-//					"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' \n" +
-//					"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' \n" +
-//					"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' \n";
-//				if (aseVersion >= 15700)
-//					sqlCreateTmpSysmonitors =
-//						"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-//						"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' \n" +
-//						"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' \n" +
-//						"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' \n";
-//
-//				String sqlDropTmpTabPWS   = 
-//					"\n" +
-//					"drop table #sysmonitorsP \n"+
-//					"drop table #sysmonitorsW \n" +
-//					"drop table #sysmonitorsS \n";
-//				
-//				String sqlSampleSpins =
-//					"/*------ SAMPLE THE monitors to master..sysmonitors -------*/ \n" +
-//					"DBCC monitor('sample', 'all',        'on') \n" +
-//					"DBCC monitor('sample', 'spinlock_s', 'on') \n" +
-//					"\n" +
-//					sqlCreateTmpSysmonitors +
-//					" \n" +
-//					"/*------ get data: for all spinlocks -------*/ \n" +
-//					"SELECT \n" +
-//					"  type         = \n" +
-//					"    CASE \n" +
-//					"      WHEN P.field_name like 'Dbtable->%'  THEN convert(varchar(20), 'DBTABLE')  \n" +
-//					"      WHEN P.field_name like 'Dbt->%'      THEN convert(varchar(20), 'DBTABLE')  \n" +
-//					"      WHEN P.field_name like 'Dbtable.%'   THEN convert(varchar(20), 'DBTABLE')  \n" +
-//					"      WHEN P.field_name like 'Resource->%' THEN convert(varchar(20), 'RESOURCE') \n" +
-//					"      WHEN P.field_name like 'Kernel->%'   THEN convert(varchar(20), 'KERNEL')   \n" +
-//					"      WHEN P.field_name in (select spin_name from #spin_names where spin_type = 'CACHELET')   \n" +
-//					"                                           THEN convert(varchar(20), 'CACHE') \n" +
-//					"      ELSE convert(varchar(20), 'OTHER')  \n" +
-//					"    END, \n" +
-//					(isClusterEnabled() ? "P.instanceid, \n" : "") +
-//					"  spinName     = convert(varchar(50), P.field_name), \n" +
-//					"  instances    = count(P.field_id), \n" +
-//					"  grabs        = sum(convert("+datatype+",P.value)), \n" +
-//					"  waits        = sum(convert("+datatype+",W.value)), \n" +
-//					"  spins        = sum(convert("+datatype+",S.value)), \n" +
-//					"  contention   = convert(numeric(4,1), null), \n" +
-//					"  spinsPerWait = convert(numeric(9,1), null), \n" +
-//					"  description  = convert(varchar(100), '') \n" +
-//					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S \n" +
-//					"WHERE P.field_id = W.field_id \n" +
-//					"  AND P.field_id = S.field_id \n";
-//				if (isClusterEnabled()) 
-//				{
-//					sqlSampleSpins +=
-//					"  AND P.instanceid = W.instanceid \n" +
-//					"  AND P.instanceid = S.instanceid \n" +
-//					"GROUP BY P.instanceid, P.field_name \n" +
-//					"ORDER BY 3, 2 \n" +
-//					optGoalPlan;
-//				}
-//				else 
-//				{
-//					sqlSampleSpins +=
-//					"GROUP BY P.field_name \n" +
-//					"ORDER BY 2 \n" +
-//					optGoalPlan;
-//				}
-//
-//				//---------------------------------------------
-//				// For CACHES and other FINER GRANULARITY spinlocks
-//				// do the calculation on EACH Cache partition or spinlock instance
-//				//---------------------------------------------
-//				String sqlForCaches =
-//					"\n" +
-//					"/*------ get data: For some selected spinlocks with multiple instances -------*/ \n" +
-//					"SELECT \n" + 
-//					"  type         = N.spin_type, \n" +
-//					(isClusterEnabled() ? "P.instanceid, \n" : "") +
-//					"  spinName     = convert(varchar(50), convert(varchar(40),P.field_name) + ' # ' + convert(varchar(5), P.field_id-N.start_id)), \n" +
-//					"  instances    = convert(int,1), \n" +
-//					"  grabs        = convert("+datatype+",P.value), \n" +
-//					"  waits        = convert("+datatype+",W.value), \n" +
-//					"  spins        = convert("+datatype+",S.value), \n" +
-//					"  contention   = convert(numeric(4,1), null), \n" +
-//					"  spinsPerWait = convert(numeric(9,1), null), \n" +
-//					"  description  = N.spin_desc \n" +
-//					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S, #spin_names N \n" +
-//					"WHERE P.field_id = W.field_id \n" +
-//					"  AND P.field_id = S.field_id \n" +
-//				    "  AND P.field_name = N.spin_name \n";
-//				if (isClusterEnabled()) 
-//				{
-//					sqlForCaches +=
-//					"  AND P.instanceid = W.instanceid \n" +
-//					"  AND P.instanceid = S.instanceid \n" +
-//					"ORDER BY 3, 2 \n" +
-//					optGoalPlan;
-//				}
-//				else 
-//				{
-//					sqlForCaches +=
-//					"ORDER BY 2 \n" +
-//					optGoalPlan;
-//				}
-//
-//				setSql(preDropTmpTables + sqlCreateTmpTabCache + sqlSampleSpins + sqlForCaches + sqlDropTmpTabCache + sqlDropTmpTabPWS);
-//
-//
-//				//---------------------------------------------
-//				// SQL INIT (executed first time only)
-//				// AFTER 12.5.2 traceon(8399) is no longer needed
-//				//---------------------------------------------
-//				String sqlInit = "DBCC traceon(3604) \n";
-//				if (aseVersion < 12520)
-//					sqlInit += "DBCC traceon(8399) \n";
-//				if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion <= 15000) )
-//				{
-//					sqlInit = "set switch on 3604 with no_info \n";
-//				}
-//
-//				sqlInit += "DBCC monitor('select', 'all',        'on') \n" +
-//				           "DBCC monitor('select', 'spinlock_s', 'on') \n";
-//
-//				setSqlInit(sqlInit);
-//			}
-
 			@Override
 			public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 			{
@@ -6772,6 +5745,12 @@ extends Thread
 			private static final long serialVersionUID = -925512251960490929L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -6814,41 +5793,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				if (isClusterEnabled())
-//					this.getPk().add("instanceid");
-//
-//				String optGoalPlan = "";
-//				if (aseVersion >= 15020)
-//				{
-//					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				}
-//
-//				String discardSpinlocks = "group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0')";
-//				if (aseVersion >= 15700)
-//					discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
-//
-//				String sql =   
-//					"SELECT \n" +
-//					(isClusterEnabled() ? "instanceid, \n" : "") +
-//					"  field_name = convert(varchar(100),field_name), \n" +
-//					"  group_name = convert(varchar(30),group_name), \n" +
-//					"  field_id, \n" +
-//					"  value, \n" +
-//					"  description  = convert(varchar(255), description) \n" +
-//					"FROM master..sysmonitors \n" +
-//					"WHERE " + discardSpinlocks + " \n" +
-//					"  AND value > 100 \n" +
-//					"ORDER BY group_name, field_name" + (isClusterEnabled() ? ", instanceid" : "") + "\n" +
-//					optGoalPlan;
-//
-//				setSql(sql);
-//			}
 		};
 
 		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
@@ -6876,36 +5820,74 @@ extends Thread
 					if (dividerLocation == 0)
 						return;
 					
-					if ( ! isMonConnected() )
-						return;
+//					if ( ! isMonConnected() )
+//						return;
 
-					CountersModel cm = getCm();
+					CountersModel cm = getDisplayCm();
+					if (cm == null)
+						cm = getCm();
+
+//System.out.println(CM_NAME__SYSMON+" -- CM="+cm);
 					if (cm == null)
 						return;
 
+//System.out.println(CM_NAME__SYSMON+" -- cm.hasDiffData()="+cm.hasDiffData());
 					if ( ! cm.hasDiffData() )
 						return;
 
-//					SpSysmon sysmon = new SpSysmon(cm);
-//					sysmon.calc();
+					RTextArea textArea = (RTextArea)getClientProperty("textArea");
+					if (textArea == null)
+						return;
+
+					int caretPosition = textArea.getCaretPosition();
+
+					SpSysmon sysmon = new SpSysmon(cm);
+					sysmon.calc();
 //					sysmon.printReport();
+					String report = sysmon.getReportText();
+
+					textArea.setText(report);
+					if (caretPosition > 0 && caretPosition < textArea.getDocument().getLength())
+						textArea.setCaretPosition(caretPosition);
 				}
 
 				@Override
 				protected JPanel createExtendedInfoPanel()
 				{
-					JSplitPane mainSplitPane = getMainSplitPane();
+//					JSplitPane mainSplitPane = getMainSplitPane();
 					JPanel panel = SwingUtils.createPanel("Extended Information", false);
 	
 					panel.setLayout(new BorderLayout());
-					panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
-	
+//					panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
+
+					RTextArea textArea = new RTextArea();
+					RTextScrollPane textScroll = new RTextScrollPane(textArea, false);
+					textArea.setText("empty sp_sysmon");
+
+					putClientProperty("textArea",   textArea);
+					putClientProperty("textScroll", textScroll);
+
+					panel.add(textScroll, BorderLayout.CENTER);
+
 //					panel.setPreferredSize(new Dimension(0, 0));
 //					panel.setMinimumSize(new Dimension(0, 0));
 //					panel.setSize(new Dimension(0, 500));
-					mainSplitPane.setDividerLocation(150);
+//					mainSplitPane.setDividerLocation(150);
 					return panel;
 				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(3);
+
+					mainSplitPane.setDividerLocation(700);
+				}
+
 				private JTree createTreeSpSysmon()
 				{
 					DefaultMutableTreeNode top = new DefaultMutableTreeNode("sp_sysmon");
@@ -7083,6 +6065,12 @@ extends Thread
 			private static final long serialVersionUID = -925512251960490929L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -7158,78 +6146,6 @@ extends Thread
 				String sql = "exec sp_asetune_ra_stats ";
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("sysmonitors", "value",                 "<html>The Counter value for this raw counter name.</html>");
-//					mtd.addColumn("sysmonitors", "log_waits",             "<html>Log Extension Wait:                Count</html>");
-//					mtd.addColumn("sysmonitors", "sum_log_wait",          "<html>Log Extension Wait:                Amount of time (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_log_wait",      "<html>Log Extension Wait:                Longest Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "truncpt_moved",         "<html>Truncation Point Movement:         Moved</html>");
-//					mtd.addColumn("sysmonitors", "truncpt_gotten",        "<html>Truncation Point Movement:         Gotten from RS</html>");
-//					mtd.addColumn("sysmonitors", "rs_connect",            "<html>Connections to Replication Server: Success</html>");
-//					mtd.addColumn("sysmonitors", "fail_rs_connect",       "<html>Connections to Replication Server: Failed</html>");
-//					mtd.addColumn("sysmonitors", "io_send",               "<html>I/O Wait from RS:                  Send, Count</html>");
-//					mtd.addColumn("sysmonitors", "sum_io_send_wait",      "<html>I/O Wait from RS:                  Send, Amount of Time (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_io_send_wait",  "<html>I/O Wait from RS:                  Send, Longest Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "io_recv",               "<html>I/O Wait from RS:                  Receive, Count</html>");
-//					mtd.addColumn("sysmonitors", "sum_io_recv_wait",      "<html>I/O Wait from RS:                  Receive, Amount of Time (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_io_recv_wait",  "<html>I/O Wait from RS:                  Receive, Longest Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "packets_sent",          "<html>Network Packet Information:        Packets Sent</html>");
-//					mtd.addColumn("sysmonitors", "full_packets_sent",     "<html>Network Packet Information:        Full Packets Sent</html>");
-//					mtd.addColumn("sysmonitors", "sum_packet",            "<html>Network Packet Information:        Amount of Bytes Sent</html>");
-//					mtd.addColumn("sysmonitors", "largest_packet",        "<html>Network Packet Information:        Largest Packet</html>");
-//					mtd.addColumn("sysmonitors", "log_records_scanned",   "<html>Log Scan Summary:                  Log Records Scanned</html>");
-//					mtd.addColumn("sysmonitors", "log_records_processed", "<html>Log Scan Summary:                  Log Records Processed</html>");
-//					mtd.addColumn("sysmonitors", "log_scans",             "<html>Log Scan Summary:                  Number of Log Scans</html>");
-//					mtd.addColumn("sysmonitors", "sum_log_scan",          "<html>Log Scan Summary:                  Amount of Time for Log Scans (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_log_scan",      "<html>Log Scan Summary:                  Longest Time for Log Scan (ms)</html>");
-//					mtd.addColumn("sysmonitors", "open_xact",             "<html>Transaction Activity:              Opened</html>");
-//					mtd.addColumn("sysmonitors", "maintuser_xact",        "<html>Transaction Activity:              Maintenance User</html>");
-//					mtd.addColumn("sysmonitors", "commit_xact",           "<html>Transaction Activity:              Commited</html>");
-//					mtd.addColumn("sysmonitors", "abort_xact",            "<html>Transaction Activity:              Aborted</html>");
-//					mtd.addColumn("sysmonitors", "prepare_xact",          "<html>Transaction Activity:              Prepared</html>");
-//					mtd.addColumn("sysmonitors", "delayed_commit_xact",   "<html>Transaction Activity:              Delayed Commit</html>");
-//					mtd.addColumn("sysmonitors", "xupdate_processed",     "<html>Log Scan Activity:                 Updates</html>");
-//					mtd.addColumn("sysmonitors", "xinsert_processed",     "<html>Log Scan Activity:                 Inserts</html>");
-//					mtd.addColumn("sysmonitors", "xdelete_processed",     "<html>Log Scan Activity:                 Deletes</html>");
-//					mtd.addColumn("sysmonitors", "xexec_processed",       "<html>Log Scan Activity:                 Store Procedures</html>");
-//					mtd.addColumn("sysmonitors", "xcmdtext_processed",    "<html>Log Scan Activity:                 DDL Log Records</html>");
-//					mtd.addColumn("sysmonitors", "xwrtext_processed",     "<html>Log Scan Activity:                 Writetext Log Records</html>");
-//					mtd.addColumn("sysmonitors", "xrowimage_processed",   "<html>Log Scan Activity:                 Text/Image Log Records</html>");
-//					mtd.addColumn("sysmonitors", "xclr_processed",        "<html>Log Scan Activity:                 CLRs</html>");
-//					mtd.addColumn("sysmonitors", "xckpt_processed",       "<html>Log Scan Activity:                 Checkpoints Processed</html>");
-//					mtd.addColumn("sysmonitors", "xckpt_genxactpurge",    "<html>Log Scan Activity:                 </html>");
-//					mtd.addColumn("sysmonitors", "sqldml_processed",      "<html>Log Scan Activity:                 SQL Statements Processed</html>");
-//					mtd.addColumn("sysmonitors", "bckward_schema",        "<html>Backward Schema Lookups:           Count</html>");
-//					mtd.addColumn("sysmonitors", "sum_bckward_wait",      "<html>Backward Schema Lookups:           Total Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_bckward_wait",  "<html>Backward Schema Lookups:           Longest Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "forward_schema",        "<html>Schema Cache:                      Count</html>");
-//					mtd.addColumn("sysmonitors", "sum_forward_wait",      "<html>Schema Cache:                      Total Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "longest_forward_wait",  "<html>Schema Cache:                      Longest Wait (ms)</html>");
-//					mtd.addColumn("sysmonitors", "schema_reuse",          "<html>Schema Cache:                      Schemas reused</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				//int aseVersion = getServerVersion();
-//
-//				//if (isClusterEnabled())
-//				//	this.getPk().add("instanceid");
-//
-//				//String optGoalPlan = "";
-//				//if (aseVersion >= 15020)
-//				//{
-//				//	optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				//}
-//
-//				String sql = "exec sp_asetune_ra_stats ";
-//
-//				setSql(sql);
-//			}
 		};
 
 		// Need stored proc 'sp_asetune_ra_stats'
@@ -7334,6 +6250,15 @@ extends Thread
 			private static final long serialVersionUID = 7929613701950650791L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				if (srvVersion >= 15700)
+					return new String[] {"per object statistics active=1", "statement statistics active=1"};
+
+				return new String[] {"per object statistics active=1"};
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -7412,72 +6337,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols = "";
-//
-//				// ASE cluster edition
-//				String InstanceID = "";
-//
-//				// ASE 15.5 or (15.0.3 in cluster edition) 
-//				String RequestCnt         = "";
-//				String TempdbRemapCnt     = "";
-//				String AvgTempdbRemapTime = "";
-//
-//				// ASE 15.7
-//				String ExecutionCount = "";
-//				String CPUTime        = "";
-//				String ExecutionTime  = "";
-//				String PhysicalReads  = "";
-//				String LogicalReads   = "";
-//				String PhysicalWrites = "";
-//				String PagesWritten   = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					InstanceID = "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled()) )
-//				{
-//					RequestCnt         = "RequestCnt, ";
-//					TempdbRemapCnt     = "TempdbRemapCnt, ";
-//					AvgTempdbRemapTime = "AvgTempdbRemapTime, ";
-//				}
-//
-//				if (aseVersion >= 15700)
-//				{
-//					ExecutionCount = "ExecutionCount, ";
-//					CPUTime        = "CPUTime, ";
-//					ExecutionTime  = "ExecutionTime, ";
-//					PhysicalReads  = "PhysicalReads, ";
-//					LogicalReads   = "LogicalReads, ";
-//					PhysicalWrites = "PhysicalWrites, ";
-//					PagesWritten   = "PagesWritten, ";
-//				}
-//				
-//				cols = 
-//					InstanceID + 
-//					"PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate, " +
-//					RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +
-//					ExecutionCount + CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
-//					"";
-//
-//				// remove last comma
-//				cols = StringUtil.removeLastComma(cols);
-//
-//				String sql = 
-//					"select " + cols + "\n" +
-//					"from monCachedProcedures \n" +
-//					"order by DBName, ObjectName, ObjectType\n";
-//
-//				setSql(sql);
-//			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -7645,6 +6504,12 @@ extends Thread
 			private static final long serialVersionUID = -6467250604457739178L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -7676,33 +6541,6 @@ extends Thread
 				return sql;
 			}
 
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				cols2 += "Requests, Loads, Writes, Stalls";
-//				if (isClusterEnabled())
-//				{
-//					cols1 = "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				//cols1 = "Requests, Loads, Writes, Stalls";
-//				if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monProcedureCache \n";
-//
-//				setSql(sql);
-//			}
-			
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
@@ -7835,6 +6673,15 @@ extends Thread
 			private static final long serialVersionUID = 7929613701950650791L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				if (srvVersion >= 15700)
+					return new String[] {"enable monitoring=1", "statement statistics active=1"};
+
+				return new String[] {"enable monitoring=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 			}
@@ -7895,56 +6742,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				String InstanceID      = "";
-//				String StatementNumber = "";
-//				String LineNumber      = "";
-//				// ase 15.7
-//				String ExecutionCount = "";
-//				String CPUTime        = "";
-//				String ExecutionTime  = "";
-//				String PhysicalReads  = "";
-//				String LogicalReads   = "";
-//				String PhysicalWrites = "";
-//				String PagesWritten   = "";
-//
-//				if (isClusterEnabled())  InstanceID      = "InstanceID, ";
-//				if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
-//				if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
-//				if (aseVersion >= 15700)
-//				{
-//					ExecutionCount = "ExecutionCount, ";
-//					CPUTime        = "CPUTime, ";
-//					ExecutionTime  = "ExecutionTime, ";
-//					PhysicalReads  = "PhysicalReads, ";
-//					LogicalReads   = "LogicalReads, ";
-//					PhysicalWrites = "PhysicalWrites, ";
-//					PagesWritten   = "PagesWritten, ";
-//				}
-//
-//				cols1 += "SPID, " + InstanceID + "DBName, OwnerName, ObjectName, " + 
-//				         LineNumber + StatementNumber + "ContextID, ObjectType, " +
-//				         ExecutionCount + CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
-//				         "PlanID, MemUsageKB, CompileDate, KPID, DBID, OwnerUID, ObjectID, " +
-//				         "MaxContextID = convert(int, -1)";
-//				//"MaxContextID = (select max(ContextID) from monProcessProcedures i where o.SPID = i.SPID)";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monProcessProcedures o\n" +
-//					"order by SPID, ContextID desc\n" +
-//					"";
-//
-//				setSql(sql);
-//			}
 
 			/** 
 			 * Fill in the MaxContextID column...
@@ -8201,6 +6998,12 @@ extends Thread
 			private static final long serialVersionUID = 1725558024113511209L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 			}
@@ -8249,42 +7052,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				cols1 += "DBID, ObjectID, IndexID, DBName,  ObjectName, ObjectType, ";
-//				cols2 += "";
-//				cols3 += "CachedKB, CacheName";
-//				if (aseVersion >= 15000)
-//				{
-//					cols2 += "PartitionID, PartitionName, TotalSizeKB, ";
-//					getPk().add("PartitionID");
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monCachedObject \n" +
-//					"order by DBName,  ObjectName";
-//
-//				setSql(sql);
-//			}
-
-//			public boolean persistCounters()
-//			{
-//				return false;
-//			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -8390,6 +7157,12 @@ extends Thread
 			private static final long serialVersionUID = 1227895347277630659L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "errorlog pipe active=1", "errorlog pipe max=200"};
+			}
+
+			@Override
 			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				String cols1, cols2, cols3;
@@ -8415,35 +7188,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				String instanceId = "";
-//				if (isClusterEnabled())
-//				{
-//					instanceId = "InstanceID, ";
-//				}
-//
-//				cols1 = "Time, "+instanceId+"SPID, KPID, FamilyID, EngineNumber, ErrorNumber, Severity, ";
-//				cols2 = "";
-//				cols3 = "ErrorMessage";
-//				if (aseVersion >= 12510)
-//				{
-//					cols2 = "State, ";
-//				}
-//			
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monErrorLog\n";
-//
-//				setSql(sql);
-//			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -8538,6 +7282,12 @@ extends Thread
 			private static final long serialVersionUID = -5448698796472216270L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "deadlock pipe active=1", "deadlock pipe max=500"};
+			}
+
+			@Override
 			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				String cols1, cols2, cols3;
@@ -8559,31 +7309,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				// 12.5.4 version
-//				//		cols1 = "DeadlockID, VictimKPID, ResolveTime, ObjectDBID, PageNumber, RowNumber, HeldFamilyID, HeldSPID, HeldKPID, HeldProcDBID, HeldProcedureID, HeldBatchID, HeldContextID, HeldLineNumber, WaitFamilyID, WaitSPID, WaitKPID, WaitTime, ObjectName, HeldUserName, HeldApplName, HeldTranName, HeldLockType, HeldCommand, WaitUserName, WaitLockType";
-//
-//				cols1 = "*";
-//				cols2 = "";
-//				cols3 = "";
-//				if (aseVersion >= 15020)
-//				{
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monDeadLock\n";
-//
-//				setSql(sql);
-//			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -8634,6 +7359,12 @@ extends Thread
 			private static final long serialVersionUID = 1L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "lock timeout pipe active=1", "lock timeout pipe max messages=500"};
+			}
+
+			@Override
 			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				String cols1, cols2, cols3;
@@ -8649,25 +7380,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//			//	int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				cols1 = "*";
-//				cols2 = "";
-//				cols3 = "";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monLockTimeout\n";
-//
-//				setSql(sql);
-//			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -8722,6 +7434,12 @@ extends Thread
 			private static final long serialVersionUID = -2606894492200318775L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -8750,29 +7468,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				//String cols1, cols2, cols3;
-//				//cols1 = cols2 = cols3 = "";
-//
-//				String instanceId = "";
-//				if (isClusterEnabled() && aseVersion >= 15500)
-//				{
-//					instanceId = "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String sql = 
-//					"select "+instanceId+"ModuleName, ModuleID, Active, ActiveDiff = Active, HWM, NumPagesReused \n" +
-//					"from monProcedureCacheModuleUsage\n" +
-//					"order by ModuleID";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
@@ -8857,6 +7552,12 @@ extends Thread
 			private static final long serialVersionUID = -5474676196893459453L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -8900,40 +7601,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				int aseVersion = getServerVersion();
-//
-//				String optGoalPlan = "";
-//				if (aseVersion >= 15020)
-//				{
-//					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				}
-//
-//				//String cols1, cols2, cols3;
-//				//cols1 = cols2 = cols3 = "";
-//
-//				String instanceId     = "";
-//				String instanceIdJoin = "";
-//				if (isClusterEnabled() && aseVersion >= 15500)
-//				{
-//					instanceId = "C.InstanceID, ";
-//					instanceIdJoin = "  and C.InstanceID = M.InstanceID \n";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String sql = 
-//					"select M.ModuleName, "+instanceId+"C.ModuleID, C.AllocatorName, C.AllocatorID, C.Active, ActiveDiff = C.Active, C.HWM, C.ChunkHWM, C.NumReuseCaused \n" +
-//					"from monProcedureCacheMemoryUsage C, monProcedureCacheModuleUsage M \n" +
-//					"where C.ModuleID = M.ModuleID \n" +
-//					instanceIdJoin +
-//					"order by C.ModuleID, C.AllocatorID \n" +
-//					optGoalPlan;
-//
-//				setSql(sql);
-//			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -9036,6 +7703,12 @@ extends Thread
 			private static final long serialVersionUID = -9084781196460687664L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "enable stmt cache monitoring=1", "statement cache size"}; // NO default for 'statement cache size' configuration
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -9102,64 +7775,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monStatementCache",  "UnusedSizeKB", "<html>" +
-//							"Number of KB that is free for usage by any statement.<br>" +
-//							"<b>Formula</b>: abs.TotalSizeKB - abs.UsedSizeKB<br></html>");
-//					mtd.addColumn("monStatementCache",  "AvgStmntSizeInKB", "<html>" +
-//							"Average KB that each compiled SQL Statement are using.<br>" +
-//							"<b>Formula</b>: abs.UsedSizeKB / abs.NumStatements<br></html>");
-//					mtd.addColumn("monStatementCache",  "NumStatementsDiff", "<html>" +
-//							"Simply the difference count from previous sample of 'NumStatements'.<br>" +
-//							"<b>Formula</b>: this.NumStatements - previous.NumStatements<br></html>");
-//					mtd.addColumn("monStatementCache",  "CacheHitPct", "<html>" +
-//							"Percent of Statements that already was in the Statement Cache<br>" +
-//							"<b>Formula</b>: diff.HitCount / diff.NumSearches * 100 <br></html>");
-////					mtd.addColumn("monStatementCache",  "OveralAvgReusePct", "<html>" +
-////							"A good indication of overall average reuse for each statement. A 10:1 ratio obviously is much better than 2:1<br>" +
-////							"<b>Formula</b>: diff.HitCount / diff.NumStatements * 100 <br>" +
-////							"<b>Note</b>: The sampling interval plays a huge role in this metric – during a 1 second sample, not that many statements <br>" +
-////							"             may be executed as compared to a 10 minute sample – and could distort the ratio to be viewed as excessively low.<br></html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				//int aseVersion = getServerVersion();
-//
-//				//String cols1, cols2, cols3;
-//				//cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String sql = 
-//					"SELECT \n" +
-//					(isClusterEnabled() ? "  InstanceID, \n" : "") +
-//					"  TotalSizeKB, \n" +
-//					"  UsedSizeKB, \n" +
-//					"  UnusedSizeKB      = TotalSizeKB - UsedSizeKB, \n" +
-//					"  AvgStmntSizeInKB  = CASE WHEN NumStatements>0 THEN UsedSizeKB / NumStatements ELSE 0 END, \n" +
-//					"  NumStatements, \n" +
-//					"  NumStatementsDiff = NumStatements, \n" +
-//					"  CacheHitPct       = CASE WHEN NumSearches  >0 THEN convert(numeric(10,1), ((HitCount+0.0)/(NumSearches+0.0))  *100.0 ) ELSE convert(numeric(10,1), 0) END, \n" +
-////					"  OveralAvgReusePct = CASE WHEN NumStatements>0 THEN convert(numeric(10,1), ((HitCount+0.0)/(NumStatements+0.0))*100.0 ) ELSE convert(numeric(10,1), 0) END, \n" +
-//					"  NumSearches, \n" +
-//					"  HitCount, \n" +
-//					"  NumInserts, \n" +
-//					"  NumRemovals, \n" +
-//					"  NumRecompilesSchemaChanges, \n" +
-//					"  NumRecompilesPlanFlushes \n" +
-//					"FROM monStatementCache \n";
-//
-//				setSql(sql);
-//			}
 
 			/** 
 			 * Compute the CacheHitPct for DIFF values
@@ -9396,6 +8011,12 @@ extends Thread
 			private static final long serialVersionUID = -1842749890597642593L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "enable stmt cache monitoring=1", "statement cache size"}; // NO default for 'statement cache size' configuration
+			}
+
+			@Override
 			protected CmSybMessageHandler createSybMessageHandler()
 			{
 				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
@@ -9499,87 +8120,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					String showplanTooltip = "<html>" +
-//						"The execution plan this SQL statement has.<br>" +
-//						"<b>Formula</b>: show_plan(-1,SSQLID,-1,-1)<br>" +
-//						"<b>Note</b>: It is possible for a single entry in the statement cache to be associated with multiple, and possibly different, SQL plans. <b>show_plan</b> displays only one of them." +
-//						"</html>";
-//					String sqltextTooltip =	"<html>" +
-//						"SQL Statement that is assigned to the SSQLID.<br>" +
-//						"<b>Formula</b>: show_cached_text(SSQLID)<br>" +
-//						"</html>";
-//
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monCachedStatement",  "msgAsColValue", showplanTooltip);
-//					mtd.addColumn("monCachedStatement",  "HasShowplan",   showplanTooltip);
-//					mtd.addColumn("monCachedStatement",  "sqltext",       sqltextTooltip);
-//					mtd.addColumn("monCachedStatement",  "HasSqltext",    sqltextTooltip);
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				if (isClusterEnabled())
-//				{
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				// NOTE: The function 'show_plan(-1,SSQLID,-1,-1)'
-//				//       returns a Ase Message (MsgNum=0) within the ResultSet
-//				//       those messages are placed in the column named 'msgAsColValue'
-//				//       see SamplingCnt.readResultset() for more details
-//				String sql = 
-//					"SELECT \n" +
-//					(isClusterEnabled() ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
-//					" DBID, \n" +                       // The database ID from which the statement was cached.
-//					(aseVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-//					" UserID, SUserID, SUserName = suser_name(SUserID), \n" +
-//					" SSQLID, \n" +                     // The unique identifier for a statement.
-//					" Hashkey, \n" +                    // The hashkey over the statement's text.
-////					" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
-////					" HasSqltext    = convert(bit,1), \n" +
-//					(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-//					(aseVersion >= 15700 ? " OptimizerLevel, " : "") + // The optimizer level stored in the statement cache
-//					" HasShowplan   = RUNTIME_REPLACE::HAS_SHOWPLAN, \n" +
-//					" HasSqltext    = RUNTIME_REPLACE::HAS_SQL_TEXT, \n" +
-//					" UseCount, \n" +                   // The number of times this statement was used.
-//					" UseCountDiff = UseCount, \n" +    // The number of times this statement was used.
-//					" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
-//					" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, \n" + // Elapsed time value.
-//					" MaxLIO,         MinLIO,         AvgLIO, \n" +         // Logical IO
-//					" MaxPIO,         MinPIO,         AvgPIO, \n" +         // Physical IO
-//					" MaxCpuTime,     MinCpuTime,     AvgCpuTime, \n" +     // Execution time.
-//					" LastUsedDate, \n" +               // Date when this statement was last used.
-//					" LastRecompiledDate, \n" +         // Date when this statement was last recompiled.
-//					" CachedDate, \n" +                 // Date when this statement was cached.
-//					" MinPlanSizeKB, \n" +              // The size of a plan associated with this statement when dormant.
-//					" MaxPlanSizeKB, \n" +              // The size of a plan associated with this statement when it is in use.
-//					" CurrentUsageCount, \n" +          // The number of concurrent uses of this statement.
-//					" MaxUsageCount, \n" +              // The maximum number of times for which this statement was simultaneously used.
-//					" NumRecompilesSchemaChanges, \n" + // The number of times this statement was recompiled due to schema changes.
-//					" NumRecompilesPlanFlushes, \n" +   // The number of times this statement was recompiled because no usable plan was found.
-//					" HasAutoParams       = convert(bit,HasAutoParams), " + // Does this statement have any parameterized literals.
-//					" ParallelDegree, " +               // The parallel-degree session setting.
-//					" QuotedIdentifier    = convert(bit,QuotedIdentifier), " + // The quoted identifier session setting.
-//					(aseVersion < 15026 ? " TableCount, " : "") + // describeme
-//					" TransactionIsolationLevel, " +    // The transaction isolation level session setting.
-//					" TransactionMode, " +              // The transaction mode session setting.
-//					" SAAuthorization     = convert(bit,SAAuthorization), " +       // The SA authorization session setting.
-//					" SystemCatalogUpdate = convert(bit,SystemCatalogUpdate), \n" + // The system catalog update session setting.
-//					" StatementSize, \n" +              // The size of the statement's text in bytes.
-////					" sqltext       = convert(text, show_cached_text(SSQLID)), \n" +
-//					" sqltext       = RUNTIME_REPLACE::DO_SQL_TEXT, \n" +
-//					" msgAsColValue = RUNTIME_REPLACE::DO_SHOWPLAN \n" + // this is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
-//					"FROM monCachedStatement \n";
-//
-//				setSql(sql);
-//			}
 
 			@Override
 			public String getSql()
@@ -9810,6 +8350,12 @@ extends Thread
 			private static final long serialVersionUID = -1842749890866142593L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "per object statistics active=1"};
+			}
+
+			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				try 
@@ -9890,62 +8436,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monProcessObject",  "dupMergeCount", "<html>" +
-//					                                                       "If more than <b>one</b> row was fetched for this \"Primary Key\".<br>" +
-//					                                                       "Then this column will hold number of rows merged into this row. 0=No Merges(only one row for this PK), 1=One Merge accurred(two rows was seen for this PK), etc...<br>" +
-//					                                                       "This means that the non-diff columns will be from the first row fetched,<br>" +
-//					                                                       "then all columns which is marked for difference calculation will be a summary of all the rows (so it's basically a SQL SUM(colName) operation)." +
-//					                                                   "</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				if (aseVersion >= 15000)
-//				{
-//					cols1 += "SPID, KPID, ObjectType, DBName, ObjectName, IndexID, PartitionName, PartitionSize, OwnerUserID, LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0), DBID, ObjectID, PartitionID";
-//					this.getPk().add("PartitionID");
-//				}
-//				else
-//				{
-//					String TableSize = "";
-//					if (aseVersion >= 12520)
-//						TableSize = "TableSize, ";
-//
-//					cols1 += "SPID, KPID, ObjectType, DBName, ObjectName, IndexID, "+TableSize+"                 OwnerUserID, LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0), DBID, ObjectID";
-//				}
-//			
-//				// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
-//				//                   so this will be a workaround for those releses below 15.0.0
-//				String whereSpidNotMe = "SPID != @@spid";
-////				if (aseVersion >= 12540 && aseVersion <= 15000)
-//				if (aseVersion <= 15000)
-//				{
-//					whereSpidNotMe = "SPID != convert(int,@@spid)";
-//				}
-//
-//				String sql = 
-//					"select " + cols1 + "\n" +
-//					"from monProcessObject\n" +
-//					"where "+whereSpidNotMe;
-//
-//				setSql(sql);
-//			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -10120,6 +8610,12 @@ extends Thread
 				true, true)
 		{
 			private static final long serialVersionUID = 5078336367667465709L;
+
+			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "statement statistics active=1", "wait event timing=1"};
+			}
 
 			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
@@ -10323,190 +8819,6 @@ extends Thread
 			       + "  /* UNION ALL */ \n\n"
 			       + x_sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addColumn("monProcess",  "BlockingOtherSpids", "This SPID is Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.");
-//					mtd.addColumn("monProcess",  "multiSampled",       "<html>" +
-//					                                                       "This indicates that the PrimaryKey (SPID, monSource[, InstanceID]) has been in this table for more than one sample.<br>" +
-//					                                                       "Also 'StartTime' has to be the <b>same</b> as in the previous sample.<br>" +
-//					                                                       "The StartTime is the columns, which tells the start time for current SQL statement, or the individual statement inside a Stored Procedure." +
-//					                                                   "</html>");
-//
-//					mtd.addColumn("monProcess",  "HasMonSqlText",      "Has values for: select SQLText from master..monProcessSQLText where SPID = <SPID>");
-//					mtd.addColumn("monProcess",  "MonSqlText",                         "select SQLText from master..monProcessSQLText where SPID = <SPID>");
-//					mtd.addColumn("monProcess",  "HasDbccSqlText",     "Has values for: DBCC sqltext(<SPID>)");
-//					mtd.addColumn("monProcess",  "DbccSqlText",                        "DBCC sqltext(<SPID>)");
-//					mtd.addColumn("monProcess",  "HasShowPlan",        "Has values for: sp_showplan <SPID>, null, null, null");
-//					mtd.addColumn("monProcess",  "ShowPlanText",                       "sp_showplan <SPID>, null, null, null");
-//					mtd.addColumn("monProcess",  "HasStacktrace",      "Has values for: DBCC stacktrace(<SPID>)");
-//					mtd.addColumn("monProcess",  "DbccStacktrace",                     "DBCC stacktrace(<SPID>)");
-//					mtd.addColumn("monProcess",  "HasProcCallStack",   "Has values for: select * from monProcessProcedures where SPID = <SPID>");
-//					mtd.addColumn("monProcess",  "ProcCallStack",                      "select * from monProcessProcedures where SPID = <SPID>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				////////////////////////////
-//				// NOTE: This Counter Model has 2 separete SQL selects
-//				//       1: The rows in: monProcessStatement
-//				//       2: The rows in: SPID's that might NOT be in monProcessStatement, BUT still are BLOCKING other spids
-//				// IMPORTANT: when you add a column to the FIRST you need to add it to the SECOND as well
-//				////////////////////////////
-//
-//				// ASE 15.7
-//				String HostName       = "";
-//				String ClientName     = "";
-//				String ClientHostName = "";
-//				String ClientApplName = "";
-//
-//				if (aseVersion >= 15700)
-//				{
-//					HostName       = "P.HostName, ";
-//					ClientName     = "P.ClientName, ";
-//					ClientHostName = "P.ClientHostName, ";
-//					ClientApplName = "P.ClientApplName, ";
-//				}
-//
-//				String optGoalPlan = "";
-//				if (aseVersion >= 15020)
-//				{
-//					optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
-//				}
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "S.InstanceID, ";
-//					this.getPk().add("InstanceID");
-//				}
-//
-//				String dbNameCol  = "dbname=db_name(S.DBID)";
-//				if (aseVersion >= 15020) // just a guess what release this was intruduced
-//				{
-//					dbNameCol  = "dbname=S.DBName";
-//				}
-//
-//				cols1 += "monSource=convert(varchar(10),'ACTIVE'), \n" +
-//				         "P.SPID, P.KPID, \n" +
-//				         "multiSampled=convert(varchar(10),''), \n" +
-//				         "S.BatchID, S.LineNumber, \n" +
-//				         dbNameCol+", procname=isnull(object_name(S.ProcedureID,S.DBID),''), linenum=S.LineNumber, \n" +
-//				         "P.Command, P.Application, \n" +
-//				         HostName + ClientName + ClientHostName + ClientApplName +
-//				         "S.CpuTime, S.WaitTime, ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n" +
-//				         "UsefullExecTime = (datediff(ms, S.StartTime, getdate()) - S.WaitTime), \n" +
-//				         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
-//				         "P.SecondsWaiting, P.WaitEventID, \n" +
-//				         "WaitClassDesc=convert(varchar(50),''), \n" +
-//				         "WaitEventDesc=convert(varchar(50),''), \n" +
-//				         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), \n" +
-//				         "S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n";
-//				cols2 += "";
-//				cols3 += "S.PagesModified, S.PacketsSent, S.PacketsReceived, S.NetworkPacketSize, \n" +
-//				         "S.PlansAltered, S.StartTime, S.PlanID, S.DBID, S.ProcedureID, \n" +
-//				         "P.SecondsConnected, P.EngineNumber, P.NumChildren, \n" +
-//				         "MonSqlText=convert(text,null), \n" +
-//				         "DbccSqlText=convert(text,null), \n" +
-//				         "ProcCallStack=convert(text,null), \n" +
-//				         "ShowPlanText=convert(text,null), \n" +
-//				         "DbccStacktrace=convert(text,null) \n";
-//				if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//					cols2 += "S.RowsAffected, " +
-//					         "tempdb_name = db_name(tempdb_id(S.SPID)), " +
-//					         "pssinfo_tempdb_pages = convert(int, pssinfo(S.SPID, 'tempdb_pages')), \n";
-//				}
-//
-//				// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
-//				//                   so this will be a workaround for those releses below 15.0.0
-//				String whereSpidNotMe = "S.SPID != @@spid";
-////				if (aseVersion >= 12540 && aseVersion <= 15000)
-//				if (aseVersion <= 15000)
-//				{
-//					whereSpidNotMe = "S.SPID != convert(int,@@spid)";
-//				}
-//
-//				// The above I had in the Properties file for a long time
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monProcessStatement S, monProcess P \n" +
-//					"where S.KPID = P.KPID \n" +
-//					(isClusterEnabled() ? "  and S.InstanceID = P.InstanceID \n" : "") +
-//					"  and "+whereSpidNotMe+"\n" +
-//					"order by S.LogicalReads desc \n" +
-//					optGoalPlan;
-//
-//				//-------------------------------------------
-//				// Build SECOND SQL, which gets SPID's that blocks other, and might not be within the ABOVE ststement
-//				//-------------------------------------------
-//				cols1 = cols2 = cols3 = "";
-//
-//				if (isClusterEnabled())
-//				{
-//					cols1 += "P.InstanceID, ";
-//				}
-//
-//				dbNameCol  = "dbname=db_name(P.DBID)";
-//				if (aseVersion >= 15020) // just a guess what release this was intruduced
-//				{
-//					dbNameCol  = "dbname=P.DBName";
-//				}
-//
-//				cols1 += "monSource=convert(varchar(10),'BLOCKER'), \n" +
-//				         "P.SPID, P.KPID, \n" +
-//				         "multiSampled=convert(varchar(10),''), \n" +
-//				         "P.BatchID, P.LineNumber, \n" +
-//				         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
-//				         HostName + ClientName + ClientHostName + ClientApplName +
-//				         "P.Command, P.Application, \n" +
-//				         "CpuTime=-1, WaitTime=-1, ExecTimeInMs=-1, \n" +
-//				         "UsefullExecTime = -1, \n" +
-//				         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
-//				         "P.SecondsWaiting, P.WaitEventID, \n" +
-//				         "WaitClassDesc=convert(varchar(50),''), \n" +
-//				         "WaitEventDesc=convert(varchar(50),''), \n" +
-//				         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), \n" +
-//				         "MemUsageKB=-1, PhysicalReads=-1, LogicalReads=-1, \n";
-//				cols2 += "";
-//				cols3 += "PagesModified=-1, PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
-//				         "PlansAltered=-1, StartTime=convert(datetime,NULL), PlanID=-1, P.DBID, ProcedureID=-1, \n" +
-//				         "P.SecondsConnected, P.EngineNumber, P.NumChildren, \n" +
-//				         "MonSqlText=convert(text,null), \n" +
-//				         "DbccSqlText=convert(text,null), \n" +
-//				         "ProcCallStack=convert(text,null), \n" +
-//				         "ShowPlanText=convert(text,null), \n" +
-//				         "DbccStacktrace=convert(text,null) \n";
-//				if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
-//				{
-//					cols2 += "RowsAffected=-1, " +
-//					         "tempdb_name = db_name(tempdb_id(P.SPID)), " +
-//					         "pssinfo_tempdb_pages = convert(int, pssinfo(P.SPID, 'tempdb_pages')), \n";
-//				}
-//
-//
-//				// The above I had in the Properties file for a long time
-//				String x_sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monProcess P \n" +
-//					"where P.SPID in (select blocked from sysprocesses where blocked > 0) \n" +
-//					optGoalPlan;
-//
-//
-//				//------------------------------------------------
-//				// Finally set the SQL
-//				//------------------------------------------------
-//				setSql(  sql + "\n\n"
-//				       + "  /* UNION ALL */ \n\n"
-//				       + x_sql);
-//			}
 
 			@Override
 			public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
@@ -10886,6 +9198,9 @@ extends Thread
 						// Get LIST of SPID's that I'm blocking
 						String blockingList = getBlockingListStr(counters, spid, pos_BlockingSPID, pos_SPID);
 
+						// This could be used to test that PCS.store() will truncate string size to the tables storage size
+						//blockingList += "'1:aaa:0', '1:bbb:0', '1:ccc:0', '1:ddd:0', '1:eee:0', '1:fff:0', '1:ggg:0', '1:hhh:0', '1:iii:0', '1:jjj:0', '1:kkk:0', '1:lll:0', '1:mmm:0', '1:nnn:0', '1:ooo:0', '1:ppp:0', '1:qqq:0', '1:rrr:0', '1:sss:0', '1:ttt:0', '1:uuu:0', '1:vvv:0', '1:wwww:0', '1:xxx:0', '1:yyy:0', '1:zzz:0' -end-";
+
 						counters.setValueAt(blockingList,      rowId, pos_BlockingOtherSpids);
 					}
 				}
@@ -11187,8 +9502,13 @@ extends Thread
 				false, true)
 		// OVERRIDE SOME DEFAULT METHODS
 		{
-
 			private static final long serialVersionUID = -5587478527730346195L;
+
+			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "wait event timing=1"};
+			}
 
 			@Override
 			public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
@@ -11207,7 +9527,7 @@ extends Thread
 				cols2 = ", ObjectName = isnull(object_name(ObjectID, DBID), 'ObjId='+convert(varchar(30),ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
 				cols3 = "";
 				
-				String whereArgs = "where BlockedState = 'Blocked' or BlockedState = 'Blocking'";
+				String whereArgs = "where BlockedState = 'Blocked' or BlockedState = 'Blocking' or BlockedBy > 0 ";
 
 				String sql = 
 					"select " + cols1 + cols2 + cols3 + "\n" +
@@ -11216,31 +9536,6 @@ extends Thread
 
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-////				int aseVersion = getServerVersion();
-//
-//				String cols1, cols2, cols3;
-//				cols1 = cols2 = cols3 = "";
-//
-//				cols1 = "*";
-//				cols2 = ", ObjectName = isnull(object_name(ObjectID, DBID), 'ObjId='+convert(varchar(30),ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-//				cols3 = "";
-////				if (aseVersion >= 15020)
-////				{
-////				}
-//				
-//				String whereArgs = "where BlockedState = 'Blocked' or BlockedState = 'Blocking'";
-//
-//				String sql = 
-//					"select " + cols1 + cols2 + cols3 + "\n" +
-//					"from monLocks\n" +
-//					whereArgs + "\n";
-//
-//				setSql(sql);
-//			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -11367,6 +9662,12 @@ extends Thread
 			private static final long serialVersionUID = -1842749890597642593L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"capture missing statistics"}; // NO default for this configuration
+			}
+
+			@Override
 			public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
 				List <String> pkCols = new LinkedList<String>();
@@ -11384,15 +9685,6 @@ extends Thread
 				String sql = "exec sp_missing_stats";
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				//int aseVersion = getServerVersion();
-//
-//				String sql = "exec sp_missing_stats";
-//				setSql(sql);
-//			}
 		};
 
 		// Need stored proc 'sp_missing_stats'
@@ -11472,6 +9764,12 @@ extends Thread
 			private static final long serialVersionUID = 1L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable metrics capture"}; // NO default for this configuration
+			}
+
+			@Override
 			protected CmSybMessageHandler createSybMessageHandler()
 			{
 				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
@@ -11536,44 +9834,6 @@ extends Thread
 				String sql = "exec sp_asetune_qp_metrics";
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				try 
-//				{
-//					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-//					mtd.addTable("sysquerymetrics",  "Holds about Query Plan Metrics.");
-//
-//					mtd.addColumn("sysquerymetrics", "DBName",       "<html>Database name</html>");
-//					mtd.addColumn("sysquerymetrics", "uid",          "<html>User ID</html>");
-//					mtd.addColumn("sysquerymetrics", "gid",          "<html>Group ID</html>");
-//					mtd.addColumn("sysquerymetrics", "id",           "<html>Unique ID</html>");
-//					mtd.addColumn("sysquerymetrics", "hashkey",      "<html>The hashkey over the SQL query text</html>");
-//					mtd.addColumn("sysquerymetrics", "sequence",     "<html>Sequence number for a row when multiple rows are required for the SQL text</html>");
-//					mtd.addColumn("sysquerymetrics", "exec_min",     "<html>Minimum execution time</html>");
-//					mtd.addColumn("sysquerymetrics", "exec_max",     "<html>Maximum execution time</html>");
-//					mtd.addColumn("sysquerymetrics", "exec_avg",     "<html>Average execution time</html>");
-//					mtd.addColumn("sysquerymetrics", "elap_min",     "<html>Minimum elapsed time</html>");
-//					mtd.addColumn("sysquerymetrics", "elap_max",     "<html>Maximum elapsed time</html>");
-//					mtd.addColumn("sysquerymetrics", "elap_avg",     "<html>Average elapsed time</html>");
-//					mtd.addColumn("sysquerymetrics", "lio_min",      "<html>Minimum logical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "lio_max",      "<html>Maximum logical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "lio_avg",      "<html>Average logical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "pio_min",      "<html>Minumum physical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "pio_max",      "<html>Maximum physical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "pio_avg",      "<html>Average physical IO</html>");
-//					mtd.addColumn("sysquerymetrics", "cnt",          "<html>Number of times the query has been executed.</html>");
-//					mtd.addColumn("sysquerymetrics", "abort_cnt",    "<html>Number of times a query was aborted by Resource Governor as a resource limit was exceeded.</html>");
-//					mtd.addColumn("sysquerymetrics", "qtext",        "<html>query text</html>");
-//				}
-//				catch (NameNotFoundException e) {/*ignore*/}
-//
-//				//int aseVersion = getServerVersion();
-//
-//				String sql = "exec sp_asetune_qp_metrics";
-//				setSql(sql);
-//			}
 		};
 
 		// Need stored proc 'sp_missing_stats'
@@ -11726,6 +9986,12 @@ extends Thread
 			private static final long serialVersionUID = -1842749890597642593L;
 
 			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
 			protected CmSybMessageHandler createSybMessageHandler()
 			{
 				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
@@ -11749,15 +10015,6 @@ extends Thread
 				String sql = "exec sp_monitorconfig 'all'";
 				return sql;
 			}
-
-//			@Override
-//			public void initSql(Connection conn)
-//			{
-//				//int aseVersion = getServerVersion();
-//
-//				String sql = "exec sp_monitorconfig 'all'";
-//				setSql(sql);
-//			}
 		};
 
 		tmp.setDisplayName(displayName);

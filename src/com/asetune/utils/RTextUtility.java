@@ -24,6 +24,9 @@ public class RTextUtility
 		boolean wholeWord = true;
 		boolean regex     = false;
 
+		if (toMarkColl == null)
+			return 0;
+		
 		//Color.ORANGE
 		ChangeableHighlightPainter markAllHighlightPainter = new ChangeableHighlightPainter(color);
 		markAllHighlightPainter.setRoundedEdges(true);

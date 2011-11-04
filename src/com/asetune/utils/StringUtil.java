@@ -605,7 +605,8 @@ public class StringUtil
 		if (in == null)
 			return null;
 
-		return in.replaceAll("\\<.*?\\>", "");   // STRIP ALL HTML Tags from the description.
+//		return in.replaceAll("\\<.*?\\>", "");   // STRIP ALL HTML Tags from the description. hmmm this stips off '<>' also, which is the same as "not equal" or !=, which is NOT a html tag
+		return in.replaceAll("<[^>]+>", "");   // STRIP ALL HTML Tags from the description.
 	}
 
 	/**
@@ -785,6 +786,13 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		String[] htmlStrArr = {"a<>bc", "<html>a<b>b</b>c</html>", "abc,"};
+		for (String s : htmlStrArr)
+		{
+			System.out.println("str1='"+stripHtml(s)+"'.");
+		}
+		System.exit(0);
+
 		String[] str = {"abc", "abc ", "abc,", "abc, ", "abc,\t", "abc,\n", "abc,\t\t", "abc,\n\n", "abc,\t\n"};
 		for (String s : str)
 		{

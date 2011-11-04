@@ -6,6 +6,8 @@ import com.asetune.cm.CountersModel;
 
 public abstract class AbstractSysmonType
 {
+	protected StringBuilder _reportText = new StringBuilder();
+
 	protected int _aseVersion       = 0;
 
 	protected int _NumEngines       = 0;
@@ -49,8 +51,9 @@ public abstract class AbstractSysmonType
 		_value_pos      = cm.findColumn("value");
 
 		_NumElapsedMs   = cm.getLastSampleInterval();
-		
-		_aseVersion     = cm.getServerVersion();
+
+		if (cm.isRuntimeInitialized())
+			_aseVersion = cm.getServerVersion();
 
 		setData( cm.getDataCollection(CountersModel.DATA_DIFF) );
 	}
@@ -72,9 +75,12 @@ public abstract class AbstractSysmonType
 
 	public abstract void calc();
 
-	protected void addReportLn(String name)
+	protected void addReportLn(String line)
 	{
-		System.out.println(name);
+//		System.out.println(line);
+
+		_reportText.append(line);
+		_reportText.append("\n");
 	}
 	protected void addReportLn(String name, int counter)
 	{
@@ -89,8 +95,14 @@ public abstract class AbstractSysmonType
 //			BigDecimal xTotal   = new BigDecimal(total)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		
 		String line = String.format("%1$-50s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.", 
+//		String line = String.format("%1$-50s %2$10d %3$3.1f %4$3.1f %5$3.1f", 
 				name, counter, perSec, perTran, total);
-		System.out.println(line);
+
+		_reportText.append(line);
+		_reportText.append("\n");
+
+//		System.out.println(line);
+		
 
 //			System.out.println(StringUtil.left(name, 50) + " cnt="+StringUtil.right(counter+"", 10)+", perSec='"+xPerSec+"', perTran='"+xPerTran+"', total='"+xTotal+"'.");
 	}
@@ -107,8 +119,11 @@ public abstract class AbstractSysmonType
 //			BigDecimal xTotal   = new BigDecimal(total)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		
 		String line = String.format("%1$-50s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.", 
+//		String line = String.format("%1$-50s %2$10d %3$3.1f %4$3.1f %5$3.1f", 
 				name, counter, perSec, perTran, total);
-		System.out.println(line);
+//		System.out.println(line);
+		_reportText.append(line);
+		_reportText.append("\n");
 
 //			System.out.println(StringUtil.left(name, 50) + " cnt="+StringUtil.right(counter+"", 10)+", perSec='"+xPerSec+"', perTran='"+xPerTran+"', total='"+xTotal+"'.");
 
@@ -120,5 +135,27 @@ public abstract class AbstractSysmonType
 //			str(@tmp_int, 10) + space(5) +
 //			str(100.0 * @tmp_int / @NumTaskSwitch,5,1) +
 //			@psign
+	}
+
+	public String getReport()
+	{
+		if (hasReportText())
+		{
+			String rptHead = getReportHead();
+			String rptText = getReportText();
+			return rptHead + rptText;
+		}
+		return "";
+	}
+
+	public abstract String getReportHead();
+
+	public boolean hasReportText()
+	{
+		return _reportText.length() > 0;
+	}
+	public String getReportText()
+	{
+		return _reportText.toString();
 	}
 }
