@@ -2172,7 +2172,7 @@ public class AseConnectionUtils
 		{
 			htmlBegin   = "<html><pre>";
 			htmlEnd     = "</pre></html>";
-			htmlNewLine = "<br>";
+			htmlNewLine = "<br>\n";
 		}
 
 		int aseVersion = 0;

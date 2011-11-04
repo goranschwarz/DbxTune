@@ -518,7 +518,7 @@ extends JDialog implements ActionListener, ChangeListener
 		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, aseVersion, isCeEnabled));
 		String diffCols         = StringUtil.toCommaStr(_cm.getDiffColumns());
 		String pctCols          = StringUtil.toCommaStr(_cm.getPctColumns());
-		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfig());
+		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, aseVersion, isCeEnabled));
 		String needRole         = StringUtil.toCommaStr(_cm.getDependsOnRole());
 		String needAseVersion   = _cm.getDependsOnVersionStr();
 		String needAseCeVersion = _cm.getDependsOnCeVersionStr();

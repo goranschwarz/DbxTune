@@ -50,6 +50,7 @@ li   {margin-bottom: 6px}
 	Calculating some of the ordinary "sp_sysmon" calculation.<br>
 	The goal is to present some kind of sp_sysmon report simulation in the "Extended Info Panel".<br>
 	Maybe a TreeTable or similar will present the information, but a lot of work is still needed here.<br>
+	For now: the information is printed as raw text, in the Extended Info Panel, which is located on the right hand side for the text report.<br>
 	</LI>
 
 	<LI>
@@ -170,6 +171,58 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Add Messages: Wait Event Dictionary</b><br>
 	Added 5 new 'Wait Event Descriptions' from ASE Documentation 'Performance and Tuning Series: Monitoring Tables', Document ID 'DC00848-01-1570-01'<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Persistent Counter Storage, Strings can be overflowed.</b><br>
+	When storing to long Strings in the PCS, in H2 we got Exception: org.h2.jdbc.JdbcBatchUpdateException: Value too long for column<br>
+	Solution: If the string we are going to store is "longer" that the database allowed storage size, then
+	truncate the end of the string (the part of the string that we want be able to store), 
+	and add '...' as a marker that is has been truncated.
+	</LI>
+
+	<LI>
+	<b>bug fix: Copy + Paste for to ascii table did not handle newLine.</b><br>
+	Now the ascii table looks better if any "cell" has newlines in them<br>
+	If this happens, I also add an extra vertical row separator, so it's easier to see where a new row starts<br>
+	</LI>
+
+	<LI>
+	<b>GUI Change: in all Performance Counters when reading offline database.</b><br>
+	Previously the field 'Clear Time' was empty, this field is not visible in offline mode anymore<br>
+	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is 
+	displaying, this makes it easier to detect if we are looking at the correct data.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: in offline mode, the filter 'column list' wasn't loaded.</b><br>
+	This is now fixed<br>
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Objects': Column name 'ObjectName' was showing IndexName instead of table name</b><br>
+	In AseTune Version 2011-09-30, 2.6.0: I changed to used ObjectName column instead of ObjectName=object_name(...)<br>
+	This was not so good since the "raw" ObjectName displayed the IndexName instead of table name, so <br>
+	I changed it back to display the table name using object_name(...), and also added a column (in ase 15.0.2 or higher)<br>
+	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
+	</LI>
+	
+	<LI>
+	<b>Change: tab 'Objects': Added some columns</b><br>
+	<ul>
+	    <li>NumUsedPages - which just does: data_pages(A.DBID, A.ObjectID, A.IndexID)</li>
+	    <li>RowsPerPage - which calculates number of rows per page</li>
+	    <li>Remark - which tries to figure out what is happening of with this object. is it a table scan, etc...</li>
+	</ul>
+	The above columns will make it easier to check if many LogicalReads "ok", meaning is this on a small or large table<br>
+	This can be disabled using the option 'CMobjectActivity.TabRowCount=true|false' in the properties file.<br>  
+	The column 'Remark' should be treaded as 'experimental', use tooltip on the cell to get more information about the remark.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: tab 'Objects': to many DuplicateKey errors/Exceptions.</b><br>
+	Changed the internal PrimaryKey from: '[InstanceID,] ObjectName, DBName, IndexID' to: '[InstanceID,] ObjectID, DBID, IndexID'.<br>
+	Hopefully this will cause to less DuplicateKey errors.<br>
 	</LI>
 
 </UL>

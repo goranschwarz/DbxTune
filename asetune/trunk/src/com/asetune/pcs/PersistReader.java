@@ -1440,6 +1440,8 @@ implements Runnable
 			// now rows was found, do something?
 			if (row == 0)
 			{
+				if (cm.getRowCount() > 0)
+					_logger.info("loadSessionCm(cmName='"+cmName+"', type='"+typeStr+"', sampleTs='"+sampleTs+"'): NO ROW WAS FOUND IN THE STORAGE, but cm.getRowCount()="+cm.getRowCount());
 			}
 
 //System.out.println(Thread.currentThread().getName()+": Loaded "+row+" rows into for the CM '"+cmName+"', type='"+typeStr+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"' for sampleTs '"+sampleTs+"'.");

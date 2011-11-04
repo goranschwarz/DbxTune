@@ -321,7 +321,7 @@ public class CountersModelAppend
 		// Update dates on panel
 		TabularCntrPanel tabPanel = getTabPanel();
 		if (tabPanel != null)
-			tabPanel.setTimeInfo(null, _thisSamplingTime, _interval);
+			tabPanel.setTimeInfo(null, getSampleTimeHead(), _thisSamplingTime, _interval);
 
 		if ( AseTune.hasGUI() )
 		{

@@ -29,8 +29,8 @@ import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
-import com.asetune.gui.QueryWindow;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.tools.QueryWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.StringUtil;
 

@@ -19,6 +19,14 @@ extends AbstractSysmonType
 	}
 
 	@Override
+	public String getReportHead()
+	{
+		return "======================================================================\n" +
+		       " Kernel \n" +
+		       "----------------------------------------------------------------------\n";
+	}
+
+	@Override
 	public void calc()
 	{
 	}
