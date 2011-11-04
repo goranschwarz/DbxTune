@@ -1465,6 +1465,7 @@ public class RefreshProcess extends Thread
 
 		if (    !currentBatch.dbname.equals("") 
 			 && !currentBatch.procedureName.equals("") 
+			 && !currentBatch.procedureName.startsWith("*")
 			 && currentSqlLine > 0
 			 && pdf.sqlTextShowProcSrcCheckbox.isSelected() 
 		   )
@@ -1595,6 +1596,7 @@ public class RefreshProcess extends Thread
 		{
 			if (    currentDbname   != null && !currentDbname.equals("")
 			     && currentProcName != null && !currentProcName.equals("")
+			     && currentProcName != null && !currentProcName.startsWith("*")
 			     && currentSqlLine > 0
 				 && pdf.sqlTextShowProcSrcCheckbox.isSelected() 
 			   )
@@ -2177,7 +2179,7 @@ public class RefreshProcess extends Thread
 
 		cols1 = cols2 = cols3 = "";
 		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
-		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads";
+		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
 		cols3 = "";
 		if (_aseVersion >= 12520)
 		{
