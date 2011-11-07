@@ -8,22 +8,20 @@ public class Kernel
 extends AbstractSysmonType
 {
 
-	public Kernel(CountersModel cm)
+	public Kernel(SpSysmon sysmon, CountersModel cm)
 	{
-		super(cm);
+		super(sysmon, cm);
 	}
 
-	public Kernel(int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
+	public Kernel(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
-		super(aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		super(sysmon, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
 	}
 
 	@Override
-	public String getReportHead()
+	public String getReportName()
 	{
-		return "======================================================================\n" +
-		       " Kernel \n" +
-		       "----------------------------------------------------------------------\n";
+		return "Kernel";
 	}
 
 	@Override

@@ -7,22 +7,20 @@ import com.asetune.cm.CountersModel;
 public class ProcCache
 extends AbstractSysmonType
 {
-	public ProcCache(CountersModel cm)
+	public ProcCache(SpSysmon sysmon, CountersModel cm)
 	{
-		super(cm);
+		super(sysmon, cm);
 	}
 
-	public ProcCache(int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
+	public ProcCache(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
-		super(aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		super(sysmon, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
 	}
 
 	@Override
-	public String getReportHead()
+	public String getReportName()
 	{
-		return "======================================================================\n" +
-		       " Procedure Cache \n" +
-		       "----------------------------------------------------------------------\n";
+		return "Procedure Cache";
 	}
 
 	@Override
@@ -177,35 +175,35 @@ extends AbstractSysmonType
 				fld_SqlStatementCache_StatementsNotCached += value; // NOT SUM, but += anyway
 		}
 
-		addReportLn("Procedure Cache Management        per sec      per xact       count  %% of total");
-		addReportLn("  Procedure Requests",        fld_ProcedureRequests);
-		addReportLn("  Procedure Reads from Disk", fld_ProcedureReadsFromDisk);
-		addReportLn("  Procedure Writes to Disk",  fld_ProcedureWritesToDisk);
-		addReportLn("  Procedure Removals",        fld_ProcedureRemovals);
-		addReportLn("  Procedure Recompilations",  fld_ProcedureRecompilations);
+		addReportHead("Procedure Cache Management");
+		addReportLnCnt("  Procedure Requests",        fld_ProcedureRequests);
+		addReportLnPct("  Procedure Reads from Disk", fld_ProcedureReadsFromDisk, fld_ProcedureRequests);
+		addReportLnPct("  Procedure Writes to Disk",  fld_ProcedureWritesToDisk,  fld_ProcedureRequests);
+		addReportLnCnt("  Procedure Removals",        fld_ProcedureRemovals);
+		addReportLnCnt("  Procedure Recompilations",  fld_ProcedureRecompilations);
 
-		addReportLn("  Recompilations Requests:");
-		addReportLn("    Execution Phase",          fld_RecompilationsRequests_ExecutionPhase);
-		addReportLn("    Compilation Phase",        fld_RecompilationsRequests_CompilationPhase);
-		addReportLn("    Execute Cursor Execution", fld_RecompilationsRequests_ExecuteCursorExecution);
-		addReportLn("    Redefinition Phase",       fld_RecompilationsRequests_RedefinitionPhase);
+		addReportLn   ("  Recompilations Requests:");
+		addReportLnCnt("    Execution Phase",          fld_RecompilationsRequests_ExecutionPhase);
+		addReportLnCnt("    Compilation Phase",        fld_RecompilationsRequests_CompilationPhase);
+		addReportLnCnt("    Execute Cursor Execution", fld_RecompilationsRequests_ExecuteCursorExecution);
+		addReportLnCnt("    Redefinition Phase",       fld_RecompilationsRequests_RedefinitionPhase);
 
-		addReportLn("  Recompilation Reasons:");
-		addReportLn("    Table Missing",            fld_RecompilationReasons_TableMissing);
-		addReportLn("    Temporary Table Missing",  fld_RecompilationReasons_TemporaryTableMissing);
-		addReportLn("    Schema Change",            fld_RecompilationReasons_SchemaChange);
-		addReportLn("    Index Change",             fld_RecompilationReasons_IndexChange);
-		addReportLn("    Isolation Level Change",   fld_RecompilationReasons_IsolationLevelChange);
-		addReportLn("    Permissions Change",       fld_RecompilationReasons_PermissionsChange);
-		addReportLn("    Cursor Permissions Change",fld_RecompilationReasons_CursorPermissionsChange);
+		addReportLn   ("  Recompilation Reasons:");
+		addReportLnCnt("    Table Missing",            fld_RecompilationReasons_TableMissing);
+		addReportLnCnt("    Temporary Table Missing",  fld_RecompilationReasons_TemporaryTableMissing);
+		addReportLnCnt("    Schema Change",            fld_RecompilationReasons_SchemaChange);
+		addReportLnCnt("    Index Change",             fld_RecompilationReasons_IndexChange);
+		addReportLnCnt("    Isolation Level Change",   fld_RecompilationReasons_IsolationLevelChange);
+		addReportLnCnt("    Permissions Change",       fld_RecompilationReasons_PermissionsChange);
+		addReportLnCnt("    Cursor Permissions Change",fld_RecompilationReasons_CursorPermissionsChange);
 
-		addReportLn("  SQL Statement Cache:");
-		addReportLn("    Statements Cached",        fld_SqlStatementCache_StatementsCached);
-		addReportLn("    Statements Found in Cache",fld_SqlStatementCache_StatementsFoundInCache);
-		addReportLn("    Statements Not Found",     fld_SqlStatementCache_StatementsNotFound);
-		addReportLn("    Statements Dropped",       fld_SqlStatementCache_StatementsDropped);
-		addReportLn("    Statements Restored",      fld_SqlStatementCache_StatementsRestored);
-		addReportLn("    Statements Not Cached",    fld_SqlStatementCache_StatementsNotCached);
+		addReportLn   ("  SQL Statement Cache:");
+		addReportLnCnt("    Statements Cached",        fld_SqlStatementCache_StatementsCached);
+		addReportLnCnt("    Statements Found in Cache",fld_SqlStatementCache_StatementsFoundInCache);
+		addReportLnCnt("    Statements Not Found",     fld_SqlStatementCache_StatementsNotFound);
+		addReportLnCnt("    Statements Dropped",       fld_SqlStatementCache_StatementsDropped);
+		addReportLnCnt("    Statements Restored",      fld_SqlStatementCache_StatementsRestored);
+		addReportLnCnt("    Statements Not Cached",    fld_SqlStatementCache_StatementsNotCached);
 	}
 //	print "Procedure Cache Management        per sec      per xact       count  %% of total"
 //
