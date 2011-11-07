@@ -59,7 +59,7 @@ public class TimeUtils
 		execTimeHH = "00" + execTime;
 		execTimeHH = (execTime < 100) ? execTimeHH.substring(execTimeHH.length()-2) : "" + execTime;
 
-		return execTimeHH+":"+execTimeMM+":"+execTimeSS+":"+execTimeMs;
+		return execTimeHH+":"+execTimeMM+":"+execTimeSS+"."+execTimeMs;
 	}
 
 	/**

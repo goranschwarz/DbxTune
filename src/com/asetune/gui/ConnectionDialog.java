@@ -607,8 +607,9 @@ public class ConnectionDialog
 		if (_showHostmonTab)
 			panel.add(_aseHostMonitor_chk,     "");
 
-		_aseOptionStore_chk  .addActionListener(this);
-		_aseHostMonitor_chk.addActionListener(this);
+		_aseOptionConnOnStart_chk.addActionListener(this);
+		_aseOptionStore_chk      .addActionListener(this);
+		_aseHostMonitor_chk      .addActionListener(this);
 
 		return panel;
 	}
@@ -1158,11 +1159,12 @@ public class ConnectionDialog
 
 		
 		// ACTIONS
-		_offlineJdbcDriver_cbx.addActionListener(this);
-		_offlineTestConn_but.addActionListener(this);
-		_offlineJdbcUrl_cbx.getEditor().getEditorComponent().addKeyListener(this);
-		_offlineJdbcUrl_cbx.addActionListener(this);
-		_offlineJdbcUrl_but.addActionListener(this);
+		_offlineJdbcDriver_cbx  .addActionListener(this);
+		_offlineTestConn_but    .addActionListener(this);
+		_offlineJdbcUrl_cbx     .getEditor().getEditorComponent().addKeyListener(this);
+		_offlineJdbcUrl_cbx     .addActionListener(this);
+		_offlineJdbcPassword_txt.addActionListener(this);
+		_offlineJdbcUrl_but     .addActionListener(this);
 
 		return panel;
 	}
@@ -1502,6 +1504,11 @@ public class ConnectionDialog
 					if (_hostmonPasswd_txt.getText().trim().equals("")) {_hostmonPasswd_txt.requestFocus(); return; }
 					if (_hostmonHost_txt  .getText().trim().equals("")) {_hostmonHost_txt  .requestFocus(); return; }
 					if (_hostmonPort_txt  .getText().trim().equals("")) {_hostmonPort_txt  .requestFocus(); return; }
+				}
+				else if (_tab.getSelectedIndex() == TAB_POS_OFFLINE)
+				{
+					if (_offlineJdbcUsername_txt.getText().trim().equals("")) {_offlineJdbcUsername_txt.requestFocus(); return; }
+					if (_offlineJdbcPassword_txt.getText().trim().equals("")) {_offlineJdbcPassword_txt.requestFocus(); return; }
 				}
 
 				_ok.requestFocus();
@@ -2073,6 +2080,19 @@ public class ConnectionDialog
 			}
 		}
 
+		// --- ASE: CHECKBOX: Connect On Startup ---
+		if (_aseOptionConnOnStart_chk.equals(source))
+		{
+			// Save this option at once...
+			// Then we can press "cancel"... and it will still be stored
+			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf != null)
+			{
+				conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP, _aseOptionConnOnStart_chk.isSelected());
+				conf.save();
+			}
+		}
+
 		// --- ASE: CHECKBOX: STORE DATA ---
 		if (_aseOptionStore_chk.equals(source))
 		{
@@ -2278,6 +2298,15 @@ public class ConnectionDialog
 			}
 		}
 		
+		// --- OFFLINE: BUTTON: JDBC TEST CONNECTION ---
+		if (_offlineJdbcPassword_txt.equals(source))
+		{
+			if (_offlineJdbcUsername_txt  .getText().trim().equals("") )
+				setFocus();
+			else
+				_ok.doClick();
+		}
+
 		// --- OFFLINE: BUTTON: JDBC TEST CONNECTION ---
 		if (_offlineTestConn_but.equals(source))
 		{
@@ -2555,6 +2584,7 @@ public class ConnectionDialog
 				_hostmonHost_txt.setText(oshostname);
 			}
 		}
+		setFocus();
 
 		validateContents();		
 	}

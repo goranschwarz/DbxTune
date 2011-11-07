@@ -7,22 +7,20 @@ import com.asetune.cm.CountersModel;
 public class TaskMgmt
 extends AbstractSysmonType
 {
-	public TaskMgmt(CountersModel cm)
+	public TaskMgmt(SpSysmon sysmon, CountersModel cm)
 	{
-		super(cm);
+		super(sysmon, cm);
 	}
 
-	public TaskMgmt(int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
+	public TaskMgmt(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
-		super(aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		super(sysmon, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
 	}
 
 	@Override
-	public String getReportHead()
+	public String getReportName()
 	{
-		return "======================================================================\n" +
-		       " Task Management \n" +
-		       "----------------------------------------------------------------------\n";
+		return "Task Management";
 	}
 
 	@Override
@@ -64,6 +62,9 @@ extends AbstractSysmonType
 		int    field_id   = -1;
 		int    value      = 0;
 
+		int NumEngines       = _sysmon.getNumEngines();
+		int NumXacts         = _sysmon.getNumXacts();
+
 		int NumTaskSwitch    = 0; // Total Number of Task Context Switches across all engines
 		int IgnoreTaskSwitch = 0; // Total Number of Task Context Switches which can be ignored
 		int KnownTaskSwitch  = 0; // Count of Number of Task Context Switches by Known Causes
@@ -85,11 +86,11 @@ extends AbstractSysmonType
 			if (groupName.equals("config") && fieldName.equals("cg_cmaxonline"))
 				tmpNumEngines += value;
 			if (groupName.startsWith("engine_") && fieldName.equals("clock_ticks") && value > 0)
-				_NumEngines++;
+				NumEngines++;
 
 			// NumXacts
 			if (groupName.equals("access") && fieldName.equals("xacts"))
-				_NumXacts += value;
+				NumXacts += value;
 			
 			// NumTaskSwitch
 			if (groupName.startsWith("engine_") && fieldName.equals("context_switches"))
@@ -108,7 +109,9 @@ extends AbstractSysmonType
 		NumTaskSwitch = NumTaskSwitch - IgnoreTaskSwitch - IgnoreTaskYields;
 
 		// 
-		int[] fld_EngineCtxSwitchArray = new int[_NumEngines];
+		int fld_ConnectionsOpened         = 0;
+		
+		int[] fld_EngineCtxSwitchArray = new int[NumEngines];
 		int fld_VoluntaryYields           = 0;
 		int fld_CacheSearchMisses         = 0;
 		int fld_ExceedingIoBatchSize      = 0;
@@ -140,6 +143,12 @@ extends AbstractSysmonType
 //			field_id  = ((Number)row.get(_field_id_pos)).intValue();
 			value     = ((Number)row.get(_value_pos)).intValue();
 
+
+			// Connections Opened
+			if (groupName.equals("kernel") && fieldName.equals("processes_created"))
+				fld_ConnectionsOpened += value; // NOT SUM, but += anyway
+
+			
 			// Task Context Switches by Engine
 			if (groupName.startsWith("engine_") && fieldName.equals("context_switches"))
 			{
@@ -289,37 +298,47 @@ extends AbstractSysmonType
 //		System.out.println("NumElapsedMs     = "+_NumElapsedMs);
 //		System.out.println();
 
+
+		addReportHead("Task Management");
+
+		addReportLnCnt("  Connections Opened", fld_ConnectionsOpened);
+		addReportLn("");
+
+		addReportLn("  Task Context Switches by Engine");
 		int fld_EngineCtxSwitchAllEngines = 0;
+		for (int i=0; i<fld_EngineCtxSwitchArray.length; i++)
+		{
+			fld_EngineCtxSwitchAllEngines += fld_EngineCtxSwitchArray[i];
+			addReportLnPct("    Engine "+i, fld_EngineCtxSwitchArray[i], NumTaskSwitch);
+		}
 		if (fld_EngineCtxSwitchArray.length > 1)
 		{
-			for (int i=0; i<fld_EngineCtxSwitchArray.length; i++)
-			{
-				fld_EngineCtxSwitchAllEngines += fld_EngineCtxSwitchArray[i];
-				addReportLn("Task Context Switches by Engine "+i, fld_EngineCtxSwitchArray[i], _NumElapsedMs, _NumXacts, NumTaskSwitch);
-			}
+			addReportLnSum();
+			addReportLnCnt("    Total Task Context Switches", fld_EngineCtxSwitchAllEngines);
 		}
-		addReportLn("Total Task Context Switches", fld_EngineCtxSwitchAllEngines, _NumElapsedMs, _NumXacts, NumTaskSwitch);
+		addReportLn("");
 
-		addReportLn("  Voluntary Yields",            fld_VoluntaryYields          , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Cache Search Misses",         fld_CacheSearchMisses        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Exceeding I/O batch size",    fld_ExceedingIoBatchSize     , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  System Disk Writes",          fld_SystemDiskWrites         , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Logical Lock Contention",     fld_LogicalLockContention    , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Address Lock Contention",     fld_AddressLockContention    , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Latch Contention",            fld_LatchContention          , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Physical Lock Transition",    fld_PhysicalLockTransition   , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Logical Lock Transition",     fld_LogicalLockTransition    , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Object Lock Transition",      fld_ObjectLockTransition     , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Log Semaphore Contention",    fld_LogSemaphoreContention   , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  PLC Lock Contention",         fld_PlcLockContention        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Group Commit Sleeps",         fld_GroupCommitSleeps        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Last Log Page Writes",        fld_LastLogPageWrites        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Modify Conflicts",            fld_LastLogPageWrites        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  I/O Device Contention",       fld_IoDeviceContention       , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Network Packet Received",     fld_NetworkPacketReceived    , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Network Packet Sent",         fld_NetworkPacketSent        , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Interconnect Message Sleeps", fld_InterconnectMessageSleeps, _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Network services",            fld_NetworkServices          , _NumElapsedMs, _NumXacts, NumTaskSwitch);
-		addReportLn("  Other Causes",                fld_OtherCauses              , _NumElapsedMs, _NumXacts, NumTaskSwitch);
+		addReportLn("  Task Context Switches Due To:");
+		addReportLnPct("    Voluntary Yields",            fld_VoluntaryYields          , NumTaskSwitch);
+		addReportLnPct("    Cache Search Misses",         fld_CacheSearchMisses        , NumTaskSwitch);
+		addReportLnPct("    Exceeding I/O batch size",    fld_ExceedingIoBatchSize     , NumTaskSwitch);
+		addReportLnPct("    System Disk Writes",          fld_SystemDiskWrites         , NumTaskSwitch);
+		addReportLnPct("    Logical Lock Contention",     fld_LogicalLockContention    , NumTaskSwitch);
+		addReportLnPct("    Address Lock Contention",     fld_AddressLockContention    , NumTaskSwitch);
+		addReportLnPct("    Latch Contention",            fld_LatchContention          , NumTaskSwitch);
+		addReportLnPct("    Physical Lock Transition",    fld_PhysicalLockTransition   , NumTaskSwitch);
+		addReportLnPct("    Logical Lock Transition",     fld_LogicalLockTransition    , NumTaskSwitch);
+		addReportLnPct("    Object Lock Transition",      fld_ObjectLockTransition     , NumTaskSwitch);
+		addReportLnPct("    Log Semaphore Contention",    fld_LogSemaphoreContention   , NumTaskSwitch);
+		addReportLnPct("    PLC Lock Contention",         fld_PlcLockContention        , NumTaskSwitch);
+		addReportLnPct("    Group Commit Sleeps",         fld_GroupCommitSleeps        , NumTaskSwitch);
+		addReportLnPct("    Last Log Page Writes",        fld_LastLogPageWrites        , NumTaskSwitch);
+		addReportLnPct("    Modify Conflicts",            fld_LastLogPageWrites        , NumTaskSwitch);
+		addReportLnPct("    I/O Device Contention",       fld_IoDeviceContention       , NumTaskSwitch);
+		addReportLnPct("    Network Packet Received",     fld_NetworkPacketReceived    , NumTaskSwitch);
+		addReportLnPct("    Network Packet Sent",         fld_NetworkPacketSent        , NumTaskSwitch);
+		addReportLnPct("    Interconnect Message Sleeps", fld_InterconnectMessageSleeps, NumTaskSwitch);
+		addReportLnPct("    Network services",            fld_NetworkServices          , NumTaskSwitch);
+		addReportLnPct("    Other Causes",                fld_OtherCauses              , NumTaskSwitch);
 	}
 }

@@ -1,18 +1,32 @@
 package com.asetune.sp_sysmon;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.List;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.StringUtil;
 
 public abstract class AbstractSysmonType
 {
 	protected StringBuilder _reportText = new StringBuilder();
 
+	protected SpSysmon _sysmon      = null;
+
 	protected int _aseVersion       = 0;
 
-	protected int _NumEngines       = 0;
-	protected int _NumXacts         = 0;
-	protected int _NumElapsedMs     = 0;
+//	protected int _NumEngines       = 0;
+//	protected int _NumXacts         = 0;
+//	protected int _NumElapsedMs     = 0;
+
+	public void setNumEngines(int numEngines)     { _sysmon.setNumEngines(numEngines); }
+	public void setNumXacts(int numXacts)         { _sysmon.setNumXacts(numXacts); }
+	public void setNumElapsedMs(int numElapsedMs) { _sysmon.setNumElapsedMs(numElapsedMs); }
+	
+	public int getNumEngines()   { return _sysmon.getNumEngines(); }
+	public int getNumXacts()     { return _sysmon.getNumXacts(); }
+	public int getNumElapsedMs() { return _sysmon.getNumElapsedMs(); }
 
 	protected int _fieldName_pos  = -1;
 	protected int _groupName_pos  = -1;
@@ -22,7 +36,19 @@ public abstract class AbstractSysmonType
 
 	private List<List<Object>> _data;
 
-	
+	                                       //|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
+	private static final String cntLine    = "  -------------------------  ------------  ------------  ----------  ----------";
+	private static final String cntFmt     = "  %1$-25s %2$12.1d %3$12.1f %4$10f' %5$10.1f";
+//	private static final String cntFmt     = "  %1$-25s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.";
+
+	private static final String sumLine    = "  -------------------------  ------------  ------------  ----------";
+	private static final String sumFmt     = "  %1$-25s %2$12.1d %3$12.1f %4$10f'";
+//	private static final String sumFmt     = "%1$-50s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.";
+
+	private static final String na_str     = "n/a";
+	private static final String section    = "===============================================================================";
+	private static final String subsection = "-------------------------------------------------------------------------------";
+
 	public void printReport()
 	{
 	}
@@ -36,7 +62,7 @@ public abstract class AbstractSysmonType
 		return _data;
 	}
 
-	public AbstractSysmonType(CountersModel cm)
+	public AbstractSysmonType(SpSysmon sysmon, CountersModel cm)
 	{
 		//		if (_cm == null)
 //			throw new xxxx;
@@ -44,111 +70,245 @@ public abstract class AbstractSysmonType
 //		if ( ! _cm.hasDiffData() )
 //			throw new xxxx;
 
+		_sysmon = sysmon;
+		
 		_fieldName_pos  = cm.findColumn("field_name");
 		_groupName_pos  = cm.findColumn("group_name");
 		_instanceid_pos = cm.findColumn("instanceid");
 		_field_id_pos   = cm.findColumn("field_id");
 		_value_pos      = cm.findColumn("value");
 
-		_NumElapsedMs   = cm.getLastSampleInterval();
+		_sysmon.setNumElapsedMs( (int) cm.getSampleInterval() );
 
+		int       interval  = (int) cm.getSampleInterval();
+		Timestamp startTime = null;
+		Timestamp endTime   = cm.getSampleTime();
+		if (endTime != null)
+			startTime = new Timestamp( endTime.getTime() - interval);
+		
+		_sysmon.setAseVersionStr   (cm.getServerName());
+		_sysmon.setAseServerNameStr(cm.isRuntimeInitialized() ? cm.getServerVersionStr() : "unknown");
+		_sysmon.setRunDate         (startTime);
+		_sysmon.setSampleStartTime (startTime);
+		_sysmon.setSampleEndTime   (endTime);
+		_sysmon.setSampleInterval  (interval);
+		_sysmon.setSampleMode      ("unknown");
+		_sysmon.setCounterClearTime(cm.getCounterClearTime());
+
+		
 		if (cm.isRuntimeInitialized())
 			_aseVersion = cm.getServerVersion();
 
 		setData( cm.getDataCollection(CountersModel.DATA_DIFF) );
 	}
 
-	public AbstractSysmonType(int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
+	public AbstractSysmonType(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
+		_sysmon = sysmon;
+		
 		_fieldName_pos  = fieldName_pos;
 		_groupName_pos  = groupName_pos;
 		_instanceid_pos = instanceId_pos;
 //		_field_id_pos   = fieldId_pos;
 		_value_pos      = value_pos;
 
-		_NumElapsedMs   = sampleTimeInMs;
+		_sysmon.setNumElapsedMs(sampleTimeInMs);
 		
 		_aseVersion     = aseVersion;
+
+		_sysmon.setAseVersionStr   (AseConnectionUtils.versionIntToStr(aseVersion));
+		_sysmon.setAseServerNameStr("UNKNOWN");
+		_sysmon.setRunDate         (null);
+		_sysmon.setSampleStartTime (null);
+		_sysmon.setSampleEndTime   (null);
+		_sysmon.setSampleInterval  (sampleTimeInMs);
+		_sysmon.setSampleMode      ("unknown");
+		_sysmon.setCounterClearTime(null);
 
 		setData( data );
 	}
 
 	public abstract void calc();
 
+	protected void addReportHead(String txt)
+	{
+		String headTxt = StringUtil.left(txt, 32, false);
+		_reportText.append(headTxt).append(                "    per sec    per xact       count  % of total\n");
+		_reportText.append("------------------------------- ----------- ----------- ----------- -----------\n");
+	}
+
+	protected void addReportLnNotYetImplemented()
+	{
+		_reportText.append("  - This section has not yet been implemented by AseTune...\n");
+	}
+
+	protected void addReportLn()
+	{
+		_reportText.append("\n");
+	}
+	
 	protected void addReportLn(String line)
 	{
-//		System.out.println(line);
-
 		_reportText.append(line);
 		_reportText.append("\n");
 	}
-	protected void addReportLn(String name, int counter)
+
+	protected void addReportLnSum()
 	{
-		if (_NumXacts == 0)
-			_NumXacts = 1;
-
-		double perSec  = counter / (_NumElapsedMs  *1.0) / 1000.0;
-		double perTran = counter / (_NumXacts      * 1.0);
-		double total   = counter;
-//			BigDecimal xPerSec  = new BigDecimal(perSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//			BigDecimal xPerTran = new BigDecimal(perTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//			BigDecimal xTotal   = new BigDecimal(total)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		
-		String line = String.format("%1$-50s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.", 
-//		String line = String.format("%1$-50s %2$10d %3$3.1f %4$3.1f %5$3.1f", 
-				name, counter, perSec, perTran, total);
-
-		_reportText.append(line);
-		_reportText.append("\n");
-
-//		System.out.println(line);
-		
-
-//			System.out.println(StringUtil.left(name, 50) + " cnt="+StringUtil.right(counter+"", 10)+", perSec='"+xPerSec+"', perTran='"+xPerTran+"', total='"+xTotal+"'.");
+		_reportText.append("------------------------------- ----------- ----------- -----------\n");
 	}
-	protected void addReportLn(String name, int counter, int NumElapsedMs, int NumXacts, int NumTaskSwitch)
+
+	protected void addReportLnCnt(String name, int counter)
 	{
+		int NumElapsedMs = _sysmon.getNumElapsedMs();
+		if (NumElapsedMs == 0)
+			NumElapsedMs = 1;
+		int NumXacts     = _sysmon.getNumXacts();
 		if (NumXacts == 0)
 			NumXacts = 1;
 
-		double perSec  = counter / (NumElapsedMs  *1.0) / 1000.0;
-		double perTran = counter / (NumXacts      * 1.0);
-		double total   = 100.0 * (counter / (NumTaskSwitch * 1.0));
-//			BigDecimal xPerSec  = new BigDecimal(perSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//			BigDecimal xPerTran = new BigDecimal(perTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//			BigDecimal xTotal   = new BigDecimal(total)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
-		
-		String line = String.format("%1$-50s cnt=%2$10d, perSec='%3$3.1f', perTran='%4$3.1f', total='%5$3.1f'.", 
-//		String line = String.format("%1$-50s %2$10d %3$3.1f %4$3.1f %5$3.1f", 
-				name, counter, perSec, perTran, total);
-//		System.out.println(line);
-		_reportText.append(line);
-		_reportText.append("\n");
+//System.out.println(getReportHead()+":cnt.NumElapsedMs  = "+NumElapsedMs);
+		double dPerSec  = counter / ((NumElapsedMs * 1.0) / 1000.0);
+		double dPerTran = counter /  (NumXacts     * 1.0);
+		double dTotal   = counter;
+		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal total   = new BigDecimal(dTotal)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-//			System.out.println(StringUtil.left(name, 50) + " cnt="+StringUtil.right(counter+"", 10)+", perSec='"+xPerSec+"', perTran='"+xPerTran+"', total='"+xTotal+"'.");
+        //|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
+		//|  -------------------------  ------------  ------------  ----------  ----------
+		String line = //"  " +
+			StringUtil.left(name       , 32, false) +
+			StringUtil.right(perSec +"", 11) + " " +
+			StringUtil.right(perTran+"", 11) + " " +
+			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right("n/a  "   , 11);
 
-//			select @rptline = "    Network services" + space(9) +
-//			str(@tmp_int / (@NumElapsedMs / 1000.0),12,1) +
-//			space(2) +
-//			str(@tmp_int / convert(real, @NumXacts),12,1) +
-//			space(2) +
-//			str(@tmp_int, 10) + space(5) +
-//			str(100.0 * @tmp_int / @NumTaskSwitch,5,1) +
-//			@psign
+		_reportText.append(line).append("\n");
 	}
 
-	public String getReport()
+	protected void addReportLnPct(String name, int counter, int divideBy)
+	{
+		int NumElapsedMs = _sysmon.getNumElapsedMs();
+		if (NumElapsedMs == 0)
+			NumElapsedMs = 1;
+		int NumXacts     = _sysmon.getNumXacts();
+		if (NumXacts == 0)
+			NumXacts = 1;
+		if (divideBy == 0)
+			divideBy = 1;
+
+//System.out.println(getReportHead()+":pct.NumElapsedMs  = "+NumElapsedMs);
+		double dPerSec  = counter / ((NumElapsedMs  * 1.0) / 1000.0);
+		double dPerTran = counter /  (NumXacts      * 1.0);
+		double dPct     = 100.0 * (counter / (divideBy * 1.0));
+		BigDecimal perSec  = new BigDecimal(dPerSec) .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		BigDecimal pct     = new BigDecimal(dPct)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		
+		//|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
+		//|  -------------------------  ------------  ------------  ----------  ----------
+		String line = //"  " +
+			StringUtil.left(name       , 32, false) +
+			StringUtil.right(perSec +"", 11) + " " +
+			StringUtil.right(perTran+"", 11) + " " +
+			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right(pct +" %" , 11);
+
+		_reportText.append(line).append("\n");
+	}
+
+	protected void addReportLnSC(String name, int counter)
+	{
+		String line = //"  " +
+			StringUtil.left(name       , 32, false) +
+			StringUtil.right("n/a"     , 11) + " " +
+			StringUtil.right("n/a"     , 11) + " " +
+			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right("n/a %"   , 11);
+
+		_reportText.append(line).append("\n");
+	}
+
+	protected void addReportLnScD(String name, int counter, int divideby, int scale)
+	{
+		addReportLnScDiv(name, counter, divideby, scale);
+	}
+	protected void addReportLnScDiv(String name, int counter, int divideby, int scale)
+	{
+		double dCalc = 0;
+		if (divideby > 0)
+			dCalc = counter / (divideby * 1.0);
+
+		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+
+		String line = //"  " +
+			StringUtil.left(name    , 32, false) +
+			StringUtil.right("n/a"  , 11) + " " +
+			StringUtil.right("n/a"  , 11) + " " +
+			StringUtil.right(calc+"", 11) + " " +
+			StringUtil.right("n/a %", 11);
+
+		_reportText.append(line).append("\n");
+	}
+	protected void addReportLnSec(String name, int counter, int divideby, int scale)
+	{
+		double dCalc = 0;
+		if (divideby > 0)
+			dCalc = counter / (divideby * 1.0);
+
+		BigDecimal calc = new BigDecimal(dCalc).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+
+		String line = //"  " +
+			StringUtil.left(name,     32, false) +
+			StringUtil.right(""+calc, 11) + " seconds";
+
+		_reportText.append(line).append("\n");
+	}
+
+	protected String getReport()
 	{
 		if (hasReportText())
 		{
-			String rptHead = getReportHead();
+//			String rptHead = 
+//				"\n" +
+//				"===============================================================================\n" +
+//				" "+getReportHead()+" \n" +
+//				"-------------------------------------------------------------------------------\n";
+
+			// Center the report name
+//			String reportName = getReportName();
+//			int leftPad = (80 - 2 - reportName.length()) / 2;
+//			reportName = StringUtil.replicate("-", leftPad) + " " + reportName;
+//
+//			int rightPad = (80 - reportName.length() - 2);
+//			reportName = reportName + " " + StringUtil.replicate("-", rightPad);
+//
+//			String rptHead =
+//				"\n" +
+//				"===============================================================================\n" +
+//				reportName+"\n" +
+//				"===============================================================================\n";
+//			String rptText = getReportText();
+
+			// Left side: the report name
+			String reportName = "-- " + getReportName();
+			int rightPad = (80 - reportName.length() - 2);
+			reportName = reportName + " " + StringUtil.replicate("-", rightPad);
+
+			String rptHead =
+				"\n" +
+				"===============================================================================\n" +
+				reportName+"\n" +
+				"===============================================================================\n";
 			String rptText = getReportText();
+
 			return rptHead + rptText;
 		}
 		return "";
 	}
 
-	public abstract String getReportHead();
+	public abstract String getReportName();
 
 	public boolean hasReportText()
 	{
