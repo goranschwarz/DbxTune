@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -37,6 +38,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
 
 
@@ -149,6 +151,31 @@ public class PersistWriterJdbc
 	@Override
 	public void stopServices()
 	{
+		if ( _jdbcDriver.equals("org.h2.Driver") && _conn != null)
+		{
+			// This statement closes all open connections to the database and closes the database. 
+			// This command is usually not required, as the database is closed automatically when 
+			// the last connection to it is closed.
+			//
+			// If no option is used, then the database is closed normally. All connections are 
+			// closed, open transactions are rolled back.
+			// 
+			// SHUTDOWN COMPACT     fully compacts the database (re-creating the database may 
+			//                      further reduce the database size). If the database is closed 
+			//                      normally (using SHUTDOWN or by closing all connections), then 
+			//                      the database is also compacted, but only for at most the time 
+			//                      defined by the database setting h2.maxCompactTime (see there).
+			// SHUTDOWN IMMEDIATELY closes the database files without any cleanup and without compacting.
+			// SHUTDOWN DEFRAG      re-orders the pages when closing the database so that table 
+			//                      scans are faster.
+			//
+			// Admin rights are required to execute this command.
+			
+			String shutdownCmd = "SHUTDOWN COMPACT";
+			_logger.info("Sending "+shutdownCmd+" to H2 database.");
+			dbExecNoException(shutdownCmd);
+		}
+
 		if (_h2ServerTcp != null)
 		{
 			_logger.info("Stopping H2 TCP Service.");
@@ -434,19 +461,40 @@ public class PersistWriterJdbc
 			// IF H2, add hard coded stuff to URL
 			if ( _jdbcDriver.equals("org.h2.Driver") )
 			{
+				H2UrlHelper urlHelper = new H2UrlHelper(localJdbcUrl);
+				Map<String, String> urlMap = urlHelper.getUrlOptionsMap();
+				if (urlMap == null)
+					urlMap = new LinkedHashMap<String, String>();
+
+				boolean change = false;
+
 				// Database short names are converted to uppercase for the DATABASE() function, 
 				// and in the CATALOG column of all database meta data methods. 
 				// Setting this to "false" is experimental. 
 				// When set to false, all identifier names (table names, column names) are case 
 				// sensitive (except aggregate, built-in functions, data types, and keywords).
-//				if (localJdbcUrl.indexOf("DATABASE_TO_UPPER") > 0) // default to true
-//					 do something;
+				if ( ! urlMap.containsKey("DATABASE_TO_UPPER") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: DATABASE_TO_UPPER=false");
+					urlMap.put("DATABASE_TO_UPPER", "false");
+				}
 
 				// The maximum time in milliseconds used to compact a database when closing.
-//				if (localJdbcUrl.indexOf("MAX_COMPACT_TIME") > 0) // default to 200ms
-//					 do something;
+				if ( ! urlMap.containsKey("MAX_COMPACT_TIME") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: MAX_COMPACT_TIME=2000");
+					urlMap.put("MAX_COMPACT_TIME",  "2000");
+				}
 
-//				new ConnectionInfo(localJdbcUrl);
+				if (change)
+				{
+					urlHelper.setUrlOptionsMap(urlMap);
+					localJdbcUrl = urlHelper.getUrl();
+					
+					_logger.info("Added some options to the H2 URL. New URL is '"+localJdbcUrl+"'.");
+				}
 			}
 
 			_conn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
@@ -515,12 +563,97 @@ public class PersistWriterJdbc
 				}
 			}
 
+			// if H2
+			// Set some specific stuff
+			if ( DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			{
+				_logger.info("Do H2 Specific settings for the database.");
+				// Sets the size of the cache in KB (each KB being 1024 bytes) for the current database. 
+				// The default value is 16384 (16 MB). The value is rounded to the next higher power 
+				// of two. Depending on the virtual machine, the actual memory required may be higher.
+				//dbExecSetting("SET CACHE_SIZE int");
+
+				// Sets the compression algorithm for BLOB and CLOB data. Compression is usually slower, 
+				// but needs less disk space. LZF is faster but uses more space.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET COMPRESS_LOB { NO | LZF | DEFLATE }
+				dbExecSetting("SET COMPRESS_LOB LZF");
+
+				// Sets the default lock timeout (in milliseconds) in this database that is used for 
+				// the new sessions. The default value for this setting is 1000 (one second).
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET DEFAULT LOCK_TIMEOUT int
+				dbExecSetting("SET DEFAULT_LOCK_TIMEOUT 5000");
+
+				// If IGNORECASE is enabled, text columns in newly created tables will be 
+				// case-insensitive. Already existing tables are not affected. 
+				// The effect of case-insensitive columns is similar to using a collation with 
+				// strength PRIMARY. Case-insensitive columns are compared faster than when 
+				// using a collation. String literals and parameters are however still considered 
+				// case sensitive even if this option is set.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent. 
+				// This setting can be appended to the database URL: jdbc:h2:test;IGNORECASE=TRUE
+				// SET IGNORECASE { TRUE | FALSE }
+				//dbExecSetting("SET IGNORECASE TRUE");
+
+				// Sets the transaction log mode. The values 0, 1, and 2 are supported, 
+				// the default is 2. This setting affects all connections.
+				// LOG 0 means the transaction log is disabled completely. It is the fastest mode, 
+				//       but also the most dangerous: if the process is killed while the database is open
+				//       in this mode, the data might be lost. It must only be used if this is not a 
+				//       problem, for example when initially loading a database, or when running tests.
+				// LOG 1 means the transaction log is enabled, but FileDescriptor.sync is disabled. 
+				//       This setting is about half as fast as with LOG 0. This setting is useful if 
+				//       no protection against power failure is required, but the data must be protected 
+				//       against killing the process.
+				// LOG 2 (the default) means the transaction log is enabled, and FileDescriptor.sync 
+				//       is called for each checkpoint. This setting is about half as fast as LOG 1. 
+				//       Depending on the file system, this will also protect against power failure 
+				//       in the majority if cases.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is not persistent. 
+				// This setting can be appended to the database URL: jdbc:h2:test;LOG=0
+				// SET LOG int
+				//dbExecSetting("SET LOG 1");
+
+				// Sets the maximum size of an in-place LOB object. LOB objects larger that this size 
+				// are stored in a separate file, otherwise stored directly in the database (in-place). 
+				// The default max size is 1024. This setting has no effect for in-memory databases.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET MAX_LENGTH_INPLACE_LOB int
+				//dbExecSetting("SET MAX_LENGTH_INPLACE_LOB 4096");
+
+				// Set the query timeout of the current session to the given value. The timeout is 
+				// in milliseconds. All kinds of statements will throw an exception if they take 
+				// longer than the given value. The default timeout is 0, meaning no timeout.
+				// This command does not commit a transaction, and rollback does not affect it.
+				// SET QUERY_TIMEOUT int
+				dbExecSetting("SET QUERY_TIMEOUT 5000");
+
+				// Sets the trace level for file the file or system out stream. Levels are: 0=off, 
+				// 1=error, 2=info, 3=debug. The default level is 1 for file and 0 for system out. 
+				// To use SLF4J, append ;TRACE_LEVEL_FILE=4 to the database URL when opening the database.
+				// This setting is not persistent. Admin rights are required to execute this command, 
+				// as it affects all connections. This command does not commit a transaction, 
+				// and rollback does not affect it. This setting can be appended to the 
+				// database URL: jdbc:h2:test;TRACE_LEVEL_SYSTEM_OUT=3
+				// SET { TRACE_LEVEL_FILE | TRACE_LEVEL_SYSTEM_OUT } int
+				//dbExecSetting("");
+
+				// 
+				//dbExec("");
+			}
+
 			// if ASE, turn off error message like: Scale error during implicit conversion of NUMERIC value '1.2920528650283813' to a NUMERIC field.
 			// or fix the actual values to be more correct when creating graph data etc.
 			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
 			{
 				_logger.debug("Connected to ASE, do some specific settings 'set arithabort numeric_truncation off'.");
-				dbExec("set arithabort numeric_truncation off ");
+				dbExecSetting("set arithabort numeric_truncation off ");
 				
 				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
 				if (aseVersion < 15000)
@@ -562,6 +695,25 @@ public class PersistWriterJdbc
 		return _conn;
 	}
 
+
+	private boolean dbExecSetting(String sql)
+	throws SQLException
+	{
+		_logger.info(getDatabaseProductName()+": "+sql);
+		return dbExec(sql, true);
+	}
+
+	private boolean dbExecNoException(String sql)
+	{
+		try
+		{
+			return dbExec(sql, true);
+		}
+		catch (SQLException e)
+		{
+			return false;
+		}
+	}
 
 	private boolean dbExec(String sql)
 	throws SQLException

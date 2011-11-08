@@ -82,7 +82,7 @@ implements PropertyChangeListener
 	}
 	public void setState(final String string)
 	{
-		//System.out.println("WaitForExecDialog.setState('"+string+"');");
+//		System.out.println("WaitForExecDialog.setState('"+string+"');");
 		_state_lbl.setText(string);
 //		if (SwingUtilities.isEventDispatchThread())
 //		{

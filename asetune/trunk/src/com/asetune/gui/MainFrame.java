@@ -845,6 +845,10 @@ public class MainFrame
 				// Send usage info
 				CheckForUpdates.sendCounterUsageInfoNoBlock();
 
+				// stop the collector thread
+				if (GetCounters.hasInstance())
+					GetCounters.getInstance().shutdown();
+
 				action_disconnect(null);
 				
 //				dispose();
@@ -1850,7 +1854,7 @@ public class MainFrame
 				// If we have a PersistentCounterHandler, stop it...
 				if ( PersistentCounterHandler.hasInstance() )
 				{
-					wait.setState("Stopping Persist Storage Handler.");
+					wait.setState("Stopping Persist Storage Handler, if H2 do SHUTDOWN.");
 					PersistentCounterHandler.getInstance().stop();
 				}
 

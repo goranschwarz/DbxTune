@@ -34,6 +34,7 @@ public class GetCountersGui
 {
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(GetCountersGui.class);
+	private boolean       _running = true;
 
 	public GetCountersGui()
 	{
@@ -121,6 +122,15 @@ public class GetCountersGui
 		MainFrame.setStatus(MainFrame.ST_CONNECT);
 	}
 
+	@Override
+	public void shutdown()
+	{
+		_logger.info("Stopping the collector thread.");
+		_running = false;
+		if (_thread != null)
+			_thread.interrupt();
+	}
+
 	public void run()
 	{
 		boolean	  firstLoopAfterConnect = true;
@@ -134,6 +144,9 @@ public class GetCountersGui
 		// Set the Thread name
 		setName("GetCountersGUI");
 		_thread = Thread.currentThread();
+
+		_running = true;
+		_logger.info("Starting GetCounters GUI collector");
 
 		// loop
 		int loopCounter = 0;
@@ -160,10 +173,12 @@ public class GetCountersGui
 			_logger.error("Problems initializing InMemoryCounterHandler,", e);
 		}
 
+		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
+
 		//---------------------------
 		// NOW LOOP
 		//---------------------------
-		while (true)
+		while (_running)
 		{
 			MainFrame.setStatus(MainFrame.ST_MEMORY);
 
@@ -520,6 +535,8 @@ public class GetCountersGui
 				setInRefresh(false);
 				//System.exit(1);
 			}
-		}
+		} // END: while(_running)
+
+		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending...");
 	}
 }

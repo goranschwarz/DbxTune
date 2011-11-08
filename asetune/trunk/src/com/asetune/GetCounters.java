@@ -42,6 +42,7 @@ import javax.swing.tree.DefaultTreeModel;
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
@@ -632,6 +633,8 @@ extends Thread
 	/** The run is located in any implementing subclass */
 	public abstract void run();
 
+	/** shutdown or stop any collector */
+	public abstract void shutdown();
 	
 	public static void setWaitEvent(String str)
 	{
@@ -5788,6 +5791,7 @@ extends Thread
 					"FROM master..sysmonitors \n" +
 					"WHERE " + discardSpinlocks + " \n" +
 					"  AND value > 100 \n" +
+					"  OR  group_name = 'config' \n" +
 					"ORDER BY group_name, field_name" + (isClusterEnabled ? ", instanceid" : "") + "\n" +
 					optGoalPlan;
 
@@ -5860,9 +5864,12 @@ extends Thread
 					panel.setLayout(new BorderLayout());
 //					panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
 
-					RTextArea textArea = new RTextArea();
-					RTextScrollPane textScroll = new RTextScrollPane(textArea, false);
+					RSyntaxTextArea textArea = new RSyntaxTextArea();
+					RTextScrollPane textScroll = new RTextScrollPane(textArea, true);
 					textArea.setText("empty sp_sysmon");
+//					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+//					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+//					textArea.setCodeFoldingEnabled(true);
 
 					putClientProperty("textArea",   textArea);
 					putClientProperty("textScroll", textScroll);

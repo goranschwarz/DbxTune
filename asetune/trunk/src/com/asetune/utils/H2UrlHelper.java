@@ -1,6 +1,8 @@
 package com.asetune.utils;
 
 import java.io.File;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.h2.constant.SysProperties;
 
@@ -15,6 +17,8 @@ public class H2UrlHelper
 	private String _urlOptions  = null;
 	private String _rawFileName = null;
 	private String _extFileName = null;
+
+	private Map<String, String> _urlOptionsMap = new LinkedHashMap<String, String>();
 	
 	public H2UrlHelper(String url)
 	{
@@ -40,6 +44,7 @@ public class H2UrlHelper
 		{
 			int index = urlVal.indexOf(';');
 			_urlOptions = urlVal.substring(index);
+			_urlOptionsMap = StringUtil.parseCommaStrToMap(_urlOptions, "=", ";");
 
 			urlVal = urlVal.substring(0, index);
 		}
@@ -109,6 +114,62 @@ public class H2UrlHelper
 	}
 
 	/**
+	 * Get the a "new" URL Based on all sub components
+	 * @return
+	 */
+	public String getUrl()
+	{
+		String urlOptions = getUrlOptions();
+		if (urlOptions == null)
+			urlOptions = "";
+
+		return _h2UrlStart + _urlType + ":" + _rawFileName + urlOptions;
+	}
+
+	/**
+	 * Get URL Options as a string
+	 * @return
+	 */
+	public String getUrlOptions()
+	{
+		return _urlOptions;
+	}
+
+	/**
+	 * Get URL Options
+	 * @return
+	 */
+	public Map<String, String> getUrlOptionsMap()
+	{
+		return _urlOptionsMap;
+	}
+
+	/**
+	 * Set URL Options
+	 * @return
+	 */
+	public void setUrlOptionsMap(Map<String, String> urlOptionsMap)
+	{
+		_urlOptionsMap = urlOptionsMap;
+
+		String urlOptions = "";
+		if (_urlOptionsMap != null && _urlOptionsMap.size() > 0)
+		{
+			for (Map.Entry<String,String> entry : _urlOptionsMap.entrySet()) 
+			{
+				String key = entry.getKey();
+				String val = entry.getValue();
+
+				urlOptions += ";" + key + "=" + val;
+			}
+		}
+		if (StringUtil.isNullOrBlank(urlOptions))
+			_urlOptions = null;
+		else
+			_urlOptions = urlOptions;
+	}
+
+	/**
 	 * Get the Filename part passed in the URL.<br>
 	 * The format is RAW, meaning ~ is not translated into $HOME, and PATH delimiters is not changed.
 	 * @return
@@ -155,11 +216,6 @@ public class H2UrlHelper
 		if ( ! f.isDirectory() )
 			f = f.getParentFile();
 		return f;
-	}
-
-	public String getUrlOptions()
-	{
-		return _urlOptions;
 	}
 
 	/**
