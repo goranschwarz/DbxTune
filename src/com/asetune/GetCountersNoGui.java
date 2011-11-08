@@ -453,11 +453,22 @@ public class GetCountersNoGui
 
 
 	
+	@Override
+	public void shutdown()
+	{
+		_logger.info("Stopping the collector thread.");
+		_running = false;
+		if (_thread != null)
+			_thread.interrupt();
+	}
+
 	public void run()
 	{
 		// Set the Thread name
 		_thread = Thread.currentThread();
 		_thread.setName("GetCountersNoGui");
+		
+		_running = true;
 
 		// If you want to start a new session in the Persistent Storage, just set this to true...
 		// This could for instance be used when you connect to a new ASE Server
@@ -491,6 +502,8 @@ public class GetCountersNoGui
 
 		// remember when we started
 		long threadStartTime = System.currentTimeMillis();
+
+		_logger.info("Thread '"+Thread.currentThread().getName()+"' starting...");
 
 		//---------------------------
 		// NOW LOOP
@@ -789,7 +802,9 @@ public class GetCountersNoGui
 			sleep(_sleepTime * 1000);
 //			try { Thread.sleep( _sleepTime * 1000 ); }
 //			catch (InterruptedException ignore) {}
-		}
+
+		} // END: while(_running)
+
 		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending...");
 
 		// so lets stop the Persistent Counter Handler and it's services as well

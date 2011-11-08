@@ -336,6 +336,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			catch (Throwable e) 
 			{
 				_logger.info(getName()+" had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: "+e);
+				_logger.debug(getName()+" had some issues when doing setCm(_cm) back to the original cm. Caught and ignored: "+e, e);
 			}
 
 			loadFilterProps();
@@ -469,14 +470,19 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			}
 			setPostponeTime(_cm.getPostponeTime());
 
-			_dataTable.setModel(_cm);
-			_cm.addTableModelListener(this);
-			adjustTableColumnWidth();
-
-			// remove the JXTable listener...
-			// it will be called from tableChanged() if we are NOT looking
-			// at at the history...
-			_cm.removeTableModelListener(_dataTable);
+			// if not same model as previously...
+			TableModel currentModel = _dataTable.getModel();
+			if ( ! _cm.equals(currentModel) )
+			{
+				_dataTable.setModel(_cm);
+				_cm.addTableModelListener(this);
+				adjustTableColumnWidth();
+	
+				// remove the JXTable listener...
+				// it will be called from tableChanged() if we are NOT looking
+				// at at the history...
+				_cm.removeTableModelListener(_dataTable);
+			}
 		}
 	}
 
@@ -2465,6 +2471,11 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		@Override
 		public void setModel(TableModel newModel)
 		{
+			// Noo ned to continue if it's the same model ????
+			TableModel currentModel = getModel();
+			if (newModel.equals(currentModel))
+				return;
+				
 //			_hasNewModel = true;
 			super.setModel(newModel);
 			

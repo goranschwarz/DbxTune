@@ -201,16 +201,16 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>Change: tab 'Objects': Column name 'ObjectName' was showing IndexName instead of table name</b><br>
-	In AseTune Version 2011-09-30, 2.6.0: I changed to used ObjectName column instead of ObjectName=object_name(...)<br>
-	This was not so good since the "raw" ObjectName displayed the IndexName instead of table name, so <br>
-	I changed it back to display the table name using object_name(...), and also added a column (in ase 15.0.2 or higher)<br>
+	In AseTune Version 2011-09-30, 2.6.0: I changed to used <code>ObjectName</code> column instead of <code>ObjectName=object_name(...)</code><br>
+	This was not so good since the "raw" <code>ObjectName</code> displayed the IndexName instead of table name, so <br>
+	I changed it back to display the table name using <code>object_name(...)</code>, and also added a column (in ase 15.0.2 or higher)<br>
 	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
 	</LI>
 	
 	<LI>
 	<b>Change: tab 'Objects': Added some columns</b><br>
 	<ul>
-	    <li>NumUsedPages - which just does: data_pages(A.DBID, A.ObjectID, A.IndexID)</li>
+	    <li>NumUsedPages - which just does: <code>data_pages(A.DBID, A.ObjectID, A.IndexID)</code></li>
 	    <li>RowsPerPage - which calculates number of rows per page</li>
 	    <li>Remark - which tries to figure out what is happening of with this object. is it a table scan, etc...</li>
 	</ul>
@@ -221,8 +221,25 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>bug fix: tab 'Objects': to many DuplicateKey errors/Exceptions.</b><br>
-	Changed the internal PrimaryKey from: '[InstanceID,] ObjectName, DBName, IndexID' to: '[InstanceID,] ObjectID, DBID, IndexID'.<br>
+	Changed the internal PrimaryKey from: '<code>[InstanceID,] ObjectName, DBName, IndexID</code>' to: '<code>[InstanceID,] ObjectID, DBID, IndexID</code>'.<br>
 	Hopefully this will cause to less DuplicateKey errors.<br>
+	</LI>
+
+	<LI>
+	<b>Change: H2 PCS, Persist Counter Storage, connect properties</b><br>
+	When recording a session in a H2 database, set some basic options if they are not part of the URL<br>
+	<ul>
+	    <li><code>DATABASE_TO_UPPER=false</code> - Do <b>not</b> convert Table and Column names to upper.</li>
+	    <li><code>MAX_COMPACT_TIME=2000</code>   - The maximum time in milliseconds used to compact a database when closing.</li>
+	</ul>
+	Also setting some options in the database after connect<br>
+	<ul>
+	    <li><code>SET COMPRESS_LOB LZF</code>          - Compress LOB Large OBjects, text/image fields.</li>
+	    <li><code>SET DEFAULT_LOCK_TIMEOUT 5000</code> - Change the LOCK timeout to 5 seconds.</li>
+	    <li><code>SET QUERY_TIMEOUT 5000</code>        - Change query timeout timeout to 5 seconds.</li>
+	</ul>
+	Also do '<code>SHUTDOWN COMPACT</code>' in method, stopServices()<br>
+	The intention for these changes is that the database size will be smaller...<br>
 	</LI>
 
 </UL>
