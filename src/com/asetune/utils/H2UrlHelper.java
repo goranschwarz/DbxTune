@@ -189,6 +189,16 @@ public class H2UrlHelper
 	}
 
 	/**
+	 * Get name of the parsed file part of the URL<br>
+	 * null if no file was passed.
+	 * @return
+	 */
+	public String getFilename()
+	{
+		return _extFileName;
+	}
+
+	/**
 	 * Get a File object of what directory the parsed database file exists in 
 	 * @return (null if no db file was found after extracting the templates)
 	 */

@@ -397,6 +397,18 @@ public class GetCountersGui
 				}
 				catch (SQLException sqlex)
 				{
+					// Connection is already closed.
+					if ( "JZ0C0".equals(sqlex.getSQLState()) )
+					{
+						boolean forceConnectionCheck = true;
+						boolean closeConnOnFailure   = true;
+						if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
+						{
+							_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
+							continue; // goto: while (_running)
+						}
+					}
+					
 					_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
 					mainSampleTime   = new Timestamp(System.currentTimeMillis());
 					aseServerName    = "unknown";
@@ -413,6 +425,9 @@ public class GetCountersGui
 						pc.setStartNewSample(true);
 					startNewPcsSession = false;
 				}
+				
+				// add some statistics on the "main" sample level
+				setStatisticsTime(mainSampleTime);
 
 				//-----------------
 				// Update data in tabs

@@ -58,8 +58,19 @@ implements Runnable
 	/** A connection to the PersitentCounter Storage back end */
 	private Connection _conn = null;
 	
-	// implements singleton pattern
+	/** implements singleton pattern */
 	private static PersistReader _instance = null;
+
+	/** User information, just used to get what we are connected to
+	    The connection is made outside */
+	private String _jdbcDriver = "";
+	private String _jdbcUrl    = "";
+	private String _jdbcUser   = "";
+	private String _jdbcPasswd = "";
+
+	/** Hold information of last loaded session list, this can be used to send statistics */
+	private List<SessionInfo> _lastLoadedSessionList = null;
+
 
 	/** hold information about if current selected sample */
 	private HashMap<String,CmIndicator> _currentIndicatorMap = new HashMap<String,CmIndicator>();
@@ -195,6 +206,33 @@ implements Runnable
 	**---------------------------------------------------
 	*/
 
+	public void setJdbcDriver(String jdbcDriver) { _jdbcDriver = jdbcDriver; }
+	public void setJdbcUrl(String jdbcUrl)       { _jdbcUrl = jdbcUrl; }
+	public void setJdbcUser(String jdbcUser)     { _jdbcUser = jdbcUser; }
+	public void setJdbcPasswd(String jdbcPasswd) { _jdbcPasswd = jdbcPasswd; }
+
+	public String getJdbcDriver() { return _jdbcDriver; }
+	public String getJdbcUrl()    { return _jdbcUrl; }
+	public String getJdbcUser()   { return _jdbcUser; }
+	public String getJdbcPasswd() { return _jdbcPasswd; }
+
+	/** What is current JDBC settings */
+	public String GetConnectionInfo()
+	{
+		return "jdbcDriver='" + _jdbcDriver + "', " +
+		       "jdbcUrl='"    + _jdbcUrl    + "', " +
+		       "jdbcUser='"   + _jdbcUser   + "', " +
+		       "jdbcPasswd='" + "*secret*"  + "'.";
+	}
+	
+	/** 
+	 * Last loaded session(s) information <br>
+	 * This will be used to grab statistics on disconnect.
+	 */
+	public List<SessionInfo> getLastLoadedSessionList()
+	{
+		return _lastLoadedSessionList;
+	}
 
 	/**
 	 * Checks if this looks like a offline database
@@ -1717,6 +1755,9 @@ implements Runnable
 			sessionInfo._sampleCmNameSumMap = getSessionSampleCmNameSumMap(sessionInfo._sessionId);
 		}
 
+		// Save last SessionInfo, this can be used to send statistics
+		_lastLoadedSessionList = sessionList;
+		
 		// Get number of samples in LAST session
 		_numOfSamplesOnLastRefresh = getNumberOfSamplesInLastSession(true);
 
@@ -1939,7 +1980,7 @@ implements Runnable
 System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
-		
+
 		return map;
 	}
 	

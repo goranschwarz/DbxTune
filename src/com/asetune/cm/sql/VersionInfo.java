@@ -41,6 +41,9 @@ public class VersionInfo
 	public static final String  SP_OPENTRAN_CR_STR            = "2011-04-14";  // "YYYY-MM-DD"
 	public static       Date    SP_OPENTRAN_CRDATE            = null;
 
+	public static final String  SP__OPTDIAG_CR_STR            = "2006-06-20";  // "YYYY-MM-DD"
+	public static       Date    SP__OPTDIAG_CRDATE            = null;
+
 	static
 	{
 		try
@@ -57,6 +60,8 @@ public class VersionInfo
 			SP_LOCKSUM_CRDATE             = sdf.parse(SP_LOCKSUM_CR_STR);
 			SP_SPACEUSED2_CRDATE          = sdf.parse(SP_SPACEUSED2_CR_STR);
 			SP_OPENTRAN_CRDATE            = sdf.parse(SP_OPENTRAN_CR_STR);
+
+			SP__OPTDIAG_CRDATE            = sdf.parse(SP__OPTDIAG_CR_STR);
 		}
 		catch(ParseException e)
 		{

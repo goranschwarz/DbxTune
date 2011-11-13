@@ -79,6 +79,7 @@ import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
+import com.asetune.gui.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPane.TabOrderAndVisibilityListener;
@@ -304,7 +305,7 @@ public class MainFrame
 			public void run()
 			{
 				_logger.debug("----Start Shutdown Hook");
-				CheckForUpdates.sendCounterUsageInfoNoBlock();
+				CheckForUpdates.sendCounterUsageInfo(true);
 				_logger.debug("----End Shutdown Hook");
 			}
 		});
@@ -841,9 +842,6 @@ public class MainFrame
 					if (answer > 0)
 						return;
 				}
-
-				// Send usage info
-				CheckForUpdates.sendCounterUsageInfoNoBlock();
 
 				// stop the collector thread
 				if (GetCounters.hasInstance())
@@ -1690,11 +1688,11 @@ public class MainFrame
 					getCnt.enableRefresh();
 				}
 				
-				CheckForUpdates.sendConnectInfoNoBlock();
+				CheckForUpdates.sendConnectInfoNoBlock(connType);
 				
 				// Set title...
 			}
-		}
+		} // end: ASE_CONN
 
 		if ( connType == ConnectionDialog.OFFLINE_CONN)
 		{
@@ -1709,6 +1707,11 @@ public class MainFrame
 				{
 					PersistReader reader = new PersistReader(getOfflineConnection());
 					PersistReader.setInstance(reader);
+					
+					reader.setJdbcDriver(connDialog.getOfflineJdbcDriver());
+					reader.setJdbcUrl   (connDialog.getOfflineJdbcUrl());
+					reader.setJdbcUser  (connDialog.getOfflineJdbcUser());
+					reader.setJdbcPasswd(connDialog.getOfflineJdbcPasswd());
 				}
 //				_offlineSlider.setVisible(true);
 
@@ -1740,8 +1743,10 @@ public class MainFrame
 //
 //				// Start it
 //				_reader.start();
+				
+				CheckForUpdates.sendConnectInfoNoBlock(connType);
 			}
-		}
+		} // end: OFFLINE_CONN
 	}
 
 
@@ -1767,9 +1772,11 @@ public class MainFrame
 		final WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Disconnecting from "+disconnectFrom);
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
-		Runnable terminateConnectionTask = new Runnable()
+		BgExecutor terminateConnectionTask = new BgExecutor()
 		{
-			public void run()
+			
+			@Override
+			public void doWork()
 			{
 				//--------------------------
 				// - Stop the counter refresh thread
@@ -1802,6 +1809,13 @@ public class MainFrame
 					}
 				}
 		
+				// Send usage info, as a background thread.
+				// Clearing components etc, will hopefully take some time...
+				// But it's a time "hole" here, which can be done better
+				// also sendCounterUsageInfo(true) is done in the JVM shutdown hook
+				// Counter RESET will be done in the CheckForUpdates.sendCounterUsageInfo()
+				CheckForUpdates.sendCounterUsageInfo(false);
+
 				//--------------------------
 				// Clearing all cm's
 				_logger.info("Clearing components...");
@@ -3424,10 +3438,10 @@ public class MainFrame
 		}
 		public void actionPerformed(ActionEvent actionevent)
 		{
-			Runnable doWork = new Runnable()
+			BgExecutor doWork = new BgExecutor()
 			{
 				@Override
-				public void run()
+				public void doWork()
 				{
 					_mainframe.readSliderMoveToCurrentTs();
 					_mainframe._readSelectionTimer.stop();

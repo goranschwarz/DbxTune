@@ -37,8 +37,26 @@
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	$checkId            = getUrlParam('checkId');
-	$clientTime         = getUrlParam('clientTime');
+	$connectId          = getUrlParam('connectId');
+	$clientTime         = getUrlParam('clientTime');   // removed in versions after 2011-11-09
+	$sessionType        = getUrlParam('sessionType');
+	$sessionStartTime   = getUrlParam('sessionStartTime');
+	$sessionEndTime     = getUrlParam('sessionEndTime');
 	$userName           = getUrlParam('userName');
+
+	//------------------------------------------
+	// Check for values that are NOT sent, some version on AseTune is NOT sending new information.
+	if (empty($connectId))
+		$connectId = -1;
+
+	// 'clientTime' was moved into 'sessionStartTime' in versions after 2011-11-09
+	if (empty($sessionStartTime))
+		$sessionStartTime= $clientTime;
+
+	if (empty($sessionType))
+		$sessionType= "online";
+
+
 
 	// Copy all values AFTER userName to an array
 	$cpArr = array();
@@ -76,8 +94,11 @@
 		(
 			checkId,
 			serverAddTime,
-			clientTime,
+			sessionType,
+			sessionStartTime,
+			sessionEndTime,
 			userName,
+			connectId,
 
 			cmName,
 			addSequence,
@@ -88,8 +109,11 @@
 		(
 			$checkId,
 			NOW(),
-			'$clientTime',
+			'$sessionType',
+			'$sessionStartTime',
+			'$sessionEndTime',
 			'$userName',
+			$connectId,
 
 			'$key',
 			$addSequence,

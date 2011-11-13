@@ -47,6 +47,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
@@ -360,7 +361,12 @@ public class ConnectionDialog
 	public String getSshPassword() { return _hostmonPasswd_txt.getText(); }
 	public String getSshHostname() { return _hostmonHost_txt  .getText(); }
 	public String getSshPortStr()  { return _hostmonPort_txt  .getText(); }
-	
+
+	public String getOfflineJdbcDriver() { return _offlineJdbcDriver_cbx  .getEditor().getItem().toString(); }
+	public String getOfflineJdbcUrl()    { return _offlineJdbcUrl_cbx     .getEditor().getItem().toString(); }
+	public String getOfflineJdbcUser()   { return _offlineJdbcUsername_txt.getText(); }
+	public String getOfflineJdbcPasswd() { return _offlineJdbcPassword_txt.getText(); }
+
 //	public static Connection showConnectionDialog(Frame owner, Map input)
 //	public static Connection showConnectionDialog(Frame owner)
 //	{
@@ -1738,7 +1744,7 @@ public class ConnectionDialog
 //			return false;
 //		}
 //	}
-	
+
 	/**
 	 * Make a connection to the PCS storage
 	 * @return
@@ -1751,6 +1757,8 @@ public class ConnectionDialog
 		PersistentCounterHandler pch = null;
 		try
 		{
+			checkForH2LocalDrive(null);
+
 			Configuration pcsProps = new Configuration();
 
 			String pcsAll = _pcsWriter_cbx.getEditor().getItem().toString();
@@ -2152,6 +2160,12 @@ public class ConnectionDialog
 			setToTemplate();
 		}
 
+		// --- PCS: COMBOBOX: JDBC URL ---
+		if (_pcsJdbcUrl_cbx.equals(source))
+		{
+			checkForH2LocalDrive(null);
+		}
+
 		// --- PCS: BUTTON: "..." 
 		if (_pcsJdbcUrl_but.equals(source))
 		{
@@ -2168,33 +2182,7 @@ public class ConnectionDialog
 				String newUrl  = h2help.getNewUrl(newFile);
 
 				_pcsJdbcUrl_cbx.getEditor().setItem(newUrl);
-
-//				String url  = _pcsJdbcUrl_cbx.getEditor().getItem().toString();
-//				String path = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
-
-//				// Take away db suffix. ".h2.db"
-//				if (path.matches(".*\\.h2\\.db.*"))
-//					path = path.replaceAll("\\.h2\\.db", "");
-//
-//				// Take away db suffix. ".data.db"
-//				if (path.matches(".*\\.data\\.db.*"))
-//					path = path.replaceAll("\\.data\\.db", "");
-//
-//				// Take away index suffix. ".index.db"
-//				if (path.matches(".*\\.index\\.db.*"))
-//					path = path.replaceAll("\\.index\\.db", "");
-//
-//				// Take away log suffix. ".99.log.db"
-//				if (path.matches(".*\\.[0-9]*\\.log\\.db.*"))
-//					path = path.replaceAll("\\.[0-9]*\\.log\\.db", "");
-//
-//				// fill in the template
-//				if ( url.matches(".*\\[<path>\\]<dbname>.*") )
-//					url = url.replaceFirst("\\[<path>\\]<dbname>", path);
-//				else
-//					url += path;
-//
-//				_pcsJdbcUrl_cbx.getEditor().setItem(url);
+				checkForH2LocalDrive(null);
 			}
 		}
 		
@@ -2235,66 +2223,6 @@ public class ConnectionDialog
 
 					_offlineJdbcUrl_cbx.getEditor().setItem(newUrl);
 				}
-
-//				JFileChooser fc = new JFileChooser();
-//				if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-//					fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
-////				if (url.startsWith("jdbc:h2:file:")) fc.setFileFilter();
-////				if (url.startsWith("jdbc:h2:zip:"))  fc.setFileFilter();
-//
-//				int returnVal = fc.showOpenDialog(this);
-//				if(returnVal == JFileChooser.APPROVE_OPTION) 
-//				{
-//					String path = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
-//
-//					if (    url.startsWith("jdbc:h2:file:")
-//					     || url.startsWith("jdbc:h2:tcp:")
-//					   )
-//					{
-//						// Take away db suffix. ".h2.db"
-//						if (path.matches(".*\\.h2\\.db.*"))
-//							path = path.replaceAll("\\.h2\\.db", "");
-//
-//						// Take away db suffix. ".data.db"
-//						if (path.matches(".*\\.data\\.db.*"))
-//							path = path.replaceAll("\\.data\\.db", "");
-//
-//						// Take away index suffix. ".index.db"
-//						if (path.matches(".*\\.index\\.db.*"))
-//							path = path.replaceAll("\\.index\\.db", "");
-//
-//						// Take away log suffix. ".99.log.db"
-//						if (path.matches(".*\\.[0-9]*\\.log\\.db.*"))
-//							path = path.replaceAll("\\.[0-9]*\\.log\\.db", "");
-//
-//						// fill in the template
-//						if ( url.matches(".*\\[<path>\\]<dbname>.*") )
-//							url = url.replaceFirst("\\[<path>\\]<dbname>", path);
-//						else
-//							url += path;
-//					}
-//
-//					if (url.startsWith("jdbc:h2:zip:"))
-//					{
-//						File f = new File(path);
-//						String dbname = f.getName();
-//						if (dbname.toLowerCase().endsWith(".zip"))
-//							dbname = dbname.substring(0, dbname.length()-".zip".length());
-//						else
-//							dbname = "offlineDb";
-//
-//						// fill in the template
-//						if ( url.matches(".*<zipFileName>!/<dbname>.*") )
-//						{
-//							url = url.replaceFirst("<zipFileName>", path);
-//							url = url.replaceFirst("<dbname>", dbname);
-//						}
-//						else
-//							url += path;
-//					}
-//	
-//					_offlineJdbcUrl_cbx.getEditor().setItem(url);
-//				}
 			}
 		}
 		
@@ -3039,6 +2967,80 @@ public class ConnectionDialog
 		return conf;
 	}
 	
+	/**
+	 * Invoke a message if the storage driver is NOT local<br>
+	 * With local I only check if it's 'C:' or not, I dont know how to do it in another way...
+	 */
+	private void checkForH2LocalDrive(String jdbcUrl)
+	{
+		// Do some extra checking if H2
+		if (jdbcUrl == null)
+			jdbcUrl = _pcsJdbcUrl_cbx.getEditor().getItem().toString();
+
+		if ( jdbcUrl.startsWith("jdbc:h2:file:") )
+		{
+			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
+			{
+				H2UrlHelper urlHelper = new H2UrlHelper(jdbcUrl);
+				String filename = urlHelper.getFilename();
+				if ( ! StringUtil.isNullOrBlank(filename) )
+				{
+					filename = filename.toLowerCase();
+					if (   filename.matches("[d-z]:.*") 
+						|| filename.startsWith("\\\\") 
+						|| filename.startsWith("//") 
+						|| filename.startsWith("\\")
+					   )
+					{
+						boolean networkDrive = true;
+						String systemType    = "unknown";
+						// try even harder to figgure out if it's a local drive or not
+						try
+						{
+							String fnStart = filename.substring(0,3); // get first 3 chars
+							File f = new File(fnStart);
+
+							// Type description for a file, directory, or folder as it would be displayed 
+							// in a system file browser. Example from Windows: the "Desktop" folder is desribed 
+							// s "Desktop". Override for platforms with native ShellFolder implementations
+							//
+							// returns: the file type description as it would be displayed by a native 
+							//          file chooser or null if no native information is available.
+							systemType = FileSystemView.getFileSystemView().getSystemTypeDescription(f);
+
+							if (systemType != null)
+							{
+								if ( systemType.toLowerCase().indexOf("local") > 1 )
+									networkDrive = false;
+							}
+						}
+						catch (Throwable t) {/*ignore*/}
+
+						if (networkDrive)
+						{
+							String htmlStr = 
+								"<html>" +
+								"The selected storage file is '"+filename+"'.<br>" +
+								"Is this <b>really</b> a local drive?<br>" +
+								"<br>" +
+								"Using a network drive will be <b>much</b> slower.<br>" +
+								"The recomendation is to use a local drive as the database storage!<br>" +
+								"<br>" +
+								"The localized System Type Description from the Operating System, is '<b>"+systemType+"</b>'.<br>" +
+								"If this string doesn't contain 'local', then it's considdered as a netork drive.<br>" +
+								"<br>" +
+								"Note: If the localized type '<b>"+systemType+"</b>' containes 'local' in you'r localization, please email me at goran_schwarz@hotmail.com the localized string.<br>" +
+								"<br>" +
+								"This is just a warning message, but be aware that the storage thread might not keep up...<br>" +
+								"</html>";
+							SwingUtils.showWarnMessage(this, "Local drive?", htmlStr, null);
+						}
+					} // end: not 'c:'
+				} // end: filename containes something
+			} // end: PlatformUtils.Platform_WIN
+		} // end: jdbcUrl.startsWith("jdbc:h2:file:")
+	}
+
 	
 	
 	

@@ -90,6 +90,21 @@ public interface IPersistWriter
 	/** save counters for this cm */
 	public void saveCounters(CountersModel cm);
 
+	/** save DDL into "any" storage */
+	public void saveDdlDetails(DdlDetails ddlDetails);
+
+	/** check if this DDL is stored in the DDL storage, implementer should hold all stored DDL's in a cache */
+	public boolean isDdlDetailsStored(String dbname, String objectName);
+
+	/** Put the dbname, objectname in a structure/cache which isDdlDetailsStored() can check for */
+	public void markDdlDetailsAsStored(String dbname, String objectName);
+
+	/** Clear the structure/cache holding markers for what has been saved. This should be called if the database is recreated during runtime, this so we can store new DDL Storage requests */
+	public void clearDdlDetailesCache();
+	
+	/** If we opens a database, then get information that is already stored in the database, this so we don't store it "again" */
+	public void populateDdlDetailesCache();
+	
 	/**
 	 * Called from the {@link PersistentCounterHandler#consume} as the first thing it does.
 	 * @param cont 
@@ -153,6 +168,5 @@ public interface IPersistWriter
 	public int getAlterTables();
 	public int getDropTables();
 
-	
 	public void resetCounters();
 }

@@ -22,6 +22,7 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.SummaryPanel;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistContainer;
@@ -563,7 +564,7 @@ public class GetCountersNoGui
 						continue;
 					}
 
-					CheckForUpdates.sendConnectInfoNoBlock();
+					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN);
 				}
 				catch (SQLException e)
 				{
@@ -684,6 +685,18 @@ public class GetCountersNoGui
 				}
 				catch (SQLException sqlex)
 				{
+					// Connection is already closed.
+					if ( "JZ0C0".equals(sqlex.getSQLState()) )
+					{
+						boolean forceConnectionCheck = true;
+						boolean closeConnOnFailure   = true;
+						if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
+						{
+							_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
+							continue; // goto: while (_running)
+						}
+					}
+
 					_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
 					mainSampleTime   = new Timestamp(System.currentTimeMillis());
 					aseServerName    = "unknown";
@@ -715,6 +728,9 @@ public class GetCountersNoGui
 				if (startNewPcsSession)
 					pc.setStartNewSample(true);
 				startNewPcsSession = false;
+
+				// add some statistics on the "main" sample level
+				setStatisticsTime(mainSampleTime);
 
 				
 				//-----------------

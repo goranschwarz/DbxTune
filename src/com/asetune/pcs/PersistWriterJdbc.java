@@ -17,11 +17,14 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -454,6 +457,9 @@ public class PersistWriterJdbc
 				// Also clear what DDL's has been created, so they can be recreated.
 				clearIsDdlCreatedCache();
 				
+				// Also clear what what DDL information that has been stored, so we can add them to the new database again
+				clearDdlDetailesCache();
+
 				// Indicate the we need to start a new session...
 				setSessionStarted(false);
 			}
@@ -673,6 +679,10 @@ public class PersistWriterJdbc
 					_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
 				}
 			}
+
+			// GET information already stored in the DDL Detailes storage
+			populateDdlDetailesCache();
+
 		}
 		catch (SQLException ev)
 		{
@@ -928,6 +938,7 @@ public class PersistWriterJdbc
 			checkAndCreateTable(SESSION_MON_TAB_COL_DICT);
 			checkAndCreateTable(SESSION_ASE_CONFIG);
 			checkAndCreateTable(SESSION_ASE_CONFIG_TEXT);
+			checkAndCreateTable(DDL_STORAGE);
 			
 			//--------------------------
 			// Now fill in some data
@@ -2082,4 +2093,153 @@ public class PersistWriterJdbc
 			}
 		}
 	}
+
+
+
+	//---------------------------------------------
+	// BEGIN: DDL Lookup
+	//---------------------------------------------
+	/** what entries has already been stored in the back-end, this so we can sort out fast if wee need to store or not */
+	// TODO: maybe as HashMap<String(dbname), HasSet<String(objectName)>>, which would be faster.
+	private Set<String> _ddlDetailsCache = Collections.synchronizedSet(new HashSet<String>());
+
+	/** check if this DDL is stored in the DDL storage, implementer should hold all stored DDL's in a cache */
+	@Override
+	public boolean isDdlDetailsStored(String dbname, String objectName)
+	{
+		String key = dbname + ":" + objectName;
+		return _ddlDetailsCache.contains(key);
+	}
+
+	@Override
+	public void markDdlDetailsAsStored(String dbname, String objectName)
+	{
+		String key = dbname + ":" + objectName;
+		_ddlDetailsCache.add(key);
+		
+System.out.println("========== markDdlDetailsAsStored() ===============================");
+System.out.println("dbname                        objectname");
+System.out.println("----------------------------- -------------------------------------");
+for (String str : _ddlDetailsCache)
+{
+	String[] sa = str.split(":");
+	System.out.println(StringUtil.left(sa[0], 30) + " " + sa[1]);
+}
+System.out.println("-------------------------------------------------------------------");
+	}
+
+	@Override
+	public void clearDdlDetailesCache()
+	{
+		_ddlDetailsCache.clear();
+	}
+
+	@Override
+	public void populateDdlDetailesCache()
+	{
+//		throw new RuntimeException("FIXME: this one NEEDS to be implemented.");
+		// select xxx from DDL_STORAGE:MonDdlStorage
+		if (_conn == null)
+		{
+			_logger.info("populateDdlDetailesCache(): No database connection to Persistent Storage DB.");
+			return;
+		}
+
+//		sbSql.append("    "+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
+//		sbSql.append("   ,"+fill(qic+"owner"            +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
+//		sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar", 255,-1,-1),20)+" "+getNullable(false)+"\n");
+//		sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",  20,-1,-1),20)+" "+getNullable(false)+"\n");
+//		sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime", -1,-1,-1),20)+" "+getNullable(false)+"\n");
+
+		String sql = 
+			" select \"dbname\", \"objectName\" " +
+			" from " + getTableName(DDL_STORAGE, null, true);
+
+		int rows = 0;
+		try
+		{
+			Statement stmt = _conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+
+			while (rs.next())
+			{
+				rows++;
+				String dbname     = rs.getString(1);
+				String objectName = rs.getString(2);
+
+				markDdlDetailsAsStored(dbname, objectName);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException e)
+		{
+			// If NEW database, the "MonDdlStorage" is probably not there...
+			// The SQLState from H2 is "42S02", but I if it's the same from other vendors I dont know. 
+			// org.h2.jdbc.JdbcSQLException: Table "MonDdlStorage" not found; SQL statement:
+			if ( ! "42S02".equals(e.getSQLState()) )
+				_logger.error("Problems loading 'Stored DDL detailes'. SqlState='"+e.getSQLState()+"', sql="+sql, e);
+		}
+		
+		String str = "Loaded "+rows+" 'Stored DDL detailes' from the PCS database.";
+		_logger.debug(str);
+		
+	}
+
+	/** save DDL into "any" storage */
+	@Override
+	public void saveDdlDetails(DdlDetails ddlDetails)
+	{
+		if (ddlDetails == null)
+			throw new RuntimeException("saveDdl(), input 'ddlDetails', can't be null.");
+			
+		if (_conn == null)
+		{
+			_logger.info("DDL Lookup Storage: No database connection to Persistent Storage DB.");
+			return;
+		}
+		
+		// check AGAIN if DDL has NOT been saved in any writer class
+		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getObjectName()) )
+		{
+			_logger.debug("saveDdlDetails(): The DDL for dbname '"+ddlDetails.getDbname()+"', objectName '"+ddlDetails.getObjectName()+"' has already been stored by all the writers.");
+			return;
+		}
+
+		try
+		{
+			_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
+
+			String sql = getTableInsertStr(DDL_STORAGE, null, true);
+			PreparedStatement pstmt = _conn.prepareStatement(sql);
+
+			int col = 1;
+			
+			pstmt.setString(col++, ddlDetails.getDbname());
+			pstmt.setString(col++, ddlDetails.getOwner());
+			pstmt.setString(col++, ddlDetails.getObjectName());
+			pstmt.setString(col++, ddlDetails.getType());
+			pstmt.setString(col++, ddlDetails.getCrdate() == null ? null : ddlDetails.getCrdate().toString() );
+			pstmt.setString(col++, ddlDetails.getObjectText());
+			pstmt.setString(col++, ddlDetails.getDependsText());
+			pstmt.setString(col++, ddlDetails.getOptdiagText());
+			pstmt.setString(col++, ddlDetails.getExtraInfoText());
+
+			pstmt.executeUpdate();
+			pstmt.close();
+
+			// ADD IT TO HE CACHE AS SAVED, no need to save again.
+			markDdlDetailsAsStored(ddlDetails.getDbname(), ddlDetails.getObjectName());
+
+//			return rowsCount;
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Error writing DDL Information to Persistent Counter Store. for table dbname='"+ddlDetails.getDbname()+"', objectName='"+ddlDetails.getObjectName()+"'.", e);
+//			return -1;
+		}
+	}
+	//---------------------------------------------
+	// END: DDL Lookup
+	//---------------------------------------------
 }

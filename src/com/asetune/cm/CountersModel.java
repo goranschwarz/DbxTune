@@ -273,9 +273,9 @@ implements Cloneable
 
 		
 		// incremented every time a refresh() happens, done by incRefreshCounter()
-		//_refreshCounter  = 0;  // probably NOT reset, then send counter info will show 0
+		//_refreshCounter  = 0;  // probably NOT reset, then send counter info will show 0, reset is done by resetStatCounters()
 		// incremented every time a refresh() happens, summary of how many rows collected
-		//_sumRowCount     = 0;  // probably NOT reset, then send counter info will show 0
+		//_sumRowCount     = 0;  // probably NOT reset, then send counter info will show 0, reset is done by resetStatCounters()
 
 		// if this CM has valid data for last sample
 		_hasValidSampleData = false;
@@ -3058,6 +3058,13 @@ implements Cloneable
 			}
 		}
 
+		// Check if there is any rows that we want to interogate more, , every CM's has to implement this.
+		sendDdlDetailsRequest(tmpNewSample, tmpDiffData, tmpRateData);
+
+		// Do we want to send an Alarm somewhere, every CM's has to implement this.
+		sendAlarmRequest(tmpNewSample, tmpDiffData, tmpRateData);
+
+
 		if ( ! AseTune.hasGUI() )
 		{
 			// NO GUI, move structures
@@ -3158,6 +3165,12 @@ implements Cloneable
 
 					endGuiRefresh();
 
+					// send DDL Request info based on the sorted JTable
+					if (getTabPanel() != null)
+					{
+						getTabPanel().ddlRequestInfoSave();
+					}
+
 				} // end: run method
 			};
 
@@ -3180,6 +3193,30 @@ implements Cloneable
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
 
+
+	/**
+	 * Any CM that wants to get more DDL information should implement this
+	 * 
+	 * @param absData
+	 * @param diffData
+	 * @param rateData
+	 */
+	public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	{
+		// empty implementation, any subclass can implement it.
+	}
+
+	/**
+	 * Any CM that wants to send Alarm Requests somewhere should implement this
+	 * 
+	 * @param absData
+	 * @param diffData
+	 * @param rateData
+	 */
+	public void sendAlarmRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	{
+		// empty implementation, any subclass can implement it.
+	}
 
 	/**
 	 * FIXME: Describe what this is used for
@@ -3225,6 +3262,24 @@ implements Cloneable
 //		System.out.println(_name+":------doFireTableStructureChanged------");
 		fireTableStructureChanged();
 	}
+
+	/**
+	 * Reset statistical counters that will be sent to www.asetune.com<br>
+	 * This is called from CheckForUpdates.sendCounterUsageInfo(), which will send of the statistics.
+	 */
+	public void resetStatCounters()
+	{
+		// incremented every time a refresh() happens, done by incRefreshCounter()
+		_refreshCounter  = 0;
+
+		// incremented every time a refresh() happens, summary of how many rows collected
+		_sumRowCount     = 0;
+		
+//		_sumRowCountAbs  = 0;
+//		_sumRowCountDiff = 0;
+//		_sumRowCountRate = 0;
+	}
+	
 
 
 	public int getDataSource()
@@ -3374,36 +3429,6 @@ implements Cloneable
 	 *  colId starts at 
 	 *  NOTE: note tested (2007-07-13)
 	 */
-//	private synchronized Object getValue(int whatData, int rowId, int colId)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = newSample;
-//		else if (whatData == DATA_DIFF) data = diffData;
-//		else if (whatData == DATA_RATE) data = rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//		{
-//			_logger.debug("getValue(type, rowId, colId): Cant find any data.");
-//			return null;
-//		}
-//
-//		if (data.getColNames().size() <= colId)
-//		{
-//			_logger.debug("getValue(type, rowId, colId): colId='"+colId+"', is larger that columns in data '"+data.getColNames().size()+"'.");
-//			return null;
-//		}
-//		if (data.getRowCount() <= rowId)
-//		{
-//			_logger.debug("getValue(type, rowId, colId): rowId='"+rowId+"', is larger that rows in data '"+data.getRowCount()+"'.");
-//			return null;
-//		}
-//
-//		return data.getValueAt(rowId, colId);
-//	}
-
 	// Return the value of a cell by keyVal, (keyVal, ColumnName)
 	private synchronized Double getValue(int whatData, String pkStr, String colname)
 	{
@@ -3441,24 +3466,6 @@ implements Cloneable
 			return (Double) o;
 		else
 			return new Double(o.toString());
-
-//		for (int i = 0; i < data.getRowCount(); i++)
-//		{
-//			List<Object> row = data.getRow(i);
-//			if (row.get(0).equals(keyVal))
-//			{
-//				Object o = getValue(whatData, i, colname);
-//				if (o instanceof Double)
-//				{
-//					return (Double) o;
-//				}
-//				else
-//				{
-//					return new Double(o.toString());
-//				}
-//			}
-//		}
-//		return null;
 	}
 	/**
 	 * Get a int array of rows where colValue matches values in the column name
@@ -3512,54 +3519,6 @@ implements Cloneable
 	}
 
 	// Return the MAX of the values of a column (ColumnName)
-//	private synchronized Double getMaxValue(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return null;
-//
-//		int idCol = data.getColNames().indexOf(colname);
-//		if (idCol == -1)
-//		{
-//			_logger.info("getMaxValue: Cant find the column '" + colname + "'.");
-//			return null;
-//		}
-//		if (data.getRowCount() == 0)
-//			return null;
-//
-//		double maxResult = 0;
-//		double result = 0;
-//		for (int i = 0; i < data.getRowCount(); i++)
-//		{
-//			Object o = data.getValueAt(i, idCol);
-//			if (o == null)
-//				continue;
-//
-//			if (o instanceof Number)
-//			{
-//				_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
-//				result = ((Number) o).doubleValue();
-//			}
-//			else
-//			{
-//				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
-//				result = Double.parseDouble(o.toString());
-//			}
-//
-//			if (result > maxResult)
-//			{
-//				maxResult = result;
-//			}
-//		}
-//		return new Double(maxResult);
-//	}
 	private synchronized Double getMaxValue(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -3620,54 +3579,6 @@ implements Cloneable
 	}
 
 	// Return the MIN of the values of a column (ColumnName)
-//	private synchronized Double getMinValue(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return null;
-//
-//		int idCol = data.getColNames().indexOf(colname);
-//		if (idCol == -1)
-//		{
-//			_logger.info("getMinValue: Cant find the column '" + colname + "'.");
-//			return null;
-//		}
-//		if (data.getRowCount() == 0)
-//			return null;
-//
-//		double minResult = 0;
-//		double result = 0;
-//		for (int i = 0; i < data.getRowCount(); i++)
-//		{
-//			Object o = data.getValueAt(i, idCol);
-//			if (o == null)
-//				continue;
-//
-//			if (o instanceof Number)
-//			{
-//				_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
-//				result = ((Number) o).doubleValue();
-//			}
-//			else
-//			{
-//				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
-//				result = Double.parseDouble(o.toString());
-//			}
-//
-//			if (result < minResult)
-//			{
-//				minResult = result;
-//			}
-//		}
-//		return new Double(minResult);
-//	}
 	private synchronized Double getMinValue(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -3728,52 +3639,6 @@ implements Cloneable
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
-//	private synchronized Double getSumValue(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return null;
-//
-//		int idCol = data.getColNames().indexOf(colname);
-//		if (idCol == -1)
-//		{
-//			_logger.info("getSumValuePCT: Cant find the column '" + colname + "'.");
-//			return null;
-//		}
-//		if (data.getRowCount() == 0)
-//			return null;
-//		double result = 0;
-//		for (int i = 0; i < data.getRowCount(); i++)
-//		{
-//			Object o = data.getValueAt(i, idCol);
-//			if (o == null)
-//				continue;
-//
-//			if (o instanceof Long)
-//			{
-//				_logger.debug("Colname='" + colname + "', Long: " + ((Long) o).longValue());
-//				result += ((Long) o).longValue();
-//			}
-//			else if (o instanceof Double)
-//			{
-//				_logger.debug("Colname='" + colname + "', Double: " + ((Double) o).doubleValue());
-//				result += ((Double) o).doubleValue();
-//			}
-//			else
-//			{
-//				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
-//				result += Double.parseDouble(o.toString());
-//			}
-//		}
-//		return new Double(result);
-//	}
 	private synchronized Double getSumValue(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -3833,47 +3698,6 @@ implements Cloneable
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
-//	private synchronized int getCountGtZero(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return 0;
-//
-//		int idCol = data.getColNames().indexOf(colname);
-//		if (idCol == -1)
-//		{
-//			_logger.info("getSumValuePCT: Cant find the column '" + colname + "'.");
-//			return 0;
-//		}
-//		if (data.getRowCount() == 0)
-//			return 0;
-//
-//		int counter = 0;
-//		for (int i = 0; i < data.getRowCount(); i++)
-//		{
-//			Object o = data.getValueAt(i, idCol);
-//			if (o == null)
-//				continue;
-//
-//			if (o instanceof Number)
-//			{
-//				if ( ((Number)o).longValue() > 0 )
-//					counter++;
-//			}
-//			else
-//			{
-//				_logger.warn("NOT A INSTANCE OF NUMBER: Colname='" + colname + "', toString(): " + o.toString());
-//			}
-//		}
-//		return counter;
-//	}
 	private synchronized int getCountGtZero(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -3927,30 +3751,6 @@ implements Cloneable
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
-//	private synchronized Double getAvgValue(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return null;
-//
-//		Double sum = getSumValue(whatData, colname);
-//		if (sum == null)
-//			return null;
-//
-//		int count = data.getRowCount();
-//		
-//		if (count == 0)
-//			return new Double(0);
-//		else
-//			return new Double(sum.doubleValue() / count);
-//	}
 	private synchronized Double getAvgValue(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -3979,30 +3779,6 @@ implements Cloneable
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
-//	private synchronized Double getAvgValueGtZero(int whatData, String colname)
-//	{
-//		SamplingCnt data = null;
-//
-//		if      (whatData == DATA_ABS)  data = _newSample;
-//		else if (whatData == DATA_DIFF) data = _diffData;
-//		else if (whatData == DATA_RATE) data = _rateData;
-//		else
-//			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-//
-//		if (data == null)
-//			return null;
-//
-//		Double sum = getSumValue(whatData, colname);
-//		if (sum == null)
-//			return null;
-//
-//		int count = getCountGtZero(whatData, colname);
-//		
-//		if (count == 0)
-//			return new Double(0);
-//		else
-//			return new Double(sum.doubleValue() / count);
-//	}
 	private synchronized Double getAvgValueGtZero(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -4109,15 +3885,7 @@ implements Cloneable
 	public Double getRateValueSum      (int[] rowIds, String colname) { return getSumValue      (DATA_RATE, rowIds,  colname); }
 
 	
-//	public void setSwingRefreshOK(boolean b)
-//	{
-//		swingRefreshOK = b;
-//	}
-//	public boolean isSwingRefreshOK() 
-//	{
-//		return swingRefreshOK;
-//	}
-	
+
 	public void setDataInitialized(boolean b)
 	{
 		dataInitialized = b;
@@ -4126,47 +3894,7 @@ implements Cloneable
 	{
 		return dataInitialized;
 	}
-	
-	/**
-	 * If we are in swing, the data is fetched by a special thread.
-	 * So we need to wait for data to be fetched and processed before 
-	 * we can continue to read the data...
-	 * FIXME: change this to wait() on an Object instead.
-	 */
-//	public void waitForSwingDataRefresh()
-//	{
-//		if (isDataInitialized())
-//		{
-//			long startWait = System.currentTimeMillis();
-//
-//			// FIXME: change this to wait() on an Object instead.
-//			while(true)
-//			{
-//				if ( isSwingRefreshOK() )
-//					return;
-//
-//				// Don't wait for too, long...
-//				long waitedForMs = System.currentTimeMillis() - startWait;
-//				if ( waitedForMs > 1000 )
-//				{
-//					_logger.warn(getName() + ": waitForSwingDataRefresh() timed out after "+waitedForMs+" ms.");
-//					return;
-//				}
-//
-//				try 
-//				{ 
-//					MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing... Graphs... Waiting for '"+getDisplayName()+"' to completing data read.");
-//
-//					_logger.debug(getName() + ": waitForSwingDataRefresh(), 20 ms");
-//					Thread.sleep(20); 
-//				}
-//				catch(InterruptedException ignore) 
-//				{
-//					return;
-//				}
-//			}
-//		}
-//	}
+
 
 	public boolean hasResultSetMetaData()
 	{

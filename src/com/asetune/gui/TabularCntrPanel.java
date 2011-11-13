@@ -299,6 +299,26 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	}
 
 	/**
+	 * Called to reset to initial state
+	 */
+	public void resetCm()
+	{
+		//FIXME: something strange is happening here... I need to find out what is happening...
+		try 
+		{
+			if (_cm != null)
+				_cm.removeTableModelListener(this);
+			_dataTable.setModel(new DefaultTableModel());
+		} 
+		catch (Throwable t) 
+		{
+//			t.printStackTrace();
+		}
+
+		setDisplayCm(null, true); // set it to tail mode (as it is when initializing the panel)
+	}
+
+	/**
 	 * @param cm
 	 *            the Counter Data that should be view, null if not available
 	 * @param tailMode
@@ -470,19 +490,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			}
 			setPostponeTime(_cm.getPostponeTime());
 
-			// if not same model as previously...
-			TableModel currentModel = _dataTable.getModel();
-			if ( ! _cm.equals(currentModel) )
-			{
-				_dataTable.setModel(_cm);
-				_cm.addTableModelListener(this);
-				adjustTableColumnWidth();
-	
-				// remove the JXTable listener...
-				// it will be called from tableChanged() if we are NOT looking
-				// at at the history...
-				_cm.removeTableModelListener(_dataTable);
-			}
+			_dataTable.setModel(_cm);
+			_cm.addTableModelListener(this);
+			adjustTableColumnWidth();
+
+			// remove the JXTable listener...
+			// it will be called from tableChanged() if we are NOT looking
+			// at at the history...
+			_cm.removeTableModelListener(_dataTable);
 		}
 	}
 
@@ -804,7 +819,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	public void reset()
 	{
 		setTimeInfo(null, null, null, 0);
-		setDisplayCm(null, true); // set it to tail mode (as it is when initializing the panel)
+		resetCm(); // set it to tail mode (as it is when initializing the panel)
 	}
 
 	public void putTableClientProperty(Object key, Object value)
@@ -2471,10 +2486,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		@Override
 		public void setModel(TableModel newModel)
 		{
-			// Noo ned to continue if it's the same model ????
-			TableModel currentModel = getModel();
-			if (newModel.equals(currentModel))
-				return;
+//			// Noo ned to continue if it's the same model ????
+//			TableModel currentModel = getModel();
+//			if (newModel.equals(currentModel))
+//			{
+//				System.out.println("TCP: same model as before: currentModel="+currentModel);
+//				return;
+//			}
 				
 //			_hasNewModel = true;
 			super.setModel(newModel);
@@ -4043,5 +4061,41 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		else
 			rowSorter.allRowsChanged();
 		
+	}
+
+	/**
+	 * Should we do any DDL Info Request store.<br>
+	 * Any implemeters should return true and add records by implemeting method ddlRequestInfoSave(JTable)
+	 * 
+	 * @return true if call method ddlRequestInfoSave(JTable)
+	 */
+	public boolean ddlRequestInfo()
+	{
+		return false;
+	}
+
+	/**
+	 * This should be overridden on tabs that want to save DDL specifications based 
+	 * on the X first rows in the table, which depends on how the JTable is sorted.
+	 */
+	public void ddlRequestInfoSave(JTable table)
+	{
+	}
+	/** internal method called by Counter Collector / CM if we have a GUI */
+	public final void ddlRequestInfoSave()
+	{
+		if (ddlRequestInfo())
+		{
+			// Do this differed; Why: I dont know if the "sorter" has done it's job yet
+			Runnable doWork = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					ddlRequestInfoSave(_dataTable);
+				}
+			};
+			SwingUtilities.invokeLater(doWork);
+		}
 	}
 }

@@ -34,6 +34,7 @@ CREATE TABLE asemon_usage
         clientCanonicalHostName varchar(40),
 
         user_name               varchar(30),
+        user_home               varchar(50),
         user_dir                varchar(50),
         propfile                varchar(100),
         gui                     varchar(10),
@@ -62,9 +63,10 @@ CREATE TABLE asemon_connect_info
 
         srvVersion              int,
         isClusterEnabled        int,
+        connectId               int,
         
 		srvName                 varchar(30),
-		srvIpPort               varchar(30),
+		srvIpPort               varchar(60),
 		srvUser                 varchar(30),
 		srvVersionStr           varchar(150),
 
@@ -72,7 +74,7 @@ CREATE TABLE asemon_connect_info
 		pcsConfig               varchar(400),
 
 
-		PRIMARY KEY (checkId, serverAddTime)
+		PRIMARY KEY (checkId, connectId, serverAddTime)
 );
 
 CREATE TABLE asemon_udc_info
@@ -92,15 +94,19 @@ CREATE TABLE asemon_counter_usage_info
 (
 		checkId                 int,
         serverAddTime           timestamp,
-        clientTime              timestamp,
+        sessionType             varchar(10),
+        sessionStartTime        timestamp        NOT NULL,
+        sessionEndTime          timestamp            NULL,
+--        clientTime              timestamp, -- removed 2011-11-09
         userName                varchar(30),
+        connectId               int,
 
         cmName                  varchar(30),
         addSequence             int,
         refreshCount            int,
         sumRowCount             int,
 
-        PRIMARY KEY (checkId, cmName)
+        PRIMARY KEY (checkId, connectId, clientTime, cmName)
 );
 
 CREATE TABLE asemon_error_info
