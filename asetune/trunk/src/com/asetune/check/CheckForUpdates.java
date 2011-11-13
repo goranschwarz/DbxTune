@@ -19,6 +19,7 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -35,7 +36,13 @@ import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.Log4jLogRecord;
+import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistReader.CmCounterInfo;
+import com.asetune.pcs.PersistReader.CmNameSum;
+import com.asetune.pcs.PersistReader.SampleCmCounterInfo;
+import com.asetune.pcs.PersistReader.SessionInfo;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
@@ -72,6 +79,8 @@ public class CheckForUpdates
 {
 	private static Logger _logger = Logger.getLogger(CheckForUpdates.class);
 
+//	private static final boolean _printDevTrace = false;
+
 	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
 	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
 	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
@@ -88,6 +97,8 @@ public class CheckForUpdates
 	private static boolean _sendCounterUsageInfo = true;
 	private static boolean _sendLogInfoWarning   = false;
 	private static boolean _sendLogInfoError     = false;
+
+	private static int     _connectCount         = 0;
 
 	private static int     _sendLogInfoThreshold = 100;
 	private static int     _sendLogInfoCount     = 0;
@@ -117,6 +128,8 @@ public class CheckForUpdates
 	private static boolean _initialized = false;
 
 	private static int     _checkId = -1;
+
+	private final static int DEFAULT_TIMEOUT = 6*1000;
 
 //	static
 //	{
@@ -189,7 +202,7 @@ public class CheckForUpdates
 	private InputStream sendHttpPost(String urlStr, QueryString urlParams)
 	throws MalformedURLException, IOException
 	{
-		return sendHttpPost(urlStr, urlParams, 3*1000);
+		return sendHttpPost(urlStr, urlParams, DEFAULT_TIMEOUT);
 	}
 	private InputStream sendHttpPost(String urlStr, QueryString urlParams, int timeoutInMs)
 	throws MalformedURLException, IOException
@@ -358,7 +371,11 @@ public class CheckForUpdates
 		}
 
 		urlParams.add("user_name",          System.getProperty("user.name"));
+		urlParams.add("user_home",          System.getProperty("user.home"));
 		urlParams.add("user_dir",           System.getProperty("user.dir"));
+		urlParams.add("user_country",       System.getProperty("user.country"));
+		urlParams.add("user_language",      System.getProperty("user.language"));
+		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
 		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
 		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
 		urlParams.add("gui",                AseTune.hasGUI()+"");
@@ -376,9 +393,6 @@ public class CheckForUpdates
 		urlParams.add("os_version",         System.getProperty("os.version"));
 		urlParams.add("os_arch",            System.getProperty("os.arch"));
 		urlParams.add("sun_desktop",        System.getProperty("sun.desktop"));
-		urlParams.add("user_country",       System.getProperty("user.country"));
-		urlParams.add("user_language",      System.getProperty("user.language"));
-		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
 		urlParams.add("-end-",              "-end-");
 
 		try
@@ -656,9 +670,27 @@ public class CheckForUpdates
 
 
 	/**
+	 * @param connType ConnectionDialog.ASE_CONN | ConnectionDialog.OFFLINE_CONN
 	 */
-	public static void sendConnectInfoNoBlock()
+	public static void sendConnectInfoNoBlock(final int connType)
 	{
+		// TRACE IN DEVELOPMENT
+//		if (_printDevTrace && _checkId < 0)
+//		{
+//			// well, this should NOT really be done here, but in test it's hopefully OK
+//			_connectCount++;
+//
+//			System.out.println("DEV-TRACE(CheckForUpdates): sendConnectInfoNoBlock(): _connectInfoCount="+_connectCount);
+//			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+//			if (mtd != null)
+//			{
+//				String srvVersion       = mtd.aseVersionNum + "";
+//				String isClusterEnabled = mtd.isClusterEnabled + "";
+//
+//				System.out.println("DEV-TRACE(CheckForUpdates): sendConnectInfoNoBlock(): srvVersion="+srvVersion+", isClusterEnabled="+isClusterEnabled+".");
+//			}
+//		}
+
 		if ( ! _sendConnectInfo )
 		{
 			_logger.debug("Send 'Connect info' has been disabled.");
@@ -670,7 +702,7 @@ public class CheckForUpdates
 			public void run()
 			{
 				CheckForUpdates connInfo = new CheckForUpdates();
-				connInfo.sendConnectInfo();
+				connInfo.sendConnectInfo(connType);
 
 				CheckForUpdates udcInfo = new CheckForUpdates();
 				udcInfo.sendUdcInfo();
@@ -685,7 +717,7 @@ public class CheckForUpdates
 	/**
 	 * Send info on connection
 	 */
-	public void sendConnectInfo()
+	public void sendConnectInfo(final int connType)
 	{
 		// URL TO USE
 		String urlStr = ASETUNE_CONNECT_INFO_URL;
@@ -713,6 +745,14 @@ public class CheckForUpdates
 			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
 			return;
 		}
+		
+		if (connType != ConnectionDialog.ASE_CONN && connType != ConnectionDialog.OFFLINE_CONN)
+		{
+			_logger.warn("ConnectInfo: Connection type must be ASE_CONN | OFFLINE_CONN");
+			return;
+		}
+		
+		_connectCount++;
 
 		// COMPOSE: parameters to send to HTTP server
 		QueryString urlParams = new QueryString();
@@ -722,23 +762,57 @@ public class CheckForUpdates
 		String checkId          = _checkId + "";
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
-		String srvVersion       = mtd.aseVersionNum + "";
-		String isClusterEnabled = mtd.isClusterEnabled + "";
+		String srvVersion       = "0";
+		String isClusterEnabled = "0";
 
-		String srvName          = AseConnectionFactory.getServer();
-		String srvIpPort        = AseConnectionFactory.getHostPortStr();
-		String srvUser          = AseConnectionFactory.getUser();
-		String srvVersionStr    = mtd.aseVersionStr;
+		String srvName          = "";
+		String srvIpPort        = "";
+		String srvUser          = "";
+		String srvVersionStr    = "";
 
-		String usePcs           = "false";
+		String usePcs           = "";
 		String pcsConfig        = "";
-		if (PersistentCounterHandler.hasInstance())
+
+		
+		if (connType == ConnectionDialog.ASE_CONN)
 		{
-			PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-			if (pch.isRunning())
+			srvVersion       = mtd.aseVersionNum + "";
+			isClusterEnabled = mtd.isClusterEnabled + "";
+
+			srvName          = AseConnectionFactory.getServer();
+			srvIpPort        = AseConnectionFactory.getHostPortStr();
+			srvUser          = AseConnectionFactory.getUser();
+			srvVersionStr    = mtd.aseVersionStr;
+
+			usePcs           = "false";
+			pcsConfig        = "";
+			if (PersistentCounterHandler.hasInstance())
 			{
-				usePcs = "true";
-				pcsConfig = pch.getConfigStr();
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+				if (pch.isRunning())
+				{
+					usePcs = "true";
+					pcsConfig = pch.getConfigStr();
+				}
+			}
+		}
+		else if (connType == ConnectionDialog.OFFLINE_CONN)
+		{
+			srvVersion       = "-1";
+			isClusterEnabled = "-1";
+
+			srvName          = "offline-read";
+			srvIpPort        = "offline-read";
+			srvUser          = "offline-read";
+			srvVersionStr    = "offline-read";
+
+			usePcs           = "true";
+			pcsConfig        = "";
+
+			if ( PersistReader.hasInstance() )
+			{
+				PersistReader reader = PersistReader.getInstance();
+				pcsConfig = reader.GetConnectionInfo();
 			}
 		}
 
@@ -754,6 +828,7 @@ public class CheckForUpdates
 		urlParams.add("clientTime",          clientTime);
 		urlParams.add("userName",            System.getProperty("user.name"));
 
+		urlParams.add("connectId",           _connectCount+"");
 		urlParams.add("srvVersion",          srvVersion);
 		urlParams.add("isClusterEnabled",    isClusterEnabled);
 
@@ -808,6 +883,12 @@ public class CheckForUpdates
 	 */
 	public static void sendUdcInfoNoBlock()
 	{
+		// TRACE IN DEVELOPMENT
+//		if (_printDevTrace && _checkId < 0)
+//		{
+//			System.out.println("DEV-TRACE(CheckForUpdates): sendUdcInfoNoBlock(): ");
+//		}
+
 		if ( ! _sendUdcInfo )
 		{
 			_logger.debug("Send 'UDC info' has been disabled.");
@@ -938,24 +1019,50 @@ public class CheckForUpdates
 
 	/**
 	 */
-	private static boolean _sendCounterUsage_done = false;
+//	private static boolean _sendCounterUsage_done = false;
+	private static int _sendCounterUsage_atConnectCount = 0;
 
-	public static void sendCounterUsageInfoNoBlock()
+	public static void sendCounterUsageInfo(boolean blockingCall)
 	{
+		// TRACE IN DEVELOPMENT
+//		if (_printDevTrace && _checkId < 0)
+//		{
+//			System.out.println("DEV-TRACE(CheckForUpdates): sendCounterUsageInfo(blockingCall="+blockingCall+"): _connectCount="+_connectCount+", _sendCounterUsage_atConnectCount="+_sendCounterUsage_atConnectCount+".");
+//
+//			if ( _sendCounterUsage_atConnectCount < _connectCount )
+//			{
+//				// WARN: this should only be done while testing
+//				_sendCounterUsage_atConnectCount++;
+//				for (CountersModel cm : GetCounters.getCmList())
+//				{
+//					if (cm.getRefreshCounter() >= 0)
+//						System.out.println("DEV-TRACE(CheckForUpdates): sendCounterUsageInfoNoBlock(): name="+StringUtil.left(cm.getName(),20)+", getRefreshCounter="+cm.getRefreshCounter()+", getSumRowCount="+cm.getSumRowCount());
+//
+//					// WARN: this should only be done while testing
+//					cm.resetStatCounters();
+//				}
+//			}
+//			else
+//				System.out.println("DEV-TRACE(CheckForUpdates): sendCounterUsageInfo(blockingCall="+blockingCall+"): already done (_sendCounterUsage_atConnectCount="+_sendCounterUsage_atConnectCount+", _connectCount="+_connectCount+").");
+//				_logger.debug("sendCounterUsageInfo, already done (_sendCounterUsage_atConnectCount="+_sendCounterUsage_atConnectCount+", _connectCount="+_connectCount+").");
+//		}
+
 		if ( ! _sendCounterUsageInfo )
 		{
 			_logger.debug("Send 'Counter Usage Info' has been disabled.");
 			return;
 		}
 
-// Hmmm... skip the noblock thread... since this is done just before the JVM exits.
-//		Runnable doLater = new Runnable()
-//		{
-//			public void run()
-//			{
-				if ( ! _sendCounterUsage_done )
+		Runnable doLater = new Runnable()
+		{
+			public void run()
+			{
+//				if ( ! _sendCounterUsage_done )
+//				{
+//					_sendCounterUsage_done = true;
+				if ( _sendCounterUsage_atConnectCount < _connectCount )
 				{
-					_sendCounterUsage_done = true;
+					_sendCounterUsage_atConnectCount++;
 
 					CheckForUpdates chk = new CheckForUpdates();
 
@@ -964,14 +1071,23 @@ public class CheckForUpdates
 				}
 				else
 				{
-					_logger.debug("sendCounterUsageInfo, already done...");
+					_logger.debug("sendCounterUsageInfo, already done (_sendCounterUsage_atConnectCount="+_sendCounterUsage_atConnectCount+", _connectCount="+_connectCount+").");
 				}
-//			}
-//		};
-//		Thread checkThread = new Thread(doLater);
-//		checkThread.setName("sendCounterUsageInfo");
-////		checkThread.setDaemon(true);
-//		checkThread.start();
+			}
+		};
+		if (blockingCall)
+		{
+			// if synchronous, just call the run method on current thread
+			doLater.run();
+		}
+		else
+		{
+			// no blocking call, start a thread that does it.
+			Thread checkThread = new Thread(doLater);
+			checkThread.setName("sendCounterUsageInfo");
+			checkThread.setDaemon(true);
+			checkThread.start();
+		}
 	}
 
 	/**
@@ -1004,69 +1120,206 @@ public class CheckForUpdates
 		// COMPOSE: parameters to send to HTTP server
 		QueryString urlParams = new QueryString();
 
-		Date timeNow = new Date(System.currentTimeMillis());
+//		Date timeNow = new Date(System.currentTimeMillis());
 
 		String checkId          = _checkId + "";
-		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+//		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		String sampleStartTime  = "";
+		String sampleEndTime    = "";
+		if (GetCounters.hasInstance())
+		{
+			GetCounters cnt = GetCounters.getInstance();
+
+			Timestamp startTs = cnt.getStatisticsFirstSampleTime();
+			Timestamp endTs   = cnt.getStatisticsLastSampleTime();
+
+			if (startTs != null) sampleStartTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(startTs);
+			if (endTs   != null) sampleEndTime   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTs);
+
+			// now RESET COUNTERS collector
+			cnt.resetStatisticsTime();
+		}
 
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
 
 		urlParams.add("checkId",             checkId);
-		urlParams.add("clientTime",          clientTime);
+		urlParams.add("connectId",           _connectCount+"");
+//		urlParams.add("clientTime",          clientTime);
+		urlParams.add("sessionType",         "online");
+		urlParams.add("sessionStartTime",    sampleStartTime);
+		urlParams.add("sessionEndTime",      sampleEndTime);
 		urlParams.add("userName",            System.getProperty("user.name"));
 
 		int rows = 0;
 		for (CountersModel cm : GetCounters.getCmList())
 		{
-			int minRefresh = 5;
+			int minRefresh = 1;
 			if (_logger.isDebugEnabled())
 				minRefresh = 1;
 			if (cm.getRefreshCounter() >= minRefresh)
 			{
-				urlParams.add(cm.getName(), cm.getRefreshCounter()+","+cm.getSumRowCount());
+				urlParams.add(cm.getName(), cm.getRefreshCounter() + "," + cm.getSumRowCount());
 				rows++;
 			}
+			
+			// now RESET COUNTERS in the CM's
+			cm.resetStatCounters();
 		}
 
-		// If NO UDC rows where found, no need to continue
-		if (rows == 0)
+
+		// Keep the Query objects in a list, because the "offline" database can have multiple sends.
+		List<QueryString> sendQueryList = new ArrayList<QueryString>();
+		if (rows > 0)
+		{
+			sendQueryList.add(urlParams);
+		}
+		else // If NO UDC rows where found, Then lets try to see if we have the offline database has been read 
 		{
 			_logger.debug("No 'Counter Usage' was reported, skipping this.");
-			return;
-		}
 
-		try
-		{
-			// SEND OFF THE REQUEST
-			InputStream in;
-			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams, 2000);
-			else
-				in = sendHttpParams(urlStr, urlParams, 2000);
-
-			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
-			String line;
-			String responseLines = "";
-			while ((line = lr.readLine()) != null)
+			if ( ! PersistReader.hasInstance() )
 			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
-				responseLines += line;
-				if (line.startsWith("ERROR:"))
+				// Nothing to do, lets get out of here
+				return;
+			}
+			else
+			{
+				_logger.debug("BUT, trying to get the info from PersistReader.");
+
+				// Get reader and some other info.
+				PersistReader     reader      = PersistReader.getInstance();
+				List<SessionInfo> sessionList = reader.getLastLoadedSessionList();
+
+				// Loop the session list and add parameters to url send
+				int loopCnt = 0;
+				for (SessionInfo sessionInfo : sessionList)
 				{
-					_logger.warn("When doing 'Counter Usage' info 'ERROR:' response row, which looked like '" + line + "'.");
-				}
-				if (line.startsWith("DONE:"))
-				{
+					loopCnt++;
+
+					// COMPOSE: parameters to send to HTTP server
+					urlParams = new QueryString();
+
+					if (_logger.isDebugEnabled())
+						urlParams.add("debug",    "true");
+
+					checkId                 = _checkId + "";
+					String sessionStartTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(sessionInfo._sessionId);
+					String sessionEndTime   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(sessionInfo._lastSampleTime);
+
+					if (_logger.isDebugEnabled())
+						urlParams.add("debug",    "true");
+
+					urlParams.add("checkId",             checkId);
+					urlParams.add("connectId",           _connectCount+"");
+//					urlParams.add("clientTime",          sessionTime);
+					urlParams.add("sessionType",         "offline-"+loopCnt);
+					urlParams.add("sessionStartTime",    sessionStartTime);
+					urlParams.add("sessionEndTime",      sessionEndTime);
+					urlParams.add("userName",            System.getProperty("user.name"));
+
+					// Print info
+//					System.out.println("sessionInfo: \n" +
+//							"   _sessionId              = "+sessionInfo._sessionId              +", \n" +
+//							"   _lastSampleTime         = "+sessionInfo._lastSampleTime         +", \n" +
+//							"   _numOfSamples           = "+sessionInfo._numOfSamples           +", \n" +
+//							"   _sampleList             = "+sessionInfo._sampleList             +", \n" +
+//							"   _sampleCmNameSumMap     = "+sessionInfo._sampleCmNameSumMap     +", \n" +
+//							"   _sampleCmNameSumMap     = "+(sessionInfo._sampleCmNameSumMap     == null ? "null" : "size="+sessionInfo._sampleCmNameSumMap.size()    +", keySet:"+sessionInfo._sampleCmNameSumMap.keySet()    ) +", \n" +
+//							"   _sampleCmCounterInfoMap = "+(sessionInfo._sampleCmCounterInfoMap == null ? "null" : "size="+sessionInfo._sampleCmCounterInfoMap.size()+", keySet:"+sessionInfo._sampleCmCounterInfoMap.keySet()) +", \n" +
+//							"   -end-.");
+
+					// Loop CM's
+					rows = 0;
+					for (CmNameSum cmNameSum : sessionInfo._sampleCmNameSumMap.values())
+					{
+						// Print info
+//						System.out.println(
+//							"   > CmNameSum: \n" +
+//							"   >>  _cmName           = " + cmNameSum._cmName            +", \n" +
+//							"   >>  _sessionStartTime = " + cmNameSum._sessionStartTime  +", \n" +
+//							"   >>  _absSamples       = " + cmNameSum._absSamples        +", \n" +
+//							"   >>  _diffSamples      = " + cmNameSum._diffSamples       +", \n" +
+//							"   >>  _rateSamples      = " + cmNameSum._rateSamples       +", \n" +
+//							"   >>  -end-.");
+
+						int minRefresh = 1;
+						if (cmNameSum._diffSamples >= minRefresh)
+						{
+							// Get how many rows has been sampled for this CM during this sample session
+							// In most cases the pointer sessionInfo._sampleCmCounterInfoMap will be null
+							// which means a 0 value
+							int rowsSampledInThisPeriod = 0;
+							
+							if (sessionInfo._sampleCmCounterInfoMap != null)
+							{
+								// Get details for "current" sample session
+								// summarize all "diff rows" into a summary, which will be sent as statistsics
+								for (SampleCmCounterInfo scmci : sessionInfo._sampleCmCounterInfoMap.values())
+								{
+									// Get current CMName in the map
+									CmCounterInfo cmci = scmci._ciMap.get(cmNameSum._cmName);
+									if (cmci != null)
+										rowsSampledInThisPeriod += cmci._diffRows;
+								}
+							}
+							
+							// finally add the info to the UrlParams
+							urlParams.add(cmNameSum._cmName, cmNameSum._diffSamples + "," + rowsSampledInThisPeriod);
+
+							rows++;
+						}
+					}
+
+					// add it to the list
+					if (rows > 0)
+						sendQueryList.add(urlParams);
 				}
 			}
-			in.close();
+		} // end: offline data
 
-//			_checkSucceed = true;
-		}
-		catch (IOException ex)
+		// Loop each of the request and send off data
+		for (QueryString urlEntry : sendQueryList)
 		{
-			_logger.debug("when trying to send 'Counter Usage' info, we had problems", ex);
+			try
+			{
+				// If NOT in the "known" thread name, then it's a synchronous call, then lower the timeout value. 
+				int timeout = DEFAULT_TIMEOUT;
+				String threadName = Thread.currentThread().getName(); 
+				if ( ! "sendCounterUsageInfo".equals(threadName) )
+					timeout = 2000;
+
+				// SEND OFF THE REQUEST
+				InputStream in;
+				if (_useHttpPost)
+					in = sendHttpPost(urlStr, urlEntry, timeout);
+				else
+					in = sendHttpParams(urlStr, urlEntry, timeout);
+
+				LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+				String line;
+				String responseLines = "";
+				while ((line = lr.readLine()) != null)
+				{
+					_logger.debug("response line "+lr.getLineNumber()+": " + line);
+					responseLines += line;
+					if (line.startsWith("ERROR:"))
+					{
+						_logger.warn("When doing 'Counter Usage' info 'ERROR:' response row, which looked like '" + line + "'.");
+					}
+					if (line.startsWith("DONE:"))
+					{
+					}
+				}
+				in.close();
+
+//				_checkSucceed = true;
+			}
+			catch (IOException ex)
+			{
+				_logger.debug("when trying to send 'Counter Usage' info, we had problems", ex);
+			}
 		}
 	}
 
@@ -1084,6 +1337,12 @@ public class CheckForUpdates
 	 */
 	public static synchronized void sendLogInfoNoBlock(final Log4jLogRecord record)
 	{
+		// TRACE IN DEVELOPMENT
+//		if (_printDevTrace && _checkId < 0)
+//		{
+//			System.out.println("DEV-TRACE(CheckForUpdates): sendLogInfoNoBlock(): ");
+//		}
+
 		if (_checkId < 0)
 		{
 			_logger.debug("No checkId was discovered when trying to send ERROR info, skipping this.");

@@ -509,7 +509,10 @@ implements SybMessageHandler
 							", TranState " + eedi.getTranState() + ":\n");
 				}
 				// Now print the error or warning
-				sb.append(sqe.getMessage()+"\n");
+				String msg = sqe.getMessage();
+				sb.append(msg);
+				if ( ! msg.endsWith("\n") )
+					sb.append("\n");
 			}
 			else
 			{

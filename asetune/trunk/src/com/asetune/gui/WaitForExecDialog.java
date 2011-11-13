@@ -13,6 +13,7 @@ import javax.swing.SwingWorker.StateValue;
 
 import net.miginfocom.swing.MigLayout;
 
+import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -27,6 +28,7 @@ public class WaitForExecDialog
 extends JDialog
 implements PropertyChangeListener
 {
+	private static Logger _logger = Logger.getLogger(WaitForExecDialog.class);
 	private static final long serialVersionUID = 1L;
 
 	private JLabel          _label           = new JLabel("Waiting...", JLabel.CENTER);
@@ -82,7 +84,9 @@ implements PropertyChangeListener
 	}
 	public void setState(final String string)
 	{
-//		System.out.println("WaitForExecDialog.setState('"+string+"');");
+		if (_logger.isDebugEnabled())
+			_logger.debug("WaitForExecDialog.setState('"+string+"');");
+
 		_state_lbl.setText(string);
 //		if (SwingUtilities.isEventDispatchThread())
 //		{
@@ -122,6 +126,9 @@ implements PropertyChangeListener
 	 */
 	public void propertyChange(PropertyChangeEvent event) 
 	{
+		if (_logger.isDebugEnabled())
+			_logger.debug("WaitForExecDialog.propertyChange(): propName="+event.getPropertyName()+", newVal="+event.getNewValue()+", oldVal="+event.getOldValue()+", PropagationId="+event.getPropagationId()+", getSource="+event.getSource());
+
 		// Close this window when the Swing worker has completed
 		if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
 		{
@@ -141,7 +148,7 @@ implements PropertyChangeListener
 	 * while we are waiting in the code for the Executable to end and this dialog will disappear.  
 	 * @param execClass
 	 */
-	public void execAndWait(final Runnable execClass)
+	public void execAndWait(final BgExecutor execClass)
 	{
 		// Execute in a Swing Thread
 		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
@@ -149,7 +156,14 @@ implements PropertyChangeListener
 			@Override
 			protected String doInBackground() throws Exception
 			{
-				execClass.run();
+				try 
+				{
+					execClass.doWork();
+				} 
+				catch (Throwable t) 
+				{
+					_logger.debug("WaitForEcecDialog: has problems when doing it's work.", t);
+				}
 				return null;
 			}
 	
@@ -159,5 +173,13 @@ implements PropertyChangeListener
 	
 		//the dialog will be visible until the SwingWorker is done
 		this.setVisible(true); 
+	}
+
+	/**
+	 * Like the Runnable interface
+	 */
+	public interface BgExecutor
+	{
+		void doWork();
 	}
 }

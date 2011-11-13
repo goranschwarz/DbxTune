@@ -32,6 +32,27 @@
 		return $val;
 	}
 
+	//----------------------------------------
+	// FUNCTION: get "callers" IP address
+	//----------------------------------------
+	function get_ip_address() 
+	{
+		foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key) 
+		{
+			if (array_key_exists($key, $_SERVER) === true) 
+			{
+				foreach (explode(',', $_SERVER[$key]) as $ip) 
+				{
+					if (filter_var($ip, FILTER_VALIDATE_IP) !== false) 
+					{
+						return $ip;
+					}
+				}
+			}
+		}
+	}
+	//$callerIpAddress = get_ip_address();
+
 
 	//------------------------------------------
 	// DEFINE latest version information
@@ -114,6 +135,7 @@
 	$clientCanonicalHostName = getUrlParam('clientCanonicalHostName');
 
 	$user_name               = getUrlParam('user_name');
+	$user_home               = getUrlParam('user_home');
 	$user_dir                = getUrlParam('user_dir');
 	$propfile                = getUrlParam('propfile');
 	$gui                     = getUrlParam('gui');
@@ -132,11 +154,13 @@
 	$os_version              = getUrlParam('os_version');
 	$os_arch                 = getUrlParam('os_arch');
 
+	$caller_ip               = get_ip_address();
+
 
 	//------------------------------------------
 	// If user is 'gorans', get out of here otherwise I will flod the log with personal entries
 	//-------
-	if ( $user_name == "gorans" )
+	if ( $user_name == "goransXXX" )
 	{
 		if ( $debug == "true" )
 			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
@@ -173,8 +197,10 @@
 		clientHostName,
 		clientHostAddress,
 		clientCanonicalHostName,
+		callerIpAddress,
 
 		user_name,
+		user_home,
 		user_dir,
 		propfile,
 		gui,
@@ -207,8 +233,10 @@
 		'$clientHostName',
 		'$clientHostAddress',
 		'$clientCanonicalHostName',
+		'$caller_ip',
 
 		'$user_name',
+		'$user_home',
 		'$user_dir',
 		'$propfile',
 		'$gui',

@@ -33,6 +33,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.table.AbstractTableModel;
@@ -85,6 +86,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.SshConnection;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sp_sysmon.SpSysmon;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -353,8 +355,11 @@ extends Thread
 	/** A list of roles which the connected user has */
 	protected List<String> _activeRoleList = null;
 
+	/** Statistic field: first sample time */
+	private Timestamp _statFirstSampleTime = null;
+	/** Statistic field: last sample time */
+	private Timestamp _statLastSampleTime  = null;
 
-	
 	public static final String TRANLOG_DISK_IO_TOOLTIP =
 		  "Below is a table that describes how a fast or slow disk affects number of transactions per second.<br>" +
 		  "The below description tries to exemplify number of transactions per seconds based on Disk IO responsiveness on the <b>LOG</b> Device.<br>" +
@@ -1675,7 +1680,8 @@ extends Thread
 					"select " + cols1 + cols2 + cols3 + "\n" +
 					"from master..monOpenObjectActivity A \n" +
 					"where UsedCount > 0 OR LockRequests > 0 OR LogicalReads > 100 \n" +
-					(isClusterEnabled ? "order by 2,3,4" : "order by 1,2,3") + "\n";
+//					(isClusterEnabled ? "order by 2,3,4" : "order by 1,2,3") + "\n";
+					"order by LogicalReads desc \n";
 
 				return sql;
 			}
@@ -1806,14 +1812,105 @@ extends Thread
 						}
 					}
 				}
-			}
+			} // end localCalculation
+
+			/**
+			 * Request DDL information for the first 10 rows
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// HOW MANY TOP ROWS SHOULD WE GRAB
+				int NUM_OF_DDLS_TO_PERSIST = 10;
+
+				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public boolean ddlRequestInfo()
+				{
+					return true;
+				}
+				@Override
+				public void ddlRequestInfoSave(JTable table)
+				{
+					if (table == null)
+						return;
+
+					if ( ! PersistentCounterHandler.hasInstance() )
+						return;
+
+					PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+					int DBName_pos     = -1;
+					int ObjectName_pos = -1;
+					int IndexID_pos    = -1;
+					for (int c=0; c<table.getColumnCount(); c++)
+					{
+						if ( "DBName".equals(table.getColumnName(c)) )
+							DBName_pos = c;
+
+						if ( "ObjectName".equals(table.getColumnName(c)) )
+							ObjectName_pos = c;
+
+						if ( "IndexID".equals(table.getColumnName(c)) )
+							IndexID_pos = c;
+
+						if (DBName_pos >= 0 && ObjectName_pos >= 0 && IndexID_pos >= 0)
+							break;
+					}
+
+					// HOW MANY TOP ROWS SHOULD WE GRAB FROM THE JTABLE
+					int NUM_OF_DDLS_TO_PERSIST = 10;
+					
+					int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, table.getRowCount());
+					for (int r=0; r<rows; r++)
+					{
+						Object DBName_obj     = table.getValueAt(r, DBName_pos);
+						Object ObjectName_obj = table.getValueAt(r, ObjectName_pos);
+						Object IndexID_obj    = table.getValueAt(r, IndexID_pos);
+
+						// Skip index rows... (change the loop to do this)
+//						if (IndexID_obj instanceof Number)
+//						{
+//							if ( ((Number)IndexID_obj).intValue() > 0 )
+//								continue;
+//						}
+						if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+							pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+					}
+					
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_object_activity.png") );
 			tcp.setCm(tmp);
@@ -6283,6 +6380,8 @@ extends Thread
 			{
 				String cols = "";
 
+				String orderBy = "order by DBName, ObjectName, ObjectType \n";
+
 				// ASE cluster edition
 				String InstanceID = "";
 
@@ -6309,6 +6408,8 @@ extends Thread
 
 				if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
 				{
+					orderBy = "order by RequestCnt desc \n";
+
 					RequestCnt         = "RequestCnt, ";
 					TempdbRemapCnt     = "TempdbRemapCnt, ";
 					AvgTempdbRemapTime = "AvgTempdbRemapTime, ";
@@ -6340,10 +6441,42 @@ extends Thread
 				String sql = 
 					"select " + cols + "\n" +
 					"from master..monCachedProcedures \n" +
-					"order by DBName, ObjectName, ObjectType\n";
+					orderBy;
 
 				return sql;
 			}
+
+			/**
+			 * Request DDL information for the first 10 rows
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// HOW MANY TOP ROWS SHOULD WE GRAB
+				int NUM_OF_DDLS_TO_PERSIST = 10;
+
+				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 
 		tmp.setDisplayName(displayName);
@@ -6819,7 +6952,37 @@ extends Thread
 						newSample.setValueAt(maxContextId, rowId, pos_MaxContextID);
 					}
 				}
-			}
+			} // end: localCalculation
+
+			/**
+			 * Request DDL information for ALL ROWS
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// Get ALL rows
+				int rows = absData.getRowCount();
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 
 		tmp.setDisplayName(displayName);
@@ -7055,10 +7218,43 @@ extends Thread
 				String sql = 
 					"select " + cols1 + cols2 + cols3 + "\n" +
 					"from master..monCachedObject \n" +
-					"order by DBName,  ObjectName";
+					"order by CachedKB desc";
 
 				return sql;
 			}
+
+			/**
+			 * Request DDL information for first 10 rows
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// HOW MANY TOP ROWS SHOULD WE GRAB
+				int NUM_OF_DDLS_TO_PERSIST = 10;
+
+				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
+
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 
 		tmp.setDisplayName(displayName);
@@ -8443,6 +8639,36 @@ extends Thread
 
 				return sql;
 			}
+
+			/**
+			 * Request DDL information for ALL ROWS
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// Get ALL rows
+				int rows = absData.getRowCount();
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -9261,6 +9487,36 @@ extends Thread
 				}
 				return sb.toString();
 			}
+
+			/**
+			 * Request DDL information for ALL ROWS
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("dbname");
+				int ObjectName_pos = absData.findColumn("procname");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// Get ALL rows
+				int rows = absData.getRowCount();
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 
 		tmp.setDisplayName(displayName);
@@ -9543,6 +9799,36 @@ extends Thread
 
 				return sql;
 			}
+
+			/**
+			 * Request DDL information for ALL ROWS
+			 */
+			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			{
+				if ( ! PersistentCounterHandler.hasInstance() )
+					return;
+				if ( absData == null )
+					return;
+
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+				int DBName_pos     = absData.findColumn("DBName");
+				int ObjectName_pos = absData.findColumn("ObjectName");
+
+				if (DBName_pos == -1 || ObjectName_pos == -1)
+					return;
+
+				// Get ALL rows
+				int rows = absData.getRowCount();
+				for (int r=0; r<rows; r++)
+				{
+					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+				}
+			} // end: sendDdlDetailsRequest
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -11563,4 +11849,51 @@ extends Thread
 		}
 		_conn = null;
 	}
+	
+
+	//==================================================================
+	// BEGIN: statistical mehods
+	//==================================================================
+	/**
+	 * Call this whenever we do a new sample
+	 * @param mainSampleTime the time of the sample.
+	 */
+	public void setStatisticsTime(Timestamp mainSampleTime)
+	{
+		if (_statFirstSampleTime == null)
+			_statFirstSampleTime = mainSampleTime;
+
+		_statLastSampleTime = mainSampleTime;
+	}
+
+	/**
+	 * Reset statistical times (first/last) sample times<br>
+	 * This would be called by the statistical "sender" after a disconnect.
+	 */
+	public void resetStatisticsTime()
+	{
+		_statFirstSampleTime = null;
+		_statLastSampleTime  = null;
+	}
+
+	/**
+	 * Get first sample time, used by the statistical send<br>
+	 * If no samples has been done it will return null
+	 */
+	public Timestamp getStatisticsFirstSampleTime()
+	{
+		return _statFirstSampleTime;
+	}
+
+	/**
+	 * Get last sample time, used by the statistical send
+	 * If no samples has been done it will return null
+	 */
+	public Timestamp getStatisticsLastSampleTime()
+	{
+		return _statLastSampleTime;
+	}
+	//==================================================================
+	// END: statistical mehods
+	//==================================================================
 }

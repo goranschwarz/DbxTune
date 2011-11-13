@@ -26,6 +26,7 @@
 	$clientTime         = getUrlParam('clientTime');
 	$userName           = getUrlParam('userName');
 
+	$connectId          = getUrlParam('connectId');
 	$srvVersion         = getUrlParam('srvVersion');
 	$isClusterEnabled   = getUrlParam('isClusterEnabled');
 
@@ -36,6 +37,12 @@
 
 	$usePcs             = getUrlParam('usePcs');
 	$pcsConfig          = getUrlParam('pcsConfig');
+
+	//------------------------------------------
+	// Check for values that are NOT sent, some version on AseTune is NOT sending new information.
+	if (empty($connectId))
+		$connectId = -1;
+
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
@@ -56,6 +63,7 @@
 		clientTime,
 		userName,
 
+		connectId,
 		srvVersion,
 		isClusterEnabled,
 
@@ -74,6 +82,7 @@
 		'$clientTime',
 		'$userName',
 
+		$connectId,
 		$srvVersion,
 		$isClusterEnabled,
 

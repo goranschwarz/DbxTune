@@ -332,6 +332,61 @@ extends AbstractTreeTableModel
 //	}
 	//END: move this to a better place
 
+//	public void init(List<SessionInfo> sessionList)
+//	{
+//		PersistReader reader = PersistReader.getInstance();
+//		if (reader == null)
+//			throw new RuntimeException("The 'PersistReader' has not been initialized.");
+//
+//		// get a LIST of sessions
+//		if (sessionList == null)
+//			sessionList = reader.getSessionList();
+//			
+//		// Loop the sessions and load all samples 
+//		for (SessionInfo sessionInfo : sessionList)
+//		{
+//			SessionLevel sessionLevel = new SessionLevel(
+//					sessionInfo._sessionId, 
+//					sessionInfo._sessionId,
+//					sessionInfo._lastSampleTime, 
+//					sessionInfo._numOfSamples);
+//			_sessions.add(sessionLevel);
+//
+//			List<Timestamp>                     sessionSamples         = sessionInfo._sampleList;
+//			Map<Timestamp, SampleCmCounterInfo> sampleCmCounterInfoMap = sessionInfo._sampleCmCounterInfoMap;
+//
+//			// Load all samples for this sampleId
+//			if (sessionSamples == null)
+//				sessionSamples = reader.getSessionSamplesList(sessionInfo._sessionId);
+//
+//			if (_showCmCounterInfoColumns)
+//				if (sampleCmCounterInfoMap == null)
+//					sampleCmCounterInfoMap = reader.getSessionSampleCmCounterInfoMap(sessionInfo._sessionId);
+//_xxx_sampleCmCounterInfoMap = sampleCmCounterInfoMap;
+//
+//			if (sessionSamples != null && sessionSamples.size() > 0)
+//			{
+//				sessionLevel.addAllSamples(sessionSamples);
+//				sessionLevel.makeBabies();
+//			}
+//
+//			// load CM name SUM
+//			Map<String,CmNameSum> sessionSamplesCmNameSumMap = sessionInfo._sampleCmNameSumMap;
+//
+//			if (sessionSamplesCmNameSumMap == null)
+//				sessionSamplesCmNameSumMap = reader.getSessionSampleCmNameSumMap(sessionInfo._sessionId);
+//
+////			System.out.println("<<<<<sessionSamplesCmNameSumMap: "+sessionSamplesCmNameSumMap);
+//			if (sessionSamplesCmNameSumMap != null)
+//					addCmNameSumCols(sessionSamplesCmNameSumMap);
+//		}
+//		fixCmNameSumColsOrder();
+//			
+//		// Debug print the tree...
+//		if (_logger.isDebugEnabled())
+//			printTree();
+//	}
+//private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	public void init(List<SessionInfo> sessionList)
 	{
 		PersistReader reader = PersistReader.getInstance();
@@ -352,33 +407,33 @@ extends AbstractTreeTableModel
 					sessionInfo._numOfSamples);
 			_sessions.add(sessionLevel);
 
-			List<Timestamp>                     sessionSamples         = sessionInfo._sampleList;
-			Map<Timestamp, SampleCmCounterInfo> sampleCmCounterInfoMap = sessionInfo._sampleCmCounterInfoMap;
+//			List<Timestamp>                     sessionSamples         = sessionInfo._sampleList;
+//			Map<Timestamp, SampleCmCounterInfo> sampleCmCounterInfoMap = sessionInfo._sampleCmCounterInfoMap;
 
 			// Load all samples for this sampleId
-			if (sessionSamples == null)
-				sessionSamples = reader.getSessionSamplesList(sessionInfo._sessionId);
+			if (sessionInfo._sampleList == null)
+				sessionInfo._sampleList = reader.getSessionSamplesList(sessionInfo._sessionId);
 
 			if (_showCmCounterInfoColumns)
-				if (sampleCmCounterInfoMap == null)
-					sampleCmCounterInfoMap = reader.getSessionSampleCmCounterInfoMap(sessionInfo._sessionId);
-_xxx_sampleCmCounterInfoMap = sampleCmCounterInfoMap;
+				if (sessionInfo._sampleCmCounterInfoMap == null)
+					sessionInfo._sampleCmCounterInfoMap = reader.getSessionSampleCmCounterInfoMap(sessionInfo._sessionId);
+_xxx_sampleCmCounterInfoMap = sessionInfo._sampleCmCounterInfoMap;
 
-			if (sessionSamples != null && sessionSamples.size() > 0)
+			if (sessionInfo._sampleList != null && sessionInfo._sampleList.size() > 0)
 			{
-				sessionLevel.addAllSamples(sessionSamples);
+				sessionLevel.addAllSamples(sessionInfo._sampleList);
 				sessionLevel.makeBabies();
 			}
 
 			// load CM name SUM
-			Map<String,CmNameSum> sessionSamplesCmNameSumMap = sessionInfo._sampleCmNameSumMap;
+//			Map<String,CmNameSum> sessionSamplesCmNameSumMap = sessionInfo._sampleCmNameSumMap;
 
-			if (sessionSamplesCmNameSumMap == null)
-				sessionSamplesCmNameSumMap = reader.getSessionSampleCmNameSumMap(sessionInfo._sessionId);
+			if (sessionInfo._sampleCmNameSumMap == null)
+				sessionInfo._sampleCmNameSumMap = reader.getSessionSampleCmNameSumMap(sessionInfo._sessionId);
 
 //			System.out.println("<<<<<sessionSamplesCmNameSumMap: "+sessionSamplesCmNameSumMap);
-			if (sessionSamplesCmNameSumMap != null)
-					addCmNameSumCols(sessionSamplesCmNameSumMap);
+			if (sessionInfo._sampleCmNameSumMap != null)
+					addCmNameSumCols(sessionInfo._sampleCmNameSumMap);
 		}
 		fixCmNameSumColsOrder();
 			
@@ -386,6 +441,7 @@ _xxx_sampleCmCounterInfoMap = sampleCmCounterInfoMap;
 		if (_logger.isDebugEnabled())
 			printTree();
 	}
+// FIXME: fix this, why having a _xxx_variable, this can't be good... use the above structure in some way...
 private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	
 	public Object getChild(Object parent, int index) 

@@ -23,26 +23,43 @@
 <BODY>
 
 <h1>Choose a Specific Report Below</h1>
-<A HREF="http://www.asemon.se/usage_report.php?summary_count=true"  >Summary Report, Start Count</A>      <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_country=true">Summary Report, Country Count</A>    <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_version=true">Summary Report, Version Count</A>    <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true" >Summary Report, ASE Version Count</A><BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_user=true"   >Summary Report, on User</A>          <BR>
-<A HREF="http://www.asemon.se/usage_report.php?conn=true"           >Connection Info Report</A>           <BR>
-<A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A><BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=true"          >Counter Usage Info Report</A>        <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>       <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report, first 500</A>     <BR>
-<A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (last 300)</A>           <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=false"  >Summary Report, Start Count, NO RESET '<code>usageDiff</code>'</A>   <i>(check column '<code>lastPollTime</code>' to work out what '<code>usageDiff</code>' is from)</i> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=true"   >Summary Report, Start Count, WITH RESET '<code>usageDiff</code>'</A> <i>(only for admin, <b>so please do not use</b>)</i> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_os=true"     >Summary Report, OS Count</A>              <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_country=true">Summary Report, Country Count</A>         <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_version=true">Summary Report, Version Count</A>         <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true" >Summary Report, ASE Version Count</A>     <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_user=true"   >Summary Report, on User</A>               <BR>
 <BR>
-Admin:<BR>
-<A HREF="http://www.asemon.se/db_cleanup.php"                       >DB Cleanup, remove 'gorans' etc</A>  <BR>
+<A HREF="http://www.asemon.se/usage_report.php?conn=first"          >Connection Info Report (first 500)</A>    <BR>
+<A HREF="http://www.asemon.se/usage_report.php?conn=all"            >Connection Info Report, ALL</A>           <BR>
+<BR>
+<A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A>     <BR>
+<BR>
+<A HREF="http://www.asemon.se/usage_report.php?usage=first"         >Counter Usage Info Report (first 500)</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?usage=all"           >Counter Usage Info Report, ALL</A>        <BR>
+<BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>            <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report (first 500)</A>         <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=all"       >Error Info Report, ALL</A>                <BR>
+<BR>
+<A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (first 300)</A>               <BR>
+<BR>
+<h2>Admin:</h2>
+DB Cleanup: 
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=cleanup">cleanup</A>, 
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=dbmaint">dbmaint</A>, 
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=check"  >check</A>, 
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=help"   >help</A>
+<i>(only for admin, <b>so please do not use</b>)</i>
 
 <?php
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	//------------------------------------------
 	$rpt_summary_count      = $_GET['summary_count'];
+	$rpt_summary_diffReset  = $_GET['diffReset'];
+	$rpt_summary_os         = $_GET['summary_os'];
 	$rpt_summary_country    = $_GET['summary_country'];
 	$rpt_summary_version    = $_GET['summary_version'];
 	$rpt_summary_asever     = $_GET['summary_asever'];
@@ -59,6 +76,23 @@ Admin:<BR>
 	$rpt_onDomain           = $_GET['onDomain'];
 	$rpt_onUser             = $_GET['onUser'];
 	$rpt_onId               = $_GET['onId'];
+
+//	function get_ip_address() {
+//	    foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key) {
+//	        if (array_key_exists($key, $_SERVER) === true) {
+//	            foreach (explode(',', $_SERVER[$key]) as $ip) {
+//	                if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
+//	                    return $ip;
+//	                }
+//	            }
+//	        }
+//	    }
+//	}
+//	$ip = get_ip_address();
+//	echo "IP ADDRESS: " . $ip . "<br>\n";
+//$url=file_get_contents("http://whatismyipaddress.com/ip/$ip");
+
+
 
 	function htmlResultset($result, $headName)
 	{
@@ -111,6 +145,9 @@ Admin:<BR>
 
 				else if ( $colname == "deleteLogId" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "callerIpAddress" )
+					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
@@ -314,12 +351,37 @@ Admin:<BR>
 		htmlResultset($result, "asemon_udc_info on: $rpt_onId");
 
 		// sending query
-		$result = mysql_query("SELECT *, (sumRowCount / refreshCount) AS avgSumRowCount FROM asemon_counter_usage_info WHERE checkId = " . $rpt_onId . " ORDER BY addSequence");
+		$result = mysql_query("
+			SELECT checkId, 
+				serverAddTime, 
+				sessionType, 
+				sessionStartTime, 
+				sessionEndTime,
+				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+				userName, 
+				connectId, 
+				cmName, 
+				addSequence, 
+				refreshCount, 
+				sumRowCount, 
+				(sumRowCount / refreshCount) AS avgSumRowCount
+			FROM asemon_counter_usage_info 
+			WHERE checkId = " . $rpt_onId . " 
+			ORDER BY connectId, sessionStartTime, addSequence
+			");
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "asemon_counter_usage_info on: $rpt_onId");
+
+		// sending query
+		$result = mysql_query("SELECT * FROM asemon_error_info WHERE checkId = " . $rpt_onId);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "asemon_error_info on: $rpt_onId");
 	}
 
 
@@ -437,8 +499,11 @@ Admin:<BR>
 		htmlResultset($result, "Domain Count");
 
 		//----------- Move NOW table into PREV
-		mysql_query("TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysql_error());
+		if ( $rpt_summary_diffReset == "true" )
+		{
+			mysql_query("TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysql_error());
+			mysql_query("INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysql_error());
+		}
 
 
 		//------------------------------------------
@@ -461,8 +526,8 @@ Admin:<BR>
 
 		//----------- GET RESULTS & PRINT IT
 		$result = mysql_query("
-			SELECT n.userName as sybUserName,
-				n.userName as userNameUsage,
+			SELECT n.userName as userNameUsage,
+				n.userName as sybUserName,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
@@ -478,8 +543,8 @@ Admin:<BR>
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
-			SELECT n.userName as sybUserName,
-				n.userName as userNameUsage,
+			SELECT n.userName as userNameUsage,
+				n.userName as sybUserName,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
@@ -494,10 +559,57 @@ Admin:<BR>
 		htmlResultset($result, "Sybase users, Start Count");
 
 		//----------- Move NOW table into PREV
-		mysql_query("TRUNCATE TABLE sumSybaseUsersStartPriv") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumSybaseUsersStartPriv (SELECT * FROM sumSybaseUsersStartNow)") or die("ERROR: " . mysql_error());
+		if ( $rpt_summary_diffReset == "true" )
+		{
+			mysql_query("TRUNCATE TABLE sumSybaseUsersStartPriv") or die("ERROR: " . mysql_error());
+			mysql_query("INSERT INTO    sumSybaseUsersStartPriv (SELECT * FROM sumSybaseUsersStartNow)") or die("ERROR: " . mysql_error());
+		}
 	}
 
+
+	//-------------------------------------------
+	// SUMMARY REPORT, OS COUNT
+	//-------------------------------------------
+	if ( $rpt_summary_os == "true" )
+	{
+		$sql = "
+			SELECT
+				os_name, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
+			FROM asemon_usage
+			GROUP BY
+				os_name
+			ORDER BY
+				2 desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Summary Report, Country Count");
+
+
+		$sql = "
+			SELECT
+				os_name, clientAsemonVersion, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
+			FROM asemon_usage
+			GROUP BY
+				os_name, clientAsemonVersion
+			ORDER BY
+				2 desc, 3 desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Summary Report, Country Count");
+
+	}
 
 	//-------------------------------------------
 	// SUMMARY REPORT, COUNTRY COUNT
@@ -636,20 +748,31 @@ Admin:<BR>
 	//-------------------------------------------
 	// CONNECTION INFO
 	//-------------------------------------------
-	if ( $rpt_conn == "true" )
+	if ( $rpt_conn != "" )
 	{
+		$label = "Counter Usage Info Report";
 		$sql = "
 			SELECT *
 			FROM asemon_connect_info
 			ORDER BY checkId desc
 		";
 
+		if ( $rpt_conn == "first" )
+		{
+			$sql   = $sql   . " LIMIT 500 ";
+			$label = $label . ", first 500 rows";
+		}
+		else
+		{
+			$label = $label . ", ALL rows";
+		}
+
 		// sending query
 		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "Connection Info Report");
+		htmlResultset($result, $label);
 	}
 
 
@@ -678,29 +801,44 @@ Admin:<BR>
 	//-------------------------------------------
 	// COUNTER USAGE INFO
 	//-------------------------------------------
-	if ( $rpt_usage == "true" )
+	if ( $rpt_usage != "" )
 	{
+		$label = "Counter Usage Info Report";
 		$sql = "
 			SELECT
 				checkId,
 				serverAddTime,
-				clientTime,
+				sessionType,
+				sessionStartTime,
+				sessionEndTime,
+				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
 				userName,
+				connectId, 
 				addSequence,
 				cmName,
 				refreshCount,
 				sumRowCount,
 				(sumRowCount / refreshCount) AS avgSumRowCount
 			FROM asemon_counter_usage_info
-			ORDER BY checkId desc, addSequence
+			ORDER BY checkId desc, connectId, sessionStartTime, addSequence
 		";
+		if ( $rpt_usage == "first" )
+		{
+			$sql   = $sql   . " LIMIT 500 ";
+			$label = $label . ", first 500 rows";
+		}
+		else
+		{
+			$label = $label . ", ALL rows";
+		}
+
 
 		// sending query
 		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "Counter Usage Info Report");
+		htmlResultset($result, $label);
 	}
 
 
@@ -788,12 +926,35 @@ Admin:<BR>
 			";
 		}
 
+		if ( $rpt_errorInfo == "all" )
+		{
+			$sql = "
+				SELECT checkId,
+					checkId as deleteLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					logStacktrace
+				FROM asemon_error_info
+				ORDER BY checkId desc, sendCounter
+			";
+		}
+
 		// sending query
 		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "500 first ERROR Info Report");
+		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+
 	}
 
 
@@ -818,13 +979,16 @@ Admin:<BR>
 
 				user_country,
 				user_language,
+				user_timezone,
 				sun_desktop,
 
 				clientHostName,
 				clientHostAddress,
 				clientCanonicalHostName,
+				callerIpAddress,
 
 				user_name,
+				user_home,
 				user_dir,
 				propfile,
 				gui,
