@@ -1,6 +1,7 @@
 package com.asetune.pcs;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 public class DdlDetails
 {
@@ -9,6 +10,9 @@ public class DdlDetails
 	private String    _objectName    = null;
 	private String    _type          = null;
 	private Timestamp _crdate        = null;
+	private String    _source        = null; // Subsystem Source
+	private int       _dependLevel   = 0;    // 0=First level, 1=second level etc...
+	private List<String> _dependList = null;
 	private String    _objectText    = null;
 	private String    _dependsText   = null;
 	private String    _optdiagText   = null;
@@ -28,6 +32,9 @@ public class DdlDetails
 	public String    getObjectName()    { return _objectName; }
 	public String    getType()          { return _type; }
 	public Timestamp getCrdate()        { return _crdate; }
+	public String    getSource()        { return _source; }
+	public int       getDependLevel()   { return _dependLevel; }
+	public List<String> getDependList() { return _dependList; }
 	public String    getObjectText()    { return _objectText; }
 	public String    getDependsText()   { return _dependsText; }
 	public String    getOptdiagText()   { return _optdiagText; }
@@ -38,6 +45,9 @@ public class DdlDetails
 	public void setObjectName   (String    objectName)  { _objectName    = objectName == null ? null : objectName.trim(); }
 	public void setType         (String    type)        { _type          = type       == null ? null : type      .trim(); }
 	public void setCrdate       (Timestamp crdate)      { _crdate        = crdate; }
+	public void setSource       (String    source)      { _source        = source; }
+	public void setDependLevel  (int       dependLevel) { _dependLevel   = dependLevel; }
+	public void setDependList(List<String> dependList)  { _dependList    = dependList; }
 	public void setObjectText   (String    objectText)  { _objectText    = objectText; }
 	public void setDependsText  (String    dependsText) { _dependsText   = dependsText; }
 	public void setOptdiagText  (String    optdiagText) { _optdiagText   = optdiagText; }
@@ -54,11 +64,14 @@ public class DdlDetails
 
 		sb.append("\n");
 		sb.append("====BEGIN==================================================").append("\n");
-		sb.append(" Dbname     = '").append( getDbname()     ).append("'\n");
-		sb.append(" Owner      = '").append( getOwner()      ).append("'\n");
-		sb.append(" ObjectName = '").append( getObjectName() ).append("'\n");
-		sb.append(" Type       = '").append( getType()       ).append("'\n");
-		sb.append(" Crdate     = '").append( getCrdate()     ).append("'\n");
+		sb.append(" Dbname      = '").append( getDbname()     ).append("'\n");
+		sb.append(" Owner       = '").append( getOwner()      ).append("'\n");
+		sb.append(" ObjectName  = '").append( getObjectName() ).append("'\n");
+		sb.append(" Type        = '").append( getType()       ).append("'\n");
+		sb.append(" Crdate      = '").append( getCrdate()     ).append("'\n");
+		sb.append(" SubsSource  = '") .append( getSource()    ).append("'\n");
+		sb.append(" DependLevel = ") .append( getDependLevel()).append("\n");
+		sb.append(" DependList  = '") .append( getDependList()).append("'\n");
 		sb.append("-----ObjectText--------------------------------------------").append("\n");
 		sb.append(" ").append( getObjectText() ).append("\n");
 		sb.append("-----DependsText-------------------------------------------").append("\n");

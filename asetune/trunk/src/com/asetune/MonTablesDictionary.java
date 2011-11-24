@@ -35,24 +35,33 @@ public class MonTablesDictionary
 	/** hashtable with MonTableEntry */
 	private HashMap<String,MonTableEntry> _monTables = null;
 
+	/** ASE @@servername string */
+	public String aseServerName = "";
+
 	/** ASE @@version string */
 	public String aseVersionStr = "";
+
 	/** Calculate the @@version into a number. example: 12.5.4 -> 12540 */
 	public int    aseVersionNum = 0;
+
 	/** If the version string contained the string 'Cluster Edition', this member will be true. */
 	public boolean isClusterEnabled = false;
 
 	/** ASE sp_version 'installmontables' string */
 	public String montablesVersionStr = "";
+
 	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 12540 */
 	public int    montablesVersionNum = 0;
+
 	/** sp_version 'installmontables' Status string */
 	public String montablesStatus = "";
 
 	/** ASE sp_version 'installmaster' string */
 	public String installmasterVersionStr = "";
+
 	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 12540 */
 	public int    installmasterVersionNum = 0;
+
 	/** sp_version 'installmontables' Status string */
 	public String installmasterStatus = "";
 
@@ -375,6 +384,9 @@ public class MonTablesDictionary
 			return;
 		}
 
+		// @@servername
+		aseServerName = AseConnectionUtils.getAseServername(conn);
+		
 		// @@version_number
 		try
 		{

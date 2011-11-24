@@ -91,6 +91,7 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.QueryWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -139,6 +140,7 @@ public class MainFrame
 
 	public static final String ACTION_OPEN_ASE_CONFIG_MON       = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL          = "OPEN_CAPTURE_SQL";
+	public static final String ACTION_OPEN_ASE_APP_TRACE        = "OPEN_ASE_APP_TRACE";
 	public static final String ACTION_OPEN_SQL_QUERY_WIN        = "OPEN_SQL_QUERY_WIN";
 	public static final String ACTION_OPEN_LOCK_TOOL            = "OPEN_LOCK_TOOL";
 	public static final String ACTION_OPEN_WIZARD_OFFLINE       = "OPEN_WIZARD_OFFLINE";
@@ -208,6 +210,7 @@ public class MainFrame
 	private JMenu               _tools_m                = new JMenu("Tools");
 	private JMenuItem           _aseConfMon_mi          = new JMenuItem("Configure ASE for Monitoring...");
 	private JMenuItem           _captureSql_mi          = new JMenuItem("Capture SQL...");
+	private JMenuItem           _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
 	private JMenu               _preDefinedSql_m        = null;
 	private JMenuItem           _sqlQuery_mi            = new JMenuItem("SQL Query Window...");
 //	private JMenuItem           _lockTool_mi            = new JMenuItem("Lock Tool (NOT YET IMPLEMENTED)");
@@ -404,6 +407,7 @@ public class MainFrame
 		
 		_aseConfMon_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_captureSql_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
+		_aseAppTrace_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
 		_sqlQuery_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
 //		_lockTool_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
 		_createOffline_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/pcs_write_16.png"));
@@ -440,6 +444,7 @@ public class MainFrame
 		
 		_tools_m.add(_aseConfMon_mi);
 		_tools_m.add(_captureSql_mi);
+		_tools_m.add(_aseAppTrace_mi);
 		_preDefinedSql_m = createPredefinedSqlMenu();
 		if (_preDefinedSql_m != null) _tools_m.add(_preDefinedSql_m);
 		_tools_m.add(_sqlQuery_mi);
@@ -468,6 +473,7 @@ public class MainFrame
 
 		_aseConfMon_mi            .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_captureSql_mi            .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
+		_aseAppTrace_mi           .setActionCommand(ACTION_OPEN_ASE_APP_TRACE);
 		_sqlQuery_mi              .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
 //		_lockTool_mi              .setActionCommand(ACTION_OPEN_LOCK_TOOL);
 		_createOffline_mi         .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
@@ -494,6 +500,7 @@ public class MainFrame
 
 		_aseConfMon_mi            .addActionListener(this);
 		_captureSql_mi            .addActionListener(this);
+		_aseAppTrace_mi           .addActionListener(this);
 		_sqlQuery_mi              .addActionListener(this);
 //		_lockTool_mi              .addActionListener(this);
 		_createOffline_mi         .addActionListener(this);
@@ -984,6 +991,13 @@ public class MainFrame
 		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
 			new ProcessDetailFrame(-1);
 
+		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
+		{
+			String servername    = MonTablesDictionary.getInstance().aseServerName;
+			String aseVersionStr = MonTablesDictionary.getInstance().aseVersionStr;
+			AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
+			apptrace.setVisible(true);
+		}
 
 		if (ACTION_OPEN_SQL_QUERY_WIN.equals(actionCmd))
 		{
@@ -1774,7 +1788,6 @@ public class MainFrame
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor terminateConnectionTask = new BgExecutor()
 		{
-			
 			@Override
 			public void doWork()
 			{
@@ -2789,6 +2802,7 @@ public class MainFrame
 			mf._tools_m                   .setEnabled(true); // always TRUE
 			mf._aseConfMon_mi             .setEnabled(true);
 			mf._captureSql_mi             .setEnabled(true);
+			mf._aseAppTrace_mi            .setEnabled(true);
 			mf._preDefinedSql_m           .setEnabled(true);
 			mf._sqlQuery_mi               .setEnabled(true);
 //			mf._lockTool_mi               .setEnabled();
@@ -2834,6 +2848,7 @@ public class MainFrame
 			mf._tools_m                   .setEnabled(true); // always TRUE
 			mf._aseConfMon_mi             .setEnabled(false);
 			mf._captureSql_mi             .setEnabled(false);
+			mf._aseAppTrace_mi            .setEnabled(false);
 			mf._preDefinedSql_m           .setEnabled(false);
 			mf._sqlQuery_mi               .setEnabled(false);
 //			mf._lockTool_mi               .setEnabled();
@@ -2879,6 +2894,7 @@ public class MainFrame
 			mf._tools_m                   .setEnabled(true); // always TRUE
 			mf._aseConfMon_mi             .setEnabled(false);
 			mf._captureSql_mi             .setEnabled(false);
+			mf._aseAppTrace_mi            .setEnabled(false);
 			mf._preDefinedSql_m           .setEnabled(false);
 			mf._sqlQuery_mi               .setEnabled(false);
 //			mf._lockTool_mi               .setEnabled();

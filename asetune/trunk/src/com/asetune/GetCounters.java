@@ -1030,11 +1030,22 @@ extends Thread
 						", aaConnections      = @@connections \n" +
 						", distinctLogins     = (select count(distinct suid) from master..sysprocesses) \n" +
 
-						// 32 = Database created with for load option, or crashed while loading database, instructs recovery not to proceed
-						// 256 = Database suspect | Not recovered | Cannot be opened or used | Can be dropped only with dbcc dbrepair
+						// ------ column 'stat'
+						// 32   - Database created with for load option, or crashed while loading database, instructs recovery not to proceed
+						// 256  - Database suspect | Not recovered | Cannot be opened or used | Can be dropped only with dbcc dbrepair
+						// 1024 - read only
+						// 2048 - dbo use only
+						// 4096 - single user
+						// ------ column 'stat2'
+						// 16 - Database is offline
+						// 32 - Database is offline until recovery completes
 						// model is used during create database... so skip this one to
 						", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) from master..sysdatabases readpast \n" +
-						"                        where (status & 32 != 32) and (status & 256 != 256) and name != 'model') \n" + 
+						"                        where (status & 32   != 32  ) and (status & 256  != 256 ) \n" +
+						"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
+						"                          and (status & 4096 != 4096) \n" +
+						"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
+						"                          and name != 'model') \n" + 
 
 						", pack_received      = @@pack_received \n" +
 						", pack_sent          = @@pack_sent \n" +
@@ -1814,37 +1825,20 @@ extends Thread
 				}
 			} // end localCalculation
 
-			/**
-			 * Request DDL information for the first 10 rows
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
-
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// HOW MANY TOP ROWS SHOULD WE GRAB
-				int NUM_OF_DDLS_TO_PERSIST = 10;
-
-				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				return 10;
+			}
+			@Override
+			public String[] getDdlDetailsSortOnColName()
+			{
+				String[] sa = {"LogicalReads", "APFReads", "PhysicalReads", "LockWaits"};
+				return sa;
+			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -1873,7 +1867,7 @@ extends Thread
 
 					int DBName_pos     = -1;
 					int ObjectName_pos = -1;
-					int IndexID_pos    = -1;
+//					int IndexID_pos    = -1;
 					for (int c=0; c<table.getColumnCount(); c++)
 					{
 						if ( "DBName".equals(table.getColumnName(c)) )
@@ -1882,10 +1876,12 @@ extends Thread
 						if ( "ObjectName".equals(table.getColumnName(c)) )
 							ObjectName_pos = c;
 
-						if ( "IndexID".equals(table.getColumnName(c)) )
-							IndexID_pos = c;
+//						if ( "IndexID".equals(table.getColumnName(c)) )
+//							IndexID_pos = c;
 
-						if (DBName_pos >= 0 && ObjectName_pos >= 0 && IndexID_pos >= 0)
+//						if (DBName_pos >= 0 && ObjectName_pos >= 0 && IndexID_pos >= 0)
+//							break;
+						if (DBName_pos >= 0 && ObjectName_pos >= 0)
 							break;
 					}
 
@@ -1897,7 +1893,7 @@ extends Thread
 					{
 						Object DBName_obj     = table.getValueAt(r, DBName_pos);
 						Object ObjectName_obj = table.getValueAt(r, ObjectName_pos);
-						Object IndexID_obj    = table.getValueAt(r, IndexID_pos);
+//						Object IndexID_obj    = table.getValueAt(r, IndexID_pos);
 
 						// Skip index rows... (change the loop to do this)
 //						if (IndexID_obj instanceof Number)
@@ -1906,7 +1902,7 @@ extends Thread
 //								continue;
 //						}
 						if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-							pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
+							pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".guiSorted, row="+r);
 					}
 					
 				}
@@ -6446,37 +6442,24 @@ extends Thread
 				return sql;
 			}
 
-			/**
-			 * Request DDL information for the first 10 rows
+
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
+				return 10;
+			}
+			@Override
+			public String[] getDdlDetailsSortOnColName()
+			{
+				if (getServerVersion() < 15500)
+					return null;
 
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// HOW MANY TOP ROWS SHOULD WE GRAB
-				int NUM_OF_DDLS_TO_PERSIST = 10;
-
-				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				String[] sa = {"RequestCnt"};
+				return sa;
+			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -6954,35 +6937,15 @@ extends Thread
 				}
 			} // end: localCalculation
 
-			/**
-			 * Request DDL information for ALL ROWS
+
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
-
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// Get ALL rows
-				int rows = absData.getRowCount();
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				return Integer.MAX_VALUE; // Basically ALL Rows
+			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -7223,38 +7186,14 @@ extends Thread
 				return sql;
 			}
 
-			/**
-			 * Request DDL information for first 10 rows
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
-
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// HOW MANY TOP ROWS SHOULD WE GRAB
-				int NUM_OF_DDLS_TO_PERSIST = 10;
-
-				int rows = Math.min(NUM_OF_DDLS_TO_PERSIST, absData.getRowCount());
-
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				return 10;
+			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -8319,7 +8258,8 @@ extends Thread
 //					" sqltext       = convert(text, show_cached_text(SSQLID)), \n" +
 					" sqltext       = RUNTIME_REPLACE::DO_SQL_TEXT, \n" +
 					" msgAsColValue = RUNTIME_REPLACE::DO_SHOWPLAN \n" + // this is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
-					"FROM master..monCachedStatement \n";
+					"FROM master..monCachedStatement \n" +
+					"WHERE MetricsCount > 0 \n";
 
 				return sql;
 			}
@@ -8330,8 +8270,8 @@ extends Thread
 				String sql = super.getSql();
 				
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean sampleSqlText_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.sqlText", true);
-				boolean sampleShowplan_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.showplan", true);
+				boolean sampleSqlText_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.sqlText", false);
+				boolean sampleShowplan_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.showplan", false);
 
 				//----- SQL TEXT
 				String hasSqlText = "convert(bit,1)";
@@ -8397,6 +8337,21 @@ extends Thread
 				str = str.replaceAll("\\n", "<br>");
 
 				return "<html><pre>" + str + "</pre></html>";
+			}
+
+			/** 
+			 * Get number of rows to save/request ddl information for 
+			 */
+			@Override
+			public int getMaxNumOfDdlsToPersist()
+			{
+				return 10;
+			}
+			@Override
+			public String[] getDdlDetailsSortOnColName()
+			{
+				String[] sa = {"UseCount", "UseCountDiff", "AvgLIO", "AvgElapsedTime"};
+				return sa;
 			}
 		};
 
@@ -8600,30 +8555,46 @@ extends Thread
 			@Override
 			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
-				String cols1 = "";
+				String cols = "";
+
+				String InstanceID    = ""; // only in ClusterEdition
+				String TableSize     = ""; // between 12.5.2 and < 15.0.0
+				String ObjectName    = "ObjectName = isnull(object_name(ObjectID, DBID), 'Obj='+ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
+				String IndexName     = ""; // 15.0.2 or higher
+				String PartitionID   = ""; // 15.0.0 or higher
+				String PartitionName = ""; // 15.0.0 or higher
+				String PartitionSize = ""; // 15.0.0 or higher
 
 				if (isClusterEnabled)
-				{
-					cols1 += "InstanceID, ";
-				}
+					InstanceID = "InstanceID, ";
+
+				if (aseVersion >= 12520)
+					TableSize = "TableSize, \n";
 
 				if (aseVersion >= 15000)
 				{
-					cols1 += "SPID, KPID, ObjectType, DBName, ObjectName, IndexID, PartitionName, PartitionSize, \n" +
-					         "OwnerUserID, LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0), \n" +
-					         "DBID, ObjectID, PartitionID";
+					TableSize = "";
+					PartitionName = "PartitionName, ";
+					PartitionSize = "PartitionSize, \n";
+					PartitionID   = ", PartitionID";
 				}
-				else
-				{
-					String TableSize = "";
-					if (aseVersion >= 12520)
-						TableSize = "TableSize, ";
 
-					cols1 += "SPID, KPID, ObjectType, DBName, ObjectName, IndexID, " + TableSize + "\n" +
-					         "OwnerUserID, LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0), \n" +
-					         "DBID, ObjectID";
+				if (aseVersion >= 15020)
+				{
+					IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
+						        "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
+						        "            END, \n";
 				}
-			
+
+				cols = InstanceID + "SPID, KPID, ObjectType, DBName, \n" +
+				       ObjectName +
+				       "IndexID, \n" + 
+				       IndexName + 
+				       PartitionName + PartitionSize +
+				       TableSize +
+				       "OwnerUserID, LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0), \n" +
+				       "DBID, ObjectID" + PartitionID;
+
 				// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 				//                   so this will be a workaround for those releses below 15.0.0
 				String whereSpidNotMe = "SPID != @@spid";
@@ -8633,42 +8604,21 @@ extends Thread
 				}
 
 				String sql = 
-					"select " + cols1 + "\n" +
+					"select " + cols + "\n" +
 					"from master..monProcessObject\n" +
 					"where "+whereSpidNotMe;
 
 				return sql;
 			}
 
-			/**
-			 * Request DDL information for ALL ROWS
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
-
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// Get ALL rows
-				int rows = absData.getRowCount();
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				return Integer.MAX_VALUE; // Basically ALL Rows
+			}
 		};
 	
 		tmp.setDisplayName(displayName);
@@ -9488,35 +9438,24 @@ extends Thread
 				return sb.toString();
 			}
 
-			/**
-			 * Request DDL information for ALL ROWS
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
+				return Integer.MAX_VALUE; // Basically ALL Rows
+			}
 
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("dbname");
-				int ObjectName_pos = absData.findColumn("procname");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// Get ALL rows
-				int rows = absData.getRowCount();
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+			/** 
+			 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
+			 */
+			@Override
+			public String[] getDdlDetailsColNames()
+			{
+				String[] sa = {"dbname", "procname"};
+				return sa;
+			}
 		};
 
 		tmp.setDisplayName(displayName);
@@ -9544,10 +9483,10 @@ extends Thread
 //					Configuration conf = Configuration.getInstance(Configuration.TEMP);
 					Configuration conf = Configuration.getCombinedConfiguration();
 					JCheckBox sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
-					JCheckBox sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    true));
+					JCheckBox sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
 					JCheckBox sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
 					JCheckBox sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
-					JCheckBox sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", true));
+					JCheckBox sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
 
 					sampleMonSqltext_chk    .setName(getName()+".sample.monSqltext");
 					sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
@@ -9800,35 +9739,14 @@ extends Thread
 				return sql;
 			}
 
-			/**
-			 * Request DDL information for ALL ROWS
+			/** 
+			 * Get number of rows to save/request ddl information for 
 			 */
-			public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+			@Override
+			public int getMaxNumOfDdlsToPersist()
 			{
-				if ( ! PersistentCounterHandler.hasInstance() )
-					return;
-				if ( absData == null )
-					return;
-
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-
-				int DBName_pos     = absData.findColumn("DBName");
-				int ObjectName_pos = absData.findColumn("ObjectName");
-
-				if (DBName_pos == -1 || ObjectName_pos == -1)
-					return;
-
-				// Get ALL rows
-				int rows = absData.getRowCount();
-				for (int r=0; r<rows; r++)
-				{
-					Object DBName_obj     = absData.getValueAt(r, DBName_pos);
-					Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
-
-					if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-						pch.addDdl((String)DBName_obj, (String)ObjectName_obj);
-				}
-			} // end: sendDdlDetailsRequest
+				return Integer.MAX_VALUE; // Basically ALL Rows
+			}
 		};
 	
 		tmp.setDisplayName(displayName);

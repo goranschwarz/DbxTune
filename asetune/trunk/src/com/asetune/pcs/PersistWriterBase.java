@@ -572,15 +572,18 @@ public abstract class PersistWriterBase
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"owner"            +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar", 255,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",  20,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime", -1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"objectText"       +qic,40)+" "+fill(getDatatype("text",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"dependsText"      +qic,40)+" "+fill(getDatatype("text",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"optdiagText"      +qic,40)+" "+fill(getDatatype("text",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"extraInfoText"    +qic,40)+" "+fill(getDatatype("text",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    "+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"owner"            +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"source"           +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"dependLevel"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"dependList"       +qic,40)+" "+fill(getDatatype("varchar", 1500,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"objectText"       +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"dependsText"      +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"optdiagText"      +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"extraInfoText"    +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+qic+"dbname"+qic+", "+qic+"owner"+qic+", "+qic+"objectName"+qic+")\n");
 				sbSql.append(") \n");
@@ -810,13 +813,16 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("objectName")   .append(qic).append(", ");
 			sbSql.append(qic).append("type")         .append(qic).append(", ");
 			sbSql.append(qic).append("crdate")       .append(qic).append(", ");
+			sbSql.append(qic).append("source")       .append(qic).append(", ");
+			sbSql.append(qic).append("dependLevel")  .append(qic).append(", ");
+			sbSql.append(qic).append("dependList")   .append(qic).append(", ");
 			sbSql.append(qic).append("objectText")   .append(qic).append(", ");
 			sbSql.append(qic).append("dependsText")  .append(qic).append(", ");
 			sbSql.append(qic).append("optdiagText")  .append(qic).append(", ");
 			sbSql.append(qic).append("extraInfoText").append(qic).append("");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{

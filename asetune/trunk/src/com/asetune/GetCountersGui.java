@@ -131,6 +131,41 @@ public class GetCountersGui
 			_thread.interrupt();
 	}
 
+	/**
+	 * This will hopefully help, the GUI a bit, meaning it wont "freeze" for short periods<br>
+	 * The isMonConnected will just return, with the "cached" value...
+	 */
+	private void startIsMonConnectedWatchDog()
+	{
+		Thread isMonConnectedWatchDog = new Thread()
+		{
+			@Override
+			public void run() 
+			{
+				_logger.info("Starting up 'is monitor connected' background thread...");
+				
+				while(true)
+				{
+					try
+					{
+						isMonConnected(true, true);
+
+						Thread.sleep(1000);
+					}
+					catch(Throwable t)
+					{
+						_logger.info("isMonConnectedWatchDog: caught: "+t);
+					}
+				}
+			};
+		};
+		
+		isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
+		isMonConnectedWatchDog.setDaemon(true);
+
+		isMonConnectedWatchDog.start();
+	}
+
 	public void run()
 	{
 		boolean	  firstLoopAfterConnect = true;
@@ -167,6 +202,8 @@ public class GetCountersGui
 
 			// Start it
 			imch.start();
+			
+			startIsMonConnectedWatchDog();
 		}
 		catch (Exception e)
 		{
