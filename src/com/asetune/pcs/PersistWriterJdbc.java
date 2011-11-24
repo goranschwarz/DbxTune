@@ -2117,15 +2117,20 @@ public class PersistWriterJdbc
 		String key = dbname + ":" + objectName;
 		_ddlDetailsCache.add(key);
 		
-System.out.println("========== markDdlDetailsAsStored() ===============================");
-System.out.println("dbname                        objectname");
-System.out.println("----------------------------- -------------------------------------");
-for (String str : _ddlDetailsCache)
-{
-	String[] sa = str.split(":");
-	System.out.println(StringUtil.left(sa[0], 30) + " " + sa[1]);
-}
-System.out.println("-------------------------------------------------------------------");
+//		System.out.println("markDdlDetailsAsStored(): "+dbname+"."+objectName+"    TOTAL MARKED SIZE IS NOW: "+_ddlDetailsCache.size());
+
+//System.out.println("========== markDdlDetailsAsStored() ===============================");
+//System.out.println("dbname                        objectname");
+//System.out.println("----------------------------- -------------------------------------");
+//for (String str : _ddlDetailsCache)
+//{
+//	String[] sa = str.split(":");
+//	System.out.println(StringUtil.left(sa[0], 30) + " " + sa[1]);
+//}
+//System.out.println("-------------------------------------------------------------------");
+//System.out.println("Last added record: "+dbname+"."+objectName);
+//System.out.println("TOTAL SIZE IS NOW: "+_ddlDetailsCache.size());
+//System.out.println("-------------------------------------------------------------------");
 	}
 
 	@Override
@@ -2137,40 +2142,43 @@ System.out.println("------------------------------------------------------------
 	@Override
 	public void populateDdlDetailesCache()
 	{
-//		throw new RuntimeException("FIXME: this one NEEDS to be implemented.");
-		// select xxx from DDL_STORAGE:MonDdlStorage
 		if (_conn == null)
 		{
 			_logger.info("populateDdlDetailesCache(): No database connection to Persistent Storage DB.");
 			return;
 		}
 
-//		sbSql.append("    "+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"owner"            +qic,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar", 255,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",  20,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime", -1,-1,-1),20)+" "+getNullable(false)+"\n");
+		String tabName = getTableName(DDL_STORAGE, null, false);
 
 		String sql = 
 			" select \"dbname\", \"objectName\" " +
-			" from " + getTableName(DDL_STORAGE, null, true);
+			" from " + tabName;
 
 		int rows = 0;
 		try
 		{
-			Statement stmt = _conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-
-			while (rs.next())
-			{
-				rows++;
-				String dbname     = rs.getString(1);
-				String objectName = rs.getString(2);
-
-				markDdlDetailsAsStored(dbname, objectName);
-			}
+			// First CHECK IF Table EXISTS
+			DatabaseMetaData dbmd = _conn.getMetaData();
+			ResultSet rs = dbmd.getColumns(null, null, tabName, "%");
+			boolean tabExists = rs.next();
 			rs.close();
-			stmt.close();
+
+			if( tabExists )
+			{
+				Statement stmt = _conn.createStatement();
+				rs = stmt.executeQuery(sql);
+
+				while (rs.next())
+				{
+					rows++;
+					String dbname     = rs.getString(1);
+					String objectName = rs.getString(2);
+
+					markDdlDetailsAsStored(dbname, objectName);
+				}
+				rs.close();
+				stmt.close();
+			}
 		}
 		catch (SQLException e)
 		{
@@ -2213,13 +2221,21 @@ System.out.println("------------------------------------------------------------
 			String sql = getTableInsertStr(DDL_STORAGE, null, true);
 			PreparedStatement pstmt = _conn.prepareStatement(sql);
 
+			// TODO: check MetaData for length of 'dependList' column
+			String dependList = StringUtil.toCommaStr(ddlDetails.getDependList());
+			if (dependList.length() > 1500)
+				dependList = dependList.substring(0, 1497) + "...";
+
 			int col = 1;
-			
+
 			pstmt.setString(col++, ddlDetails.getDbname());
 			pstmt.setString(col++, ddlDetails.getOwner());
 			pstmt.setString(col++, ddlDetails.getObjectName());
 			pstmt.setString(col++, ddlDetails.getType());
 			pstmt.setString(col++, ddlDetails.getCrdate() == null ? null : ddlDetails.getCrdate().toString() );
+			pstmt.setString(col++, ddlDetails.getSource());
+			pstmt.setInt   (col++, ddlDetails.getDependLevel());
+			pstmt.setString(col++, dependList);
 			pstmt.setString(col++, ddlDetails.getObjectText());
 			pstmt.setString(col++, ddlDetails.getDependsText());
 			pstmt.setString(col++, ddlDetails.getOptdiagText());

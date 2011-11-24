@@ -1011,7 +1011,7 @@ public class AseConnectionFactory
 	
 	
 
-	public static String getHostname()
+	public static String getLocalHostname()
 	{
 		String hostname = null;
 		try 
@@ -1107,7 +1107,7 @@ public class AseConnectionFactory
 		// If hostname is not specified, get the current host and use that...
 		if (hostname == null || (hostname != null && hostname.trim().equals("")))
 		{
-			hostname = getHostname();
+			hostname = getLocalHostname();
 		}
 
 		// If password is "null", then make it an empty password
@@ -1152,7 +1152,7 @@ public class AseConnectionFactory
 	public static Connection getConnection(String url, String username, String password, Properties connProps, ConnectionProgressCallback cpc) 
 	throws ClassNotFoundException, SQLException
 	{
-		String hostname = getHostname();
+		String hostname = getLocalHostname();
 
 		// If password is "null", then make it an empty password
 		if (password != null && password.equalsIgnoreCase("null"))

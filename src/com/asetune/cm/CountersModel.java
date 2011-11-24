@@ -15,6 +15,8 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -3195,7 +3197,7 @@ implements Cloneable
 
 
 	/**
-	 * Any CM that wants to get more DDL information should implement this
+	 * Request DDL information for first 10 rows
 	 * 
 	 * @param absData
 	 * @param diffData
@@ -3203,8 +3205,177 @@ implements Cloneable
 	 */
 	public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
 	{
-		// empty implementation, any subclass can implement it.
+		if ( ! PersistentCounterHandler.hasInstance() )
+			return;
+		if ( absData == null )
+			return;
+
+		// How MANY rows should we save
+		int maxNumOfDdlsToPersist = getMaxNumOfDdlsToPersist();
+		if (maxNumOfDdlsToPersist <= 0)
+			return;
+
+		PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+
+		String[] colInfo = getDdlDetailsColNames();
+		if ( colInfo == null || (colInfo != null && colInfo.length < 2) )
+			throw new RuntimeException("getDdlDetailsColNames() must return a String array with a length of 2 or more. colInfoArr='"+StringUtil.toCommaStr(colInfo)+"'.");
+
+		int DBName_pos     = absData.findColumn(colInfo[0]);
+		int ObjectName_pos = absData.findColumn(colInfo[1]);
+
+		if (DBName_pos == -1 || ObjectName_pos == -1)
+			return;
+
+		// Save first X rows from the Absolute values
+		int rows = Math.min(maxNumOfDdlsToPersist, absData.getRowCount());
+		for (int r=0; r<rows; r++)
+		{
+			Object DBName_obj     = absData.getValueAt(r, DBName_pos);
+			Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
+
+			if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+				pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".abs, row="+r);
+		}
+
+		// From here on we need diffData to continue
+		if (diffData == null)
+			return;
+
+		// No need to continue iff all rows has already been added :)
+		rows = Math.min(maxNumOfDdlsToPersist, diffData.getRowCount());
+		if (rows == diffData.getRowCount())
+			return;
+
+		// Here we can sort to TOP values in the rate/diff Data structures
+		// This so we can collect what is the hottest tables/procs right now
+		String sortDescOnColumns[] = getDdlDetailsSortOnColName();
+		if (sortDescOnColumns == null)
+			return;
+		for (final String column : sortDescOnColumns)
+		{
+			final int colPos = diffData.findColumn(column);
+			if (colPos == -1)
+			{
+				_logger.error("sendDdlDetailsRequest() sortDescOnColumns='"+StringUtil.toCommaStr(sortDescOnColumns)+"', but column '"+column+"' can't be found in diffValues, trying with next column.");
+				continue;
+			}
+
+			//FIXME: the below can be donne more efficient
+			// instead of copyList + sort + takeFirt#Rows
+			// do some kind of sort into a array holding only top X rows (some kind of bubble sort on the Top#Rows array)
+			
+			// Take a copy of the data, and sort it...
+			ArrayList<List<Object>> sorted = new ArrayList<List<Object>>( diffData.getDataCollection() );
+			Collections.sort(sorted,
+				new Comparator<List<Object>>()
+				{
+					@Override
+					public int compare(List<Object> o1, List<Object> o2)
+					{
+						Object objVal1 = o1.get(colPos);
+						Object objVal2 = o2.get(colPos);
+						
+						if (objVal1 instanceof Number && objVal2 instanceof Number)
+						{
+							if ( ((Number)objVal1).doubleValue() < ((Number)objVal2).doubleValue() ) return 1;
+							if ( ((Number)objVal1).doubleValue() > ((Number)objVal2).doubleValue() ) return -1;
+							return 0;
+						}
+						_logger.warn("CM='"+getName()+"', NOT A NUMBER colName='"+column+"', colPos="+colPos+": objVal1="+objVal1.getClass().getName()+", objVal2="+objVal2.getClass().getName());
+						return 0;
+					}
+				});
+
+			// Now take first records
+			for (int r=0; r<rows; r++)
+			{
+				Object DBName_obj     = sorted.get(r).get(DBName_pos);
+				Object ObjectName_obj = sorted.get(r).get(ObjectName_pos);
+
+//Object sortOnCol_obj  = sorted.get(r).get(colPos);
+//System.out.println("CM='"+getName()+"', DIFF TOP("+rows+") ROWS: "+column+" = "+sortOnCol_obj+", db='"+DBName_obj+"', objName='"+ObjectName_obj+"'.");
+
+				if (DBName_obj instanceof String && ObjectName_obj instanceof String)
+					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".diff.sortCol."+column+", row="+r);
+			}
+		}
+
+//		// Here we can sort to TOP values in the rate/diff Data structures
+//		// This so we can collect what is the hottest tables/procs right now
+//		String sortDescOnColumns[] = getDdlDetailsSortOnColName();
+//		for (String column : sortDescOnColumns)
+//		{
+//			int colPos = diffData.findColumn(column);
+//			if (colPos == -1)
+//			{
+//				_logger.error("sendDdlDetailsRequest() sortDescOnColumns='"+StringUtil.toCommaStr(sortDescOnColumns)+"', but column '"+column+"' can't be found in diffValues, trying with next column.");
+//				continue;
+//			}
+//
+//			for (List<Object> row : data)
+//			{
+//				Object objVal = row.get(colPos);
+//				if (objVal instanceof Number)
+//				{
+//				}
+//			}
+//		}
+
+// SOME EXAMPLE OF BUBBLE SORT
+//		int temp_vote;
+//		int temp_candidate;
+//		int[] candidate = new int[10];
+//		int[] vote = new int[10];
+//
+//		for (int i=0; i<vote.length; i++)
+//		{
+//			for (int j=0; j<vote.length-1; j++)
+//			{
+//				if (vote[j] < vote[j+1])
+//				{
+//					temp_vote = vote[j];
+//					vote[j]   = vote[j+1];
+//					vote[j+1] = temp_vote;
+//					
+//					temp_candidate = candidate[j];
+//      				candidate[j]   = candidate[j+1];
+//       				candidate[j+1] = temp_candidate;
+//				}
+//			}
+//		}
+			
+	} // end: sendDdlDetailsRequest
+
+	/** 
+	 * Get number of rows to save/request ddl information for 
+	 * if 0 is return no lookup will be done.
+	 */
+	public int getMaxNumOfDdlsToPersist()
+	{
+		return 0;
 	}
+
+	/** 
+	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
+	 */
+	public String[] getDdlDetailsColNames()
+	{
+		String[] sa = {"DBName", "ObjectName"};
+		return sa;
+	}
+	/**
+	 * Sort descending on this column(s) to get values from the diff/rate structure<br>
+	 * One sort for every value will be done, meaning we can do "top" for more than 1 column<br>
+	 * So if we want to do top 10 LogicalReads AND top 10 LockContention
+	 * If this one returns null, this will not be done
+	 * @return
+	 */
+	public String[] getDdlDetailsSortOnColName()
+	{
+		return null;
+	}
+
 
 	/**
 	 * Any CM that wants to send Alarm Requests somewhere should implement this

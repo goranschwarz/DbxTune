@@ -32,6 +32,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.Debug;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
+import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingExceptionHandler;
 import com.asetune.utils.SwingUtils;
@@ -695,6 +696,9 @@ public class AseTune
 					_logger.info("Checking for new release...");
 					//CheckForUpdates.noBlockCheck(frame, false, false);
 					CheckForUpdates.noBlockCheck(frame, false, true);
+
+					// Start OutOfMemory check/thread
+					Memory.start();
 
 					// FINALLY SHOW THE WINDOW
 					SplashWindow.drawProgress("Loading Main Window...");

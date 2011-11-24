@@ -250,6 +250,32 @@ li   {margin-bottom: 6px}
 	Next step: make a GUI so the values can be viewed<br>
 	</LI>
 
+	<LI>
+	<b>bug fix: Problems to login</b><br>
+	When a user logs in, I check for 'mon_role' (and 'sybase_ts_role'), if user doesn't have those roles
+	I will try to automatically grant those roles, if current user is authorized to do this.<br>
+	Fix: current user should have 'sso_role' not 'sa_role' to do automatic grant.<br>
+	</LI>
+
+	<LI>
+	<b>Add: if GUI mode, start up a connection "watchdog"</b><br>
+	This only means that the isOpen() check will hopefully already been done by the watchdog, which
+	means that the GUI will not freeze or lag behind, because it's not the Swing Dispatch Thread that calls
+	the database to check if the connection is still open.<br>
+	</LI>
+
+	<LI>
+	<b>New Functionality: ASE Application Tracing</b><br>
+	A new tool 'ASE Application Tracing', for details see http://www.sybase.com/files/White_Papers/ASE15-apptrace-070507-wp.pdf
+	for more information how this works.<br>
+	This is just a GUI on top... But the GUI can work with remote files, so you can start the trace your 
+	local client (probably a PC), if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
+	will be opened to do tail of the trace file. This makes it easier to view the trace file.<br>
+	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
+	BUT: Watch out for memory consumption...<br>
+	TODO: I need to write a better message here....<br>
+	</LI>
+
 </UL>
 
 

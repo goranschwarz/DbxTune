@@ -104,7 +104,7 @@ public class Memory
 								fireOutOfMemory();
 						}
 						
-						Thread.sleep(2 * 1000);
+						Thread.sleep(5 * 1000);
 					}
 				}
 				catch (InterruptedException ignore)

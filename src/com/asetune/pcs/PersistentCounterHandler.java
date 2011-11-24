@@ -26,6 +26,7 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 
 public class PersistentCounterHandler 
@@ -241,11 +242,25 @@ implements Runnable
 	 * @param dbname
 	 * @param objectName
 	 */
-	public void addDdl(String dbname, String objectName)
+	public void addDdl(String dbname, String objectName, String source)
+	{
+		addDdl(dbname, objectName, source, 0);
+	}
+	private void addDdl(String dbname, String objectName, String source, int dependLevel)
 	{
 		if (_writerClasses.size() == 0)
 			return;
 
+		// Don't do empty ones...
+		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
+			return;
+
+		if (objectName.equals("temp worktable"))
+			return;
+		
+//		if (objectName.startsWith("#"))
+//			return;
+		
 		// check if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
 		for (IPersistWriter pw : _writerClasses)
@@ -266,10 +281,11 @@ implements Runnable
 		int qsize = _ddlInputQueue.size();
 		if (qsize > _warnDdlInputQueueSizeThresh)
 		{
-			_logger.warn("The DDL request Input queue has "+qsize+" entries. The persistent writer might not keep in pace.");
+			if (_logger.isDebugEnabled())
+				_logger.debug("The DDL request Input queue has "+qsize+" entries. The persistent writer might not keep in pace.");
 		}
 
-		DdlQueueEntry entry = new DdlQueueEntry(dbname, objectName);
+		DdlQueueEntry entry = new DdlQueueEntry(dbname, objectName, source, dependLevel);
 		_ddlInputQueue.add(entry);
 	}
 
@@ -299,6 +315,8 @@ implements Runnable
 
 		String dbname     = qe._dbname;
 		String objectName = qe._objectName;
+		String source     = qe._source;
+		int dependLevel   = qe._dependLevel;
 
 		// FIXME: dbname  can be a Integer
 		// FIXME: objName can be a Integer
@@ -332,11 +350,17 @@ implements Runnable
 			return false;
 		}
 
+		if (_logger.isDebugEnabled())
+			_logger.debug("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
+System.out.println("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
+
 		// Statement Cache objects
 		if (isStatementCache)
 		{
 			DdlDetails entry = new DdlDetails(dbname, objectName);
 			entry.setCrdate( new Timestamp(System.currentTimeMillis()) );
+			entry.setSource( source );
+			entry.setDependLevel( dependLevel );
 			entry.setOwner("ssql");
 			entry.setType("SS");
 			String sql = 
@@ -359,12 +383,13 @@ implements Runnable
 			// Keep a list of objects we need to work with
 			// because: if we get more than one proc/table with different owners
 			ArrayList<DdlDetails> objectList = new ArrayList<DdlDetails>();
-	
+			
 			// GET type and creation time
 			String sql = 
-				"select type, owner=user_name(uid), crdate " +
-				"from "+dbname+"..sysobjects " +
-				"where name = '"+objectName+"' "; 
+				"select o.type, u.name, o.crdate \n" +
+				"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+				"where o.name = '"+objectName+"' \n" +
+				"  and o.uid = u.uid ";
 			try
 			{
 				Statement statement = conn.createStatement();
@@ -373,25 +398,28 @@ implements Runnable
 				{
 					DdlDetails entry = new DdlDetails();
 					
-					entry.setDbname    ( dbname );
-					entry.setObjectName( objectName );
-					entry.setType      ( rs.getString   (1) );
-					entry.setOwner     ( rs.getString   (2) );
-					entry.setCrdate    ( rs.getTimestamp(3) );
+					entry.setDbname     ( dbname );
+					entry.setObjectName ( objectName );
+					entry.setSource     ( source );
+					entry.setDependLevel( dependLevel );
+
+					entry.setType       ( rs.getString   (1) );
+					entry.setOwner      ( rs.getString   (2) );
+					entry.setCrdate     ( rs.getTimestamp(3) );
 					
 					objectList.add(entry);
 				}
 			}
 			catch (SQLException e)
 			{
-				_logger.error("Problems Getting basic information about DDL for dbname='"+dbname+"', objectName='"+objectName+"'. Skipping DDL Storage of this object. Caught: "+e);
+				_logger.error("Problems Getting basic information about DDL for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object. Caught: "+e);
 				return false;
 			}
 	
 			// The object was NOT found
 			if (objectList.size() == 0)
 			{
-				_logger.warn("DDL Lookup. Can't find any information for dbname='"+dbname+"', objectName='"+objectName+"'. Skipping DDL Storage of this object.");
+				_logger.info("DDL Lookup. Can't find any information for dbname='"+dbname+"', objectName='"+objectName+"', source='"+source+"', dependLevel="+dependLevel+". Skipping DDL Storage of this object.");
 				return false;
 			}
 	
@@ -434,19 +462,19 @@ implements Runnable
 	
 					//--------------------------------------------
 					// GET sp__optdiag
-					if (_aseVersion >= 15700)
-						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-					else
-						sql = "exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-	
-					ss = new AseSqlScript(conn, 10);
-					try	{ 
-						entry.setOptdiagText( ss.executeSqlStr(sql) ); 
-					} catch (SQLException e) { 
-						entry.setOptdiagText( e.toString() ); 
-					} finally {
-						ss.close();
-					}
+//					if (_aseVersion >= 15700)
+//						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
+//					else
+//						sql = "exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
+//	
+//					ss = new AseSqlScript(conn, 10);
+//					try	{ 
+//						entry.setOptdiagText( ss.executeSqlStr(sql) ); 
+//					} catch (SQLException e) { 
+//						entry.setOptdiagText( e.toString() ); 
+//					} finally {
+//						ss.close();
+//					}
 	
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
@@ -483,10 +511,11 @@ implements Runnable
 					//--------------------------------------------
 					// GET OBJECT TEXT
 					sql = " select c.text "
-						+ " from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..syscomments c "
-						+ " where o.name = '"+entry.getObjectName()+"' "
-						+ "   and o.id = c.id "
-						+ "   and o.uid = user_id('"+entry.getOwner()+"') "
+						+ " from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..syscomments c, "+entry.getDbname()+"..sysusers u \n"
+						+ " where o.name = '"+entry.getObjectName()+"' \n"
+						+ "   and u.name = '"+entry.getOwner()+"' \n" 
+						+ "   and o.id   = c.id \n"
+						+ "   and o.uid  = u.uid \n"
 						+ " order by c.number, c.colid2, c.colid ";
 	
 					try
@@ -532,6 +561,7 @@ implements Runnable
 				{
 					sql = "exec "+entry.getDbname()+"..sp_depends '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
 	
+					ArrayList<String> dependList = new ArrayList<String>();
 					try
 					{
 						Statement statement = conn.createStatement();
@@ -561,10 +591,12 @@ implements Runnable
 								if (beginIndex < 0)
 									beginIndex = 0;
 								String shortObjName = depOnObjectName.substring(beginIndex);
-	
-								// Don't add SystemProcedure dependencies
-								if ( ! shortObjName.startsWith("sp_") )
-									addDdl(entry.getDbname(), shortObjName);
+
+								dependList.add(shortObjName);
+
+								// Don't add SystemProcedure/systemTables dependencies
+								if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
+									addDdl(entry.getDbname(), shortObjName, source, dependLevel + 1);
 							}
 						}
 						else
@@ -582,8 +614,9 @@ implements Runnable
 						{
 							_logger.warn("Problems getting 'sp_depends' for table '"+entry.getFullObjectName()+"'. SqlState='"+e.getSQLState()+"', Caught: "+e);
 						}
-						
 					}
+					if (dependList.size() > 0)
+						entry.setDependList(dependList);
 				}
 	
 				int qsize = _ddlStoreQueue.size();
@@ -1155,11 +1188,15 @@ implements Runnable
 	{
 		public String _dbname;
 		public String _objectName;
+		public String _source;
+		public int    _dependLevel;
 
-		public DdlQueueEntry(String dbname, String objectName)
+		public DdlQueueEntry(String dbname, String objectName, String source, int dependLevel)
 		{
-			_dbname     = dbname;
-			_objectName = objectName;
+			_dbname      = dbname;
+			_objectName  = objectName;
+			_source      = source;
+			_dependLevel = dependLevel;
 		}
 		
 		public String toString()

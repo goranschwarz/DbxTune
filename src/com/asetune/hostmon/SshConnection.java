@@ -12,6 +12,8 @@ import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.Session;
 import ch.ethz.ssh2.StreamGobbler;
 
+import com.asetune.utils.StringUtil;
+
 public class SshConnection
 {
 	private static Logger _logger = Logger.getLogger(SshConnection.class);
@@ -289,6 +291,11 @@ public class SshConnection
 		if (_uname != null)
 			return _uname;
 
+		if (_conn == null)
+		{
+			throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
+		}
+
 		Session sess = _conn.openSession();
 		sess.execCommand("uname -a");
 
@@ -328,6 +335,89 @@ public class SshConnection
 	}
 
 	/**
+	 * Simply check if a file name exists in the remote server
+	 * @param filename to check if it exists
+	 */
+	public boolean doFileExist(String filename)
+	{
+		if (isClosed())
+			throw new RuntimeException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
+		try
+		{
+			Session sess = _conn.openSession();
+			sess.execCommand("ls -Fal '" + filename + "'");
+
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			String output = "";
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			sess.close();
+			
+			_logger.debug("doFileExist: '"+filename+"' produced '"+output+"'.");
+
+			if ( output.startsWith("-") )
+				return true;
+			return false;
+		}
+		catch (IOException e)
+		{
+			_logger.error("doFileExist() caught: "+e, e);
+			return false;
+		}
+	}
+
+	/**
+	 * Remove a file
+	 * @param filename to remove
+	 */
+	public boolean removeFile(String filename)
+	throws IOException
+	{
+		if (isClosed())
+			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
+		Session sess = _conn.openSession();
+		sess.execCommand("rm -f '" + filename + "'");
+
+		InputStream stdout = new StreamGobbler(sess.getStdout());
+		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+		String output = "";
+		while (true)
+		{
+			String line = br.readLine();
+			if (line == null)
+				break;
+
+			output += line;
+		}
+
+		Integer rc = sess.getExitStatus();
+
+		sess.close();
+		
+		_logger.debug("removeFile: '"+filename+"' produced '"+output+"'.");
+
+		if ( ! StringUtil.isNullOrBlank(output) )
+			throw new IOException("removeFile('"+filename+"') produced output, which wasn't expected. Output: "+output);
+
+		if (rc != null && rc.intValue() != 0)
+			throw new IOException("removeFile('"+filename+"') return code not zero. rc="+rc+". Output: "+output);
+
+		return true;
+	}
+
+	/**
 	 * Check if the Veritas 'vxstat' is executable and in the current path
 	 * 
 	 * @return true if Veritas commands are available (in the path)
@@ -336,6 +426,9 @@ public class SshConnection
 	public boolean hasVeritas()
 	throws IOException
 	{
+		if (isClosed())
+			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
 		Session sess = _conn.openSession();
 		sess.execCommand("vxstat");
 

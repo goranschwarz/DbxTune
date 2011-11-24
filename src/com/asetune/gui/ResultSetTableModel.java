@@ -11,8 +11,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.event.TableModelListener;
-import javax.swing.table.TableModel;
+import javax.swing.table.AbstractTableModel;
 
 import com.asetune.utils.StringUtil;
 
@@ -25,8 +24,10 @@ import com.asetune.utils.StringUtil;
  * @author Goran Schwarz
  */
 public class ResultSetTableModel
-    implements TableModel
+    extends AbstractTableModel
 {
+	private static final long serialVersionUID = 1L;
+
 	int	_numcols;
 
 	private ArrayList<String>            _type        = new ArrayList<String>();
@@ -168,13 +169,13 @@ public class ResultSetTableModel
 	{
 	}
 
-	public void addTableModelListener(TableModelListener l)
-	{
-	}
-
-	public void removeTableModelListener(TableModelListener l)
-	{
-	}
+//	public void addTableModelListener(TableModelListener l)
+//	{
+//	}
+//
+//	public void removeTableModelListener(TableModelListener l)
+//	{
+//	}
 
 	
 	

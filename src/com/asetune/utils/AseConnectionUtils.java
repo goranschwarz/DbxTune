@@ -624,6 +624,76 @@ public class AseConnectionUtils
 	}
 
 	/**
+	 * Get ASE SPID
+	 * @param conn
+	 * @return
+	 */
+	public static int getAseSpid(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			int spid = UNKNOWN;
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select @@spid");
+			while (rs.next())
+			{
+				spid = rs.getInt(1);
+			}
+			rs.close();
+			stmt.close();
+
+			return spid;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting @@spid, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	/**
+	 * Get ASE SPID
+	 * @param conn
+	 * @return
+	 */
+	public static String getAseVersionStr(Connection conn)
+	{
+		final String UNKNOWN = "";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String verStr = UNKNOWN;
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select @@version");
+			while (rs.next())
+			{
+				verStr = rs.getString(1);
+			}
+			rs.close();
+			stmt.close();
+
+			return verStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting @@version, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	/**
 	 * Get a comma separated list of values from ASE syslisteners table.
 	 * @param conn
 	 * @param addType
@@ -1156,14 +1226,17 @@ public class AseConnectionUtils
 		int    aseVersionNum = 0;
 		String aseVersionStr = "";
 		String atAtServername = "";
+		String sql = "";
 		try
 		{
 			// Get the version of the ASE server
 			// select @@version_number (new since 15 I think, this means the local try block)
 			try
 			{
+				// ------------------------------
+				sql = "select @@version_number";
 				Statement stmt = conn.createStatement();
-				ResultSet rs = stmt.executeQuery("select @@version_number");
+				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )
 				{
 					aseVersionNum = rs.getInt(1);
@@ -1175,9 +1248,10 @@ public class AseConnectionUtils
 				_logger.debug("checkForMonitorOptions, @@version_number failed, probably an early ASE version", ex);
 			}
 
-			// select @@version
+			// ------------------------------
+			sql = "select @@version";
 			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery("select @@version");
+			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
 				aseVersionStr = rs.getString(1);
@@ -1187,9 +1261,10 @@ public class AseConnectionUtils
 			int aseVersionNumFromVerStr = aseVersionStringToNumber(aseVersionStr);
 			aseVersionNum = Math.max(aseVersionNum, aseVersionNumFromVerStr);
 
-			// select @@servername
+			// ------------------------------
+			sql = "select @@servername";
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("select @@servername");
+			rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
 				atAtServername = rs.getString(1);
@@ -1200,10 +1275,11 @@ public class AseConnectionUtils
 
 			
 			// if user name is null or empty, then get current user
-			if (user == null || (user != null && user.trim().equals("")) )
+			if (StringUtil.isNullOrBlank(user))
 			{
+				sql = "select suser_name()";
 				stmt = conn.createStatement();
-				rs = stmt.executeQuery("select suser_name()");
+				rs = stmt.executeQuery(sql);
 				while (rs.next())
 				{
 					user = rs.getString(1);
@@ -1217,28 +1293,26 @@ public class AseConnectionUtils
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("sp_activeroles");
 			boolean has_sa_role        = false;
+			boolean has_sso_role       = false;
 			boolean has_mon_role       = false;
 			boolean has_sybase_ts_role = false;
 			while (rs.next())
 			{
 				String roleName = rs.getString(1);
-				if (roleName.equals("sa_role"))
-					has_sa_role = true;
-
-				if (roleName.equals("mon_role"))
-					has_mon_role = true;
-
-				if (roleName.equals("sybase_ts_role"))
-					has_sybase_ts_role = true;
+				if (roleName.equals("sa_role"))        has_sa_role        = true;
+				if (roleName.equals("sso_role"))       has_sso_role       = true;
+				if (roleName.equals("mon_role"))       has_mon_role       = true;
+				if (roleName.equals("sybase_ts_role")) has_sybase_ts_role = true;
 			}
-			if (!has_mon_role)
+			if ( ! has_mon_role )
 			{
 				// Try to grant access to current user
-				if (has_sa_role)
+//				if (has_sa_role && has_sso_role)
+				if (has_sso_role)
 				{
-					_logger.info("User '"+user+"' has NOT got role 'mon_role', but since this users do have 'sa_role', I will automatically try to grant 'mon_role' to the user '"+user+"'.");
+					_logger.info("User '"+user+"' has NOT got role 'mon_role', but since this users do have 'sso_role', I will automatically try to grant 'mon_role' to the user '"+user+"'.");
 
-					String sql = "sp_role 'grant', 'mon_role', '"+user+"'";
+					sql = "sp_role 'grant', 'mon_role', '"+user+"'";
 					stmt.execute(sql);
 					_logger.info("Executed: "+sql);
 
@@ -1247,7 +1321,8 @@ public class AseConnectionUtils
 					_logger.info("Executed: "+sql);
 
 					// re-check if grant of mon_role succeeded
-					rs = stmt.executeQuery("sp_activeroles");
+					sql = "sp_activeroles";
+					rs = stmt.executeQuery(sql);
 					has_mon_role = false;
 					while (rs.next())
 					{
@@ -1255,9 +1330,13 @@ public class AseConnectionUtils
 							has_mon_role = true;
 					}
 				}
+				else
+				{
+					_logger.info("Automatic grant of 'mon_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
+				}
 
 				// If mon_role was still unsuccessfull
-				if (!has_mon_role)
+				if ( ! has_mon_role )
 				{
 					String msg = "You need 'mon_role' to access monitoring tables";
 					_logger.error(msg);
@@ -1268,6 +1347,7 @@ public class AseConnectionUtils
 							"You need 'mon_role' to access monitoring tables<br>" +
 							"<br>" +
 							"Have your system administrator grant 'mon_role' to the login '"+user+"'.<br>" +
+							"Note: if user '"+user+"' has 'sso_role', then "+Version.getAppName()+" would have done this automatically.<br>" +
 							"<br>" +
 							"This can be done with the following command:<br>" +
 							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
@@ -1280,15 +1360,16 @@ public class AseConnectionUtils
 					}
 					return false;
 				}
-			}
-			if (!has_sybase_ts_role)
+			} // end: ! has_mon_role
+
+			if ( ! has_sybase_ts_role )
 			{
 				// Try to grant access to current user
-				if (has_sa_role)
+				if ( has_sso_role )
 				{
-					_logger.info("User '"+user+"' has NOT got role 'sybase_ts_role', but since this users do have 'sa_role', I will automatically try to grant 'sybase_ts_role' to the user '"+user+"'.");
+					_logger.info("User '"+user+"' has NOT got role 'sybase_ts_role', but since this users do have 'sso_role', I will automatically try to grant 'sybase_ts_role' to the user '"+user+"'.");
 
-					String sql = "sp_role 'grant', 'sybase_ts_role', '"+user+"'";
+					sql = "sp_role 'grant', 'sybase_ts_role', '"+user+"'";
 					stmt.execute(sql);
 					_logger.info("Executed: "+sql);
 
@@ -1297,7 +1378,8 @@ public class AseConnectionUtils
 					_logger.info("Executed: "+sql);
 
 					// re-check if grant of mon_role succeeded
-					rs = stmt.executeQuery("sp_activeroles");
+					sql = "sp_activeroles";
+					rs = stmt.executeQuery(sql);
 					has_sybase_ts_role = false;
 					while (rs.next())
 					{
@@ -1305,28 +1387,50 @@ public class AseConnectionUtils
 							has_sybase_ts_role = true;
 					}
 				}
+				else
+				{
+					_logger.info("Automatic grant of 'sybase_ts_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
+				}
 
 				// If mon_role was still unsuccessfull
-				if (!has_sybase_ts_role)
+				if ( ! has_sybase_ts_role )
 				{
 					String msg = "You may need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.";
 					_logger.warn(msg);
-//					if (gui)
-//					{
-//						SwingUtils.showErrorMessage(parent, "Problems when checking 'Sybase TS Role'", 
-//								msg, null);
-//					}
-//					return false;
+
+					if (gui)
+					{
+						String msgHtml = 
+							"<html>" +
+							"You need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.<br>" +
+							"This is especially true for Performance Counter 'Active Statements', if you enable 'Get DBCC SQL Text' or 'Get ASE Stacktrace'.<br>" +
+							"<br>" +
+							"<b>This is only a warning message, You will still be allowed to login.</b><br>" +
+							"<br>" +
+							"Have your system administrator grant 'sybase_ts_role' to the login '"+user+"'.<br>" +
+							"Note: if user '"+user+"' has 'sso_role', then "+Version.getAppName()+" would have done this automatically.<br>" +
+							"<br>" +
+							"This can be done with the following command:<br>" +
+							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+							"<code>1> sp_role 'grant', 'sybase_ts_role', '"+user+"'</code><br>" +
+							"<code>2> go</code><br>" +
+							"</html>";
+
+						SwingUtils.showWarnMessage(parent, "Problems when checking 'Sybase TS Role'", 
+								msgHtml, null);
+					}
 				}
-			}
+			} // end: ! has_sybase_ts_role
 
 			// force master
-			stmt.executeUpdate("use master");
+			sql = "use master";
+			stmt.executeUpdate(sql);
 
 			_logger.debug("Verify monTables existance");
 
 			// Check if montables are configured
-			rs = stmt.executeQuery("select count(*) from master..sysobjects where name ='monTables'");
+			sql = "select count(*) from master..sysobjects where name ='monTables'";
+			rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
 				if (rs.getInt(1) == 0)
@@ -1363,6 +1467,7 @@ public class AseConnectionUtils
 			// Check if configuration 'xxx' is activated
 			if (needsConfig != null)
 			{
+				sql = "java:method:checkAseConfig()";
 				_logger.debug("Verify monitor configuration: "+StringUtil.toCommaStr(needsConfig));
 	
 				String errorMesage = checkAseConfig(conn, needsConfig, true);
@@ -1396,8 +1501,12 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			String msg = AseConnectionUtils.showSqlExceptionMessage(parent, Version.getAppName()+" - connect", "Problems when connecting to a ASE Server.", ex); 
-			_logger.error("Problems when connecting to a ASE Server. "+msg);
+			String msg = AseConnectionUtils.showSqlExceptionMessage(parent, 
+					Version.getAppName()+" - connect", 
+					"Problems when connecting to a ASE Server.<br>" +
+					"Last Executed SQL: "+sql, 
+					ex); 
+			_logger.error("Problems when connecting to a ASE Server. Last Executed SQL '"+sql+"'. "+msg);
 			return false;
 		}
 		catch (Exception ex)
