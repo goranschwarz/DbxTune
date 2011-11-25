@@ -1896,7 +1896,8 @@ public class AseConnectionUtils
 		String sql = "select show_role()";
 		try
 		{
-			List<String> roleList = null;
+//			List<String> roleList = null;
+			List<String> roleList = new LinkedList<String>();
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())

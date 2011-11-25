@@ -66,6 +66,9 @@ public class FileTail
 	/** Is the tailer currently tailing? */
 	private boolean _running = false;
 
+	/** This will be set to true right before the thread is ending */
+	private boolean _shutdownIsComplete = false;
+
 	/** Listeners */
 	private Set<TraceListener> _listeners = new LinkedHashSet<TraceListener>();
 
@@ -245,6 +248,33 @@ public class FileTail
 		_running = false;
 	}
 
+	/**
+	 * Wait until the thread has ended.
+	 */
+	public void waitForShutdownToComplete()
+	{
+		while(true)
+		{
+			if (_shutdownIsComplete)
+			{
+				_logger.info("The '"+getName()+"' has now been shutdown.");
+				break;
+			}
+
+			try
+			{
+				_logger.info("Waiting for '"+getName()+"' to complete the shutdown.");
+				Thread.sleep(1000);
+			}
+			catch (InterruptedException e)
+			{
+				_logger.info("The '"+getName()+"' has was interrupted.");
+				break;
+			}
+			
+		}
+	}
+
 	/** just print a start message */
 	protected void printStartMessage()
 	{
@@ -299,6 +329,8 @@ public class FileTail
 					_running = false;
 					return;
 				}
+
+				_shutdownIsComplete = false;
 
 				/*
 				 * Advanced:
@@ -419,6 +451,7 @@ public class FileTail
 
 				_running = false;
 				printStopMessage();
+				_shutdownIsComplete = true;
 
 			} // end: run()
 		};
@@ -451,6 +484,7 @@ public class FileTail
 				{
 					// Start 
 					_running = true;
+					_shutdownIsComplete = false;
 
 					RandomAccessFile raf = new RandomAccessFile(_localFile, "r");
 					while (_running)
@@ -507,6 +541,7 @@ public class FileTail
 				}
 
 				printStopMessage();
+				_shutdownIsComplete = true;
 
 			} // end: run()
 		};

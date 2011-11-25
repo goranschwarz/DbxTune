@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -180,6 +182,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 
 	private int             _spid                   = -1;
 	private boolean         _spidExistsInAse        = false; // this is set during login
+	
+	private List<String>    _aseUserHasRoles        = new LinkedList<String>();
 
 	public AseAppTraceDialog(int spid, String servername, String aseVersionStr)
 	{
@@ -246,7 +250,6 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 
 		// ADD this from the out of memory listener (Note only works if it has been installed)
 		Memory.addMemoryListener(this);
-		final Memory.MemoryListener tmp_this = this;
 
 		addWindowListener(new WindowAdapter()
 		{
@@ -254,11 +257,25 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			public void windowClosing(WindowEvent e)
 			{
 				stopTrace();
-
-				// Remove this from the out of memory listener
-				Memory.removeMemoryListener(tmp_this);
+				distroy();
 			}
 		});
+	}
+	/** call this when window is closing */
+	private void distroy()
+	{
+		// Remove this from the out of memory listener
+		Memory.removeMemoryListener(this);
+		
+		// Memory doesn't seems to be released, I don't know why, so lets try to reset some data structures
+		_traceOut_txt    = null;
+		_traceOut_scroll = null;
+
+		_proc_txt    = null;
+		_proc_scroll = null;
+		_procCache   = null;
+		
+		dispose();
 	}
 
 	private JPanel createAccessPanel()
@@ -825,7 +842,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseSpid_txt.setEnabled( ! isConnected ); // Disabled when connected
 		_aseSpid_but.setEnabled( ! isConnected ); // Disabled when connected
 		
-		_aseSpHelpAppTrace_but.setEnabled( isConnected ); // Enabled only when connected
+//		_aseSpHelpAppTrace_but.setEnabled( isConnected ); // Enabled only when connected
+		_aseExtenedOption_but .setEnabled( isConnected ); // Enabled only when connected
 
 		_aseStartTrace_but.setVisible( ! isConnected );  // Disabled when connected, so we can start
 		_aseStopTrace_but .setVisible(   isConnected );  // Enable   when connected, so we can stop
@@ -967,7 +985,12 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 				{
 					_aseConn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-AppTrace-"+_spid, null);
 					_aseServerName = AseConnectionUtils.getAseServername(_aseConn);
+					_aseVersionStr = AseConnectionUtils.getAseVersionStr(_aseConn);
 
+					// Get list of active roles
+					_aseUserHasRoles = AseConnectionUtils.getActiveRoles(_aseConn);
+
+					// Check if the SPID exists in there server
 					_spidExistsInAse = false;
 					Statement statement = _aseConn.createStatement();
 					String sql = 
@@ -1019,9 +1042,42 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			}
 		};
 		aseWait.execAndWait(aseWaitTask);
+
+		// No Connection, lets get out of here
 		if (_aseConn == null)
 			return false;
 
+		// ERROR only on ASE 15.0.2 or higher.
+		int aseVersion = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
+		if (aseVersion < 15020 )
+		{
+			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to "+AseConnectionUtils.versionIntToStr(aseVersion)+".";
+			_logger.info(msg);
+			SwingUtils.showWarnMessage(this, "Need a later ASE Version", msg, null);
+			closeAseConn();
+			
+			return false;
+		}
+		
+		// ERROR if we were not authorized.
+		if ( _aseUserHasRoles != null )
+		{
+			boolean ok = false;
+			if (_aseUserHasRoles.contains(AseConnectionUtils.SA_ROLE))  ok = true;
+			if (_aseUserHasRoles.contains(AseConnectionUtils.SSO_ROLE)) ok = true;
+
+			if ( ! ok )
+			{
+				String msg = "The user '"+AseConnectionFactory.getUser()+"' does not have '"+AseConnectionUtils.SA_ROLE+"' or '"+AseConnectionUtils.SSO_ROLE+"', so I can't do Application Tracing.";
+				_logger.info(msg);
+				SwingUtils.showWarnMessage(this, "Not authorized to do Application Tracing", msg, null);
+				closeAseConn();
+				
+				return false;
+			}
+		}
+
+		// ERROR if the SPID didn't exist
 		if ( ! _spidExistsInAse )
 		{
 			String msg = "SPID '"+_spid+"' did NOT exists in the ASE when the ASE AppTrace Controller Thread connected.";
@@ -1126,7 +1182,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	{
 		createAseTracefile(false);
 
-		execSql("set switch on 3604 with no_info");
+//		execSql("set switch on 3604 with no_info");
 
 		String traceFile = getAseTraceFileFinal();
 		execSql("set tracefile '"+traceFile+"' for "+_spid);
@@ -1176,7 +1232,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			for (String option : _currentOptions)
 				execSql("set "+option+" off");
 
-			execSql("set tracefile off for "+_spid);
+//			execSql("set tracefile off for "+_spid);
+			execSql("set tracefile off");
 		}
 	}
 
@@ -1214,6 +1271,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		stopProcTextReader();
 
 		closeAseConn();
+		
+		// Save last portion of the internal buffer to file.
+		appendTraceOutFile(null, true);
 
 		setConnected(false);
 //		_aseStartTrace_but.setVisible(true);
@@ -1579,29 +1639,67 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	**---------------------------------------------------
 	*/	
 	@Override
+//	public void outOfMemoryHandler()
+//	{
+//		_logger.debug("outOfMemoryHandler was called");
+//
+//		// TRACE TEXT
+//		String msg = 
+//			"====================================================================\n" +
+//			" RESET DUE TO OUT OF MEMORY \n" +
+//			" The records will still be in the save file (if you specified this) \n" +
+//			"--------------------------------------------------------------------\n";
+//		_traceOut_txt.setText(null);
+//		_traceOut_txt.setText(msg);
+//
+//
+//		// PROCEDURE TEXT & cache
+//		// --- cache
+//		_procCache.clear();
+//		// --- combobox
+//		_procName_cbxmdl = new DefaultComboBoxModel();
+//		_procName_cbxmdl.addElement(DEFAULT_STORED_PROC);
+//		_procName_cbx.setModel(_procName_cbxmdl);
+//		// --- text
+//		_proc_txt.setText(null);
+//		_proc_txt.setText(msg);
+//		
+////		System.gc();
+//
+//		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+//		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
+//
+//		// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead
+//		JOptionPane optionPane = new JOptionPane(
+//				"Sorry, out-of-memory. \n" +
+//				"\n" +
+//				"I have cleared the Trace and ProcedureText fields! \n" +
+//				"This will hopefully get us going again. \n" +
+//				"\n" +
+//				"Note: you can raise the memory parameter -Xmx###m in the "+Version.getAppName()+" start script.\n" +
+//				"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
+//				"After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.", 
+//				JOptionPane.INFORMATION_MESSAGE);
+//		JDialog dialog = optionPane.createDialog(this, "out-of-memory");
+//		dialog.setModal(false);
+//		dialog.setVisible(true);
+//	}
 	public void outOfMemoryHandler()
 	{
 		_logger.debug("outOfMemoryHandler was called");
+		
+		if ( ! isConnected() )
+			return;
 
 		// TRACE TEXT
 		String msg = 
-			"================================================\n" +
-			" RESET DUE TO OUT OF MEMORY \n" +
-			"------------------------------------------------\n";
-		_traceCmdLog_txt.setText(msg);
-
-
-		// PROCEDURE TEXT & cache
-		// --- cache
-		_procCache.clear();
-		// --- combobox
-		_procName_cbxmdl = new DefaultComboBoxModel();
-		_procName_cbxmdl.addElement(DEFAULT_STORED_PROC);
-		_procName_cbx.setModel(_procName_cbxmdl);
-		// --- text
-		_proc_txt.setText(msg);
+			"====================================================================\n" +
+			" CLOSE TO OUT OF MEMORY \n" +
+			" ASE Application Tracing has been stopped. \n" +
+			" Close the window and start a new session, or view the data here. \n" +
+			"--------------------------------------------------------------------\n";
 		
-		System.gc();
+		stopTrace();
 
 		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
 		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
@@ -1610,8 +1708,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		JOptionPane optionPane = new JOptionPane(
 				"Sorry, out-of-memory. \n" +
 				"\n" +
-				"I have cleared the Trace and ProcedureText fields! \n" +
-				"This will hopefully get us going again. \n" +
+				"I have STOPPED Application Tracing \n" +
+				"To start a new Trace, Close the Trace window... \n" +
 				"\n" +
 				"Note: you can raise the memory parameter -Xmx###m in the "+Version.getAppName()+" start script.\n" +
 				"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
@@ -1620,11 +1718,28 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		JDialog dialog = optionPane.createDialog(this, "out-of-memory");
 		dialog.setModal(false);
 		dialog.setVisible(true);
+
+		if (_fileTail != null)
+		{
+			_fileTail.waitForShutdownToComplete();
+		}
+		// Append the message to TEXT, and TEXT FILE
+		// set caret at end of TEXT
+		_traceOut_txt.append(msg);
+		appendTraceOutFile(msg, true);
+		_traceOut_txt.setCaretPosition( _traceOut_txt.getDocument().getLength() );
+
+
 	}
 
 	@Override
 	public void memoryConsumption(int memoryLeftInMB)
 	{
+		if (memoryLeftInMB < 100)
+		{
+			_logger.info("Looks like free memory is below "+memoryLeftInMB+" MB, lets do cleanup...");
+			outOfMemoryHandler();
+		}
 	}
 	/*---------------------------------------------------
 	** END: implementing Memory.MemoryListener
@@ -1681,30 +1796,49 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		}
 
 		// SAVE TO FILE
-		if (_traceOutSave_chk.isSelected())
-		{
-			// Save only every 500 row or so
-			if ( (_traceOut_txt.getLineCount() % 500) == 0 )
-			{
-				String dir = _traceOutSave_txt.getText();
-				if ( ! (dir.endsWith("\\") || dir.endsWith("/")) )
-					dir += "/";
-				String filename = dir + getAseTraceFileFinalOnlyFileName() + ".txt";
+		appendTraceOutFile(row, false);
+	}
 
-				try
-				{
-					BufferedWriter out = new BufferedWriter(new FileWriter(filename));
-					out.write(_traceOut_txt.getText());
-					out.close();
-				}
-				catch (Exception e)
-				{
-					String msg = "Problems saving Trace output to file '"+filename+"'. Caught: "+e;
-					_logger.error(msg);
-					SwingUtils.showErrorMessage("Problems Saving Trace Output file.", msg, e);
-				}
+	private StringBuilder _traceOutSaveBuffert = new StringBuilder(TRACE_OUT_BUFFERT_SIZE + 512);
+	private static final int TRACE_OUT_BUFFERT_SIZE = 10240; // 10K
+
+	private void appendTraceOutFile(String row, boolean flushBuffer)
+	{
+		if ( ! _traceOutSave_chk.isSelected() )
+			return;
+
+		if (row != null)
+		{
+			_traceOutSaveBuffert.append(row);
+			if ( ! row.endsWith("\n") )
+				_traceOutSaveBuffert.append("\n");
+		}
+
+		// Save only when buffer is full
+		if ( flushBuffer || _traceOutSaveBuffert.length() >= TRACE_OUT_BUFFERT_SIZE )
+		{
+			String dir = _traceOutSave_txt.getText();
+			if ( ! (dir.endsWith("\\") || dir.endsWith("/")) )
+				dir += "/";
+			String filename = dir + getAseTraceFileFinalOnlyFileName() + ".txt";
+
+			try
+			{
+				BufferedWriter out = new BufferedWriter(new FileWriter(filename, true)); // APPEND to file
+				out.write(_traceOutSaveBuffert.toString());
+				out.close();
+				
+				// reset the buffert
+				_traceOutSaveBuffert.setLength(0);
+			}
+			catch (Exception e)
+			{
+				String msg = "Problems saving Trace output to file '"+filename+"'. Caught: "+e;
+				_logger.error(msg);
+				SwingUtils.showErrorMessage("Problems Saving Trace Output file.", msg, e);
 			}
 		}
+		
 	}
 	/*---------------------------------------------------
 	** END: implementing FileTail.TraceListener
@@ -2321,6 +2455,17 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		private JRadioButton _show_elimination_brief_rbt    = new JRadioButton("brief");
 		private JRadioButton _show_elimination_long_rbt     = new JRadioButton("long");
 
+		private JCheckBox    _show_pll_costing_chk          = new JCheckBox("show_pll_costing", false);
+		private JRadioButton _show_pll_costing_normal_rbt   = new JRadioButton("normal", true);
+		private JRadioButton _show_pll_costing_brief_rbt    = new JRadioButton("brief");
+		private JRadioButton _show_pll_costing_long_rbt     = new JRadioButton("long");
+
+		private JCheckBox    _show_missing_stats_chk        = new JCheckBox("show_missing_stats", false);
+		private JRadioButton _show_missing_stats_normal_rbt = new JRadioButton("normal", true);
+		private JRadioButton _show_missing_stats_brief_rbt  = new JRadioButton("brief");
+		private JRadioButton _show_missing_stats_long_rbt   = new JRadioButton("long");
+
+//		set option show_missing_stats
 
 		public OptionsDialog(Dialog owner)
 		{
@@ -2372,6 +2517,42 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			JPanel p = SwingUtils.createPanel("Extended Options", true);
 			p.setLayout(new MigLayout());
 
+// from manual, some might not work...  http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc00743.1570/html/queryprocessing/CIHBAAHJ.htm
+//			show				Shows a reasonable collection of details, where the collection depends on the choice of {normal | brief | long | on | off}
+//			show_lop			Shows the logical operators used
+//			show_managers		Shows the data structure managers used during optimization
+//			show_log_props		Shows the logical properties evaluated
+//			show_parallel		Shows details of parallel query optimization
+//			show_histograms		Shows the processing of histograms associated with SARG/join columns
+//			show_abstract_plan	Shows the details of an abstract plan
+//			show_search_engine	Shows the details of the join-ordering algorithm
+//			show_counters		Shows the optimization counters
+//			show_best_plan		Shows the details of the best query plan selected by the optimizer
+//			show_code_gen		Shows details of code generation
+//			show_pio_costing	Shows estimates of physical input/output (reads/writes from/to the disk)
+//			show_lio_costing	Shows estimates of logical input/output (reads/writes from/to memory)
+//			show_pll_costing	Shows estimates relating to costing for parallel execution
+//			show_elimination	Shows partition elimination
+//			show_missing_stats	Shows details of useful statistics missing from SARG/join columns
+
+			_show_chk              .setToolTipText("Shows a reasonable collection of details, where the collection depends on the choice of {normal | brief | long | on | off}");
+			_show_lop_chk          .setToolTipText("Shows the logical operators used");
+			_show_parallel_chk     .setToolTipText("Shows details of parallel query optimization");
+			_show_search_engine_chk.setToolTipText("Shows the details of the join-ordering algorithm");
+			_show_counters_chk     .setToolTipText("Shows the optimization counters");
+			_show_managers_chk     .setToolTipText("Shows the data structure managers used during optimization");
+			_show_histograms_chk   .setToolTipText("Shows the processing of histograms associated with SARG/join columns");
+			_show_abstract_plan_chk.setToolTipText("Shows the details of an abstract plan");
+			_show_best_plan_chk    .setToolTipText("Shows the details of the best query plan selected by the optimizer");
+			_show_code_gen_chk     .setToolTipText("Shows details of code generation");
+			_show_pio_costing_chk  .setToolTipText("Shows estimates of physical input/output (reads/writes from/to the disk)");
+			_show_lio_costing_chk  .setToolTipText("Shows estimates of logical input/output (reads/writes from/to memory)");
+			_show_log_props_chk    .setToolTipText("Shows the logical operators used");
+			_show_elimination_chk  .setToolTipText("Shows partition elimination");
+			_show_pll_costing_chk  .setToolTipText("Shows estimates relating to costing for parallel execution");
+			_show_missing_stats_chk.setToolTipText("Shows details of useful statistics missing from SARG/join columns");
+
+
 			addChk123(p, _show_chk,               _show_normal_rbt,               _show_brief_rbt,               _show_long_rbt              );
 			addChk123(p, _show_lop_chk,           _show_lop_normal_rbt,           _show_lop_brief_rbt,           _show_lop_long_rbt          );
 			addChk123(p, _show_parallel_chk,      _show_parallel_normal_rbt,      _show_parallel_brief_rbt,      _show_parallel_long_rbt     );
@@ -2386,6 +2567,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			addChk123(p, _show_lio_costing_chk,   _show_lio_costing_normal_rbt,   _show_lio_costing_brief_rbt,   _show_lio_costing_long_rbt  );
 			addChk123(p, _show_log_props_chk,     _show_log_props_normal_rbt,     _show_log_props_brief_rbt,     _show_log_props_long_rbt    );
 			addChk123(p, _show_elimination_chk,   _show_elimination_normal_rbt,   _show_elimination_brief_rbt,   _show_elimination_long_rbt  );
+			addChk123(p, _show_pll_costing_chk,   _show_pll_costing_normal_rbt,   _show_pll_costing_brief_rbt,   _show_pll_costing_long_rbt  );
+			addChk123(p, _show_missing_stats_chk, _show_missing_stats_normal_rbt, _show_missing_stats_brief_rbt, _show_missing_stats_long_rbt);
 
 			return p;
 		}
@@ -2448,6 +2631,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			setOptionOnOff123(source, "option show_lio_costing"   , _show_lio_costing_chk,   _show_lio_costing_normal_rbt,   _show_lio_costing_brief_rbt,   _show_lio_costing_long_rbt  );
 			setOptionOnOff123(source, "option show_log_props"     , _show_log_props_chk,     _show_log_props_normal_rbt,     _show_log_props_brief_rbt,     _show_log_props_long_rbt    );
 			setOptionOnOff123(source, "option show_elimination"   , _show_elimination_chk,   _show_elimination_normal_rbt,   _show_elimination_brief_rbt,   _show_elimination_long_rbt  );
+			setOptionOnOff123(source, "option show_pll_costing"   , _show_pll_costing_chk,   _show_pll_costing_normal_rbt,   _show_pll_costing_brief_rbt,   _show_pll_costing_long_rbt  );
+			setOptionOnOff123(source, "option show_missing_stats" , _show_missing_stats_chk, _show_missing_stats_normal_rbt, _show_missing_stats_brief_rbt, _show_missing_stats_long_rbt);
 		}
 
 		private void setOptionOnOff123(Object source, String option, JCheckBox chk, JRadioButton normal_rb, JRadioButton brief_rb, JRadioButton long_rb)
@@ -2521,8 +2706,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			AseConnectionFactory.setAppName("xxx");
 			AseConnectionFactory.setUser("sa");
 			AseConnectionFactory.setPassword("");
-			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
-//			AseConnectionFactory.setHostPort("gorans-xp", "5000");
+//			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
+			AseConnectionFactory.setHostPort("gorans-xp", "5000");
 //			AseConnectionFactory.setHostPort("gorans-xp", "15700");
 			
 			final Connection conn = AseConnectionFactory.getConnection();
