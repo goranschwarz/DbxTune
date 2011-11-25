@@ -462,19 +462,33 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 					//--------------------------------------------
 					// GET sp__optdiag
-//					if (_aseVersion >= 15700)
-//						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
-//					else
-//						sql = "exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' "; 
-//	
-//					ss = new AseSqlScript(conn, 10);
-//					try	{ 
-//						entry.setOptdiagText( ss.executeSqlStr(sql) ); 
-//					} catch (SQLException e) { 
-//						entry.setOptdiagText( e.toString() ); 
-//					} finally {
-//						ss.close();
-//					}
+					if (_aseVersion >= 15700)
+						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
+					else
+					{
+						// do SP_OPTDIAG, but only on UNPARTITIONED tables
+						sql="declare @partitions int \n" +
+							"select @partitions = count(*) \n" +
+							"from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..sysusers u, "+entry.getDbname()+"..syspartitions p \n" +
+							"where o.name = '"+entry.getObjectName()+"' \n" +
+							"  and u.name = '"+entry.getOwner()+"' \n" +
+							"  and o.id = p.id \n" +
+							"  and o.uid = o.uid \n" +
+							"if (@partitions > 1) \n" +
+							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.'" +
+							"else \n" +
+							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' " +
+							"";
+					}
+	
+					ss = new AseSqlScript(conn, 10);
+					try	{ 
+						entry.setOptdiagText( ss.executeSqlStr(sql) ); 
+					} catch (SQLException e) { 
+						entry.setOptdiagText( e.toString() ); 
+					} finally {
+						ss.close();
+					}
 	
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
