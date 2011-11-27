@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -107,11 +108,11 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private JCheckBox       _aseOptStatIo_chk       = new JCheckBox("Statistics IO",       false);
 	private JCheckBox       _aseOptStatTime_chk     = new JCheckBox("Statistics Time",     false);
 	private JCheckBox       _aseOptStatPlanCost_chk = new JCheckBox("Statistics Plancost", false);
+	private JButton         _aseOptAllOff_but       = new JButton("All Options to OFF");
 
 	private JButton         _aseExtenedOption_but   = new JButton("Extended Options...");
 	private OptionsDialog   _aseOptionsDialog       = new OptionsDialog(this);
 	private JButton         _aseSpHelpAppTrace_but  = new JButton("sp_helpapptrace");
-	private JCheckBox       _aseShowProcPanel_chk   = new JCheckBox("Show Procedure Text",   true);
 	private JCheckBox       _aseDelSrvFileOnStop_chk= new JCheckBox("Delete ASE Trace File", false);
 
 	private JLabel          _aseTraceFile_lbl       = new JLabel("ASE Trace File");
@@ -162,6 +163,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private JTextField      _traceOutSave_txt       = new JTextField("");
 	private JButton         _traceOutSave_but       = new JButton("...");
 	private JCheckBox       _traceOutTail_chk       = new JCheckBox("Move to last row when input is received", true);
+	private JCheckBox       _traceShowProcPanel_chk = new JCheckBox("Show Procedure Text",   true);
 	private RSyntaxTextArea _traceOut_txt           = new RSyntaxTextArea();
 	private RTextScrollPane _traceOut_scroll        = new RTextScrollPane(_traceOut_txt);
 
@@ -202,9 +204,19 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private void init(int spid, String aseName, String aseVersionStr)
 	{
 		setTitle("ASE Application Tracing - Not Connected"); // Set window title
+		
+		// Set the icon, if we "just" do setIconImage() on the JDialog
+		// it will not be the "correct" icon in the Alt-Tab list on Windows
+		// So we need to grab the owner, and set that since the icon is grabbed from the owner...
 		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png");
 		if (icon != null)
-			setIconImage(icon.getImage());
+		{
+			Object owner = getOwner();
+			if (owner != null && owner instanceof Frame)
+				((Frame)owner).setIconImage(icon.getImage());
+			else
+				setIconImage(icon.getImage());
+		}
 
 		_aseVersionStr = aseVersionStr;
 		_aseServerName = aseName;
@@ -241,7 +253,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		getSavedWindowProps();
 
 		// Initial state of panels/fields
-		_procPanel.setVisible( _aseShowProcPanel_chk.isSelected() );
+		_procPanel.setVisible( _traceShowProcPanel_chk.isSelected() );
 
 		validateInput();
 		setConnected(false);
@@ -342,7 +354,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseOptStatTime_chk    .setToolTipText("Show 'statistics time' output in the trace file.");
 		_aseOptStatPlanCost_chk.setToolTipText("Show 'statistics plancost' output in the trace file.");
 		_aseExtenedOption_but  .setToolTipText("Some extra/extended trace options are available here.");
-
+		_aseOptAllOff_but      .setToolTipText("<html>Turn ALL options to OFF, even if they havn't been turned on yet.<br><br>This is just a quick way to turn everything off.<br>Even if you already have turned it off, which might failed in some way. (due to various bugs in ASE or this sowtware)</html>");
 		_aseSaveDir_lbl        .setToolTipText("Directory where ASE is storing the trace file.");
 		_aseSaveDir_txt        .setToolTipText("Directory where ASE is storing the trace file.");
 		tooltip = 
@@ -366,9 +378,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseStopTrace_but       .setToolTipText("Stop doing trace on this SPID");
 		_aseTraceFile_lbl       .setToolTipText("<html>This is the full filename where ASE stores the trace information.<br><b>Note</b>: Before the trace is started, this is only a preview of what will the trace file name would be.</html>");
 		_aseTraceFile_txt       .setToolTipText("<html>This is the full filename where ASE stores the trace information.<br><b>Note</b>: Before the trace is started, this is only a preview of what will the trace file name would be.</html>");
-		_aseShowProcPanel_chk   .setToolTipText("Should the Procedure Text panel be visible.");
 		_aseDelSrvFileOnStop_chk.setToolTipText("<html>" +
-			"<b>Try</b> to delete the ASE Trace file on the server side.<br>" +
+			"<b>Try</b> to delete the ASE Trace file on the server side when the trace is stopped.<br>" +
 			"If the Local User or the SSH connection doesn't have privileges to delete the trace file which is created with the 'sybase' user/account, then an error message is displayed.<br>" +
 			"<br>" +
 			"<b>Note:</b> If this option is not checked or user doesn't have privileges to delete the file, manual cleanup/delete of the ASE Trace files has to be done.</html>");
@@ -390,8 +401,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 
 		panel.add(new JLabel(""),          "span, split, growx, pushx"); // dummy JLabel just to do "pushx"
 		panel.add(_aseExtenedOption_but,   "");
+		panel.add(_aseOptAllOff_but,       "");
 		panel.add(_aseSpHelpAppTrace_but,  "");
-		panel.add(_aseShowProcPanel_chk,   "");
 		panel.add(_aseDelSrvFileOnStop_chk,"wrap");
 				
 		panel.add(_aseTraceFile_lbl,      "");
@@ -415,10 +426,10 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseStopTrace_but.setVisible(false);
 
 		// Add action listener
-		_aseShowProcPanel_chk .addActionListener(this);
 		_aseSpid_txt          .addActionListener(this);
 		_aseSpid_but          .addActionListener(this);
 		_aseExtenedOption_but .addActionListener(this);
+		_aseOptAllOff_but     .addActionListener(this);
 		_aseSpHelpAppTrace_but.addActionListener(this);
 		_aseStartTrace_but    .addActionListener(this);
 		_aseStopTrace_but     .addActionListener(this);
@@ -526,23 +537,26 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
 		// Tooltip
-		panel            .setToolTipText("Trace Information, which the ASE server writes will be visible here.");
-		_traceOutSave_chk.setToolTipText("Do you want to save this information to a local file?");
-		_traceOutSave_txt.setToolTipText("Directory name where to store this trace information. One file will be created for every session, using the same filename as on the server side, appended with '.txt', which makes the file easier to open.");
-		_traceOutSave_but.setToolTipText("Open a File Chooser and locate a file name to be used for this.");
-		_traceOutTail_chk.setToolTipText("Simply moved the current active line to be at the end, more or less a tail.");
+		panel                  .setToolTipText("Trace Information, which the ASE server writes will be visible here.");
+		_traceOutSave_chk      .setToolTipText("Do you want to save this information to a local file?");
+		_traceOutSave_txt      .setToolTipText("Directory name where to store this trace information. One file will be created for every session, using the same filename as on the server side, appended with '.txt', which makes the file easier to open.");
+		_traceOutSave_but      .setToolTipText("Open a File Chooser and locate a file name to be used for this.");
+		_traceOutTail_chk      .setToolTipText("Simply moved the current active line to be at the end, more or less a tail.");
+		_traceShowProcPanel_chk.setToolTipText("Should the Procedure Text panel be visible.");
 	
 		_traceOut_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
-		panel.add(_traceOutSave_chk,  "split");
-		panel.add(_traceOutSave_txt,  "growx, pushx");
-		panel.add(_traceOutSave_but,  "wrap");
-		panel.add(_traceOutTail_chk,  "wrap");
+		panel.add(_traceOutSave_chk,       "split");
+		panel.add(_traceOutSave_txt,       "growx, pushx");
+		panel.add(_traceOutSave_but,       "wrap");
+		panel.add(_traceOutTail_chk,       "split, growx, pushx");
+		panel.add(_traceShowProcPanel_chk, "wrap");
 
 		panel.add(_traceOut_scroll,   "grow, push, wrap");
 
 		// Add action listener
-		_traceOutSave_but.addActionListener(this);
+		_traceOutSave_but      .addActionListener(this);
+		_traceShowProcPanel_chk.addActionListener(this);
 
 		_traceOut_txt.addCaretListener(createTraceOutTxtCaretListener());
 		
@@ -633,9 +647,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	{
 		Object source = e.getSource();
 
-		if (_aseShowProcPanel_chk.equals(source))
+		if (_traceShowProcPanel_chk.equals(source))
 		{
-			boolean visible = _aseShowProcPanel_chk.isSelected();
+			boolean visible = _traceShowProcPanel_chk.isSelected();
 			if ( ! visible)
 				_splitPane1_saveDividerLocation = _splitPane1.getDividerLocation();
 
@@ -788,6 +802,12 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			_aseOptionsDialog.setVisible(true);
 		}
 
+		// BUT: ALL Options to off
+		if (_aseOptAllOff_but.equals(source))
+		{
+			turnOffAllOptions();
+		}
+
 //		// BUT: ASE Control Command Log
 //		if (_traceCmdLog_but.equals(source))
 //		{
@@ -844,6 +864,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		
 //		_aseSpHelpAppTrace_but.setEnabled( isConnected ); // Enabled only when connected
 		_aseExtenedOption_but .setEnabled( isConnected ); // Enabled only when connected
+		_aseOptAllOff_but     .setEnabled( isConnected ); // Enabled only when connected
 
 		_aseStartTrace_but.setVisible( ! isConnected );  // Disabled when connected, so we can start
 		_aseStopTrace_but .setVisible(   isConnected );  // Enable   when connected, so we can stop
@@ -961,6 +982,28 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: "+sql, e);
 		}
 	}
+
+	/**
+	 * Turn OFF all options even the ones in Extended Options Dialog
+	 */
+	private void turnOffAllOptions()
+	{
+		_aseOptShowSql_chk     .setSelected(false);
+		_aseOptShowplan_chk    .setSelected(false);
+		_aseOptStatIo_chk      .setSelected(false);
+		_aseOptStatTime_chk    .setSelected(false);
+		_aseOptStatPlanCost_chk.setSelected(false);
+
+		setOption("show_sqltext",        false);
+		setOption("showplan",            false);		
+		setOption("statistics io",       false);
+		setOption("statistics time",     false);
+		setOption("statistics plancost", false);
+
+		_aseOptionsDialog.turnOffAllOptions();
+	}
+
+
 
 	/** 
 	 * START a application tracing session on the ASE server<br>
@@ -1420,7 +1463,6 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		conf.setProperty("aseAppTrace.ase.opt.statistics_time",     _aseOptStatTime_chk    .isSelected() );
 		conf.setProperty("aseAppTrace.ase.opt.statistics_plancost", _aseOptStatPlanCost_chk.isSelected() );
 
-		conf.setProperty("aseAppTrace.ase.showProcPanel",           _aseShowProcPanel_chk  .isSelected() );
 		conf.setProperty("aseAppTrace.ase.delSrvTraceFileOnStop",   _aseDelSrvFileOnStop_chk.isSelected() );
 		
 		conf.setProperty("aseAppTrace.ase."+_aseHostName+".saveDir",_aseSaveDir_txt        .getText() );
@@ -1454,9 +1496,10 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		//----------------------------------
 		// TRACE OUTPUT
 		//----------------------------------
-		conf.setProperty("aseAppTrace.traceOut.save",  _traceOutSave_chk.isSelected() );
-		conf.setProperty("aseAppTrace.traceOut.dir",   _traceOutSave_txt.getText() );
-		conf.setProperty("aseAppTrace.traceOut.tail",  _traceOutTail_chk.isSelected() );
+		conf.setProperty("aseAppTrace.traceOut.save",          _traceOutSave_chk      .isSelected() );
+		conf.setProperty("aseAppTrace.traceOut.dir",           _traceOutSave_txt      .getText() );
+		conf.setProperty("aseAppTrace.traceOut.tail",          _traceOutTail_chk      .isSelected() );
+		conf.setProperty("aseAppTrace.traceOut.showProcPanel", _traceShowProcPanel_chk.isSelected() );
 
 		//----------------------------------
 		// PROC
@@ -1472,7 +1515,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		//------------------
 		if (_splitPane1 != null)
 		{
-			if (_aseShowProcPanel_chk.isSelected())
+			if (_traceShowProcPanel_chk.isSelected())
 				conf.setProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  _splitPane1.getDividerLocation());
 		}
 
@@ -1505,7 +1548,6 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseOptStatTime_chk     .setSelected(conf.getBooleanProperty("aseAppTrace.ase.opt.statistics_time",     _aseOptStatTime_chk     .isSelected()));
 		_aseOptStatPlanCost_chk .setSelected(conf.getBooleanProperty("aseAppTrace.ase.opt.statistics_plancost", _aseOptStatPlanCost_chk .isSelected()));
 
-		_aseShowProcPanel_chk   .setSelected(conf.getBooleanProperty("aseAppTrace.ase.showProcPanel",           _aseShowProcPanel_chk   .isSelected()));
 		_aseDelSrvFileOnStop_chk.setSelected(conf.getBooleanProperty("aseAppTrace.ase.delSrvTraceFileOnStop",   _aseDelSrvFileOnStop_chk.isSelected()));
 
 		String saveDir = conf.getProperty("aseAppTrace.ase."+_aseHostName+".saveDir");
@@ -1576,9 +1618,10 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		//----------------------------------
 		// TRACE OUTPUT
 		//----------------------------------
-		_traceOutSave_chk.setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.save", _traceOutSave_chk.isSelected()));
-		_traceOutSave_txt.setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",  System.getProperty("ASETUNE_SAVE_DIR")));
-		_traceOutTail_chk.setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.tail", _traceOutTail_chk.isSelected()));
+		_traceOutSave_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.save",          _traceOutSave_chk.isSelected()));
+		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           System.getProperty("ASETUNE_SAVE_DIR")));
+		_traceOutTail_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.tail",          _traceOutTail_chk.isSelected()));
+		_traceShowProcPanel_chk.setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.showProcPanel", _traceShowProcPanel_chk.isSelected()));
 
 		//----------------------------------
 		// PROC
@@ -1615,7 +1658,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		int divLoc = conf.getIntProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  -1);
 		if (divLoc < 0)
 			divLoc = width / 2;
-		if (_aseShowProcPanel_chk.isSelected())
+		if (_traceShowProcPanel_chk.isSelected())
 			_splitPane1.setDividerLocation(divLoc);
 
 		divLoc = conf.getIntProperty("aseAppTrace.dialog.splitPane.dividerLocation2",  -1);
@@ -2655,6 +2698,47 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 				setOption(option, value);
 			}
 		}
+
+		/**
+		 * Turn OFF all options
+		 */
+		public void turnOffAllOptions()
+		{
+			_show_chk              .setSelected(false);
+			_show_lop_chk          .setSelected(false);
+			_show_parallel_chk     .setSelected(false);
+			_show_search_engine_chk.setSelected(false);
+			_show_counters_chk     .setSelected(false);
+			_show_managers_chk     .setSelected(false);
+			_show_histograms_chk   .setSelected(false);
+			_show_abstract_plan_chk.setSelected(false);
+			_show_best_plan_chk    .setSelected(false);
+			_show_code_gen_chk     .setSelected(false);
+			_show_pio_costing_chk  .setSelected(false);
+			_show_lio_costing_chk  .setSelected(false);
+			_show_log_props_chk    .setSelected(false);
+			_show_elimination_chk  .setSelected(false);
+			_show_pll_costing_chk  .setSelected(false);
+			_show_missing_stats_chk.setSelected(false);
+
+			setOption("option show"               , false);
+			setOption("option show_lop"           , false);
+			setOption("option show_parallel"      , false);
+			setOption("option show_search_engine" , false);
+			setOption("option show_counters"      , false);
+			setOption("option show_managers"      , false);
+			setOption("option show_histograms"    , false);
+			setOption("option show_abstract_plan" , false);
+			setOption("option show_best_plan"     , false);
+			setOption("option show_code_gen"      , false);
+			setOption("option show_pio_costing"   , false);
+			setOption("option show_lio_costing"   , false);
+			setOption("option show_log_props"     , false);
+			setOption("option show_elimination"   , false);
+			setOption("option show_pll_costing"   , false);
+			setOption("option show_missing_stats" , false);
+		}
+
 	}
 
 	

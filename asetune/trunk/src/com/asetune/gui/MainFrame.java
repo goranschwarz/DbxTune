@@ -3277,6 +3277,8 @@ public class MainFrame
 		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
 		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 
+		tmpConf.setProperty("mainTabbedPane.tabLayoutPolicy", _mainTabbedPane.getTabLayoutPolicy());
+
 		tmpConf.setProperty("window.width",  getSize().width);
 		tmpConf.setProperty("window.height", getSize().height);
 		if (isVisible())
@@ -3330,6 +3332,9 @@ public class MainFrame
 		// 
 		_refreshInterval      = tmpConf.getIntProperty("main.refresh.interval", _refreshInterval);
 		_refreshNoGuiInterval = tmpConf.getIntProperty("nogui.sleepTime",       _refreshNoGuiInterval);
+
+		int tabLayoutPolicy = tmpConf.getIntProperty("mainTabbedPane.tabLayoutPolicy", JTabbedPane.WRAP_TAB_LAYOUT);
+		_mainTabbedPane.setTabLayoutPolicy(tabLayoutPolicy);
 
 		boolean bool; 
 		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
