@@ -46,6 +46,7 @@ extends XmenuActionBase
 	/* (non-Javadoc)
 	 * @see com.sybase.jisql.xmenu.XmenuActionBase#doWork()
 	 */
+	@Override 
 	public void doWork() 
 	{
 		_conn = getConnection();
@@ -112,6 +113,7 @@ extends XmenuActionBase
 			 */
 		textFrame.addWindowListener(new WindowAdapter()
 		{
+			@Override 
 			public void windowClosing(WindowEvent e)
 			{
 				if (_closeConnOnExit)
@@ -124,6 +126,7 @@ extends XmenuActionBase
 
 		ActionListener action = new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				if (e.getActionCommand().equals("Refresh"))

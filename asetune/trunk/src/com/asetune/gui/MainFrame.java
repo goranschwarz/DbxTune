@@ -79,12 +79,13 @@ import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
-import com.asetune.gui.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPane.TabOrderAndVisibilityListener;
 import com.asetune.gui.swing.GTabbedPaneViewDialog;
 import com.asetune.gui.swing.Screenshot;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.wizard.WizardOffline;
 import com.asetune.gui.wizard.WizardUserDefinedCm;
 import com.asetune.pcs.InMemoryCounterHandler;
@@ -98,6 +99,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
 import com.asetune.utils.PropPropEntry;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -141,6 +143,7 @@ public class MainFrame
 	public static final String ACTION_OPEN_ASE_CONFIG_MON       = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL          = "OPEN_CAPTURE_SQL";
 	public static final String ACTION_OPEN_ASE_APP_TRACE        = "OPEN_ASE_APP_TRACE";
+	public static final String ACTION_OPEN_DDL_VIEW             = "OPEN_DDL_VIEW";
 	public static final String ACTION_OPEN_SQL_QUERY_WIN        = "OPEN_SQL_QUERY_WIN";
 	public static final String ACTION_OPEN_LOCK_TOOL            = "OPEN_LOCK_TOOL";
 	public static final String ACTION_OPEN_WIZARD_OFFLINE       = "OPEN_WIZARD_OFFLINE";
@@ -164,6 +167,12 @@ public class MainFrame
 	
 	public static final String ACTION_TAB_SELECTOR              = "TAB_SELECTOR";
 
+	public static final String ACTION_SLIDER_LEFT               = "SLIDER_LEFT";
+	public static final String ACTION_SLIDER_RIGHT              = "SLIDER_RIGHT";
+	public static final String ACTION_SLIDER_LEFT_LEFT          = "SLIDER_LEFT_LEFT";
+	public static final String ACTION_SLIDER_RIGHT_RIGHT        = "SLIDER_RIGHT_RIGHT";
+	public static final String ACTION_SLIDER_LEFT_NEXT          = "SLIDER_LEFT_NEXT";
+	public static final String ACTION_SLIDER_RIGHT_NEXT         = "SLIDER_RIGHT_NEXT";
 
 	private PersistContainer _currentPc      = null;
 
@@ -211,6 +220,7 @@ public class MainFrame
 	private JMenuItem           _aseConfMon_mi          = new JMenuItem("Configure ASE for Monitoring...");
 	private JMenuItem           _captureSql_mi          = new JMenuItem("Capture SQL...");
 	private JMenuItem           _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
+	private JMenuItem           _ddlView_mi             = new JMenuItem("DDL Viewer...");
 	private JMenu               _preDefinedSql_m        = null;
 	private JMenuItem           _sqlQuery_mi            = new JMenuItem("SQL Query Window...");
 //	private JMenuItem           _lockTool_mi            = new JMenuItem("Lock Tool (NOT YET IMPLEMENTED)");
@@ -277,6 +287,8 @@ public class MainFrame
 	/** String to append at the end of the setTitle() */
 	private String _windowTitleAppend = null;
 
+	/** DDL Viewer GUI */
+	private DdlViewer _ddlViewer = null;
 	//-------------------------------------------------
 
 	public static int getRefreshInterval()      { return _refreshInterval; }
@@ -408,6 +420,7 @@ public class MainFrame
 		_aseConfMon_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_captureSql_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 		_aseAppTrace_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
+		_ddlView_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/ddl_view_tool.png"));
 		_sqlQuery_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
 //		_lockTool_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
 		_createOffline_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/pcs_write_16.png"));
@@ -441,10 +454,11 @@ public class MainFrame
 		_view_m.add(_counterTabView_mi);
 		_view_m.add(_graphView_mi);
 		_view_m.add(_graphs_m);
-		
+
 		_tools_m.add(_aseConfMon_mi);
 		_tools_m.add(_captureSql_mi);
 		_tools_m.add(_aseAppTrace_mi);
+		_tools_m.add(_ddlView_mi);
 		_preDefinedSql_m = createPredefinedSqlMenu();
 		if (_preDefinedSql_m != null) _tools_m.add(_preDefinedSql_m);
 		_tools_m.add(_sqlQuery_mi);
@@ -474,6 +488,7 @@ public class MainFrame
 		_aseConfMon_mi            .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_captureSql_mi            .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
 		_aseAppTrace_mi           .setActionCommand(ACTION_OPEN_ASE_APP_TRACE);
+		_ddlView_mi               .setActionCommand(ACTION_OPEN_DDL_VIEW);
 		_sqlQuery_mi              .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
 //		_lockTool_mi              .setActionCommand(ACTION_OPEN_LOCK_TOOL);
 		_createOffline_mi         .setActionCommand(ACTION_OPEN_WIZARD_OFFLINE);
@@ -501,6 +516,7 @@ public class MainFrame
 		_aseConfMon_mi            .addActionListener(this);
 		_captureSql_mi            .addActionListener(this);
 		_aseAppTrace_mi           .addActionListener(this);
+		_ddlView_mi               .addActionListener(this);
 		_sqlQuery_mi              .addActionListener(this);
 //		_lockTool_mi              .addActionListener(this);
 		_createOffline_mi         .addActionListener(this);
@@ -524,6 +540,22 @@ public class MainFrame
 		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, ActionEvent.ALT_MASK));
 
 		_refreshNow_but.setMnemonic(KeyEvent.VK_R);
+
+//		FIXME: Add some Ctrl+>, Ctrl+<  and Ctrl+Shift+<>  to navigate the offline/inmem JSlider, this will make navigation easier
+//		FIXME: look at setFocus on JSlide after a Offline dataset has been loded....
+		KeyStroke leftSample       = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  ActionEvent.CTRL_MASK);
+		KeyStroke rightSample      = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, ActionEvent.CTRL_MASK);
+		KeyStroke leftLeftSample   = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  ActionEvent.SHIFT_MASK);
+		KeyStroke rightRightSample = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, ActionEvent.SHIFT_MASK);
+		KeyStroke leftNextSample   = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  ActionEvent.CTRL_MASK | ActionEvent.SHIFT_MASK);
+		KeyStroke rightNextSample  = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, ActionEvent.CTRL_MASK | ActionEvent.SHIFT_MASK);
+
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT,        leftSample,       JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT,       rightSample,      JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT_LEFT,   leftLeftSample,   JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT_RIGHT, rightRightSample, JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT_NEXT,   leftNextSample,   JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT_NEXT,  rightNextSample,  JComponent.WHEN_IN_FOCUSED_WINDOW);
 		
 		//--------------------------
 		// TOOLBAR
@@ -682,6 +714,19 @@ public class MainFrame
 		_readSlider.setPaintTrack(true);
 		_readSlider.setMajorTickSpacing(10);
 		_readSlider.setMinorTickSpacing(1);
+		_readSlider.setToolTipText("" +
+			"<html>" +
+			"Choose a in-memory sample period to display.<br>" +
+			"Keyboard Shortcuts:" +
+			"<ul>" +
+			"    <li>Ctrl + Left - Move one position Left in the slider.</li>" +
+			"    <li>Ctrl + Right - Move one position Right in the slider.</li>" +
+			"    <li>Shift + Left - Move 10 positions Left in the slider.</li>" +
+			"    <li>Shift + Right - Move 10 positions Right in the slider.</li>" +
+//			"    <li>Ctrl + Shift + Left - Move to Previous sample that contains data.</li>" +
+//			"    <li>Ctrl + Shift + Right - Move to Next sample that contains data.</li>" +
+			"</ul>" +
+			"</html>");
 
 //		_readSlider.setLabelTable(_readSlider.createStandardLabels(10));
 //		_readSlider.setLabelTable(dict);
@@ -699,6 +744,19 @@ public class MainFrame
 		_offlineSlider.setPaintTrack(true);
 		_offlineSlider.setMajorTickSpacing(10);
 		_offlineSlider.setMinorTickSpacing(1);
+		_offlineSlider.setToolTipText("" +
+			"<html>" +
+			"Choose a stored sample period to display.<br>" +
+			"Keyboard Shortcuts:" +
+			"<ul>" +
+			"    <li>Ctrl + Left - Move one position Left in the slider.</li>" +
+			"    <li>Ctrl + Right - Move one position Right in the slider.</li>" +
+			"    <li>Shift + Left - Move 10 positions Left in the slider.</li>" +
+			"    <li>Shift + Right - Move 10 positions Right in the slider.</li>" +
+			"    <li>Ctrl + Shift + Left - Move to Previous sample that contains data.</li>" +
+			"    <li>Ctrl + Shift + Right - Move to Next sample that contains data.</li>" +
+			"</ul>" +
+			"</html>");
 
 //		_offlineSlider.setLabelTable(_readSlider.createStandardLabels(10));
 //		_offlineSlider.setLabelTable(dict);
@@ -999,6 +1057,11 @@ public class MainFrame
 			apptrace.setVisible(true);
 		}
 
+		if (ACTION_OPEN_DDL_VIEW.equals(actionCmd))
+		{
+			action_openDdlViewer(null, null);
+		}
+
 		if (ACTION_OPEN_SQL_QUERY_WIN.equals(actionCmd))
 		{
 			try 
@@ -1234,6 +1297,13 @@ public class MainFrame
 //				pm.setVisible(true);
 			}
 		}
+
+		if (ACTION_SLIDER_LEFT       .equals(actionCmd)) action_sliderKeyLeft(e);
+		if (ACTION_SLIDER_RIGHT      .equals(actionCmd)) action_sliderKeyRight(e);
+		if (ACTION_SLIDER_LEFT_LEFT  .equals(actionCmd)) action_sliderKeyLeftLeft(e);
+		if (ACTION_SLIDER_RIGHT_RIGHT.equals(actionCmd)) action_sliderKeyRightRight(e);
+		if (ACTION_SLIDER_LEFT_NEXT  .equals(actionCmd)) action_sliderKeyLeftNext(e);
+		if (ACTION_SLIDER_RIGHT_NEXT .equals(actionCmd)) action_sliderKeyRightNext(e);
 
 	}
 
@@ -1789,7 +1859,7 @@ public class MainFrame
 		BgExecutor terminateConnectionTask = new BgExecutor()
 		{
 			@Override
-			public void doWork()
+			public Object doWork()
 			{
 				//--------------------------
 				// - Stop the counter refresh thread
@@ -1878,6 +1948,15 @@ public class MainFrame
 				}
 		
 				//--------------------------
+				// Close the DDL View
+				if (_ddlViewer != null)
+				{
+					_ddlViewer.setVisible(false);
+					_ddlViewer.dispose();
+					_ddlViewer = null;
+				}
+
+				//--------------------------
 				// If we have a PersistentCounterHandler, stop it...
 				if ( PersistentCounterHandler.hasInstance() )
 				{
@@ -1925,6 +2004,8 @@ public class MainFrame
 				wait.setState("Disconnected.");
 
 				_logger.info("The disconnect thread is ending.");
+				
+				return null;
 			}
 		};
 		wait.execAndWait(terminateConnectionTask);
@@ -1998,6 +2079,96 @@ public class MainFrame
 		dlg.setVisible(true);
 	}
 
+	private void moveSlider(JSlider slider, int moveValue)
+	{
+		int toPos  = slider.getValue() + moveValue;
+		if (toPos >= 0 && toPos <= slider.getMaximum())
+			slider.setValue(toPos); // This will call the stateChanged, which does the rest of the work.
+	}
+
+	private void action_sliderKeyLeft(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			moveSlider(_readSlider, -1);
+
+		else if (isOfflineConnected())
+			moveSlider(_offlineSlider, -1);
+	}
+
+	private void action_sliderKeyRight(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			moveSlider(_readSlider, 1);
+
+		else if (isOfflineConnected())
+			moveSlider(_offlineSlider, 1);
+	}
+
+	private void action_sliderKeyLeftLeft(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			moveSlider(_readSlider, -10);
+
+		else if (isOfflineConnected())
+			moveSlider(_offlineSlider, -10);
+	}
+
+	private void action_sliderKeyRightRight(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			moveSlider(_readSlider, 10);
+
+		else if (isOfflineConnected())
+			moveSlider(_offlineSlider, 10);
+	}
+
+	private void action_sliderKeyLeftNext(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			_logger.info("No action has been assigned 'Ctrl+Shift+left' in 'onlinde mode'");
+
+		else if (isOfflineConnected())
+		{
+			if (_currentPanel != null)
+				_currentPanel.OfflineRewind();
+		}
+	}
+
+	private void action_sliderKeyRightNext(ActionEvent e)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+			_logger.info("No action has been assigned 'Ctrl+Shift+right' in 'onlinde mode'");
+
+		else if (isOfflineConnected())
+		{
+			if (_currentPanel != null)
+				_currentPanel.OfflineFastForward();
+		}
+	}
+
+	public void action_openDdlViewer(String dbname, String objectname)
+	{
+		if (AseTune.getCounterCollector().isMonConnected())
+		{
+			SwingUtils.showInfoMessage("DDL Viewer", 
+				"<html>" +
+				    "Only supported in 'offline' mode<br>" +
+				    "meaning: when you view a recorded session.<br>" +
+				    "<br>" +
+				    "<i>This functionality, will be implemented for 'online mode' in the future.</i><br>" +
+				"<html>");
+		}
+		else if (isOfflineConnected())
+		{
+			if (_ddlViewer == null)
+				_ddlViewer = new DdlViewer();
+
+			if ( ! StringUtil.isNullOrBlank(objectname) )
+				_ddlViewer.setViewEntry(dbname, objectname);
+				
+			_ddlViewer.setVisible(true);
+		}
+	}
 
 	// Overridden so we can exit when window is closed
 //	protected void processWindowEvent(WindowEvent e)
@@ -2803,6 +2974,7 @@ public class MainFrame
 			mf._aseConfMon_mi             .setEnabled(true);
 			mf._captureSql_mi             .setEnabled(true);
 			mf._aseAppTrace_mi            .setEnabled(true);
+			mf._ddlView_mi                .setEnabled(false);
 			mf._preDefinedSql_m           .setEnabled(true);
 			mf._sqlQuery_mi               .setEnabled(true);
 //			mf._lockTool_mi               .setEnabled();
@@ -2849,6 +3021,7 @@ public class MainFrame
 			mf._aseConfMon_mi             .setEnabled(false);
 			mf._captureSql_mi             .setEnabled(false);
 			mf._aseAppTrace_mi            .setEnabled(false);
+			mf._ddlView_mi                .setEnabled(true);
 			mf._preDefinedSql_m           .setEnabled(false);
 			mf._sqlQuery_mi               .setEnabled(false);
 //			mf._lockTool_mi               .setEnabled();
@@ -2895,6 +3068,7 @@ public class MainFrame
 			mf._aseConfMon_mi             .setEnabled(false);
 			mf._captureSql_mi             .setEnabled(false);
 			mf._aseAppTrace_mi            .setEnabled(false);
+			mf._ddlView_mi                .setEnabled(false);
 			mf._preDefinedSql_m           .setEnabled(false);
 			mf._sqlQuery_mi               .setEnabled(false);
 //			mf._lockTool_mi               .setEnabled();
@@ -3462,10 +3636,12 @@ public class MainFrame
 			BgExecutor doWork = new BgExecutor()
 			{
 				@Override
-				public void doWork()
+				public Object doWork()
 				{
 					_mainframe.readSliderMoveToCurrentTs();
 					_mainframe._readSelectionTimer.stop();
+					
+					return null;
 				}
 			};
 			WaitForExecDialog execWait = new WaitForExecDialog(_mainframe, "Loading in-memory history entry.");
@@ -3493,5 +3669,4 @@ public class MainFrame
 			_mainframe._offlineSelectionTimer.stop();
 		}
 	}
-
 }

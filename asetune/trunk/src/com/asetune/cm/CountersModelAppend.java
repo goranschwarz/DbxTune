@@ -367,6 +367,7 @@ public class CountersModelAppend
 	/**
 	 * NO PK is needed, we are NOT going to do DIFF calculations
 	 */
+	@Override
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		// NO PK is needed, we are NOT going to do DIFF calculations

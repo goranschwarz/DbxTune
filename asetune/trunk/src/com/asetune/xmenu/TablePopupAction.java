@@ -53,6 +53,7 @@ implements ActionListener
 		_closeConnOnExit = closeConnOnExit;
 	}
 
+	@Override 
 	public void actionPerformed(ActionEvent e)
 	{
 		JMenuItem source = (JMenuItem)(e.getSource());
@@ -82,8 +83,16 @@ implements ActionListener
 			_xmenuObject.setMenuProperties(_menuProps);
 			_xmenuObject.setAllProperties(_allProps);
 
-			_xmenuObject.setConnection( _connFactory.getConnection(_connName) );
-			_xmenuObject.setCloseConnOnExit( _closeConnOnExit );
+			if (_xmenuObject.getConnectionOnStart())
+			{
+				_xmenuObject.setConnection( _connFactory.getConnection(_connName) );
+				_xmenuObject.setCloseConnOnExit( _closeConnOnExit );
+			}
+			else
+			{
+				_xmenuObject.setConnection(null);
+				_xmenuObject.setCloseConnOnExit(false);
+			}
 //			_xmenuObject.setConnection( MainFrame.getMonConnection() );
 
 

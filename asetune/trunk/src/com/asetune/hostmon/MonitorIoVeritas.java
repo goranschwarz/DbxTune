@@ -45,12 +45,12 @@ extends MonitorIo
         md.addStrColumn( "name",             2,  2, false,   30, "Name of the disk");
 		md.addIntColumn( "samples",          3,  0, true,        "Number of 'sub' sample entries of vxstat this value is based on");
 
-		md.addStatColumn("OperationsRead",   4,  3, true, 8, 1, "The number of read operations, per seconds");
-		md.addStatColumn("OperationsWrite",  5,  4, true, 8, 1, "The number of write operations, per seconds");
-		md.addStatColumn("BlocksRead",       6,  5, true, 8, 1, "The number of blocks read, per seconds");
-		md.addStatColumn("BlocksWrite",      7,  6, true, 8, 1, "The number of blocks written, per second");
-		md.addStatColumn("AvgTimeMsRead",    8,  7, true, 8, 1, "The average time in milliseconds spent on read operations in the interval");
-		md.addStatColumn("AvgTimeMsWrite",   9,  8, true, 8, 1, "The average time in milliseconds spent on write operations in the interval");
+		md.addStatColumn("OperationsRead",   4,  3, true, 10, 1, "The number of read operations, per seconds");
+		md.addStatColumn("OperationsWrite",  5,  4, true, 10, 1, "The number of write operations, per seconds");
+		md.addStatColumn("BlocksRead",       6,  5, true, 10, 1, "The number of blocks read, per seconds");
+		md.addStatColumn("BlocksWrite",      7,  6, true, 10, 1, "The number of blocks written, per second");
+		md.addStatColumn("AvgTimeMsRead",    8,  7, true, 10, 1, "The average time in milliseconds spent on read operations in the interval");
+		md.addStatColumn("AvgTimeMsWrite",   9,  8, true, 10, 1, "The average time in milliseconds spent on write operations in the interval");
 
 		// Use "name" as the Primary Key, which is used to do summary/average calculations
 		md.setPkCol("name");

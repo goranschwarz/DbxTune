@@ -930,6 +930,9 @@ public class ConnectionDialog
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
+//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;AUTO_SERVER=TRUE");
+//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
+//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE};AUTO_SERVER=TRUE");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 
@@ -1153,7 +1156,7 @@ public class ConnectionDialog
 		_offlineJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
 
 		// http://www.h2database.com/html/features.html#database_url
-		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE");
+		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:zip:<zipFileName>!/<dbname>");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
@@ -2868,7 +2871,7 @@ public class ConnectionDialog
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("conn.dialog.window.width",  510);
+		int width  = conf.getIntProperty("conn.dialog.window.width",  570);
 		int height = conf.getIntProperty("conn.dialog.window.height", 645);
 		int x      = conf.getIntProperty("conn.dialog.window.pos.x",  -1);
 		int y      = conf.getIntProperty("conn.dialog.window.pos.y",  -1);

@@ -288,7 +288,7 @@ extends CountersModel
 
 	
 	@Override
-	public String getToolTipTextOnTableColumn(String colname)
+	public String getToolTipTextOnTableColumnHeader(String colname)
 	{
 		if (_offlineMetadata != null)
 			return _offlineMetadata.getDescription(colname);
@@ -296,7 +296,7 @@ extends CountersModel
 		if (_osSampleTable != null)
 			return _osSampleTable.getMetaData().getDescription(colname);
 
-		return super.getToolTipTextOnTableColumn(colname);
+		return super.getToolTipTextOnTableColumnHeader(colname);
 	}
 
 	@Override public boolean discardDiffPctHighlighterOnAbsTable() { return false; }

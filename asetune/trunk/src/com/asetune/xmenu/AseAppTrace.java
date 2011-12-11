@@ -17,6 +17,7 @@ extends XmenuActionBase
 
 	/**
 	 */
+	@Override 
 	public void doWork() 
 	{
 		String spidStr  = getParamValue(0);

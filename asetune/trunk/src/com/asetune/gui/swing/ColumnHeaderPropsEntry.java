@@ -1,4 +1,4 @@
-package com.asetune.gui;
+package com.asetune.gui.swing;
 
 import java.text.ParseException;
 

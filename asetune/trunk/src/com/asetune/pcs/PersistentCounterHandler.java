@@ -39,6 +39,8 @@ implements Runnable
 	** Constants
 	**---------------------------------------------------
 	*/
+	public static final String STATEMENT_CACHE_NAME = "statement_cache";
+
 
 	/*---------------------------------------------------
 	** class members
@@ -244,9 +246,9 @@ implements Runnable
 	 */
 	public void addDdl(String dbname, String objectName, String source)
 	{
-		addDdl(dbname, objectName, source, 0);
+		addDdl(dbname, objectName, source, null, 0);
 	}
-	private void addDdl(String dbname, String objectName, String source, int dependLevel)
+	private void addDdl(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
 		if (_writerClasses.size() == 0)
 			return;
@@ -255,11 +257,14 @@ implements Runnable
 		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
 			return;
 
-		if (objectName.equals("temp worktable"))
+		if (objectName.indexOf("temp worktable") >= 0 )
 			return;
 		
-//		if (objectName.startsWith("#"))
-//			return;
+		if (objectName.startsWith("#"))
+			return;
+		
+		if (objectName.startsWith("ObjId:"))
+			return;
 		
 		// check if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
@@ -285,7 +290,7 @@ implements Runnable
 				_logger.debug("The DDL request Input queue has "+qsize+" entries. The persistent writer might not keep in pace.");
 		}
 
-		DdlQueueEntry entry = new DdlQueueEntry(dbname, objectName, source, dependLevel);
+		DdlQueueEntry entry = new DdlQueueEntry(dbname, objectName, source, dependParent, dependLevel);
 		_ddlInputQueue.add(entry);
 	}
 
@@ -297,8 +302,6 @@ implements Runnable
 			throw new RuntimeException("The Persistent Counter Handler module has NOT yet been initialized.");
 		}
 	}
-
-	
 
 	/**
 	 * Get DDL information from the database and pass it on to the storage thread
@@ -313,10 +316,11 @@ implements Runnable
 		if (conn == null)
 			return false;
 
-		String dbname     = qe._dbname;
-		String objectName = qe._objectName;
-		String source     = qe._source;
-		int dependLevel   = qe._dependLevel;
+		String dbname       = qe._dbname;
+		String objectName   = qe._objectName;
+		String source       = qe._source;
+		String dependParent = qe._dependParent;
+		int    dependLevel  = qe._dependLevel;
 
 		// FIXME: dbname  can be a Integer
 		// FIXME: objName can be a Integer
@@ -325,10 +329,12 @@ implements Runnable
 		// Statement Cache object
 		boolean isStatementCache = false;
 		String  ssqlid = null;
+// s00 is the old style of ID, FIXME: add this
+//		if (objectName.startsWith("*ss") || objectName.startsWith("s00") )
 		if (objectName.startsWith("*ss"))
 		{
 			isStatementCache = true;
-			dbname           = "statement_cache";
+			dbname           = STATEMENT_CACHE_NAME;
 			int sep = objectName.indexOf('_');
 			ssqlid = objectName.substring(3, sep);
 			//haskey = objectName.substring(sep+1, objectName.length()-3);
@@ -363,19 +369,79 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			entry.setDependLevel( dependLevel );
 			entry.setOwner("ssql");
 			entry.setType("SS");
+			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
 			String sql = 
 				"set switch on 3604 with no_info \n" +
 				"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
 			
 			AseSqlScript ss = new AseSqlScript(conn, 10);
 			try	{ 
-				entry.setObjectText( ss.executeSqlStr(sql) ); 
+				entry.setObjectText( ss.executeSqlStr(sql, true) ); 
 			} catch (SQLException e) { 
 				entry.setObjectText( e.toString() ); 
 			} finally {
 				ss.close();
 			}
 			
+			if (_aseVersion >= 15700)
+			{
+				//-----------------------------------------------------------
+				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
+				//-----------------------------------------------------------
+				// statement_id
+				//			     is the object ID of the lightweight procedure (A procedure that can be created and invoked 
+				//			     internally by Adaptive Server). This is the SSQLID from monCachedStatement.
+				// 
+				// plan_id
+				//			     is the unique identifier for the plan. This is the PlanID from monCachedProcedures. 
+				//			     A value of zero for plan_id displays the showplan output for all cached plans for the indicated SSQLID.
+				// 
+				// level_of_detail
+				//			     is a value from 0 - 6 indicating the amount of detail show_cached_plan_in_xml returns (see Table 2-6). 
+				//			     level_of_detail determines which sections of showplan are returned by show_cached_plan_in_xml. 
+				//			     The default value is 0.
+				// 
+				//			     The output of show_cached_plan_in_xml includes the plan_id and these sections:
+				// 
+				//			         parameter - contains the parameter values used to compile the query and the parameter values 
+				//			                     that caused the slowest performance. The compile parameters are indicated with the 
+				//			                     <compileParameters> and </compileParameters> tags. The slowest parameter values are 
+				//			                     indicated with the <execParameters> and </execParameters> tags. 
+				//			                     For each parameter, show_cached_plan_in_xml displays the:
+				//			                        Number
+				//			                        Datatype
+				//			                        Value:    values that are larger than 500 bytes and values for insert-value statements 
+				//			                                  do not appear. The total memory used to store the values for all parameters 
+				//			                                  is 2KB for each of the two parameter sets.
+				// 
+				//			         opTree    - contains the query plan and the optimizer estimates. 
+				//			                     The opTree section is delineated by the <opTree> and </opTree> tags.
+				// 
+				//			         execTree  - contains the query plan with the lava operator details. 
+				//			                     The execTree section is identified by the tags <execTree> and </execTree>.
+				//
+				// level_of_detail parameter opTree execTree
+				// --------------- --------- ------ --------
+				// 0 (the default)       YES    YES         
+				// 1                     YES                
+				// 2                            YES         
+				// 3                                     YES
+				// 4                            YES      YES
+				// 5                     YES             YES
+				// 6                     YES    YES      YES
+				//-----------------------------------------------------------
+
+				sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
+
+				ss = new AseSqlScript(conn, 10);
+				try	{
+					entry.setExtraInfoText( ss.executeSqlStr(sql, true) );
+				} catch (SQLException e) {
+					entry.setExtraInfoText( e.toString() );
+				} finally {
+					ss.close();
+				}
+			}
 			_ddlStoreQueue.add(entry);
 		}
 		else // all other tables
@@ -398,10 +464,12 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				{
 					DdlDetails entry = new DdlDetails();
 					
-					entry.setDbname     ( dbname );
-					entry.setObjectName ( objectName );
-					entry.setSource     ( source );
-					entry.setDependLevel( dependLevel );
+					entry.setDbname      ( dbname );
+					entry.setObjectName  ( objectName );
+					entry.setSource      ( source );
+					entry.setDependParent( dependParent );
+					entry.setDependLevel ( dependLevel );
+					entry.setSampleTime  ( new Timestamp(System.currentTimeMillis()) );
 
 					entry.setType       ( rs.getString   (1) );
 					entry.setOwner      ( rs.getString   (2) );
@@ -453,7 +521,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 					ss = new AseSqlScript(conn, 10);
 					try	{ 
-						entry.setObjectText( ss.executeSqlStr(sql) ); 
+						entry.setObjectText( ss.executeSqlStr(sql, true) ); 
 					} catch (SQLException e) { 
 						entry.setObjectText( e.toString() ); 
 					} finally {
@@ -472,18 +540,20 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 							"from "+entry.getDbname()+"..sysobjects o, "+entry.getDbname()+"..sysusers u, "+entry.getDbname()+"..syspartitions p \n" +
 							"where o.name = '"+entry.getObjectName()+"' \n" +
 							"  and u.name = '"+entry.getOwner()+"' \n" +
-							"  and o.id = p.id \n" +
+							"  and o.id  = p.id \n" +
 							"  and o.uid = o.uid \n" +
+							"  and p.indid = 0 \n" +
+							"                  \n" +
 							"if (@partitions > 1) \n" +
-							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.'" +
+							"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
 							"else \n" +
-							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' " +
+							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
 							"";
 					}
 	
 					ss = new AseSqlScript(conn, 10);
 					try	{ 
-						entry.setOptdiagText( ss.executeSqlStr(sql) ); 
+						entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
 					} catch (SQLException e) { 
 						entry.setOptdiagText( e.toString() ); 
 					} finally {
@@ -496,7 +566,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 					ss = new AseSqlScript(conn, 10);
 					try	{ 
-						entry.setExtraInfoText( ss.executeSqlStr(sql) ); 
+						entry.setExtraInfoText( ss.executeSqlStr(sql, true) ); 
 					} catch (SQLException e) { 
 						entry.setExtraInfoText( e.toString() ); 
 					} finally {
@@ -564,7 +634,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 				ss = new AseSqlScript(conn, 10);
 				try	{ 
-					entry.setDependsText( ss.executeSqlStr(sql) ); 
+					entry.setDependsText( ss.executeSqlStr(sql, true) ); 
 				} catch (SQLException e) { 
 					entry.setDependsText( e.toString() ); 
 				} finally {
@@ -610,7 +680,9 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 
 								// Don't add SystemProcedure/systemTables dependencies
 								if ( ! shortObjName.startsWith("sp_") && ! shortObjName.startsWith("sys"))
-									addDdl(entry.getDbname(), shortObjName, source, dependLevel + 1);
+								{
+									addDdl(entry.getDbname(), shortObjName, source, objectName, dependLevel + 1);
+								}
 							}
 						}
 						else
@@ -1203,14 +1275,16 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 		public String _dbname;
 		public String _objectName;
 		public String _source;
+		public String _dependParent;
 		public int    _dependLevel;
 
-		public DdlQueueEntry(String dbname, String objectName, String source, int dependLevel)
+		public DdlQueueEntry(String dbname, String objectName, String source, String dependParent, int dependLevel)
 		{
-			_dbname      = dbname;
-			_objectName  = objectName;
-			_source      = source;
-			_dependLevel = dependLevel;
+			_dbname       = dbname;
+			_objectName   = objectName;
+			_source       = source;
+			_dependParent = dependParent;
+			_dependLevel  = dependLevel;
 		}
 		
 		public String toString()

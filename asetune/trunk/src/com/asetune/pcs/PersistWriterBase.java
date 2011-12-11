@@ -577,7 +577,9 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"sampleTime"       +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"source"           +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
+				sbSql.append("   ,"+fill(qic+"dependParent"     +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
 				sbSql.append("   ,"+fill(qic+"dependLevel"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"dependList"       +qic,40)+" "+fill(getDatatype("varchar", 1500,-1,-1),20)+" "+getNullable(true) +"\n");
 				sbSql.append("   ,"+fill(qic+"objectText"       +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
@@ -813,7 +815,9 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("objectName")   .append(qic).append(", ");
 			sbSql.append(qic).append("type")         .append(qic).append(", ");
 			sbSql.append(qic).append("crdate")       .append(qic).append(", ");
+			sbSql.append(qic).append("sampleTime")   .append(qic).append(", ");
 			sbSql.append(qic).append("source")       .append(qic).append(", ");
+			sbSql.append(qic).append("dependParent") .append(qic).append(", ");
 			sbSql.append(qic).append("dependLevel")  .append(qic).append(", ");
 			sbSql.append(qic).append("dependList")   .append(qic).append(", ");
 			sbSql.append(qic).append("objectText")   .append(qic).append(", ");
@@ -822,7 +826,7 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("extraInfoText").append(qic).append("");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{

@@ -7,11 +7,14 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
@@ -65,8 +68,8 @@ import org.jdesktop.swingx.JXTable;
 
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.gui.WaitForExecDialog;
-import com.asetune.gui.WaitForExecDialog.BgExecutor;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -78,7 +81,7 @@ import com.asetune.utils.SwingUtils;
 
 public class AseAppTraceDialog
 extends JDialog
-implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
+implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
 {
 	private static Logger _logger = Logger.getLogger(AseAppTraceDialog.class);
 	private static final long serialVersionUID = 1L;
@@ -86,7 +89,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private FileTail        _fileTail               = null;
 	
 	private String[]        _aseSaveTemplateArr     = new String[] {"aseAppTrace.${SERVERNAME}.${SPID}.${DATE}"};
-	private String[]        _accessTypeArr          = new String[] {"Choose a method", "SSH Access", "Direct/Local Access"};
+	private String[]        _accessTypeArr          = new String[] {"Choose a method", "SSH Access", "Direct/Local Access", "No Tail, Just Control Trace"};
 	private final String    DEFAULT_STORED_PROC     = "No procedure is loaded.";
 
 	/** options to reset on setTraceOff */
@@ -131,9 +134,10 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private JPanel          _accessTypePanel        = null;
 	private JLabel          _accessType_lbl         = new JLabel("Trace File Access");
 	private JComboBox       _accessType_cbx         = new JComboBox(_accessTypeArr);
-	private static final int ACCESS_TYPE_NONE       = 0;
+	private static final int ACCESS_TYPE_NOT_SELECTED = 0;
 	private static final int ACCESS_TYPE_SSH        = 1;
 	private static final int ACCESS_TYPE_LOCAL      = 2;
+	private static final int ACCESS_TYPE_NONE       = 3;
 
 	private JPanel          _sshPanel               = null;
 	private SshConnection   _sshConn                = null;
@@ -154,6 +158,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	private JButton         _remoteMount_but        = new JButton("...");
 	private JLabel          _remoteFile_lbl         = new JLabel("Local File");
 	private JTextField      _remoteFile_txt         = new JTextField();
+
+	private JPanel          _noTailPanel            = null;
+	private JLabel          _noTail_lbl             = new JLabel();
 
 	private JSplitPane      _splitPane1             = null;
 	private JSplitPane      _splitPane2             = null;
@@ -240,6 +247,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_procPanel        = createProcPanel();
 		_traceCmdLogPanel = createTraceCmdLogPanel();
 
+		setAccessVisiblePanels();
+
+		
 		JPanel topPanel = new JPanel(new MigLayout());
 		topPanel.add(_aseOptionsPanel, "grow, push");
 		topPanel.add(_accessTypePanel, "grow, push");
@@ -297,19 +307,21 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 
 		_sshPanel         = createSshPanel();
 		_remotePanel      = createRemotePanel();
+		_noTailPanel      = createNoTailPanel();
 
-		setAccessVisiblePanels();
-
-		_accessType_lbl.setToolTipText("The Trace needs to be accessed in some way. You can choose Direct/Local access or SSH access.");
-		_accessType_cbx.setToolTipText("The Trace needs to be accessed in some way. You can choose Direct/Local access or SSH access.");
+		_accessType_lbl.setToolTipText("The Trace needs to be accessed in some way. You can choose Direct/Local access or SSH access or Simply NOT to Tail the server trace file, just control the AppTrace and read the file yourself.");
+		_accessType_cbx.setToolTipText("The Trace needs to be accessed in some way. You can choose Direct/Local access or SSH access or Simply NOT to Tail the server trace file, just control the AppTrace and read the file yourself.");
 
 		panel.add(_accessType_lbl,     "");
 		panel.add(_accessType_cbx,     "pushx, growx, wrap");
 		panel.add(_sshPanel,           "push, grow, span, wrap, hidemode 3");
 		panel.add(_remotePanel,        "push, grow, span, wrap, hidemode 3");
+		panel.add(_noTailPanel,        "push, grow, span, wrap, hidemode 3");
 
 		// Add action listener
 		_accessType_cbx.addActionListener(this);
+
+		// Focus action listener
 
 		return panel;
 	}
@@ -317,20 +329,49 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 	{
 		int index = _accessType_cbx.getSelectedIndex();
 		
-		if (index == ACCESS_TYPE_NONE)
+		if (index == ACCESS_TYPE_NOT_SELECTED)
 		{
 			_sshPanel   .setVisible(false);
 			_remotePanel.setVisible(false);
+			_noTailPanel.setVisible(false);
+
+			_aseDelSrvFileOnStop_chk.setEnabled(true);
+
+			SwingUtils.setEnabled(_traceOutPanel, true);
+			SwingUtils.setEnabled(_procPanel,     true);
 		}
 		else if (index == ACCESS_TYPE_SSH)
 		{
 			_sshPanel   .setVisible(true);
 			_remotePanel.setVisible(false);
+			_noTailPanel.setVisible(false);
+			
+			_aseDelSrvFileOnStop_chk.setEnabled(true);
+
+			SwingUtils.setEnabled(_traceOutPanel, true);
+			SwingUtils.setEnabled(_procPanel,     true);
 		}
 		else if (index == ACCESS_TYPE_LOCAL)
 		{
 			_sshPanel   .setVisible(false);
 			_remotePanel.setVisible(true);
+			_noTailPanel.setVisible(false);
+			
+			_aseDelSrvFileOnStop_chk.setEnabled(true);
+			
+			SwingUtils.setEnabled(_traceOutPanel, true);
+			SwingUtils.setEnabled(_procPanel,     true);
+		}
+		else if (index == ACCESS_TYPE_NONE)
+		{
+			_sshPanel   .setVisible(false);
+			_remotePanel.setVisible(false);
+			_noTailPanel.setVisible(true);
+			
+			_aseDelSrvFileOnStop_chk.setEnabled(false);
+			
+			SwingUtils.setEnabled(_traceOutPanel, false);
+			SwingUtils.setEnabled(_procPanel,     false);
 		}
 	}
 
@@ -444,6 +485,11 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_aseSaveTemplate_cbx    .addActionListener(this);
 		_aseDelSrvFileOnStop_chk.addActionListener(this);
 
+		// Focus action listener
+		_aseSpid_txt        .addFocusListener(this);
+		_aseSaveDir_txt     .addFocusListener(this);
+		_aseSaveTemplate_cbx.addFocusListener(this);
+
 		// initialize some fields...
 		_aseTraceFile_txt.setText(getAseTraceFilePreview());
 
@@ -493,6 +539,12 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		_sshHostname_txt.addActionListener(this);
 		_sshPort_txt    .addActionListener(this);
 
+		// Focus action listener
+		_sshUsername_txt.addFocusListener(this);
+		_sshPassword_txt.addFocusListener(this);
+		_sshHostname_txt.addFocusListener(this);
+		_sshPort_txt    .addFocusListener(this);
+
 		return panel;
 	}
 
@@ -525,8 +577,38 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		// for validation
 		_remoteMount_txt.addActionListener(this);
 
+		// Focus action listener
+		_remoteFile_txt .addFocusListener(this);
+		_remoteMount_txt.addFocusListener(this);
+
 		// set some initial fields etc...
 		_remoteFile_txt.setText(getLocalTraceFilePreview());
+
+		return panel;
+	}
+
+	private JPanel createNoTailPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("No Access to the Trace file", true);
+		panel.setLayout(new MigLayout("insets 0 0 0 0"));
+
+		String text = 
+			"<html>The Server Trace file has to be read manually.<br>" +
+			"<br>" +
+			"This means you will only control the Trace with this GUI.<br>" +
+			"The trace output has to be read at the server side.<br>" +
+			"<br>" +
+			"The downside is: Less functionality in the client<br>" +
+			"The upside is: That no local memory will be used to view the trace file." +
+			"</html>";
+
+		_noTail_lbl.setText(text);
+
+		// Tooltip
+		panel      .setToolTipText(text);
+		_noTail_lbl.setToolTipText(text);
+
+		panel.add(_noTail_lbl,  "growx, pushx");
 
 		return panel;
 	}
@@ -563,6 +645,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		// for validation
 		_traceOutSave_chk.addActionListener(this);
 		_traceOutSave_txt.addActionListener(this);
+
+		// Focus action listener
+		_traceOutSave_txt .addFocusListener(this);
 
 		return panel;
 	}
@@ -603,6 +688,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		// for validation
 		_procSave_chk.addActionListener(this);
 		_procSave_txt.addActionListener(this);
+
+		// Focus action listener
+		_procSave_txt .addFocusListener(this);
 
 		return panel;
 	}
@@ -846,6 +934,19 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		saveProps();
 	}
 
+	@Override
+	public void focusGained(FocusEvent e)
+	{
+		// Nothing to do here
+	}
+
+	@Override
+	public void focusLost(FocusEvent e)
+	{
+		// Simply use the action listener...
+		actionPerformed( new ActionEvent(e.getSource(), e.getID(), "focusLost") );
+	}
+
 	/** enable/disable some fields depending if we are connected or not, Try to figure out in what state we are in */
 	public boolean isConnected()
 	{
@@ -907,7 +1008,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		String warn = "";
 
 		int index = _accessType_cbx.getSelectedIndex();
-		if (index == ACCESS_TYPE_NONE)
+		if (index == ACCESS_TYPE_NOT_SELECTED)
 		{
 			warn = "Choose a 'Trace File Access' method";
 		}
@@ -932,12 +1033,43 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		}
 		
 		if (_traceOutSave_chk.isSelected())
+		{
 			if (StringUtil.isNullOrBlank(_traceOutSave_txt.getText()))
 				warn = "Save location for Trace Output has not been specified";
+			else
+			{
+				File f = new File(_traceOutSave_txt.getText());
+				if ( ! f.exists() )
+				{
+					String curDir = _traceOutSave_txt.getText();
+					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+					_traceOutSave_txt.setText(newDir);
+
+					SwingUtils.showInfoMessage(this, "Directory not found", 
+						"<html>The directory '"+curDir+"' didn't exist!<br>Setting the save directory to '"+newDir+"'.</html>");
+				}
+					_traceOutSave_txt.setText(System.getProperty("ASETUNE_SAVE_DIR"));
+			}
+		}
 		
 		if (_procSave_chk.isSelected())
+		{
 			if (StringUtil.isNullOrBlank(_procSave_txt.getText()))
 				warn = "Save location for Procedure Text has not been specified";
+			else
+			{
+				File f = new File(_procSave_txt.getText());
+				if ( ! f.exists() )
+				{
+					String curDir = _procSave_txt.getText();
+					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+					_procSave_txt.setText(newDir);
+
+					SwingUtils.showInfoMessage(this, "Directory not found", 
+						"<html>The directory '"+curDir+"' didn't exist!<br>Setting the save directory to '"+newDir+"'.</html>");
+				}
+			}
+		}
 
 		if (_spid < 0)
 			warn = "A valid SPID must be specified";
@@ -1022,7 +1154,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 		BgExecutor aseWaitTask = new BgExecutor()
 		{
 			@Override
-			public void doWork()
+			public Object doWork()
 			{
 				try
 				{
@@ -1082,6 +1214,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 					_aseConn = null;
 					_aseServerName = DEFAULT_aseServerName;
 				}
+				return null;
 			}
 		};
 		aseWait.execAndWait(aseWaitTask);
@@ -1153,7 +1286,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 			BgExecutor waitTask = new BgExecutor()
 			{
 				@Override
-				public void doWork()
+				public Object doWork()
 				{
 					try
 					{
@@ -1165,6 +1298,7 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 						_sshConn = null;
 						closeAseConn();
 					}
+					return null;
 				}
 			};
 			wait.execAndWait(waitTask);
@@ -1188,6 +1322,9 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 				stopTrace();
 				return false;
 			}
+
+			if (_procGet_chk.isSelected())
+				startProcTextReader();
 		}
 		else if (index == ACCESS_TYPE_LOCAL)
 		{
@@ -1208,10 +1345,14 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 				stopTrace();
 				return false;
 			}
-		}
 
-		if (_procGet_chk.isSelected())
-			startProcTextReader();
+			if (_procGet_chk.isSelected())
+				startProcTextReader();
+		}
+		else if (index == ACCESS_TYPE_NONE)
+		{
+			setTraceOn();
+		}
 
 		setConnected(true);
 //		_aseStartTrace_but.setVisible(false);
@@ -1276,7 +1417,8 @@ implements ActionListener, FileTail.TraceListener, Memory.MemoryListener
 				execSql("set "+option+" off");
 
 //			execSql("set tracefile off for "+_spid);
-			execSql("set tracefile off");
+			execSql("set tracefile off -- for "+_spid);
+//			execSql("set tracefile off");
 		}
 	}
 

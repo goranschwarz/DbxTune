@@ -27,15 +27,15 @@ extends MonitorIo
 		md.addStrColumn( "device",         1,  1, false,   30, "Disk device name");
 		md.addIntColumn( "samples",        2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
 
-		md.addStatColumn("readsPerSec",    3,  2, true, 5,  1, "Reads per second");
-		md.addStatColumn("writesPerSec",   4,  3, true, 5,  1, "Writes per second");
+		md.addStatColumn("readsPerSec",    3,  2, true, 10, 1, "Reads per second");
+		md.addStatColumn("writesPerSec",   4,  3, true, 10, 1, "Writes per second");
 		md.addStatColumn("kbReadPerSec",   5,  4, true, 10, 1, "KB read per second");
 		md.addStatColumn("kbWritePerSec",  6,  5, true, 10, 1, "KB written per second");
-		md.addStatColumn("wait",           7,  6, true, 5,  1, "Average number of transactions waiting for service (Q length)");
-		md.addStatColumn("actv",           8,  7, true, 5,  1, "Average number of transactions actively being serviced (removed from the queue but not yet completed)");
-		md.addStatColumn("svc_t",          9,  8, true, 5,  1, "Service time (ms). Includes everything: wait time, active queue time, seek rotation, transfer time");
-		md.addStatColumn("waitPct",       10,  9, true, 4,  1, "Percent of time there are transactions waiting for service (queue non-empty)");
-		md.addStatColumn("busyPct",       11, 10, true, 4,  1, "Percent of time the disk is busy (transactions in progress)");
+		md.addStatColumn("wait",           7,  6, true, 10, 1, "Average number of transactions waiting for service (Q length)");
+		md.addStatColumn("actv",           8,  7, true, 10, 1, "Average number of transactions actively being serviced (removed from the queue but not yet completed)");
+		md.addStatColumn("svc_t",          9,  8, true, 10, 1, "Service time (ms). Includes everything: wait time, active queue time, seek rotation, transfer time");
+		md.addStatColumn("waitPct",       10,  9, true, 5,  1, "Percent of time there are transactions waiting for service (queue non-empty)");
+		md.addStatColumn("busyPct",       11, 10, true, 5,  1, "Percent of time the disk is busy (transactions in progress)");
 
 		// Use "device" as the Primary Key, which is used to du summary/average calculations
 		md.setPkCol("device");

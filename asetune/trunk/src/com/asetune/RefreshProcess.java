@@ -19,10 +19,12 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
@@ -41,6 +43,9 @@ import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.AseConfigMonitoringDialog;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
@@ -50,7 +55,7 @@ public class RefreshProcess extends Thread
 	private static Logger _logger          = Logger.getLogger(RefreshProcess.class);
 
 	private ProcessDetailFrame pdf;
-	private Connection	       conn;
+	private Connection	       _conn;
 	private boolean	           refreshProcessFlag;
 	private int                _refreshInterval      = 1;
 	boolean	                   batchCapture	         = false;
@@ -139,8 +144,9 @@ public class RefreshProcess extends Thread
 	public CountersModel	   CMProcWaits;
 	public CountersModel	   CMLocks;
 
-	private int _aseVersion       = 0;
-	private int _monTablesVersion = 0;
+	private int     _aseVersion       = 0;
+	private boolean _isClusterEnabled = false;
+	private int     _monTablesVersion = 0;
 	 
 
 	private String  _captureRestrictionSql = "";
@@ -178,7 +184,7 @@ public class RefreshProcess extends Thread
 	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int kpid) 
 	{
 		this.pdf = aPdf;
-		this.conn = conn;
+		this._conn = conn;
 		this.kpid = kpid;
 		refreshProcessFlag=true;
 		selectedStatement=-1;
@@ -305,18 +311,18 @@ public class RefreshProcess extends Thread
 			{
 				// Refresh process information
 				currentSql = 
-					"select P.spid, P.enginenum, P.status, P.suid, suser_name(P.suid), P.hostname, P.hostprocess, P.cmd, P.cpu, " + 
-					"   P.physical_io, P.memusage, LocksHeld, P.blocked, P.dbid, db_name(P.dbid), P.uid, '' /*user_name(P.uid)*/, P.gid, " + 
-					"   P.tran_name, P.time_blocked, P.network_pktsz, P.fid, P.execlass, P.priority, P.affinity, P.id, object_name(P.id,P.dbid), " + 
-					"   P.stmtnum, P.linenum, P.origsuid, P.block_xloid, P.clientname, P.clienthostname,  P.clientapplname, P.sys_id, " + 
-					"   P.ses_id, P.loggedindatetime, P.ipaddr,  program_name=convert(varchar,P.program_name), CPUTime, " + 
-					"   WaitTime, LogicalReads, PhysicalReads, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, " + 
-					"   ScanPgs =  TableAccesses,IdxPgs = IndexAccesses, TmpTbl = TempDbObjects, UlcBytWrite =  ULCBytesWritten, " + 
-					"   UlcFlush = ULCFlushes, ULCFlushFull, Transactions, Commits, Rollbacks, PacketsSent, PacketsReceived, " + 
-					"   BytesSent, BytesReceived " + 
-					"from sysprocesses P , monProcessActivity A, monProcessNetIO N " + 
-					"where P.kpid=A.KPID " +
-					"  and N.KPID=P.kpid " +
+					"select P.spid, P.enginenum, P.status, P.suid, suser_name(P.suid), P.hostname, P.hostprocess, P.cmd, P.cpu, \n" + 
+					"   P.physical_io, P.memusage, LocksHeld, P.blocked, P.dbid, db_name(P.dbid), P.uid, '' /*user_name(P.uid)*/, P.gid, \n" + 
+					"   P.tran_name, P.time_blocked, P.network_pktsz, P.fid, P.execlass, P.priority, P.affinity, P.id, object_name(P.id,P.dbid), \n" + 
+					"   P.stmtnum, P.linenum, P.origsuid, P.block_xloid, P.clientname, P.clienthostname,  P.clientapplname, P.sys_id, \n" + 
+					"   P.ses_id, P.loggedindatetime, P.ipaddr,  program_name=convert(varchar,P.program_name), CPUTime, \n" + 
+					"   WaitTime, LogicalReads, PhysicalReads, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, \n" + 
+					"   ScanPgs =  TableAccesses,IdxPgs = IndexAccesses, TmpTbl = TempDbObjects, UlcBytWrite =  ULCBytesWritten, \n" + 
+					"   UlcFlush = ULCFlushes, ULCFlushFull, Transactions, Commits, Rollbacks, PacketsSent, PacketsReceived, \n" + 
+					"   BytesSent, BytesReceived \n" + 
+					"from sysprocesses P , monProcessActivity A, monProcessNetIO N \n" + 
+					"where P.kpid=A.KPID \n" +
+					"  and N.KPID=P.kpid \n" +
 					"  and P.kpid=" + Integer.toString(kpid);
 				rs = stmt.executeQuery(currentSql);
 	
@@ -431,10 +437,21 @@ public class RefreshProcess extends Thread
 					+ "from monProcessStatement S, monProcess P \n"
 					+ "where S.KPID = P.KPID\n";
 
+				Configuration conf = Configuration.getCombinedConfiguration();
+				String extraWhere = conf.getProperty(ProcessDetailFrame.PROP_CURRENT_STATEMENT_EXTRA_WHERE);
+				String orderBy    = conf.getProperty(ProcessDetailFrame.PROP_CURRENT_STATEMENT_ORDER_BY);
+
+				if (StringUtil.isNullOrBlank(extraWhere))
+					extraWhere = " 1 = 1 ";
+				if (StringUtil.isNullOrBlank(orderBy))
+					orderBy = "S.LogicalReads desc \n";
+
 				if (kpid > 0)
-					sql += "and S.KPID=" + Integer.toString(kpid);
+					sql += "  and S.KPID = " + Integer.toString(kpid) + " \n";
 				else
-					sql += "and S.SPID != @@spid order by S.LogicalReads desc\n";
+					sql += "  and S.SPID != @@spid \n";
+				sql += "  and " + extraWhere + " \n";
+				sql += "order by " + orderBy;
 
 				currentSql = sql;
 				rs = stmt.executeQuery(sql);
@@ -578,12 +595,12 @@ public class RefreshProcess extends Thread
 			{
 				// get this new batch SQL text
 				String sql = 
-					"select SPID, KPID, BatchID, LineNumber, SQLText " 
-					+ "from monProcessSQLText " 
-					+ "where KPID=" + currentBatch.kpid 
-					+ " and  SPID=" + currentBatch.spid
-					+ " and  BatchID=" + currentBatch.batchId 
-					+ " order by SPID, KPID, LineNumber, SequenceInLine";
+					"select SPID, KPID, BatchID, LineNumber, SQLText \n" 
+					+ "from monProcessSQLText \n" 
+					+ "where KPID=" + currentBatch.kpid + " \n"
+					+ " and  SPID=" + currentBatch.spid + " \n"
+					+ " and  BatchID=" + currentBatch.batchId + " \n" 
+					+ " order by SPID, KPID, LineNumber, SequenceInLine \n";
 
 				_logger.debug("EXEC SQL: " + sql);
 
@@ -863,9 +880,9 @@ public class RefreshProcess extends Thread
 				 && SQLTextMonitor)
 			{
 				String sql =
-					"select SPID, KPID, BatchID, SQLText " +
-					"from monSysSQLText " +
-					"where 1=1 ";
+					"select SPID, KPID, BatchID, SQLText \n" +
+					"from monSysSQLText \n" +
+					"where 1=1 \n";
 
 				if (kpid > 0)
 					sql += "and KPID=" + Integer.toString(kpid);
@@ -889,7 +906,7 @@ public class RefreshProcess extends Thread
 					_logger.info("END:   Discarding everything in the transient monSysSQLText table in the first sample. this took "+TimeUtils.msToTimeStr(System.currentTimeMillis()-startTime)+".");
 				}
 
-				sql += " order by SPID, KPID, BatchID, SequenceInBatch";
+				sql += " order by SPID, KPID, BatchID, SequenceInBatch \n";
 
 				currentSql = sql;
 				rs = stmt.executeQuery(sql);
@@ -953,9 +970,9 @@ public class RefreshProcess extends Thread
 			if (planTextSample && planTextPipe && planTextPipeMsg)
 			{
 				String sql =
-					"select SPID, KPID, BatchID, PlanID, PlanText, DBID, ProcedureID " + 
-					"from monSysPlanText " +
-					"where 1=1 ";
+					"select SPID, KPID, BatchID, PlanID, PlanText, DBID, ProcedureID \n" + 
+					"from monSysPlanText \n" +
+					"where 1=1 \n";
 
 				if (kpid > 0)
 					sql += " and KPID=" + Integer.toString(kpid);
@@ -1224,6 +1241,20 @@ public class RefreshProcess extends Thread
 			
 			pdf.statusBarLbl.setForeground(Color.RED);
 			pdf.statusBarLbl.setText("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.");
+
+			String htmlMsg = "<html>" +
+				"Problems executing SQL Statement.<br>" +
+				"ASE Error Number '"+SQLEx.getErrorCode()+"'<br>" +
+				"ASE SQL State '"+SQLEx.getSQLState()+"'<br>" +
+				"ASE Message '"+SQLEx.getMessage()+"'<br>" +
+				"<br>" +
+				"<b>Check the below SQL and see if any of your 'Extra Where Clauses / order by' may cause them.</b><br>" +
+				"<i>TIP: Check and Use alias for table names...</i><br>" +
+				"<pre>" +
+				currentSql +
+				"<pre>" +
+				"</html>";
+			SwingUtils.showErrorMessage("Error when executing SQL", htmlMsg, SQLEx);
 		}
 	}
 
@@ -1402,7 +1433,7 @@ public class RefreshProcess extends Thread
 	
 			try
 			{
-				Statement statement = conn.createStatement();
+				Statement statement = _conn.createStatement();
 				ResultSet rs = statement.executeQuery(sqlStatement);
 				while(rs.next())
 				{
@@ -1991,6 +2022,497 @@ public class RefreshProcess extends Thread
   	} // end: method
 	
 
+	public void createCounters()
+	{
+//		String   cols1 = null;
+//		String   cols2 = null;
+//		String   cols3 = null;
+
+//		String   name;
+//		String   displayName;
+//		String   description;
+		int      needVersion   = 0;
+		int      needCeVersion = 0;
+		String[] monTables;
+		String[] needRole;
+		String[] needConfig;
+		String[] colsCalcDiff;
+		String[] colsCalcPCT;
+//		List     pkList;
+
+		//------------------------------------
+		//------------------------------------
+		// Objects
+		//------------------------------------
+		//------------------------------------
+//		name         = "CMProcObjects";
+//		displayName  = "Objects";
+//		description  = "What objects are accessed right now.";
+
+		needVersion  = 0;
+		monTables    = new String[] { "monProcessObject" };
+		needRole     = new String[] {"mon_role"};
+		needConfig   = new String[] {"enable monitoring", "per object statistics active"};
+		colsCalcDiff = new String[] { "LogicalReads", "PhysicalReads", "PhysicalAPFReads" };
+		colsCalcPCT  = new String[] {};
+//		pkList       = new LinkedList();
+//		     pkList.add("KPID");
+//		     pkList.add("DBName");
+//		     pkList.add("ObjectID");
+//		     pkList.add("IndexID");
+//		     pkList.add("OwnerUserID");
+//
+//		cols1 = cols2 = cols3 = "";
+//		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
+//		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
+//		cols3 = "";
+//		if (_aseVersion >= 12520)
+//		{
+//			cols3 = ", TableSize";
+//		}
+//		if (_aseVersion >= 15000)
+//		{
+//			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
+//			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
+//
+//			pkList.add("PartitionID");
+//		}
+//
+//		String CMProcObjectsSqlBase = 
+//			"select " + cols1 + cols2 + cols3 + "\n" +
+//		    "from monProcessObject \n" +
+//		    "where 1=1 ";
+
+		CMProcObjects = new CountersModel(
+				"CMProcObjects", null, null, 
+				colsCalcDiff, colsCalcPCT, 
+				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				String cols1 = "";
+				String cols2 = "";
+				String cols3 = "";
+				cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
+				cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
+				cols3 = "";
+				if (srvVersion >= 12520)
+				{
+					cols3 = ", TableSize";
+				}
+				if (srvVersion >= 15000)
+				{
+					cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
+					cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
+				}
+
+				String sql = 
+					"select " + cols1 + cols2 + cols3 + "\n" +
+					"from monProcessObject \n" +
+					"where 1=1 ";
+
+				return sql;
+			}
+
+			@Override
+			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				List <String> pkCols = new LinkedList<String>();
+
+//				if (isClusterEnabled)
+//					pkCols.add("InstanceID");
+
+				pkCols.add("KPID");
+				pkCols.add("DBName");
+				pkCols.add("ObjectID");
+				pkCols.add("IndexID");
+				pkCols.add("OwnerUserID");
+
+				if (srvVersion >= 15000)
+					pkCols.add("PartitionID");
+
+				return pkCols;
+			}
+
+			@Override
+			public boolean isRefreshable()
+			{
+				boolean refresh = false;
+
+				// Current TAB is visible
+				if ( equalsTabPanel(pdf.getActiveTab()) )
+					refresh = true;
+		
+				// Current TAB is un-docked (in it's own window)
+				if (getTabPanel() != null)
+				{
+					JTabbedPane tp = pdf.getTabbedPane();
+					if (tp instanceof GTabbedPane)
+					{
+						GTabbedPane gtp = (GTabbedPane) tp;
+						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+							refresh = true;
+					}
+				}
+
+				// Background poll is checked
+				if ( isBackgroundDataPollingEnabled() )
+					refresh = true;
+
+				// NO-REFRESH if data polling is PAUSED
+				if ( isDataPollingPaused() )
+					refresh = false;
+
+				// Check postpone
+				if ( getTimeToNextPostponedRefresh() > 0 )
+				{
+					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+					refresh = false;
+				}
+
+				return refresh;
+			}
+		};
+
+		CMProcObjects.setTabPanel(pdf.processObjectsPanel);
+		
+		if (kpid > 0)
+			CMProcObjects.setSqlWhere(" and KPID = " + kpid);
+
+		
+		//------------------------------------
+		//------------------------------------
+		// Waits
+		//------------------------------------
+		//------------------------------------
+//		name         = "CMProcWaits";
+//		displayName  = "Waits";
+//		description  = "What is this spid waiting for right now.";
+
+		needVersion  = 0;
+		monTables    = new String[] { "monProcessWaits", "monWaitEventInfo", "monWaitClassInfo" };
+		needRole     = new String[] {"mon_role"};
+		needConfig   = new String[] {"enable monitoring", "process wait events", "wait event timing"};
+		colsCalcDiff = new String[] { "WaitTime", "Waits" };
+		colsCalcPCT  = new String[] {};
+//		pkList       = new LinkedList();
+//		     pkList.add("KPID");
+//		     pkList.add("WaitEventID");
+//
+//		String   CMProcWaitsSqlBase = 
+//			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits " + 
+//		    "from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C " + 
+//		    "where W.WaitEventID=I.WaitEventID " + 
+//		    "  and I.WaitClassID=C.WaitClassID ";
+//		CMProcWaits = new CountersModel(
+//				"CMProcWaits", 
+//				CMProcWaitsSqlBase, 
+//				pkList,	colsCalcDiff, colsCalcPCT, 
+//				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
+//		{
+		CMProcWaits = new CountersModel(
+				"CMProcWaits", null, null,
+				colsCalcDiff, colsCalcPCT, 
+				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
+		{
+			private static final long	serialVersionUID	= 1L;
+
+			@Override
+			protected CmSybMessageHandler createSybMessageHandler()
+			{
+				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
+	
+				// If ASE is above 15.0.3 esd#1, and dbcc traceon(3604) is given && 'capture missing stats' is 
+				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
+				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
+				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
+	
+				return msgHandler;
+			}
+
+			@Override
+			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				String sql = 
+					"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
+					"from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C \n" + 
+					"where W.WaitEventID=I.WaitEventID \n" + 
+					"  and I.WaitClassID=C.WaitClassID \n";
+				return sql;
+			}
+
+			@Override
+			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				List <String> pkCols = new LinkedList<String>();
+
+//				if (isClusterEnabled)
+//					pkCols.add("InstanceID");
+
+				pkCols.add("KPID");
+				pkCols.add("WaitEventID");
+
+				return pkCols;
+			}
+
+			@Override
+			public boolean isRefreshable()
+			{
+				boolean refresh = false;
+
+				// Current TAB is visible
+				if ( equalsTabPanel(pdf.getActiveTab()) )
+					refresh = true;
+		
+				// Current TAB is un-docked (in it's own window)
+				if (getTabPanel() != null)
+				{
+					JTabbedPane tp = pdf.getTabbedPane();
+					if (tp instanceof GTabbedPane)
+					{
+						GTabbedPane gtp = (GTabbedPane) tp;
+						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+							refresh = true;
+					}
+				}
+
+				// Background poll is checked
+				if ( isBackgroundDataPollingEnabled() )
+					refresh = true;
+
+				// NO-REFRESH if data polling is PAUSED
+				if ( isDataPollingPaused() )
+					refresh = false;
+
+				// Check postpone
+				if ( getTimeToNextPostponedRefresh() > 0 )
+				{
+					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+					refresh = false;
+				}
+
+				return refresh;
+			}
+		};
+
+
+		CMProcWaits.setTabPanel(pdf.processWaitsPanel);
+
+		if (kpid > 0)
+			CMProcWaits.setSqlWhere(" and KPID = " + kpid);
+
+
+		//------------------------------------
+		//------------------------------------
+		// Locks
+		//------------------------------------
+		//------------------------------------
+		/*
+		** SPID        KPID        DBID        ParentSPID  LockID      Context     ObjectID    LockState            LockType             LockLevel                      WaitTime    PageNumber  RowNumber   
+		** ----------- ----------- ----------- ----------- ----------- ----------- ----------- ---------            --------             ---------                      ----------- ----------- ----------- 
+		**         221  1222509855          17           0         442           8   757577737 Granted              shared page          PAGE                                  NULL      854653        NULL 
+		**         221  1222509855          17           0         442           8  1073438898 Granted              shared page          PAGE                                  NULL      479900        NULL 
+		**         405   222298460           4           0         810           0  1768445424 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+		**         405   222298460           4           0         810           0  1560444683 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+		**         405   222298460           4           0         810           0  1592444797 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+		**         405   222298460           4           0         810           0  1736445310 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+		*/
+//		name         = "CMProcLocks";
+//		displayName  = "Locks";
+//		description  = "What locks does this spid hold right now.";
+
+		needVersion  = 0;
+		monTables    = new String[] { "monLocks" };
+		needRole     = new String[] {"mon_role"};
+		needConfig   = new String[] {"enable monitoring"};
+		colsCalcDiff = new String[] {};
+		colsCalcPCT  = new String[] {};
+
+//		//List pkList_CMLocks = new LinkedList();
+//		pkList = null;
+
+//		cols1 = cols2 = cols3 = "";
+//		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
+//		cols2 = "";
+//		cols3 = "WaitTime, PageNumber, RowNumber";
+//		if (_aseVersion >= 15002)
+//		{
+//			cols2 = "BlockedState, BlockedBy, ";  //
+//		}
+//		if (_aseVersion >= 15020)
+//		{
+//			cols3 += ", SourceCodeID";  //
+//		}
+//		
+//		String   CMLocksSqlBase =
+//			"select " + cols1 + cols2 + cols3 + "\n" +
+//			"from monLocks L " + 
+//			"where 1=1 ";
+
+		CMLocks = new CountersModel(
+				"CMLocks", null, null, 
+				colsCalcDiff, colsCalcPCT, 
+				monTables, needRole, needConfig, needVersion, needCeVersion, false, true)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				String cols1 = "";
+				String cols2 = "";
+				String cols3 = "";
+
+				cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, \n" +
+						"ObjectID, ObjectName=object_name(ObjectID, DBID), \n" +
+						"LockState, LockType, LockLevel, ";
+				cols2 = "";
+				cols3 = "WaitTime, PageNumber, RowNumber";
+				if (srvVersion >= 15002)
+				{
+					cols2 = "BlockedState, BlockedBy, ";  //
+				}
+				if (srvVersion >= 15020)
+				{
+					cols3 += ", SourceCodeID";  //
+				}
+				
+				String sql =
+					"select " + cols1 + cols2 + cols3 + "\n" +
+					"from monLocks L " + 
+					"where 1=1 ";
+
+				return sql;
+			}
+
+			@Override
+			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return null;
+			}
+
+			@Override
+			public boolean isRefreshable()
+			{
+				boolean refresh = false;
+
+				// Current TAB is visible
+				if ( equalsTabPanel(pdf.getActiveTab()) )
+					refresh = true;
+		
+				// Current TAB is un-docked (in it's own window)
+				if (getTabPanel() != null)
+				{
+					JTabbedPane tp = pdf.getTabbedPane();
+					if (tp instanceof GTabbedPane)
+					{
+						GTabbedPane gtp = (GTabbedPane) tp;
+						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+							refresh = true;
+					}
+				}
+
+				// Background poll is checked
+				if ( isBackgroundDataPollingEnabled() )
+					refresh = true;
+
+				// NO-REFRESH if data polling is PAUSED
+				if ( isDataPollingPaused() )
+					refresh = false;
+
+				// Check postpone
+				if ( getTimeToNextPostponedRefresh() > 0 )
+				{
+					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+					refresh = false;
+				}
+
+				return refresh;
+			}
+		};
+
+		CMLocks.setTabPanel(pdf.processLocksPanel);
+
+		if (kpid > 0)
+			CMLocks.setSqlWhere(" and KPID = " + kpid);
+	}
+
+	private List<String> _activeRoleList    = null;
+	private boolean      _isInitialized     = false;
+	private boolean      _countersIsCreated = false;
+
+	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+	throws Exception
+	{
+		if (_isInitialized)
+			return;
+
+		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
+			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
+
+			
+		if (! _countersIsCreated)
+			createCounters();
+		
+		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+
+		// Get active ASE Roles
+		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		_activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		
+		// Get active Monitor Configuration
+		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
+
+		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
+		// This will hurt performance, especially when querying sysmonitors table, so set this to off
+		if (aseVersion >= 15031)
+			AseConnectionUtils.setCompatibilityMode(conn, false);
+
+		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();
+		CMList.add(CMProcWaits);
+		CMList.add(CMProcObjects);
+		CMList.add(CMLocks);
+
+		// initialize all the CM's
+		for (CountersModel cm : CMList)
+		{
+			if (cm != null)
+			{
+				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
+
+				// set the version
+				cm.setServerVersion(aseVersion);
+				cm.setClusterEnabled(isClusterEnabled);
+				
+				// set the active roles, so it can be used in initSql()
+				cm.setActiveRoles(_activeRoleList);
+
+				// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
+				cm.setMonitorConfigs(monitorConfigMap);
+
+				// Now when we are connected to a server, and properties are set in the CM, 
+				// mark it as runtime initialized (or late initialization)
+				// do NOT do this at the end of this method, because some of the above stuff
+				// will be used by the below method calls.
+				cm.setRuntimeInitialized(true);
+
+				// Initializes SQL, use getServerVersion to check what we are connected to.
+				cm.initSql(conn);
+
+				// Use this method if we need to check anything in the database.
+				// for example "deadlock pipe" may not be active...
+				// If server version is below 15.0.2 statement cache info should not be VISABLE
+				cm.init(conn);
+			}
+		}
+			
+		_isInitialized = true;
+	}
+
+	
 	public void run()
 	{
 		// Check configured options
@@ -2057,7 +2579,7 @@ public class RefreshProcess extends Thread
 			// new MessageDialog(pdf, "Warning", msg.toString());
 			JOptionPane.showMessageDialog(pdf, msg.toString(), Version.getAppName()+" - SPID monitoring", JOptionPane.WARNING_MESSAGE);
 
-			AseConfigMonitoringDialog.showDialog(pdf, conn, -1);
+			AseConfigMonitoringDialog.showDialog(pdf, _conn, -1);
 		}
 
 		// Check if "sp_showplanfull" exists
@@ -2137,305 +2659,20 @@ public class RefreshProcess extends Thread
 		}
 
 		_aseVersion       = MonTablesDictionary.getInstance().aseVersionNum;
+		_isClusterEnabled = MonTablesDictionary.getInstance().isClusterEnabled;
 		_monTablesVersion = MonTablesDictionary.getInstance().montablesVersionNum;
 
-		String   cols1 = null;
-		String   cols2 = null;
-		String   cols3 = null;
-
-		String   name;
-		String   displayName;
-		String   description;
-		int      needVersion   = 0;
-		int      needCeVersion = 0;
-		String[] monTables;
-		String[] needRole;
-		String[] needConfig;
-		String[] colsCalcDiff;
-		String[] colsCalcPCT;
-		List     pkList;
-
-		//------------------------------------
-		//------------------------------------
-		// Objects
-		//------------------------------------
-		//------------------------------------
-		name         = "CMProcObjects";
-		displayName  = "Objects";
-		description  = "What objects are accessed right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monProcessObject" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring", "per object statistics active"};
-		colsCalcDiff = new String[] { "LogicalReads", "PhysicalReads", "PhysicalAPFReads" };
-		colsCalcPCT  = new String[] {};
-		pkList       = new LinkedList();
-		     pkList.add("KPID");
-		     pkList.add("DBName");
-		     pkList.add("ObjectID");
-		     pkList.add("IndexID");
-		     pkList.add("OwnerUserID");
-
-		cols1 = cols2 = cols3 = "";
-		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
-		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
-		cols3 = "";
-		if (_aseVersion >= 12520)
+		try
 		{
-			cols3 = ", TableSize";
+			initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
 		}
-		if (_aseVersion >= 15000)
+		catch (Exception ex)
 		{
-			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
-			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
-
-			pkList.add("PartitionID");
-		}
-
-		String CMProcObjectsSqlBase = 
-			"select " + cols1 + cols2 + cols3 + "\n" +
-		    "from monProcessObject \n" +
-		    "where 1=1 ";
-
-		CMProcObjects = new CountersModel(
-				"CMProcObjects", 
-				CMProcObjectsSqlBase, 
-				pkList, colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
-		{
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-		CMProcObjects.setTabPanel(pdf.processObjectsPanel);
-		
-		if (kpid > 0)
-			CMProcObjects.setSqlWhere(" and KPID = " + kpid);
-
-		
-		//------------------------------------
-		//------------------------------------
-		// Waits
-		//------------------------------------
-		//------------------------------------
-		name         = "CMProcWaits";
-		displayName  = "Waits";
-		description  = "What is this spid waiting for right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monProcessWaits", "monWaitEventInfo", "monWaitClassInfo" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring", "process wait events", "wait event timing"};
-		colsCalcDiff = new String[] { "WaitTime", "Waits" };
-		colsCalcPCT  = new String[] {};
-		pkList       = new LinkedList();
-		     pkList.add("KPID");
-		     pkList.add("WaitEventID");
-
-		String   CMProcWaitsSqlBase = 
-			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits " + 
-		    "from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C " + 
-		    "where W.WaitEventID=I.WaitEventID " + 
-		    "  and I.WaitClassID=C.WaitClassID ";
-		CMProcWaits = new CountersModel(
-				"CMProcWaits", 
-				CMProcWaitsSqlBase, 
-				pkList,	colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
-		{
-			private static final long	serialVersionUID	= 1L;
-
-			protected CmSybMessageHandler createSybMessageHandler()
-			{
-				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
-	
-				// If ASE is above 15.0.3 esd#1, and dbcc traceon(3604) is given && 'capture missing stats' is 
-				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
-				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
-				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
-	
-				return msgHandler;
-			}
-
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-
-		CMProcWaits.setTabPanel(pdf.processWaitsPanel);
-
-		if (kpid > 0)
-			CMProcWaits.setSqlWhere(" and KPID = " + kpid);
-
-
-		//------------------------------------
-		//------------------------------------
-		// Locks
-		//------------------------------------
-		//------------------------------------
-		/*
-		** SPID        KPID        DBID        ParentSPID  LockID      Context     ObjectID    LockState            LockType             LockLevel                      WaitTime    PageNumber  RowNumber   
-		** ----------- ----------- ----------- ----------- ----------- ----------- ----------- ---------            --------             ---------                      ----------- ----------- ----------- 
-		**         221  1222509855          17           0         442           8   757577737 Granted              shared page          PAGE                                  NULL      854653        NULL 
-		**         221  1222509855          17           0         442           8  1073438898 Granted              shared page          PAGE                                  NULL      479900        NULL 
-		**         405   222298460           4           0         810           0  1768445424 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1560444683 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1592444797 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1736445310 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		*/
-		name         = "CMProcLocks";
-		displayName  = "Locks";
-		description  = "What locks does this spid hold right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monLocks" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring"};
-		colsCalcDiff = new String[] {};
-		colsCalcPCT  = new String[] {};
-
-		//List pkList_CMLocks = new LinkedList();
-		pkList = null;
-
-		cols1 = cols2 = cols3 = "";
-		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
-		cols2 = "";
-		cols3 = "WaitTime, PageNumber, RowNumber";
-		if (_aseVersion >= 15002)
-		{
-			cols2 = "BlockedState, BlockedBy, ";  //
-		}
-		if (_aseVersion >= 15020)
-		{
-			cols3 += ", SourceCodeID";  //
+			SwingUtils.showErrorMessage("Problems Initalize CM's", 
+					"Problems when initializing some of the Performance Counters", ex);
+			return;
 		}
 		
-		String   CMLocksSqlBase =
-			"select " + cols1 + cols2 + cols3 + "\n" +
-			"from monLocks L " + 
-			"where 1=1 ";
-
-		CMLocks = new CountersModel(
-				"CMLocks", 
-				CMLocksSqlBase, 
-				pkList, colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, false, true)
-		{
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-		CMLocks.setTabPanel(pdf.processLocksPanel);
-
-		if (kpid > 0)
-			CMLocks.setSqlWhere(" and KPID = " + kpid);
-
 
 		// loop
 		boolean firstTime = true;
@@ -2457,7 +2694,7 @@ public class RefreshProcess extends Thread
 
 		try
 		{
-			conn.close();
+			_conn.close();
 		}
 		catch (SQLException sqlex)
 		{

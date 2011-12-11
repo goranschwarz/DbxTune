@@ -19,7 +19,7 @@ import javax.swing.event.PopupMenuListener;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionFactory;
 import com.asetune.utils.SwingUtils;
@@ -67,6 +67,7 @@ public class TablePopupFactory
 		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
 		menuItem.addActionListener(new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				Component invoker = getPopupMenuInvoker((JMenuItem)e.getSource());
@@ -88,6 +89,7 @@ public class TablePopupFactory
 		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ROW_IS_SELECTED);
 		menuItem.addActionListener(new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				Component invoker = getPopupMenuInvoker((JMenuItem)e.getSource());
@@ -283,6 +285,7 @@ public class TablePopupFactory
 	public static class TablePopupMenuListener 
 	implements PopupMenuListener
 	{
+		@Override 
 		public void popupMenuWillBecomeVisible(PopupMenuEvent e)
 		{
 			_logger.trace("popupMenuWillBecomeVisible(), source="+e.getSource());
@@ -321,10 +324,10 @@ public class TablePopupFactory
 
 					if ( actionName != null && actionName.equals(ENABLE_MENU_IF_ON_A_ROW) )
 					{
-						if (tab instanceof TabularCntrPanel.TCPTable)
+						if (tab instanceof GTable)
 						{
-							TabularCntrPanel.TCPTable tcpTab = (TabularCntrPanel.TCPTable) tab;
-							mi.setEnabled(tcpTab.isLastMousePressedAtModelRowColValid());
+							GTable gTab = (GTable) tab;
+							mi.setEnabled(gTab.isLastMousePressedAtModelRowColValid());
 						}
 						continue;
 					}
@@ -375,11 +378,13 @@ public class TablePopupFactory
 			} // loop menu items
 		}
 	
+		@Override 
 		public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
 		{
 			_logger.trace("popupMenuWillBecomeInvisible()");
 		}
 	
+		@Override 
 		public void popupMenuCanceled(PopupMenuEvent e)
 		{
 			_logger.trace("popupMenuCanceled()");

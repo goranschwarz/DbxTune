@@ -3,6 +3,7 @@
  */
 package com.asetune.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dialog;
@@ -28,6 +29,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
@@ -183,12 +185,8 @@ public class AseConfigMonitoringDialog
 		initComponents();
 		pack();
 
-//		Dimension size = getPreferredSize();
-//		size.width += 200;
-//
-//		setPreferredSize(size);
-////		setMinimumSize(size);
-//		setSize(size);
+		// Set a reasonable size on the window/dialog
+		SwingUtils.setSizeWithingScreenLimit(this, 10);
 
 		setLocationRelativeTo(owner);
 
@@ -269,17 +267,21 @@ public class AseConfigMonitoringDialog
 	*/
 	protected void initComponents()
 	{
-		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		JPanel panel    = new JPanel();
+		JPanel topPanel = new JPanel();
+		panel   .setLayout(new BorderLayout());
+		topPanel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
 
 		_monitoringPanel_1 = createMonitoringPanel();
 		_monitoringPanel_2 = createOtherMonitorConfigPanel();
 
-		// ADD the OK, Cancel, Apply buttons
-		panel.add(_monitoringPanel_1,    "growx");
-		panel.add(_monitoringPanel_2,    "growx");
-		panel.add(createOnExitPanel(),   "growx");
-		panel.add(createOkCancelPanel(), "bottom, right, push");
+		topPanel.add(_monitoringPanel_1,    "growx");
+		topPanel.add(_monitoringPanel_2,    "growx");
+		topPanel.add(createOnExitPanel(),   "growx");
+
+		// ADD TOP and OK panel
+		panel.add(new JScrollPane(topPanel), BorderLayout.CENTER);
+		panel.add(createOkCancelPanel(),     BorderLayout.SOUTH);
 
 		loadProps();
 
@@ -289,7 +291,7 @@ public class AseConfigMonitoringDialog
 	private JPanel createMonitoringPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("sp_configure 'Monitoring'", true);
-		panel.setLayout(new MigLayout("gap 0","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("gap 0","[][grow,fill]",""));   // insets Top Left Bottom Right
 
 		//--- TOOLTIP 
 		// The ToolTip is also used to display configuration problems...
@@ -341,30 +343,30 @@ public class AseConfigMonitoringDialog
 		panel.add(_waitEventTiming_chk,           "wrap 15");
 
 		panel.add(_lockTimeoutPipeActive_chk,     "");
-		panel.add(_lockTimeoutPipeMaxMessages_sp, "right, wrap");
+		panel.add(_lockTimeoutPipeMaxMessages_sp, "right, pushx, wrap");
 
 		panel.add(_deadlockPipeActive_chk,        "");
-		panel.add(_deadlockPipeMaxMessages_sp,    "right, wrap");
+		panel.add(_deadlockPipeMaxMessages_sp,    "right, pushx, wrap");
 
 		panel.add(_errorlogPipeActive_chk,        "");
-		panel.add(_errorlogPipeMaxMessages_sp,    "right, wrap 10");
+		panel.add(_errorlogPipeMaxMessages_sp,    "right, pushx, wrap 10");
 
 		panel.add(_sqlTextPipeActive_chk,         "");
-		panel.add(_sqlTextPipeMaxMessages_sp,     "right, wrap");
+		panel.add(_sqlTextPipeMaxMessages_sp,     "right, pushx, wrap");
 
 		panel.add(_statementPipeActive_chk,       "");
-		panel.add(_statementPipeMaxMessages_sp,   "right, wrap");
+		panel.add(_statementPipeMaxMessages_sp,   "right, pushx, wrap");
 
 		panel.add(_planTextPipeActive_chk,        "");
-		panel.add(_planTextPipeMaxMessages_sp,    "right, wrap 15");
+		panel.add(_planTextPipeMaxMessages_sp,    "right, pushx, wrap 15");
 
 		panel.add(_maxSqlTextMonitored_lbl,       "");
-		panel.add(_maxSqlTextMonitored_sp,        "right, wrap 10");
+		panel.add(_maxSqlTextMonitored_sp,        "right, pushx, wrap 10");
 
 		panel.add(new JSeparator(),               "span, grow, push, wrap 10");
 
 		panel.add(_predefinedConfigs_lbl,         "");
-		panel.add(_predefinedConfigs_cbx,         "right, wrap 10");
+		panel.add(_predefinedConfigs_cbx,         "right, pushx, wrap 10");
 
 		panel.add(_configurabelMemory_lbl,        "span, wrap");
 
@@ -377,7 +379,7 @@ public class AseConfigMonitoringDialog
 	private JPanel createOtherMonitorConfigPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Other Monitor Configuration", true);
-		panel.setLayout(new MigLayout("gap 0","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("gap 0","[][grow,fill]",""));   // insets Top Left Bottom Right
 
 		String toolTipText;
 
@@ -455,16 +457,16 @@ public class AseConfigMonitoringDialog
 		panel.add(_cfgEnableMetricsCapture_chk,   "wrap");
 
 		panel.add(_cfgMetricsElapMax_lbl,         "gapleft 50");
-		panel.add(_cfgMetricsElapMax_sp,          "right, wrap");
+		panel.add(_cfgMetricsElapMax_sp,          "right, pushx, wrap");
 		
 		panel.add(_cfgMetricsExecMax_lbl,         "gapleft 50");
-		panel.add(_cfgMetricsExecMax_sp,          "right, wrap");
+		panel.add(_cfgMetricsExecMax_sp,          "right, pushx, wrap");
 		
 		panel.add(_cfgMetricsLioMax_lbl,          "gapleft 50");
-		panel.add(_cfgMetricsLioMax_sp,           "right, wrap");
+		panel.add(_cfgMetricsLioMax_sp,           "right, pushx, wrap");
 		
 		panel.add(_cfgMetricsPioMax_lbl,          "gapleft 50");
-		panel.add(_cfgMetricsPioMax_sp,           "right, wrap 10");
+		panel.add(_cfgMetricsPioMax_sp,           "right, pushx, wrap 10");
 
 		return panel;
 	}
@@ -501,9 +503,10 @@ public class AseConfigMonitoringDialog
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_ok,     "tag ok, right");
-		panel.add(_cancel, "tag cancel");
-		panel.add(_apply,  "tag apply");
+		panel.add(new JLabel(), "pushx, growx");
+		panel.add(_ok,          "tag ok, right");
+		panel.add(_cancel,      "tag cancel");
+		panel.add(_apply,       "tag apply");
 
 		_apply.setEnabled(false);
 
@@ -1436,7 +1439,7 @@ public class AseConfigMonitoringDialog
 		try
 		{
 			System.out.println("Open the Dialog with a VALID connection.");
-			Connection conn = AseConnectionFactory.getConnection("goransxp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
+			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
 			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 12510);
 
 			System.out.println("Open the Dialog with a CLOSED connection.");

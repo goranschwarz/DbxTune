@@ -10,6 +10,7 @@ import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
@@ -36,6 +37,8 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 
+import net.miginfocom.swing.MigLayout;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.LineNumberedPaper;
@@ -59,6 +62,10 @@ public class ProcessDetailFrame extends JFrame
 	private static Logger _logger          = Logger.getLogger(ProcessDetailFrame.class);
 
 //	private   JFrame           pdf                          = null;
+	private   JLabel           _currentStmntSqlWhereClause_lbl = new JLabel("Where: ");
+	private   JTextField       _currentStmntSqlWhereClause_txt = new JTextField();
+	private   JLabel           _currentStmntSqlOrderBy_lbl     = new JLabel("Order By: ");
+	private   JTextField       _currentStmntSqlOrderBy_txt     = new JTextField();
 	private   int              kpid;
 	public    int              processRefreshInterv         = 1;
 	private   BorderLayout     borderLayout1                = new BorderLayout();
@@ -107,7 +114,8 @@ public class ProcessDetailFrame extends JFrame
 	private   TitledBorder     titledBorderPlan;
 	private   TitledBorder     titledBorderCapture;
 	public    TitledBorder     titledBorderBatch;
-	private   JScrollPane      currentStatementsPan         = new JScrollPane();
+//	private   JScrollPane      currentStatementsPan         = new JScrollPane();
+	private   JPanel           currentStatementsPan         = new JPanel();
 	private   BorderLayout     borderLayout3                = new BorderLayout();
 	protected JTextField       kpidFld                      = new JTextField();
 	protected JTextField       spidFld                      = new JTextField();
@@ -149,9 +157,10 @@ public class ProcessDetailFrame extends JFrame
 	};
 
 	//
+//	public JXTable currentStatementTable = new JXTable()
 	public JTable currentStatementTable = new JTable()
 	{
-        private static final long serialVersionUID = -6016641348388707594L;
+        private static final long serialVersionUID = 1L;
 
 		public TableCellRenderer getCellRenderer(int row, int column)
 		{
@@ -469,7 +478,7 @@ public class ProcessDetailFrame extends JFrame
 		kpidLbl.setText("KPID :");
 		northPan.setPreferredSize(new Dimension(10, 90));
 		northPan.setLayout(borderLayout3);
-		currentStatementsPan.getViewport().setBackground(new Color(230, 230, 230));
+//		currentStatementsPan.getViewport().setBackground(new Color(230, 230, 230));
 		currentStatementsPan.setBorder(titledBorderCurrent);
 
 		capturedStatementsTable.setBackground(new Color(230, 230, 230));
@@ -538,6 +547,17 @@ public class ProcessDetailFrame extends JFrame
 		currentStatementTable.setShowHorizontalLines(false);
 		currentStatementTable.setBackground(new Color(230, 230, 230));
 		currentStatementTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+//		currentStatementTable.setSortable(true);
+//
+//		// Set special Render to print multiple columns sorts
+//		currentStatementTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+//
+//		//--------------------------------------------------------------------
+//		// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
+//		//--------------------------------------------------------------------
+//		currentStatementTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+
+		
 
 		// Fixing/setting background selection color... on some platforms it seems to be a strange color
 		// on XP a gray color of "r=178,g=180,b=191" is the default, which looks good on the screen
@@ -918,7 +938,7 @@ public class ProcessDetailFrame extends JFrame
 				saveCapturedStatements();
 			}
 		});
-
+		
 		this.getContentPane().add(infoPanel, BorderLayout.NORTH);
 		this.getContentPane().add(statusPanel, BorderLayout.SOUTH);
 		this.getContentPane().add(mainTabbedPanel, BorderLayout.CENTER);
@@ -1034,7 +1054,35 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		});
 
 
-		currentStatementsPan.getViewport().add(currentStatementTable, null);
+		_currentStmntSqlWhereClause_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		_currentStmntSqlOrderBy_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		
+		JPanel xxx = new JPanel(new MigLayout("insets 0 0 0 0", "[][grow]", ""));
+		xxx.add(_currentStmntSqlWhereClause_lbl,  "");
+		xxx.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
+		xxx.add(_currentStmntSqlOrderBy_lbl,      "");
+		xxx.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
+		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push");
+//		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, width 100%, height 100%, wrap");
+		
+		currentStatementsPan.setLayout(new BorderLayout());
+		currentStatementsPan.add(xxx, BorderLayout.CENTER);
+//		currentStatementsPan.getViewport().add(xxx, null);
+//		currentStatementsPan.getViewport().add(currentStatementTable, null);
 		capturedStatementScrollPan.getViewport().add(capturedStatementsTable, null);
 
 		kpidFld.setText(Integer.toString(kpid));
@@ -1093,6 +1141,25 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		infoPanel.add(refreshButton,           new XYConstraints(635, 5,   85,  25));
 		infoPanel.add(clearButton,             new XYConstraints(735, 5,   85,  25));
 		infoPanel.add(saveButton,              new XYConstraints(835, 5,   100, 25));
+
+//		infoPanel.setLayout(new MigLayout());
+//		infoPanel.add(spidLbl,                 "");
+//		infoPanel.add(spidFld,                 "w 50px");
+//		infoPanel.add(kpidLbl,                 "");
+//		infoPanel.add(kpidFld,                 "w 50px");
+//		infoPanel.add(suser_nameLbl,           "");
+//		infoPanel.add(suser_nameFld,           "w 150px");
+//		infoPanel.add(refreshIntLbl,           "");
+//		infoPanel.add(refreshIntFld,           "w 30px");
+//		infoPanel.add(new JLabel(),            "growx, pushx");
+//		infoPanel.add(refreshButton,           "");
+//		infoPanel.add(clearButton,             "");
+//		infoPanel.add(saveButton,              "wrap");
+//		infoPanel.add(_currentStmntSqlWhereClause_lbl,  "w 60px, span, split");
+//		infoPanel.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
+//		infoPanel.add(_currentStmntSqlOrderBy_lbl,      "w 60px, span, split");
+//		infoPanel.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
+		
 		statusPanel.add(middleStatusPan,   BorderLayout.CENTER);
 		statusPanel.add(serverLbl,         BorderLayout.EAST);
 		middleStatusPan.add(statusBarLbl,  BorderLayout.CENTER);
@@ -1415,6 +1482,9 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 //			tmpConf.setProperty(base + "locks.window.pos.y",  processLocksFrame.getLocationOnScreen().y);
 //			}
 
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_txt.getText());
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    _currentStmntSqlOrderBy_txt    .getText());
+
 			// Get rid of all fields first
 			tmpConf.removeAll(base + "plan.extraWhere.");
 			int saveCount = 0;
@@ -1572,6 +1642,9 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 //			processLocksFrame.setVisible(winActive);
 //		}
 
+		_currentStmntSqlWhereClause_txt.setText(props.getProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, ""));
+		_currentStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    ""));
+
 		int count   = props.getIntProperty(base + "plan.extraWhere.count", -1);
 		int active  = props.getIntProperty(base + "plan.extraWhere.active", -1);
 		if ( count != -1  && active != -1 )
@@ -1606,6 +1679,8 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		checkBox1  = props.getBooleanProperty(base + "plan.discardPreOpenStmnts", true);
 		discardPreOpenStmntsCheckbox.setSelected(checkBox1);
 	}
+  	public static final String PROP_CURRENT_STATEMENT_EXTRA_WHERE = "processDetailFrame.spid.current.statement.extraWhere";
+  	public static final String PROP_CURRENT_STATEMENT_ORDER_BY    = "processDetailFrame.spid.current.statement.orderBy";
 
   	public void setRefreshError(Exception e)
 	{

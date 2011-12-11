@@ -70,7 +70,7 @@ extends AbstractSysmonType
 		int KnownTaskSwitch  = 0; // Count of Number of Task Context Switches by Known Causes
 		int IgnoreTaskYields = 0; // Total Number of Task Yields which can be ignored
 
-		int tmpNumEngines = 0;
+//		int tmpNumEngines = 0;
 
 		// Get some basics
 		for (List<Object> row : getData())
@@ -83,10 +83,10 @@ extends AbstractSysmonType
 			value     = ((Number)row.get(_value_pos)).intValue();
 
 			// tmpNumEngines, NumEngines
-			if (groupName.equals("config") && fieldName.equals("cg_cmaxonline"))
-				tmpNumEngines += value;
-			if (groupName.startsWith("engine_") && fieldName.equals("clock_ticks") && value > 0)
-				NumEngines++;
+//			if (groupName.equals("config") && fieldName.equals("cg_cmaxonline"))
+//				tmpNumEngines += value;
+//			if (groupName.startsWith("engine_") && fieldName.equals("clock_ticks") && value > 0)
+//				NumEngines++;
 
 			// NumXacts
 			if (groupName.equals("access") && fieldName.equals("xacts"))

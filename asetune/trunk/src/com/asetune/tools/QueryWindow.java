@@ -1191,22 +1191,28 @@ public class QueryWindow
 
 	private static class SqlProgressDialog
 	extends JDialog
-	implements PropertyChangeListener
+	implements PropertyChangeListener, ActionListener
 	{
 		private static final long serialVersionUID = 1L;
 
 		private JLabel _label = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
 
+		private Connection      _conn = null;
 		private JLabel _state_lbl = new JLabel();
 		private RSyntaxTextArea _allSql_txt   = new RSyntaxTextArea();
 		private RTextScrollPane _allSql_sroll = new RTextScrollPane(_allSql_txt);
+		private JButton         _cancel       = new JButton("Cancel");
 
-		public SqlProgressDialog(Window owner, String sql)
+		public SqlProgressDialog(Window owner, Connection conn, String sql)
 		{
 			super((Frame)null, "Waiting for server...", true);
 			setLayout(new MigLayout());
 
+			_conn = conn;
+
 			_label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+
+			_cancel.setToolTipText("Send a CANCEL request to the server.");
 
 			_allSql_txt.setText(sql);
 			_allSql_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
@@ -1217,6 +1223,9 @@ public class QueryWindow
 			add(_label,        "push, grow, wrap");
 			add(_state_lbl,    "wrap");
 			add(_allSql_sroll, "push, grow, wrap");
+			add(_cancel,       "center");
+
+			_cancel.addActionListener(this);
 
 			pack();
 			setSize( getSize().width + 100, getSize().height + 70);
@@ -1247,11 +1256,32 @@ public class QueryWindow
 				dispose();
 			}
 		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			Object source = e.getSource();
+			
+			if (_cancel.equals(source))
+			{
+				if (_conn != null && _conn instanceof SybConnection)
+				{
+					try
+					{
+						((SybConnection)_conn).cancel();
+					}
+					catch(SQLException ex)
+					{
+						SwingUtils.showErrorMessage("Cancel", "Problems sending cancel to ASE: "+ex, ex);
+					}
+				}
+			}
+		}
 	}
 
 	public void displayQueryResults(final String sql, final boolean execGui)
 	{
-		final SqlProgressDialog progress = new SqlProgressDialog(_window, sql);
+		final SqlProgressDialog progress = new SqlProgressDialog(_window, _conn, sql);
 
 		// Execute in a Swing Thread
 		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
@@ -1259,11 +1289,26 @@ public class QueryWindow
 			@Override
 			protected String doInBackground() throws Exception
 			{
-//				if (_showplan.isSelected())
 				if (execGui)
+				{
+					_resPanel.removeAll();
+					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					
+					JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
+					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+
 					new AsePlanViewer(_conn, sql);
+				}
 				else
+				{
+					_resPanel.removeAll();
+					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					
+					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.");
+					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+
 					displayQueryResults(_conn, sql, progress);
+				}
 				return null;
 			}
 
@@ -1406,7 +1451,15 @@ public class QueryWindow
 		if (conn instanceof SybConnection)
 		{
 			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
-			((SybConnection)conn).setSybMessageHandler(null);
+//			((SybConnection)conn).setSybMessageHandler(null);
+			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
+			{
+				@Override
+				public SQLException messageHandler(SQLException sqle)
+				{
+					return AseConnectionUtils.sqlExceptionToWarning(sqle);
+				}
+			});
 		}
 
 		try

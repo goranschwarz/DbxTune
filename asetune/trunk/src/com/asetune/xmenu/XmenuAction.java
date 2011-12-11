@@ -30,6 +30,10 @@ public interface XmenuAction
 	public String                       getParamValue(int param);
 	public String                       getMenuName();
 	public String                       getConfig();
+
+	/** True if we should make a new connection on startup */
+	public boolean                      getConnectionOnStart();
+
 	public Connection                   getConnection();
 	public boolean                      isCloseConnOnExit();
 

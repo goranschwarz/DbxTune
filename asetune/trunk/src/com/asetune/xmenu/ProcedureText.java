@@ -56,8 +56,9 @@ extends XmenuActionBase
 	}
 
 	/* (non-Javadoc)
-	 * @see com.sybase.jisql.xmenu.XmenuActionBase#doWork()
+	 * @see com.asetune.xmenu.XmenuActionBase#doWork()
 	 */
+	@Override 
 	public void doWork() 
 	{
 		_conn     = getConnection();
@@ -104,6 +105,7 @@ extends XmenuActionBase
 
 		ActionListener action = new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				textFrame.dispose();
@@ -200,6 +202,7 @@ extends XmenuActionBase
 		menuItem = new JMenuItem("Procedure Text");
 		menuItem.addActionListener( new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				JComponent comp = _rightClickComponent;
@@ -231,6 +234,7 @@ extends XmenuActionBase
 		menuItem = new JMenuItem("Table Information");
 		menuItem.addActionListener( new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 //				String dbname   = "sybsystemprocs";
@@ -269,9 +273,9 @@ extends XmenuActionBase
 		
 		MouseAdapter ma = new java.awt.event.MouseAdapter() 
 		{
-			public void mousePressed (MouseEvent e) { maybeShowPopup(e); }
-			public void mouseReleased(MouseEvent e) { maybeShowPopup(e); }
-			public void mouseClicked (MouseEvent e) { maybeShowPopup(e); }
+			@Override public void mousePressed (MouseEvent e) { maybeShowPopup(e); }
+			@Override public void mouseReleased(MouseEvent e) { maybeShowPopup(e); }
+			@Override public void mouseClicked (MouseEvent e) { maybeShowPopup(e); }
 
 			private void maybeShowPopup(MouseEvent e) 
 			{

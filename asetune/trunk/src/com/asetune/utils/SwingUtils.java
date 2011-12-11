@@ -909,6 +909,33 @@ public class SwingUtils
 		return new Dimension(Math.min(width, screenWidth), Math.min(height, screenHeight));
 	}
 
+	/**
+	 * If the input Component are smaller than the screen size then they will be used<br>
+	 * Otherwise the screen size will be used
+	 * 
+	 * @param comp Component to set size of
+	 * @param marginPixels Number of pixels to the border of the screen. 0 means no margin space
+	 */
+	public static void setSizeWithingScreenLimit(Component comp, int marginPixels)
+	{
+		Dimension size = comp.getSize();
+		size = SwingUtils.getSizeWithingScreenLimit(size.width, size.height, marginPixels);
+		comp.setSize(size);
+	}
+
+	/**
+	 * Enable/disable all components on a JPanel
+	 * @param panel
+	 * @param enable
+	 */
+	public static void setEnabled(JPanel panel, boolean enable)
+	{
+		panel.setEnabled(enable);
+		for (int i = 0; i < panel.getComponentCount(); i++)
+		{
+			panel.getComponent(i).setEnabled(enable);
+		}
+	}
 
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -936,4 +963,5 @@ public class SwingUtils
 		System.out.println(xxx);
 		System.out.println("##################################");
 	}
+
 }

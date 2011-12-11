@@ -44,6 +44,7 @@ import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
@@ -55,7 +56,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 
 public class CountersModel 
 extends AbstractTableModel
-implements Cloneable 
+implements Cloneable, ITableTooltip
 {
     private static final long serialVersionUID = -7486772146682031469L;
 
@@ -1137,6 +1138,11 @@ implements Cloneable
 	{
 		_description = desc;
 	}
+	/**
+	 * Get a description, which can be used for tooltip etc.
+	 * @return
+	 * @see #getName()
+	 */
 	public String getDescription()
 	{
 		return _description;
@@ -1300,7 +1306,8 @@ implements Cloneable
 	 * @param colName
 	 * @return the tooltip
 	 */
-	public String getToolTipTextOnTableColumn(String colName)
+	@Override
+	public String getToolTipTextOnTableColumnHeader(String colName)
 	{
 		return MonTablesDictionary.getInstance().getDescription(getMonTablesInQuery(), colName);
 	}
@@ -1314,6 +1321,7 @@ implements Cloneable
 	 * @param modelCol
 	 * @return
 	 */
+	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{
 		// Get tip on WaitEventID
@@ -1346,10 +1354,76 @@ implements Cloneable
 			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
 
 			if ( sql != null && ! AseTune.getCounterCollector().isMonConnected() )
+			{
+				// IF SPID, get values from JTable in OFFLINE MODE
+				if ("SPID".equalsIgnoreCase(colName))
+				{
+					if (MainFrame.isOfflineConnected())
+					{
+						CountersModel cm = GetCounters.getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+						TabularCntrPanel tcp = cm.getTabPanel();
+						if (tcp != null)
+						{
+							tcp.tabSelected();
+							cm = tcp.getDisplayCm();
+							if (cm != null)
+							{
+								CounterTableModel ctmAbs  = cm.getCounterDataAbs();
+								CounterTableModel ctmDiff = cm.getCounterDataDiff();
+								CounterTableModel ctmRate = cm.getCounterDataRate();
+								if (ctmRate != null)
+								{
+									int spid_pos = ctmRate.findColumn("SPID");
+									int rowCount = ctmRate.getRowCount();
+									for (int r=0; r<rowCount; r++)
+									{
+										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
+										{
+											StringBuilder sb = new StringBuilder(300);
+											sb.append("<html>\n");
+											sb.append("<table border=0 cellspacing=0 >\n");
+//											sb.append("<table border=1 cellspacing=0 >\n");
+//											sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
+
+											sb.append("<tr>");
+											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Column Name")      .append("</b></font></td>");
+											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Absolute Counters").append("</b></font></td>");
+											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Diff Counters")    .append("</b></font></td>");
+											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Rate Counters")    .append("</b></font></td>");
+											sb.append("</tr>\n");
+
+											for (int c=0; c<ctmRate.getColumnCount(); c++)
+											{
+//												System.out.println("XXXX: colName='"+ctm.getColumnName(c)+"', value='"+ctm.getValueAt(r, c)+"'.");
+
+												if ( (c % 2) == 0 )
+													sb.append("<tr bgcolor=\"#ffffff\">"); // white
+												else
+													sb.append("<tr bgcolor=\"#ffffcc\">"); // light yellow
+
+												sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append(ctmRate.getColumnName(c)).append("</b></font></td>");
+
+												sb.append("<td nowrap>").append(ctmAbs ==null?"":ctmAbs .getValueAt(r, c)).append("</td>");
+												sb.append("<td nowrap>").append(ctmDiff==null?"":ctmDiff.getValueAt(r, c)).append("</td>");
+												sb.append("<td nowrap>").append(ctmRate==null?"":ctmRate.getValueAt(r, c)).append("</td>");
+												sb.append("</tr>\n");
+											}
+											sb.append("</table>\n");
+											sb.append("</html>\n");
+											return sb.toString();
+										}
+									}
+								}
+							}
+						}
+					} // end: offline
+				} // end: SPID
+
 				return "<html>" +
 				       "No runtime tool tip available for '"+colName+"'. <br>" +
 				       "Not connected to the monitored server.<br>" +
 				       "</html>";
+			}
 
 			if (sql != null)
 			{
@@ -1893,10 +1967,10 @@ implements Cloneable
 	 * (by calling setSql()) for the desired ASE version.
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
-	// public abstract String getSqlForVersion(int srvVersion, boolean isClusterEnabled);
+//	public abstract String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
 	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		throw new RuntimeException("The method CountersModel.getSqlForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new RuntimeException("The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
 	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
@@ -1910,7 +1984,7 @@ implements Cloneable
 	}
 
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
-	// public abstract List<String> getPkForVersion(int srvVersion, boolean isClusterEnabled);
+//	public abstract List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		throw new RuntimeException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");

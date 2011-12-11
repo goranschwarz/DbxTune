@@ -41,6 +41,13 @@ public class TabularCntrPanelTester extends JFrame
     private static final long serialVersionUID = 1L;
 
 	JTabbedPane _tabs = null;
+	JTabbedPane _tabs1 = null;
+	JTabbedPane _tabs2 = null;
+	JTabbedPane _tabs3 = null;
+	JTabbedPane _tabs4 = null;
+	JTabbedPane _tabs5 = null;
+	JTabbedPane _tabs6 = null;
+	JTabbedPane _tabs7 = null;
 	boolean _showTabsHeader4 = true;
 
 	/**
@@ -62,17 +69,84 @@ public class TabularCntrPanelTester extends JFrame
 //      _tabs = new GTabbedPane();
 //      _tabs = new CloseableTabbedPane();
         _tabs = new XXTabbedPane();
+        _tabs1 = new XXTabbedPane();
+        _tabs2 = new XXTabbedPane();
+        _tabs3 = new XXTabbedPane();
+        _tabs4 = new XXTabbedPane();
+        _tabs5 = new XXTabbedPane();
+        _tabs6 = new XXTabbedPane();
+        _tabs7 = new XXTabbedPane();
 //		_tabs.setUI(new TestPlaf(_tabs.getUI()));
         System.out.println("XXXXXXXX: UIClassID="+_tabs.getUIClassID()+", UI="+_tabs.getUI());
-		_tabs.add(  "0-Summary",     new TabularCntrPanel("0-Summary") );
-		_tabs.add(  "1-Object",      new TabularCntrPanel("1-Object") );
-		_tabs.add(  "2-Processes",   new TabularCntrPanel("2-Processes") );
-		_tabs.add(  "3-Databases",   new TabularCntrPanel("3-Databases") );
-		_tabs.add(  "4-Waits",       new TabularCntrPanel("4-Waits") );
-		_tabs.add(  "5-Engines",     new TabularCntrPanel("5-Engines") );
-		_tabs.add(  "6-Data Caches", new TabularCntrPanel("6-Data Caches") );
-		_tabs.add(  "7-Pools",       new TabularCntrPanel("7-Pools") );
-		_tabs.add(  "8-Devices",     new TabularCntrPanel("8-Devices") );
+//		_tabs.add(  "0-Summary",     new TabularCntrPanel("0-Summary") );
+//		_tabs.add(  "1-Object",      new TabularCntrPanel("1-Object") );
+//		_tabs.add(  "2-Processes",   new TabularCntrPanel("2-Processes") );
+//		_tabs.add(  "3-Databases",   new TabularCntrPanel("3-Databases") );
+//		_tabs.add(  "4-Waits",       new TabularCntrPanel("4-Waits") );
+//		_tabs.add(  "5-Engines",     new TabularCntrPanel("5-Engines") );
+//		_tabs.add(  "6-Data Caches", new TabularCntrPanel("6-Data Caches") );
+//		_tabs.add(  "7-Pools",       new TabularCntrPanel("7-Pools") );
+//		_tabs.add(  "8-Devices",     new TabularCntrPanel("8-Devices") );
+
+		_tabs1.add(  "Objects",              new TabularCntrPanel("Objects") );
+		_tabs1.add(  "Cached Procedures",    new TabularCntrPanel("Cached Procedures") );
+		_tabs1.add(  "Procedure Call Stack", new TabularCntrPanel("Procedure Call Stack") );
+		_tabs1.add(  "Active Objects",       new TabularCntrPanel("Active Objects") );
+		_tabs1.add(  "Active Statements",    new TabularCntrPanel("Active Statements") );
+		_tabs1.add(  "Blocking",             new TabularCntrPanel("Blocking") );
+		_tabs1.add(  "Missing Statistics",   new TabularCntrPanel("Missing Statistics") );
+		_tabs1.add(  "QP Metrics",           new TabularCntrPanel("QP Metrics") );
+		
+		_tabs2.add(  "Processes",        new TabularCntrPanel("Processes") );
+		_tabs2.add(  "SPID Wait",        new TabularCntrPanel("SPID Wait") );
+		_tabs2.add(  "Databases",        new TabularCntrPanel("Databases") );
+		_tabs2.add(  "Temp Db",          new TabularCntrPanel("Temp Db") );
+		_tabs2.add(  "Waits",            new TabularCntrPanel("Waits") );
+		_tabs2.add(  "Engines",          new TabularCntrPanel("Engines") );
+		_tabs2.add(  "System Load",      new TabularCntrPanel("System Load") );
+		_tabs2.add(  "Spinlock Sum",     new TabularCntrPanel("Spinlock Sum") );
+		_tabs2.add(  "Sysmon Raw",       new TabularCntrPanel("Sysmon Raw") );
+		_tabs2.add(  "RepAgent",         new TabularCntrPanel("RepAgent") );
+		_tabs2.add(  "Errorlog",         new TabularCntrPanel("Errorlog") );
+		_tabs2.add(  "Deadlock",         new TabularCntrPanel("Deadlock") );
+		_tabs2.add(  "Lock Timeout",     new TabularCntrPanel("Lock Timeout") );
+		_tabs2.add(  "sp_monitorconfig", new TabularCntrPanel("sp_monitorconfig") );
+
+		_tabs3.add(  "Devices",     new TabularCntrPanel("Devices") );
+		_tabs3.add(  "IO Sum",      new TabularCntrPanel("IO Sum") );
+		_tabs3.add(  "IO Queue",    new TabularCntrPanel("IO Queue") );
+
+		_tabs4.add(  "Caches",                   new TabularCntrPanel("Caches") );
+		_tabs4.add(  "Pools",                    new TabularCntrPanel("Pools") );
+		_tabs4.add(  "Procedure Cache Load",     new TabularCntrPanel("Procedure Cache Load") );
+		_tabs4.add(  "Cached Objects",           new TabularCntrPanel("Cached Objects") );
+		_tabs4.add(  "Proc Cache Module Usage",  new TabularCntrPanel("Proc Cache Module Usage") );
+		_tabs4.add(  "Proc Cache Memeory Usage", new TabularCntrPanel("Proc Cache Memeory Usage") );
+		_tabs4.add(  "Statement Cache",          new TabularCntrPanel("Statement Cache") );
+		_tabs4.add(  "Statement Cache Details",  new TabularCntrPanel("Statement Cache Details") );
+
+		_tabs5.add(  "OS Disk Stat",     new TabularCntrPanel("OS Disk Stat") );
+		_tabs5.add(  "OS CPU(vmstat)",   new TabularCntrPanel("OS CPU(vmstat)") );
+		_tabs5.add(  "OS CPU(mpstat)",   new TabularCntrPanel("OS CPU(mpstat)") );
+
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+//		_tabs.add(  "",   new TabularCntrPanel("") );
+
+
+		_tabs.add(  "Summary",  new TabularCntrPanel("Summary") );
+		_tabs.add(  "Objects/Access",       _tabs1 );
+		_tabs.add(  "Server",        _tabs2 );
+		_tabs.add(  "Disk",          _tabs3 );
+		_tabs.add(  "Caches",        _tabs4 );
+		_tabs.add(  "Host Monitor",  _tabs5 );
+//		_tabs.add(  "Miscellaneous", _tabs6 );
+		_tabs.add(  "User Defined",  _tabs7 );
+		
 		
 		add(_tabs);
 		
