@@ -30,32 +30,32 @@ extends MonitorIo
 		md.addStrColumn( "Disks",       1,  1, false,   30, "Disk device name");
 		md.addIntColumn( "samples",     2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
 
-		md.addStatColumn("X_tm_act",    3,  2, true, 7,  1, "Indicates the percentage of time the physical disk or tape was active (bandwidth utilization for the drive).");
-		md.addStatColumn("X_bps",       4,  3, true, 7,  1, "Indicates the amount of data transferred (read or written) per second to the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
-		md.addStatColumn("X_tps",       5,  4, true, 7,  1, "Indicates the number of transfers per second that were issued to the physical disk or tape. A transfer is an I/O request to the physical disk or tape. Multiple logical requests can be combined into a single I/O request to the disk. A transfer is of indeterminate size.");
-		md.addStatColumn("X_bread",     6,  5, true, 7,  1, "Indicates the amount of data read per second, from the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
-		md.addStatColumn("X_bwrtn",     7,  6, true, 7,  1, "Indicates the amount of data written per second, to the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
+		md.addStatColumn("X_tm_act",    3,  2, true, 10,  1, "Indicates the percentage of time the physical disk or tape was active (bandwidth utilization for the drive).");
+		md.addStatColumn("X_bps",       4,  3, true, 10,  1, "Indicates the amount of data transferred (read or written) per second to the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
+		md.addStatColumn("X_tps",       5,  4, true, 10,  1, "Indicates the number of transfers per second that were issued to the physical disk or tape. A transfer is an I/O request to the physical disk or tape. Multiple logical requests can be combined into a single I/O request to the disk. A transfer is of indeterminate size.");
+		md.addStatColumn("X_bread",     6,  5, true, 10,  1, "Indicates the amount of data read per second, from the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
+		md.addStatColumn("X_bwrtn",     7,  6, true, 10,  1, "Indicates the amount of data written per second, to the drive. Note: in "+Version.getAppName()+" this is always presented in KB per second");
 
-		md.addStatColumn("R_rps",       8,  7, true, 7,  1, "Indicates the number of read transfers per second.");
-		md.addStatColumn("R_avgserv",   9,  8, true, 7,  1, "Indicates the average service time per read transfer. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("R_minserv",  10,  9, true, 7,  1, "Indicates the minimum read service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("R_maxserv",  11, 10, true, 7,  1, "Indicates the maximum read service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("R_timeouts", 12, 11, true, 7,  1, "Indicates the number of read timeouts per second.");
-		md.addStatColumn("R_fails",    13, 12, true, 7,  1, "Indicates the number of failed read requests per second.");
+		md.addStatColumn("R_rps",       8,  7, true, 10,  1, "Indicates the number of read transfers per second.");
+		md.addStatColumn("R_avgserv",   9,  8, true, 10,  1, "Indicates the average service time per read transfer. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("R_minserv",  10,  9, true, 10,  1, "Indicates the minimum read service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("R_maxserv",  11, 10, true, 10,  1, "Indicates the maximum read service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("R_timeouts", 12, 11, true, 10,  1, "Indicates the number of read timeouts per second.");
+		md.addStatColumn("R_fails",    13, 12, true, 10,  1, "Indicates the number of failed read requests per second.");
 		
-		md.addStatColumn("W_wps",      14, 13, true, 7,  1, "Indicates the number of write transfers per second.");
-		md.addStatColumn("W_avgserv",  15, 14, true, 7,  1, "Indicates the average service time per write transfer. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("W_minserv",  16, 15, true, 7,  1, "Indicates the minimum write service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("W_maxserv",  17, 16, true, 7,  1, "Indicates the maximum write service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("W_timeouts", 18, 17, true, 7,  1, "Indicates the number of write timeouts per second.");
-		md.addStatColumn("W_fails",    19, 18, true, 7,  1, "Indicates the number of failed write requests per second.");
+		md.addStatColumn("W_wps",      14, 13, true, 10,  1, "Indicates the number of write transfers per second.");
+		md.addStatColumn("W_avgserv",  15, 14, true, 10,  1, "Indicates the average service time per write transfer. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("W_minserv",  16, 15, true, 10,  1, "Indicates the minimum write service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("W_maxserv",  17, 16, true, 10,  1, "Indicates the maximum write service time. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("W_timeouts", 18, 17, true, 10,  1, "Indicates the number of write timeouts per second.");
+		md.addStatColumn("W_fails",    19, 18, true, 10,  1, "Indicates the number of failed write requests per second.");
 
-		md.addStatColumn("Q_avgtime",  20, 19, true, 7,  1, "Indicates the average time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("Q_mintime",  21, 20, true, 7,  1, "Indicates the minimum time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("Q_maxtime",  22, 21, true, 7,  1, "Indicates the maximum time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
-		md.addStatColumn("Q_avgwqsz",  23, 22, true, 7,  1, "Indicates the average wait queue size.");
-		md.addStatColumn("Q_avgsqsz",  24, 23, true, 7,  1, "Indicates the average service queue size.");
-		md.addStatColumn("Q_sqfull",   25, 24, true, 7,  1, "Indicates the number of times the service queue becomes full (that is, the disk is not accepting any more service requests) per second.");
+		md.addStatColumn("Q_avgtime",  20, 19, true, 10,  1, "Indicates the average time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("Q_mintime",  21, 20, true, 10,  1, "Indicates the minimum time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("Q_maxtime",  22, 21, true, 10,  1, "Indicates the maximum time spent by a transfer request in the wait queue. Note: in "+Version.getAppName()+" this is always presented in in milliseconds.");
+		md.addStatColumn("Q_avgwqsz",  23, 22, true, 10,  1, "Indicates the average wait queue size.");
+		md.addStatColumn("Q_avgsqsz",  24, 23, true, 10,  1, "Indicates the average service queue size.");
+		md.addStatColumn("Q_sqfull",   25, 24, true, 10,  1, "Indicates the number of times the service queue becomes full (that is, the disk is not accepting any more service requests) per second.");
 
 		// Use "Disks" as the Primary Key, which is used to du summary/average calculations
 		md.setPkCol("Disks");

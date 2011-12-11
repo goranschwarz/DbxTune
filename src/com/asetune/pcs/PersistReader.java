@@ -1977,7 +1977,7 @@ implements Runnable
 		}
 		
 		String str = "Loading 'Session Samples CM Counter Info' for sessionId '"+inSessionStartTime+"' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
-System.out.println(str);
+//System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
 
@@ -2291,6 +2291,182 @@ System.out.println(str);
 	}
 	/*---------------------------------------------------
 	** END: notification listener stuff
+	**---------------------------------------------------
+	*/
+
+
+	
+	/*---------------------------------------------------
+	** BEGIN: DDL reader
+	**---------------------------------------------------
+	*/
+//	sbSql.append("create table " + tabName + "\n");
+//	sbSql.append("( \n");
+//	sbSql.append("    "+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"owner"            +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"objectName"       +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"crdate"           +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"source"           +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"dependParent"     +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"dependLevel"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//	sbSql.append("   ,"+fill(qic+"dependList"       +qic,40)+" "+fill(getDatatype("varchar", 1500,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"objectText"       +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"dependsText"      +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"optdiagText"      +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("   ,"+fill(qic+"extraInfoText"    +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+//	sbSql.append("\n");
+//	sbSql.append("   ,PRIMARY KEY ("+qic+"dbname"+qic+", "+qic+"owner"+qic+", "+qic+"objectName"+qic+")\n");
+//	sbSql.append(") \n");
+
+//	public static class DdlDetails
+//	{
+//		public String    _dbname;
+//		public String    _owner;
+//		public String    _objectName;
+//		public String    _type;
+//		public Timestamp _crdate;
+//		public String    _source;
+//		public String    _dependParent;
+//		public int       _dependLevel;
+//		public String    _dependList;
+//		public String    _objectText;
+//		public String    _dependsText;
+//		public String    _optdiagText;
+//		public String    _extraInfoText;
+//	}
+
+	public DdlDetails getDdlDetailes(String dbname, String type, String objectName, String owner)
+	{
+		long fetchStartTime = System.currentTimeMillis();
+
+		String sql = 
+			" select * " +
+			" from " + PersistWriterBase.getTableName(PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			" where \"dbname\"     = ? " +
+			"   and \"type\"       = ? " +
+			"   and \"objectName\" = ? " +
+			"   and \"owner\"      = ? ";
+
+		DdlDetails ddlDetails = null;
+		try
+		{
+			PreparedStatement pstmnt = _conn.prepareStatement(sql);
+			pstmnt.setString(1, dbname);
+			pstmnt.setString(2, type);
+			pstmnt.setString(3, objectName);
+			pstmnt.setString(4, owner);
+
+			ResultSet rs = pstmnt.executeQuery();
+
+			while (rs.next())
+			{
+				ddlDetails = new DdlDetails();
+
+				ddlDetails.setDbname(      rs.getString   ("dbname"));
+				ddlDetails.setOwner(       rs.getString   ("owner"));
+				ddlDetails.setObjectName(  rs.getString   ("objectName"));
+				ddlDetails.setType(        rs.getString   ("type"));
+				ddlDetails.setCrdate(      rs.getTimestamp("crdate"));
+				ddlDetails.setSampleTime(  rs.getTimestamp("sampleTime"));
+				ddlDetails.setSource(      rs.getString   ("source"));
+				ddlDetails.setDependParent(rs.getString   ("dependParent"));
+				ddlDetails.setDependLevel( rs.getInt      ("dependLevel"));
+				ddlDetails.setDependList(  StringUtil.parseCommaStrToList( rs.getString("dependList") ) );
+
+				ddlDetails.setObjectText(   rs.getString("objectText"));
+				ddlDetails.setDependsText(  rs.getString("dependsText"));
+				ddlDetails.setOptdiagText(  rs.getString("optdiagText"));
+				ddlDetails.setExtraInfoText(rs.getString("extraInfoText"));
+			}
+			rs.close();
+			pstmnt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems loading 'DDL Detailes'. sql="+sql, e);
+		}
+		
+		String str = "Loading 'DDL Detailes' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+System.out.println(str);
+		_logger.debug(str);
+		setStatusText(str);
+
+		return ddlDetails;
+	}
+
+	public List<DdlDetails> getDdlObjects(boolean addBlobs)
+	{
+//		setWatermark("Loading Sessions...");  // if the window wasn't visible, set the watermark now
+		long fetchStartTime = System.currentTimeMillis();
+//		setStatusText("Loading 'Session Samples CM Counter Info' for sessionId '"+inSessionStartTime+"'.");
+
+		List<DdlDetails> list = new ArrayList<DdlDetails>();
+
+		String blobCols = "";
+		if (addBlobs)
+			blobCols = ", \"objectText\", \"dependsText\", \"optdiagText\", \"extraInfoText\" ";
+
+		String sql = 
+//			"select * " +
+			"select \"dbname\", \"owner\", \"objectName\", \"type\", \"crdate\", \"sampleTime\", \"source\", \"dependParent\", \"dependLevel\", \"dependList\" " + blobCols +
+//			"select \"dbname\", \"owner\", \"objectName\", \"type\", \"crdate\", \"sampleTime\", \"source\", \"dependLevel\", \"dependList\" " + blobCols +
+			"from " + PersistWriterBase.getTableName(PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			"order by \"dbname\", \"type\", \"objectName\", \"owner\" ";
+
+		try
+		{
+			PreparedStatement pstmnt = _conn.prepareStatement(sql);
+//			pstmnt.setString(1, inSessionStartTime.toString());
+
+			ResultSet rs = pstmnt.executeQuery();
+//			ResultSetMetaData rsmd = rs.getMetaData();
+//			int cols = rsmd.getColumnCount();
+
+			while (rs.next())
+			{
+				DdlDetails ddlDetails = new DdlDetails();
+
+				ddlDetails.setDbname(      rs.getString   ("dbname"));
+				ddlDetails.setOwner(       rs.getString   ("owner"));
+				ddlDetails.setObjectName(  rs.getString   ("objectName"));
+				ddlDetails.setType(        rs.getString   ("type"));
+				ddlDetails.setCrdate(      rs.getTimestamp("crdate"));
+				ddlDetails.setSampleTime(  rs.getTimestamp("sampleTime"));
+				ddlDetails.setSource(      rs.getString   ("source"));
+				ddlDetails.setDependParent(rs.getString   ("dependParent"));
+				ddlDetails.setDependLevel( rs.getInt      ("dependLevel"));
+				ddlDetails.setDependList(  StringUtil.parseCommaStrToList( rs.getString("dependList") ) );
+
+				if (addBlobs)
+				{
+					ddlDetails.setObjectText(   rs.getString("objectText"));
+					ddlDetails.setDependsText(  rs.getString("dependsText"));
+					ddlDetails.setOptdiagText(  rs.getString("optdiagText"));
+					ddlDetails.setExtraInfoText(rs.getString("extraInfoText"));
+				}
+
+				list.add(ddlDetails);
+			}
+			rs.close();
+			pstmnt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems loading 'DDL TreeView'. sql="+sql, e);
+		}
+		
+		String str = "Loading 'DDL TreeView' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
+System.out.println(str);
+		_logger.debug(str);
+		setStatusText(str);
+
+		return list;
+	}
+	
+	
+	/*---------------------------------------------------
+	** END: DDL reader
 	**---------------------------------------------------
 	*/
 }

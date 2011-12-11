@@ -494,6 +494,14 @@ public class PersistWriterJdbc
 					urlMap.put("MAX_COMPACT_TIME",  "2000");
 				}
 
+				// AutoServer mode
+				if ( ! urlMap.containsKey("AUTO_SERVER") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
+					urlMap.put("AUTO_SERVER",  "TRUE");
+				}
+
 				if (change)
 				{
 					urlHelper.setUrlOptionsMap(urlMap);
@@ -584,14 +592,14 @@ public class PersistWriterJdbc
 				// Admin rights are required to execute this command, as it affects all connections. 
 				// This command commits an open transaction. This setting is persistent.
 				// SET COMPRESS_LOB { NO | LZF | DEFLATE }
-				dbExecSetting("SET COMPRESS_LOB LZF");
+				dbExecSetting("SET COMPRESS_LOB DEFLATE");
 
 				// Sets the default lock timeout (in milliseconds) in this database that is used for 
 				// the new sessions. The default value for this setting is 1000 (one second).
 				// Admin rights are required to execute this command, as it affects all connections. 
 				// This command commits an open transaction. This setting is persistent.
 				// SET DEFAULT LOCK_TIMEOUT int
-				dbExecSetting("SET DEFAULT_LOCK_TIMEOUT 5000");
+				dbExecSetting("SET DEFAULT_LOCK_TIMEOUT 15000");
 
 				// If IGNORECASE is enabled, text columns in newly created tables will be 
 				// case-insensitive. Already existing tables are not affected. 
@@ -638,7 +646,7 @@ public class PersistWriterJdbc
 				// longer than the given value. The default timeout is 0, meaning no timeout.
 				// This command does not commit a transaction, and rollback does not affect it.
 				// SET QUERY_TIMEOUT int
-				dbExecSetting("SET QUERY_TIMEOUT 5000");
+				dbExecSetting("SET QUERY_TIMEOUT 15000");
 
 				// Sets the trace level for file the file or system out stream. Levels are: 0=off, 
 				// 1=error, 2=info, 3=debug. The default level is 1 for file and 0 for system out. 
@@ -2232,8 +2240,10 @@ public class PersistWriterJdbc
 			pstmt.setString(col++, ddlDetails.getOwner());
 			pstmt.setString(col++, ddlDetails.getObjectName());
 			pstmt.setString(col++, ddlDetails.getType());
-			pstmt.setString(col++, ddlDetails.getCrdate() == null ? null : ddlDetails.getCrdate().toString() );
+			pstmt.setString(col++, ddlDetails.getCrdate()     == null ? null : ddlDetails.getCrdate()    .toString() );
+			pstmt.setString(col++, ddlDetails.getSampleTime() == null ? null : ddlDetails.getSampleTime().toString() );
 			pstmt.setString(col++, ddlDetails.getSource());
+			pstmt.setString(col++, ddlDetails.getDependParent());
 			pstmt.setInt   (col++, ddlDetails.getDependLevel());
 			pstmt.setString(col++, dependList);
 			pstmt.setString(col++, ddlDetails.getObjectText());

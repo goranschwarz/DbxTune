@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Properties;
 
+import com.asetune.AseTune;
+
 /**
  * @author gorans
  *
@@ -33,29 +35,37 @@ implements XmenuAction
 		super();
 	}
 
-	public void setMenuProperties(Properties p)                     { _menuProps = p; }
-	public void setAllProperties(Properties p)                      { _allProps = p; }
-	public void setParamValues(LinkedHashMap<String,String> map)    { _paramValues = map; }
-	public void addParamValue(String k, String v)                   { _paramValues.put(k, v); }
-	public void setConfig(String name)                              { _config = name; }
-	public void setMenuName(String name)                            { _menuName = name; }
-	public void setConnection(Connection conn)                      { _conn = conn; }
-	public void setCloseConnOnExit(boolean b)                       { _closeConnOnExit = b; }
+	@Override public void setMenuProperties(Properties p)                     { _menuProps = p; }
+	@Override public void setAllProperties(Properties p)                      { _allProps = p; }
+	@Override public void setParamValues(LinkedHashMap<String,String> map)    { _paramValues = map; }
+	@Override public void addParamValue(String k, String v)                   { _paramValues.put(k, v); }
+	@Override public void setConfig(String name)                              { _config = name; }
+	@Override public void setMenuName(String name)                            { _menuName = name; }
+	@Override public void setConnection(Connection conn)                      { _conn = conn; }
+	@Override public void setCloseConnOnExit(boolean b)                       { _closeConnOnExit = b; }
 
-	public Properties                   getMenuProperties()         { return _menuProps; }
-	public Properties                   getAllProperties()          { return _allProps; }
-	public LinkedHashMap<String,String> getParamValues()            { return _paramValues; }
-	public Iterator<String>             getParamIterator()          { return _paramValues.values().iterator(); }
-	public String                       getParamValue(String param) { return (String)_paramValues.get(param); }
-	public String                       getConfig()                 { return _config; }
-	public String                       getMenuName()               { return _menuName; }
-	public Connection                   getConnection()             { return _conn; }
-	public boolean                      isCloseConnOnExit()         { return _closeConnOnExit; }
+	@Override public Properties                   getMenuProperties()         { return _menuProps; }
+	@Override public Properties                   getAllProperties()          { return _allProps; }
+	@Override public LinkedHashMap<String,String> getParamValues()            { return _paramValues; }
+	@Override public Iterator<String>             getParamIterator()          { return _paramValues.values().iterator(); }
+	@Override public String                       getParamValue(String param) { return (String)_paramValues.get(param); }
+	@Override public String                       getConfig()                 { return _config; }
+	@Override public String                       getMenuName()               { return _menuName; }
+	@Override public Connection                   getConnection()             { return _conn; }
+	@Override public boolean                      isCloseConnOnExit()         { return _closeConnOnExit; }
 
+	@Override 
+	public boolean getConnectionOnStart()
+	{
+		return AseTune.getCounterCollector().isMonConnected();
+	}
+
+	@Override 
 	public String getParamValue(int pos)
 	{
 		return getParamValue(pos, null);
 	}
+	
 	public String getParamValue(int pos, String defaultValue)
 	{
 		if ( pos < 0  &&  pos > _paramValues.size() )

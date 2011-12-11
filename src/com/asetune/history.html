@@ -234,20 +234,19 @@ li   {margin-bottom: 6px}
 	</ul>
 	Also setting some options in the database after connect<br>
 	<ul>
-	    <li><code>SET COMPRESS_LOB LZF</code>          - Compress LOB Large OBjects, text/image fields.</li>
-	    <li><code>SET DEFAULT_LOCK_TIMEOUT 5000</code> - Change the LOCK timeout to 5 seconds.</li>
-	    <li><code>SET QUERY_TIMEOUT 5000</code>        - Change query timeout timeout to 5 seconds.</li>
+	    <li><code>SET COMPRESS_LOB DEFLATE</code>       - Compress LOB Large OBjects, text/image fields.</li>
+	    <li><code>SET DEFAULT_LOCK_TIMEOUT 15000</code> - Change the LOCK timeout to 15 seconds.</li>
+	    <li><code>SET QUERY_TIMEOUT 15000</code>        - Change query timeout timeout to 15 seconds.</li>
 	</ul>
 	Also do '<code>SHUTDOWN COMPACT</code>' in method, stopServices()<br>
 	The intention for these changes is that the database size will be smaller...<br>
 	</LI>
 
 	<LI>
-	<b>Add: DDL storage functionality</b><br>
+	<b>New: DDL storage functionality</b><br>
 	In some of the performance counters, get top 10, or all rows (DBName, ObjectName) and get various
 	information from the ASE Server (sp_help/procText, sp__optdiag, sp_depends) on tables/procedures<br>
 	If the table or procedure has dependencies to other tables/procedures, add q DDL request of those objects as well.<br>
-	Next step: make a GUI so the values can be viewed<br>
 	</LI>
 
 	<LI>
@@ -279,6 +278,67 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>bug fix: Main Tabbed Pane, Scroll / Wrap properties</b><br>
 	This was previously not saved and restored on AseTune restart, now it is<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counter 'SPID Waits'</b><br>
+	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID. 
+	So there could be quite a bunch of rows in this one...<br>
+	</LI>
+
+	<LI>
+	<b>New: View DDL </b><br>
+	The entries stored be the 'DDL storage functionality' can be viewed in a TreeTable,<br>
+	Access the 'View DDL' from:
+	<ul>
+		<li>MainMenu -&gt; Tools -&gt; DDL Viewer</li>
+		<li>Any Performance Counter: Right click menu -&gt; DDL Viewer</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in 'Statement Cache Details'</b><br>
+	In ASE 15.7, Show 'show_cached_plan_in_xml(SSQLID, 0)' in the details.<br>
+	The information will be saved/displayed in raw XML format until a good reader is available.
+	</LI>
+
+	<LI>
+	<b>New: Tooltip on SPID, in offline mode for all Performance Counter</b><br>
+	Tooltip on SPID in JTable cells now work in offline mode as well<br>
+	First it loads the 'Processes tab', then it check if the SPID is there and reads all the information.<br>
+	If the 'Processes' is not saved, then the ordinary 'Not able to load...' will be displayed.<br>
+	</LI>
+
+	<LI>
+	<b>Enhanced functionality: The offline/in-memory Slider can be moved with keyboard shortcuts.</b><br>
+	The offline/in-memory Slider can now be moved using
+	<ul>
+		<li>Crtl+left or Ctrl+right for one tick at time</li>
+		<li>Shift+left or Shift+right for 10 ticks at time</li>
+		<li>Crtl+Shift+left or Ctrl+Shift+right move to next slot that has data</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change: HostMonitor data type when storing counters</b><br>
+	HostMonitor, expanded most data type storage from 7,1 or 5,1 to 10,1<br>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: SQL/Query Window</b><br>
+	<ul>
+		<li>Now has a "cancel" button, when a statement is executing</li>
+		<li>All SQLExceptions are converted into SQLWarnings and printed along with the result sets</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: Capture SQL</b><br>
+	<ul>
+		<li>New field to write "extra where clause, on active statements</li>
+		<li>New field to write "order by, on active statements</li>
+	</ul>
+	Note: This tool will be rewritten from scratch "soon"
 	</LI>
 
 </UL>

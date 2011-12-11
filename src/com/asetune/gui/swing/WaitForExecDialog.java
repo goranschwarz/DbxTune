@@ -1,10 +1,11 @@
-package com.asetune.gui;
+package com.asetune.gui.swing;
 
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Window;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.concurrent.ExecutionException;
 
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -21,6 +22,14 @@ import com.asetune.utils.StringUtil;
 
 /**
  * This needs a lot more work
+ * <p>
+ * 
+ * Example of how to use this:
+ * <pre>
+ * 
+ * 
+ * 
+ * </pre>
  * 
  * @author Goran Schwarz
  */
@@ -148,17 +157,17 @@ implements PropertyChangeListener
 	 * while we are waiting in the code for the Executable to end and this dialog will disappear.  
 	 * @param execClass
 	 */
-	public void execAndWait(final BgExecutor execClass)
+	public Object execAndWait(final BgExecutor execClass)
 	{
 		// Execute in a Swing Thread
-		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
+		SwingWorker<Object, Object> doBgThread = new SwingWorker<Object, Object>()
 		{
 			@Override
-			protected String doInBackground() throws Exception
+			protected Object doInBackground() throws Exception
 			{
 				try 
 				{
-					execClass.doWork();
+					return execClass.doWork();
 				} 
 				catch (Throwable t) 
 				{
@@ -173,6 +182,21 @@ implements PropertyChangeListener
 	
 		//the dialog will be visible until the SwingWorker is done
 		this.setVisible(true); 
+		
+		try
+		{
+			return doBgThread.get();
+		}
+		catch (InterruptedException e)
+		{
+			_logger.warn("execAndWait Caught: "+e, e);
+			return null;
+		}
+		catch (ExecutionException e)
+		{
+			_logger.warn("execAndWait Caught: "+e, e);
+			return null;
+		}
 	}
 
 	/**
@@ -180,6 +204,6 @@ implements PropertyChangeListener
 	 */
 	public interface BgExecutor
 	{
-		void doWork();
+		Object doWork();
 	}
 }

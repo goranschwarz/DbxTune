@@ -25,6 +25,7 @@ public class CounterSetTemplates
 		_nameShortToLongMap.put(GetCounters.CM_NAME__SUMMARY                 , GetCounters.CM_DESC__SUMMARY                 );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__OBJECT_ACTIVITY         , GetCounters.CM_DESC__OBJECT_ACTIVITY         );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__PROCESS_ACTIVITY        , GetCounters.CM_DESC__PROCESS_ACTIVITY        );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__PROCESS_WAIT            , GetCounters.CM_DESC__PROCESS_WAIT            );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__OPEN_DATABASES          , GetCounters.CM_DESC__OPEN_DATABASES          );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__TEMPDB_ACTIVITY         , GetCounters.CM_DESC__TEMPDB_ACTIVITY         );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__SYS_WAIT                , GetCounters.CM_DESC__SYS_WAIT                );
@@ -63,6 +64,7 @@ public class CounterSetTemplates
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SUMMARY                 , GetCounters.CM_NAME__SUMMARY                 );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__OBJECT_ACTIVITY         , GetCounters.CM_NAME__OBJECT_ACTIVITY         );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__PROCESS_ACTIVITY        , GetCounters.CM_NAME__PROCESS_ACTIVITY        );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__PROCESS_WAIT            , GetCounters.CM_NAME__PROCESS_WAIT            );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__OPEN_DATABASES          , GetCounters.CM_NAME__OPEN_DATABASES          );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__TEMPDB_ACTIVITY         , GetCounters.CM_NAME__TEMPDB_ACTIVITY         );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SYS_WAIT                , GetCounters.CM_NAME__SYS_WAIT                );
@@ -239,6 +241,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOnSmall =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -276,6 +279,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOnMedium =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -313,6 +317,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOnLarge =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -350,6 +355,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOnAll =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -393,6 +399,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOffSmall =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -430,6 +437,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOffMedium =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -467,6 +475,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOffLarge =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -504,6 +513,7 @@ public class CounterSetTemplates
 	public final static String systemTemplatePcsOffAll =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROCESS_ACTIVITY        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__PROCESS_WAIT            +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OPEN_DATABASES          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__TEMPDB_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYS_WAIT                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +

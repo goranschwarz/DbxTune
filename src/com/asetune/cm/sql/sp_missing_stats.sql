@@ -271,8 +271,8 @@ begin
 		                  end,
 		s.partitionid, 
 		s.indid, 
-		datachange      = datachange(o.name, null, null),
-		updStatDate     = isnull((select convert(varchar(30),s2.moddate,109) from sysstatistics s2 where s2.id = s.id and s2.formatid = 100),'not found') -- formatid = 100 seems to be 'update statistics info'
+		datachange      = datachange(o.name, null, null)--,
+--		updStatDate     = isnull((select convert(varchar(30),s2.moddate,109) from sysstatistics s2 where s2.id = s.id and s2.formatid = 100),'not found') -- formatid = 100 seems to be 'update statistics info'
 	from sysstatistics s, sysobjects o
 	where s.id = o.id
 	  and o.name like @tabname

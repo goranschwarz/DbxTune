@@ -282,7 +282,7 @@ public abstract class AseConfigText
 			{
 				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
 				script = new AseSqlScript(conn, 10); 
-				_configStr = script.executeSqlStr(sql);
+				_configStr = script.executeSqlStr(sql, true);
 			}
 			catch (SQLException ex)
 			{

@@ -45,6 +45,7 @@ extends XmenuActionBase
 	/* (non-Javadoc)
 	 * @see com.sybase.jisql.xmenu.XmenuActionBase#doWork()
 	 */
+	@Override 
 	public void doWork() 
 	{
 		_dbname  = getParamValue(0);
@@ -97,6 +98,7 @@ extends XmenuActionBase
 
 		textFrame.addWindowListener(new WindowAdapter()
 		{
+			@Override 
 			public void windowClosing(WindowEvent e)
 			{
 			}
@@ -104,6 +106,7 @@ extends XmenuActionBase
 
 		ActionListener action = new ActionListener()
 		{
+			@Override 
 			public void actionPerformed(ActionEvent e)
 			{
 				textFrame.dispose();
@@ -127,6 +130,7 @@ extends XmenuActionBase
 
 		SwingWorker w = new SwingWorker()
 		{
+			@Override 
 			public Object construct()
 	        {
 				execOptDiag(textFrame, textarea);

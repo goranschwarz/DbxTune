@@ -9,14 +9,9 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Frame;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
@@ -24,22 +19,13 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.lang.reflect.InvocationTargetException;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Timestamp;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -66,50 +52,33 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
-import javax.swing.RowSorter.SortKey;
-import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableColumn;
-import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
-import org.jdesktop.swingx.event.TableColumnModelExtListener;
-import org.jdesktop.swingx.renderer.DefaultTableRenderer;
-import org.jdesktop.swingx.renderer.StringValue;
-import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.ColumnControlButton;
-import org.jdesktop.swingx.table.TableColumnExt;
-import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.gui.focusabletip.FocusableTip;
-import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPaneWindowProps;
-import com.asetune.gui.swing.MultiSortTableCellHeaderRenderer;
+import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.RowFilterDiffCounterIsZero;
 import com.asetune.gui.swing.RowFilterValueAndOp;
 import com.asetune.pcs.InMemoryCounterHandler;
@@ -226,11 +195,11 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	// This panel will be used for any checkboxes etc that is local to any specific tables.
 
 	// DATA TABLE panel
-	private TCPTable				_dataTable							= new TCPTable();
+	private GTable                  _dataTable                          = new GTable();
 
 	private JPopupMenu				_tablePopupMenu						= null;
 
-	private Watermark				_watermark							= null;
+//	private Watermark				_watermark							= null;
 
 	// Refresh column with every minute
 	private long					_lastColWithRefresh					= 0;
@@ -1662,14 +1631,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_timePostpone_txt  .setToolTipText("<html>If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples.<br>tip: '10m' is 10 minutes, '24h' is 24 hours</html>");
 		_timeViewStored_lbl.setToolTipText("You are viewing data that has been stored in the In Memory Counter Storage or the Persistent Counter Storage");
 
-		_timeOfflineRewind_but.setToolTipText("Get privious sample with data");
+		_timeOfflineRewind_but.setToolTipText("<html>Move to Previous sample that contains data.<br> Keyboard Shortcut: Ctrl + Shift + Left</html>");
 		_timeOfflineRewind_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_rewind.png"));
 		_timeOfflineRewind_but.setText(null);
 		_timeOfflineRewind_but.setContentAreaFilled(false);
 		_timeOfflineRewind_but.setMargin( new Insets(0,0,0,0) );
 		_timeOfflineRewind_but.setVisible(false);
 
-		_timeOfflineFastForward_but.setToolTipText("Get next sample with data");
+		_timeOfflineFastForward_but.setToolTipText("<html>Move to Next sample that contains data.<br> Keyboard Shortcut: Ctrl + Shift + Right</html>");
 		_timeOfflineFastForward_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_fastforward.png"));
 		_timeOfflineFastForward_but.setText(null);
 		_timeOfflineFastForward_but.setContentAreaFilled(false);
@@ -1722,10 +1691,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_optionHasActiveGraphs_lbl.setVisible(false);
 		_optionTrendGraphs_but    .setVisible(false);
 
-		panel.add(_optionPauseDataPolling_chk,      "push, grow, left, split");
+		panel.add(_optionPauseDataPolling_chk,      "pushx, growx, left, split");
 		panel.add(_optionHasActiveGraphs_lbl,       "top");
 		panel.add(_optionTrendGraphs_but,           "top, wrap");
-		panel.add(_optionEnableBgPolling_chk,       "push, grow, left, split");
+		panel.add(_optionEnableBgPolling_chk,       "pushx, growx, left, split");
 		panel.add(_optionQueryTimeout_lbl,          "");
 		panel.add(_optionQueryTimeout_txt,          "width 40:40, wrap");
 		panel.add(_optionPersistCounters_chk,       "split");
@@ -1840,7 +1809,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		}
 
 		JScrollPane scroll = new JScrollPane(_dataTable);
-		_watermark = new Watermark(scroll, "Not Connected...");
+//		_watermark = new Watermark(scroll, "Not Connected...");
+		_dataTable.setWatermarkAnchor(scroll);
+		setWatermarkText("Not Connected...");
 
 		// panel.add(scroll, BorderLayout.CENTER);
 		// panel.add(scroll, "");
@@ -2415,817 +2386,817 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			filterAction(null, "NO_ZERO_COUNTERS");
 	}
 
-	/*---------------------------------------------------
-	 **---------------------------------------------------
-	 **---------------------------------------------------
-	 **---- SUBCLASSES ---- SUBCLASES ---- SUBCLASES ----- 
-	 **---------------------------------------------------
-	 **---------------------------------------------------
-	 **---------------------------------------------------
-	 */
-	/**
-	 * This timer is started when a colomn in the table has been moved/removed
-	 * It will save the column order layout...
-	 * A timer is needed because, when we move a column the method columnMoved() is kicked of
-	 * for every pixel we move the mouse.
-	 */
-	private class ColumnLayoutTimerAction implements ActionListener
-	{
-		private TCPTable _tab = null;
-		ColumnLayoutTimerAction(TCPTable tab)
-		{
-			_tab = tab;
-		}
-		@Override
-		public void actionPerformed(ActionEvent actionevent)
-		{
-			_tab.saveColumnLayout();
-			_tab._columnLayoutTimer.stop();
-		}
-	}
+//	/*---------------------------------------------------
+//	 **---------------------------------------------------
+//	 **---------------------------------------------------
+//	 **---- SUBCLASSES ---- SUBCLASES ---- SUBCLASES ----- 
+//	 **---------------------------------------------------
+//	 **---------------------------------------------------
+//	 **---------------------------------------------------
+//	 */
+//	/**
+//	 * This timer is started when a colomn in the table has been moved/removed
+//	 * It will save the column order layout...
+//	 * A timer is needed because, when we move a column the method columnMoved() is kicked of
+//	 * for every pixel we move the mouse.
+//	 */
+//	private class ColumnLayoutTimerAction implements ActionListener
+//	{
+//		private TCPTable _tab = null;
+//		ColumnLayoutTimerAction(TCPTable tab)
+//		{
+//			_tab = tab;
+//		}
+//		@Override
+//		public void actionPerformed(ActionEvent actionevent)
+//		{
+//			_tab.saveColumnLayout();
+//			_tab._columnLayoutTimer.stop();
+//		}
+//	}
 
-	public class TCPTable extends JXTable
-	{
-		private static final long	serialVersionUID			= 8891472887299452415L;
-		private int					_lastMousePressedAtModelCol	= -1;
-		private int					_lastMousePressedAtModelRow	= -1;
-		private TCPTable            _thisTable                  = null;
-//		private boolean             _hasNewModel                = true;
-		private boolean             _tableStructureChangedFlag  = true;
-
-		/** If columns are reordered, save it after X seconds inactivity */
-		protected Timer             _columnLayoutTimer          = null;
-
-		private TCPTable()
-		{
-			init();
-		}
-
-		private TCPTable(TableModel tm)
-		{
-			super(tm);
-			init();
-		}
-
-		public int getLastMousePressedAtModelCol()
-		{
-			return _lastMousePressedAtModelCol;
-		}
-
-		public int getLastMousePressedAtModelRow()
-		{
-			return _lastMousePressedAtModelRow;
-		}
-
-		public boolean isLastMousePressedAtModelRowColValid()
-		{
-			return _lastMousePressedAtModelRow >= 0 && _lastMousePressedAtModelCol >= 0;
-		}
-
-		/** just wrap the super setModel() */
-		@Override
-		public void setModel(TableModel newModel)
-		{
-//			// Noo ned to continue if it's the same model ????
-//			TableModel currentModel = getModel();
-//			if (newModel.equals(currentModel))
+//	public class TCPTable extends JXTable
+//	{
+//		private static final long	serialVersionUID			= 8891472887299452415L;
+//		private int					_lastMousePressedAtModelCol	= -1;
+//		private int					_lastMousePressedAtModelRow	= -1;
+//		private TCPTable            _thisTable                  = null;
+////		private boolean             _hasNewModel                = true;
+//		private boolean             _tableStructureChangedFlag  = true;
+//
+//		/** If columns are reordered, save it after X seconds inactivity */
+//		protected Timer             _columnLayoutTimer          = null;
+//
+//		private TCPTable()
+//		{
+//			init();
+//		}
+//
+//		private TCPTable(TableModel tm)
+//		{
+//			super(tm);
+//			init();
+//		}
+//
+//		public int getLastMousePressedAtModelCol()
+//		{
+//			return _lastMousePressedAtModelCol;
+//		}
+//
+//		public int getLastMousePressedAtModelRow()
+//		{
+//			return _lastMousePressedAtModelRow;
+//		}
+//
+//		public boolean isLastMousePressedAtModelRowColValid()
+//		{
+//			return _lastMousePressedAtModelRow >= 0 && _lastMousePressedAtModelCol >= 0;
+//		}
+//
+//		/** just wrap the super setModel() */
+//		@Override
+//		public void setModel(TableModel newModel)
+//		{
+////			// Noo ned to continue if it's the same model ????
+////			TableModel currentModel = getModel();
+////			if (newModel.equals(currentModel))
+////			{
+////				System.out.println("TCP: same model as before: currentModel="+currentModel);
+////				return;
+////			}
+//				
+////			_hasNewModel = true;
+//			super.setModel(newModel);
+//			
+//			if (newModel instanceof CountersModel)
 //			{
-//				System.out.println("TCP: same model as before: currentModel="+currentModel);
-//				return;
+//				String tabName = _thisTable.getName();
+//				if (StringUtil.isNullOrBlank(tabName))
+//				{
+//					CountersModel cm = (CountersModel) newModel;
+//					_thisTable.setName(cm.getName());
+//				}
 //			}
-				
-//			_hasNewModel = true;
-			super.setModel(newModel);
-			
-			if (newModel instanceof CountersModel)
-			{
-				String tabName = _thisTable.getName();
-				if (StringUtil.isNullOrBlank(tabName))
-				{
-					CountersModel cm = (CountersModel) newModel;
-					_thisTable.setName(cm.getName());
-				}
-			}
-			loadColumnLayout();
-		}
-
-		private void init()
-		{
-			// wait 1 seconds before column layout is saved, this simply means less config writes...
-			_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
-			_thisTable = this;
-
-			//
-			// Cell renderer changes to "Rate" Counters
-			//
-			// The normal formatter doesn't add '.0' if values are even
-			// Make '0'     -> '0.0' 
-			//  and '123'   -> '123.0' 
-			//  and '123.5' -> '123.5'
-			@SuppressWarnings("serial")
-			StringValue sv = new StringValue() 
-			{
-				NumberFormat nf = null;
-				{ // init/constructor section
-					try
-					{
-						nf = new DecimalFormat();
-						nf.setMinimumFractionDigits(1);
-					}
-					catch (Throwable t)
-					{
-						nf = NumberFormat.getInstance();
-					}
-				}
-				public String getString(Object value) 
-				{
-					if ( ! (value instanceof BigDecimal) ) 
-						return StringValues.TO_STRING.getString(value);
-					return nf.format(value);
-				}
-			};
-			// bind the RATE values (which happens to be BigDecimal)
-			setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(sv, JLabel.RIGHT));
-
-			//--------------------------------------------------------------------
-			// Add mouse listener to be used to identify what row/col we are at.
-			// this is used from the context menu, to do copy of cell or row
-			//--------------------------------------------------------------------
-			addMouseListener(new MouseAdapter()
-			{
-				// public void mouseClicked(MouseEvent e)
-
-				// Done on left&right click
-				// if you any want left-click(select) use method mouseClicked()
-				// instead
-				@Override
-				public void mousePressed(MouseEvent e)
-				{
-					_lastMousePressedAtModelCol = -1;
-					_lastMousePressedAtModelRow = -1;
-
-					Point p = new Point(e.getX(), e.getY());
-					int col = columnAtPoint(p);
-					int row = rowAtPoint(p);
-
-					if ( row >= 0 && col >= 0 )
-					{
-						_lastMousePressedAtModelCol = convertColumnIndexToModel(col);
-						_lastMousePressedAtModelRow = convertRowIndexToModel(row);
-					}
-				}
-			});
-
-			//--------------------------------------------------------------------
-			// listen on changes in the column header.
-			// Used to save/restore column order
-			//--------------------------------------------------------------------
-			TableColumnModelExtListener columnModelListener = new TableColumnModelExtListener() 
-			{
-				@Override
-				public void columnPropertyChange(PropertyChangeEvent e) {}
-				@Override
-				public void columnMarginChanged(ChangeEvent e)          {columnMovedOrRemoved(null);}
-				@Override
-				public void columnSelectionChanged(ListSelectionEvent e){}
-
-				@Override
-				public void columnAdded(TableColumnModelEvent e)
-				{
-					// If a new model has been loaded AND it's the LAST column we are adding
-					// then load the column layout
-					//System.out.println("------columnAdded(): tabName='"+getName()+"', _hasNewModel="+_hasNewModel+", modelCount="+getModel().getColumnCount()+", getToIndex="+e.getToIndex()+".");
-					
-//					if (_hasNewModel && getModel().getColumnCount()-1 == e.getToIndex())
+//			loadColumnLayout();
+//		}
+//
+//		private void init()
+//		{
+//			// wait 1 seconds before column layout is saved, this simply means less config writes...
+//			_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
+//			_thisTable = this;
+//
+//			//
+//			// Cell renderer changes to "Rate" Counters
+//			//
+//			// The normal formatter doesn't add '.0' if values are even
+//			// Make '0'     -> '0.0' 
+//			//  and '123'   -> '123.0' 
+//			//  and '123.5' -> '123.5'
+//			@SuppressWarnings("serial")
+//			StringValue sv = new StringValue() 
+//			{
+//				NumberFormat nf = null;
+//				{ // init/constructor section
+//					try
 //					{
+//						nf = new DecimalFormat();
+//						nf.setMinimumFractionDigits(1);
+//					}
+//					catch (Throwable t)
+//					{
+//						nf = NumberFormat.getInstance();
+//					}
+//				}
+//				public String getString(Object value) 
+//				{
+//					if ( ! (value instanceof BigDecimal) ) 
+//						return StringValues.TO_STRING.getString(value);
+//					return nf.format(value);
+//				}
+//			};
+//			// bind the RATE values (which happens to be BigDecimal)
+//			setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(sv, JLabel.RIGHT));
+//
+//			//--------------------------------------------------------------------
+//			// Add mouse listener to be used to identify what row/col we are at.
+//			// this is used from the context menu, to do copy of cell or row
+//			//--------------------------------------------------------------------
+//			addMouseListener(new MouseAdapter()
+//			{
+//				// public void mouseClicked(MouseEvent e)
+//
+//				// Done on left&right click
+//				// if you any want left-click(select) use method mouseClicked()
+//				// instead
+//				@Override
+//				public void mousePressed(MouseEvent e)
+//				{
+//					_lastMousePressedAtModelCol = -1;
+//					_lastMousePressedAtModelRow = -1;
+//
+//					Point p = new Point(e.getX(), e.getY());
+//					int col = columnAtPoint(p);
+//					int row = rowAtPoint(p);
+//
+//					if ( row >= 0 && col >= 0 )
+//					{
+//						_lastMousePressedAtModelCol = convertColumnIndexToModel(col);
+//						_lastMousePressedAtModelRow = convertRowIndexToModel(row);
+//					}
+//				}
+//			});
+//
+//			//--------------------------------------------------------------------
+//			// listen on changes in the column header.
+//			// Used to save/restore column order
+//			//--------------------------------------------------------------------
+//			TableColumnModelExtListener columnModelListener = new TableColumnModelExtListener() 
+//			{
+//				@Override
+//				public void columnPropertyChange(PropertyChangeEvent e) {}
+//				@Override
+//				public void columnMarginChanged(ChangeEvent e)          {columnMovedOrRemoved(null);}
+//				@Override
+//				public void columnSelectionChanged(ListSelectionEvent e){}
+//
+//				@Override
+//				public void columnAdded(TableColumnModelEvent e)
+//				{
+//					// If a new model has been loaded AND it's the LAST column we are adding
+//					// then load the column layout
+//					//System.out.println("------columnAdded(): tabName='"+getName()+"', _hasNewModel="+_hasNewModel+", modelCount="+getModel().getColumnCount()+", getToIndex="+e.getToIndex()+".");
+//					
+////					if (_hasNewModel && getModel().getColumnCount()-1 == e.getToIndex())
+////					{
+////						_logger.debug("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
+////						_hasNewModel = false;
+////						_thisTable.loadColumnLayout();
+////					}
+////System.out.println("tabname="+StringUtil.left(getName(), 30)+", modelColCount-1="+(getModel().getColumnCount()-1)+", toIndex="+e.getToIndex());
+//					if (_tableStructureChangedFlag && getModel().getColumnCount()-1 == e.getToIndex())
+//					{
+////if (getName().equals("CMobjActivity"))
+////System.out.println("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
 //						_logger.debug("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
-//						_hasNewModel = false;
+//						_tableStructureChangedFlag = false;
 //						_thisTable.loadColumnLayout();
 //					}
-//System.out.println("tabname="+StringUtil.left(getName(), 30)+", modelColCount-1="+(getModel().getColumnCount()-1)+", toIndex="+e.getToIndex());
-					if (_tableStructureChangedFlag && getModel().getColumnCount()-1 == e.getToIndex())
-					{
-//if (getName().equals("CMobjActivity"))
-//System.out.println("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
-						_logger.debug("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
-						_tableStructureChangedFlag = false;
-						_thisTable.loadColumnLayout();
-					}
-				}
-
-				@Override
-				public void columnRemoved(TableColumnModelEvent e)      {columnMovedOrRemoved(e);}
-				@Override
-				public void columnMoved(TableColumnModelEvent e)        {columnMovedOrRemoved(e);}
-				private void columnMovedOrRemoved(TableColumnModelEvent e)
-				{
-					if (_columnLayoutTimer.isRunning())
-						_columnLayoutTimer.restart();
-					else
-						_columnLayoutTimer.start();
-				}
-			};
-			getColumnModel().addColumnModelListener(columnModelListener);
-
-			// Set special Render to print multiple columns sorts
-			_thisTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
-
-			//--------------------------------------------------------------------
-			// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
-			//--------------------------------------------------------------------
-			_thisTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
-		}
-
-		public void printColumnLayout(String prefix)
-		{
-			if (getColumnCount() == 0)
-				return;
-
-			// Get prefix name to use
-			String cmName = getName(); // Name of the JTable component, which should be the CM name
-			if (cmName == null)
-			{
-				_logger.debug("Can't print Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
-				return;
-			}
-
-			TableColumnModel tcm = getColumnModel();
-
-			for (TableColumn tc : getColumns(true))
-			{
-				TableColumnExt tcx     = (TableColumnExt) tc;
-				String         colName = tc.getHeaderValue().toString();
-
-				// Visible
-				boolean colIsVisible = tcx.isVisible();
-
-				// Sorted
-				SortOrder colSort = getSortOrder(colName);
-
-				// View/model position
-				int colModelPos = tcx.getModelIndex();
-				int colViewPos  = -1;
-				try {colViewPos = tcm.getColumnIndex(colName);}
-				catch (IllegalArgumentException ignore) {}
-
-				System.out.println(prefix + "printColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
-			}
-		}
-		/**
-		 * Load column order/layout from the saved vales in the temporary properties file.
-		 */
-		public void loadColumnLayout()
-		{
-//if ("CMobjActivity".equals(getName()))
-//new Exception("loadColumnLayout() was CALLED from").printStackTrace();
-//			Configuration conf = Configuration.getInstance(Configuration.TEMP);
-			Configuration conf = Configuration.getCombinedConfiguration();
-			if (conf == null) 
-				return;
-
-			if (getColumnCount() == 0)
-				return;
-
-			// Get prefix name to use
-			String cmName = getName(); // Name of the JTable component, which should be the CM name
-			if (cmName == null)
-			{
-				_logger.debug("Can't load Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
-				return;
-			}
-
-			int srvVersion = 0;
-			if (getModel() instanceof CountersModel)
-			{
-				CountersModel cm = (CountersModel) getModel();
-				if (cm.isRuntimeInitialized())
-					srvVersion = cm.getServerVersion();
-			}
-			// get the values from configuration
-			String confKey = cmName + ".gui.column.header.props." + srvVersion;
-			String confVal = conf.getProperty(confKey);
-			if (confVal == null)
-			{
-				// Revert back to "previous" version
-				confKey = cmName + ".gui.column.header.props";
-				confVal = conf.getProperty(confKey);
-			}
-			if (confVal == null)
-				return;
-
-			// split on '; ' and stuff the entries in a Map object
-			LinkedHashMap<String, ColumnHeaderPropsEntry> colProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
-			String[] strArr = confVal.split("; ");
-			for (int i=0; i<strArr.length; i++)
-			{
-				try 
-				{
-					// each entry looks like: colName={modelPos=1,viewPos=1,isVisible=true,sort=unsorted}
-					// where modelPos=int[0..999], viewPos=int[0..999], isVisible=boolean[true|false], sort=String[unsorted|ascending|descending]
-					ColumnHeaderPropsEntry chpe = ColumnHeaderPropsEntry.parseKeyValue(strArr[i]);
-					colProps.put(chpe._colName, chpe);
-				}
-				catch (ParseException e)
-				{
-					_logger.info("Problems parsing '"+confKey+"' with string '"+strArr[i]+"'. Caught: "+e);
-					continue;
-				}
-			}
-
-			// If cable model and config are "out of sync", do not load
-			if (colProps.size() != getModel().getColumnCount())
-			{
-				_logger.info(confKey + " has '"+colProps.size()+"' values and the table model has '"+getModel().getColumnCount()+"' columns. I will skip moving columns around, the original column layout will be used.");
-				return;
-			}
-
-			// Now move the columns in right position
-			// make it recursive until no more has to be moved
-			for (int i=0; i<colProps.size(); i++)
-			{
-				if (loadColumnLayout(colProps) == 0)
-					break;
-			}
-
-			// SETTING SORT ORDER
-			// Find the highest sorted column
-			int maxSortOrderPos = -1;
-			for (ColumnHeaderPropsEntry chpe : colProps.values())
-				maxSortOrderPos = Math.max(maxSortOrderPos, chpe._sortOrderPos);
-
-			// now APPLY the sorts in the correct order.
-			// Starting with the highest number... 
-			// The LAST one you do setSortOrder() will be SORT COLUMN 1
-			for (int i=maxSortOrderPos; i>0; i--)
-			{
-				for (ColumnHeaderPropsEntry chpe : colProps.values())
-				{
-					if (chpe._sortOrderPos == i)
-					{
-						if (_logger.isDebugEnabled())
-							_logger.debug(i+": Setting '"+StringUtil.left(chpe._colName,20)+"', viewPos="+chpe._viewPos+",  to "+chpe._sortOrder+", sortOrderPos="+chpe._sortOrderPos+", ModelColumnCount="+getModel().getColumnCount()+", RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", name="+getName());
-
-						if (chpe._viewPos < getRowSorter().getModel().getColumnCount())
-							setSortOrder(chpe._viewPos, chpe._sortOrder);
-						else
-							_logger.debug("Can't set the sort order for column '"+chpe._colName+"'. viewPos < RowSorterModelColumnCount, this will be retried later? Info RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", TableModelColumnCount="+getModel().getColumnCount()+", viewPos="+chpe._viewPos+", TableName="+getName());
-					}
-				}
-			}
-			
-		}
-		protected int loadColumnLayout(Map<String, ColumnHeaderPropsEntry> colProps)
-		{
-			int fixCount = 0;
-			TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
-			for (Map.Entry<String,ColumnHeaderPropsEntry> entry : colProps.entrySet()) 
-			{
-				String                 colName = entry.getKey();
-				ColumnHeaderPropsEntry chpe    = entry.getValue();
-
-				// Hide/show column
-				TableColumnExt tcx = tcmx.getColumnExt(colName);
-				if (tcx != null)
-				{
-					if ( chpe._isVisible == false && tcx.isVisible() )
-					{
-						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> HIDE '"+colName+"'.");
-						tcx.setVisible(false);
-						fixCount++;
-					}
-
-					if ( chpe._isVisible == true && !tcx.isVisible() )
-					{
-						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> SHOW '"+colName+"'.");
-						tcx.setVisible(true);
-						fixCount++;
-					}
-				}
-
-				// Move column
-				int colViewPos = -1;
-				try {colViewPos = tcmx.getColumnIndex(colName);}
-				catch (IllegalArgumentException ignore) {}
-				
-				int propViewPos = chpe._viewPos; 
-
-				_logger.trace("loadColumnLayout() cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' colViewPos(from)='"+colViewPos+"', chpe._viewPos(to)='"+chpe._viewPos+"'.");
-				if (colViewPos >= 0 && propViewPos >= 0)
-				{
-					if (colViewPos != propViewPos)
-					{
-						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> MOVE '"+colName+"' from '"+colViewPos+"' -> '"+propViewPos+"'.");
-
-						// hmmm, this will trigger columnMove
-						// but we have the timer before saveColumnLayout is kicked of, so we should be fine
-						// and also since we have already read it into local variables it doesn't matter.
-						tcmx.moveColumn(colViewPos, propViewPos);
-						fixCount++;
-					}
-				}
-
-//				// sorting
-//				SortOrder currentSortOrder = SortOrder.UNSORTED;
-//				if (colViewPos >= 0) 
-//					currentSortOrder = getSortOrder(colViewPos);
-////if (getName().equals("CMobjActivity"))
-////System.out.println("loadColumnLayout() SORT TO: cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' chpe._sortOrder='"+chpe._sortOrder+"', currentSortOrder='"+currentSortOrder+"'.");
-//				if (chpe._sortOrder != currentSortOrder)
-//				{
-////if (getName().equals("CMobjActivity"))
-////System.out.println("loadColumnLayout() CHANGING SORT ORDER to: chpe._viewPos="+chpe._viewPos+", chpe._sortOrder="+chpe._sortOrder);
-//					_logger.trace("loadColumnLayout() SORT TO: cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' viewPos='"+chpe._viewPos+"', sortOrder(to)='"+chpe._sortOrder+"'.");
-//					setSortOrder(chpe._viewPos, chpe._sortOrder);
 //				}
-
-				// WIDTH
-				int colWidth = chpe._width; 
-				if (colWidth > 0)
-				{
-					if (tcx != null)
-					{
-						tcx.setPreferredWidth(colWidth);
-						tcx.setWidth(colWidth);
-					}
-				}
-
-				// Initially set all columns to UNSORTED
-				// setting the order will be done later
-				if (colViewPos >= 0) 
-				{
-					if (getSortOrder(colViewPos) != SortOrder.UNSORTED)
-						setSortOrder(colViewPos, SortOrder.UNSORTED);
-				}
-			}
-			return fixCount;
-		}
-
-		/** Save column order/layout in the temporary properties file. */
-		public void saveColumnLayout()
-		{
-			saveColumnLayout(false);
-		}
-		/** Save column order/layout in the temporary properties file. 
-		 * @param toOriginalLayout if we want to save the original layout, which makes restore esier.
-		 */
-		public void saveColumnLayout(boolean toOriginalLayout)
-		{
-			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-			if (conf == null) 
-				return;
-
-			if (getColumnCount() == 0)
-				return;
-
-			// Get prefix name to use
-			String cmName = getName(); // Name of the JTable component, which should be the CM name
-			if (cmName == null)
-			{
-				_logger.debug("Can't load Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
-				return;
-			}
-
-			int srvVersion = 0;
-			if (getModel() instanceof CountersModel)
-			{
-				CountersModel cm = (CountersModel) getModel();
-				if (cm.isRuntimeInitialized())
-					srvVersion = cm.getServerVersion();
-			}
-			String confKeyBase    = cmName + ".gui.column.header.props";
-			String confKeyVersion = cmName + ".gui.column.header.props." + srvVersion;
-			String confVal = "";
-
-			TableColumnModel tcm = getColumnModel();
-
-			for (TableColumn tc : getColumns(true))
-			{
-				TableColumnExt tcx     = (TableColumnExt) tc;
-				String         colName = tc.getHeaderValue().toString();
-
-				// Visible
-				boolean colIsVisible = tcx.isVisible();
-
-				// View/model position
-				int colModelPos = tcx.getModelIndex();
-				int colViewPos  = -1;
-				try {colViewPos = tcm.getColumnIndex(colName);}
-				catch (IllegalArgumentException ignore) {}
-
-				// Column width
-				int colWidth = tc.getWidth();
-
-				// Sorted
-				SortOrder colSort    = getSortOrder(colName);
-				int       colSortPos = getSortOrderIndex(colName);
-
-//if (getName().equals("CMobjActivity"))
-//System.out.println("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
-				_logger.debug("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", sortPos="+colSortPos+", identifier='"+tcx.getIdentifier()+"', width="+colWidth+", toString="+tc);
-
-				ColumnHeaderPropsEntry chpe = new ColumnHeaderPropsEntry(colName, colModelPos, colViewPos, colIsVisible, colSort, colSortPos, colWidth);
-				if (toOriginalLayout)
-				{
-					chpe._viewPos      = colModelPos;
-					chpe._isVisible    = true;
-					chpe._sortOrder    = SortOrder.UNSORTED;
-					chpe._sortOrderPos = 0;
-					chpe._width        = -1;
-				}
-
-				// Append to the Config Value
-				confVal += chpe+"; ";
-			}
-			confVal = confVal.substring(0, confVal.length()-2);
-			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyBase+"="+confVal);
-			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyVersion+"="+confVal);
-
-			conf.setProperty(confKeyBase,    confVal);
-			conf.setProperty(confKeyVersion, confVal);
-			conf.save();
-		}
-		
-		/** 
-		 * restore original column layout, the original layout is the same as the order from the model 
-		 */
-		public void setOriginalColumnLayout()
-		{
-			saveColumnLayout(true);
-			loadColumnLayout();
-		}
-
-		/**
-		 * Get the sort index for a specific column.
-		 * @param colModelIndex
-		 * @return -1 if the column is not sorted, else it would be a number greater than 0.
-		 */
-		public int getSortOrderIndex(int colModelIndex)
-		{
-			List<? extends SortKey> sortKeys = this.getRowSorter().getSortKeys();
-			if ( sortKeys == null || sortKeys.size() == 0 )
-				return -1;
-
-			int sortIndex = 1;
-			for (SortKey sortKey : sortKeys)
-			{
-				if (sortKey.getSortOrder() == SortOrder.UNSORTED)
-					continue;
-
-				if ( sortKey.getColumn() == colModelIndex )
-					return sortIndex;
-
-				sortIndex++;
-			}
-
-			return -1;
-		}
-
-		/**
-		 * Get the sort index for a specific column.
-		 * @param colName
-		 * @return -1 if the column is not sorted, else it would be a number greater than 0.
-		 */
-		public int getSortOrderIndex(String colName)
-		{
-			try
-			{
-				int colModelIndex = this.getColumn(colName).getModelIndex();
-				return getSortOrderIndex(colModelIndex);
-			}
-			catch (IllegalArgumentException ignore)
-			{
-				return -1;
-			}
-		}
-
-		/**
-		 * To be able select/UN-SELECT rows in a table Called when a row/cell is
-		 * about to change. getSelectedRow(), still shows what the *current*
-		 * selection is
-		 */
-		@Override
-		public void changeSelection(int row, int column, boolean toggle, boolean extend)
-		{
-			_logger.debug("changeSelection(row=" + row + ", column=" + column + ", toggle=" + toggle + ", extend=" + extend + "), getSelectedRow()=" + getSelectedRow() + ", getSelectedColumn()=" + getSelectedColumn());
-
-			// if "row we clicked on" is equal to "currently selected row"
-			// and also check that we do not do "left/right on keyboard"
-			if ( row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
-			{
-				toggle = true;
-				_logger.debug("changeSelection(): change toggle to " + toggle + ".");
-			}
-
-			super.changeSelection(row, column, toggle, extend);
-		}
-
-		/* Called on fire* has been called on the TableModel */
-		@Override
-		public void tableChanged(final TableModelEvent e)
-		{
-			if ( ! SwingUtilities.isEventDispatchThread() )
-			{
-//			    SwingUtilities.invokeLater(new Runnable() {
-//			    	public void run() {
-//			    		privateTableChanged(e);
-//			    	}
-//			    });
-			    try
-				{
-					SwingUtilities.invokeAndWait(new Runnable() {
-					    public void run() {
-					    	privateTableChanged(e);
-					    }
-					});
-				}
-				catch (InterruptedException e1)      { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), Caught: "+e1); }
-				catch (InvocationTargetException e1) { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), threw exception: "+e1, e1); }
-			}
-			else
-	        	privateTableChanged(e);
-				
-		}
-		private void privateTableChanged(TableModelEvent e)
-		{
-			// new Exception().printStackTrace();
-
-			// TODO: try to get PK from the CounterModel (or SamplingCnt.getPkForRow()) 
-			//       then restore: row=SamplingCnt.getRowForPk(); convertModelToView(); setSelectionInterval()
-
-			int viewSelectedRow = getSelectedRow();
-			int modelRowBefore = -1;
-			if ( viewSelectedRow >= 0 )
-				modelRowBefore = convertRowIndexToModel(getSelectedRow());
-
-			super.tableChanged(e);
-
-			// it looks like either JTable or JXTable looses the selected row
-			// after "fireTableDataChanged" has been called...
-			// So try to set it back to where it previously was!
-			if ( modelRowBefore >= 0 )
-			{
-				// If no rows in model, no need to restore selected row.
-				if (getRowCount() > 0 && modelRowBefore < getRowCount())
-				{
-					int viewRowNow = convertRowIndexToView(modelRowBefore);
-					if ( viewRowNow >= 0 )
-						getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
-				}
-			}
-
-			// event: AbstactTableModel.fireTableStructureChanged
-			if ( SwingUtils.isStructureChanged(e) )
-			{
-				_tableStructureChangedFlag = true;
-				loadColumnLayout();
-			}
-		}
-
-		// public TableCellRenderer getCellRenderer(int row, int column)
-		// {
-		// return _tableDiffDataCellRenderer;
-		// TableCellRenderer renderer = super.getCellRenderer(row, column);
-		// if (_cm != null )
-		// {
-		// if (_cm.showAbsolute())
-		// return renderer;
-		//
-		// if (_cm.isDeltaCalculatedColumn(column))
-		// {
-		// return _tableDiffDataCellRenderer;
-		// }
-		// }
-		// return renderer;
-		// }
-
-		// 
-		// TOOL TIP for: TABLE HEADERS
-		//
-		@Override
-		protected JTableHeader createDefaultTableHeader()
-		{
-			return new JXTableHeader(getColumnModel())
-			{
-				private static final long	serialVersionUID	= -4987530843165661043L;
-
-				@Override
-				public String getToolTipText(MouseEvent e)
-				{
-					// Now get the column name, which we point at
-					Point p = e.getPoint();
-					int index = getColumnModel().getColumnIndexAtX(p.x);
-					if ( index < 0 )
-						return null;
-					Object colNameObj = getColumnModel().getColumn(index).getHeaderValue();
-
-					// Now get the ToolTip from the CounterTableModel
-					String toolTip = null;
-					if ( colNameObj instanceof String )
-					{
-						String colName = (String) colNameObj;
-						if ( _cm != null )
-							toolTip = _cm.getToolTipTextOnTableColumn(colName);
-					}
-					return toolTip;
-				}
-			};
-		}
-
-		// 
-		// TOOL TIP for: CELLS
-		//
-		@Override
-		public String getToolTipText(MouseEvent e)
-		{
-			String tip = null;
-			Point p = e.getPoint();
-			int row = rowAtPoint(p);
-			int col = columnAtPoint(p);
-			if ( row >= 0 && col >= 0 )
-			{
-				col = super.convertColumnIndexToModel(col);
-				row = super.convertRowIndexToModel(row);
-
-				TableModel model = getModel();
-				String colName = model.getColumnName(col);
-				Object cellValue = model.getValueAt(row, col);
-
-				if ( model instanceof CountersModel )
-				{
-					CountersModel cm = (CountersModel) model;
-					tip = cm.getToolTipTextOnTableCell(e, colName, cellValue, row, col);
-
-					// Do we want to use "focusable" tips?
-					if (tip != null) 
-					{
-						if (_focusableTip == null) 
-							_focusableTip = new FocusableTip(this);
-
-//							_focusableTip.setImageBase(imageBase);
-						_focusableTip.toolTipRequested(e, tip);
-					}
-					// No tooltip text at new location - hide tip window if one is
-					// currently visible
-					else if (_focusableTip!=null) 
-					{
-						_focusableTip.possiblyDisposeOfTipWindow();
-					}
-					return null;
-				}
-			}
-//			if ( tip != null )
-//				return tip;
-			return getToolTipText();
-		}
-
-		// // TableCellRenderer _tableDiffDataCellRenderer = new
-		// DefaultTableCellRenderer()
-		// TableCellRenderer _tableDiffDataCellRenderer = new
-		// DefaultTableRenderer()
-		// {
-		// private static final long serialVersionUID = -4439199147374261543L;
-		//
-		// public Component getTableCellRendererComponent(JTable table, Object
-		// value, boolean isSelected, boolean hasFocus, int row, int column)
-		// {
-		// Component comp = super.getTableCellRendererComponent(table, value,
-		// isSelected, hasFocus, row, column);
-		// // if (value == null || _cm == null)
-		// // return comp;
-		// // if (value == null)
-		// // return comp;
-		//
-		// // ((JLabel)comp).setHorizontalAlignment(RIGHT);
-		// // if ( _cm.isPctColumn(column) )
-		// // {
-		// // comp.setForeground(Color.red);
-		// // }
-		// // else
-		// // {
-		// // comp.setForeground(Color.blue);
-		// // if ( value instanceof Number )
-		// // {
-		// // if ( ((Number)value).doubleValue() != 0.0 )
-		// // {
-		// // comp.setFont( comp.getFont().deriveFont(Font.BOLD) );
-		// // }
-		// // }
-		// // }
-		// // return comp;
-		// if ( value instanceof Number )
-		// {
-		// comp.setForeground(Color.blue);
-		// // ((JLabel)comp).setHorizontalAlignment(RIGHT);
-		// if ( ((Number)value).doubleValue() != 0.0 )
-		// {
-		// comp.setFont( comp.getFont().deriveFont(Font.BOLD) );
-		// }
-		// }
-		// return comp;
-		// }
-		// };
-	}
-	private FocusableTip _focusableTip;
+//
+//				@Override
+//				public void columnRemoved(TableColumnModelEvent e)      {columnMovedOrRemoved(e);}
+//				@Override
+//				public void columnMoved(TableColumnModelEvent e)        {columnMovedOrRemoved(e);}
+//				private void columnMovedOrRemoved(TableColumnModelEvent e)
+//				{
+//					if (_columnLayoutTimer.isRunning())
+//						_columnLayoutTimer.restart();
+//					else
+//						_columnLayoutTimer.start();
+//				}
+//			};
+//			getColumnModel().addColumnModelListener(columnModelListener);
+//
+//			// Set special Render to print multiple columns sorts
+//			_thisTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+//
+//			//--------------------------------------------------------------------
+//			// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
+//			//--------------------------------------------------------------------
+//			_thisTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+//		}
+//
+//		public void printColumnLayout(String prefix)
+//		{
+//			if (getColumnCount() == 0)
+//				return;
+//
+//			// Get prefix name to use
+//			String cmName = getName(); // Name of the JTable component, which should be the CM name
+//			if (cmName == null)
+//			{
+//				_logger.debug("Can't print Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
+//				return;
+//			}
+//
+//			TableColumnModel tcm = getColumnModel();
+//
+//			for (TableColumn tc : getColumns(true))
+//			{
+//				TableColumnExt tcx     = (TableColumnExt) tc;
+//				String         colName = tc.getHeaderValue().toString();
+//
+//				// Visible
+//				boolean colIsVisible = tcx.isVisible();
+//
+//				// Sorted
+//				SortOrder colSort = getSortOrder(colName);
+//
+//				// View/model position
+//				int colModelPos = tcx.getModelIndex();
+//				int colViewPos  = -1;
+//				try {colViewPos = tcm.getColumnIndex(colName);}
+//				catch (IllegalArgumentException ignore) {}
+//
+//				System.out.println(prefix + "printColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
+//			}
+//		}
+//		/**
+//		 * Load column order/layout from the saved vales in the temporary properties file.
+//		 */
+//		public void loadColumnLayout()
+//		{
+////if ("CMobjActivity".equals(getName()))
+////new Exception("loadColumnLayout() was CALLED from").printStackTrace();
+////			Configuration conf = Configuration.getInstance(Configuration.TEMP);
+//			Configuration conf = Configuration.getCombinedConfiguration();
+//			if (conf == null) 
+//				return;
+//
+//			if (getColumnCount() == 0)
+//				return;
+//
+//			// Get prefix name to use
+//			String cmName = getName(); // Name of the JTable component, which should be the CM name
+//			if (cmName == null)
+//			{
+//				_logger.debug("Can't load Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
+//				return;
+//			}
+//
+//			int srvVersion = 0;
+//			if (getModel() instanceof CountersModel)
+//			{
+//				CountersModel cm = (CountersModel) getModel();
+//				if (cm.isRuntimeInitialized())
+//					srvVersion = cm.getServerVersion();
+//			}
+//			// get the values from configuration
+//			String confKey = cmName + ".gui.column.header.props." + srvVersion;
+//			String confVal = conf.getProperty(confKey);
+//			if (confVal == null)
+//			{
+//				// Revert back to "previous" version
+//				confKey = cmName + ".gui.column.header.props";
+//				confVal = conf.getProperty(confKey);
+//			}
+//			if (confVal == null)
+//				return;
+//
+//			// split on '; ' and stuff the entries in a Map object
+//			LinkedHashMap<String, ColumnHeaderPropsEntry> colProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
+//			String[] strArr = confVal.split("; ");
+//			for (int i=0; i<strArr.length; i++)
+//			{
+//				try 
+//				{
+//					// each entry looks like: colName={modelPos=1,viewPos=1,isVisible=true,sort=unsorted}
+//					// where modelPos=int[0..999], viewPos=int[0..999], isVisible=boolean[true|false], sort=String[unsorted|ascending|descending]
+//					ColumnHeaderPropsEntry chpe = ColumnHeaderPropsEntry.parseKeyValue(strArr[i]);
+//					colProps.put(chpe._colName, chpe);
+//				}
+//				catch (ParseException e)
+//				{
+//					_logger.info("Problems parsing '"+confKey+"' with string '"+strArr[i]+"'. Caught: "+e);
+//					continue;
+//				}
+//			}
+//
+//			// If cable model and config are "out of sync", do not load
+//			if (colProps.size() != getModel().getColumnCount())
+//			{
+//				_logger.info(confKey + " has '"+colProps.size()+"' values and the table model has '"+getModel().getColumnCount()+"' columns. I will skip moving columns around, the original column layout will be used.");
+//				return;
+//			}
+//
+//			// Now move the columns in right position
+//			// make it recursive until no more has to be moved
+//			for (int i=0; i<colProps.size(); i++)
+//			{
+//				if (loadColumnLayout(colProps) == 0)
+//					break;
+//			}
+//
+//			// SETTING SORT ORDER
+//			// Find the highest sorted column
+//			int maxSortOrderPos = -1;
+//			for (ColumnHeaderPropsEntry chpe : colProps.values())
+//				maxSortOrderPos = Math.max(maxSortOrderPos, chpe._sortOrderPos);
+//
+//			// now APPLY the sorts in the correct order.
+//			// Starting with the highest number... 
+//			// The LAST one you do setSortOrder() will be SORT COLUMN 1
+//			for (int i=maxSortOrderPos; i>0; i--)
+//			{
+//				for (ColumnHeaderPropsEntry chpe : colProps.values())
+//				{
+//					if (chpe._sortOrderPos == i)
+//					{
+//						if (_logger.isDebugEnabled())
+//							_logger.debug(i+": Setting '"+StringUtil.left(chpe._colName,20)+"', viewPos="+chpe._viewPos+",  to "+chpe._sortOrder+", sortOrderPos="+chpe._sortOrderPos+", ModelColumnCount="+getModel().getColumnCount()+", RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", name="+getName());
+//
+//						if (chpe._viewPos < getRowSorter().getModel().getColumnCount())
+//							setSortOrder(chpe._viewPos, chpe._sortOrder);
+//						else
+//							_logger.debug("Can't set the sort order for column '"+chpe._colName+"'. viewPos < RowSorterModelColumnCount, this will be retried later? Info RowSorterModelColumnCount="+getRowSorter().getModel().getColumnCount()+", TableModelColumnCount="+getModel().getColumnCount()+", viewPos="+chpe._viewPos+", TableName="+getName());
+//					}
+//				}
+//			}
+//			
+//		}
+//		protected int loadColumnLayout(Map<String, ColumnHeaderPropsEntry> colProps)
+//		{
+//			int fixCount = 0;
+//			TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
+//			for (Map.Entry<String,ColumnHeaderPropsEntry> entry : colProps.entrySet()) 
+//			{
+//				String                 colName = entry.getKey();
+//				ColumnHeaderPropsEntry chpe    = entry.getValue();
+//
+//				// Hide/show column
+//				TableColumnExt tcx = tcmx.getColumnExt(colName);
+//				if (tcx != null)
+//				{
+//					if ( chpe._isVisible == false && tcx.isVisible() )
+//					{
+//						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> HIDE '"+colName+"'.");
+//						tcx.setVisible(false);
+//						fixCount++;
+//					}
+//
+//					if ( chpe._isVisible == true && !tcx.isVisible() )
+//					{
+//						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> SHOW '"+colName+"'.");
+//						tcx.setVisible(true);
+//						fixCount++;
+//					}
+//				}
+//
+//				// Move column
+//				int colViewPos = -1;
+//				try {colViewPos = tcmx.getColumnIndex(colName);}
+//				catch (IllegalArgumentException ignore) {}
+//				
+//				int propViewPos = chpe._viewPos; 
+//
+//				_logger.trace("loadColumnLayout() cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' colViewPos(from)='"+colViewPos+"', chpe._viewPos(to)='"+chpe._viewPos+"'.");
+//				if (colViewPos >= 0 && propViewPos >= 0)
+//				{
+//					if (colViewPos != propViewPos)
+//					{
+//						_logger.trace("loadColumnLayout() cm='"+getName()+"': ACTION -> MOVE '"+colName+"' from '"+colViewPos+"' -> '"+propViewPos+"'.");
+//
+//						// hmmm, this will trigger columnMove
+//						// but we have the timer before saveColumnLayout is kicked of, so we should be fine
+//						// and also since we have already read it into local variables it doesn't matter.
+//						tcmx.moveColumn(colViewPos, propViewPos);
+//						fixCount++;
+//					}
+//				}
+//
+////				// sorting
+////				SortOrder currentSortOrder = SortOrder.UNSORTED;
+////				if (colViewPos >= 0) 
+////					currentSortOrder = getSortOrder(colViewPos);
+//////if (getName().equals("CMobjActivity"))
+//////System.out.println("loadColumnLayout() SORT TO: cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' chpe._sortOrder='"+chpe._sortOrder+"', currentSortOrder='"+currentSortOrder+"'.");
+////				if (chpe._sortOrder != currentSortOrder)
+////				{
+//////if (getName().equals("CMobjActivity"))
+//////System.out.println("loadColumnLayout() CHANGING SORT ORDER to: chpe._viewPos="+chpe._viewPos+", chpe._sortOrder="+chpe._sortOrder);
+////					_logger.trace("loadColumnLayout() SORT TO: cm='"+getName()+"': info '"+StringUtil.left(colName,30)+"' viewPos='"+chpe._viewPos+"', sortOrder(to)='"+chpe._sortOrder+"'.");
+////					setSortOrder(chpe._viewPos, chpe._sortOrder);
+////				}
+//
+//				// WIDTH
+//				int colWidth = chpe._width; 
+//				if (colWidth > 0)
+//				{
+//					if (tcx != null)
+//					{
+//						tcx.setPreferredWidth(colWidth);
+//						tcx.setWidth(colWidth);
+//					}
+//				}
+//
+//				// Initially set all columns to UNSORTED
+//				// setting the order will be done later
+//				if (colViewPos >= 0) 
+//				{
+//					if (getSortOrder(colViewPos) != SortOrder.UNSORTED)
+//						setSortOrder(colViewPos, SortOrder.UNSORTED);
+//				}
+//			}
+//			return fixCount;
+//		}
+//
+//		/** Save column order/layout in the temporary properties file. */
+//		public void saveColumnLayout()
+//		{
+//			saveColumnLayout(false);
+//		}
+//		/** Save column order/layout in the temporary properties file. 
+//		 * @param toOriginalLayout if we want to save the original layout, which makes restore esier.
+//		 */
+//		public void saveColumnLayout(boolean toOriginalLayout)
+//		{
+//			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+//			if (conf == null) 
+//				return;
+//
+//			if (getColumnCount() == 0)
+//				return;
+//
+//			// Get prefix name to use
+//			String cmName = getName(); // Name of the JTable component, which should be the CM name
+//			if (cmName == null)
+//			{
+//				_logger.debug("Can't load Column Layout, because the JTable has not been assigned a name. getName() on the JTable is null.");
+//				return;
+//			}
+//
+//			int srvVersion = 0;
+//			if (getModel() instanceof CountersModel)
+//			{
+//				CountersModel cm = (CountersModel) getModel();
+//				if (cm.isRuntimeInitialized())
+//					srvVersion = cm.getServerVersion();
+//			}
+//			String confKeyBase    = cmName + ".gui.column.header.props";
+//			String confKeyVersion = cmName + ".gui.column.header.props." + srvVersion;
+//			String confVal = "";
+//
+//			TableColumnModel tcm = getColumnModel();
+//
+//			for (TableColumn tc : getColumns(true))
+//			{
+//				TableColumnExt tcx     = (TableColumnExt) tc;
+//				String         colName = tc.getHeaderValue().toString();
+//
+//				// Visible
+//				boolean colIsVisible = tcx.isVisible();
+//
+//				// View/model position
+//				int colModelPos = tcx.getModelIndex();
+//				int colViewPos  = -1;
+//				try {colViewPos = tcm.getColumnIndex(colName);}
+//				catch (IllegalArgumentException ignore) {}
+//
+//				// Column width
+//				int colWidth = tc.getWidth();
+//
+//				// Sorted
+//				SortOrder colSort    = getSortOrder(colName);
+//				int       colSortPos = getSortOrderIndex(colName);
+//
+////if (getName().equals("CMobjActivity"))
+////System.out.println("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", identifier='"+tcx.getIdentifier()+"', toString="+tc);
+//				_logger.debug("saveColumnLayout() cm='"+cmName+"': colName="+StringUtil.left(colName,30)+", modelPos="+colModelPos+", viewPos="+colViewPos+", isVisible="+colIsVisible+", sort="+colSort+", sortPos="+colSortPos+", identifier='"+tcx.getIdentifier()+"', width="+colWidth+", toString="+tc);
+//
+//				ColumnHeaderPropsEntry chpe = new ColumnHeaderPropsEntry(colName, colModelPos, colViewPos, colIsVisible, colSort, colSortPos, colWidth);
+//				if (toOriginalLayout)
+//				{
+//					chpe._viewPos      = colModelPos;
+//					chpe._isVisible    = true;
+//					chpe._sortOrder    = SortOrder.UNSORTED;
+//					chpe._sortOrderPos = 0;
+//					chpe._width        = -1;
+//				}
+//
+//				// Append to the Config Value
+//				confVal += chpe+"; ";
+//			}
+//			confVal = confVal.substring(0, confVal.length()-2);
+//			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyBase+"="+confVal);
+//			_logger.debug("saveColumnLayout() SAVE PROPERTY: "+confKeyVersion+"="+confVal);
+//
+//			conf.setProperty(confKeyBase,    confVal);
+//			conf.setProperty(confKeyVersion, confVal);
+//			conf.save();
+//		}
+//		
+//		/** 
+//		 * restore original column layout, the original layout is the same as the order from the model 
+//		 */
+//		public void setOriginalColumnLayout()
+//		{
+//			saveColumnLayout(true);
+//			loadColumnLayout();
+//		}
+//
+//		/**
+//		 * Get the sort index for a specific column.
+//		 * @param colModelIndex
+//		 * @return -1 if the column is not sorted, else it would be a number greater than 0.
+//		 */
+//		public int getSortOrderIndex(int colModelIndex)
+//		{
+//			List<? extends SortKey> sortKeys = this.getRowSorter().getSortKeys();
+//			if ( sortKeys == null || sortKeys.size() == 0 )
+//				return -1;
+//
+//			int sortIndex = 1;
+//			for (SortKey sortKey : sortKeys)
+//			{
+//				if (sortKey.getSortOrder() == SortOrder.UNSORTED)
+//					continue;
+//
+//				if ( sortKey.getColumn() == colModelIndex )
+//					return sortIndex;
+//
+//				sortIndex++;
+//			}
+//
+//			return -1;
+//		}
+//
+//		/**
+//		 * Get the sort index for a specific column.
+//		 * @param colName
+//		 * @return -1 if the column is not sorted, else it would be a number greater than 0.
+//		 */
+//		public int getSortOrderIndex(String colName)
+//		{
+//			try
+//			{
+//				int colModelIndex = this.getColumn(colName).getModelIndex();
+//				return getSortOrderIndex(colModelIndex);
+//			}
+//			catch (IllegalArgumentException ignore)
+//			{
+//				return -1;
+//			}
+//		}
+//
+//		/**
+//		 * To be able select/UN-SELECT rows in a table Called when a row/cell is
+//		 * about to change. getSelectedRow(), still shows what the *current*
+//		 * selection is
+//		 */
+//		@Override
+//		public void changeSelection(int row, int column, boolean toggle, boolean extend)
+//		{
+//			_logger.debug("changeSelection(row=" + row + ", column=" + column + ", toggle=" + toggle + ", extend=" + extend + "), getSelectedRow()=" + getSelectedRow() + ", getSelectedColumn()=" + getSelectedColumn());
+//
+//			// if "row we clicked on" is equal to "currently selected row"
+//			// and also check that we do not do "left/right on keyboard"
+//			if ( row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
+//			{
+//				toggle = true;
+//				_logger.debug("changeSelection(): change toggle to " + toggle + ".");
+//			}
+//
+//			super.changeSelection(row, column, toggle, extend);
+//		}
+//
+//		/* Called on fire* has been called on the TableModel */
+//		@Override
+//		public void tableChanged(final TableModelEvent e)
+//		{
+//			if ( ! SwingUtilities.isEventDispatchThread() )
+//			{
+////			    SwingUtilities.invokeLater(new Runnable() {
+////			    	public void run() {
+////			    		privateTableChanged(e);
+////			    	}
+////			    });
+//			    try
+//				{
+//					SwingUtilities.invokeAndWait(new Runnable() {
+//					    public void run() {
+//					    	privateTableChanged(e);
+//					    }
+//					});
+//				}
+//				catch (InterruptedException e1)      { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), Caught: "+e1); }
+//				catch (InvocationTargetException e1) { _logger.info("SwingUtilities.invokeAndWait(privateTableChanged), threw exception: "+e1, e1); }
+//			}
+//			else
+//	        	privateTableChanged(e);
+//				
+//		}
+//		private void privateTableChanged(TableModelEvent e)
+//		{
+//			// new Exception().printStackTrace();
+//
+//			// TODO: try to get PK from the CounterModel (or SamplingCnt.getPkForRow()) 
+//			//       then restore: row=SamplingCnt.getRowForPk(); convertModelToView(); setSelectionInterval()
+//
+//			int viewSelectedRow = getSelectedRow();
+//			int modelRowBefore = -1;
+//			if ( viewSelectedRow >= 0 )
+//				modelRowBefore = convertRowIndexToModel(getSelectedRow());
+//
+//			super.tableChanged(e);
+//
+//			// it looks like either JTable or JXTable looses the selected row
+//			// after "fireTableDataChanged" has been called...
+//			// So try to set it back to where it previously was!
+//			if ( modelRowBefore >= 0 )
+//			{
+//				// If no rows in model, no need to restore selected row.
+//				if (getRowCount() > 0 && modelRowBefore < getRowCount())
+//				{
+//					int viewRowNow = convertRowIndexToView(modelRowBefore);
+//					if ( viewRowNow >= 0 )
+//						getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
+//				}
+//			}
+//
+//			// event: AbstactTableModel.fireTableStructureChanged
+//			if ( SwingUtils.isStructureChanged(e) )
+//			{
+//				_tableStructureChangedFlag = true;
+//				loadColumnLayout();
+//			}
+//		}
+//
+//		// public TableCellRenderer getCellRenderer(int row, int column)
+//		// {
+//		// return _tableDiffDataCellRenderer;
+//		// TableCellRenderer renderer = super.getCellRenderer(row, column);
+//		// if (_cm != null )
+//		// {
+//		// if (_cm.showAbsolute())
+//		// return renderer;
+//		//
+//		// if (_cm.isDeltaCalculatedColumn(column))
+//		// {
+//		// return _tableDiffDataCellRenderer;
+//		// }
+//		// }
+//		// return renderer;
+//		// }
+//
+//		// 
+//		// TOOL TIP for: TABLE HEADERS
+//		//
+//		@Override
+//		protected JTableHeader createDefaultTableHeader()
+//		{
+//			return new JXTableHeader(getColumnModel())
+//			{
+//				private static final long	serialVersionUID	= -4987530843165661043L;
+//
+//				@Override
+//				public String getToolTipText(MouseEvent e)
+//				{
+//					// Now get the column name, which we point at
+//					Point p = e.getPoint();
+//					int index = getColumnModel().getColumnIndexAtX(p.x);
+//					if ( index < 0 )
+//						return null;
+//					Object colNameObj = getColumnModel().getColumn(index).getHeaderValue();
+//
+//					// Now get the ToolTip from the CounterTableModel
+//					String toolTip = null;
+//					if ( colNameObj instanceof String )
+//					{
+//						String colName = (String) colNameObj;
+//						if ( _cm != null )
+//							toolTip = _cm.getToolTipTextOnTableColumn(colName);
+//					}
+//					return toolTip;
+//				}
+//			};
+//		}
+//
+//		// 
+//		// TOOL TIP for: CELLS
+//		//
+//		@Override
+//		public String getToolTipText(MouseEvent e)
+//		{
+//			String tip = null;
+//			Point p = e.getPoint();
+//			int row = rowAtPoint(p);
+//			int col = columnAtPoint(p);
+//			if ( row >= 0 && col >= 0 )
+//			{
+//				col = super.convertColumnIndexToModel(col);
+//				row = super.convertRowIndexToModel(row);
+//
+//				TableModel model = getModel();
+//				String colName = model.getColumnName(col);
+//				Object cellValue = model.getValueAt(row, col);
+//
+//				if ( model instanceof CountersModel )
+//				{
+//					CountersModel cm = (CountersModel) model;
+//					tip = cm.getToolTipTextOnTableCell(e, colName, cellValue, row, col);
+//
+//					// Do we want to use "focusable" tips?
+//					if (tip != null) 
+//					{
+//						if (_focusableTip == null) 
+//							_focusableTip = new FocusableTip(this);
+//
+////							_focusableTip.setImageBase(imageBase);
+//						_focusableTip.toolTipRequested(e, tip);
+//					}
+//					// No tooltip text at new location - hide tip window if one is
+//					// currently visible
+//					else if (_focusableTip!=null) 
+//					{
+//						_focusableTip.possiblyDisposeOfTipWindow();
+//					}
+//					return null;
+//				}
+//			}
+////			if ( tip != null )
+////				return tip;
+//			return getToolTipText();
+//		}
+//
+//		// // TableCellRenderer _tableDiffDataCellRenderer = new
+//		// DefaultTableCellRenderer()
+//		// TableCellRenderer _tableDiffDataCellRenderer = new
+//		// DefaultTableRenderer()
+//		// {
+//		// private static final long serialVersionUID = -4439199147374261543L;
+//		//
+//		// public Component getTableCellRendererComponent(JTable table, Object
+//		// value, boolean isSelected, boolean hasFocus, int row, int column)
+//		// {
+//		// Component comp = super.getTableCellRendererComponent(table, value,
+//		// isSelected, hasFocus, row, column);
+//		// // if (value == null || _cm == null)
+//		// // return comp;
+//		// // if (value == null)
+//		// // return comp;
+//		//
+//		// // ((JLabel)comp).setHorizontalAlignment(RIGHT);
+//		// // if ( _cm.isPctColumn(column) )
+//		// // {
+//		// // comp.setForeground(Color.red);
+//		// // }
+//		// // else
+//		// // {
+//		// // comp.setForeground(Color.blue);
+//		// // if ( value instanceof Number )
+//		// // {
+//		// // if ( ((Number)value).doubleValue() != 0.0 )
+//		// // {
+//		// // comp.setFont( comp.getFont().deriveFont(Font.BOLD) );
+//		// // }
+//		// // }
+//		// // }
+//		// // return comp;
+//		// if ( value instanceof Number )
+//		// {
+//		// comp.setForeground(Color.blue);
+//		// // ((JLabel)comp).setHorizontalAlignment(RIGHT);
+//		// if ( ((Number)value).doubleValue() != 0.0 )
+//		// {
+//		// comp.setFont( comp.getFont().deriveFont(Font.BOLD) );
+//		// }
+//		// }
+//		// return comp;
+//		// }
+//		// };
+//	}
+//	private FocusableTip _focusableTip;
 	
 	/*---------------------------------------------------
 	 ** BEGIN: Highlighter stuff for the JXTable
@@ -3330,7 +3301,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	public void setWatermarkText(String str)
 	{
 		_logger.debug(_displayName + ".setWatermarkText('" + str + "')");
-		_watermark.setWatermarkText(str);
+		_dataTable.setWatermarkText(str);
 	}
 
 	public void setWatermark()
@@ -3451,84 +3422,84 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_counterRows_lbl.setText(_dataTable.getModel().getRowCount() + " / " + _dataTable.getRowCount());
 	}
 
-	private class Watermark extends AbstractComponentDecorator
-	{
-		public Watermark(JComponent target, String text)
-		{
-			super(target);
-			if ( text == null )
-				text = "";
-			_textSave = text;
-			_textBr   = text.split("\n");
-		}
-
-		private String		_restartText	= "Note: Restart "+Version.getAppName()+" after you have enabled the configuration.";
-		private String[]	_textBr			= null; // Break Lines by '\n'
-		private String      _textSave       = null; // Save last text so we dont need to do repaint if no changes.
-		private Graphics2D	g				= null;
-		private Rectangle	r				= null;
-
-		@Override
-		public void paint(Graphics graphics)
-		{
-			if ( _textBr == null || _textBr != null && _textBr.length < 0 )
-				return;
-
-			r = getDecorationBounds();
-			g = (Graphics2D) graphics;
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
-			g.setColor(new Color(128, 128, 128, 128));
-
-			FontMetrics fm = g.getFontMetrics();
-			int maxStrWidth = 0;
-			int maxStrHeight = fm.getHeight();
-
-			// get max with for all of the lines
-			for (int i = 0; i < _textBr.length; i++)
-			{
-				int CurLineStrWidth = fm.stringWidth(_textBr[i]);
-				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
-			}
-			int xPos = (r.width - maxStrWidth) / 2;
-			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 1.3);
-
-			int spConfigureCount = 0;
-
-			// Print all the lines
-			for (int i = 0; i < _textBr.length; i++)
-			{
-				g.drawString(_textBr[i], xPos, (yPos + (maxStrHeight * i)));
-
-				if ( _textBr[i].startsWith("sp_configure") )
-					spConfigureCount++;
-			}
-
-			if ( spConfigureCount > 0 )
-			{
-				int yPosRestartText = yPos + (maxStrHeight * (_textBr.length + 1));
-				g.drawString(_restartText, xPos, yPosRestartText);
-			}
-		}
-
-		public void setWatermarkText(String text)
-		{
-			if ( text == null )
-				text = "";
-
-			// If text has NOT changed, no need to continue
-			if (text.equals(_textSave))
-				return;
-
-			_textSave = text;
-
-			_textBr = text.split("\n");
-			_logger.debug("setWatermarkText: to '" + text + "'.");
-
-			repaint();
-		}
-	}
+//	private class Watermark extends AbstractComponentDecorator
+//	{
+//		public Watermark(JComponent target, String text)
+//		{
+//			super(target);
+//			if ( text == null )
+//				text = "";
+//			_textSave = text;
+//			_textBr   = text.split("\n");
+//		}
+//
+//		private String		_restartText	= "Note: Restart "+Version.getAppName()+" after you have enabled the configuration.";
+//		private String[]	_textBr			= null; // Break Lines by '\n'
+//		private String      _textSave       = null; // Save last text so we dont need to do repaint if no changes.
+//		private Graphics2D	g				= null;
+//		private Rectangle	r				= null;
+//
+//		@Override
+//		public void paint(Graphics graphics)
+//		{
+//			if ( _textBr == null || _textBr != null && _textBr.length < 0 )
+//				return;
+//
+//			r = getDecorationBounds();
+//			g = (Graphics2D) graphics;
+//			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+//			Font f = g.getFont();
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+//			g.setColor(new Color(128, 128, 128, 128));
+//
+//			FontMetrics fm = g.getFontMetrics();
+//			int maxStrWidth = 0;
+//			int maxStrHeight = fm.getHeight();
+//
+//			// get max with for all of the lines
+//			for (int i = 0; i < _textBr.length; i++)
+//			{
+//				int CurLineStrWidth = fm.stringWidth(_textBr[i]);
+//				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+//			}
+//			int xPos = (r.width - maxStrWidth) / 2;
+//			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 1.3);
+//
+//			int spConfigureCount = 0;
+//
+//			// Print all the lines
+//			for (int i = 0; i < _textBr.length; i++)
+//			{
+//				g.drawString(_textBr[i], xPos, (yPos + (maxStrHeight * i)));
+//
+//				if ( _textBr[i].startsWith("sp_configure") )
+//					spConfigureCount++;
+//			}
+//
+//			if ( spConfigureCount > 0 )
+//			{
+//				int yPosRestartText = yPos + (maxStrHeight * (_textBr.length + 1));
+//				g.drawString(_restartText, xPos, yPosRestartText);
+//			}
+//		}
+//
+//		public void setWatermarkText(String text)
+//		{
+//			if ( text == null )
+//				text = "";
+//
+//			// If text has NOT changed, no need to continue
+//			if (text.equals(_textSave))
+//				return;
+//
+//			_textSave = text;
+//
+//			_textBr = text.split("\n");
+//			_logger.debug("setWatermarkText: to '" + text + "'.");
+//
+//			repaint();
+//		}
+//	}
 
 	/*---------------------------------------------------
 	 ** END: Watermark stuff
@@ -3869,6 +3840,19 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		}
 	}
 
+	/** Simply click the rewind button, to position the slider at previous available data set */
+	public void OfflineRewind()
+	{
+		if (_timeOfflineRewind_but.isVisible())
+			_timeOfflineRewind_but.doClick();
+	}
+	/** Simply click the fast forward button, to position the slider at next available data set */
+	public void OfflineFastForward()
+	{
+		if (_timeOfflineFastForward_but.isVisible())
+			_timeOfflineFastForward_but.doClick();
+	}
+
 	/*---------------------------------------------------
 	 ** END: off-line methods
 	 **---------------------------------------------------
@@ -4060,7 +4044,6 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		}
 		else
 			rowSorter.allRowsChanged();
-		
 	}
 
 	/**

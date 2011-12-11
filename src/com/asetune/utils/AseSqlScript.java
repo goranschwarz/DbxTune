@@ -16,9 +16,12 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -284,13 +287,13 @@ implements SybMessageHandler
 	 * @param filename
 	 * @throws SQLException
 	 */
-	public String executeSql(String className, String filename)
+	public String executeSql(String className, String filename, final boolean aseExceptionsToWarnings)
 	throws SQLException
 	{
 		try
 		{
 			Class<?> clazz = Class.forName(className);
-			return executeSql(clazz, filename);
+			return executeSql(clazz, filename, aseExceptionsToWarnings);
 		}
 		catch(ClassNotFoundException e)
 		{
@@ -298,7 +301,7 @@ implements SybMessageHandler
 		return null;
 	}
 
-	public String executeSql(Class<?> clazz, String filename)
+	public String executeSql(Class<?> clazz, String filename, final boolean aseExceptionsToWarnings)
 	throws SQLException
 	{
 		try
@@ -308,7 +311,7 @@ implements SybMessageHandler
 			{
 				BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
 				br = new BufferedReader(new InputStreamReader(url.openStream()));
-				String result = executeSql(br);
+				String result = executeSql(br, aseExceptionsToWarnings);
 				br.close();
 				return result;
 			}
@@ -319,7 +322,7 @@ implements SybMessageHandler
 		return null;
 	}
 
-	public String executeSql(String filename)
+	public String executeSql(String filename, final boolean aseExceptionsToWarnings)
 	throws SQLException
 	{
 		try
@@ -334,7 +337,7 @@ implements SybMessageHandler
 
 				FileReader fr = new FileReader(file);
 				BufferedReader br = new BufferedReader(fr);
-				String result = executeSql(br);
+				String result = executeSql(br, aseExceptionsToWarnings);
 				br.close();
 				fr.close();
 				return result;
@@ -346,14 +349,14 @@ implements SybMessageHandler
 		return null;
 	}
 
-	public String executeSqlStr(String sql)
+	public String executeSqlStr(String sql, final boolean aseExceptionsToWarnings)
 	throws SQLException
 	{
 		try
 		{
 			StringReader sr = new StringReader(sql);
 			BufferedReader br = new BufferedReader(sr);
-			String result = executeSql(br);
+			String result = executeSql(br, aseExceptionsToWarnings);
 			br.close();
 			sr.close();
 			return result;
@@ -364,7 +367,7 @@ implements SybMessageHandler
 		return null;
 	}
 
-	public String executeSql(BufferedReader br)
+	public String executeSql(BufferedReader br, final boolean aseExceptionsToWarnings)
 	throws SQLException, IOException
 	{
 		StringBuilder sb = new StringBuilder();
@@ -375,9 +378,14 @@ implements SybMessageHandler
 			@Override
 			public SQLException messageHandler(SQLException sqle)
 			{
-				if (AseConnectionUtils.isInLoadDbException(sqle))
+				if (aseExceptionsToWarnings)
 					return AseConnectionUtils.sqlExceptionToWarning(sqle);
-				return sqle;
+				else
+				{
+					if (AseConnectionUtils.isInLoadDbException(sqle))
+						return AseConnectionUtils.sqlExceptionToWarning(sqle);
+					return sqle;
+				}
 			}
 		});
 
@@ -411,7 +419,7 @@ implements SybMessageHandler
 
 					if(hasRs)
 					{
-						// Get next resultset to work with
+						// Get next result set to work with
 						rs = stmnt.getResultSet();
 
 						// Append, messages and Warnings to output, if any
@@ -437,8 +445,17 @@ implements SybMessageHandler
 					//	sb.append("("+rowsAffected+" row affected)\n");
 					}
 
-					// Check if we have more resultsets
-					hasRs = stmnt.getMoreResults();
+					// Check if we have more result sets
+//					try 
+//					{ 
+						hasRs = stmnt.getMoreResults(); 
+//					} 
+//					catch (SQLException ex2) 
+//					{
+//						sb.append(getSqlWarningMsgs(stmnt, true));
+////						sb.append(getSqlWarningMsgs(ex2));
+//						hasRs = stmnt.getMoreResults(); 
+//					}
 
 					_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
 				}
@@ -517,7 +534,7 @@ implements SybMessageHandler
 			else
 			{
 				// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
-				if ( ! sqe.getSQLState().equals("010P4") )
+				if ( ! "010P4".equals(sqe.getSQLState()) )
 				{
 					sb.append("Unexpected exception : " +
 							"SqlState: " + sqe.getSQLState()  +
@@ -969,5 +986,91 @@ implements SybMessageHandler
 			return sqle;
 		}
 		
-	}		
+	}
+	
+	
+	
+	//----------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	// SOME TEST CODE
+	//----------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	//----------------------------------------------------------------------
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		//log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+		Configuration conf1 = new Configuration(Version.APP_STORE_DIR + "/asetune.save.properties");
+		Configuration.setInstance(Configuration.USER_TEMP, conf1);
+		
+		Configuration.setSearchOrder(Configuration.USER_TEMP);
+
+		System.setProperty("ASETUNE_SAVE_DIR", "c:/projects/asetune/data");
+		
+		// DO THE THING
+		try
+		{
+			System.out.println("Open DB connection.");
+
+			AseConnectionFactory.setAppName("xxx");
+			AseConnectionFactory.setUser("sa");
+			AseConnectionFactory.setPassword("");
+//			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
+			AseConnectionFactory.setHostPort("gorans-xp", "5000");
+//			AseConnectionFactory.setHostPort("gorans-xp", "15700");
+			
+			final Connection conn = AseConnectionFactory.getConnection();
+			
+			String dbname  = "perfdemo";
+			String owner   = "dbo";
+			String objname = "DestTab1";
+
+			String sql;
+			sql = "exec sp_who\ngo\n";
+			sql = "exec model..sp__optdiag 'dbo.sysobjects'\ngo\n";
+
+			sql="declare @partitions int \n" +
+				"select @partitions = count(*) \n" +
+				"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u, "+dbname+"..syspartitions p \n" +
+				"where o.name = '"+objname+"' \n" +
+				"  and u.name = '"+owner+"' \n" +
+				"  and o.id  = p.id \n" +
+				"  and o.uid = o.uid \n" +
+				"  and p.indid = 0 \n" +
+				"                  \n" +
+				"if (@partitions > 1) \n" +
+				"    print 'Table is partitioned, and this is not working so well with sp__optdiag, sorry.' \n" +
+				"else \n" +
+				"    exec "+dbname+"..sp__optdiag '"+owner+"."+objname+"' \n" +
+				"print 'xxxxxxxxxxxxxxx' \n" +
+				"raiserror 99999 'test raise error...' \n" +
+				"print 'yyyyyyyyyyyyyyy' \n" +
+				"go\n" +
+				"raiserror 99999 'test raise error...' \n" +
+				"print 'adflkashfdlkajshf' \n" +
+				"raiserror 99999 'test raise error...' \n" +
+				"\n";
+
+			AseSqlScript ss = new AseSqlScript(conn, 10);
+			try	{ 
+				System.out.println("NORMAL:\n" + ss.executeSqlStr(sql, true) ); 
+			} catch (SQLException e) { 
+				System.out.println("EXCEPTION:\n" + e.toString() ); 
+				e.printStackTrace();
+			} finally {
+				ss.close();
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
 }

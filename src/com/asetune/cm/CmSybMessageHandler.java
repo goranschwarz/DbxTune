@@ -57,9 +57,15 @@ implements SybMessageHandler
 
 		// MsgNum='10351', Severity='14', Msg: Server user id %d is not a valid user in database '%s'
 		addDiscardMsgNum(10351);
-		
+
+		// MsgNum='924', Severity='??', Msg: Database '%s' is already open and can only have one user at a time.
+		addDiscardMsgNum(924); 
+
 		// MsgNum='936', Severity='14', Msg: The Model database is unavailable. It is being used to create a new database.
 		addDiscardMsgNum(936); 
+
+		// MsgNum='962', Severity='14', Msg: Database with ID '%d' is not available. Please try again later.
+		addDiscardMsgNum(962); 
 		
 		// MsgNum='969', Severity='14', Msg: You can access database '%.*s' only from its owner instance '%.*s'. You cannot access local temporary databases from non-owner instances except to use CREATE DATABASE and DROP DATABASE with local system temporary databases.
 		// This is a Cluster message, thrown by object_name(id, DBID) if it's a nonlocal tempdb, and the object_name() returns NULL instead

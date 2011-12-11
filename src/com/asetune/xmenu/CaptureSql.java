@@ -19,6 +19,7 @@ extends XmenuActionBase
 	/* (non-Javadoc)
 	 * @see com.sybase.jisql.xmenu.XmenuActionBase#doWork()
 	 */
+	@Override 
 	public void doWork() 
 	{
 		String kpidStr  = getParamValue(0);

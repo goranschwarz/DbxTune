@@ -3,6 +3,7 @@
  */
 package com.asetune.cm;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +43,8 @@ public class CountersModelUserDefined
 		_sqlVerStr = sqlVerStr;
 	}
 
-	public void initSql()
+	@Override
+	public void initSql(Connection conn)
 	{
 		int aseVersion = getServerVersion();
 

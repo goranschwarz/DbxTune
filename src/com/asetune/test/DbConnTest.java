@@ -43,9 +43,9 @@ public class DbConnTest
 
 			AseSqlScript ss = new AseSqlScript(conn, 10);
 			try	{ 
-				System.out.println("NORMAL:" + ss.executeSqlStr(sql) ); 
+				System.out.println("NORMAL:" + ss.executeSqlStr(sql, true) ); 
 			} catch (SQLException e) { 
-				System.out.println("EXCEPTION:" + ss.executeSqlStr(sql) ); 
+				System.out.println("EXCEPTION:" + ss.executeSqlStr(sql, true) ); 
 				e.printStackTrace();
 			} finally {
 				ss.close();

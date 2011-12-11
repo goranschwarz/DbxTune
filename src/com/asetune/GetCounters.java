@@ -44,6 +44,7 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
@@ -392,6 +393,9 @@ extends Thread
 
 	public static final String CM_NAME__PROCESS_ACTIVITY        = "CMprocessActivity";
 	public static final String CM_DESC__PROCESS_ACTIVITY        = "Processes";
+
+	public static final String CM_NAME__PROCESS_WAIT            = "CMspidWait";
+	public static final String CM_DESC__PROCESS_WAIT            = "SPID Wait";
 
 	public static final String CM_NAME__OPEN_DATABASES          = "CMopenDatabases";
 	public static final String CM_DESC__OPEN_DATABASES          = "Databases";
@@ -2497,6 +2501,301 @@ extends Thread
 
 		_CMList.add(tmp);
 
+
+
+
+
+
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
+		// Processes Wait
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
+
+		//==================================================================================================
+		// 12.5.0.3: Description of: monProcessWaits
+		// 
+		// Description: Provides a server-wide view of where processes are waiting for an event. 
+		//              monProcessWaits requires the 'enable monitoring' and 'process wait events' 
+		//              configuration parameters to be enabled.
+		//
+		// Needs Configuration:
+		// 'enable monitoring' and 'process wait events'
+		// 
+		// Name                           Datatype     Attributes  Ind Description
+		// ------------------------------ ------------ ----------- --- ------------------------------------------------------------
+		// SPID                           smallint                   0 Session process identifier
+		// KPID                           int                        0 Kernel process identifier
+		// WaitEventID                    smallint                   0 Unique identifier for the wait event
+		// WaitTime                       int                        1 Amount of time (in seconds) that tasks have spent waiting for the event
+		// Waits                          int                        0 Number of times tasks have waited for the event
+		//---------------------------------------------------------------------------------------------------
+		// Column changes in various versions:
+		//
+		// Version      Action Name              Datatype   Attributes Description
+		// ------------ ------ ----------------- ---------- ---------- ----------------------------------
+		// 15.0.2 esd#5 add    ServerUserID      int                   Server User Identifier of the user running this process. This matches the syslogins.suid column. The corresponding name can be obtained using the 'suser_name' function
+		// 15.0.1CE/15.5 add   InstanceId        int                   The Server Instance Identifier (cluster only)
+		//---------------------------------------------------------------------------------------------------
+
+		name         = CM_NAME__PROCESS_WAIT;
+		displayName  = CM_DESC__PROCESS_WAIT;
+		description  = "<html>" +
+			"What different resources are a Server SPID waiting for.<br>" +
+			"<br>" +
+			"<br>Note</b>: This is in experimental mode, it mighttake to much resources<br>" +
+			"</html>";
+		
+		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
+		
+		needVersion  = 0;
+		needCeVersion= 0;
+		monTables    = new String[] {"monProcessWaits", "monWaitEventInfo", "monWaitClassInfo"};
+		needRole     = new String[] {"mon_role"};
+		needConfig   = new String[] {"enable monitoring=1", "process wait events=1"};
+		colsCalcDiff = new String[] {"WaitTime", "Waits"};
+		colsCalcPCT  = new String[] {};
+		pkList       = new LinkedList<String>();
+			pkList.add("SPID");
+			pkList.add("KPID");
+			pkList.add("WaitEventID");
+
+	
+		tmp = new CountersModel(name, null, 
+				pkList, colsCalcDiff, colsCalcPCT, 
+				monTables, needRole, needConfig, needVersion, needCeVersion, 
+				true, true)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				return new String[] {"enable monitoring=1", "process wait events=1"};
+			}
+
+			@Override
+			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+			{
+				try 
+				{
+					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+					mtd.addColumn("monProcessWaits", "WaitTimePerWait", 
+					    "<html>" +
+					        "Wait time in seconds per wait. formula: diff.WaitTime / diff.Waits<br>" +
+					        "Since WaitTime here is in seconds, this value will also be in seconds." +
+					    "</html>");
+				}
+				catch (NameNotFoundException e) {/*ignore*/}
+			}
+
+			@Override
+			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+			{
+				List <String> pkCols = new LinkedList<String>();
+
+				if (isClusterEnabled)
+					pkCols.add("InstanceID");
+
+				pkCols.add("SPID");
+				pkCols.add("KPID");
+				pkCols.add("WaitEventID");
+
+				return pkCols;
+			}
+
+			@Override
+			public String getSqlInitForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+			{
+				String sql =
+					"/*------ Create permanent tables for monWaitEventInfo & monWaitClassInfo in tempdb. -------*/ \n" +
+					"/*------ hopefully this is less expensive than doing the join via CIS -------*/ \n" +
+					"if ((select object_id('tempdb.guest.monWaitEventInfo')) is null) \n" +
+					"   exec('select * into tempdb.guest.monWaitEventInfo from master..monWaitEventInfo') \n" +
+					"\n" +
+					"if ((select object_id('tempdb.guest.monWaitClassInfo')) is null) \n" +
+					"   exec('select * into tempdb.guest.monWaitClassInfo from master..monWaitClassInfo') \n" +
+					"\n";
+
+				return sql;
+			}
+			@Override
+			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+			{
+				String cols = "";
+
+				String InstanceID = ""; // in cluster
+				String UserName   = ""; // in 15.0.2 esd#5
+
+				if (isClusterEnabled)
+					InstanceID = "W.InstanceID, ";
+
+				if (aseVersion >= 15056)
+					UserName = "UserName = suser_name(W.ServerUserID), ";
+
+				cols = InstanceID + "W.SPID, W.KPID, " + UserName + "\n" +
+					"Class=C.Description, Event=I.Description, \n" +
+					"W.WaitEventID, W.WaitTime, W.Waits, \n" +
+					"WaitTimePerWait = CASE WHEN W.Waits > 0 \n" +
+					"                       THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) \n" +
+					"                       ELSE convert(numeric(15,3), 0.0) \n" +
+					"                  END \n";
+
+				String sql = 
+					"select " + cols +
+					"from master..monProcessWaits W, tempdb.guest.monWaitEventInfo I, tempdb.guest.monWaitClassInfo C \n" +
+					"where W.WaitEventID = I.WaitEventID \n" +
+					"  and I.WaitClassID = C.WaitClassID \n" +
+					"  and RUNTIME_REPLACE::EXTRA_WHERE_CLAUSE \n" +
+					"order by " + (isClusterEnabled ? "W.SPID, W.WaitEventID, W.InstanceID" : "W.SPID, W.WaitEventID") + "\n" +
+					"";
+
+				return sql;
+			}
+
+			@Override
+			public String getSql()
+			{
+				String sql = super.getSql();
+
+				Configuration conf = Configuration.getCombinedConfiguration();
+				String extraWhereClause = (conf == null) ? "" : conf.getProperty(getName()+".sample.extraWhereClause", "");
+				if (StringUtil.isNullOrBlank(extraWhereClause))
+					extraWhereClause = "1=1";
+
+				sql = sql.replace("RUNTIME_REPLACE::EXTRA_WHERE_CLAUSE", extraWhereClause);
+				
+				return sql;
+			}
+
+			/** 
+			 * Compute the WaitTimePerWait for diff values
+			 */
+			public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+			{
+				int WaitTime,        Waits;
+				int WaitTimeId = -1, WaitsId = -1;
+
+				double calcWaitTimePerWait;
+				int WaitTimePerWaitId = -1;
+
+				// Find column Id's
+				List<String> colNames = diffData.getColNames();
+				if (colNames == null)
+					return;
+
+				for (int colId=0; colId < colNames.size(); colId++) 
+				{
+					String colName = colNames.get(colId);
+					if      (colName.equals("WaitTimePerWait")) WaitTimePerWaitId = colId;
+					else if (colName.equals("WaitTime"))        WaitTimeId        = colId;
+					else if (colName.equals("Waits"))           WaitsId           = colId;
+				}
+
+				// Loop on all diffData rows
+				for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+				{
+					WaitTime = ((Number)diffData.getValueAt(rowId, WaitTimeId)).intValue();
+					Waits    = ((Number)diffData.getValueAt(rowId, WaitsId   )).intValue();
+
+					// int totIo = Reads + APFReads + Writes;
+					if (Waits > 0)
+					{
+						// WaitTimePerWait = WaitTime / Waits;
+						calcWaitTimePerWait = WaitTime / (Waits * 1.0);
+
+						BigDecimal newVal = new BigDecimal(calcWaitTimePerWait).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+						diffData.setValueAt(newVal, rowId, WaitTimePerWaitId);
+					}
+					else
+						diffData.setValueAt(new BigDecimal(0), rowId, WaitTimePerWaitId);
+				}
+			}
+		};
+		
+		tmp.setDisplayName(displayName);
+		tmp.setDescription(description);
+		if (AseTune.hasGUI())
+		{
+			final String localName = name;
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long serialVersionUID = 1L;
+
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					String tooltip = 
+						"<html>" +
+						"Add extra where clause to the query that fetches WaitTime for SPID's<br>" +
+						"To check initial SQL statement that are used: Right click on the 'tab', and choose 'Properties'<br>" +
+						"The extra string will replace the string 'RUNTIME_REPLACE::EXTRA_WHERE_CLAUSE'.<br>" +
+						"<br>" +
+						"<b>Examples:</b><br>" +
+						"<b>- Only users with the login 'sa'</b><br>" +
+						"<code>SPID in (select spid from master..sysprocesses where suser_name(suid) = 'sa')                     </code><br>" +
+						"<br>" +
+						"<b>- Same as above, but in a more efficent way (only in ASE 15.0.2 ESD#5 or higher)</b><br>" +
+						"<code>suser_name(ServerUserID) = 'sa'                                                                   </code><br>" +
+						"<br>" +
+						"<b>- Only with programs that has logged in via 'isql'</b><br>" +
+						"<code>SPID in (select spid from master..sysprocesses where program_name = 'isql')                       </code><br>" +
+						"<br>" +
+						"<b>- Only with clients that has logged in from the host 'host99'</b><br>" +
+						"<code>SPID in (select spid from master..sysprocesses where hostname = 'host99')                         </code><br>" +
+						"<br>" +
+						"<b>- Only with clients that has logged in from the IP address '192.168.0.1'</b><br>" +
+						"<code>SPID in (select spid from master..sysprocesses where ipaddr = '192.168.0.123')                    </code><br>" +
+						"<br>" +
+						"<b>- Only with clients that has logged in to ASE in the last 60 seconds</b><br>" +
+						"<code>SPID in (select spid from master..sysprocesses where datediff(ss,loggedindatetime,getdate()) < 60)</code><br>" +
+						"</html>";
+					final RSyntaxTextArea extraWhereClause_txt = new RSyntaxTextArea();
+					final JButton         extraWhereClause_but = new JButton("Apply Extra Where Clause");
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String extraWhereClause = (conf == null ? "" : conf.getProperty(localName+".sample.extraWhereClause", ""));
+
+					extraWhereClause_txt.setText(extraWhereClause);
+					extraWhereClause_txt.setHighlightCurrentLine(false);
+					extraWhereClause_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+					extraWhereClause_txt.setName(localName+".sample.extraWhereClause");
+
+					extraWhereClause_but.setToolTipText(tooltip);
+					extraWhereClause_txt.setToolTipText(tooltip);
+
+					panel.add(extraWhereClause_txt, "grow, push, wrap");
+					panel.add(extraWhereClause_but, "wrap");
+
+					extraWhereClause_but.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null) return;
+							conf.setProperty(localName+".sample.extraWhereClause", extraWhereClause_txt.getText().trim());
+							conf.save();
+						}
+					});
+					
+					return panel;
+				}
+			};
+			tcp.setToolTipText( description );
+			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_process_wait_activity.png") );
+			tcp.setCm(tmp);
+			MainFrame.addTcp( tcp );
+
+			tmp.setTabPanel( tcp );
+		}
+		
+		_CMList.add(tmp);
 
 
 
@@ -8186,12 +8485,18 @@ extends Thread
 						"SQL Statement that is assigned to the SSQLID.<br>" +
 						"<b>Formula</b>: show_cached_text(SSQLID)<br>" +
 						"</html>";
+					String xmlPlanTooltip =	"<html>" +
+					    "XML Plan of the Statement that is assigned to the SSQLID.<br>" +
+					    "<b>Formula</b>: show_cached_plan_in_xml(SSQLID, 0)<br>" +
+					    "<b>Note</b>: If the FULL XML plan is not displayed, try to disable the 'Get Showplan' option.</html>";
 
 					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 					mtd.addColumn("monCachedStatement",  "msgAsColValue", showplanTooltip);
 					mtd.addColumn("monCachedStatement",  "HasShowplan",   showplanTooltip);
 					mtd.addColumn("monCachedStatement",  "sqltext",       sqltextTooltip);
 					mtd.addColumn("monCachedStatement",  "HasSqltext",    sqltextTooltip);
+					mtd.addColumn("monCachedStatement",  "xmlPlan",       xmlPlanTooltip);
+					mtd.addColumn("monCachedStatement",  "HasXmlPlan",    xmlPlanTooltip);
 				}
 				catch (NameNotFoundException e) {/*ignore*/}
 			}
@@ -8227,9 +8532,10 @@ extends Thread
 //					" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
 //					" HasSqltext    = convert(bit,1), \n" +
 					(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-					(aseVersion >= 15700 ? " OptimizerLevel, " : "") + // The optimizer level stored in the statement cache
-					" HasShowplan   = RUNTIME_REPLACE::HAS_SHOWPLAN, \n" +
-					" HasSqltext    = RUNTIME_REPLACE::HAS_SQL_TEXT, \n" +
+					(aseVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+					                       " HasSqltext    = RUNTIME_REPLACE::HAS_SQL_TEXT, \n" +
+					                       " HasShowplan   = RUNTIME_REPLACE::HAS_SHOWPLAN, \n" +
+					(aseVersion >= 15700 ? " HasXmlPlan    = RUNTIME_REPLACE::HAS_XML_PLAN, \n" : "") +
 					" UseCount, \n" +                   // The number of times this statement was used.
 					" UseCountDiff = UseCount, \n" +    // The number of times this statement was used.
 					" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
@@ -8256,8 +8562,9 @@ extends Thread
 					" SystemCatalogUpdate = convert(bit,SystemCatalogUpdate), \n" + // The system catalog update session setting.
 					" StatementSize, \n" +              // The size of the statement's text in bytes.
 //					" sqltext       = convert(text, show_cached_text(SSQLID)), \n" +
-					" sqltext       = RUNTIME_REPLACE::DO_SQL_TEXT, \n" +
-					" msgAsColValue = RUNTIME_REPLACE::DO_SHOWPLAN \n" + // this is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
+					                       " sqltext       = RUNTIME_REPLACE::DO_SQL_TEXT, \n" +
+					(aseVersion >= 15700 ? " xmlPlan       = RUNTIME_REPLACE::DO_XML_PLAN, \n" : "") +
+					                       " msgAsColValue = RUNTIME_REPLACE::DO_SHOWPLAN \n" + // this is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
 					"FROM master..monCachedStatement \n" +
 					"WHERE MetricsCount > 0 \n";
 
@@ -8270,31 +8577,47 @@ extends Thread
 				String sql = super.getSql();
 				
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean sampleSqlText_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.sqlText", false);
-				boolean sampleShowplan_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.showplan", false);
+				boolean sampleSqlText_chk  = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.sqlText",  false);
+				boolean sampleXmlPlan_chk  = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.xmlPlan",  false);
+				boolean sampleShowplan_chk = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.showplan", false);
 
 				//----- SQL TEXT
 				String hasSqlText = "convert(bit,1)";
-				String doSqltext  = "convert(text, show_cached_text(SSQLID))";
+				String  doSqltext = "convert(text, show_cached_text(SSQLID))";
 				if ( ! sampleSqlText_chk )
 				{
 					hasSqlText = "convert(bit,0)";
-					doSqltext  = "convert(text, 'CMstmntCacheDetails.sample.sqlText=false')";
+					 doSqltext = "convert(text, 'CMstmntCacheDetails.sample.sqlText=false')";
 				}
 				sql = sql.replace("RUNTIME_REPLACE::HAS_SQL_TEXT", hasSqlText);
-				sql = sql.replace("RUNTIME_REPLACE::DO_SQL_TEXT",  doSqltext);
+				sql = sql.replace("RUNTIME_REPLACE::DO_SQL_TEXT",   doSqltext);
+
+				
+				//----- XML PLAN
+				if (getServerVersion() >= 15700)
+				{
+					String hasXmlPlan = "convert(bit,1)";
+					String  doXmlPlan = "show_cached_plan_in_xml(SSQLID, 0)";
+					if ( ! sampleXmlPlan_chk )
+					{
+						hasXmlPlan = "convert(bit,0)";
+						 doXmlPlan = "convert(text, 'CMstmntCacheDetails.sample.xmlPlan=false')";
+					}
+					sql = sql.replace("RUNTIME_REPLACE::HAS_XML_PLAN", hasXmlPlan);
+					sql = sql.replace("RUNTIME_REPLACE::DO_XML_PLAN",   doXmlPlan);
+				}
 
 				
 				//----- SHOWPLAN
 				String hasShowplan = "CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END";
-				String doShowplan  = "convert(text, '')";
+				String  doShowplan = "convert(text, '')";
 				if ( ! sampleShowplan_chk )
 				{
 					hasShowplan = "convert(bit,0)";
-					doShowplan  = "convert(text, 'CMstmntCacheDetails.sample.showplan=false')";
+					 doShowplan = "convert(text, 'CMstmntCacheDetails.sample.showplan=false')";
 				}
 				sql = sql.replace("RUNTIME_REPLACE::HAS_SHOWPLAN", hasShowplan);
-				sql = sql.replace("RUNTIME_REPLACE::DO_SHOWPLAN",  doShowplan);
+				sql = sql.replace("RUNTIME_REPLACE::DO_SHOWPLAN",   doShowplan);
 
 				
 				return sql;
@@ -8311,7 +8634,19 @@ extends Thread
 					{
 						Object cellVal = getValueAt(modelRow, pos_showplanText);
 						if (cellVal instanceof String)
-							return toHtmlString((String) cellVal);
+							return toHtmlString((String) cellVal, true);
+					}
+				}
+
+				// XML PLAN
+				if ("HasXmlPlan".equals(colName) || "xmlPlan".equals(colName))
+				{
+					int pos_xmlPlanText = findColumn("xmlPlan");
+					if (pos_xmlPlanText > 0)
+					{
+						Object cellVal = getValueAt(modelRow, pos_xmlPlanText);
+						if (cellVal instanceof String)
+							return toHtmlString((String) cellVal, false);
 					}
 				}
 
@@ -8323,7 +8658,7 @@ extends Thread
 					{
 						Object cellVal = getValueAt(modelRow, pos_sqltext);
 						if (cellVal instanceof String)
-							return toHtmlString((String) cellVal);
+							return toHtmlString((String) cellVal, true);
 					}
 				}
 
@@ -8331,9 +8666,13 @@ extends Thread
 			}
 
 			/** add HTML around the string, and translate linebreaks into <br> */
-			private String toHtmlString(String in)
+			private String toHtmlString(String in, boolean breakLines)
 			{
-				String str = StringUtil.makeApproxLineBreak(in, 100, 5, "\n");
+				String str = in;
+				str = str.replaceAll("<", "&lt;");
+				str = str.replaceAll(">", "&gt;");
+				if (breakLines)
+					str = StringUtil.makeApproxLineBreak(in, 150, 5, "\n");
 				str = str.replaceAll("\\n", "<br>");
 
 				return "<html><pre>" + str + "</pre></html>";
@@ -8368,6 +8707,7 @@ extends Thread
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long	serialVersionUID	= 1L;
+				private JCheckBox sampleXmlPlan_chk;
 
 				protected JPanel createLocalOptionsPanel()
 				{
@@ -8377,9 +8717,9 @@ extends Thread
 					Configuration conf = Configuration.getCombinedConfiguration();
 					
 					// SAMPLE SQL TEXT
-					JCheckBox sampleSqlText_chk  = new JCheckBox("Get SQL Text", conf == null ? true : conf.getBooleanProperty(localName+".sample.sqlText", true));
+					JCheckBox sampleSqlText_chk  = new JCheckBox("Get SQL Text", conf == null ? false : conf.getBooleanProperty(localName+".sample.sqlText", false));
 					sampleSqlText_chk.setName(localName+".sample.sqlText");
-					sampleSqlText_chk.setToolTipText("<html>Get SQL Text assosiated with the Cached Statement.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
+					sampleSqlText_chk.setToolTipText("<html>Get SQL Text (using: show_cached_text(SSQLID)) assosiated with the Cached Statement.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
 					panel.add(sampleSqlText_chk, "wrap");
 
 					sampleSqlText_chk.addActionListener(new ActionListener()
@@ -8395,7 +8735,7 @@ extends Thread
 					});
 					
 					// SAMPLE SHOWPLAN
-					JCheckBox sampleShowplan_chk = new JCheckBox("Get Showplan", conf == null ? true : conf.getBooleanProperty(localName+".sample.showplan", true));
+					JCheckBox sampleShowplan_chk = new JCheckBox("Get Showplan", conf == null ? false : conf.getBooleanProperty(localName+".sample.showplan", false));
 					sampleShowplan_chk.setName(localName+".sample.showplan");
 					sampleShowplan_chk.setToolTipText("<html>Get Showplan assosiated with the Cached Statement.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
 					panel.add(sampleShowplan_chk, "wrap");
@@ -8412,7 +8752,40 @@ extends Thread
 						}
 					});
 
+					// SAMPLE XML PLAN
+//					JCheckBox sampleXmlPlan_chk  = new JCheckBox("Get XML Plan", conf == null ? false : conf.getBooleanProperty(localName+".sample.xmlPlan", false));
+					sampleXmlPlan_chk  = new JCheckBox("Get XML Plan", conf == null ? false : conf.getBooleanProperty(localName+".sample.xmlPlan", false));
+					sampleXmlPlan_chk.setName(localName+".sample.xmlPlan");
+					sampleXmlPlan_chk.setToolTipText("<html>ONLY ON ASE 15.7 and above<br>Get XML Plan (using: show_cached_plan_in_xml(SSQLID, 0)) assosiated with the Cached Statement.<br><b>Note</b>: Try uncheck 'Get Showplan' if not the whole XML is displayed.<br>This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
+					panel.add(sampleXmlPlan_chk, "wrap");
+
+					sampleXmlPlan_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null) return;
+							conf.setProperty(localName+".sample.xmlPlan", ((JCheckBox)e.getSource()).isSelected());
+							conf.save();
+						}
+					});
+					
 					return panel;
+				}
+
+				@Override
+				public void checkLocalComponents()
+				{
+					CountersModel cm = getCm();
+					if (cm != null)
+					{
+						boolean enabled = false;
+						if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 15700)
+							enabled = true;
+
+						sampleXmlPlan_chk.setEnabled(enabled);
+					}
 				}
 			};
 			tcp.setToolTipText( description );
@@ -9142,9 +9515,9 @@ extends Thread
 				Configuration conf = Configuration.getCombinedConfiguration();
 				boolean getShowplan       = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true);
 				boolean getMonSqltext     = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true);
-				boolean getDbccSqltext    = conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    true);
+				boolean getDbccSqltext    = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false);
 				boolean getProcCallStack  = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true);
-				boolean getDbccStacktrace = conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", true);
+				boolean getDbccStacktrace = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false);
 
 				// Where are various columns located in the Vector 
 				int pos_WaitEventID        = -1, pos_WaitEventDesc  = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
