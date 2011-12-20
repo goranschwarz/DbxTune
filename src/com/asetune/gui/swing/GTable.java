@@ -101,27 +101,61 @@ extends JXTable
 	@Override
 	public void setModel(TableModel newModel)
 	{
-//		// Noo ned to continue if it's the same model ????
-//		TableModel currentModel = getModel();
-//		if (newModel.equals(currentModel))
-//		{
-//			System.out.println("TCP: same model as before: currentModel="+currentModel);
-//			return;
-//		}
-			
-//		_hasNewModel = true;
-		super.setModel(newModel);
-		
-		if (newModel instanceof CountersModel)
+		// In some cases, we get the following stack trace
+		// -----------------------------------------------------
+		// 2011-12-15 09:42:24,561 - WARN  - AWT-EventQueue-0          - 16  :SwingExceptionHandler.java     - Problems in AWT/Swing Event Dispatch Thread, Caught: java.lang.ArrayIndexOutOfBoundsException: 58 >= 54
+		// java.lang.ArrayIndexOutOfBoundsException: 58 >= 54
+		// 	at java.util.Vector.elementAt(Unknown Source)
+		// 	at javax.swing.table.DefaultTableColumnModel.getColumn(Unknown Source)
+		// 	at org.jdesktop.swingx.JXTable.getColumn(JXTable.java:2265)
+		// 	at org.jdesktop.swingx.JXTable.columnAdded(JXTable.java:2231)
+		// 	at javax.swing.table.DefaultTableColumnModel.fireColumnAdded(Unknown Source)
+		// 	at javax.swing.table.DefaultTableColumnModel.addColumn(Unknown Source)
+		// 	at org.jdesktop.swingx.table.DefaultTableColumnModelExt.addColumn(DefaultTableColumnModelExt.java:198)
+		// 	at org.jdesktop.swingx.JXTable.createAndAddColumns(JXTable.java:2601)
+		// 	at org.jdesktop.swingx.JXTable.createDefaultColumnsFromModel(JXTable.java:2575)
+		// 	at javax.swing.JTable.tableChanged(Unknown Source)
+		// 	at org.jdesktop.swingx.JXTable.tableChanged(JXTable.java:1529)
+		// 	at com.asetune.gui.swing.GTable.privateTableChanged(GTable.java:711)
+		// 	at com.asetune.gui.swing.GTable.tableChanged(GTable.java:696)
+		// 	at javax.swing.JTable.setModel(Unknown Source)
+		// 	at org.jdesktop.swingx.JXTable.setModel(JXTable.java:1609)
+		// 	at com.asetune.gui.swing.GTable.setModel(GTable.java:113)
+		// 	at com.asetune.gui.TabularCntrPanel.setDisplayCm(TabularCntrPanel.java:379)
+		// 	at com.asetune.gui.MainFrame.actionPerformed(MainFrame.java:1163)
+		// 	at javax.swing.AbstractButton.fireActionPerformed(Unknown Source)
+		//...swing stack code deleted...
+		// -----------------------------------------------------
+		// Then switching to InMemory View is not possible
+		// so, lets add a try catch...
+		try
 		{
-			String tabName = _thisTable.getName();
-			if (StringUtil.isNullOrBlank(tabName))
+//			// Noo ned to continue if it's the same model ????
+//			TableModel currentModel = getModel();
+//			if (newModel.equals(currentModel))
+//			{
+//				System.out.println("TCP: same model as before: currentModel="+currentModel);
+//				return;
+//			}
+				
+//			_hasNewModel = true;
+			super.setModel(newModel);
+			
+			if (newModel instanceof CountersModel)
 			{
-				CountersModel cm = (CountersModel) newModel;
-				_thisTable.setName(cm.getName());
+				String tabName = _thisTable.getName();
+				if (StringUtil.isNullOrBlank(tabName))
+				{
+					CountersModel cm = (CountersModel) newModel;
+					_thisTable.setName(cm.getName());
+				}
 			}
+			loadColumnLayout();
 		}
-		loadColumnLayout();
+		catch (Throwable t)
+		{
+			_logger.warn("Problems setting GTable.setModel(). Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"').", t);
+		}
 	}
 
 	private void init()

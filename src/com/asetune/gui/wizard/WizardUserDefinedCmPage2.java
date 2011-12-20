@@ -15,12 +15,13 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import net.miginfocom.swing.MigLayout;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
@@ -81,8 +82,12 @@ implements ActionListener
 	
 	private boolean    _firtsTimeRender = true;
 
-	private JTextArea   _sqlInit_txt          = new JTextArea();        // A field to enter a query in
-	private JTextArea   _sql_txt              = new JTextArea();        // A field to enter a query in
+//	private JTextArea   _sqlInit_txt          = new JTextArea();        // A field to enter a query in
+//	private JTextArea   _sql_txt              = new JTextArea();        // A field to enter a query in
+//	private JTextArea   _sqlClose_txt         = new JTextArea();        // A field to enter a query in
+	private RSyntaxTextArea _sqlInit_txt      = new RSyntaxTextArea();  // A field to enter a query in
+	private RSyntaxTextArea _sql_txt          = new RSyntaxTextArea();  // A field to enter a query in
+	private RSyntaxTextArea _sqlClose_txt     = new RSyntaxTextArea();  // A field to enter a query in
 	private JLabel      _needVersion_lbl      = new JLabel("Min ASE Version");
 	private JTextField  _needVersion_txt      = new JTextField(NEED_VERSION_DEFAULT);
 	private JLabel      _needRole_lbl         = new JLabel("Needs Role");
@@ -92,7 +97,6 @@ implements ActionListener
 	private JLabel      _monTables_lbl        = new JLabel("Monitor Tables");
 	private JTextField  _monTables_txt        = new JTextField(MON_TABLES_DEFAULT);
 	private JCheckBox   _negDiffCntToZero_chk = new JCheckBox("If Difference Calculation renders a negative number, set to Zero", true);
-	private JTextArea   _sqlClose_txt         = new JTextArea();        // A field to enter a query in
 
 	public static String getDescription() { return WIZ_DESC; }
 	public Dimension getPreferredSize() { return WizardUserDefinedCm.preferredSize; }
@@ -126,6 +130,17 @@ implements ActionListener
 				"    But if the counters just wraps around the max boundary into a negative value, the diff calculation still works." +
 				"</ul></html>");
 
+		_sqlInit_txt .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sql_txt     .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlClose_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+
+		_sqlInit_txt .setHighlightCurrentLine(false);
+		_sql_txt     .setHighlightCurrentLine(false);
+		_sqlClose_txt.setHighlightCurrentLine(false);
+
+		RTextScrollPane sqlScroll = new RTextScrollPane(_sql_txt);
+		sqlScroll.setLineNumbersEnabled(true);
+
 		add( new MultiLineLabel(WIZ_HELP1), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlInit_txt, "growx, pushx, wrap");
 
@@ -134,9 +149,9 @@ implements ActionListener
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_OPEN");
 		add(button, "span, align right, wrap 10");
 
-		
 		add( new MultiLineLabel(WIZ_HELP2), "wmin 100, span, pushx, growx, wrap" );
-		add(new JScrollPane(_sql_txt), "growx, pushx, height 100%, wrap");
+//		add(new JScrollPane(_sql_txt), "growx, pushx, height 100%, wrap");
+		add(sqlScroll, "growx, pushx, height 100%, wrap");
 
 		add(_needVersion_lbl, "split, width 80lp!");
 		add(_needVersion_txt, "split, growx, pushx");

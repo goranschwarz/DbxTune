@@ -55,6 +55,22 @@ public class PersistWriterJdbc
 	** DEFINITIONS
 	**---------------------------------------------------
 	*/
+	public static final String PROP_BASE                      = "PersistWriterJdbc.";
+	public static final String PROP_PART_jdbcDriver           = "jdbcDriver";
+	public static final String PROP_PART_jdbcUrl              = "jdbcUrl";
+	public static final String PROP_PART_jdbcUsername         = "jdbcUser";
+	public static final String PROP_PART_jdbcPassword         = "jdbcPasswd";
+	public static final String PROP_PART_startH2NetworkServer = "startH2NetworkServer";
+
+	public static final String PROP_jdbcDriver           = "PersistWriterJdbc.jdbcDriver";
+	public static final String PROP_jdbcUrl              = "PersistWriterJdbc.jdbcUrl";
+	public static final String PROP_jdbcUsername         = "PersistWriterJdbc.jdbcUser";
+	public static final String PROP_jdbcPassword         = "PersistWriterJdbc.jdbcPasswd";
+	public static final String PROP_startH2NetworkServer = "PersistWriterJdbc.startH2NetworkServer";
+
+	public static final String PROP_jdbcKeepConnOpen     = "PersistWriterJdbc.jdbcKeepConnOpen";
+	public static final String PROP_h2NewDbOnDateChange  = "PersistWriterJdbc.h2NewDbOnDateChange";
+	public static final String PROP_h2DateParseFormat    = "PersistWriterJdbc.h2DateParseFormat";
 
 	
 	/*---------------------------------------------------
@@ -90,6 +106,11 @@ public class PersistWriterJdbc
 	private Configuration _config    = null;
 	private String        _configStr = null;
 
+	/** just a flag that we are currently persisting, stopService() has to wait for a while */
+	private boolean _inSaveSample = false;
+	
+	/** If the stopService() timed out, or wiatTime <= 0 */
+	private boolean _shutdownWithNoWait = false;
 	
 	/*---------------------------------------------------
 	** Constructors
@@ -152,8 +173,47 @@ public class PersistWriterJdbc
 	}
 
 	@Override
-	public void stopServices()
+	public void stopServices(int maxWaitTimeInMs)
 	{
+		if (maxWaitTimeInMs <= 0)
+			_shutdownWithNoWait = true;
+
+		// Wait X seconds for Current container to be persisted.
+		if (_inSaveSample && maxWaitTimeInMs > 0)
+		{
+			int  sleepTime = 500;
+//			int  maxWaitTimeInMs = 10 * 1000;
+			long startTime = System.currentTimeMillis();
+
+			_logger.info("Waiting for "+getName()+" to persist current container. Max wait time is "+maxWaitTimeInMs+" milliseconds.");
+			
+			while (_inSaveSample)
+			{
+				long waitSoFar = System.currentTimeMillis() - startTime;
+				if (waitSoFar > maxWaitTimeInMs)
+				{
+					_logger.info("Aborting waiting for "+getName()+" to persist current container. Waited "+waitSoFar+", now stopping the service without waiting for last persist to finish.");
+					_shutdownWithNoWait = true;
+					break;
+				}
+				if ( ! _inSaveSample)
+				{
+					_logger.info("Done waiting for "+getName()+" to persist current container. Waited "+waitSoFar+" until the last save was finished.");
+					break;
+				}
+				
+				try { Thread.sleep(sleepTime); }
+				catch(InterruptedException e) { break; }
+			}
+			// Sleep just a little time if the wait time expired
+			if (_shutdownWithNoWait)
+			{
+				try { Thread.sleep(100); }
+				catch(InterruptedException ignore) { }
+			}
+		}
+
+		// IF H2, make special shutdown
 		if ( _jdbcDriver.equals("org.h2.Driver") && _conn != null)
 		{
 			// This statement closes all open connections to the database and closes the database. 
@@ -230,18 +290,17 @@ public class PersistWriterJdbc
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
 		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '"+_name+"'.");
 		
-		_jdbcDriver = props.getPropertyRaw(propPrefix+"jdbcDriver",   "");
-		_jdbcUrl    = props.getPropertyRaw(propPrefix+"jdbcUrl",      "");
-		_jdbcUser   = props.getPropertyRaw(propPrefix+"jdbcUser",     _jdbcUser);
-		_jdbcPasswd = props.getProperty   (propPrefix+"jdbcPasswd",   "");
+		_jdbcDriver = props.getPropertyRaw(PROP_jdbcDriver,   "");
+		_jdbcUrl    = props.getPropertyRaw(PROP_jdbcUrl,      "");
+		_jdbcUser   = props.getPropertyRaw(PROP_jdbcUsername, _jdbcUser);
+		_jdbcPasswd = props.getProperty   (PROP_jdbcPassword, "");
 		if (_jdbcPasswd.equalsIgnoreCase("null"))
 			_jdbcPasswd="";
 
-		_keepConnOpen         = props.getBooleanProperty(propPrefix+"jdbcKeepConnOpen", _keepConnOpen);
-
-		_h2NewDbOnDateChange  = props.getBooleanProperty(propPrefix+"h2NewDbOnDateChange",  _h2NewDbOnDateChange);
-		_h2DbDateParseFormat  = props.getPropertyRaw(    propPrefix+"h2DateParseFormat",    _h2DbDateParseFormat);
-		_startH2NetworkServer = props.getBooleanProperty(propPrefix+"startH2NetworkServer", _startH2NetworkServer);
+		_keepConnOpen         = props.getBooleanProperty(PROP_jdbcKeepConnOpen,     _keepConnOpen);
+		_h2NewDbOnDateChange  = props.getBooleanProperty(PROP_h2NewDbOnDateChange,  _h2NewDbOnDateChange);
+		_h2DbDateParseFormat  = props.getPropertyRaw(    PROP_h2DateParseFormat,    _h2DbDateParseFormat);
+		_startH2NetworkServer = props.getBooleanProperty(PROP_startH2NetworkServer, _startH2NetworkServer);
 
 		// Set _h2DbDateParseFormat, _h2NewDbOnDateChange if the URL has variable ${DATE:format=someFormat;roll=true|false}
 		urlSubstitution(null, _jdbcUrl);
@@ -500,6 +559,14 @@ public class PersistWriterJdbc
 					change = true;
 					_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
 					urlMap.put("AUTO_SERVER",  "TRUE");
+				}
+
+				// AutoServer mode
+				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
+					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
 				}
 
 				if (change)
@@ -1388,6 +1455,12 @@ public class PersistWriterJdbc
 			_logger.error("No database connection to Persistent Storage DB.'");
 			return;
 		}
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("Save Sample: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+
 
 		Timestamp sessionStartTime  = cont.getSessionStartTime();
 		Timestamp sessionSampleTime = cont.getMainSampleTime();
@@ -1401,6 +1474,9 @@ public class PersistWriterJdbc
 			// This will lower number of IO's to the transaction log
 			if (_conn.getAutoCommit() == true)
 				_conn.setAutoCommit(false);
+
+			// STATUS, that we are saving right now
+			_inSaveSample = true;
 
 			//
 			// INSERT THE ROW
@@ -1452,6 +1528,8 @@ public class PersistWriterJdbc
 		{
 			try { _conn.setAutoCommit(true); }
 			catch (SQLException e2) { _logger.error("Problems when setting AutoCommit to true.", e2); }
+
+			_inSaveSample = false;
 		}
 	}
 
@@ -1554,6 +1632,12 @@ public class PersistWriterJdbc
 			return;
 		}
 
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("SaveCounterData: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+
 		_logger.debug("Persisting Counters for CounterModel='"+cm.getName()+"'.");
 
 		int counterType = 0;
@@ -1564,6 +1648,12 @@ public class PersistWriterJdbc
 		if (cm.hasDiffData() && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(cm, DIFF, sessionStartTime, sessionSampleTime);}
 		if (cm.hasRateData() && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(cm, RATE, sessionStartTime, sessionSampleTime);}
 		
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("SaveCounterData:1: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+
 		int graphCount = 0;
 		Map<String,TrendGraphDataPoint> tgdMap = cm.getTrendGraphData();
 		if (tgdMap != null)
@@ -1588,6 +1678,12 @@ public class PersistWriterJdbc
 //		sbSql.append("   ,"+fill(qic+"absRows"          +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
 //		sbSql.append("   ,"+fill(qic+"diffRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
 //		sbSql.append("   ,"+fill(qic+"rateRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("saveCounterData:2: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
 
 		// Store some info
 		StringBuilder sbSql = new StringBuilder();
@@ -1618,6 +1714,12 @@ public class PersistWriterJdbc
 			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
 		}
 
+
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("saveCounterData:3: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
 
 		// SUMMARY INFO for the whole session
 		String tabName = getTableName(SESSION_SAMPLE_SUM, null, true);
@@ -1659,6 +1761,11 @@ public class PersistWriterJdbc
 
 	private int save(CountersModel cm, int whatData, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	{
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("saveCm: Discard entry due to 'ShutdownWithNoWait'.");
+			return -1;
+		}
 		if (_conn == null)
 		{
 			//_logger.error("No database connection to Persistent Storage DB.'");
@@ -1726,6 +1833,12 @@ public class PersistWriterJdbc
 			// Loop all rows, and ADD them to the Prepared Statement
 			for (int r=0; r<rowsCount; r++)
 			{
+				if (_shutdownWithNoWait)
+				{
+					_logger.info("saveCm:inRowLoop: Discard entry due to 'ShutdownWithNoWait'.");
+					return -1;
+				}
+
 				int col = 1;
 				// Add sessionStartTime as the first column
 //				pstmt.setTimestamp(col++, sessionStartTime);
@@ -1810,6 +1923,12 @@ public class PersistWriterJdbc
 				incInserts();
 			} // end: loop rows
 	
+			if (_shutdownWithNoWait)
+			{
+				_logger.info("saveCm:exexuteBatch: Discard entry due to 'ShutdownWithNoWait'.");
+				return -1;
+			}
+
 			pstmt.executeBatch();
 			pstmt.close();
 
@@ -1939,6 +2058,11 @@ public class PersistWriterJdbc
 		if ( ! tgdp.hasData() )
 		{
 			_logger.info("The graph '"+tgdp.getName()+"' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint="+tgdp);
+			return;
+		}
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("saveGraphData: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
 		}
 
@@ -2214,7 +2338,13 @@ public class PersistWriterJdbc
 			_logger.info("DDL Lookup Storage: No database connection to Persistent Storage DB.");
 			return;
 		}
-		
+
+		if (_shutdownWithNoWait)
+		{
+			_logger.info("DDL Lookup Storage: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+
 		// check AGAIN if DDL has NOT been saved in any writer class
 		if ( isDdlDetailsStored(ddlDetails.getDbname(), ddlDetails.getObjectName()) )
 		{

@@ -825,6 +825,6 @@ public class GetCountersNoGui
 
 		// so lets stop the Persistent Counter Handler and it's services as well
 		if (pch != null)
-			pch.stop();
+			pch.stop(true, 10*1000);
 	}
 }

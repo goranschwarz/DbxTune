@@ -128,8 +128,11 @@ public interface IPersistWriter
 
 	/**
 	 * Stop various service threads etc that this module started in startServices()
+	 * 
+	 * @param maxWaitTimeInMs maximum time that that the service can wait before gracefully shutdown.
+	 *                                0 means, do shutdown now, or "without wait"
 	 */
-	public void stopServices();
+	public void stopServices(int maxWaitTimeInMs);
 
 	/**
 	 * The writer has to have some cind of name...

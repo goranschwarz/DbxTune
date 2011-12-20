@@ -59,7 +59,6 @@ import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
@@ -76,6 +75,7 @@ import org.jdesktop.swingx.table.ColumnControlButton;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.EmptyTableModel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPaneWindowProps;
 import com.asetune.gui.swing.GTable;
@@ -277,7 +277,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		{
 			if (_cm != null)
 				_cm.removeTableModelListener(this);
-			_dataTable.setModel(new DefaultTableModel());
+//			_dataTable.setModel(new DefaultTableModel());
+			_dataTable.setModel(new EmptyTableModel());
 		} 
 		catch (Throwable t) 
 		{
@@ -396,7 +397,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			}
 			else
 			{
-				_dataTable.setModel(new DefaultTableModel());
+//				_dataTable.setModel(new DefaultTableModel());
+				_dataTable.setModel(new EmptyTableModel());
 			}
 
 			adjustTableColumnWidth();

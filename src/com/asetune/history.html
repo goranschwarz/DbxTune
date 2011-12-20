@@ -338,7 +338,47 @@ li   {margin-bottom: 6px}
 		<li>New field to write "extra where clause, on active statements</li>
 		<li>New field to write "order by, on active statements</li>
 	</ul>
-	Note: This tool will be rewritten from scratch "soon"
+	If SQL error happens, the refresh will STOP and wait for you to fix any syntax errors in "where restrictions".<br>
+	Last executed SQL statement can be viewed wit tooltip on the panel.<br>
+	Note: This tool will be rewritten from scratch "soon"<br>
+	</LI>
+
+	<LI>
+	<b>Change: ASE View Configuration Dialog</b><br>
+	Some columns is now editable, which makes it easier to do copy + paste<br>
+	</LI>
+
+	<LI>
+	<b>Change: Summary Panel, some negative counters to zero</b><br>
+	In the summary panel, some counters that could turn negative are now reseted to zero<br>
+	(Transactions, io_total_read, io_total_write, pack_received, pack_sent, packet_errors)<br>
+	while other columns should be able to turn negative like (Connections etc...)<br>
+	</LI>
+
+	<LI>
+	<b>Change: Do graceful shutdown on Persistent Counter Handler</b><br>
+	PCS try to do graceful shutdown, with "timeout" of 10 seconds.<br>
+	</LI>
+
+	<LI>
+	<b>Change: User Defined Counters, show Properties works</b><br>
+	User Defined Counter, you can now view the SQL Statement with properties<br>
+	</LI>
+
+	<LI>
+	<b>Change: Connection Dialog, PCS: now show DDL Lookup properties</b><br>
+	DDL Lookup properties is now available in the connection dialog<br>
+	</LI>
+
+	<LI>
+	<b>Change: Main Window, Status Panel, added status for PCS Handler</b><br>
+	Details about how many entries that are in the Different Persist Queues
+	are now visible in the main window... a field with 3 counters has been added<br>
+	</LI>
+
+	<LI>
+	<b>Change: Persist Writer H2, shutdown on low disk space</b><br>
+	PCS H2, when the disk storage is about to get full, shutdown the PCS Handler.<br>
 	</LI>
 
 </UL>

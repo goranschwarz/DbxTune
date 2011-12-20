@@ -16,7 +16,10 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardException;
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.asetune.pcs.PersistWriterJdbc;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SwingUtils;
 
 
 public class WizardOffline
@@ -36,7 +39,7 @@ public class WizardOffline
 	public WizardOffline()
 	{
 		System.clearProperty("wizard.sidebar.image");
-		System.setProperty("wizard.sidebar.image", "asetune/gui/wizard/WizardOffline.png");
+		System.setProperty("wizard.sidebar.image", "com/asetune/gui/wizard/WizardOffline.png");
 
 //		BufferedImage img = ImageIO.read (getClass().getResource ("WizardOffline.png"));
 //		UIManager.put ("wizard.sidebar.image", img);
@@ -133,11 +136,11 @@ public class WizardOffline
 		//offlineProps.save();
 
 		//Process some props for PCS functionality, or change name in WizardPanel?
-		fixProp(settings, "PersistWriterJdbc.", "jdbcDriver",           true, false);
-		fixProp(settings, "PersistWriterJdbc.", "jdbcUrl",              true, false);
-		fixProp(settings, "PersistWriterJdbc.", "jdbcUser",             true, false);
-		fixProp(settings, "PersistWriterJdbc.", "jdbcPasswd",           true, true);
-		fixProp(settings, "PersistWriterJdbc.", "startH2NetworkServer", true, false);
+		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcDriver,           true, false);
+		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcUrl,              true, false);
+		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcUsername,         true, false);
+		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcPassword,         true, true);
+		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_startH2NetworkServer, true, false);
 
 		fixProp(settings, "conn.",    "aseHost",     true, false);
 		fixProp(settings, "conn.",    "aseName",     true, false);
@@ -156,10 +159,10 @@ public class WizardOffline
 
 
 		//Add the PCS Writer, or add it as a wizard property?
-		String writerClass = conf.getProperty("PersistentCounterHandler.WriterClass");
+		String writerClass = conf.getProperty(PersistentCounterHandler.PROP_WriterClass);
 		if(writerClass == null)
 			writerClass = "com.asetune.pcs.PersistWriterJdbc";
-		settings.put("PersistentCounterHandler.WriterClass", writerClass);
+		settings.put(PersistentCounterHandler.PROP_WriterClass, writerClass);
 		
 //		settings.put("CM.sysMon.test", "testtest");
 		

@@ -3167,6 +3167,8 @@ implements Cloneable, ITableTooltip
 			final SamplingCnt fTmpDiffData = tmpDiffData;
 			final SamplingCnt fTmpRateData = tmpRateData;
 
+			final CountersModel thisCm = this;
+
 			Runnable doWork = new Runnable()
 			{
 				public void run()
@@ -3187,48 +3189,55 @@ implements Cloneable, ITableTooltip
 					//try { Thread.sleep(250); }
 					//catch (InterruptedException ignore) {}
 
-//					System.out.println();
-//					System.out.println(getName()+":#### KICK OFF - CHANGED ####");
-					if (getTabPanel() != null && !getTabPanel().isTableInitialized())
+					try
 					{
-						//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
-						fireTableStructureChanged();
-						
-						// Hmm do I need to do this here...
-						//getTabPanel().adjustTableColumnWidth();
-					}
-					else if (firstTimeSample && isDataInitialized())
-					{
-						firstTimeSample = false;
+//						System.out.println();
+//						System.out.println(getName()+":#### KICK OFF - CHANGED ####");
+						if (getTabPanel() != null && !getTabPanel().isTableInitialized())
+						{
+							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
+							_logger.debug(getName()+":------doFireTableStructureChanged------");
+							fireTableStructureChanged();
+							
+							// Hmm do I need to do this here...
+							//getTabPanel().adjustTableColumnWidth();
+						}
+						else if (firstTimeSample && isDataInitialized())
+						{
+							firstTimeSample = false;
 
-						//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
-						fireTableStructureChanged();
-					}
-					else
-					{
-						// Delete of individual rows...
-						// is not really needed since we do: fireTableDataChanged()
-						// This was implemented to some problems... but can probably be commented out
-//						for (int row : deletedRows)
-//						{
-//							System.out.println(getName()+":-fireTableRows-DELETED("+row+","+row+")-");
-//							fireTableRowsDeleted(row, row);
-//						}
-
-						// DEBUG: what listeners are called...
-//						if ( "CMprocActivity".equals(getName()) )
-//						{
-//							int i=0;
-//							for (TableModelListener tml : getTableModelListeners())
+							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
+							_logger.debug(getName()+":------doFireTableStructureChanged------");
+							fireTableStructureChanged();
+						}
+						else
+						{
+							// Delete of individual rows...
+							// is not really needed since we do: fireTableDataChanged()
+							// This was implemented to some problems... but can probably be commented out
+//							for (int row : deletedRows)
 //							{
-//								System.out.println("-LISTENER: fireTableDataChanged - thread("+Thread.currentThread().getName()+") - Listener("+(i++)+"): "+tml);
+//								System.out.println(getName()+":-fireTableRows-DELETED("+row+","+row+")-");
+//								fireTableRowsDeleted(row, row);
 //							}
-//						}
-						//System.out.println(getName()+":-fireTableData-CHANGED-");
-						_logger.debug(getName()+":-fireTableData-CHANGED-");
-						fireTableDataChanged();
+
+							// DEBUG: what listeners are called...
+//							if ( "CMprocActivity".equals(getName()) )
+//							{
+//								int i=0;
+//								for (TableModelListener tml : getTableModelListeners())
+//								{
+//									System.out.println("-LISTENER: fireTableDataChanged - thread("+Thread.currentThread().getName()+") - Listener("+(i++)+"): "+tml);
+//								}
+//							}
+							//System.out.println(getName()+":-fireTableData-CHANGED-");
+							_logger.debug(getName()+":-fireTableData-CHANGED-");
+							fireTableDataChanged();
+						}
+					}
+					catch(Throwable t)
+					{
+						_logger.warn("Problem when doing fireTableStructureChanged() or fireTableDataChanged(), for the CM='"+thisCm.getName()+"'", t);
 					}
 
 					// Calculte what values we should have in the graphs
