@@ -67,6 +67,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -207,6 +208,11 @@ public class ConnectionDialog
 	private boolean            _useCmForPcsTable    = true;
 	// Specific options if we are using H2 as PCS
 	private JCheckBox          _pcsH2Option_startH2NetworkServer_chk = new JCheckBox("Start H2 Database as a Network Server", false);
+	//---- PCS:DDL Lookup & Store
+	private JCheckBox          _pcsDdl_doDdlLookupAndStore_chk             = new JCheckBox("Do DDL lookup and Store", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore);
+	private JLabel             _pcsDdl_afterDdlLookupSleepTimeInMs_lbl     = new JLabel("Sleep Time");
+	private JTextField         _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+	private JCheckBox          _pcsDdl_addDependantObjectsToDdlInQueue_chk = new JCheckBox("Store Dependent Objects", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 
 	//---- OFFLINE panel
 	@SuppressWarnings("unused")
@@ -462,8 +468,9 @@ public class ConnectionDialog
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
 		
-		panel.add(createPcsJdbcPanel(),         "grow, hidemode 3");
-		panel.add(createPcsTablePanel(),        "grow");
+		panel.add(createPcsJdbcPanel(),              "grow, hidemode 3");
+		panel.add(createPcsDdlLookupAndStorePanel(), "grow");
+		panel.add(createPcsTablePanel(),             "grow");
 		
 		return panel;
 	}
@@ -905,10 +912,9 @@ public class ConnectionDialog
 		panel.add(_pcsJdbcPassword_lbl, "");
 		panel.add(_pcsJdbcPassword_txt, "push, grow, wrap");
 		
-		panel.add(_pcsH2Option_startH2NetworkServer_chk, "skip, hidemode 3, wrap");
+		panel.add(_pcsH2Option_startH2NetworkServer_chk, "skip, span, split, push, grow");
 		
-//		panel.add(_pcsTestConn_lbl, "skip, split, left");
-		panel.add(_pcsTestConn_but, "skip, right, wrap");
+		panel.add(_pcsTestConn_but, "wrap");
 //		panel.add(_pcsWhatCm_but, "skip 1, right, wrap");
 		
 		// ADD ACTION LISTENERS
@@ -948,6 +954,32 @@ public class ConnectionDialog
 		_pcsJdbcUrl_cbx   .addActionListener(this);
 		_pcsJdbcUrl_but   .addActionListener(this);
 		_pcsJdbcDriver_cbx.addActionListener(this);
+
+		return panel;
+	}
+
+	private JPanel createPcsDdlLookupAndStorePanel()
+	{
+		JPanel panel = SwingUtils.createPanel("DDL Lookup and Store", true);
+		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+
+		_pcsDdl_doDdlLookupAndStore_chk            .setToolTipText("<html>If you want the most accessed objects, Stored procedures, views etc and active statements to be DDL information to be stored in the PCS.<br>You can view them with the tool 'DDL Viewer' when connected to a offline database.<html>");
+		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setToolTipText("Also do DDL Lookup and Storage of dependant objects. Simply does 'exec sp_depends tabname' and add dependant objects for lookup...");
+		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the ASE Server.");
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the ASE Server.");
+
+		// LAYOUT
+		panel.add(_pcsDdl_doDdlLookupAndStore_chk,             "");
+		panel.add(_pcsDdl_addDependantObjectsToDdlInQueue_chk, "");
+
+		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_lbl,     "gap 50");
+		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_txt,     "push, grow, wrap");
+		
+
+		// ACTIONS
+		_pcsDdl_doDdlLookupAndStore_chk            .addActionListener(this);
+		_pcsDdl_addDependantObjectsToDdlInQueue_chk.addActionListener(this);
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .addActionListener(this);
 
 		return panel;
 	}
@@ -1078,6 +1110,9 @@ public class ConnectionDialog
 		_pcsSessionTable.setColumnControlVisible(true);
 
 //		SwingUtils.calcColumnWidths(_pcsSessionTable);
+
+		// Set minimum: HEIGHT
+//		_pcsSessionTable.setMinimumSize(new Dimension(1666, 1666)); // Dimension(width, height)
 
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_pcsSessionTable);
@@ -1765,7 +1800,7 @@ public class ConnectionDialog
 			Configuration pcsProps = new Configuration();
 
 			String pcsAll = _pcsWriter_cbx.getEditor().getItem().toString();
-			pcsProps.put("PersistentCounterHandler.WriterClass", pcsAll);
+			pcsProps.put(PersistentCounterHandler.PROP_WriterClass, pcsAll);
 
 			// pcsAll "could" be a ',' separated string
 			// But I dont know how to set the properties for those Writers
@@ -1776,12 +1811,17 @@ public class ConnectionDialog
 				
 				if (pcs.equals("com.asetune.pcs.PersistWriterJdbc"))
 				{
-					pcsProps.put("PersistWriterJdbc.jdbcDriver", _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
-					pcsProps.put("PersistWriterJdbc.jdbcUrl",    _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
-					pcsProps.put("PersistWriterJdbc.jdbcUser",   _pcsJdbcUsername_txt.getText());
-					pcsProps.put("PersistWriterJdbc.jdbcPasswd", _pcsJdbcPassword_txt.getText());
+					pcsProps.put(PersistWriterJdbc.PROP_jdbcDriver,   _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
+					pcsProps.put(PersistWriterJdbc.PROP_jdbcUrl,      _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
+					pcsProps.put(PersistWriterJdbc.PROP_jdbcUsername, _pcsJdbcUsername_txt.getText());
+					pcsProps.put(PersistWriterJdbc.PROP_jdbcPassword, _pcsJdbcPassword_txt.getText());
 
-					pcsProps.put("PersistWriterJdbc.startH2NetworkServer", _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
+					pcsProps.put(PersistWriterJdbc.PROP_startH2NetworkServer, _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
+
+					// DDL
+					pcsProps.put(PersistentCounterHandler.PROP_ddl_doDdlLookupAndStore,             _pcsDdl_doDdlLookupAndStore_chk            .isSelected() + "");
+					pcsProps.put(PersistentCounterHandler.PROP_ddl_addDependantObjectsToDdlInQueue, _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() + "");
+					pcsProps.put(PersistentCounterHandler.PROP_ddl_afterDdlLookupSleepTimeInMs,     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText());
 				}
 			}
 			
@@ -2188,6 +2228,22 @@ public class ConnectionDialog
 				checkForH2LocalDrive(null);
 			}
 		}
+
+		// --- PCS DDL Lookup: Sleep Time 
+		if (_pcsDdl_afterDdlLookupSleepTimeInMs_txt.equals(source))
+		{
+			String str = _pcsDdl_afterDdlLookupSleepTimeInMs_txt.getText();
+			try { Integer.parseInt(str); }
+			catch (Exception nfe)
+			{
+				SwingUtils.showErrorMessage("Not a number", 
+					"<html>" +
+						"Sleep Time must be a number, currently it is '"+str+"'.<br>" +
+						"Resetting to default value: " + PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs +
+					"</html>", nfe);
+				_pcsDdl_afterDdlLookupSleepTimeInMs_txt.setText(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+			}
+		}
 		
 		// --- OFFLINE: COMBOBOX: JDBC DRIVER ---
 		if (_offlineJdbcDriver_cbx.equals(source))
@@ -2263,7 +2319,7 @@ public class ConnectionDialog
 //			}
 			if ( PersistentCounterHandler.hasInstance() )
 			{
-				 PersistentCounterHandler.getInstance().stop();
+				 PersistentCounterHandler.getInstance().stop(true, 0);
 				 PersistentCounterHandler.setInstance(null);
 			}
 			if ( _offlineConn != null )
@@ -2666,7 +2722,12 @@ public class ConnectionDialog
 				conf.setProperty    ("pcs.write.h2.startH2NetworkServer", _pcsH2Option_startH2NetworkServer_chk.isSelected() );
 			else
 				conf.setProperty    ("pcs.write.h2.startH2NetworkServer", false );
-			
+
+			// DDL Lookup & Store
+			conf.setProperty        ("pcs.write.ddl.doDdlLookup",                     _pcsDdl_doDdlLookupAndStore_chk            .isSelected() );
+			conf.setProperty        ("pcs.write.ddl.addDependantObjectsToDdlInQueue", _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() );
+			conf.setProperty        ("pcs.write.ddl.afterDdlLookupSleepTimeInMs",     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText() );
+
 			// The info in JTable is stored by the CM itself...
 		}
 		
@@ -2831,6 +2892,15 @@ public class ConnectionDialog
 		bol = conf.getBooleanProperty("pcs.write.h2.startH2NetworkServer", false);
 		_pcsH2Option_startH2NetworkServer_chk.setSelected(bol);
 
+		// DDL Lookup & Store
+		bol = conf.getBooleanProperty("pcs.write.ddl.doDdlLookup", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore );
+		_pcsDdl_doDdlLookupAndStore_chk.setSelected(bol);
+
+		bol = conf.getBooleanProperty("pcs.write.ddl.addDependantObjectsToDdlInQueue", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
+		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(bol);
+
+		str = conf.getProperty("pcs.write.ddl.afterDdlLookupSleepTimeInMs", PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs + "");
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt.setText(str);
 		
 		//----------------------------------
 		// TAB: Offline

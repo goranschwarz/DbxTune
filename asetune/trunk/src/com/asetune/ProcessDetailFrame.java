@@ -63,9 +63,14 @@ public class ProcessDetailFrame extends JFrame
 
 //	private   JFrame           pdf                          = null;
 	private   JLabel           _currentStmntSqlWhereClause_lbl = new JLabel("Where: ");
-	private   JTextField       _currentStmntSqlWhereClause_txt = new JTextField();
+//	private   JTextField       _currentStmntSqlWhereClause_txt = new JTextField();
+	protected JComboBox        _currentStmntSqlWhereClause_cbx = new JComboBox();
+	protected JButton          _currentStmntSqlWhereClause_but = new JButton("Remove from template");
 	private   JLabel           _currentStmntSqlOrderBy_lbl     = new JLabel("Order By: ");
-	private   JTextField       _currentStmntSqlOrderBy_txt     = new JTextField();
+//	private   JTextField       _currentStmntSqlOrderBy_txt     = new JTextField();
+	protected JComboBox        _currentStmntSqlOrderBy_cbx     = new JComboBox();
+	protected JButton          _currentStmntSqlOrderBy_but     = new JButton("Remove from template");
+
 	private   int              kpid;
 	public    int              processRefreshInterv         = 1;
 	private   BorderLayout     borderLayout1                = new BorderLayout();
@@ -396,7 +401,10 @@ public class ProcessDetailFrame extends JFrame
 	private XYLayout     xYLayout9               = new XYLayout();
 	private TitledBorder titledBorder8;
 	private JComboBox    refreshIntFld           = new JComboBox();
+	private JCheckBox    paused_chk              = new JCheckBox("Paused");
 	private JLabel       refreshIntLbl           = new JLabel();
+//	private JButton      pauseButton             = new JButton();
+//	private JButton      resumeButton            = new JButton();
 	private JButton      refreshButton           = new JButton();
 	private JButton      clearButton             = new JButton();
 	private JButton      saveButton              = new JButton();
@@ -419,6 +427,8 @@ public class ProcessDetailFrame extends JFrame
 	}
 
 
+
+	private boolean _guiInitialized = false;
 
 	private void jbInit()
 	throws Exception
@@ -901,6 +911,31 @@ public class ProcessDetailFrame extends JFrame
 				refreshIntFld_actionPerformed(e);
 			}
 		});
+		paused_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				pause_actionPerformed(e);
+			}
+		});
+//		pauseButton.setText("Pause");
+//		pauseButton.addActionListener(new java.awt.event.ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				pauseButton_actionPerformed(e);
+//			}
+//		});
+//		resumeButton.setVisible(false);
+//		resumeButton.setText("Resume");
+//		resumeButton.addActionListener(new java.awt.event.ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				resumeButton_actionPerformed(e);
+//			}
+//		});
 		refreshButton.setText("Refresh");
 		refreshButton.addActionListener(new java.awt.event.ActionListener()
 		{
@@ -1010,7 +1045,7 @@ public class ProcessDetailFrame extends JFrame
 		stmtBatchplanSplitPan.add(activeSqlCapturedSqlSplitPan, JSplitPane.TOP);
 		stmtBatchplanSplitPan.add(batchPlanSplitPan, JSplitPane.BOTTOM);
 
-		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
+//		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
 		activeSqlCapturedSqlSplitPan.add(capturedStatementPan, JSplitPane.BOTTOM);
 
 		// SQL BATCH
@@ -1054,29 +1089,75 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		});
 
 
-		_currentStmntSqlWhereClause_txt.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				saveProps();
-			}
-		});
-		_currentStmntSqlOrderBy_txt.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				saveProps();
-			}
-		});
+//		_currentStmntSqlWhereClause_txt.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				saveProps();
+//			}
+//		});
+//		_currentStmntSqlOrderBy_txt.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				saveProps();
+//			}
+//		});
 		
+		_currentStmntSqlWhereClause_cbx.setToolTipText("Add your extra where clauses on the monXXX table. make sure that only columns in that table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_currentStmntSqlWhereClause_cbx.setEditable(true);
+		_currentStmntSqlWhereClause_cbx.addItem("");
+		_currentStmntSqlWhereClause_cbx.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				action_currentStmntSqlWhereClause_cbx(e);
+			}
+		});
+		_currentStmntSqlWhereClause_but.setToolTipText("Remove the 'extra where' from the template.");
+		_currentStmntSqlWhereClause_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				action_currentStmntSqlWhereClause_but(e);
+			}
+		});
+
+		_currentStmntSqlOrderBy_cbx.setToolTipText("Change 'order by' clauses on the monXXX table. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_currentStmntSqlOrderBy_cbx.setEditable(true);
+		_currentStmntSqlOrderBy_cbx.addItem("");
+		_currentStmntSqlOrderBy_cbx.addActionListener(new ActionListener()
+		{
+			public void actionPerformed(ActionEvent e)
+			{
+				action_currentStmntSqlOrderBy_cbx(e);
+			}
+		});
+		_currentStmntSqlOrderBy_but.setToolTipText("Remove the 'order by' from the template.");
+		_currentStmntSqlOrderBy_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				action__currentStmntSqlOrderBy_but(e);
+			}
+		});
+
 		JPanel xxx = new JPanel(new MigLayout("insets 0 0 0 0", "[][grow]", ""));
-		xxx.add(_currentStmntSqlWhereClause_lbl,  "");
-		xxx.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
-		xxx.add(_currentStmntSqlOrderBy_lbl,      "");
-		xxx.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
-		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push");
+		xxx.add(_currentStmntSqlWhereClause_lbl,  "gap 5");
+//		xxx.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
+		xxx.add(_currentStmntSqlWhereClause_cbx,  "split, growx");
+		xxx.add(_currentStmntSqlWhereClause_but,  "gap 5 5, wrap");
+
+		xxx.add(_currentStmntSqlOrderBy_lbl,      "gap 5");
+//		xxx.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
+		xxx.add(_currentStmntSqlOrderBy_cbx,      "split, growx");
+		xxx.add(_currentStmntSqlOrderBy_but,      "gap 5 5, wrap");
+		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, wrap");
 //		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, width 100%, height 100%, wrap");
 		
 		currentStatementsPan.setLayout(new BorderLayout());
@@ -1084,6 +1165,8 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 //		currentStatementsPan.getViewport().add(xxx, null);
 //		currentStatementsPan.getViewport().add(currentStatementTable, null);
 		capturedStatementScrollPan.getViewport().add(capturedStatementsTable, null);
+
+		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
 
 		kpidFld.setText(Integer.toString(kpid));
 
@@ -1130,31 +1213,34 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		});
 
 
-		infoPanel.add(spidLbl,                 new XYConstraints(11,  9,   -1,  -1));
-		infoPanel.add(kpidLbl,                 new XYConstraints(137, 8,   44,  19));
-		infoPanel.add(spidFld,                 new XYConstraints(48,  8,   74,  19));
-		infoPanel.add(kpidFld,                 new XYConstraints(178, 8,   67,  19));
-		infoPanel.add(suser_nameLbl,           new XYConstraints(254, 8,   84,  19));
-		infoPanel.add(suser_nameFld,           new XYConstraints(342, 8,   88,  19));
-		infoPanel.add(refreshIntLbl,           new XYConstraints(443, 8,   111, 18));
-		infoPanel.add(refreshIntFld,           new XYConstraints(556, 8,   50,  19));
-		infoPanel.add(refreshButton,           new XYConstraints(635, 5,   85,  25));
-		infoPanel.add(clearButton,             new XYConstraints(735, 5,   85,  25));
-		infoPanel.add(saveButton,              new XYConstraints(835, 5,   100, 25));
+//		infoPanel.add(spidLbl,                 new XYConstraints(11,  9,   -1,  -1));
+//		infoPanel.add(kpidLbl,                 new XYConstraints(137, 8,   44,  19));
+//		infoPanel.add(spidFld,                 new XYConstraints(48,  8,   74,  19));
+//		infoPanel.add(kpidFld,                 new XYConstraints(178, 8,   67,  19));
+//		infoPanel.add(suser_nameLbl,           new XYConstraints(254, 8,   84,  19));
+//		infoPanel.add(suser_nameFld,           new XYConstraints(342, 8,   88,  19));
+//		infoPanel.add(refreshIntLbl,           new XYConstraints(443, 8,   111, 18));
+//		infoPanel.add(refreshIntFld,           new XYConstraints(556, 8,   50,  19));
+//		infoPanel.add(refreshButton,           new XYConstraints(635, 5,   85,  25));
+//		infoPanel.add(clearButton,             new XYConstraints(735, 5,   85,  25));
+//		infoPanel.add(saveButton,              new XYConstraints(835, 5,   100, 25));
 
-//		infoPanel.setLayout(new MigLayout());
-//		infoPanel.add(spidLbl,                 "");
-//		infoPanel.add(spidFld,                 "w 50px");
-//		infoPanel.add(kpidLbl,                 "");
-//		infoPanel.add(kpidFld,                 "w 50px");
-//		infoPanel.add(suser_nameLbl,           "");
-//		infoPanel.add(suser_nameFld,           "w 150px");
-//		infoPanel.add(refreshIntLbl,           "");
-//		infoPanel.add(refreshIntFld,           "w 30px");
-//		infoPanel.add(new JLabel(),            "growx, pushx");
-//		infoPanel.add(refreshButton,           "");
-//		infoPanel.add(clearButton,             "");
-//		infoPanel.add(saveButton,              "wrap");
+		infoPanel.setLayout(new MigLayout());
+		infoPanel.add(spidLbl,                 "");
+		infoPanel.add(spidFld,                 "w 50px");
+		infoPanel.add(kpidLbl,                 "");
+		infoPanel.add(kpidFld,                 "w 50px");
+		infoPanel.add(suser_nameLbl,           "");
+		infoPanel.add(suser_nameFld,           "w 150px");
+		infoPanel.add(refreshIntLbl,           "");
+		infoPanel.add(refreshIntFld,           "w 30px");
+		infoPanel.add(new JLabel(),            "growx, pushx");
+		infoPanel.add(paused_chk,              "");
+//		infoPanel.add(resumeButton,            "hidemode 3");
+//		infoPanel.add(pauseButton,             "hidemode 3");
+		infoPanel.add(refreshButton,           "");
+		infoPanel.add(clearButton,             "");
+		infoPanel.add(saveButton,              "wrap");
 //		infoPanel.add(_currentStmntSqlWhereClause_lbl,  "w 60px, span, split");
 //		infoPanel.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
 //		infoPanel.add(_currentStmntSqlOrderBy_lbl,      "w 60px, span, split");
@@ -1332,6 +1418,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		}
 
 		pack();
+		_guiInitialized = true;
 		setVisible(true);
 	}
 
@@ -1369,12 +1456,59 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 			refressProcess.setRefreshInterval(processRefreshInterv);
 	}
 
+	private void pause_actionPerformed(ActionEvent e)
+	{
+		if (refressProcess != null)
+		{
+			refressProcess.setPauseProcess(paused_chk.isSelected());
+		}
+	}
+//	private void pauseButton_actionPerformed(ActionEvent e)
+//	{
+//		if (refressProcess != null)
+//		{
+//			refressProcess.pauseProcess();
+//			pauseButton .setVisible(false);
+//			resumeButton.setVisible(true);
+//		}
+//	}
+//
+//	private void resumeButton_actionPerformed(ActionEvent e)
+//	{
+//		if (refressProcess != null)
+//		{
+//			refressProcess.resumeProcess();
+//			pauseButton .setVisible(true);
+//			resumeButton.setVisible(false);
+//		}
+//	}
+
 	private void refreshButton_actionPerformed(ActionEvent e)
 	{
 		if (refressProcess != null)
 			refressProcess.refreshProcess();
 	}
 
+	/**
+	 * Called from the Refresh Process, at the top<br>
+	 * Sp here we can check various stuff and set statuses etc.
+	 */
+	public void updateGuiStatus()
+	{
+		if (refressProcess != null)
+		{
+			boolean isPaused = refressProcess.isPaused();
+			paused_chk.setSelected(isPaused);
+//			pauseButton .setVisible(!isPaused);
+//			resumeButton.setVisible( isPaused);
+
+			currentStatementsPan.setToolTipText("<html><b>Last SQL Used To get ACTIVE SQL Statements </b><br><code><pre>"+refressProcess.getActiveStatementsSql() +"</pre></code></html>");
+			captureWhereSqlPanel.setToolTipText("<html><b>Last SQL Used To get HISTORY SQL Statements</b><br><code><pre>"+refressProcess.getHistoryStatementsSql()+"</pre></code></html>");
+
+		}
+	}
+
+	/** REMOVE from template */
 	private void buttom_captureWhereSql_actionPerformed(ActionEvent e)
 	{
 		String sql = (String) comboBox_captureWhereSql.getSelectedItem();
@@ -1400,6 +1534,58 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		saveProps();
 	}
 
+	/** REMOVE from template */
+	private void action_currentStmntSqlWhereClause_but(ActionEvent e)
+	{
+		String sql = (String) _currentStmntSqlWhereClause_cbx.getSelectedItem();
+		if (sql != null)
+		{
+			sql = sql.trim();
+
+			// Check if the string is in the template list
+			Object model = _currentStmntSqlWhereClause_cbx.getModel();
+			if (model instanceof DefaultComboBoxModel)
+			{
+				int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+
+				// If it does not exist in the list save it
+				if (index > 0)
+				{
+					_currentStmntSqlWhereClause_cbx.removeItem(sql);
+				}
+			}
+		}
+
+		saveProps();
+	}
+
+	/** REMOVE from template */
+	private void action__currentStmntSqlOrderBy_but(ActionEvent e)
+	{
+		String sql = (String) _currentStmntSqlOrderBy_cbx.getSelectedItem();
+		if (sql != null)
+		{
+			sql = sql.trim();
+
+			// Check if the string is in the template list
+			Object model = _currentStmntSqlOrderBy_cbx.getModel();
+			if (model instanceof DefaultComboBoxModel)
+			{
+				int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+
+				// If it does not exist in the list save it
+				if (index > 0)
+				{
+					_currentStmntSqlOrderBy_cbx.removeItem(sql);
+				}
+			}
+		}
+
+		saveProps();
+	}
+
+
+	/** ACTION on combobox */
 	private void comboBox_captureWhereSql_actionPerformed(ActionEvent e)
 	{
 		//_logger.debug("comboBox_captureWhereSql.actionPerformed(): e.getActionCommand()='" + e.getActionCommand() + "', ActionEvent=" + e);
@@ -1420,13 +1606,62 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		// set the restrictor in refressProcess
 		if (refressProcess != null)
 			refressProcess.setCaptureRestriction(sql);
+		saveProps();
 	}
 
+
+	/** ACTION on combobox */
+	private void action_currentStmntSqlWhereClause_cbx(ActionEvent e)
+	{
+		String sql = (String) _currentStmntSqlWhereClause_cbx.getSelectedItem();
+		sql = sql.trim();
+
+		// Check if the select text is in the template list
+		// If so, name the buttom "remove", otherwisse "save"
+		Object model = _currentStmntSqlWhereClause_cbx.getModel();
+		if (model instanceof DefaultComboBoxModel)
+		{
+			int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+			if ( index == -1 )
+				_currentStmntSqlWhereClause_cbx.addItem(sql);
+		}
+
+//		// set the restrictor in refressProcess
+//		if (refressProcess != null)
+//			refressProcess.xxx(sql);
+		saveProps();
+	}
+
+	/** ACTION on combobox */
+	private void action_currentStmntSqlOrderBy_cbx(ActionEvent e)
+	{
+		String sql = (String) _currentStmntSqlOrderBy_cbx.getSelectedItem();
+		sql = sql.trim();
+
+		// Check if the select text is in the template list
+		// If so, name the buttom "remove", otherwisse "save"
+		Object model = _currentStmntSqlOrderBy_cbx.getModel();
+		if (model instanceof DefaultComboBoxModel)
+		{
+			int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+			if ( index == -1 )
+				_currentStmntSqlOrderBy_cbx.addItem(sql);
+		}
+
+//		// set the restrictor in refressProcess
+//		if (refressProcess != null)
+//			refressProcess.xxx(sql);
+		saveProps();
+	}
 
 
 
 	private void saveProps()
   	{
+		// this is really ugly, do this in another way...
+		if (!_guiInitialized)
+			return;
+		
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 		String base = "processDetailFrame.spid.";
 
@@ -1482,12 +1717,63 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 //			tmpConf.setProperty(base + "locks.window.pos.y",  processLocksFrame.getLocationOnScreen().y);
 //			}
 
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_txt.getText());
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    _currentStmntSqlOrderBy_txt    .getText());
+//			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_txt.getText());
+//			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    _currentStmntSqlOrderBy_txt    .getText());
 
+			int saveCount = 0;
+			// ACTIVE Statements WHERE
+			//---------------------------------------
+			// Get rid of all fields first
+			tmpConf.removeAll(base + "current.statement.extraWhere.");
+			saveCount = 0;
+			for (int i=1; i<_currentStmntSqlWhereClause_cbx.getItemCount(); i++)
+			{
+				Object o = _currentStmntSqlWhereClause_cbx.getItemAt(i);
+				if (o != null)
+				{
+					saveCount++;
+					tmpConf.setProperty(base + "current.statement.extraWhere."+saveCount, o.toString());
+
+					_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere."+saveCount+"='"+o.toString()+"'.");
+				}
+			}
+			tmpConf.setProperty(   base + "current.statement.extraWhere.count", saveCount);
+			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere.count='"+saveCount+"'.");
+
+			tmpConf.setProperty(   base + "current.statement.extraWhere.active", Math.max(0, _currentStmntSqlWhereClause_cbx.getSelectedIndex()));
+			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere.active='"+Math.max(0, _currentStmntSqlWhereClause_cbx.getSelectedIndex())+"'.");
+
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_cbx.getSelectedItem()+"");
+			
+			// ACTIVE Statements ORDER BY
+			//---------------------------------------
+			// Get rid of all fields first
+			tmpConf.removeAll(base + "current.statement.orderBy.");
+			saveCount = 0;
+			for (int i=1; i<_currentStmntSqlOrderBy_cbx.getItemCount(); i++)
+			{
+				Object o = _currentStmntSqlOrderBy_cbx.getItemAt(i);
+				if (o != null)
+				{
+					saveCount++;
+					tmpConf.setProperty(base + "current.statement.orderBy."+saveCount, o.toString());
+
+					_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy."+saveCount+"='"+o.toString()+"'.");
+				}
+			}
+			tmpConf.setProperty(   base + "current.statement.orderBy.count", saveCount);
+			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy.count='"+saveCount+"'.");
+
+			tmpConf.setProperty(   base + "current.statement.orderBy.active", Math.max(0, _currentStmntSqlOrderBy_cbx.getSelectedIndex()));
+			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy.active='"+Math.max(0, _currentStmntSqlOrderBy_cbx.getSelectedIndex())+"'.");
+
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY, _currentStmntSqlOrderBy_cbx.getSelectedItem()+"");
+
+			// HISTORY Statements WHERE
+			//---------------------------------------
 			// Get rid of all fields first
 			tmpConf.removeAll(base + "plan.extraWhere.");
-			int saveCount = 0;
+			saveCount = 0;
 			for (int i=1; i<comboBox_captureWhereSql.getItemCount(); i++)
 			{
 				Object o = comboBox_captureWhereSql.getItemAt(i);
@@ -1522,8 +1808,8 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		boolean checkBox1 = false;
 		boolean checkBox2 = false;
 
-//		Configuration props = Configuration.getInstance(Configuration.TEMP);
-		Configuration props = Configuration.getCombinedConfiguration();
+		Configuration props   = Configuration.getCombinedConfiguration();
+		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 		String base = "processDetailFrame.spid.";
 
 		if (props == null)
@@ -1558,7 +1844,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		}
 
 		width  = props.getIntProperty(base + "currentStatements.width",  1000);
-		height = props.getIntProperty(base + "currentStatements.height", 110);
+		height = props.getIntProperty(base + "currentStatements.height", 160);
 		if (width != -1 && height != -1)
 		{
 			currentStatementsPan.setPreferredSize(new Dimension(width, height));
@@ -1642,11 +1928,76 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 //			processLocksFrame.setVisible(winActive);
 //		}
 
-		_currentStmntSqlWhereClause_txt.setText(props.getProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, ""));
-		_currentStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    ""));
+		int count;
+		int active;
+		// ACTIVE STATEMENT: WHERE           //current.statement.
+		count   = props.getIntProperty(base + "current.statement.extraWhere.count", -1);
+		active  = props.getIntProperty(base + "current.statement.extraWhere.active", -1);
+		if ( count != -1  && active != -1 )
+		{
+			_logger.debug("loadProps(): processDetailFrame.spid.current.statement.extraWhere.active='"+active+"'.");
 
-		int count   = props.getIntProperty(base + "plan.extraWhere.count", -1);
-		int active  = props.getIntProperty(base + "plan.extraWhere.active", -1);
+			active = Math.max(0, active);
+			for (int i=1; i<=count; i++)
+			{
+				String str = props.getProperty(base + "current.statement.extraWhere."+i).trim();
+				_currentStmntSqlWhereClause_cbx.insertItemAt(str, i);
+				_logger.debug("loadProps(): processDetailFrame.current.statement.plan.extraWhere."+i+"='"+str+"'.");
+			}
+			_logger.debug("loadProps(): Set active template to index="+active+".");
+			_currentStmntSqlWhereClause_cbx.setSelectedIndex(active);
+		}
+		else
+		{
+			// if we cant find anything in the configuration file, add some defaults
+			// which will be written to the config file on next save...
+			_currentStmntSqlWhereClause_cbx.addItem("WaitTime > 1000");
+			_currentStmntSqlWhereClause_cbx.addItem("LogicalReads > 100");
+			_currentStmntSqlWhereClause_cbx.addItem("PhysicalReads > 10");
+			_currentStmntSqlWhereClause_cbx.addItem("P.SPID in (select blocked from master..sysprocesses where blocked > 0) -- SPID's that blocks others");
+			_currentStmntSqlWhereClause_cbx.addItem("P.BlockingSPID > 0 -- Blocked SPID's");
+			_currentStmntSqlWhereClause_cbx.addItem("object_name(S.ProcedureID,S.DBID) = 'any_proc_name'");
+			_currentStmntSqlWhereClause_cbx.addItem("db_name(S.DBID) = 'any_db_name'");
+		}
+		// this entry is the one used by RefreshProcess
+		if (tmpConf != null)
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_cbx.getSelectedItem()+"");
+
+		// ACTIVE STATEMENT: ORDER BY
+		count   = props.getIntProperty(base + "current.statement.orderBy.count", -1);
+		active  = props.getIntProperty(base + "current.statement.orderBy.active", -1);
+		if ( count != -1  && active != -1 )
+		{
+			_logger.debug("loadProps(): processDetailFrame.spid.current.statement.orderBy.active='"+active+"'.");
+
+			active = Math.max(0, active);
+			for (int i=1; i<=count; i++)
+			{
+				String str = props.getProperty(base + "current.statement.orderBy."+i).trim();
+				_currentStmntSqlOrderBy_cbx.insertItemAt(str, i);
+				_logger.debug("loadProps(): processDetailFrame.current.statement.plan.orderBy."+i+"='"+str+"'.");
+			}
+			_logger.debug("loadProps(): Set active template to index="+active+".");
+			_currentStmntSqlOrderBy_cbx.setSelectedIndex(active);
+		}
+		else
+		{
+			// if we cant find anything in the configuration file, add some defaults
+			// which will be written to the config file on next save...
+			_currentStmntSqlOrderBy_cbx.addItem("SPID");
+			_currentStmntSqlOrderBy_cbx.addItem("LogicalReads desc");
+			_currentStmntSqlOrderBy_cbx.addItem("PhysicalReads desc");
+		}
+		// this entry is the one used by RefreshProcess
+		if (tmpConf != null)
+			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY, _currentStmntSqlOrderBy_cbx.getSelectedItem()+"");
+
+//		_currentStmntSqlWhereClause_txt.setText(props.getProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, ""));
+//		_currentStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    ""));
+
+		// HISTORY Statements WHERE
+		count   = props.getIntProperty(base + "plan.extraWhere.count", -1);
+		active  = props.getIntProperty(base + "plan.extraWhere.active", -1);
 		if ( count != -1  && active != -1 )
 		{
 			_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere.active='"+active+"'.");
@@ -1657,7 +2008,6 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 				String str = props.getProperty(base + "plan.extraWhere."+i).trim();
 				comboBox_captureWhereSql.insertItemAt(str, i);
 				_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere."+i+"='"+str+"'.");
-
 			}
 			_logger.debug("loadProps(): Set active template to index="+active+".");
 			comboBox_captureWhereSql.setSelectedIndex(active);

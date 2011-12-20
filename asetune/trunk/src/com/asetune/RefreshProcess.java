@@ -57,6 +57,7 @@ public class RefreshProcess extends Thread
 	private ProcessDetailFrame pdf;
 	private Connection	       _conn;
 	private boolean	           refreshProcessFlag;
+	private boolean            _paused               = false;
 	private int                _refreshInterval      = 1;
 	boolean	                   batchCapture	         = false;
 	
@@ -152,6 +153,12 @@ public class RefreshProcess extends Thread
 	private String  _captureRestrictionSql = "";
 	private boolean _captureRestrictions   = false;
 
+	private String _activeStatementsSql = "";
+	private String _historyStatementsSql = "";
+
+	public String getActiveStatementsSql()  { return _activeStatementsSql; }
+	public String getHistoryStatementsSql() { return _historyStatementsSql; }
+	
 	public void setCaptureRestriction(String str)
 	{
 		_captureRestrictionSql = str;
@@ -428,12 +435,19 @@ public class RefreshProcess extends Thread
 //				    + "  NetworkPacketSize, PlansAltered, StartTime, PlanID, DBID, ProcedureID \n" 
 //				    + "from monProcessStatement \n";
 				String sql = 
-					"select  S.SPID, S.KPID, S.BatchID, S.LineNumber, dbname=db_name(S.DBID), procname=isnull(object_name(S.ProcedureID,S.DBID),''), \n"
-					+ "  S.CpuTime, S.WaitTime, ExecTimeInMs=datediff(ms, S.StartTime, getdate()), S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n"
+					"select  S.SPID, S.KPID, S.BatchID, S.LineNumber, \n"
+					+ "  dbname=db_name(S.DBID), procname=isnull(object_name(S.ProcedureID,S.DBID),''), \n"
+					+ "  P.Command, S.CpuTime, S.WaitTime, \n"
+					+ "  ExecTimeInMs=datediff(ms, S.StartTime, getdate()), S.MemUsageKB, \n"
+					+ "  S.PhysicalReads, S.LogicalReads, \n"
 					+ extraCols
+					+ "  P.Application, P.Login, \n"
+					+ "  P.WaitEventID, WaitEventDesc = '', \n"
+					+ "  P.SecondsWaiting, P.BlockingSPID, \n"
 					+ "  S.PagesModified, S.PacketsSent, S.PacketsReceived, \n"
-					+ "  S.NetworkPacketSize, S.PlansAltered, S.StartTime, S.PlanID, S.DBID, S.ProcedureID, \n"
-					+ "  P.SecondsConnected, P.EngineNumber, P.NumChildren, P.SecondsWaiting, P.WaitEventID, WaitEventDesc = '', P.BlockingSPID \n" 
+					+ "  S.NetworkPacketSize, S.PlansAltered, \n"
+					+ "  S.StartTime, S.PlanID, S.DBID, S.ProcedureID, \n"
+					+ "  P.SecondsConnected, P.EngineNumber, P.NumChildren \n" 
 					+ "from monProcessStatement S, monProcess P \n"
 					+ "where S.KPID = P.KPID\n";
 
@@ -454,6 +468,7 @@ public class RefreshProcess extends Thread
 				sql += "order by " + orderBy;
 
 				currentSql = sql;
+				_activeStatementsSql = sql;
 				rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmdCurStmt = rs.getMetaData();
 				int nbColsCurStmt = rsmdCurStmt.getColumnCount();
@@ -823,6 +838,8 @@ public class RefreshProcess extends Thread
 				}
 
 				currentSql = sql;
+				_historyStatementsSql = sql;
+
 				rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmd = rs.getMetaData();
 				int nbCols = rsmd.getColumnCount();
@@ -1242,19 +1259,26 @@ public class RefreshProcess extends Thread
 			pdf.statusBarLbl.setForeground(Color.RED);
 			pdf.statusBarLbl.setText("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.");
 
-			String htmlMsg = "<html>" +
-				"Problems executing SQL Statement.<br>" +
-				"ASE Error Number '"+SQLEx.getErrorCode()+"'<br>" +
-				"ASE SQL State '"+SQLEx.getSQLState()+"'<br>" +
-				"ASE Message '"+SQLEx.getMessage()+"'<br>" +
-				"<br>" +
-				"<b>Check the below SQL and see if any of your 'Extra Where Clauses / order by' may cause them.</b><br>" +
-				"<i>TIP: Check and Use alias for table names...</i><br>" +
-				"<pre>" +
-				currentSql +
-				"<pre>" +
-				"</html>";
-			SwingUtils.showErrorMessage("Error when executing SQL", htmlMsg, SQLEx);
+			if (AseTune.hasGUI())
+			{
+				String htmlMsg = "<html>" +
+					"Problems executing SQL Statement.<br>" +
+					"ASE Error Number '"+SQLEx.getErrorCode()+"'<br>" +
+					"ASE SQL State '"+SQLEx.getSQLState()+"'<br>" +
+					"ASE Message '"+SQLEx.getMessage()+"'<br>" +
+					"<br>" +
+					"<b>Check the below SQL and see if any of your 'Extra Where Clauses / order by' may cause them.</b><br>" +
+					"<i>TIP: Check and Use alias for table names...</i><br>" +
+					"<br>" +
+					"<b>NOTE: The refresh process has been PAUSED, so fix the problem and resume the refresh process.</b><br>" +
+					"<pre>" +
+					currentSql +
+					"<pre>" +
+					"</html>";
+				SwingUtils.showErrorMessage("Error when executing SQL", htmlMsg, SQLEx);
+				
+				setPauseProcess(true);
+			}
 		}
 	}
 
@@ -2678,15 +2702,23 @@ public class RefreshProcess extends Thread
 		boolean firstTime = true;
 		while (refreshProcessFlag)
 		{
+			pdf.updateGuiStatus();
 			try
 			{
-				if (firstTime == false)
-					java.lang.Thread.sleep(_refreshInterval * 1000);
+				if (firstTime == false && ! _paused)
+					Thread.sleep(_refreshInterval * 1000);
+
+				if (_paused)
+					Thread.sleep(500);
 			}
-			catch (Exception e)
+			catch (InterruptedException ignore) {}
+
+			if (_paused)
 			{
-				e.printStackTrace();
+				pdf.statusBarLbl.setText("Paused");
+				continue;
 			}
+
 			firstTime = false;
 
 			refreshProcess();
@@ -2707,6 +2739,26 @@ public class RefreshProcess extends Thread
 	{
 		_refreshInterval = interval;
 	}
+
+	public boolean isPaused()
+	{
+		return _paused;
+	}
+
+	public void setPauseProcess(boolean pause)
+	{
+		_paused = pause;
+	}
+
+//	public void pauseProcess()
+//	{
+//		_paused = true;
+//	}
+//
+//	public void resumeProcess()
+//	{
+//		_paused = false;
+//	}
 
 	public synchronized void refreshProcess()
 	{
@@ -2824,5 +2876,4 @@ public class RefreshProcess extends Thread
 			}
 		}
 	}
-
 }

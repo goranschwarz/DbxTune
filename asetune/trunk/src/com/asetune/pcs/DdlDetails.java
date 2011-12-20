@@ -3,6 +3,8 @@ package com.asetune.pcs;
 import java.sql.Timestamp;
 import java.util.List;
 
+import com.asetune.utils.StringUtil;
+
 public class DdlDetails
 {
 	private String    _dbname        = null;
@@ -91,5 +93,28 @@ public class DdlDetails
 		sb.append("____END____________________________________________________").append("\n");
 		
 		return sb.toString();
+	}
+	
+	public boolean isEmpty()
+	{
+		boolean objectText_empty    = StringUtil.isNullOrBlank(_objectText);
+		boolean dependsText_empty   = StringUtil.isNullOrBlank(_dependsText);
+		boolean optdiagText_empty   = StringUtil.isNullOrBlank(_optdiagText);
+		boolean extraInfoText_empty = StringUtil.isNullOrBlank(_extraInfoText);
+
+		// Check some other special cases
+		if (_objectText != null)
+		{
+			String objectText = _objectText.trim();
+
+			// If DBCC execution with no results... then consider it to be empty.
+			if (objectText.equals("DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role."))
+				objectText_empty = true;
+		}
+
+		if (objectText_empty && dependsText_empty && optdiagText_empty && extraInfoText_empty)
+			return true;
+		
+		return false;
 	}
 }

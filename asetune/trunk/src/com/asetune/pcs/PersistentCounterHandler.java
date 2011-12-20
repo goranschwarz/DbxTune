@@ -10,9 +10,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -41,6 +43,20 @@ implements Runnable
 	*/
 	public static final String STATEMENT_CACHE_NAME = "statement_cache";
 
+	public static final boolean DEFAULT_ddl_doDdlLookupAndStore             = true;
+	public static final int     DEFAULT_ddl_warnDdlInputQueueSizeThresh     = 100;
+	public static final int     DEFAULT_ddl_warnDdlStoreQueueSizeThresh     = 100;
+	public static final int     DEFAULT_ddl_afterDdlLookupSleepTimeInMs     = 500;
+	public static final boolean DEFAULT_ddl_addDependantObjectsToDdlInQueue = true;
+
+	public static final String PROP_ddl_doDdlLookupAndStore             = "PersistentCounterHandler.ddl.doDdlLookupAndStore";
+	public static final String PROP_ddl_warnDdlInputQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlInputQueueSizeThresh";
+	public static final String PROP_ddl_warnDdlStoreQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlStoreQueueSizeThresh";
+	public static final String PROP_ddl_afterDdlLookupSleepTimeInMs     = "PersistentCounterHandler.ddl.afterDdlLookupSleepTimeInMs";
+	public static final String PROP_ddl_addDependantObjectsToDdlInQueue = "PersistentCounterHandler.ddl.addDependantObjectsToDdlInQueue";
+
+	public static final String PROP_warnQueueSizeThresh                 = "PersistentCounterHandler.warnQueueSizeThresh";
+	public static final String PROP_WriterClass                         = "PersistentCounterHandler.WriterClass";
 
 	/*---------------------------------------------------
 	** class members
@@ -55,16 +71,26 @@ implements Runnable
 	private Thread   _thread           = null;
 	private Thread   _ddlStorageThread = null;
 	private Thread   _ddlLookupThread  = null;
-	
+
+	private boolean  _doDdlLookupAndStore = DEFAULT_ddl_doDdlLookupAndStore;
+
 	/** The DDL consumer "thread" code */ 
 	private Runnable _ddlStorage = null;
 
 	/** The DDL Lookup "thread" code */ 
 	private Runnable _ddlLookup  = null;
 
-	/** what entries has already been stored in the back-end, this so we can sort out fast if wee need to store or not */
-//	private HashSet<String> _ddlCache = new HashSet<String>();
+
+	/** last message on this was written at what time */
+	private long _ddlLookup_infoMessage_last      = 0;
 	
+	/** print message every 5 minutes if queue is above _ddlLookup_infoMessage_queueSize */
+	private long _ddlLookup_infoMessage_period    = 300 * 1000; //  
+	
+	/** print message every X minutes if queue is above this value */
+	private int  _ddlLookup_infoMessage_queueSize = 20; 
+
+
 	/** Configuration we were initialized with */
 	private Configuration _props;
 	
@@ -77,17 +103,17 @@ implements Runnable
 
 	/** */
 	private BlockingQueue<DdlQueueEntry> _ddlInputQueue = new LinkedBlockingQueue<DdlQueueEntry>();
-	private int	_warnDdlInputQueueSizeThresh = 100;
+	private int	_warnDdlInputQueueSizeThresh = DEFAULT_ddl_warnDdlInputQueueSizeThresh;
 
 	/** */
 	private BlockingQueue<DdlDetails> _ddlStoreQueue = new LinkedBlockingQueue<DdlDetails>();
-	private int	_warnDdlStoreQueueSizeThresh = 100;
+	private int	_warnDdlStoreQueueSizeThresh = DEFAULT_ddl_warnDdlStoreQueueSizeThresh;
 	
 	/** Sleep for X ms, after a DDL lookup has been done, this so we don't flood the system with there requests */
-	private int _afterDdlLookupSleepTimeInMs = 500;
+	private int _afterDdlLookupSleepTimeInMs = DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
 	
 	/** */
-	private boolean _addDependantObjectsToDdlInQueue = true;
+	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
 	/*---------------------------------------------------
 	** Constructors
@@ -131,16 +157,36 @@ implements Runnable
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
 
-		_warnQueueSizeThresh         = _props.getIntProperty("PersistentCounterHandler.warnQueueSizeThresh",         _warnQueueSizeThresh);
-		_warnDdlInputQueueSizeThresh = _props.getIntProperty("PersistentCounterHandler.warnDdlInputQueueSizeThresh", _warnDdlInputQueueSizeThresh);
-		_warnDdlStoreQueueSizeThresh = _props.getIntProperty("PersistentCounterHandler.warnDdlStoreQueueSizeThresh", _warnDdlStoreQueueSizeThresh);
+		_warnQueueSizeThresh             = _props.getIntProperty    (PROP_warnQueueSizeThresh,                 _warnQueueSizeThresh);
 
-		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    ("PersistentCounterHandler.afterDdlLookupSleepTimeInMs",    _afterDdlLookupSleepTimeInMs);
-		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty("PersistentCounterHandler.addDependantObjectsToDdlInQueue", _addDependantObjectsToDdlInQueue);
+		// DDL Lookup & Store Props
+		_warnDdlInputQueueSizeThresh     = _props.getIntProperty    (PROP_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
+		_warnDdlStoreQueueSizeThresh     = _props.getIntProperty    (PROP_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
+
+		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    (PROP_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
+		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROP_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
+		
+		_doDdlLookupAndStore             = _props.getBooleanProperty(PROP_ddl_doDdlLookupAndStore,             _doDdlLookupAndStore);
 		
 		// property: alarm.handleAlarmEventClass
 		// NOTE: this could be a comma ',' separated list
-		String writerClasses = _props.getProperty("PersistentCounterHandler.WriterClass");
+		String writerClasses = _props.getProperty(PROP_WriterClass);
+
+		_logger.info("Configuration for PersistentCounterHandler");
+		_logger.info("                  "+PROP_WriterClass+"                         = "+writerClasses);
+		_logger.info("                  "+PROP_warnQueueSizeThresh+"                 = "+_warnQueueSizeThresh);
+		_logger.info("                  "+PROP_ddl_doDdlLookupAndStore+"             = "+_doDdlLookupAndStore);
+		_logger.info("                  "+PROP_ddl_addDependantObjectsToDdlInQueue+" = "+_addDependantObjectsToDdlInQueue);
+		_logger.info("                  "+PROP_ddl_afterDdlLookupSleepTimeInMs+"     = "+_afterDdlLookupSleepTimeInMs);
+		_logger.info("                  "+PROP_ddl_warnDdlInputQueueSizeThresh+"     = "+_warnDdlInputQueueSizeThresh);
+		_logger.info("                  "+PROP_ddl_warnDdlStoreQueueSizeThresh+"     = "+_warnDdlStoreQueueSizeThresh);
+
+		if (_doDdlLookupAndStore)
+			_logger.info("The most active objects/statements/etc, "+Version.getAppName()+" will do DDL Lookup and Store information about them. To turn this off, set the property 'PersistentCounterHandler.doDdlLookupAndStore' to 'false' in configuration for the PersistentCounterHandler module.");
+		else
+			_logger.info("No DDL Lookup and Store will be done. The property 'PersistentCounterHandler.doDdlLookupAndStore' is set to 'false' in configuration for the PersistentCounterHandler module.");
+
+		// Check writer classes
 		if (writerClasses == null)
 		{
 //			throw new Exception("The property 'PersistentCounterHandler.WriterClass' is mandatory for the PersistentCounterHandler module. It should contain one or several classes that implemets the IPersistWriter interface. If you have more than one writer, specify them as a comma separated list.");
@@ -216,6 +262,11 @@ implements Runnable
 	{
 		if (_writerClasses.size() == 0)
 			return;
+		if ( ! isRunning() )
+		{
+			_logger.warn("The Persistent Counter Handler is not running, discarding entry.");
+			return;
+		}
 
 		int qsize = _containerQueue.size();
 		if (qsize > _warnQueueSizeThresh)
@@ -224,6 +275,7 @@ implements Runnable
 		}
 
 		_containerQueue.add(cont);
+		fireQueueSizeChange();
 	}
 
 	/**
@@ -250,6 +302,9 @@ implements Runnable
 	}
 	private void addDdl(String dbname, String objectName, String source, String dependParent, int dependLevel)
 	{
+		if ( ! _doDdlLookupAndStore )
+			return;
+
 		if (_writerClasses.size() == 0)
 			return;
 
@@ -257,15 +312,27 @@ implements Runnable
 		if (StringUtil.isNullOrBlank(dbname) || StringUtil.isNullOrBlank(objectName))
 			return;
 
-		if (objectName.indexOf("temp worktable") >= 0 )
-			return;
-		
-		if (objectName.startsWith("#"))
-			return;
-		
-		if (objectName.startsWith("ObjId:"))
-			return;
-		
+		// Discard a bunch of entries
+		if (objectName.indexOf("temp worktable") >= 0 ) return;
+		if (objectName.startsWith("#"))                 return;
+		if (objectName.startsWith("ObjId:"))            return;
+		if (objectName.startsWith("Obj="))              return;
+		if (objectName.startsWith("*") && !objectName.startsWith("*ss")) return; // Prepared statements from ct_dynamic and Java PrepStatement??
+
+		// ---------------------------------
+		// Format of the Dynamic SQL statement is:
+		// *12345612345678_ffffff
+		// *_SPID_StmntId#_??????
+		// ---------------------------------
+		// *      = just a prefix
+		// 1-6    = SPID in decimal format
+		// 7-15   = Statement ID, just a incremental counter
+		// _      = separator
+		// ffffff = Hexadecimal value for something, which I did not figure out
+		// ---------------------------------
+		// There is no way to say what SQL Statement that is behands the LW Procedure 
+		// ---------------------------------
+
 		// check if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
 		for (IPersistWriter pw : _writerClasses)
@@ -292,6 +359,7 @@ implements Runnable
 
 		DdlQueueEntry entry = new DdlQueueEntry(dbname, objectName, source, dependParent, dependLevel);
 		_ddlInputQueue.add(entry);
+		fireQueueSizeChange();
 	}
 
 	
@@ -329,8 +397,6 @@ implements Runnable
 		// Statement Cache object
 		boolean isStatementCache = false;
 		String  ssqlid = null;
-// s00 is the old style of ID, FIXME: add this
-//		if (objectName.startsWith("*ss") || objectName.startsWith("s00") )
 		if (objectName.startsWith("*ss"))
 		{
 			isStatementCache = true;
@@ -358,7 +424,17 @@ implements Runnable
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
-System.out.println("Getting DDL information about object '"+dbname+"."+objectName+"', InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size());
+
+		// Print INFO message if IN-QUEUE is above X and a certain time has pased
+		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
+		{
+			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
+			if (_ddlLookup_infoMessage_period > howLongAgo)
+			{
+				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
+				_ddlLookup_infoMessage_last = System.currentTimeMillis();
+			}
+		}
 
 		// Statement Cache objects
 		if (isStatementCache)
@@ -443,6 +519,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				}
 			}
 			_ddlStoreQueue.add(entry);
+			fireQueueSizeChange();
 		}
 		else // all other tables
 		{
@@ -687,7 +764,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 						}
 						else
 						{
-							_logger.warn("When getting dependent objects using 'sp_depends', I was expecting a column named 'object'. But it wasn't found. The result set had "+rsmd.getColumnCount()+" columns. Skipping lookup for dependent object for '"+entry.getFullObjectName()+"'.");
+							_logger.debug("When getting dependent objects using 'sp_depends', I was expecting a column named 'object'. But it wasn't found. The result set had "+rsmd.getColumnCount()+" columns. Skipping lookup for dependent object for '"+entry.getFullObjectName()+"'.");
 						}
 						rs.close();
 						statement.close();
@@ -711,6 +788,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 					_logger.warn("The DDL Storage queue has "+qsize+" entries. The persistent writer might not keep in pace.");
 				}
 				_ddlStoreQueue.add(entry);
+				fireQueueSizeChange();
 	
 			} // end: for (DdlDetails entry : objectList)
 
@@ -762,6 +840,13 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 		// loop all writer classes
 		for (IPersistWriter pw : _writerClasses)
 		{
+			// if we are about to STOP the service
+			if ( ! isRunning() )
+			{
+				_logger.info("The service is about to stop, discarding a consume(DdlQueueEntry:Input) queue entry.");
+				continue;
+			}
+
 			// Set/restore the original sessionStartTime
 			cont.setSessionStartTime(initialSessionStartTime);
 
@@ -791,7 +876,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				// Set the Session Start Time in the container.
 				Timestamp newTs = pw.getSessionStartTime();
 				cont.setSessionStartTime(newTs);
-				
+
 				// CREATE-DDL
 				for (CountersModel cm : cont._counterObjects)
 				{
@@ -824,7 +909,9 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				// Stop clock and print statistics.
 				long stopTime = System.currentTimeMillis();
 				long execTime = stopTime-startTime;
-				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', mainSampleTime='"+cont.getMainSampleTime()+"'. This persist took "+execTime+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
+
+				firePcsConsumeInfo(pw.getName(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getInserts(), pw.getUpdates(), pw.getDeletes(), pw.getCreateTables(), pw.getAlterTables(), pw.getDropTables());
+//				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', mainSampleTime='"+cont.getMainSampleTime()+"'. This persist took "+execTime+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
 			}
 			catch (Throwable t)
 			{
@@ -879,7 +966,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			_running = true;
 			long prevLookupTimeMs = 0;
 	
-			while(_running)
+			while(isRunning())
 			{
 				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
@@ -891,11 +978,23 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				try 
 				{
 					DdlQueueEntry qe = _ddlInputQueue.take();
-	
+					fireQueueSizeChange();
+
+					// this should not happen, but just in case
+					if ( ! _doDdlLookupAndStore )
+						continue;
+
 					// Make sure the container isn't empty.
 					if (qe == null)
 						continue;
 	
+					// if we are about to STOP the service
+					if ( ! isRunning() )
+					{
+						_logger.info("The service is about to stop, discarding a consume(DdlQueueEntry:Input) queue entry.");
+						continue;
+					}
+
 					// Go and store or consume the in-data/container
 					long startTime = System.currentTimeMillis();
 					boolean didLookup = ddlLookup( qe, prevLookupTimeMs );
@@ -916,6 +1015,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 			_logger.info("Emptying the DDL Input queue for module '"+threadName+"', which had "+_ddlInputQueue.size()+" entries.");
 			_ddlInputQueue.clear();
+			fireQueueSizeChange();
 
 			// Close the Lookup Connection
 			closeDdlLookupConnection();
@@ -940,7 +1040,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			_running = true;
 			long prevConsumeTimeMs = 0;
 	
-			while(_running)
+			while(isRunning())
 			{
 				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
@@ -952,11 +1052,27 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 				try 
 				{
 					DdlDetails ddlDetails = _ddlStoreQueue.take();
-	
+					fireQueueSizeChange();
+
+					// this should not happen, but just in case
+					if ( ! _doDdlLookupAndStore )
+						continue;
+
 					// Make sure the container isn't empty.
 					if (ddlDetails == null)
 						continue;
-	
+
+					if (ddlDetails.isEmpty())
+						continue;
+					
+					// if we are about to STOP the service
+					if ( ! isRunning() )
+					{
+						_logger.info("The service is about to stop, discarding a consume(DdlQueueEntry:Store) queue entry.");
+						continue;
+					}
+
+
 					// Go and store or consume the in-data/container
 					long startTime = System.currentTimeMillis();
 					saveDdl( ddlDetails, prevConsumeTimeMs );
@@ -974,6 +1090,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 	
 			_logger.info("Emptying the DDL Input queue for module '"+threadName+"', which had "+_ddlInputQueue.size()+" entries.");
 			_ddlInputQueue.clear();
+			fireQueueSizeChange();
 	
 			_logger.info("Thread '"+threadName+"' was stopped.");
 		}
@@ -992,7 +1109,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 		_running = true;
 		long prevConsumeTimeMs = 0;
 
-		while(_running)
+		while(isRunning())
 		{
 			//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
 			//try { Thread.sleep(5 * 1000); }
@@ -1004,11 +1121,19 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			try 
 			{
 				PersistContainer cont = _containerQueue.take();
+				fireQueueSizeChange();
 
 				// Make sure the container isn't empty.
 				if (cont == null)                     continue;
 				if (cont._counterObjects == null)	  continue;
 				if (cont._counterObjects.size() <= 0) continue;
+
+				// if we are about to STOP the service
+				if ( ! isRunning() )
+				{
+					_logger.info("The service is about to stop, discarding a consume(PersistContainer) queue entry.");
+					continue;
+				}
 
 				// Go and store or consume the in-data/container
 				long startTime = System.currentTimeMillis();
@@ -1027,6 +1152,7 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 
 		_logger.info("Emptying the queue for module '"+threadName+"', which had "+_containerQueue.size()+" entries.");
 		_containerQueue.clear();
+		fireQueueSizeChange();
 
 		_logger.info("Thread '"+threadName+"' was stopped.");
 	}
@@ -1058,27 +1184,38 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 		_thread.setDaemon(true);
 		_thread.start();
 
-		// Start the DDL Lookup Thread
-		_ddlLookup = new DdlLookup();
-		_ddlLookupThread = new Thread(_ddlLookup);
-		_ddlLookupThread.setName("DdlLookupThread");
-		_ddlLookupThread.setDaemon(true);
-		_ddlLookupThread.start();
+		if (_doDdlLookupAndStore)
+		{
+			// Start the DDL Lookup Thread
+			_ddlLookup = new DdlLookup();
+			_ddlLookupThread = new Thread(_ddlLookup);
+			_ddlLookupThread.setName("DdlLookupThread");
+			_ddlLookupThread.setDaemon(true);
+			_ddlLookupThread.start();
 
-		// Start the DDL Storage Thread
-		_ddlStorage = new DdlStorageConsumer();
-		_ddlStorageThread = new Thread(_ddlStorage);
-		_ddlStorageThread.setName("DdlStorageThread");
-		_ddlStorageThread.setDaemon(true);
-		_ddlStorageThread.start();
+			// Start the DDL Storage Thread
+			_ddlStorage = new DdlStorageConsumer();
+			_ddlStorageThread = new Thread(_ddlStorage);
+			_ddlStorageThread.setName("DdlStorageThread");
+			_ddlStorageThread.setDaemon(true);
+			_ddlStorageThread.start();
+		}
 	}
 
 	/**
 	 * Stop this subsystem
 	 */
-	public void stop()
+	public void stop(boolean clearQueues, int maxWaitTimeInMs)
 	{
 		_running = false;
+
+		if (clearQueues)
+		{
+			_containerQueue.clear();
+			_ddlInputQueue.clear();
+			_ddlStoreQueue.clear();
+			fireQueueSizeChange();
+		}
 
 		if (_thread != null)
 		{
@@ -1098,13 +1235,18 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			_ddlStorageThread = null;
 		}
 
-		// Close the connections to the datastore.
+		// Close the connections to the data store.
 		for (IPersistWriter pw : _writerClasses)
 		{
+			// Do this first, otherwise the wait time wont work, if close(); closes the db connection
+			pw.stopServices(maxWaitTimeInMs);
+
+			// Note: that stop service might stop the service before we disconnect from it
+			//       so you could expect some error messages, which could be discarded
 			pw.close();
-			pw.stopServices();
 		}
 	}
+	
 
 	/**
 	 * Check if we have any writers installed/attached
@@ -1293,6 +1435,73 @@ System.out.println("Getting DDL information about object '"+dbname+"."+objectNam
 			sb.append(_dbname).append(":").append(_objectName);
 			return sb.toString(); 
 		}
+	}
+
+
+	/*---------------------------------------------------
+	** Listener stuff
+	**---------------------------------------------------
+	*/
+	/** interface to be invoked when any of the internal queue sizes is changed */
+	public interface PcsQueueChange
+	{
+		/**
+		 * This will be called when any of the queue changes in size
+		 * @param pcsQueueSize          Queue size of the in bound container queue
+		 * @param ddlLookupQueueSize    Queue size of the DDL Lookups to be done
+		 * @param ddlStoreQueueSize     Queue size of the DDL Storage to be done
+		 */
+		public void pcsStorageQueueChange(int pcsQueueSize, int ddlLookupQueueSize, int ddlStoreQueueSize);
+
+		/**
+		 * This will be called once for each of the Persist Writers
+		 * @param persistWriterName   Name of the Writer
+		 * @param sessionStartTime    Time when the SESSION started to collect data
+		 * @param mainSampleTime      Time for last main period (if sample time is 10 seconds, this will be the "head" time for all subsequent Performance Counters individual times)
+		 * @param persistTimeInMs     Number of milliseconds it took for the Performance Writer to store the data
+		 * @param inserts             Number of insert operations that was done for this save
+		 * @param updates             Number of update operations that was done for this save
+		 * @param deletes             Number of delete operations that was done for this save
+		 * @param createTables        Number of create table operations that was done for this save
+		 * @param alterTables         Number of alter table operations that was done for this save
+		 * @param dropTables          Number of drop table operations that was done for this save
+		 */
+		public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, int inserts, int updates, int deletes, int createTables, int alterTables, int dropTables);
+	}
+
+	/** listeners */
+	Set<PcsQueueChange> _queueChangeListeners = new HashSet<PcsQueueChange>();
+
+	/** Add any listeners that want to see changes */
+	public void addChangeListener(PcsQueueChange l)
+	{
+		_queueChangeListeners.add(l);
+	}
+
+	/** Remove the listener */
+	public void removeChangeListener(PcsQueueChange l)
+	{
+		_queueChangeListeners.remove(l);
+	}
+
+	/** Kicked off when new entries are added */
+	protected void fireQueueSizeChange()
+	{
+		int pcsQueueSize       = _containerQueue.size();
+		int ddlLookupQueueSize = _ddlInputQueue .size();
+		int ddlStoreQueueSize  = _ddlStoreQueue .size();
+
+		for (PcsQueueChange l : _queueChangeListeners)
+			l.pcsStorageQueueChange(pcsQueueSize, ddlLookupQueueSize, ddlStoreQueueSize);
+	}
+
+	/** Kicked off when consume is done */
+	public void firePcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, int inserts, int updates, int deletes, int createTables, int alterTables, int dropTables)
+	{
+		_logger.info("Persisting Counters using '"+persistWriterName+"' for sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. inserts="+inserts+", updates="+updates+", deletes="+deletes+", createTables="+createTables+", alterTables="+alterTables+", dropTables="+dropTables+".");
+
+		for (PcsQueueChange l : _queueChangeListeners)
+			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, inserts, updates, deletes, createTables, alterTables, dropTables);
 	}
 
 	//////////////////////////////////////////////////////////////////////

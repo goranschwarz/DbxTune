@@ -525,6 +525,12 @@ extends AbstractTableModel
 	@Override
 	public boolean isCellEditable(int rowIndex, int columnIndex)
 	{
+		switch (columnIndex)
+		{
+		case 1:  return true;
+		case 2:  return true;
+		case 16: return true;
+		}
 		return false;
 	}
 

@@ -27,6 +27,8 @@ import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
+import com.asetune.pcs.PersistWriterJdbc;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Debug;
@@ -351,13 +353,13 @@ public class AseTune
 					String jdbcUser   = "sa";
 					String jdbcPasswd = "";
 
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcDriver", jdbcDriver);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUrl",    jdbcUrl);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
-					storeConfigProps.setProperty("PersistWriterJdbc.startH2NetworkServer", true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,           jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,              jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername,         jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword,         jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_startH2NetworkServer, true);
 
-					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
 				}
@@ -388,12 +390,12 @@ public class AseTune
 					String jdbcUser   = aseUser;
 					String jdbcPasswd = asePasswd;
 
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcDriver", jdbcDriver);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUrl",    jdbcUrl);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd);
 
-					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
 				}
@@ -420,12 +422,12 @@ public class AseTune
 					String jdbcUser   = asaUser;
 					String jdbcPasswd = asaPasswd;
 
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcDriver", jdbcDriver);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUrl",    jdbcUrl);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcUser",   jdbcUser);
-					storeConfigProps.setProperty("PersistWriterJdbc.jdbcPasswd", jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd);
 
-					storeConfigProps.setProperty("PersistentCounterHandler.WriterClass", "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
 				}

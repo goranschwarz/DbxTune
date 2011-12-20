@@ -1067,6 +1067,47 @@ extends Thread
 				return sql;
 			}
 			
+			/** 
+			 * reset some negative counters to 0
+			 */
+			@Override
+			public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+			{
+				SamplingCnt counters = diffData;
+				
+				if (counters == null)
+					return;
+
+				// SUMMARY only have 1 row, so this was simplest way, do not do like this on CM's that has many rows
+				// Loop on all diffData rows
+				for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+				{
+					checkAndSetNc20(counters, rowId, "Transactions");
+					checkAndSetNc20(counters, rowId, "io_total_read");
+					checkAndSetNc20(counters, rowId, "io_total_write");
+					checkAndSetNc20(counters, rowId, "pack_received");
+					checkAndSetNc20(counters, rowId, "pack_sent");
+					checkAndSetNc20(counters, rowId, "packet_errors");
+				}
+			}
+			private void checkAndSetNc20(SamplingCnt counters, int rowId, String columnName)
+			{
+				int colId = counters.findColumn(columnName);
+				if (colId >= 0)
+				{
+					Object obj  = counters.getValueAt(rowId, colId);
+					if (obj instanceof Number)
+					{
+						//System.out.println("colId="+colId+", name='"+columnName+"', o="+obj);
+						if (((Number)obj).intValue() < 0)
+						{
+							//System.out.println("colId="+colId+", name='"+columnName+"', setting to Integer(0)");
+							counters.setValueAt(new Integer(0), rowId, colId);
+						}
+					}
+				}
+			}
+
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
@@ -1561,8 +1602,8 @@ extends Thread
 				         ObjectName + 
 				         "A.IndexID, \n" +
 				         IndexName +
-//				         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
 				         "LockScheme = lockscheme(A.ObjectID, A.DBID), \n" +
+				         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
 				         "LockRequests=isnull(LockRequests,0), LockWaits=isnull(LockWaits,0), \n" +
 				         "LockContPct = CASE WHEN isnull(LockRequests,0) > 0 \n" +
 				         "                   THEN convert(numeric(10,1), ((LockWaits+0.0)/(LockRequests+0.0)) * 100.0) \n" +
@@ -1578,7 +1619,7 @@ extends Thread
 				         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
 				         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n";
 				cols2 += "";
-				cols3 += "LastOptSelectDate, LastUsedDate, Remark = convert(varchar(60), '')";
+				cols3 += "LastOptSelectDate, LastUsedDate";
 			//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 			// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
 				if (aseVersion >= 15020)

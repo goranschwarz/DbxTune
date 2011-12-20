@@ -89,7 +89,7 @@ public class PersistWriterToBcpFiles
 	{
 	}
 	@Override
-	public void stopServices()
+	public void stopServices(int maxWaitTimeInMs)
 	{
 	}
 

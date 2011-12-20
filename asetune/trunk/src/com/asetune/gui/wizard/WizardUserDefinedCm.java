@@ -5,6 +5,7 @@ package com.asetune.gui.wizard;
 
 
 import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.Properties;
 
@@ -18,6 +19,7 @@ import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.SwingUtils;
 
 
 public class WizardUserDefinedCm
@@ -36,7 +38,8 @@ public class WizardUserDefinedCm
 	public WizardUserDefinedCm()
 	{
 		System.clearProperty("wizard.sidebar.image");
-//		System.setProperty("wizard.sidebar.image", "asetune/gui/wizard/WizardUserDefinedCm.png");
+//		System.setProperty("wizard.sidebar.image", "com/asetune/gui/wizard/WizardUserDefinedCm.png");
+//      The image 'WizardUserDefinedCm.png' does not exist.
 
 //		BufferedImage img = ImageIO.read (getClass().getResource ("WizardUserDefinedCm.png"));
 //		UIManager.put ("wizard.sidebar.image", img);

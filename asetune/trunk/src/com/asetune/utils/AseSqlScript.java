@@ -97,7 +97,11 @@ implements SybMessageHandler
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems when doing set|getAutoCommit on the connection.", e);
+			// JZ0C0 = Connection is already closed
+			if ( "JZ0C0".equals(e.getSQLState()) )
+				_logger.info("Problems when doing close() on AseSqlScript object (restore autoCommit and database context). SQL State 'JZ0C0', Connection is Already closed. JDBC Message: "+e.getMessage());
+			else
+				_logger.warn("Problems when doing set|getAutoCommit on the connection.", e);
 		}
 
 		// Restore message handler

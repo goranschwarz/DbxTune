@@ -105,7 +105,7 @@ import com.asetune.utils.SwingUtils;
 
 public class MainFrame
     extends JFrame
-    implements ActionListener, ChangeListener, TableModelListener, TabOrderAndVisibilityListener
+    implements ActionListener, ChangeListener, TableModelListener, TabOrderAndVisibilityListener, PersistentCounterHandler.PcsQueueChange
 {
 	private static final long    serialVersionUID = 8984251025337127843L;
 	private static Logger        _logger          = Logger.getLogger(MainFrame.class);
@@ -248,6 +248,10 @@ public class MainFrame
 	private static JLabel             _statusServerName          = new JLabel(ST_DEFAULT_SERVER_NAME);
 	private static JLabel             _statusServerListeners     = new JLabel(ST_DEFAULT_SERVER_LISTENERS);
 	private static JLabel             _statusMemory              = new JLabel("JVM Memory Usage");
+	private static JLabel             _statusPcsQueueSize          = new JLabel();
+	private static JLabel             _statusPcsPersistInfo        = new JLabel();
+	private static JLabel             _statusPcsDdlLookupQueueSize = new JLabel();
+	private static JLabel             _statusPcsDdlStoreQueueSize  = new JLabel();
 
 	//-------------------------------------------------
 	// Toolbar Panel
@@ -775,6 +779,10 @@ public class MainFrame
 		_statusServerName     .setToolTipText("<html>The local name of the ASE Server, as named in the interfaces or sql.ini file.<BR>Also show the HOST:PORT, which we are connected to.</html>");
 		_statusServerListeners.setToolTipText("<html>This is the network listeners the ASE Servers listens to.<BR>This is good to see if we connect via SSH tunnels or other proxy functionality.<br>The format is netlibdriver: HOST PORT, next entry...</html>");
 		_statusMemory         .setToolTipText("How much memory does the JVM consume for the moment.");
+		_statusPcsQueueSize         .setToolTipText("Number of entries in the Performance Counter Storage Queue.");
+		_statusPcsPersistInfo       .setToolTipText("PCS Information, For Example: How long did the last persist took");
+		_statusPcsDdlLookupQueueSize.setToolTipText("Number of entries in the DDL Lookup Queue.");
+		_statusPcsDdlStoreQueueSize .setToolTipText("Number of entries in the DDL Storage Queue.");
 
 		// Blocking LOCK alert butt
 		_blockAlert_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/block_lock_alert.png"));
@@ -847,6 +855,11 @@ public class MainFrame
 		_statusPanel.add(_statusServerName,                       "right");
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
 		_statusPanel.add(_statusServerListeners,                  "right");
+		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
+		_statusPanel.add(_statusPcsQueueSize,                     "hidemode 3");
+		_statusPanel.add(_statusPcsPersistInfo,                   "hidemode 3");
+		_statusPanel.add(_statusPcsDdlLookupQueueSize,            "hidemode 3");
+		_statusPanel.add(_statusPcsDdlStoreQueueSize,             "hidemode 3");
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
 		_statusPanel.add(_statusMemory,                           "right");
 		_statusPanel.add(_gcNow_but,                              "right");
@@ -1772,8 +1785,13 @@ public class MainFrame
 					getCnt.enableRefresh();
 				}
 				
+				if (PersistentCounterHandler.hasInstance())
+				{
+					PersistentCounterHandler.getInstance().addChangeListener(this);
+				}
+
 				CheckForUpdates.sendConnectInfoNoBlock(connType);
-				
+
 				// Set title...
 			}
 		} // end: ASE_CONN
@@ -1961,7 +1979,13 @@ public class MainFrame
 				if ( PersistentCounterHandler.hasInstance() )
 				{
 					wait.setState("Stopping Persist Storage Handler, if H2 do SHUTDOWN.");
-					PersistentCounterHandler.getInstance().stop();
+					PersistentCounterHandler.getInstance().stop(true, 10*1000);
+					
+					wait.setState("Removing Persist Storage Handler Change listener.");
+					PersistentCounterHandler.getInstance().removeChangeListener(MainFrame.getInstance());
+
+					wait.setState("UnRegister the Persist Storage Handler");
+					PersistentCounterHandler.setInstance(null);
 				}
 
 				//--------------------------
@@ -3092,6 +3116,43 @@ public class MainFrame
 		}
 	}
 
+	/** implemets PersistentCounterHandler.PcsQueueChange */
+	@Override
+	public void pcsStorageQueueChange(int pcsQueueSize, int ddlLookupQueueSize, int ddlStoreQueueSize)
+	{
+		_statusPcsQueueSize         .setVisible(true);
+		_statusPcsDdlLookupQueueSize.setVisible(true);
+		_statusPcsDdlStoreQueueSize .setVisible(true);
+
+		_statusPcsQueueSize         .setText("" + pcsQueueSize);
+		_statusPcsDdlLookupQueueSize.setText("" + ddlLookupQueueSize);
+		_statusPcsDdlStoreQueueSize .setText("" + ddlStoreQueueSize);
+	}
+	@Override
+	public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, int inserts, int updates, int deletes, int createTables, int alterTables, int dropTables)
+	{
+		_statusPcsPersistInfo.setVisible(true);
+		_statusPcsPersistInfo.setText("(" + persistTimeInMs + " ms)");
+		
+		StringBuilder sb = new StringBuilder();
+			sb.append("<html>\n");
+			sb.append("Last PCS Information, For Example: How long did the last persist took.<br>\n");
+			sb.append("<br>\n");
+			sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH=\"100%\">\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>WriterName      </TD> <TD>").append( persistWriterName ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>sessionStartTime</TD> <TD>").append( sessionStartTime  ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>mainSampleTime  </TD> <TD>").append( mainSampleTime    ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>persistTimeInMs </TD> <TD>").append( persistTimeInMs   ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>inserts         </TD> <TD>").append( inserts           ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>updates         </TD> <TD>").append( updates           ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>deletes         </TD> <TD>").append( deletes           ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>createTables    </TD> <TD>").append( createTables      ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>alterTables     </TD> <TD>").append( alterTables       ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>dropTables      </TD> <TD>").append( dropTables        ).append("</TD></TR>\n");
+			sb.append("</TABLE>\n");
+			sb.append("</html>");
+		_statusPcsPersistInfo.setToolTipText(sb.toString());
+	}
 
 	/**
 	 * Gets current values from the status panel.
@@ -3152,6 +3213,11 @@ public class MainFrame
 				_statusServerName.setText("Offline-read");
 				_statusServerListeners.setText("Offline-read");
 
+				_statusPcsQueueSize         .setVisible(false);
+				_statusPcsPersistInfo       .setVisible(false);
+				_statusPcsDdlLookupQueueSize.setVisible(false);
+				_statusPcsDdlStoreQueueSize .setVisible(false);
+
 				_summaryPanel.setLocalServerName("Offline-read");
 
 				// SET WATERMARK
@@ -3198,7 +3264,13 @@ public class MainFrame
 				String aseHostPort = AseConnectionFactory.getHostPortStr();
 				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
 				getInstance().setTitle(Version.getAppName(), srvStr);
-				
+
+				boolean hasPcsStorage = PersistentCounterHandler.hasInstance();
+				_statusPcsQueueSize         .setVisible(hasPcsStorage);
+				_statusPcsPersistInfo       .setVisible(hasPcsStorage);
+				_statusPcsDdlLookupQueueSize.setVisible(hasPcsStorage);
+				_statusPcsDdlStoreQueueSize .setVisible(hasPcsStorage);
+
 				setMenuMode(ST_CONNECT);
 			}
 			else
@@ -3215,6 +3287,11 @@ public class MainFrame
 			_statusServerListeners.setText(ST_DEFAULT_SERVER_LISTENERS);
 			_statusStatus         .setText(ST_DEFAULT_STATUS_FIELD);
 			_statusStatus2        .setText(ST_DEFAULT_STATUS2_FIELD);
+
+			_statusPcsQueueSize         .setVisible(false);
+			_statusPcsPersistInfo       .setVisible(false);
+			_statusPcsDdlLookupQueueSize.setVisible(false);
+			_statusPcsDdlStoreQueueSize .setVisible(false);
 
 			_summaryPanel.setLocalServerName("");
 

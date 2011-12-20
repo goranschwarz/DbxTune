@@ -7,6 +7,18 @@ public class ADummyTest
 
 	public static void main(String[] args)
 	{
+		String colName       = "123:4";
+		String colModifier   = null;
+		int    colNameSepPos = colName.indexOf(':');
+		if (colNameSepPos > 0)
+		{
+			colModifier = colName.substring(colNameSepPos + 1);
+			colName     = colName.substring(0, colNameSepPos);
+		}
+		System.out.println("colName    ='"+colName+"'.");
+		System.out.println("colModifier='"+colModifier+"'.");
+
+
 		//xxx: get/set last file choosen...action in some way...
 		testUrl("jdbc:h2:file:C:/projects/asetune/data/xxx;IFEXISTS=TRUE");
 		testUrl("jdbc:h2:~/test;IFEXISTS=TRUE");

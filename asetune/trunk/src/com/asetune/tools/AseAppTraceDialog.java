@@ -456,8 +456,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		panel.add(_aseSaveDir_txt,        "growx, wrap");
 
 		panel.add(new JLabel(""),         "wrap, push"); // dummy JLabel just to do "push", it will disappear if
-
 		panel.add(_warning_lbl,           "span, split, growx");
+
 		panel.add(_aseSpid_lbl,           "gap 10");
 		panel.add(_aseSpid_txt,           "w 50");
 		panel.add(_aseSpid_but,           "");
@@ -1043,12 +1043,13 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				{
 					String curDir = _traceOutSave_txt.getText();
 					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+					if (newDir != null)
+						newDir = newDir.replace('\\', '/');
 					_traceOutSave_txt.setText(newDir);
 
 					SwingUtils.showInfoMessage(this, "Directory not found", 
 						"<html>The directory '"+curDir+"' didn't exist!<br>Setting the save directory to '"+newDir+"'.</html>");
 				}
-					_traceOutSave_txt.setText(System.getProperty("ASETUNE_SAVE_DIR"));
 			}
 		}
 		
@@ -1063,6 +1064,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				{
 					String curDir = _procSave_txt.getText();
 					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+					if (newDir != null)
+						newDir = newDir.replace('\\', '/');
 					_procSave_txt.setText(newDir);
 
 					SwingUtils.showInfoMessage(this, "Directory not found", 
@@ -1990,6 +1993,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private void appendTraceOutFile(String row, boolean flushBuffer)
 	{
 		if ( ! _traceOutSave_chk.isSelected() )
+			return;
+
+		if (StringUtil.isNullOrBlank(getAseTraceFileFinalOnlyFileName()))
 			return;
 
 		if (row != null)
