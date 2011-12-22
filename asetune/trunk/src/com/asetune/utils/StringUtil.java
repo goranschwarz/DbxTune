@@ -727,6 +727,15 @@ public class StringUtil
 
 		return str.trim().equals("");
 	}
+	/**
+	 * if NOT null or NOT empty, simply do: return ! isNullOrBlank(str)
+	 * @param str
+	 * @return
+	 */
+	public static boolean hasValue(String str)
+	{
+		return ! isNullOrBlank(str);
+	}
 
 	/**
 	 * Check if 'inStr' is part of the 'regexArr'

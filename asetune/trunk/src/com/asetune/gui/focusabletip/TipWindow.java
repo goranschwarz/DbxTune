@@ -198,8 +198,8 @@ class TipWindow extends JWindow implements ActionListener {
 
 			if (d.height > (screenSize.height - 80))
 				d.height = screenSize.height - 80;
-			if (d.width > screenSize.width)
-				d.width = screenSize.width;
+			if (d.width > screenSize.width - 100)
+				d.width = screenSize.width - 100;
 
 			textArea.setPreferredSize(d);
 
