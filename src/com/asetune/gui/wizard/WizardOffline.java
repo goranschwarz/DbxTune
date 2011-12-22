@@ -19,7 +19,6 @@ import org.netbeans.spi.wizard.WizardPage;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.SwingUtils;
 
 
 public class WizardOffline

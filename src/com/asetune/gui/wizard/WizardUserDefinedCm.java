@@ -5,7 +5,6 @@ package com.asetune.gui.wizard;
 
 
 import java.awt.Dimension;
-import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.Properties;
 
@@ -19,7 +18,6 @@ import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.SwingUtils;
 
 
 public class WizardUserDefinedCm
