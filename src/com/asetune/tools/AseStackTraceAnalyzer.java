@@ -22,6 +22,7 @@ import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -43,9 +44,13 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -310,6 +315,31 @@ public class AseStackTraceAnalyzer
 			}
 		}
 
+		/**
+		 * Sort all child's, based on _count descending
+		 */
+		public void sort()
+		{
+			sort(_root);
+		}
+		private void sort(StackEntry se)
+		{
+			// do sorting on child map, based on _count
+			se._childMap = CollectionUtils.sortByValuesDesc(se._childMap, false);
+
+			// do sorting on discard map, if it contains more than one entry
+			if (se._functionStackStartDiscardMap.size() > 1 )
+				se._functionStackStartDiscardMap = CollectionUtils.sortByValuesDesc(se._functionStackStartDiscardMap, false);
+			
+			// Do sorting on any children
+			for (String name : se._childMap.keySet())
+			{
+				StackEntry c = se._childMap.get(name);
+
+				if (c.hasChildren())
+					sort(c);
+			}
+		}
 
 		private boolean matchFunctionFilter(String functionName)
 		{
@@ -401,12 +431,19 @@ public class AseStackTraceAnalyzer
 	}
 
 
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	/**
 	 * Class that holds one "level" in the stack trace<br>
 	 * The counter is incremented every time this specific level is executed or seen at a specific place in the stack trace 
 	 * @author gorans
 	 */
 	private static class StackEntry
+	implements Comparable<StackEntry>
 	{
 		String _name = "";
 		int _depth = 0;
@@ -475,9 +512,25 @@ public class AseStackTraceAnalyzer
 				_count + 
 				"</font></b></html>";
 		}
+
+		@Override
+		public int compareTo(StackEntry o)
+		{
+			int c = _count - o._count;
+			if (c > 0) return 1;
+			if (c < 0) return -1;
+			return 0;
+//			return _count - o._count;
+		}
 	}
 
 
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	/**
 	 * The graphical representation of the parsed sybmon stack trace file.
 	 * @author gorans
@@ -519,6 +572,8 @@ public class AseStackTraceAnalyzer
 		private JTextField   _sampleCount_txt        = new JTextField();
 		private JLabel       _sampleSleep_lbl        = new JLabel("Sleep time between samples");
 		private JTextField   _sampleSleep_txt        = new JTextField();
+
+		private JButton      _sybmonExample_but      = new JButton("Example Script to do Stack Trace");
 
 		private JTree        _treeView               = null;
 
@@ -631,48 +686,7 @@ public class AseStackTraceAnalyzer
 			_sampleSleep_lbl       .setToolTipText("<html>How long time was it between the samples</html>"); 
 			_sampleSleep_txt       .setToolTipText("<html>How long time was it between the samples</html>"); 
 
-			String str =
-				"<html>" +
-				"Here is a script of how a stack trace can be sampled.<br>" +
-//				"<code>" +
-				"<pre>" +
-				"----------------------------------------------------------------------------\n" +
-				"#!/bin/ksh\n" +
-				"\n" +
-				"#export DSQUERY=ase_server_name \n" +
-				"#export SYBASE=/opt/sybase15 \n" +
-				"#export SYBASE_ASE=ASE-15_0 \n" +
-				"#export SYBASE_OCS=OCS-15_0 \n" +
-				" \n" +
-				"# setup LD_LIBRARY_PATH \n" + 
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH \n" +
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH \n" +
-				" \n" +
-				" \n" +
-				"echo 'Starting' \n" +
-				" \n" +
-				"dttm=$(date +%Y%m%d_%H%M%S) \n" +
-				" \n" +
-				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2&gt;/dev/null &lt;&lt; SYBMON \n" +
-				"cat $SYBASE/$SYBASE_ASE \n" +
-				"attach $DSQUERY \n" +
-				"log on sample_${dttm}.out \n" +
-				"set display off \n" +
-				"sample count=500 interval=100 context=y \n" +
-				"log close \n" +
-				"quit \n" +
-				"SYBMON \n" +
-				" \n" +
-				"if [ ! -f sample_${dttm}.out ] \n" +
-				"then \n" +
-				"	echo 'An error occured. The file has not been created' \n" +
-				"	exit -1 \n" +
-				"fi \n" +
-				"----------------------------------------------------------------------------\n" +
-				"</pre>" +
-//				"</code>" +
-				"</html>";
-			panel.setToolTipText(str);
+			_sybmonExample_but     .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
 
 			_sampleCount_txt.setEditable(false);
 			_sampleSleep_txt.setEditable(false);
@@ -712,6 +726,8 @@ public class AseStackTraceAnalyzer
 			panel.add(_sampleCount_txt,        "w 50");
 			panel.add(_sampleSleep_lbl,        "");
 			panel.add(_sampleSleep_txt,        "w 50");
+			panel.add(new JLabel(""),          "push, grow");
+			panel.add(_sybmonExample_but,      "wrap");
 
 			// set action
 			_loadRefresh_but       .setActionCommand(ACTION_DO_PARSE);
@@ -731,6 +747,7 @@ public class AseStackTraceAnalyzer
 			_functionFilter_txt    .addActionListener(this);
 			_functionStackStart_txt.addActionListener(this);
 			_tracefile_txt         .addActionListener(this);
+			_sybmonExample_but     .addActionListener(this);
 
 			// Focus action listener
 
@@ -892,6 +909,12 @@ public class AseStackTraceAnalyzer
 				}
 			}
 
+			// BUT: Example of SYBMON script
+			if (_sybmonExample_but.equals(source))
+			{
+				showSybmonExampleScript();
+			}
+			
 			// BUT: load trace file
 //			if (_loadRefresh_but.equals(source))
 			if (ACTION_DO_PARSE.equals(action))
@@ -936,6 +959,7 @@ public class AseStackTraceAnalyzer
 						try
 						{
 							str.readFile();
+							str.sort();
 						}
 						catch (Exception e)
 						{
@@ -959,6 +983,86 @@ public class AseStackTraceAnalyzer
 		}
 
 		
+		private void showSybmonExampleScript()
+		{
+			String exampleStr =
+				"#!/bin/ksh\n" +
+				"\n" +
+				"#--- Setup environment if this is not done from the caller of the script \n" +
+				"#export DSQUERY=ase_server_name \n" +
+				"#export SYBASE=/opt/sybase15 \n" +
+				"#export SYBASE_ASE=ASE-15_0 \n" +
+				"#export SYBASE_OCS=OCS-15_0 \n" +
+				" \n" +
+				"#--- Setup LD_LIBRARY_PATH (Solaris, Linux), SHLIB (hp), LIBPATH (aix),  \n" + 
+				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH \n" +
+				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH \n" +
+				" \n" +
+				" \n" +
+				"echo 'Starting' \n" +
+				" \n" +
+				"dttm=$(date +%Y%m%d_%H%M%S) \n" +
+				" \n" +
+				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON \n" +
+				"cat $SYBASE/$SYBASE_ASE \n" +
+				"attach $DSQUERY \n" +
+				"log on sample_${dttm}.out \n" +
+				"set display off \n" +
+				"sample count=500 interval=100 context=y \n" +
+				"log close \n" +
+				"quit \n" +
+				"SYBMON \n" +
+				" \n" +
+				"if [ ! -f sample_${dttm}.out ] \n" +
+				"then \n" +
+				"	echo 'An error occured. The file has not been created' \n" +
+				"	exit -1 \n" +
+				"fi \n" +
+				"";
+
+			// Top panel
+			JPanel top = SwingUtils.createPanel("Script example", false);
+			top.setLayout(new MigLayout());
+			top.add(new JLabel("Below is an example script of how to use 'sybmon' to generate X number of Stack Traces for a ASE Server"), "wrap");
+			top.add(new JLabel("Change 'count=500', to any value depending on how many stack traces you want."), "wrap 15");
+			top.add(new JLabel("Copy and Paste the following into a Unix/Linux shell script, and execute it with the user 'sybase' or whoever is running ASE."), "wrap");
+
+			// The Example text panel
+			RSyntaxTextArea example_txt    = new RSyntaxTextArea();
+			RTextScrollPane example_scroll = new RTextScrollPane(example_txt);
+			example_txt   .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_UNIX_SHELL);
+			example_txt   .setText(exampleStr);
+			example_scroll.setLineNumbersEnabled(true);
+
+			// Bottom panel
+			JPanel bottom = SwingUtils.createPanel("", false);
+			JButton close = new JButton("Close");
+			bottom.setLayout(new MigLayout());
+			bottom.add(new JLabel(""), "push, grow");
+			bottom.add(close,          "wrap");
+
+			// Create a dialog window
+			final JDialog dialog = new JDialog(this);
+			dialog.setLayout(new BorderLayout());
+			dialog.add(top,            BorderLayout.NORTH);
+			dialog.add(example_scroll, BorderLayout.CENTER);
+			dialog.add(bottom,         BorderLayout.SOUTH);
+
+			// Add action to close
+			close.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					dialog.setVisible(false);
+				}
+			});
+
+			// Show the window
+			dialog.pack();
+			dialog.setVisible(true);
+		}
+
 		/*---------------------------------------------------
 		** BEGIN: implementing saveProps & loadProps
 		**---------------------------------------------------

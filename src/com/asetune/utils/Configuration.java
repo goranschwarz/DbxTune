@@ -79,6 +79,12 @@ extends Properties
 	private String _propFileName = null;
 	private boolean _saveOnExit = false;
 
+	/** If the save() method should save or just simply return */
+	private boolean _saveIsEnabled = true;
+	
+	/** The name of the config */
+	private String _confName = "";
+
 //	private List _writers = new ArrayList();
 
 	// original serialVersionUID = 5707562050158600080L
@@ -130,6 +136,7 @@ extends Properties
 	public static void setInstance(String confName, Configuration configuration)
 	{
 //		_instance = configuration;
+		configuration._confName = confName;
 		_instMap.put(confName, configuration);
 	}
 
@@ -142,6 +149,11 @@ extends Properties
 //	{
 //		_writers.remove(writer);
 //	}
+
+	public String getConfName()
+	{
+		return _confName;
+	}
 
 	public String getFilename()
 	{
@@ -192,11 +204,27 @@ extends Properties
 		os.close();
 	}
 
+	public void setSaveEnable(boolean enable)
+	{
+		_saveIsEnabled = enable;
+	}
+
 	public void save()
 	{
+		save(false);
+	}
+
+	public void save(boolean withOverride)
+	{
+		if ( ! _saveIsEnabled && ! withOverride)
+		{
+			_logger.debug("Save is disabled for the configuration '"+getConfName()+"', which uses the file '"+getFilename()+"'.");
+			return;
+		}
+		
 		if (_propFileName == null)
 		{
-			_logger.debug("No filename has been assigned to this property file, cant save...");
+			_logger.debug("No filename has been assigned to this property file, can't save...");
 			return;
 		}
 
