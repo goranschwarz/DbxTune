@@ -665,6 +665,11 @@ public class AseTune
 					{
 						_logger.warn("Problem setting the Look And Feel to 'getSystemLookAndFeelClassName()'.", e);
 					}
+					
+					// Disable save properties during startup, lets see if this can make the startup faster.
+					Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (tmpConf != null)
+						tmpConf.setSaveEnable(false);
 
 					// Set the Exception handler for the AWT/Swing Event Dispatch Thread
 					// This will simply write the information to Log4J...
@@ -701,6 +706,10 @@ public class AseTune
 
 					// Start OutOfMemory check/thread
 					Memory.start();
+
+					// Enable the save properties again.
+					if (tmpConf != null)
+						tmpConf.setSaveEnable(true);
 
 					// FINALLY SHOW THE WINDOW
 					SplashWindow.drawProgress("Loading Main Window...");
