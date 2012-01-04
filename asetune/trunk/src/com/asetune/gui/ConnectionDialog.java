@@ -18,6 +18,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -1867,33 +1868,102 @@ public class ConnectionDialog
 		String configStr = "jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*hidden*'.";
 		_logger.info("Configuration for PersistReader component named 'PersistReader': "+configStr);
 
-		// Everything could NOT be done with the jdbcUrl... so here goes some special
-		// start the H2 TCP Server
-		if ( jdbcDriver.equals("org.h2.Driver") && startH2NetworkServer )
+		//-----------------------------------------------------
+		// IF Jdbc driver: H2
+		//-----------------------------------------------------
+		if ( jdbcDriver.equals("org.h2.Driver") )
 		{
-			try
+			// start the H2 TCP Server
+			if (startH2NetworkServer)
 			{
-				_logger.info("Starting a H2 TCP server.");
-				String[] args = new String[] { "-tcpAllowOthers" };
-				org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer(args);
-				h2ServerTcp.start();
-	
-	//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
-				_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
-	
-				if (true)
+				try
 				{
-					_logger.info("Starting a H2 WEB server.");
-					String[] argsWeb = new String[] { "-trace" };
-					org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer(argsWeb);
-					h2ServerWeb.start();
-	
-					_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+					_logger.info("Starting a H2 TCP server.");
+					String[] args = new String[] { "-tcpAllowOthers" };
+					org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer(args);
+					h2ServerTcp.start();
+		
+		//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
+					_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
+		
+					if (true)
+					{
+						_logger.info("Starting a H2 WEB server.");
+						String[] argsWeb = new String[] { "-trace" };
+						org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer(argsWeb);
+						h2ServerWeb.start();
+		
+						_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+					}
+
+					if (true)
+					{
+						_logger.info("Starting a H2 Postgres server.");
+						String[] argsPostgres = new String[] { "" };
+						org.h2.tools.Server h2ServerPostgres = org.h2.tools.Server.createPgServer(argsPostgres);
+						h2ServerPostgres.start();
+		
+						_logger.info("H2 WEB server, url='"+h2ServerPostgres.getURL()+"', service='"+h2ServerPostgres.getService()+"'.");
+					}
+				}
+				catch (SQLException e) 
+				{
+					_logger.warn("Problem starting H2 network service", e);
 				}
 			}
-			catch (SQLException e) 
+
+			//-----------------------------------------------------
+			// IF H2, add hard coded stuff to URL
+			//-----------------------------------------------------
+			H2UrlHelper urlHelper = new H2UrlHelper(jdbcUrl);
+			Map<String, String> urlMap = urlHelper.getUrlOptionsMap();
+			if (urlMap == null)
+				urlMap = new LinkedHashMap<String, String>();
+
+			boolean change = false;
+
+			// Database short names are converted to uppercase for the DATABASE() function, 
+			// and in the CATALOG column of all database meta data methods. 
+			// Setting this to "false" is experimental. 
+			// When set to false, all identifier names (table names, column names) are case 
+			// sensitive (except aggregate, built-in functions, data types, and keywords).
+			if ( ! urlMap.containsKey("DATABASE_TO_UPPER") )
 			{
-				_logger.warn("Problem starting H2 network service", e);
+				change = true;
+				_logger.info("H2 URL add option: DATABASE_TO_UPPER=false");
+				urlMap.put("DATABASE_TO_UPPER", "false");
+			}
+
+//			// The maximum time in milliseconds used to compact a database when closing.
+//			if ( ! urlMap.containsKey("MAX_COMPACT_TIME") )
+//			{
+//				change = true;
+//				_logger.info("H2 URL add option: MAX_COMPACT_TIME=2000");
+//				urlMap.put("MAX_COMPACT_TIME",  "2000");
+//			}
+
+			// AutoServer mode
+			if ( ! urlMap.containsKey("AUTO_SERVER") )
+			{
+				change = true;
+				_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
+				urlMap.put("AUTO_SERVER",  "TRUE");
+			}
+
+//			// DATABASE_EVENT_LISTENER
+//			if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
+//			{
+//				change = true;
+//				_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
+//				urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
+//			}
+
+			if (change)
+			{
+				urlHelper.setUrlOptionsMap(urlMap);
+				jdbcUrl = urlHelper.getUrl();
+				
+				_logger.info("Added some options to the H2 URL. New URL is '"+jdbcUrl+"'.");
 			}
 		}
 

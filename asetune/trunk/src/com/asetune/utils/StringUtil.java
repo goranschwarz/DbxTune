@@ -175,6 +175,23 @@ public class StringUtil
 	}
 
 	/**
+	 * Parsers a comma separated list and returns a Set/LinkedHashSet which holds all values.<br>
+	 * The entries will be trimmed()...
+	 * @param str a comma separated list
+	 * @return a Set with Strings
+	 */
+	public static Set<String> parseCommaStrToSet(String str)
+	{
+		LinkedHashSet<String> set = new LinkedHashSet<String>();
+
+		String[] sa = str.split(",");
+		for (String se : sa)
+			set.add(se.trim());
+		
+		return set;
+	}
+
+	/**
 	 * Parse a comma separated key=value string and make it into a Map
 	 * <p>
 	 * FIXME 1: This implementation is way to simple, it doesnt handle ',' or '=' chars inside the key/value strings etc...

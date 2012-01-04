@@ -26,8 +26,34 @@ import com.asetune.utils.StringUtil;
  * 
  * Example of how to use this:
  * <pre>
+ * // Create a Waitfor Dialog
+ * final WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Do Long Running Job");
  * 
+ * // Create the Executor object
+ * WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor()
+ * {
+ *     // This is the object that will be returned.
+ *     ArrayList<JdbcCompletion> completionList = new ArrayList<JdbcCompletion>();
  * 
+ *     public Object doWork()
+ *     {
+ *         List<String> resultList = new ArrayList<String>();
+ *         
+ *         wait.setState("Doing first step"); // will be displayed in status field, below "Do Long Running Job"
+ *         // Do long running job...
+ *         
+ *         resultList.add("Some result(s)");
+ *         wait.setState("Doing second step");
+ *         
+ *         return resultList; // simply return null, if this is not needed
+ *     }
+ * };
+ * 
+ * // Now Execute and wait for it to finish
+ * List<String> completionList = (List)wait.execAndWait(doWork);
+ * 
+ * // or if you didn't return anything from the doWork() method
+ * wait.execAndWait(doWork);
  * 
  * </pre>
  * 

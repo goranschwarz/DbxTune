@@ -97,6 +97,7 @@ import com.asetune.tools.QueryWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.JdbcUtils;
 import com.asetune.utils.Memory;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
@@ -1077,26 +1078,55 @@ public class MainFrame
 
 		if (ACTION_OPEN_SQL_QUERY_WIN.equals(actionCmd))
 		{
-			try 
+			// to JDBC OFFLINE database
+			if (isOfflineConnected() && PersistReader.hasInstance())
 			{
-				// Check that we are connected
-				if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+				PersistReader reader = PersistReader.getInstance();
+				if (reader != null)
 				{
-					SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
-					return;
+					String jdbcDriver = reader.getJdbcDriver();
+					String jdbcUrl    = reader.getJdbcUrl();
+					String jdbcUser   = reader.getJdbcUser();
+					String jdbcPasswd = reader.getJdbcPasswd();
+					
+					try 
+					{
+						Connection conn = JdbcUtils.connect(this, jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd);
+						QueryWindow qf = new QueryWindow(conn, true, QueryWindow.WindowType.JFRAME);
+						qf.openTheWindow();
+					}
+					catch (Exception ex) 
+					{
+						JOptionPane.showMessageDialog(
+							MainFrame.this, 
+							"Problems open SQL Query Window\n" + ex.getMessage(),
+							"Error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
-
-				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-QueryWindow", null);
-				QueryWindow qf = new QueryWindow(conn, true, QueryWindow.WindowType.JFRAME);
-				qf.openTheWindow();
 			}
-			catch (Exception ex) 
-			{
-				JOptionPane.showMessageDialog(
-					MainFrame.this, 
-					"Problems open SQL Query Window\n" + ex.getMessage(),
-					"Error", JOptionPane.ERROR_MESSAGE);
-			}
+			else
+			{ // to ASE
+				try 
+				{
+					// Check that we are connected
+					if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+					{
+						SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
+						return;
+					}
+	
+					Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-QueryWindow", null);
+					QueryWindow qf = new QueryWindow(conn, true, QueryWindow.WindowType.JFRAME);
+					qf.openTheWindow();
+				}
+				catch (Exception ex) 
+				{
+					JOptionPane.showMessageDialog(
+						MainFrame.this, 
+						"Problems open SQL Query Window\n" + ex.getMessage(),
+						"Error", JOptionPane.ERROR_MESSAGE);
+				}
+			} // end: to ASE
 		}
 
 		if (ACTION_OPEN_LOCK_TOOL.equals(actionCmd))
@@ -3047,7 +3077,7 @@ public class MainFrame
 			mf._aseAppTrace_mi            .setEnabled(false);
 			mf._ddlView_mi                .setEnabled(true);
 			mf._preDefinedSql_m           .setEnabled(false);
-			mf._sqlQuery_mi               .setEnabled(false);
+			mf._sqlQuery_mi               .setEnabled(true);
 //			mf._lockTool_mi               .setEnabled();
 			mf._createOffline_mi          .setEnabled(false);
 			mf._wizardCrUdCm_mi           .setEnabled(false);

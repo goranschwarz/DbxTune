@@ -1970,7 +1970,7 @@ implements Cloneable, ITableTooltip
 //	public abstract String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
 	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		throw new RuntimeException("The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
 	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
@@ -1987,7 +1987,7 @@ implements Cloneable, ITableTooltip
 //	public abstract List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		throw new RuntimeException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
@@ -3536,6 +3536,18 @@ implements Cloneable, ITableTooltip
 	
 
 
+	/**
+	 * Get basic configuration "html" chars/tags is accepted.<br>
+	 * This would be overrided by modules that does not support Properties by ShowCmPropertiesDialog
+	 * @return
+	 */
+	public String getBasicConfigurationDescription()
+	{
+		return "This module '"+getDisplayName()+"' should have <code>ShowCmPropertiesDialog</code> availablity.";
+	}
+
+	
+	
 	public int getDataSource()
 	{
 		return _dataSource;

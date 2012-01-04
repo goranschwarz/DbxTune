@@ -90,7 +90,6 @@ import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -109,6 +108,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionFactory;
 import com.asetune.utils.Debug;
 import com.asetune.utils.JavaVersion;
+import com.asetune.utils.JdbcCompleationProvider;
 import com.asetune.utils.Logging;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -125,7 +125,7 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class QueryWindow
 //	extends JFrame
 //	extends JDialog
-	implements ActionListener, SybMessageHandler, ConnectionFactory
+	implements ActionListener, SybMessageHandler, ConnectionFactory, JdbcCompleationProvider.ConnectionProvider
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
 	private static final long serialVersionUID = 1L;
@@ -145,6 +145,9 @@ public class QueryWindow
 		JDIALOG_MODAL 
 	}
 
+	/** Completion Provider for RSyntaxTextArea */
+	private JdbcCompleationProvider _jdbcTableCompleationProvider = null;
+
 	//-------------------------------------------------
 	// Actions
 	public static final String ACTION_CONNECT                   = "CONNECT";
@@ -152,6 +155,7 @@ public class QueryWindow
 	public static final String ACTION_EXIT                      = "EXIT";
 
 	private Connection  _conn            = null;
+	private int         _connType        = -1;
 //	private JTextArea	_query           = new JTextArea();           // A field to enter a query in
 	private RSyntaxTextArea	_query       = new RSyntaxTextArea();     // A field to enter a query in
 	private RTextScrollPane _queryScroll     = new RTextScrollPane(_query);
@@ -200,7 +204,7 @@ public class QueryWindow
 	public QueryWindow(CommandLine cmd)
 	throws Exception
 	{
-		Version.setAppName("AseSqlWindow");
+		Version.setAppName("SqlWindow");
 		
 		// Create store dir if it did not exists.
 		File appStoreDir = new File(Version.APP_STORE_DIR);
@@ -216,10 +220,10 @@ public class QueryWindow
 		// -----------------------------------------------------------------
 		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "asetune.properties");
 		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "asetune.user.properties");
-		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "asesqlw.save.properties");
-		final String ASESQLW_HOME          = System.getProperty("ASESQLW_HOME");
+		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "sqlw.save.properties");
+		final String SQLW_HOME             = System.getProperty("SQLW_HOME");
 		
-		String defaultPropsFile     = (ASESQLW_HOME          != null) ? ASESQLW_HOME          + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultPropsFile     = (SQLW_HOME             != null) ? SQLW_HOME             + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
 		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
 		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 
@@ -323,7 +327,7 @@ public class QueryWindow
 		}
 
 //		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
-		Logging.init("asesqlw.", propFile);
+		Logging.init("sqlw.", propFile);
 		
     	try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -343,7 +347,7 @@ public class QueryWindow
 		{
 			Properties props = new Properties();
 //			props.put("CHARSET", "iso_1");
-			conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "AseSqlWindow", null, props, null);
+			conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "SqlWindow", null, props, null);
 
 			// Set the correct dbname, if it hasnt already been done
 			AseConnectionUtils.useDbname(conn, aseDbname);
@@ -478,10 +482,19 @@ public class QueryWindow
 		{
 			// Remember the factory object that was passed to us
 			_conn = conn;
-	
-			// Setup a message handler
-	//		((SybConnection)_conn).setSybMessageHandler(this);
-			_aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+			
+			if (_conn instanceof SybConnection)
+			{
+				// Setup a message handler
+		//		((SybConnection)_conn).setSybMessageHandler(this);
+				_aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+				
+				_connType = ConnectionDialog.ASE_CONN;
+			}
+			else
+			{
+				_connType = ConnectionDialog.OFFLINE_CONN;
+			}
 		}
 
 		// Set various components
@@ -516,7 +529,10 @@ public class QueryWindow
 		CompletionProvider acProvider = createCompletionProvider();
 		AutoCompletion ac = new AutoCompletion(acProvider);
 		ac.install(_query);
-		
+		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
+//		ac.setChoicesWindowSize(600, 600);
+		ac.setDescriptionWindowSize(600, 600);
+
 		JPopupMenu menu =_query.getPopupMenu();
 		menu.addSeparator();
 		
@@ -589,25 +605,8 @@ public class QueryWindow
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
 
-		_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
-//		_showplan.setEnabled( (aseVersion >= 15000) );
-		if (_conn == null)
-		{
-			_dbs_cobx       .setEnabled(false);
-			_exec           .setEnabled(false);
-			_rsInTabs       .setEnabled(false);
-			_setOptions     .setEnabled(false);
-			_execGuiShowplan.setEnabled(false);
-		}
-		else
-		{
-			_dbs_cobx       .setEnabled(true);
-			_exec           .setEnabled(true);
-			_rsInTabs       .setEnabled(true);
-			_setOptions     .setEnabled(true);
-			_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
-		}
-
+		// Set components if visible, enabled etc...
+		setComponentVisibility();
 		
 		// ADD Ctrl+e, F5, F9
 		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.CTRL_DOWN_MASK), "execute");
@@ -660,9 +659,14 @@ public class QueryWindow
 			public void actionPerformed(ActionEvent e)
 			{
 				useDb( (String) _dbs_cobx.getSelectedItem() );
+				
+				// mark code completion for refresh
+				_jdbcTableCompleationProvider.setNeedRefresh();
 			}
 		});
-		if (_conn != null)
+		
+		// Refresh the database list (if ASE)
+		if (_conn != null && _connType == ConnectionDialog.ASE_CONN)
 			setDbNames();
 
 		// ACTION for "copy"
@@ -746,7 +750,6 @@ public class QueryWindow
 	**--------------------------------------------------*/
 
 
-
 	/**
 	 * Set the windws title
 	 * @param srvStr servername we are connected to, null = not connected.
@@ -769,7 +772,10 @@ public class QueryWindow
 		boolean showAseOptions = false;
 		boolean showHostmonTab = false;
 		boolean showPcsTab     = false;
-		boolean showOfflineTab = false;
+		boolean showOfflineTab = true;
+
+		// mark code completion for refresh
+		_jdbcTableCompleationProvider.setNeedRefresh();
 
 		ConnectionDialog connDialog = new ConnectionDialog(_jframe, checkAseCfg, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab);
 		// Show the dialog and wait for response
@@ -789,25 +795,64 @@ public class QueryWindow
 //			if (_conn != null)
 			if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
 			{
+				_connType = ConnectionDialog.ASE_CONN;
 				
 				setDbNames();
 				_aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
 
-				_dbs_cobx       .setEnabled(true);
-				_exec           .setEnabled(true);
-				_rsInTabs       .setEnabled(true);
-				_setOptions     .setEnabled(true);
-				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
-
 				_setOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
 
-//				_summaryPanel.setLocalServerName(AseConnectionFactory.getServer());
-				// Set servername in windows - title
-				String aseSrv      = AseConnectionFactory.getServer();
-				String aseHostPort = AseConnectionFactory.getHostPortStr();
-				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
-				setSrvInTitle(srvStr);
+				setComponentVisibility();
 			}
+		}
+		else if ( connType == ConnectionDialog.OFFLINE_CONN)
+		{
+			_conn = connDialog.getOfflineConn();
+			_connType = ConnectionDialog.OFFLINE_CONN;
+
+			_aseVersion = -1;
+
+			setComponentVisibility();
+		}
+	}
+	private void setComponentVisibility()
+	{
+		if (_conn == null)
+		{
+			_dbs_cobx       .setEnabled(false);
+			_exec           .setEnabled(false);
+			_rsInTabs       .setEnabled(false);
+			_setOptions     .setEnabled(false);
+			_execGuiShowplan.setEnabled(false);
+			
+			return;
+		}
+
+		if ( _connType == ConnectionDialog.ASE_CONN)
+		{
+			_dbs_cobx       .setEnabled(true);
+			_exec           .setEnabled(true);
+			_rsInTabs       .setEnabled(true);
+			_setOptions     .setEnabled(true);
+			_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+
+			// Set servername in windows - title
+			String aseSrv      = AseConnectionFactory.getServer();
+			String aseHostPort = AseConnectionFactory.getHostPortStr();
+			String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
+
+			setSrvInTitle(srvStr);
+		}
+
+		if ( _connType == ConnectionDialog.OFFLINE_CONN)
+		{
+			_dbs_cobx       .setEnabled(false);
+			_exec           .setEnabled(true);
+			_rsInTabs       .setEnabled(true);
+			_setOptions     .setEnabled(false);
+			_execGuiShowplan.setEnabled(false);
+
+			setSrvInTitle(_conn.toString());
 		}
 	}
 
@@ -819,6 +864,7 @@ public class QueryWindow
 			{
 				_conn.close();
 				_conn = null;
+				_connType = -1;
 
 				_dbs_cobx       .setEnabled(false);
 				_exec           .setEnabled(false);
@@ -1162,6 +1208,20 @@ public class QueryWindow
 	** END: implementing ConnectionFactory
 	**---------------------------------------------------
 	*/
+
+	/*---------------------------------------------------
+	** BEGIN: implementing JdbcCompletionConnectionProvider
+	**--------------------------------------------------*/
+	public Connection getConnection()
+	{
+		return _conn;
+	}
+	/*---------------------------------------------------
+	** END: implementing JdbcCompletionConnectionProvider
+	**--------------------------------------------------*/
+
+
+
 
 	private JPopupMenu createDataTablePopupMenu(JTable table)
 	{
@@ -1879,43 +1939,44 @@ public class QueryWindow
 		// language semantics. It simply checks the text entered up to the
 		// caret position for a match against known completions. This is all
 		// that is needed in the majority of cases.
-		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+		JdbcCompleationProvider         jdbcProvider = new JdbcCompleationProvider(_window, this);
 
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT row_count(db_id()), object_id('') "));
-		provider.addCompletion(new BasicCompletion(provider, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTables ORDER BY TableName"));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
+		jdbcProvider.addCompletion(new BasicCompletion(jdbcProvider, "SELECT * FROM "));
+		jdbcProvider.addCompletion(new BasicCompletion(jdbcProvider, "SELECT row_count(db_id()), object_id('') "));
+		jdbcProvider.addCompletion(new BasicCompletion(jdbcProvider, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
+		jdbcProvider.addCompletion(new BasicCompletion(jdbcProvider, "SELECT * FROM master..monTables ORDER BY TableName"));
+		jdbcProvider.addCompletion(new BasicCompletion(jdbcProvider, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
 
 		// Add a couple of "shorthand" completions. These completions don't
 		// require the input text to be the same thing as the replacement text.
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', '#G'",                 "Cache Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'", "Cache Partitions"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']", "Pool Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'", "Pool Wash Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'memory'",                                     "Memory left for reconfigure"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'Monitoring'",                                 "Check Monitor configuration"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",   "exec sp_configure 'nondefault'",                                 "Get changed configuration parameters"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",    "exec sp_helptext 'tabName', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",  "Get procedure text, with line numbers"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",    "exec sp_helptext 'tabName', NULL, NULL, 'showsql,ddlgen'",       "Get procedure text, as DDL"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', '#G'",                 "Cache Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'", "Cache Partitions"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']", "Pool Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'", "Pool Wash Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'memory'",                                     "Memory left for reconfigure"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'Monitoring'",                                 "Check Monitor configuration"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'nondefault'",                                 "Get changed configuration parameters"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",    "exec sp_helptext 'tabName', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",  "Get procedure text, with line numbers"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",    "exec sp_helptext 'tabName', NULL, NULL, 'showsql,ddlgen'",       "Get procedure text, as DDL"));
 
 		// monTables
-		provider.addCompletion(new ShorthandCompletion(provider, 
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, 
 				"monTables",  
 				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
 				"Get monitor tables in this system."));
 		// monColumns
-		provider.addCompletion(new ShorthandCompletion(provider, 
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, 
 				"monColumns", 
 				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
 		
-		return provider;
+		_jdbcTableCompleationProvider = jdbcProvider;
+		return jdbcProvider;
 	}
 
-		
+
 	/**
 	 * Private helper class for createSetOptionButton()
 	 * @author gorans
@@ -2321,8 +2382,8 @@ public class QueryWindow
 			pw.println();
 		}
 
-		pw.println("usage: asesqlw [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
-		pw.println("               [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
+		pw.println("usage: sqlw [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
+		pw.println("            [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -h,--help                 Usage information.");

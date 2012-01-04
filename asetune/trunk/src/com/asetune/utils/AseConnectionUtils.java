@@ -2597,5 +2597,177 @@ public class AseConnectionUtils
 		}
 		return true;
 	}
+	
+	/**
+	 * Get (procedure) text about an object
+	 * 
+	 * @param conn       Connection to the database
+	 * @param dbname     Name of the database
+	 * @param objectName Name of the procedure/view/trigger...
+	 * @param owner      Name of the owner, if null is passed, it will be set to 'dbo'
+	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
+	 * @return Text of the procedure/view/trigger...
+	 */
+	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int aseVersion)
+	{
+		if (StringUtil.isNullOrBlank(owner))
+			owner = "dbo";
+
+		if (aseVersion <= 0)
+		{
+			aseVersion = getAseVersionNumber(conn);
+		}
+
+		String returnText = null;
+		
+		// Statement Cache object
+		boolean isStatementCache = false;
+		String  ssqlid = null;
+		if (objectName.startsWith("*ss"))
+		{
+			isStatementCache = true;
+			int sep = objectName.indexOf('_');
+			ssqlid  = objectName.substring(3, sep);
+			//haskey = objectName.substring(sep+1, objectName.length()-3);
+		}
+
+		// Statement Cache objects
+		if (isStatementCache)
+		{			
+			if (aseVersion >= 15700)
+			{
+				//-----------------------------------------------------------
+				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
+				//-----------------------------------------------------------
+				// statement_id
+				//			     is the object ID of the lightweight procedure (A procedure that can be created and invoked 
+				//			     internally by Adaptive Server). This is the SSQLID from monCachedStatement.
+				// 
+				// plan_id
+				//			     is the unique identifier for the plan. This is the PlanID from monCachedProcedures. 
+				//			     A value of zero for plan_id displays the showplan output for all cached plans for the indicated SSQLID.
+				// 
+				// level_of_detail
+				//			     is a value from 0 - 6 indicating the amount of detail show_cached_plan_in_xml returns (see Table 2-6). 
+				//			     level_of_detail determines which sections of showplan are returned by show_cached_plan_in_xml. 
+				//			     The default value is 0.
+				// 
+				//			     The output of show_cached_plan_in_xml includes the plan_id and these sections:
+				// 
+				//			         parameter - contains the parameter values used to compile the query and the parameter values 
+				//			                     that caused the slowest performance. The compile parameters are indicated with the 
+				//			                     <compileParameters> and </compileParameters> tags. The slowest parameter values are 
+				//			                     indicated with the <execParameters> and </execParameters> tags. 
+				//			                     For each parameter, show_cached_plan_in_xml displays the:
+				//			                        Number
+				//			                        Datatype
+				//			                        Value:    values that are larger than 500 bytes and values for insert-value statements 
+				//			                                  do not appear. The total memory used to store the values for all parameters 
+				//			                                  is 2KB for each of the two parameter sets.
+				// 
+				//			         opTree    - contains the query plan and the optimizer estimates. 
+				//			                     The opTree section is delineated by the <opTree> and </opTree> tags.
+				// 
+				//			         execTree  - contains the query plan with the lava operator details. 
+				//			                     The execTree section is identified by the tags <execTree> and </execTree>.
+				//
+				// level_of_detail parameter opTree execTree
+				// --------------- --------- ------ --------
+				// 0 (the default)       YES    YES         
+				// 1                     YES                
+				// 2                            YES         
+				// 3                                     YES
+				// 4                            YES      YES
+				// 5                     YES             YES
+				// 6                     YES    YES      YES
+				//-----------------------------------------------------------
+
+				String sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
+
+				AseSqlScript ss = new AseSqlScript(conn, 10);
+				try	
+				{
+					returnText = ss.executeSqlStr(sql, true);
+				} 
+				catch (SQLException e) 
+				{
+					returnText = null;
+					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Caught: "+e); 
+				} 
+				finally 
+				{
+					ss.close();
+				}
+			}
+			else
+			{
+				String sql;
+				if (aseVersion >= 15020)
+				{
+					sql =
+						"set switch on 3604 with no_info \n" +
+						"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
+				}
+				else
+				{
+					sql=
+						"dbcc traceon(3604) \n" +
+						"dbcc prsqlcache("+ssqlid+", 1) "; // 1 = also prints showplan"
+				}
+				
+				AseSqlScript ss = new AseSqlScript(conn, 10);
+				try	
+				{ 
+					returnText = ss.executeSqlStr(sql, true); 
+				} 
+				catch (SQLException e) 
+				{ 
+					returnText = null;
+					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Caught: "+e); 
+				} 
+				finally 
+				{
+					ss.close();
+				}
+			}
+		}
+		else
+		{
+			//--------------------------------------------
+			// GET OBJECT TEXT
+			String sql;
+			sql = " select c.text "
+				+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c, "+dbname+"..sysusers u \n"
+				+ " where o.name = '"+objectName+"' \n"
+				+ "   and u.name = '"+owner+"' \n" 
+				+ "   and o.id   = c.id \n"
+				+ "   and o.uid  = u.uid \n"
+				+ " order by c.number, c.colid2, c.colid ";
+
+			try
+			{
+				StringBuilder sb = new StringBuilder();
+
+				Statement statement = conn.createStatement();
+				ResultSet rs = statement.executeQuery(sql);
+				while(rs.next())
+				{
+					String textPart = rs.getString(1);
+					sb.append(textPart);
+				}
+				rs.close();
+				statement.close();
+
+				returnText = sb.toString();
+			}
+			catch (SQLException e)
+			{
+				returnText = null;
+				_logger.warn("Problems getting text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. Caught: "+e); 
+			}
+		}
+
+		return returnText;
+	}
 }
 
