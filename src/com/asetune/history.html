@@ -16,7 +16,7 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2011-xx-xx</H2>
+<H2>2012-xx-xx</H2>
 <UL>
 	<LI>
 	<b>Change: Performance Counter Properties Dialog.</b><br>
@@ -380,6 +380,49 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Change: Persist Writer H2, shutdown on low disk space</b><br>
 	PCS H2, when the disk storage is about to get full, shutdown the PCS Handler.<br>
+	NOTE: this doesn't work on H2 1.3.163 
+	</LI>
+
+	<LI>
+	<b>Change: Offline reader, read User Defined Counters from offline DB</b><br>
+	If the samples database contains UDC, User Defined Counters that is NOT installed in the GUI
+	simply create the UDC and add it to the GUI temporarily<br>
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Proc Cache Memory Usage', now holds more values</b><br>
+	Now we do outer join on monProcedureCacheModuleUsage *= monProcedureCacheMemoryUsage<br>
+	This means that memory modules that does not have detailed sections, now is available by
+	the 'head/main' section. For example Dynamic SQL, does NOT have any details, which made it
+	a bit harder to read. But now these modules are also available in the details.<br>
+	</LI>
+
+	<LI>
+	<b>Change: all Performance Counters, right click menu</b><br>
+	The context sensitive right click menu now has alternate column names and optional columns<br>
+	This simply means that they will be enabled (available to click on) on more tabs.<br>
+	</LI>
+
+	<LI>
+	<b>New: SQL Code Completion in SQL Window tool</b><br>
+	Using Ctrl+Space you bring up SQL Code Completion, for table names and columns<br>
+	For the moment I don't use a parser to check where in the SQL code you are, so for the moment
+	it's kind off basic... Column completion work works in a limited way for table aliases.<br>
+	Please report strange behavior...<br> 
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 15.5 ESD#11, Component: jconn3.jar, jconn4.jar, jConnect Driver from JDK 15.5 ESD#11</li>
+	  <li>To version 1.3.163, Component: H2 database</li>
+	  <li>To version 15.7, Component: dsparser.jar, Sybase extension for reading interfaces, sql.ini files</li>
+	  <li>To version 15.7, Component: planviewer.jar, Sybase extension to view showplan, used by dbisql.exe</li>
+	  <li>To version 3.2.2, Component: jchart2d, Graph package</li>
+	  <li>To version 4.2, Component: MigLayout, Layout Manager</li>
+	  <li>To version 20111102, Component: proxy-vole, Access Internet Via WEB Proxy</li>
+	  <li>To version 1.6.2-2, Component: swingx-core, JXTable...</li>
+	</ul>
 	</LI>
 
 </UL>

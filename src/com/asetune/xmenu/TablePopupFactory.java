@@ -10,6 +10,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Set;
 
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
@@ -22,6 +23,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionFactory;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -35,6 +37,7 @@ public class TablePopupFactory
 	public static final String ENABLE_MENU_IF_ON_A_ROW     = "enabledIfOnrow";
 	public static final String ENABLE_MENU_ROW_IS_SELECTED = "enabledIfRowIsSelected";
 
+	public static final String OPTIONAL_PARAM = ":optional:";
 
 	private static Component getPopupMenuInvoker(JMenuItem mi)
 	{
@@ -208,14 +211,17 @@ public class TablePopupFactory
 			String config = conf.getPropertyRaw(prefixStr+".config");
 
 			// Read parameters
-			ArrayList<String> params = new ArrayList<String>();
+			ArrayList<Set<String>> params = new ArrayList<Set<String>>();
 			for (int p=1; true; p++)
 			{
 				String param = conf.getPropertyRaw(prefixStr+".param."+p);
 				if (param == null)
 					break;
 				else
-					params.add(param);
+				{
+					Set<String> paramSet = StringUtil.parseCommaStrToSet(param);
+					params.add(paramSet);
+				}
 			}
 
 			// Check that we got everything we needed
@@ -352,23 +358,37 @@ public class TablePopupFactory
 	
 							// Loop all Parameters in the PopupActions
 							int foundColumns = 0;
+							int optionalColumns = 0;
 							for (int p=0; p<pa.getParamCount(); p++)
 							{
-								String param = (String) pa.getParam(p);
-	
-								// Loop all colums in the table
-								for (int x=0; x<tab.getColumnCount(); x++)
+								Set<String> paramSet = pa.getParamSet(p);
+								for (String param : paramSet)
 								{
-									String colName = tab.getColumnName(x);
-									if ( colName.equalsIgnoreCase(param) )
+									boolean foundParam = false;
+									
+									if (param.equalsIgnoreCase(OPTIONAL_PARAM))
 									{
-										foundColumns++;
-										break; // break the column loop
+										optionalColumns++;
+										continue;
 									}
+
+									// Loop all colums in the table
+									for (int x=0; x<tab.getColumnCount(); x++)
+									{
+										String colName = tab.getColumnName(x);
+										if ( colName.equalsIgnoreCase(param) )
+										{
+											foundParam = true;
+											foundColumns++;
+											break; // break the column loop
+										}
+									}
+									if (foundParam)
+										break;
 								}
 							}
 							// If not all parameters where found in the table
-							if (foundColumns < pa.getParamCount())
+							if (foundColumns < (pa.getParamCount() - optionalColumns))
 							{
 								mi.setEnabled(false);
 							}

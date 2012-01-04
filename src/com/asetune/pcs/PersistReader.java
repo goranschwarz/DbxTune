@@ -207,8 +207,8 @@ implements Runnable
 	*/
 
 	public void setJdbcDriver(String jdbcDriver) { _jdbcDriver = jdbcDriver; }
-	public void setJdbcUrl(String jdbcUrl)       { _jdbcUrl = jdbcUrl; }
-	public void setJdbcUser(String jdbcUser)     { _jdbcUser = jdbcUser; }
+	public void setJdbcUrl(String jdbcUrl)       { _jdbcUrl    = jdbcUrl; }
+	public void setJdbcUser(String jdbcUser)     { _jdbcUser   = jdbcUser; }
 	public void setJdbcPasswd(String jdbcPasswd) { _jdbcPasswd = jdbcPasswd; }
 
 	public String getJdbcDriver() { return _jdbcDriver; }
@@ -702,6 +702,48 @@ implements Runnable
 
 		addCommand(new QueueCommand(CMD_loadSessions));
 	}
+
+	/**
+	 * Get properties about UDC, User Defined Counters stored in the offline database
+	 * @param sampleId session start time
+	 */
+	public Configuration getUdcProperties(Timestamp sampleId)
+	{
+		String sql = 
+			"select \"ParamName\", \"ParamValue\" \n" +
+			"from \"MonSessionParams\" \n" +
+			"where 1=1 \n" +
+			"  and \"SessionStartTime\" < '"+sampleId+"' \n" +
+			"  and \"Type\"            in ('system.config', 'user.config', 'temp.config') \n" +
+			"  and \"ParamName\"     like 'udc.%' \n";
+
+		try
+		{
+			Statement stmnt = _conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+
+			Configuration conf = new Configuration();
+			while (rs.next())
+			{
+				String key = rs.getString(1);
+				String val = rs.getString(2);
+				
+				conf.setProperty(key, val);
+			}
+
+			rs.close();
+			stmnt.close();
+			
+			return conf;
+		}
+		catch (SQLException e)
+		{
+			_logger.error("Problems getting UDC parameters for sample '"+sampleId+"'.", e);
+			return null;
+		}
+	}
+	
+	
 
 	/**
 	 * Get timestamp for PREVIOUS (rewind) cmName that has any data 
@@ -2463,8 +2505,8 @@ System.out.println(str);
 
 		return list;
 	}
-	
-	
+
+
 	/*---------------------------------------------------
 	** END: DDL reader
 	**---------------------------------------------------

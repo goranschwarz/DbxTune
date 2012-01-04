@@ -79,6 +79,7 @@
 		<copy file="perfdemo.bat"                                 toFile="${dist}/perfdemo.bat"/>
 		<copy file="asetune.sh"                                   toFile="${dist}/asetune.sh"/>
 		<copy file="asetune.properties"                           toFile="${dist}/asetune.properties"/>
+		<copy file="sqlw.bat"                                     toFile="${dist}/sqlw.bat"/>
 		<copy file="${src}/com/asetune/history.html"              toFile="${dist}/history.html"/>
 		<copy file="${src}/com/asetune/images/asetune_splash.jpg" toFile="${dist}/lib/asetune_splash.jpg"/>
 		<copy todir="${dist}/lib">

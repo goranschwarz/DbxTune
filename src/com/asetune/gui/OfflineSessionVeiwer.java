@@ -58,6 +58,7 @@ import org.jdesktop.swingx.treetable.TreeTableModel;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
+import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.gui.OfflineSessionModel.SessionLevel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -575,6 +576,14 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		AseConfig     .getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 //		AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 		AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+
+		// Read User Defined Counters, to check for any new UDC that isn't loaded/created
+		Configuration udcConf = reader.getUdcProperties(sl.getSampleId());
+		if (udcConf != null && udcConf.size() > 0)
+		{
+			_logger.info("Loading UDC, User Defined Counters from Offline Storage Database into the GUI.");
+			GetCounters.createUserDefinedCounterModels(udcConf);
+		}
 	}
 
 	public void doActionShow()

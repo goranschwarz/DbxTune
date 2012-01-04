@@ -11,9 +11,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.StringTokenizer;
 
 import javax.swing.JButton;
@@ -30,6 +28,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.tools.QueryWindow;
+import com.asetune.utils.AseConnectionUtils;
 
 
 /**
@@ -118,29 +117,33 @@ extends XmenuActionBase
 		procText.setEnabled(true);
 		procText.setEditable(false);
 
-		String sqlStatement = "select c.text"
-			+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
-			+ " where o.name = '"+procName+"'"
-			+ "   and o.id = c.id"
-			+ " order by c.number, c.colid2, c.colid";
+//		String sqlStatement = "select c.text"
+//			+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
+//			+ " where o.name = '"+procName+"'"
+//			+ "   and o.id = c.id"
+//			+ " order by c.number, c.colid2, c.colid";
+//
+//
+//		boolean found = false;
+//		try
+//		{
+//			Statement statement = conn.createStatement();
+//			ResultSet rs = statement.executeQuery(sqlStatement);
+//			while(rs.next())
+//			{
+//				found = true;
+//				String textPart = rs.getString(1);
+//				procText.append(textPart);
+//			}
+//		}
+//		catch (Exception e)
+//		{
+//			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+//		}
+		String objText = AseConnectionUtils.getObjectText(conn, dbname, procName, null, 0);
+		if (objText != null)
+			procText.setText(objText);
 
-
-		boolean found = false;
-		try
-		{
-			Statement statement = conn.createStatement();
-			ResultSet rs = statement.executeQuery(sqlStatement);
-			while(rs.next())
-			{
-				found = true;
-				String textPart = rs.getString(1);
-				procText.append(textPart);
-			}
-		}
-		catch (Exception e)
-		{
-			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
-		}
 		textPanel.add("Center", procTextSroll);
 		JPanel buttonPanel = new JPanel();
 		JButton closeButton = new JButton("Close");
@@ -150,7 +153,7 @@ extends XmenuActionBase
 		textFrame.getContentPane().add("Center", textPanel);
 		textFrame.setSize(1000, 600);
 
-		if ( ! found )
+		if ( objText == null )
 		{
 			JOptionPane.showMessageDialog(null, "The stored procedure '"+procName+"' can't be found in database '"+dbname+"'.", "Error", JOptionPane.ERROR_MESSAGE);
 		}

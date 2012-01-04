@@ -68,14 +68,15 @@ set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\log4j-1.2.16.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\h2-1.3.159.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\h2-1.3.163.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\wizard.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\miglayout-4.0-swing.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\swingx-core-1.6.2.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jchart2d-3.2.1.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\miglayout-swing-4.2.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\miglayout-core-4.2.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\swingx-core-1.6.2-2.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-cli-1.2.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\proxy-vole_20110515.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\proxy-vole_20111102.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\ganymed-ssh2-build251beta1.jar
 
 rem --- echo %CLASSPATH%

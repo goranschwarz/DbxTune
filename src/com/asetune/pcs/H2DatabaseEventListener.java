@@ -2,14 +2,8 @@ package com.asetune.pcs;
 
 import java.sql.SQLException;
 
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
-
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.h2.api.DatabaseEventListener;
-
-import com.asetune.AseTune;
 
 public class H2DatabaseEventListener implements DatabaseEventListener
 {
@@ -26,7 +20,7 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void init(String url)
 	{
-_logger.setLevel(Level.DEBUG);
+//_logger.setLevel(Level.DEBUG);
 		_logger.debug("init(): url='"+url+"'.");
 	}
 
@@ -40,72 +34,74 @@ _logger.setLevel(Level.DEBUG);
 		_logger.debug("opened()");
 	}
 
-	/**
-	 * This method is called if the disk space is very low. One strategy is to
-	 * inform the user and wait for it to clean up disk space. The database
-	 * should not be accessed from within this method (even to close it).
-	 */
-	@Override
-	public void diskSpaceIsLow()
-	{
-		_logger.info("H2 Database Event Listener, diskSpaceIsLow()");
-
-		if (PersistentCounterHandler.hasInstance())
-		{
-			if (AseTune.hasGUI())
-			{
-				String htmlMsg =
-					"<html>" +
-						"Running out of disk space for the H2 database (Persistent Counter Storage)<br>" +
-						"<br>" +
-						"<b>STOPPING</b> the Persistent Counter Handler<br>" +
-						"No more Performance Counters will be stored, you need to:" +
-						"<ul>" +
-						"   <li>Disconnect</li>" +
-						"   <li>Free up some disk space</li>" +
-						"   <li>Connect again</li>" +
-						"</ul>" +
-					"</html>";
-
-				// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead
-				JOptionPane optionPane = new JOptionPane(htmlMsg, JOptionPane.WARNING_MESSAGE);
-				JDialog dialog = optionPane.createDialog(null, "H2 running out of disk space");
-				dialog.setModal(false);
-				dialog.setVisible(true);
-//				// Needs to be non blocking...
-//				SwingUtils.showWarnMessage("H2 running out of disk space", htmlMsg, null);
-
-				_logger.warn("Running out of disk space for the H2 database (Persistent Counter Storage), Stopping the PCS Writer(s).");
-			}
-			else
-			{
-				_logger.warn("Running out of disk space for the H2 database (Persistent Counter Storage), Stopping the PCS Writer(s).");
-			}
-			
-			// Then STOP the service
-			// NOTE: This needs it's own Thread, otherwise it's the PersistCounterHandler thread
-			//       that will issue the shutdown, meaning store() will be "put on hold"
-			//       until this method call is done, and continue from that point. 
-			Runnable shutdownPcs = new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					_logger.info("Issuing STOP on the Persistent Counter Storage Handler");
-					PersistentCounterHandler.getInstance().stop(true, 0);
-					PersistentCounterHandler.setInstance(null);					
-				}
-			};
-			Thread shutdownThread = new Thread(shutdownPcs);
-			shutdownThread.setDaemon(true);
-			shutdownThread.setName("H2DbEvent:DiskSpace:StopPcs");
-			shutdownThread.start();
-
-			// Just sleep for a short while (more or less to contect switch)
-			//try { Thread.sleep(100); }
-			//catch(InterruptedException ignore) {}
-		}
-	}
+//	/**
+//	 * This method is called if the disk space is very low. One strategy is to
+//	 * inform the user and wait for it to clean up disk space. The database
+//	 * should not be accessed from within this method (even to close it).
+//	 * 
+//	 * hmmm, this was removed in H2 1.3.163
+//	 */
+//	@Override
+//	public void diskSpaceIsLow()
+//	{
+//		_logger.info("H2 Database Event Listener, diskSpaceIsLow()");
+//
+//		if (PersistentCounterHandler.hasInstance())
+//		{
+//			if (AseTune.hasGUI())
+//			{
+//				String htmlMsg =
+//					"<html>" +
+//						"Running out of disk space for the H2 database (Persistent Counter Storage)<br>" +
+//						"<br>" +
+//						"<b>STOPPING</b> the Persistent Counter Handler<br>" +
+//						"No more Performance Counters will be stored, you need to:" +
+//						"<ul>" +
+//						"   <li>Disconnect</li>" +
+//						"   <li>Free up some disk space</li>" +
+//						"   <li>Connect again</li>" +
+//						"</ul>" +
+//					"</html>";
+//
+//				// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead
+//				JOptionPane optionPane = new JOptionPane(htmlMsg, JOptionPane.WARNING_MESSAGE);
+//				JDialog dialog = optionPane.createDialog(null, "H2 running out of disk space");
+//				dialog.setModal(false);
+//				dialog.setVisible(true);
+////				// Needs to be non blocking...
+////				SwingUtils.showWarnMessage("H2 running out of disk space", htmlMsg, null);
+//
+//				_logger.warn("Running out of disk space for the H2 database (Persistent Counter Storage), Stopping the PCS Writer(s).");
+//			}
+//			else
+//			{
+//				_logger.warn("Running out of disk space for the H2 database (Persistent Counter Storage), Stopping the PCS Writer(s).");
+//			}
+//			
+//			// Then STOP the service
+//			// NOTE: This needs it's own Thread, otherwise it's the PersistCounterHandler thread
+//			//       that will issue the shutdown, meaning store() will be "put on hold"
+//			//       until this method call is done, and continue from that point. 
+//			Runnable shutdownPcs = new Runnable()
+//			{
+//				@Override
+//				public void run()
+//				{
+//					_logger.info("Issuing STOP on the Persistent Counter Storage Handler");
+//					PersistentCounterHandler.getInstance().stop(true, 0);
+//					PersistentCounterHandler.setInstance(null);					
+//				}
+//			};
+//			Thread shutdownThread = new Thread(shutdownPcs);
+//			shutdownThread.setDaemon(true);
+//			shutdownThread.setName("H2DbEvent:DiskSpace:StopPcs");
+//			shutdownThread.start();
+//
+//			// Just sleep for a short while (more or less to contect switch)
+//			//try { Thread.sleep(100); }
+//			//catch(InterruptedException ignore) {}
+//		}
+//	}
 
 	/**
 	 * This method is called if an exception occurred.

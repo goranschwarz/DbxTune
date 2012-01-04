@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -29,7 +30,7 @@ implements ActionListener
 	private String             _connName;
 	private String             _classname;
 	private String             _config;
-	private List<String>       _params;
+	private List<Set<String>>  _params;
 	private Properties         _menuProps;
 	private Properties         _allProps;
 	private XmenuAction        _xmenuObject;
@@ -37,7 +38,7 @@ implements ActionListener
 	private ConnectionFactory  _connFactory;
 	private boolean            _closeConnOnExit;
 
-	public TablePopupAction(String menuName, String connName, String classname, List<String> params, 
+	public TablePopupAction(String menuName, String connName, String classname, List<Set<String>> params, 
 			String config, Properties menuProps, Properties allProps, 
 			JTable table, ConnectionFactory connFactory, boolean closeConnOnExit)
 	{
@@ -104,9 +105,9 @@ implements ActionListener
 	{
 		return _params.size();
 	}
-	public String getParam(int i)
+	public Set<String> getParamSet(int i)
 	{
-		return (String)_params.get(i);
+		return _params.get(i);
 	}
 	public void loadClass()
 	{
@@ -138,21 +139,35 @@ implements ActionListener
 		// Loop parameters and try to get the position of the
 		for (int p=0; p<_params.size(); p++)
 		{
-			String param = (String) _params.get(p);
-
-			// get column position
+			Set<String> paramSet = _params.get(p);
+			String paramUsed = null;
+			boolean isOptional = false;
 			int colPos = -1;
-			for (int c=0; c<_table.getColumnCount(); c++)
+			for (String param : paramSet)
 			{
-				String colName = _table.getColumnName(c);
-				if ( colName.equalsIgnoreCase(param) )
+				if (param.equalsIgnoreCase(TablePopupFactory.OPTIONAL_PARAM))
 				{
-					colPos = c;
-					break; // break the column loop
+					isOptional = true;
+					continue;
 				}
+
+				// get column position
+				for (int c=0; c<_table.getColumnCount(); c++)
+				{
+					String colName = _table.getColumnName(c);
+					if ( colName.equalsIgnoreCase(param) )
+					{
+						paramUsed = param;
+						colPos = c;
+						break; // break the column loop
+					}
+				}
+				if (colPos > 0)
+					break;
 			}
 
-			_logger.debug("PopupMenuAction: column name '"+param+"' has table index "+colPos+".");
+
+			_logger.debug("PopupMenuAction: column name '"+paramSet+"' has table index "+colPos+".");
 
 			TableModel model = _table.getModel();
 			if (colPos >= 0)
@@ -165,20 +180,23 @@ implements ActionListener
 				}
 				else
 				{
-					JOptionPane.showMessageDialog(null, "The value for column '"+param+"' can not be a NULL or empty.", "Error", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(null, "The value for column '"+paramUsed+"' can not be a NULL or empty.", "Error", JOptionPane.ERROR_MESSAGE);
 					return null;
 				}
 
-				paramValues.put(param, val);
+				paramValues.put(paramUsed, val);
 
-				_logger.debug("PopupMenuAction: column name '"+param+"' has value '"+val+"'.");
+				_logger.debug("PopupMenuAction: column name '"+paramUsed+"' has value '"+val+"'.");
 			}
 			else
 			{
-				_logger.debug("PopupMenuAction: looking for column name '"+param+"' which could NOT be found.");
-				JOptionPane.showMessageDialog(null, "looking for column name '"+param+"' which could NOT be found in the current result set.", "Error", JOptionPane.ERROR_MESSAGE);
+				if ( ! isOptional )
+				{
+					_logger.debug("PopupMenuAction: looking for column name(s) '"+paramSet+"' which could NOT be found.");
+					JOptionPane.showMessageDialog(null, "looking for column name(s) '"+paramSet+"' which could NOT be found in the current result set.", "Error", JOptionPane.ERROR_MESSAGE);
 
-				return null;
+					return null;
+				}
 			}
 		}
 		return paramValues;

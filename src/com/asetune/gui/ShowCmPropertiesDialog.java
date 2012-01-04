@@ -154,8 +154,6 @@ extends JDialog implements ActionListener, ChangeListener
 		setSize(size);
 
 		setLocationRelativeTo(owner);
-
-		setVisible(true);
 	}
 
 	protected void initComponents()

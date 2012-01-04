@@ -43,6 +43,14 @@ extends CountersModel
 	public static final int HOSTMON_UD_CLASS = 4;
 	private String _udModuleName = null;
 
+	public static String getTypeExplanation(int type)
+	{
+		if (type == HOSTMON_IOSTAT)   return "HOSTMON_IOSTAT";
+		if (type == HOSTMON_VMSTAT)   return "HOSTMON_VMSTAT";
+		if (type == HOSTMON_MPSTAT)   return "HOSTMON_MPSTAT";
+		if (type == HOSTMON_UD_CLASS) return "HOSTMON_UD_CLASS";
+		return "UNKNOWN TYPE("+type+")";
+	}
 	//----------------------------------------------------------------------------
 	// BEGIN: Constructors
 	//----------------------------------------------------------------------------
@@ -524,5 +532,36 @@ extends CountersModel
 
 //		System.out.println(_name+":------doFireTableStructureChanged------");
 		fireTableStructureChanged();
+	}
+
+	/**
+	 * Get basic configuration "html" chars/tags is accepted.<br>
+	 * This would be overrided by modules that does not support Properties by ShowCmPropertiesDialog
+	 * @return
+	 */
+	@Override
+	public String getBasicConfigurationDescription()
+	{
+		String ret = 
+			"Host Monitor has no specific properties.<br>" +
+			"Please view executed command on the right hand side of the Option Panel<br>" +
+			"<br>" +
+			"hostMonType="+getTypeExplanation(_hostMonType)+".<br>";
+
+		if (_hostMonType == HOSTMON_UD_CLASS)
+			ret += "udModuleName='"+_udModuleName+"'<br>";
+
+		if (_hostMonitor != null)
+		{
+			ret += "<br>";
+			ret += "Some Basic info:<br>";
+			ret += "getName: "     + getName()                   + "<br>";
+			ret += "getCommand: "  + _hostMonitor.getCommand()   + "<br>";
+			ret += "getSleepTime: "+ _hostMonitor.getSleepTime() + "<br>";
+			ret += "isPaused: "    + _hostMonitor.isPaused()     + "<br>";
+			ret += "isRunning: "   + _hostMonitor.isRunning()    + "<br>";
+		}
+
+		return ret;
 	}
 }

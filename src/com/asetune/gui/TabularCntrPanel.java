@@ -1429,7 +1429,26 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		CountersModel cm = getDisplayCm();
 		if (cm == null)
 			cm = getCm();
-		new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
+
+		// If the cm has not implemented method, a UnsupportedOperationException will be thrown
+		// The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='CMosMpstat'.
+		// so fall back to some other display method
+		try
+		{
+			ShowCmPropertiesDialog dialog = new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
+			dialog.setVisible(true);
+		}
+		catch (UnsupportedOperationException e)
+		{
+			String htmlMsg = 
+				"<html>" +
+				"Sorry no properties dialog is available for '"+cm.getDisplayName()+"'.<br>" +
+				"<br>" +
+				"Basic Configuration info:<br>" +
+				cm.getBasicConfigurationDescription() +
+				"</html>";
+			SwingUtils.showInfoMessage(MainFrame.getInstance(), "Properties not available", htmlMsg);
+		}
 	}
 	/*---------------------------------------------------
 	 ** END: implementing: GTabbedPane.ShowProperties
@@ -1955,7 +1974,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 					throw new RuntimeException("The 'PersistReader' has not been initialized.");
 
 				Timestamp ts = reader.getPrevSample(sampleId, currentSampleTime, cmName);
-				if (ts != null)
+				if (ts == null)
+					SwingUtils.showInfoMessage(MainFrame.getInstance(), "No more data", "No more data was found.");
+				else
 				{
 					reader.loadSessionCmIndicators(ts);
 					reader.loadSummaryCm(ts);
@@ -1993,7 +2014,9 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 					throw new RuntimeException("The 'PersistReader' has not been initialized.");
 
 				Timestamp ts = reader.getNextSample(sampleId, currentSampleTime, cmName);
-				if (ts != null)
+				if (ts == null)
+					SwingUtils.showInfoMessage(MainFrame.getInstance(), "No more data", "No more data was found.");
+				else
 				{
 					reader.loadSessionCmIndicators(ts);
 					reader.loadSummaryCm(ts);

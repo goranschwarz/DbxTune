@@ -8023,6 +8023,7 @@ extends Thread
 		colsCalcDiff = new String[] {"ActiveDiff", "NumReuseCaused"};
 		colsCalcPCT  = new String[] {};
 		pkList       = new LinkedList<String>();
+		     pkList.add("ModuleID");
 		     pkList.add("AllocatorID");
 
 
@@ -8047,6 +8048,7 @@ extends Thread
 				if (isClusterEnabled)
 					pkCols.add("InstanceID");
 
+				pkCols.add("ModuleID");
 				pkCols.add("AllocatorID");
 
 				return pkCols;
@@ -8068,17 +8070,23 @@ extends Thread
 				String InstanceIDJoin = "";
 				if (isClusterEnabled && aseVersion >= 15500)
 				{
-					InstanceID     = "C.InstanceID, ";
-					InstanceIDJoin = "  and C.InstanceID = M.InstanceID \n";
+					InstanceID     = "M.InstanceID, ";
+					InstanceIDJoin = "  and M.InstanceID *= C.InstanceID \n";
 				}
 
 				String sql = 
-					"select M.ModuleName, "+InstanceID+"C.ModuleID, C.AllocatorName, C.AllocatorID, C.Active, \n" +
-					"       ActiveDiff = C.Active, C.HWM, C.ChunkHWM, C.NumReuseCaused \n" +
-					"from master..monProcedureCacheMemoryUsage C, master..monProcedureCacheModuleUsage M \n" +
-					"where C.ModuleID = M.ModuleID \n" +
+					"select M.ModuleName, "+InstanceID+"M.ModuleID, \n" +
+					"       AllocatorName = isnull(C.AllocatorName, '-AT-MODULE-LEVEL-'), \n" +
+					"       AllocatorID   = isnull(C.AllocatorID,   -1), \n" +
+					"       Active        = isnull(C.Active,        M.Active), \n" +
+					"       ActiveDiff    = isnull(C.Active,        M.Active), \n" +
+					"       HWM           = isnull(C.HWM,           M.HWM), \n" +
+					"       ChunkHWM      = isnull(C.ChunkHWM,      -1), \n" +
+					"       NumReuseCaused= isnull(C.NumReuseCaused,-1) \n" +
+					"from master..monProcedureCacheModuleUsage M, master..monProcedureCacheMemoryUsage C \n" +
+					"where M.ModuleID *= C.ModuleID \n" +
 					InstanceIDJoin +
-					"order by C.ModuleID, C.AllocatorID \n" +
+					"order by M.ModuleID, M.AllocatorID \n" +
 					optGoalPlan;
 
 				return sql;
@@ -11233,13 +11241,18 @@ extends Thread
 
 		for (String name : conf.getUniqueSubKeys(prefix, false))
 		{
+			if (getCmByName(name) != null)
+			{
+				_logger.info("Already loaded the UDC named '"+name+"', skipping this and continue with next one.");
+				continue;
+			}
 			SplashWindow.drawProgress("Loading: User Defined Counter Model '"+name+"'");
 			
 			String startKey = prefix + name + ".";
 			
 			Map<Integer, String> sqlVer = null;
 
-			_logger.debug("STARTING TO Initializing User Defined Counter '"+name+"'.");
+			_logger.info("Loading/Initializing User Defined Counter '"+name+"'.");
 
 			// Get the individual properties
 			String  udcName          = conf.getProperty(startKey    + "name");
@@ -11272,26 +11285,26 @@ extends Thread
 			// CHECK for mandatory properties
 			if (udcName == null)
 			{
-				_logger.error("Cant initialize User Defined Counter '"+name+"', no 'name' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'name' has been defined.");
 				failCount++;
 				continue;
 			}
 			if (udcSql == null)
 			{
-				_logger.error("Cant initialize User Defined Counter '"+name+"', no 'sql' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'sql' has been defined.");
 				failCount++;
 				continue;
 			}
 			if (udcPkPos != null)
 			{
-				_logger.error("Cant initialize User Defined Counter '"+name+"', 'pkPos' are not longer supported, please use 'pk' instead.");
+				_logger.error("Can't initialize User Defined Counter '"+name+"', 'pkPos' are not longer supported, please use 'pk' instead.");
 				failCount++;
 				continue;
 			}
 
 			if (udcPk == null)
 			{
-				_logger.error("Cant initialize User Defined Counter '"+name+"', no 'pk' has been defined.");
+				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'pk' has been defined.");
 				failCount++;
 				continue;
 			}
