@@ -108,6 +108,8 @@ update: check_for_update.php
 ###########################################################
 c:
 cd c:\tmpsvn
+- copy asetune_YYYY-MM-DD.zip to _prev_releases, and unzip it
+- start previous release and check that the "New Upgrade is Available" pop-up is displayed
 - remove the release and other created directories
 - or leave it until next release
 
@@ -115,5 +117,14 @@ cd c:\tmpsvn
 ###########################################################
 ## MAIL out that a new release is available
 ###########################################################
+- copy *.php, *.html, etc files 
+        from: asemon.se
+          to: C:\projects\asetune\src\com\asetune\check\server
+- checkin "post release" files...
+
+###########################################################
+## MAIL out that a new release is available
+###########################################################
+- Maybe mail specific instructions to some users (special changes need to be doen)
 
 

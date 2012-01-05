@@ -57,9 +57,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 260;
-	$ASEMON_LATEST_VERSION_STR = "2.6.0";
-	$ASEMON_LATEST_VERSION_STR = "2011-09-30";
+	$ASEMON_LATEST_VERSION_SRC = 278;
+	$ASEMON_LATEST_VERSION_STR = "2.9.0";
+	$ASEMON_LATEST_VERSION_STR = "2012-01-05";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asemon.se/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
