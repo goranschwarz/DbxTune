@@ -16,8 +16,21 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-xx-xx</H2>
+<H2>2012-01-05</H2>
 <UL>
+	<LI>
+	<b>New Functionality: ASE Application Tracing</b><br>
+	A new tool 'ASE Application Tracing', for details see http://www.sybase.com/files/White_Papers/ASE15-apptrace-070507-wp.pdf
+	for more information how this works.<br>
+	This is just a GUI on top of ASE 'set tracefile ...' functionality.<br>
+	The add on for the GUI is that it can work with remote files, so you can start the trace on your 
+	local client (probably a PC), tehn if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
+	will be opened to do tail of the trace file. This makes it <b>much</b> easier to view the trace file.<br>
+	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
+	This is a really usefull tool if you want to trace what a specific SPID is doing in the server.<br>
+	<b>Note:</b> This uses a lot of memory in the GUI... lets see if we can fix that in any future release.<br>
+	</LI>
+
 	<LI>
 	<b>Change: Performance Counter Properties Dialog.</b><br>
 	When you right click on the JTabbedPane, you can choose Properties.<br>
@@ -32,9 +45,46 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Change: Screen capture.</b><br>
-	The text in the Dialog can now be Copy+Paste.<br>
-	This makes it easier to access the storage directory.<br>
+	<b>Changed behavior: Connecting to different ASE Version, no need to restart AseTune</b><br>
+	It's now supported to connect to ASE Version X, then disconnect and connect to another ASE Version<br>
+	</LI>
+
+	<LI>
+	<b>New: SQL Code Completion in SQL Window tool</b><br>
+	Using Ctrl+Space you bring up SQL Code Completion, for table names and columns<br>
+	For the moment I don't use a parser to check where in the SQL code you are, so for the moment
+	it's kind off basic... Column completion work works in a limited way for table aliases.<br>
+	Please report strange behavior...<br> 
+	</LI>
+
+	<LI>
+	<b>New: DDL storage functionality</b><br>
+	In some of the performance counters, get top 10, or all rows (DBName, ObjectName) and get various
+	information from the ASE Server (sp_help/procText, sp__optdiag, sp_depends) on tables/procedures<br>
+	If the table or procedure has dependencies to other tables/procedures, add q DDL request of those objects as well.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Connection Dialog, PCS: now show DDL Lookup/Storage properties</b><br>
+	When recording a session you can now choose to do "DDL Lookup" and save it to the Persistent Counter Store<br>
+	</LI>
+
+	<LI>
+	<b>New: View DDL </b><br>
+	The entries stored be the 'DDL storage functionality' can be viewed in a TreeTable,<br>
+	Access the 'View DDL' from:
+	<ul>
+		<li>MainMenu -&gt; Tools -&gt; DDL Viewer</li>
+		<li>Any Performance Counter: Right click menu -&gt; DDL Viewer</li>
+	</ul>
+	<b>Note:</b> For the moment 'DDL View' is only available in "offline" mode. In the future this 
+	could also be implemented for "online" access.
+	</LI>
+
+	<LI>
+	<b>New: Performance Counter 'SPID Waits'</b><br>
+	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID. 
+	So there could be quite a bunch of rows in this one...<br>
 	</LI>
 
 	<LI>
@@ -54,6 +104,83 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>New: Column in in 'Statement Cache Details'</b><br>
+	In ASE 15.7, Show 'show_cached_plan_in_xml(SSQLID, 0)' in the details.<br>
+	The information will be saved/displayed in raw XML format until a good reader is available.
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Objects': Column name 'ObjectName' was showing IndexName instead of table name</b><br>
+	In AseTune Version 2011-09-30, 2.6.0: I changed to used <code>ObjectName</code> column instead of <code>ObjectName=object_name(...)</code><br>
+	This was not so good since the "raw" <code>ObjectName</code> displayed the IndexName instead of table name, so <br>
+	I changed it back to display the table name using <code>object_name(...)</code>, and also added a column (in ase 15.0.2 or higher)<br>
+	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
+	</LI>
+	
+	<LI>
+	<b>Change: tab 'Objects': Added some columns</b><br>
+	<ul>
+	    <li>NumUsedPages - which just does: <code>data_pages(A.DBID, A.ObjectID, A.IndexID)</code></li>
+	    <li>RowsPerPage - which calculates number of rows per page</li>
+	    <li>Remark - which tries to figure out what is happening of with this object. is it a table scan, etc...</li>
+	</ul>
+	The above columns will make it easier to check if many LogicalReads "ok", meaning is this on a small or large table<br>
+	This can be disabled/enabled from the Local Options, in the 'Objects' tab.
+	Or from any of the configuration files, using property 'CMobjectActivity.TabRowCount=true|false'<br>  
+	<b>Note:</b>The column 'Remark' should be treaded as 'experimental', use tooltip on the cell to get more information about the remark.<br>
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Proc Cache Memory Usage', now holds more values</b><br>
+	Now we do outer join on monProcedureCacheModuleUsage *= monProcedureCacheMemoryUsage<br>
+	This means that memory modules that does not have detailed sections, now is available by
+	the 'head/main' section. For example Dynamic SQL, does NOT have any details, which made it
+	a bit harder to read. But now these modules are also available in the details.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Summary Panel, some negative counters to zero</b><br>
+	In the summary panel, some counters that could turn negative are now reseted to zero<br>
+	(Transactions, io_total_read, io_total_write, pack_received, pack_sent, packet_errors)<br>
+	If the above counters goes negative trend graphs would be "unreadable"<br>
+	while other columns should be able to turn negative like (Connections etc...)<br>
+	</LI>
+
+	<LI>
+	<b>Add/Changes to: SQL Window, stand alone utility</b><br>
+	When starting the SQL Window tool as an external java process, using sqlw.bat. A menu bar and
+	a toolbar panel is created. This so you can connect/disconnect to ASE servers using the Connection Dialog.<br>
+	The stand alone utility 'sqlw' is released in this drop.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: SQL/Query Window</b><br>
+	<ul>
+		<li>Now has a "cancel" button, when a statement is executing</li>
+		<li>All ASE SQLExceptions are converted into SQLWarnings and printed along with the result sets.<br>
+		    For non ASE connections (offline storage) will still throw SQLExceptions</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: Capture SQL</b><br>
+	<ul>
+		<li>New field to write "extra where clause, on active statements</li>
+		<li>New field to write "order by, on active statements</li>
+	</ul>
+	If SQL error happens, the refresh will STOP and wait for you to fix any syntax errors in "where restrictions".<br>
+	Last executed SQL statement can be viewed wit tooltip on the panel.<br>
+	Note: This tool will be rewritten from scratch "soon"<br>
+	</LI>
+
+	<LI>
+	<b>Changed text in error message: Connection Dialog</b><br>
+	Some users had problems connecting, simply due to a faulty password.<br>
+	They just interpreted the "raw" JDBC error message in faulty way... It was to complicated<br>
+	So I added extra text in case the main exception was 'JZ00L'.<br>
+	</LI>
+
+	<LI>
 	<b>Change: "Extended Info Panel" on all Performance Counter tabs.</b><br>
 	The "Extended Info Panel" on each 'tab' has previously always been invisible/minimized. Now the 
 	divider location is saved to the user temporary properties. This so we can remember how
@@ -61,10 +188,55 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Add/Changes to: SQL Window, stand alone utility</b><br>
-	When starting the SQL Window tool as an external java process, using asesqlw.bat. A menu bar and
-	a toolbar panel is created. This so you can connect/disconnect to ASE servers using the Connection Dialog.<br>
-	The stand alone utility 'asesqlw' can soon be released.<br>
+	<b>Change: all Performance Counters, right click menu</b><br>
+	The context sensitive right click menu now has alternate column names and optional columns<br>
+	This simply means that they will be enabled (available to click on) on more tabs.<br>
+	</LI>
+
+	<LI>
+	<b>Add Messages: Wait Event Dictionary</b><br>
+	Added 5 new 'Wait Event Descriptions' from ASE Documentation 'Performance and Tuning Series: Monitoring Tables', Document ID 'DC00848-01-1570-01'<br>
+	</LI>
+
+	<LI>
+	<b>GUI Change: in all Performance Counters when reading offline database.</b><br>
+	Previously the field 'Clear Time' was empty, this field is not visible in offline mode anymore<br>
+	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is 
+	displaying, this makes it easier to detect if we are looking at the correct data.<br>
+	</LI>
+
+	<LI>
+	<b>Change: H2 PCS, Persist Counter Storage, connect properties</b><br>
+	When recording a session in a H2 database, set some basic options if they are not part of the URL<br>
+	<ul>
+	    <li><code>DATABASE_TO_UPPER=false</code> - Do <b>not</b> convert Table and Column names to upper.</li>
+	    <li><code>MAX_COMPACT_TIME=2000</code>   - The maximum time in milliseconds used to compact a database when closing.</li>
+	</ul>
+	Also setting some options in the database after connect<br>
+	<ul>
+	    <li><code>SET COMPRESS_LOB DEFLATE</code>       - Compress LOB Large OBjects, text/image fields.</li>
+	    <li><code>SET DEFAULT_LOCK_TIMEOUT 15000</code> - Change the LOCK timeout to 15 seconds.</li>
+	    <li><code>SET QUERY_TIMEOUT 15000</code>        - Change query timeout timeout to 15 seconds.</li>
+	</ul>
+	Also do '<code>SHUTDOWN COMPACT</code>' in method, stopServices()<br>
+	The intention for these changes is that the database size will be smaller...<br>
+	</LI>
+
+	<LI>
+	<b>New: Tooltip on SPID, in offline mode for all Performance Counter</b><br>
+	Tooltip on SPID in JTable cells now work in offline mode as well<br>
+	First it loads the 'Processes tab', then it check if the SPID is there and reads all the information.<br>
+	If the 'Processes' is not saved, then the ordinary 'Not able to load...' will be displayed.<br>
+	</LI>
+
+	<LI>
+	<b>Enhanced functionality: The offline/in-memory Slider can be moved with keyboard shortcuts.</b><br>
+	The offline/in-memory Slider can now be moved using
+	<ul>
+		<li>Crtl+left or Ctrl+right for one tick at time</li>
+		<li>Shift+left or Shift+right for 10 ticks at time</li>
+		<li>Crtl+Shift+left or Ctrl+Shift+right move to next slot that has data</li>
+	</ul>
 	</LI>
 
 	<LI>
@@ -79,11 +251,6 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Changed behavior: Connecting to different ASE Version, no need to restart AseTune</b><br>
-	It's now supported to connect to ASE Version X, then disconnect and connect to another ASE Version<br>
-	</LI>
-
-	<LI>
 	<b>Add: include servername in Window Title</b><br>
 	Show the ASE servername, or host:port number which this instance of AseTune is connected to<br>
 	format: 'AseTune - SrvName - extra information string'<br>
@@ -91,14 +258,56 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>bug fix: Tab Databases</b><br>
-	In offline mode, when reading the Performance Counters from the offline database, the local bar graph wasn't updated.<br>
+	<b>Change: Screen capture.</b><br>
+	The text in the Dialog can now be Copy+Paste.<br>
+	This makes it easier to access the storage directory.<br>
 	</LI>
 
 	<LI>
-	<b>bug fix: check if connection is still open, done to often</b><br>
-	I called isMonConnected() with forceCheck to often, this has been changed in CountersModel.isRefreshable()<br>
-	So less calls to ASE procedure sp_mda is done.<br>
+	<b>Change: HostMonitor data type when storing counters</b><br>
+	HostMonitor, expanded most data type storage from 7,1 or 5,1 to 10,1<br>
+	</LI>
+
+	<LI>
+	<b>Change: ASE View Configuration Dialog</b><br>
+	Some columns is now "editable", this simply means easier to do copy + paste<br>
+	It does NOT mean, that you can change the configuration values...<br>
+	</LI>
+
+	<LI>
+	<b>Change: Do graceful shutdown on Persistent Counter Handler</b><br>
+	PCS try to do graceful shutdown, with "timeout" of 10 seconds.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Main Window, Status Panel, added status for PCS Handler</b><br>
+	Details about how many entries that are in the Different Persist Queues
+	are now visible in the main window... a field with 3 counters has been added<br>
+	</LI>
+
+	<LI>
+	<b>Change: Offline reader, read "User Defined Counters", UDC from offline DB</b><br>
+	If the recorded database contains UDC, User Defined Counters that is NOT installed in the GUI
+	simply create the UDC and add it to the GUI temporarily<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 15.5 ESD#11, Component: jconn3.jar, jconn4.jar, jConnect Driver from JDK 15.5 ESD#11</li>
+	  <li>To version 1.3.163, Component: H2 database</li>
+	  <li>To version 15.7, Component: dsparser.jar, Sybase extension for reading interfaces, sql.ini files</li>
+	  <li>To version 15.7, Component: planviewer.jar, Sybase extension to view showplan, used by dbisql.exe</li>
+	  <li>To version 3.2.2, Component: jchart2d, Graph package</li>
+	  <li>To version 4.2, Component: MigLayout, Layout Manager</li>
+	  <li>To version 20111102, Component: proxy-vole, Access Internet Via WEB Proxy</li>
+	  <li>To version 1.6.2-2, Component: swingx-core, JXTable...</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Databases</b><br>
+	In offline mode, when reading the Performance Counters from the offline database, the local bar graph wasn't updated.<br>
 	</LI>
 
 	<LI>
@@ -117,13 +326,6 @@ li   {margin-bottom: 6px}
 	<b>bug fix: Tab Processes</b><br>
 	On highly utilized systems, timeouts happened. I guess this is due to joining with the monX proxy tables.<br>
 	So now I snapshot monProcessActivity, monProcess, monProcessNetIO into temp tables and join from there.<br>
-	</LI>
-
-	<LI>
-	<b>bug fix: Tab Objects</b><br>
-	Some customers receives CM Duplicate Key when doing difference calculation.<br>
-	I guess it's because there are same table names owned by different users or similar.<br>
-	So lets make the primary key '[InstanceID,] DBID, ObjectId, IndexId, DBName, ObjectName'<br>
 	</LI>
 
 	<LI>
@@ -162,18 +364,6 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Changed text in error message: Connection Dialog</b><br>
-	Some users had problems connecting, simply due to a faulty password.<br>
-	They just interpreted the "raw" JDBC error message in faulty way... It was to complicated<br>
-	So I added extra text in case the main exception was 'JZ00L'.<br>
-	</LI>
-
-	<LI>
-	<b>Add Messages: Wait Event Dictionary</b><br>
-	Added 5 new 'Wait Event Descriptions' from ASE Documentation 'Performance and Tuning Series: Monitoring Tables', Document ID 'DC00848-01-1570-01'<br>
-	</LI>
-
-	<LI>
 	<b>bug fix: Persistent Counter Storage, Strings can be overflowed.</b><br>
 	When storing to long Strings in the PCS, in H2 we got Exception: org.h2.jdbc.JdbcBatchUpdateException: Value too long for column<br>
 	Solution: If the string we are going to store is "longer" that the database allowed storage size, then
@@ -188,65 +378,14 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>GUI Change: in all Performance Counters when reading offline database.</b><br>
-	Previously the field 'Clear Time' was empty, this field is not visible in offline mode anymore<br>
-	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is 
-	displaying, this makes it easier to detect if we are looking at the correct data.<br>
-	</LI>
-
-	<LI>
 	<b>bug fix: in offline mode, the filter 'column list' wasn't loaded.</b><br>
 	This is now fixed<br>
-	</LI>
-
-	<LI>
-	<b>Change: tab 'Objects': Column name 'ObjectName' was showing IndexName instead of table name</b><br>
-	In AseTune Version 2011-09-30, 2.6.0: I changed to used <code>ObjectName</code> column instead of <code>ObjectName=object_name(...)</code><br>
-	This was not so good since the "raw" <code>ObjectName</code> displayed the IndexName instead of table name, so <br>
-	I changed it back to display the table name using <code>object_name(...)</code>, and also added a column (in ase 15.0.2 or higher)<br>
-	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
-	</LI>
-	
-	<LI>
-	<b>Change: tab 'Objects': Added some columns</b><br>
-	<ul>
-	    <li>NumUsedPages - which just does: <code>data_pages(A.DBID, A.ObjectID, A.IndexID)</code></li>
-	    <li>RowsPerPage - which calculates number of rows per page</li>
-	    <li>Remark - which tries to figure out what is happening of with this object. is it a table scan, etc...</li>
-	</ul>
-	The above columns will make it easier to check if many LogicalReads "ok", meaning is this on a small or large table<br>
-	This can be disabled using the option 'CMobjectActivity.TabRowCount=true|false' in the properties file.<br>  
-	The column 'Remark' should be treaded as 'experimental', use tooltip on the cell to get more information about the remark.<br>
 	</LI>
 
 	<LI>
 	<b>bug fix: tab 'Objects': to many DuplicateKey errors/Exceptions.</b><br>
 	Changed the internal PrimaryKey from: '<code>[InstanceID,] ObjectName, DBName, IndexID</code>' to: '<code>[InstanceID,] ObjectID, DBID, IndexID</code>'.<br>
 	Hopefully this will cause to less DuplicateKey errors.<br>
-	</LI>
-
-	<LI>
-	<b>Change: H2 PCS, Persist Counter Storage, connect properties</b><br>
-	When recording a session in a H2 database, set some basic options if they are not part of the URL<br>
-	<ul>
-	    <li><code>DATABASE_TO_UPPER=false</code> - Do <b>not</b> convert Table and Column names to upper.</li>
-	    <li><code>MAX_COMPACT_TIME=2000</code>   - The maximum time in milliseconds used to compact a database when closing.</li>
-	</ul>
-	Also setting some options in the database after connect<br>
-	<ul>
-	    <li><code>SET COMPRESS_LOB DEFLATE</code>       - Compress LOB Large OBjects, text/image fields.</li>
-	    <li><code>SET DEFAULT_LOCK_TIMEOUT 15000</code> - Change the LOCK timeout to 15 seconds.</li>
-	    <li><code>SET QUERY_TIMEOUT 15000</code>        - Change query timeout timeout to 15 seconds.</li>
-	</ul>
-	Also do '<code>SHUTDOWN COMPACT</code>' in method, stopServices()<br>
-	The intention for these changes is that the database size will be smaller...<br>
-	</LI>
-
-	<LI>
-	<b>New: DDL storage functionality</b><br>
-	In some of the performance counters, get top 10, or all rows (DBName, ObjectName) and get various
-	information from the ASE Server (sp_help/procText, sp__optdiag, sp_depends) on tables/procedures<br>
-	If the table or procedure has dependencies to other tables/procedures, add q DDL request of those objects as well.<br>
 	</LI>
 
 	<LI>
@@ -257,172 +396,22 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Add: if GUI mode, start up a connection "watchdog"</b><br>
+	<b>bug fix: check if connection is still open, done to often</b><br>
 	This only means that the isOpen() check will hopefully already been done by the watchdog, which
 	means that the GUI will not freeze or lag behind, because it's not the Swing Dispatch Thread that calls
 	the database to check if the connection is still open.<br>
 	</LI>
 
 	<LI>
-	<b>New Functionality: ASE Application Tracing</b><br>
-	A new tool 'ASE Application Tracing', for details see http://www.sybase.com/files/White_Papers/ASE15-apptrace-070507-wp.pdf
-	for more information how this works.<br>
-	This is just a GUI on top... But the GUI can work with remote files, so you can start the trace your 
-	local client (probably a PC), if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
-	will be opened to do tail of the trace file. This makes it easier to view the trace file.<br>
-	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
-	BUT: Watch out for memory consumption...<br>
-	TODO: I need to write a better message here....<br>
-	</LI>
-
-	<LI>
-	<b>bug fix: Main Tabbed Pane, Scroll / Wrap properties</b><br>
+	<b>bug fix: Main Tabbed Pane, "tabs": Scroll/Wrap properties</b><br>
+	If the Performance Counter 'tabs' doesnt fit on one row, do we want the tabs to "scroll" or "wrap"<br>
+	Have all tabs on one row (scroll), or use multiple rows for 'tabs' (Wrap), Warpa is the default behaviour.<br>
 	This was previously not saved and restored on AseTune restart, now it is<br>
 	</LI>
 
 	<LI>
-	<b>New: Performance Counter 'SPID Waits'</b><br>
-	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID. 
-	So there could be quite a bunch of rows in this one...<br>
-	</LI>
-
-	<LI>
-	<b>New: View DDL </b><br>
-	The entries stored be the 'DDL storage functionality' can be viewed in a TreeTable,<br>
-	Access the 'View DDL' from:
-	<ul>
-		<li>MainMenu -&gt; Tools -&gt; DDL Viewer</li>
-		<li>Any Performance Counter: Right click menu -&gt; DDL Viewer</li>
-	</ul>
-	</LI>
-
-	<LI>
-	<b>New: Column in in 'Statement Cache Details'</b><br>
-	In ASE 15.7, Show 'show_cached_plan_in_xml(SSQLID, 0)' in the details.<br>
-	The information will be saved/displayed in raw XML format until a good reader is available.
-	</LI>
-
-	<LI>
-	<b>New: Tooltip on SPID, in offline mode for all Performance Counter</b><br>
-	Tooltip on SPID in JTable cells now work in offline mode as well<br>
-	First it loads the 'Processes tab', then it check if the SPID is there and reads all the information.<br>
-	If the 'Processes' is not saved, then the ordinary 'Not able to load...' will be displayed.<br>
-	</LI>
-
-	<LI>
-	<b>Enhanced functionality: The offline/in-memory Slider can be moved with keyboard shortcuts.</b><br>
-	The offline/in-memory Slider can now be moved using
-	<ul>
-		<li>Crtl+left or Ctrl+right for one tick at time</li>
-		<li>Shift+left or Shift+right for 10 ticks at time</li>
-		<li>Crtl+Shift+left or Ctrl+Shift+right move to next slot that has data</li>
-	</ul>
-	</LI>
-
-	<LI>
-	<b>Change: HostMonitor data type when storing counters</b><br>
-	HostMonitor, expanded most data type storage from 7,1 or 5,1 to 10,1<br>
-	</LI>
-
-	<LI>
-	<b>Change: Tool: SQL/Query Window</b><br>
-	<ul>
-		<li>Now has a "cancel" button, when a statement is executing</li>
-		<li>All SQLExceptions are converted into SQLWarnings and printed along with the result sets</li>
-	</ul>
-	</LI>
-
-	<LI>
-	<b>Change: Tool: Capture SQL</b><br>
-	<ul>
-		<li>New field to write "extra where clause, on active statements</li>
-		<li>New field to write "order by, on active statements</li>
-	</ul>
-	If SQL error happens, the refresh will STOP and wait for you to fix any syntax errors in "where restrictions".<br>
-	Last executed SQL statement can be viewed wit tooltip on the panel.<br>
-	Note: This tool will be rewritten from scratch "soon"<br>
-	</LI>
-
-	<LI>
-	<b>Change: ASE View Configuration Dialog</b><br>
-	Some columns is now editable, which makes it easier to do copy + paste<br>
-	</LI>
-
-	<LI>
-	<b>Change: Summary Panel, some negative counters to zero</b><br>
-	In the summary panel, some counters that could turn negative are now reseted to zero<br>
-	(Transactions, io_total_read, io_total_write, pack_received, pack_sent, packet_errors)<br>
-	If the above counters goes negative trend graphs would be "unreadable"<br>
-	while other columns should be able to turn negative like (Connections etc...)<br>
-	</LI>
-
-	<LI>
-	<b>Change: Do graceful shutdown on Persistent Counter Handler</b><br>
-	PCS try to do graceful shutdown, with "timeout" of 10 seconds.<br>
-	</LI>
-
-	<LI>
-	<b>Change: User Defined Counters, show Properties works</b><br>
+	<b>bug fix: User Defined Counters, show Properties works</b><br>
 	User Defined Counter, you can now view the SQL Statement with properties<br>
-	</LI>
-
-	<LI>
-	<b>Change: Connection Dialog, PCS: now show DDL Lookup properties</b><br>
-	DDL Lookup properties is now available in the connection dialog<br>
-	</LI>
-
-	<LI>
-	<b>Change: Main Window, Status Panel, added status for PCS Handler</b><br>
-	Details about how many entries that are in the Different Persist Queues
-	are now visible in the main window... a field with 3 counters has been added<br>
-	</LI>
-
-	<LI>
-	<b>Change: Persist Writer H2, shutdown on low disk space</b><br>
-	PCS H2, when the disk storage is about to get full, shutdown the PCS Handler.<br>
-	NOTE: this doesn't work on H2 1.3.163 
-	</LI>
-
-	<LI>
-	<b>Change: Offline reader, read User Defined Counters from offline DB</b><br>
-	If the samples database contains UDC, User Defined Counters that is NOT installed in the GUI
-	simply create the UDC and add it to the GUI temporarily<br>
-	</LI>
-
-	<LI>
-	<b>Change: tab 'Proc Cache Memory Usage', now holds more values</b><br>
-	Now we do outer join on monProcedureCacheModuleUsage *= monProcedureCacheMemoryUsage<br>
-	This means that memory modules that does not have detailed sections, now is available by
-	the 'head/main' section. For example Dynamic SQL, does NOT have any details, which made it
-	a bit harder to read. But now these modules are also available in the details.<br>
-	</LI>
-
-	<LI>
-	<b>Change: all Performance Counters, right click menu</b><br>
-	The context sensitive right click menu now has alternate column names and optional columns<br>
-	This simply means that they will be enabled (available to click on) on more tabs.<br>
-	</LI>
-
-	<LI>
-	<b>New: SQL Code Completion in SQL Window tool</b><br>
-	Using Ctrl+Space you bring up SQL Code Completion, for table names and columns<br>
-	For the moment I don't use a parser to check where in the SQL code you are, so for the moment
-	it's kind off basic... Column completion work works in a limited way for table aliases.<br>
-	Please report strange behavior...<br> 
-	</LI>
-
-	<LI>
-	<b>Upgraded some of the third party libraries/jars</b><br>
-	<ul>
-	  <li>To version 15.5 ESD#11, Component: jconn3.jar, jconn4.jar, jConnect Driver from JDK 15.5 ESD#11</li>
-	  <li>To version 1.3.163, Component: H2 database</li>
-	  <li>To version 15.7, Component: dsparser.jar, Sybase extension for reading interfaces, sql.ini files</li>
-	  <li>To version 15.7, Component: planviewer.jar, Sybase extension to view showplan, used by dbisql.exe</li>
-	  <li>To version 3.2.2, Component: jchart2d, Graph package</li>
-	  <li>To version 4.2, Component: MigLayout, Layout Manager</li>
-	  <li>To version 20111102, Component: proxy-vole, Access Internet Via WEB Proxy</li>
-	  <li>To version 1.6.2-2, Component: swingx-core, JXTable...</li>
-	</ul>
 	</LI>
 
 </UL>

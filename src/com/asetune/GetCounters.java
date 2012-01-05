@@ -1557,9 +1557,9 @@ extends Thread
 
 				if (aseVersion >= 15020)
 				{
-					TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)), \n";
-					NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), \n";
-					RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0), \n";
+					TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
+					NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
+					RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
 					DBName       = "A.DBName, \n";
 //					ObjectName   = "A.ObjectName, \n";
 					ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
@@ -1575,11 +1575,11 @@ extends Thread
 						_logger.info(getName()+".ObjectName=true, using the string '"+ObjectName+"' for ObjectName lookup.");
 						ObjectName += ", \n";
 					}
-					if (conf.getBooleanProperty(getName()+".TabRowCount", false))
+					if (conf.getBooleanProperty(getName()+".TabRowCount", true) == false)
 					{
-						TabRowCount  = "";
-						NumUsedPages = "";
-						RowsPerPage  = "";
+						TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
+						NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
+						RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
 						_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
 					}
 				}
@@ -1890,9 +1890,50 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
+			final String localName = name;
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long serialVersionUID = 1L;
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean defaultOpt = conf == null ? true : conf.getBooleanProperty(localName+".TabRowCount", true);
+					JCheckBox sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
+
+					sampleRowCount_chk.setName(localName+".TabRowCount");
+					sampleRowCount_chk.setToolTipText("<html>" +
+							"Sample Table Row Count using ASE functions <code>row_count()</code> and <code>data_pages()</code>.<br>" +
+							"<b>Note 1</b>: Only in ASE 15.0.2 or higher.<br>" +
+							"<b>Note 2</b>: You can also set the property 'CMobjectActivity.TabRowCount=true|false' in the configuration file.<br>" +
+							"<b>Note 3</b>: To check if this is enabled or not, use the Properties dialog in this tab pane, right click + properties...<br>" +
+							"</html>");
+					panel.add(sampleRowCount_chk, "wrap");
+
+					sampleRowCount_chk.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							// Need TMP since we are going to save the configuration somewhere
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null) return;
+							conf.setProperty(localName+".TabRowCount", ((JCheckBox)e.getSource()).isSelected());
+							conf.save();
+							
+							// This will force the CM to re-initialize the SQL statement.
+							CountersModel cm = getCmByName(localName);
+							if (cm != null)
+								cm.setSql(null);
+						}
+					});
+					
+					return panel;
+				}
 
 				@Override
 				public boolean ddlRequestInfo()
@@ -2418,6 +2459,7 @@ extends Thread
 			{
 				private static final long	serialVersionUID	= 1L;
 
+				@Override
 				protected JPanel createLocalOptionsPanel()
 				{
 					JPanel panel = SwingUtils.createPanel("Local Options", true);
@@ -2765,6 +2807,7 @@ extends Thread
 			{
 				private static final long serialVersionUID = 1L;
 
+				@Override
 				protected JPanel createLocalOptionsPanel()
 				{
 					JPanel panel = SwingUtils.createPanel("Local Options", true);
@@ -8758,6 +8801,7 @@ extends Thread
 				private static final long	serialVersionUID	= 1L;
 				private JCheckBox sampleXmlPlan_chk;
 
+				@Override
 				protected JPanel createLocalOptionsPanel()
 				{
 					JPanel panel = SwingUtils.createPanel("Local Options", true);
@@ -10180,6 +10224,7 @@ extends Thread
 			{
 				private static final long	serialVersionUID	= 1L;
 
+				@Override
 				protected JPanel createLocalOptionsPanel()
 				{
 					JPanel panel = SwingUtils.createPanel("Local Options", true);
@@ -12004,7 +12049,7 @@ extends Thread
 	////////////////////////////////////////////////////////////////////////////////////////
 	private Connection         _conn                      = null;
 	private long               _lastIsClosedCheck         = 0;
-	private long               _lastIsClosedRefreshTime   = 1200;
+	private long               _lastIsClosedRefreshTime   = 2000;
 
 	/**
 	 * Do we have a connection to the database?
