@@ -16,6 +16,56 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2012-xx-xx</H2>
+<UL>
+	<LI>
+	<b>Change: users does not require 'mon_role' and 'enable monitoring' anymore</b><br>
+	If a user logs in without 'mon_role' or if 'enable monitoring' is not enabled, AseTune
+	will still allow the user to login.<br>
+	But the environment will be <b>restricted</b>. Number of available Performance Counters will
+	of course be very limited. The Summary panel will still be maintained, in there you have
+	access to ASE Servers global variables for CPU, Disk and Network. Graphs connected to the 
+	summary fields will automatically be enabled.<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Disable Monitoring on disconnect or exit.</b><br>
+	In the "ASE Monitor Configuration" panel you can choose to "disable monitoring", "prompt" on exit.<br>
+	This has been extended to "on exit or disconnect", so new when this option has been enabled,
+	a dialog is displayed when you disconnect from a ASE (or it simply disables monitoring).<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Dialog "Configure ASE for Monitoring", Disable Monitoring.</b><br>
+	If you have <b>disabled</b> monitoring using the Dialog "Configure ASE for Monitoring", 
+	then monitoring can not continue, so lets simply do disconnect... <br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Connection Dialog, choosing a sql.ini/interfaces file.</b><br>
+	Sometimes the old sql.ini/interfaces file was loaded, this is better now.<br>
+	Also if you choose a new sql.ini/interfaces file, and it not in the correct format
+	a question will pop up, to ask if you want to edit the file.<br>   
+	</LI>
+
+	<LI>
+	<b>Bug fix: When ASE is in shutdown mode, put data collection on hold.</b><br>
+	Previously all sorts of error messages was thrown, when ASE was in shutdown mode<br>
+	Not it says 'ASE Shutdown in progress' in the watermark and data collection is simply
+	put on hold until the ASE goes down. And if reconnect is enabled, it will then wait for
+	the ASE restart to complete and connect again.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Code completion in the SQL Window tool.</b><br>
+	Fixed some issues here, and also added some more static completions.<br>
+	The code completion initialization, can now be canceled.
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2012-01-05</H2>
 <UL>
 	<LI>

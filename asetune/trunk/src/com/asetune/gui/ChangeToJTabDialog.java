@@ -127,8 +127,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		_next_rememberSession_rb.setToolTipText("So this popup wont be displayed until next time you start the application and the same event happens.");
 		_next_alwaysAsk_rb      .setToolTipText("This popup will be shown every time this event happens.");
 
-		_next_alwaysRemember_rb.setText("Remember to Always make the above choice, newer ask me again.");
-		_next_rememberSession_rb.setText("Remember the above choise until the application restarts.");
+		_next_alwaysRemember_rb.setText("Remember to Always make the above choice, never ask me again.");
+		_next_rememberSession_rb.setText("Remember the above choice until the application restarts.");
 		_next_alwaysAsk_rb.setText("Always show this dialog when this happens.");
 		_next_rbg.add(_next_alwaysRemember_rb);
 		_next_rbg.add(_next_rememberSession_rb);

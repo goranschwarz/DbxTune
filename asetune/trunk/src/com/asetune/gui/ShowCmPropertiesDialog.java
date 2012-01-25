@@ -483,6 +483,9 @@ extends JDialog implements ActionListener, ChangeListener
 
 	private void parseVersionString(String versionStr)
 	{
+		if (StringUtil.isNullOrBlank(versionStr) || "0.0.0".equals(versionStr))
+			versionStr = "00.0.0"; // then the below aseVersionStringToNumber() work better
+
 		int version = AseConnectionUtils.aseVersionStringToNumber(versionStr);
 		int major = version                                     / 1000;
 		int minor =(version -  (major * 1000))                  / 100;

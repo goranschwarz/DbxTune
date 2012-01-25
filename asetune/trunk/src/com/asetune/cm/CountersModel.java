@@ -191,6 +191,8 @@ implements Cloneable, ITableTooltip
 
 	private int maxRowSeen;
 	
+	public enum State { NORMAL, SRV_IN_SHUTDOWN };
+	private State _state = State.NORMAL;
 	
 	//-------------------------------------------------------
 	// BEGIN: Graph members
@@ -2081,6 +2083,28 @@ implements Cloneable, ITableTooltip
 	}
 
 	/** */
+	public void setState(State state)
+	{
+		_state = state;
+	}
+
+	/** */
+	public State getState()
+	{
+		return _state;
+	}
+
+	/** */
+	public String getStateDescription()
+	{
+		if (_state == State.SRV_IN_SHUTDOWN) 
+			return "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
+
+		return "";
+	}
+
+	/** */
+	/** */
 	public String getSql()
 	{
 		return _sqlRequest;
@@ -3680,7 +3704,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getValue: Cant find the column '" + colname + "'.");
+			_logger.debug("getValue: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() <= rowId)

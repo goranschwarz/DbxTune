@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.apache.log4j.Logger;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
@@ -35,6 +37,9 @@ public class GetCountersGui
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(GetCountersGui.class);
 	private boolean       _running = true;
+
+	/** means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection */
+	private boolean _canDoReconnect = false; 
 
 	public GetCountersGui()
 	{
@@ -166,10 +171,17 @@ public class GetCountersGui
 		isMonConnectedWatchDog.start();
 	}
 
+	@Override
+	/** called when GetCounters.closeMonConnection() */
+	protected void cleanupMonConnection()
+	{
+		_canDoReconnect = false;
+	}
+
 	public void run()
 	{
 		boolean	  firstLoopAfterConnect = true;
-		boolean   canDoReconnect        = false; // means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection
+//		boolean   canDoReconnect        = false; // means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection
 		int       reconnectProblems     = 0;
 
 		// If you want to start a new session in the Persistent Storage, just set this to true...
@@ -237,7 +249,7 @@ public class GetCountersGui
 			else if ( ! isMonConnected() )
 			{
 				firstLoopAfterConnect = true;
-				if ( ! canDoReconnect )
+				if ( ! _canDoReconnect )
 					startNewPcsSession = true;
 
 				MainFrame.setStatus(MainFrame.ST_DISCONNECT);
@@ -248,7 +260,7 @@ public class GetCountersGui
 //				catch (InterruptedException ignore) {}
 
 				// maybe do reconnect if the connection has been lost
-				if (canDoReconnect)
+				if (_canDoReconnect)
 				{
 //					Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 					Configuration tmpConf = Configuration.getCombinedConfiguration();
@@ -301,7 +313,7 @@ public class GetCountersGui
 			// re-connect if we lost the connection
 			if (isMonConnected())
 			{
-				canDoReconnect = true;
+				_canDoReconnect = true;
 			}
 
 			loopCounter++;
@@ -399,6 +411,14 @@ public class GetCountersGui
 				//Component comp = MainFrame.getActiveTab();
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");
 
+				// Set the CM's to be in normal refresh state
+				for (CountersModel cm : _CMList)
+				{
+					if (cm == null)
+						continue;
+
+					cm.setState(CountersModel.State.NORMAL);
+				}
 
 				// Get the CounterStorage if we have any
 				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
@@ -409,17 +429,24 @@ public class GetCountersGui
 				Timestamp mainSampleTime   = null;
 				Timestamp counterClearTime = null;
 
-				String sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
-				// If version is above 15.0.2 and you have 'sa_role' 
-				// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-				if (MonTablesDictionary.getInstance().aseVersionNum >= 15020)
+				String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
+				if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.MON_ROLE))
 				{
-					if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
-						sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
+					sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
+					// If version is above 15.0.2 and you have 'sa_role' 
+					// then: use ASE function asehostname() to get on which OSHOST the ASE is running
+					if (MonTablesDictionary.getInstance().aseVersionNum >= 15020)
+					{
+						if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
+							sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
+					}
 				}
 
 				try
 				{
+					if ( ! isMonConnected() )
+						continue; // goto: while (_running)
+						
 					Statement stmt = getMonConnection().createStatement();
 					ResultSet rs = stmt.executeQuery(sql);
 					while (rs.next())
@@ -430,6 +457,41 @@ public class GetCountersGui
 						counterClearTime = rs.getTimestamp(4);
 					}
 					rs.close();
+				//	stmt.close();
+					
+					// CHECK IF ASE is in SHUTDOWN mode...
+					boolean aseInShutdown = false;
+					SQLWarning w = stmt.getWarnings();
+					while(w != null)
+					{
+						// Msg=6002: A SHUTDOWN command is already in progress. Please log off.
+						if (w.getErrorCode() == 6002)
+						{
+							aseInShutdown = true;
+							break;
+						}
+						
+						w = w.getNextWarning();
+					}
+					if (aseInShutdown)
+					{
+						String msgShort = "ASE in SHUTDOWN mode...";
+						String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
+
+						_logger.info(msgLong);
+						MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, msgLong);
+						SummaryPanel.getInstance().setWatermarkText(msgShort);
+
+						for (CountersModel cm : _CMList)
+						{
+							if (cm == null)
+								continue;
+
+							cm.setState(CountersModel.State.SRV_IN_SHUTDOWN);
+						}
+
+						continue; // goto: while (_running)
+					}
 					stmt.close();
 				}
 				catch (SQLException sqlex)
@@ -452,7 +514,7 @@ public class GetCountersGui
 					aseHostname      = "unknown";
 					counterClearTime = new Timestamp(0);
 				}
-
+				
 				// PCS
 				PersistContainer pc = null;
 				if (pcs != null || imch != null)
@@ -584,8 +646,10 @@ public class GetCountersGui
 			{
 				//        System.out.println(Version.getAppName()+" : error in GetCounters loop. "+e);
 				_logger.error(Version.getAppName()+" : error in GetCounters loop ("+e.getMessage()+").", e);
+			}
+			finally
+			{
 				setInRefresh(false);
-				//System.exit(1);
 			}
 		} // END: while(_running)
 

@@ -131,6 +131,8 @@ implements ActionListener
 
 		int selectedRow = _table.getSelectedRow();
 		int row = selectedRow;
+		if (row < 0) 
+			return null; /* No row was selected */
 		if (_table instanceof JXTable)
 			row = ((JXTable)_table).convertRowIndexToModel(selectedRow);
 

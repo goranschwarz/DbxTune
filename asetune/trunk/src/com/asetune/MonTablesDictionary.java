@@ -33,7 +33,8 @@ public class MonTablesDictionary
 	private boolean _hasGui = false;
 
 	/** hashtable with MonTableEntry */
-	private HashMap<String,MonTableEntry> _monTables = null;
+//	private HashMap<String,MonTableEntry> _monTables = null;
+	private HashMap<String,MonTableEntry> _monTables = new HashMap<String,MonTableEntry>();
 
 	/** ASE @@servername string */
 	public String aseServerName = "";
@@ -294,94 +295,139 @@ public class MonTablesDictionary
 		}
 	}
 
+	
+	public void initializeVersionInfo(Connection conn, boolean hasGui)
+	{
+		if (conn == null)
+			return;
+		String sql = null;
+
+		// @@servername
+		aseServerName = AseConnectionUtils.getAseServername(conn);
+
+		// aseVersionStr = @@version
+		// aseVersionNum = @@version -> to an integer
+		// isClusterEnabled...
+		try
+		{
+			sql = SQL_VERSION;
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				aseVersionStr = rs.getString(1);
+			}
+			rs.close();
+
+			aseVersionNum = AseConnectionUtils.aseVersionStringToNumber(aseVersionStr);
+
+			if (AseConnectionUtils.isClusterEnabled(conn))
+				isClusterEnabled = true;
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("initializeVersionInfo, @@version", ex);
+			if (_hasGui)
+				SwingUtils.showErrorMessage("MonTablesDictionary - initializeVersionInfo", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+			return;
+		}
+	}
+
 	public void initialize(Connection conn, boolean hasGui)
 	{
 		if (conn == null)
 			return;
 		_hasGui = hasGui;
 
+		// Do more things if user has MON_ROLE
+		boolean hasMonRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
+
 		String sql = null;
 
 		// get values from monTables & monTableColumns
-		initializeMonTabColHelper(conn, false);
+		if (hasMonRole)
+			initializeMonTabColHelper(conn, false);
 
 		// monWaitClassInfo
-		try
+		if (hasMonRole)
 		{
-			sql = SQL_MON_WAIT_CLASS_INFO_1;
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-			int max_waitClassId = 0; 
-			while ( rs.next() )
+			try
 			{
-				max_waitClassId = rs.getInt(1); 
+				sql = SQL_MON_WAIT_CLASS_INFO_1;
+				Statement stmt = conn.createStatement();
+				ResultSet rs = stmt.executeQuery(sql);
+				int max_waitClassId = 0; 
+				while ( rs.next() )
+				{
+					max_waitClassId = rs.getInt(1); 
+				}
+				rs.close();
+	
+				_monWaitClassInfo = new MonWaitClassInfoEntry[max_waitClassId+1];
+	
+				rs = stmt.executeQuery(SQL_MON_WAIT_CLASS_INFO);
+				while ( rs.next() )
+				{
+					MonWaitClassInfoEntry entry = new MonWaitClassInfoEntry();
+					int pos = 1;
+	
+					entry._waitClassId  = rs.getInt(pos++);
+					entry._description  = rs.getString(pos++);
+	
+					_logger.debug("Adding WaitClassInfo: " + entry);
+	
+					_monWaitClassInfo[entry._waitClassId] = entry;
+				}
+				rs.close();
 			}
-			rs.close();
-
-			_monWaitClassInfo = new MonWaitClassInfoEntry[max_waitClassId+1];
-
-			rs = stmt.executeQuery(SQL_MON_WAIT_CLASS_INFO);
-			while ( rs.next() )
+			catch (SQLException ex)
 			{
-				MonWaitClassInfoEntry entry = new MonWaitClassInfoEntry();
-				int pos = 1;
-
-				entry._waitClassId  = rs.getInt(pos++);
-				entry._description  = rs.getString(pos++);
-
-				_logger.debug("Adding WaitClassInfo: " + entry);
-
-				_monWaitClassInfo[entry._waitClassId] = entry;
+				_logger.error("MonTablesDictionary:initialize, _monWaitClassInfo", ex);
+				if (_hasGui)
+					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				_monWaitClassInfo = null;
+				return;
 			}
-			rs.close();
-		}
-		catch (SQLException ex)
-		{
-			_logger.error("MonTablesDictionary:initialize, _monWaitClassInfo", ex);
-			if (_hasGui)
-				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-			_monWaitClassInfo = null;
-			return;
-		}
-
-		// _monWaitEventInfo
-		try
-		{
-			sql = SQL_MON_WAIT_EVENT_INFO_1;
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-			int max_waitEventId = 0; 
-			while ( rs.next() )
+	
+			// _monWaitEventInfo
+			try
 			{
-				max_waitEventId = rs.getInt(1); 
+				sql = SQL_MON_WAIT_EVENT_INFO_1;
+				Statement stmt = conn.createStatement();
+				ResultSet rs = stmt.executeQuery(sql);
+				int max_waitEventId = 0; 
+				while ( rs.next() )
+				{
+					max_waitEventId = rs.getInt(1); 
+				}
+				rs.close();
+	
+				_monWaitEventInfo = new MonWaitEventInfoEntry[max_waitEventId+1];
+	
+				rs = stmt.executeQuery(SQL_MON_WAIT_EVENT_INFO);
+				while ( rs.next() )
+				{
+					MonWaitEventInfoEntry entry = new MonWaitEventInfoEntry();
+					int pos = 1;
+	
+					entry._waitEventId  = rs.getInt(pos++);
+					entry._waitClassId  = rs.getInt(pos++);
+					entry._description  = rs.getString(pos++);
+					
+					_logger.debug("Adding WaitEventInfo: " + entry);
+	
+					_monWaitEventInfo[entry._waitEventId] = entry;
+				}
+				rs.close();
 			}
-			rs.close();
-
-			_monWaitEventInfo = new MonWaitEventInfoEntry[max_waitEventId+1];
-
-			rs = stmt.executeQuery(SQL_MON_WAIT_EVENT_INFO);
-			while ( rs.next() )
+			catch (SQLException ex)
 			{
-				MonWaitEventInfoEntry entry = new MonWaitEventInfoEntry();
-				int pos = 1;
-
-				entry._waitEventId  = rs.getInt(pos++);
-				entry._waitClassId  = rs.getInt(pos++);
-				entry._description  = rs.getString(pos++);
-				
-				_logger.debug("Adding WaitEventInfo: " + entry);
-
-				_monWaitEventInfo[entry._waitEventId] = entry;
+				_logger.error("MonTablesDictionary:initialize, _monWaitEventInfo", ex);
+				if (_hasGui)
+					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+				_monWaitEventInfo = null;
+				return;
 			}
-			rs.close();
-		}
-		catch (SQLException ex)
-		{
-			_logger.error("MonTablesDictionary:initialize, _monWaitEventInfo", ex);
-			if (_hasGui)
-				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-			_monWaitEventInfo = null;
-			return;
 		}
 
 		// @@servername
@@ -488,12 +534,15 @@ public class MonTablesDictionary
 
 		//-------- montables ------
 		// is installed monitor tables fully installed.
-		if (montablesStatus.equals("incomplete"))
+		if (hasMonRole)
 		{
-			String msg = "ASE Monitoring tables has not been completely installed. Please check it's status with: sp_version";
-			if (AseTune.hasGUI())
-				JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
-			_logger.warn(msg);
+			if (montablesStatus.equals("incomplete"))
+			{
+				String msg = "ASE Monitoring tables has not been completely installed. Please check it's status with: sp_version";
+				if (AseTune.hasGUI())
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
+				_logger.warn(msg);
+			}
 		}
 
 		// is installed monitor tables version different than ASE version
@@ -511,38 +560,46 @@ public class MonTablesDictionary
 
 		//-------- installmaster ------
 		// is installmaster fully installed.
-		if (installmasterStatus.equals("incomplete"))
+		if (hasMonRole)
 		{
-			String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";
-			if (_hasGui)
-				JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
-			_logger.error(msg);
+			if (installmasterStatus.equals("incomplete"))
+			{
+				String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";
+				if (_hasGui)
+					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+				_logger.error(msg);
+			}
 		}
 
 		// is 'installmaster' version different than ASE version
-		if (installmasterVersionNum > 0)
+		if (hasMonRole)
 		{
-			if (aseVersionNum != installmasterVersionNum)
+			if (installmasterVersionNum > 0)
 			{
-				String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
-				_logger.error(msg);
-
-				String msgHtml = 
-					"<html>" +
-					"ASE 'installmaster' script may be of a faulty version. <br>" +
-					"<br>" +
-					"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
-					"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
-					"<br>" +
-					"Do the following on the machine that hosts the ASE:<br>" +
-					"<code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
-					"<br>" +
-					"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
-					"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
-					"</html>";
-				if (_hasGui)
-					SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
-					//JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+				if (aseVersionNum != installmasterVersionNum)
+				{
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+					_logger.error(msg);
+	
+					String msgHtml = 
+						"<html>" +
+						"ASE 'installmaster' script may be of a faulty version. <br>" +
+						"<br>" +
+						"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
+						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
+						"<br>" +
+						"Do the following on the machine that hosts the ASE:<br>" +
+						"<font size=\"4\">" +
+						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+						"</font>" +
+						"<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
+						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
+						"</html>";
+					if (_hasGui)
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
+						//JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		}
 	}

@@ -11,7 +11,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -166,7 +168,7 @@ implements ActionListener, ConnectionProgressCallback
 		// kick off connect.
 		cpd.doBackgroundConnect();
 
-		// Sleep for 200ms, which may give the connect time to be finnished
+		// Sleep for 200ms, which may give the connect time to be finished
 		// If NOT, make the Progress dialog visible
 		try { Thread.sleep(200); }
 		catch (InterruptedException ignore) {}
@@ -373,7 +375,7 @@ implements ActionListener, ConnectionProgressCallback
 						String msg = "";
 						//Examine the SQLWarnings chained to this exception for the reason(s).
 						msg += "-- BEGIN - SQLWarning/SQLException chain ----------------\n";
-						msg += AseConnectionUtils.getMessageFromSQLException(sqlex)   + "\n";
+						msg += AseConnectionUtils.getMessageFromSQLException(sqlex, false) + "\n";
 						msg += "-- END - SQLWarning/SQLException chain ------------------\n";
 						msg += "Stacktrace:\n";
 						tip = "<pre>" + msg + StringUtil.stackTraceToString( sqlex ) + "</pre>";
@@ -863,6 +865,9 @@ implements ActionListener, ConnectionProgressCallback
 						//-------------------------
 						if (conn != null && _doExtraTasks)
 						{
+							// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
+							MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
+
 							//-------------------------
 							//---- DO 'Check Monitor Configuration' (EXTRA_TASK_CHECK_MONITOR_CONFIG)
 							//-------------------------
@@ -872,6 +877,9 @@ implements ActionListener, ConnectionProgressCallback
 								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 							else
 							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
+
 								Exception ex = new Exception("The system is not properly configured for monitoring.");
 								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
@@ -886,6 +894,9 @@ implements ActionListener, ConnectionProgressCallback
 							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
 							if ( ! ConnectionDialog.checkReconnectVersion(conn) )
 							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
+
 								Exception ex = new Exception("Connecting to a different ASE Version, This is NOT supported now...");
 								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
 								setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
@@ -938,6 +949,15 @@ implements ActionListener, ConnectionProgressCallback
 				}
 				catch (Exception e)
 				{
+					if (_connection != null)
+					{
+						try { _connection.close(); } catch (SQLException ignore) {}
+						_connection = null;
+					}
+					
+					// Reset initialized dictionaries
+					MonTablesDictionary.reset();
+
 					_exception = e;
 					return e;
 				}
@@ -989,12 +1009,12 @@ implements ActionListener, ConnectionProgressCallback
 			public void interrupt()
 			{
 				// Can we do something here it STOP the connection?
-				// well I dont think so but anyway...
+				// well I don't think so but anyway...
 				//super.interrupt();
 			}
 		};
 		
-		// Start the worker and release controll to the Swing/AWT Event Dispatcher Thread
+		// Start the worker and release control to the Swing/AWT Event Dispatcher Thread
 		_doConnectWorker.start();
 	}
 	

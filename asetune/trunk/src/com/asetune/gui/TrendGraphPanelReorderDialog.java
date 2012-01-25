@@ -427,9 +427,10 @@ public class TrendGraphPanelReorderDialog
 			
 			CountersModel cm = tg.getCm();
 
-			String cmDisplayName = cm.getDisplayName();
-			int    tabIndex      = MainFrame.getTabbedPane().indexOfTab(cmDisplayName);
-			Icon   icon          = MainFrame.getTabbedPane().getIconAt(tabIndex);
+			Icon   icon             = null;
+			String cmDisplayName    = cm.getDisplayName();
+			int    tabIndex         = MainFrame.getTabbedPane().indexOfTab(cmDisplayName);
+			if (tabIndex >= 0) icon = MainFrame.getTabbedPane().getIconAt(tabIndex);
 
 			row.set(TabPos.Icon      .ordinal(), icon);//cm.getTabPanel().getIcon());
 			row.set(TabPos.Enabled   .ordinal(), tg.isGraphEnabled());

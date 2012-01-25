@@ -4,6 +4,8 @@
 package com.asetune.utils;
 
 import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -19,6 +21,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -797,25 +805,46 @@ public class AseConnectionUtils
 //	}
 	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
 	{
-		String exMsg = getMessageFromSQLException(sqlex);
+		String exMsg = getMessageFromSQLException(sqlex, true);
 
 		String extraInfo = ""; 
-		if ( "JZ00L".equals(sqlex.getSQLState()) )
+
+		// JZ00L: Login failed
+		if (AseConnectionUtils.containsSqlState(sqlex, "JZ00L"))
+//		if ( "JZ00L".equals(sqlex.getSQLState()) )
 		{
 			extraInfo  = "<br>" +
-					"<b>Are you sure about the password</b><br>" +
+					"<b>Are you sure about the password, SQL State 'JZ00L'</b><br>" +
 					"The first Exception 'JZ00L' in <b>most</b> cases means: wrong user or password<br>" +
 					"Before you begin searching for strange reasons, please try to login again and make sure you use the correct password.<br>" +
 					"<br>" +
 					"Below is all Exceptions that happened during the login attempt.<br>" +
 					"<HR NOSHADE>";
 		}
+
+		// JZ0IB: The server's default charset of roman8 does not map to an encoding that is available in the client Java environment. Because jConnect will not be able to do client-side conversion, the connection is unusable and is being closed. Try using a later Java version, or try including your Java installation's i18n.jar or charsets.jar file in the classpath.
+		if (AseConnectionUtils.containsSqlState(sqlex, "JZ0IB"))
+//		if ( "JZ0IB".equals(sqlex.getSQLState()) )
+		{
+			extraInfo  = "<br>" +
+					"<b>Try a Workaround for the problem, SQL State 'JZ0IB'</b><br>" +
+					"In the Connection Dialog, in the field 'URL Option' specify:<br>" +
+					"<font size=\"4\">" +
+					"  <code>CHARSET=iso_1</code><br>" +
+					"</font>" +
+					"<i>This will hopefully get you going, but characters might not converted correctly</i><br>" +
+					"<br>" +
+					"Below is all Exceptions that happened during the login attempt.<br>" +
+					"<HR NOSHADE>";
+		}
+
 		String htmlStr = 
 			"<html>" +
 			  msg + "<br>" +
 			  extraInfo + 
 			  "<br>" + 
-			  exMsg.replace("\n", "<br>") + 
+//			  exMsg.replace("\n", "<br>") + 
+			  exMsg + 
 			"</html>"; 
 
 		SwingUtils.showErrorMessage(owner, title, htmlStr, sqlex);
@@ -823,9 +852,12 @@ public class AseConnectionUtils
 		return exMsg;
 	}
 
-	public static String getMessageFromSQLException(SQLException sqlex) 
+	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags) 
 	{
 		StringBuffer sb = new StringBuffer("");
+		if (htmlTags)
+			sb.append("<UL>");
+
 		boolean first = true;
 		while (sqlex != null)
 		{
@@ -834,11 +866,39 @@ public class AseConnectionUtils
 			else
 				sb.append( "\n" );
 
+			if (htmlTags)
+				sb.append("<LI>");
 			sb.append( sqlex.getMessage() );
+			if (htmlTags)
+				sb.append("</LI>");
+
 			sqlex = sqlex.getNextException();
 		}
 
+		if (htmlTags)
+			sb.append("</UL>");
+
 		return sb.toString();
+	}
+
+	/**
+	 * Check if the SQLSate is part of the SQLException chain.
+	 * 
+	 * @param sqlex
+	 * @param sqlstate
+	 * @return
+	 */
+	public static boolean containsSqlState(SQLException sqlex, String sqlstate) 
+	{
+		while (sqlex != null)
+		{
+			if ( sqlstate.equals(sqlex.getSQLState()) )
+				return true;
+
+				sqlex = sqlex.getNextException();
+		}
+
+		return false;
 	}
 
 	/** 
@@ -943,7 +1003,8 @@ public class AseConnectionUtils
 
 			if (aseVersionNumberStr == null)
 			{
-				_logger.warn("There ASE version string seems to be faulty, cant find any '##.#' in the version number string '" + versionStr + "'.");
+//				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.", new Exception("DUMMY EXCEPTION TO GET CALLSTACK"));
+				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.");
 				return aseVersionNumber; // which probably is 0
 			}
 
@@ -1335,30 +1396,78 @@ public class AseConnectionUtils
 					_logger.info("Automatic grant of 'mon_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
 				}
 
+				final String propKey = "AseConnectionUtils.showDialogOnNoRole.mon_role";
+
 				// If mon_role was still unsuccessfull
 				if ( ! has_mon_role )
 				{
 					String msg = "You need 'mon_role' to access monitoring tables";
 					_logger.error(msg);
-					if (gui)
+
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey, true);
+					if (gui && showInfo)
 					{
 						String msgHtml = 
 							"<html>" +
-							"You need 'mon_role' to access monitoring tables<br>" +
+							"<b>You need 'mon_role' to access monitoring tables</b><br>" +
 							"<br>" +
 							"Have your system administrator grant 'mon_role' to the login '"+user+"'.<br>" +
-							"Note: if user '"+user+"' has 'sso_role', then "+Version.getAppName()+" would have done this automatically.<br>" +
+							"<i>Note: if current user '"+user+"' had 'sso_role', then the grant is automatically done by "+Version.getAppName()+".</i><br>" +
 							"<br>" +
-							"This can be done with the following command:<br>" +
-							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
-							"<code>1> sp_role 'grant', 'mon_role', '"+user+"'</code><br>" +
-							"<code>2> go</code><br>" +
+							"The grant can be done with the following command:<br>" +
+//							"<font size=\"4\">" +
+							"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+							"  <code>1> sp_role 'grant', 'mon_role', '"+user+"'</code><br>" +
+							"  <code>2> go</code><br>" +
+//							"</font>" +
+							"<br>" +
+							"<HR NOSHADE>" +
+							"<b>This is only a warning message, You will still be allowed to login.</b><br>" +
+							"<br>" +
+							"But a <b>very restricted</b> functionality will be available<br>" +
+							"Most <i>if not all</i> Performance Counters is disabled.<br>" +
+							"A basic set of graphs will be enabled. <br>" +
+							"<ul>" +
+							"  <li>CPU Summary, Global Variables</li>" +
+							"  <li>Connections/Users in ASE</li>" +
+							"  <li>Disk read/write, Global Variables</li>" +
+							"  <li>Network Packets received/sent, Global Variables</li>" +
+							"</ul>" +
+							"So make sure you get 'mon_role' granted so you can start looking at all Performance Counters.<br>" +
 							"</html>";
 
-						SwingUtils.showErrorMessage(parent, "Problems when checking 'Monitor Role'", 
-								msgHtml, null);
+//						SwingUtils.showErrorMessage(parent, "Problems when checking 'Monitor Role'", 
+//						msgHtml, null);
+
+						// Create a check box that will be passed to the message
+						JCheckBox chk = new JCheckBox("Show this information on next connect attempt.", showInfo);
+						chk.addActionListener(new ActionListener()
+						{
+							@Override
+							public void actionPerformed(ActionEvent e)
+							{
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf == null)
+									return;
+								conf.setProperty(propKey, ((JCheckBox)e.getSource()).isSelected());
+								conf.save();
+							}
+						});
+
+						SwingUtils.showWarnMessageExt(parent, "Problems when checking 'Monitor Role'",
+								msgHtml, chk, null);
 					}
-					return false;
+//					return false;
+				}
+				else
+				{
+					// Remove the 'Show this information on next connect attempt.' if we have access
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.remove(propKey);
+						conf.save();
+					}
 				}
 			} // end: ! has_mon_role
 
@@ -1392,13 +1501,17 @@ public class AseConnectionUtils
 					_logger.info("Automatic grant of 'sybase_ts_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
 				}
 
+				final String propKey = "AseConnectionUtils.showDialogOnNoRole.sybase_ts_role";
+
 				// If mon_role was still unsuccessfull
-				if ( ! has_sybase_ts_role )
+				// but show the message only if you have mon_role, otherwise it will be to many messages
+				if ( ! has_sybase_ts_role && has_mon_role )
 				{
 					String msg = "You may need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.";
 					_logger.warn(msg);
 
-					if (gui)
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey, true);
+					if (gui && showInfo)
 					{
 						String msgHtml = 
 							"<html>" +
@@ -1411,13 +1524,43 @@ public class AseConnectionUtils
 							"Note: if user '"+user+"' has 'sso_role', then "+Version.getAppName()+" would have done this automatically.<br>" +
 							"<br>" +
 							"This can be done with the following command:<br>" +
-							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
-							"<code>1> sp_role 'grant', 'sybase_ts_role', '"+user+"'</code><br>" +
-							"<code>2> go</code><br>" +
+//							"<font size=\"4\">" +
+							"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+							"  <code>1> sp_role 'grant', 'sybase_ts_role', '"+user+"'</code><br>" +
+							"  <code>2> go</code><br>" +
+//							"</font>" +
 							"</html>";
 
-						SwingUtils.showWarnMessage(parent, "Problems when checking 'Sybase TS Role'", 
-								msgHtml, null);
+						// Create a check box that will be passed to the message
+						JCheckBox chk = new JCheckBox("Show this information on next connect attempt.", showInfo);
+						chk.addActionListener(new ActionListener()
+						{
+							@Override
+							public void actionPerformed(ActionEvent e)
+							{
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf == null)
+									return;
+								conf.setProperty(propKey, ((JCheckBox)e.getSource()).isSelected());
+								conf.save();
+							}
+						});
+						
+//						SwingUtils.showWarnMessage(parent, "Problems when checking 'Sybase TS Role'", 
+//								msgHtml, null);
+						
+						SwingUtils.showWarnMessageExt(parent, "Problems when checking 'Sybase TS Role'",
+								msgHtml, chk, null);
+					}
+				}
+				else
+				{
+					// Remove the 'Show this information on next connect attempt.' if we have access
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.remove(propKey);
+						conf.save();
 					}
 				}
 			} // end: ! has_sybase_ts_role
@@ -1429,69 +1572,118 @@ public class AseConnectionUtils
 			_logger.debug("Verify monTables existance");
 
 			// Check if montables are configured
-			sql = "select count(*) from master..sysobjects where name ='monTables'";
-			rs = stmt.executeQuery(sql);
-			while (rs.next())
+			if (has_mon_role)
 			{
-				if (rs.getInt(1) == 0)
+				sql = "select count(*) from master..sysobjects where name ='monTables'";
+				rs = stmt.executeQuery(sql);
+				while (rs.next())
 				{
-					String scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmontables";
-					if (aseVersionNum >= 15000)
-						scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
-
-					String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
-					_logger.error(msg);
-					if (gui)
+					if (rs.getInt(1) == 0)
 					{
-						String msgHtml = 
-							"<html>" +
-							"ASE Monitoring tables hasn't been installed. <br>" +
-							"<br>" +
-							"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"'. <br>" +
-							"Please apply '"+scriptName+"'.<br>" +
-							"" +
-							"<br>" +
-							"Do the following on the machine that hosts the ASE:<br>" +
-							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
-							"<code>1> sp_addserver loopback, null, @@servername</code><br>" +
-							"<code>2> go</code><br>" +
-							"<code>isql -Usa -Psecret -S"+atAtServername+" -w999 -i"+scriptName+"</code><br>" +
-							"</html>";
-
-						SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+						String scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmontables";
+						if (aseVersionNum >= 15000)
+							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
+	
+						String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
+						_logger.error(msg);
+						if (gui)
+						{
+							String msgHtml = 
+								"<html>" +
+								"ASE Monitoring tables hasn't been installed. <br>" +
+								"<br>" +
+								"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"'. <br>" +
+								"Please apply '"+scriptName+"'.<br>" +
+								"" +
+								"<br>" +
+								"Do the following on the machine that hosts the ASE:<br>" +
+								"<font size=\"4\">" +
+								"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 </code><br>" +
+								"  <code>1> sp_addserver loopback, null, @@servername</code><br>" +
+								"  <code>2> go</code><br>" +
+								"  <code>isql -Usa -Psecret -S"+atAtServername+" -w999 -i"+scriptName+"</code><br>" +
+								"</font>" +
+								"</html>";
+	
+							SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+						}
+						return false;
 					}
-					return false;
 				}
 			}
 
-			// Check if configuration 'xxx' is activated
-			if (needsConfig != null)
+			if (has_mon_role)
 			{
-				sql = "java:method:checkAseConfig()";
-				_logger.debug("Verify monitor configuration: "+StringUtil.toCommaStr(needsConfig));
-	
-				String errorMesage = checkAseConfig(conn, needsConfig, true);
-				if ( errorMesage != null )
+				// Check if configuration 'xxx' is activated
+				if (needsConfig != null)
 				{
-					if (gui)
-					{
-						SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", errorMesage, null);
-		
-						AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum);
+					sql = "java:method:checkAseConfig()";
+					_logger.debug("Verify monitor configuration: "+StringUtil.toCommaStr(needsConfig));
 
-						// After reconfig, go and check again
-						errorMesage = checkAseConfig(conn, needsConfig, false);
-						
-						// If we still have errors, get out of here with false=failure
-						if ( errorMesage != null )
+					String errorMesage = checkAseConfig(conn, needsConfig, true, has_sa_role);
+					if ( errorMesage != null )
+					{
+						if (gui)
 						{
-							SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", errorMesage, null);
+							// First build up an extra dialog that will be used if config is not changed
+							String msgHtml = 
+								"<html>" +
+								"<br>" +
+								"<HR NOSHADE>" +
+								"<b>You may proceed with the login, if you check the box below.</b><br>" +
+								"<br>" +
+								"But a <b>very restricted</b> functionality will be available<br>" +
+								"Most <i>if not all</i> Performance Counters is disabled.<br>" +
+								"A basic set of graphs will be enabled. <br>" +
+								"<ul>" +
+								"  <li>CPU Summary, Global Variables</li>" +
+								"  <li>Connections/Users in ASE</li>" +
+								"  <li>Disk read/write, Global Variables</li>" +
+								"  <li>Network Packets received/sent, Global Variables</li>" +
+								"</ul>" +
+								"</html>";
+							JPanel tmpPanel = new JPanel(new MigLayout());
+							JLabel tmpLbl = new JLabel(msgHtml);
+							JCheckBox tmpChk = new JCheckBox("Yes I still want to connect...", false);
+							tmpPanel.add(tmpLbl, "push, grow, wrap");
+							tmpPanel.add(tmpChk, "push, grow, wrap");
+//							SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", errorMesage, null);
+
+							if (has_sa_role)
+							{
+								// Show message, not with the extra dialog
+								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, null);
+
+								// open config dialog
+								AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum);
+		
+								// After reconfig, go and check again
+								errorMesage = checkAseConfig(conn, needsConfig, false, has_sa_role);
+								
+								// If we still have errors, get out of here with false=failure
+								if ( errorMesage != null )
+								{
+									// Show message, now WITH the extra dialog
+//									SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", errorMesage, null);
+									SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
+
+									if (tmpChk.isSelected())
+										return true;
+									return false;
+								}
+							}
+							else
+							{
+								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
+								if (tmpChk.isSelected())
+									return true;
+								return false;
+							}
+						}
+						else
+						{
 							return false;
 						}
-					}
-					else
-					{
-						return false;
 					}
 				}
 			}
@@ -1525,7 +1717,7 @@ public class AseConnectionUtils
 	/**
 	 * @returns null if OK, a HTML message if problems
 	 */
-	private static String checkAseConfig(Connection conn, String[] needsConfig, boolean firstTimeCheck)
+	private static String checkAseConfig(Connection conn, String[] needsConfig, boolean firstTimeCheck, boolean hasSaRole)
 	throws SQLException
 	{
 		boolean notConfigured = false;
@@ -1544,11 +1736,19 @@ public class AseConnectionUtils
 
 		if ( firstTimeCheck )
 		{
-			errorMesage += "<b>I will now open the configuration panel for you.</b><BR>";
-			errorMesage += "<b>A new check will be done after that.</b><BR>";
-			errorMesage += "<BR>";
-			errorMesage += "<b>Recomendation:</b><BR>";
-			errorMesage += "Use the 'pre defined' configuration 'drop down' at the bottom.<BR>";
+			if (hasSaRole)
+			{
+				errorMesage += "<b>I will now open the configuration panel for you.</b><BR>";
+				errorMesage += "<b>A new check will be done after that.</b><BR>";
+				errorMesage += "<BR>";
+				errorMesage += "<b>Recomendation:</b><BR>";
+				errorMesage += "Use the 'pre defined' configuration 'drop down' at the bottom.<BR>";
+			}
+			else
+			{
+				errorMesage += "<b>You don't have 'sa_role'...</b><BR>";
+				errorMesage += "<b>So there is no need to open the configuration panel.</b><BR>";
+			}
 		}
 		else
 		{
@@ -1905,12 +2105,15 @@ public class AseConnectionUtils
 				if (roleList == null)
 					roleList = new LinkedList<String>();
 				String val = rs.getString(1);
-				String[] sa = val.split(" ");
-				for (int i=0; i<sa.length; i++)
+				if (val != null)
 				{
-					String role = sa[i].trim();
-					if ( ! roleList.contains(role) )
-						roleList.add(role);
+					String[] sa = val.split(" ");
+					for (int i=0; i<sa.length; i++)
+					{
+						String role = sa[i].trim();
+						if ( ! roleList.contains(role) )
+							roleList.add(role);
+					}
 				}
 			}
 			rs.close();

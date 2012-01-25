@@ -2430,7 +2430,7 @@ implements Runnable
 		}
 		
 		String str = "Loading 'DDL Detailes' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
-System.out.println(str);
+//System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
 
@@ -2461,6 +2461,9 @@ System.out.println(str);
 			PreparedStatement pstmnt = _conn.prepareStatement(sql);
 //			pstmnt.setString(1, inSessionStartTime.toString());
 
+			// No timeout
+			pstmnt.setQueryTimeout(0);
+			
 			ResultSet rs = pstmnt.executeQuery();
 //			ResultSetMetaData rsmd = rs.getMetaData();
 //			int cols = rsmd.getColumnCount();
@@ -2499,7 +2502,7 @@ System.out.println(str);
 		}
 		
 		String str = "Loading 'DDL TreeView' took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.";
-System.out.println(str);
+//System.out.println(str);
 		_logger.debug(str);
 		setStatusText(str);
 

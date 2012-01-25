@@ -534,6 +534,39 @@ extends Thread
 	}
 
 	/** 
+	 * Get any <code>CountersModel</code> that depends on a specific ASE configuration 
+	 * @return a List of CountersModel objects
+	 */
+	public static List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
+		for (CountersModel cm : _CMList)
+		{
+			String[] sa = cm.getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
+//			String[] sa = cm.getDependsOnConfig();
+			if ( sa == null )
+				continue;
+
+			for (String cfg : sa)
+			{
+				// remove any default values '=value'
+				int index = cfg.indexOf("=");
+				if (index >= 0)
+					cfg = cfg.substring(0, index).trim();
+					
+				if ( cfgName.equals(cfg) && ! cmList.contains(cm) )
+					cmList.add(cm);
+			}
+		}
+		return cmList; 
+	}
+	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
+	public static List<CountersModel> getCmListDependsOnConfig(String cfg)
+	{
+		return getCmListDependsOnConfig(cfg, null, 0, false);
+	}
+
+	/** 
 	 * Get <code>CountersModel</code> object for a CM that has the "short" name for example CMprocCallStack 
 	 * @return if the CM is not found a null will be return
 	 */
@@ -789,6 +822,9 @@ extends Thread
 	 */
 	public void checkForFullTransLogInMaster(Connection conn)
 	{
+		if (conn == null)
+			return;
+
 		//----------------------
 		// In some versions we need to do some checks before we refresh the counters
 		// - 15.0.3 ESD#1, 15.0.3.ESD#2, 15.0.3.ESD#3 (fix is estimated for the 'bharani' release)
@@ -1060,9 +1096,19 @@ extends Thread
 
 				cols3 = "";
 
-				String sql = 
-					"select " + cols1 + cols2 + cols3 + 
-					"from master..monState A \n";
+				String fromTable = " from master..monState A \n";
+
+				// if NOT MON_ROLE, revrite the query a bit
+				if (isRuntimeInitialized())
+				{
+					if ( ! isRoleActive(AseConnectionUtils.MON_ROLE))
+					{
+						cols1     = "dummyColumn = 1 \n";
+						fromTable = "";
+					}
+				}
+				
+				String sql = "select " + cols1 + cols2 + cols3 + fromTable;
 				
 				return sql;
 			}
@@ -10425,7 +10471,7 @@ extends Thread
 		needVersion  = 15020;
 		needCeVersion= 0;
 		monTables    = new String[] {"sysquerymetrics"};
-		needRole     = new String[] {};
+		needRole     = new String[] {"sa_role"};
 		needConfig   = new String[] {"enable metrics capture"}; // NO default for this configuration
 		colsCalcDiff = new String[] {"cnt", "abort_cnt"};
 		colsCalcPCT  = new String[] {};
@@ -12140,9 +12186,15 @@ extends Thread
 		{
 			_logger.error("closeMonConnection", ev);
 		}
+
+		cleanupMonConnection();
 		_conn = null;
 	}
 
+	/** override this method to cleanup stuff on disconnect */
+	protected void cleanupMonConnection()
+	{
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
