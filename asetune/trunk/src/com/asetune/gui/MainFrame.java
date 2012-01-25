@@ -1826,31 +1826,46 @@ public class MainFrame
 				boolean setMinimalGraphConfig = false;
 				Connection conn = AseTune.getCounterCollector().getMonConnection();
 
+				boolean hasMonRole          = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
+				boolean hasEnableMonitoring = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
+				int     aseVersion          = AseConnectionUtils.getAseVersionNumber(conn); 
+
 				// MON_ROLE
-				if ( ! AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE) )
+				if ( ! hasMonRole )
 					setMinimalGraphConfig = true;
 
 				// enable monitoring
-				if ( ! AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring") )
+				if ( ! hasEnableMonitoring )
 					setMinimalGraphConfig = true;
 
 				if ( setMinimalGraphConfig )
 				{
+					// GRAPHS in SUMMARY
 					CountersModel cm = GetCounters.getCmByName(GetCounters.CM_NAME__SUMMARY);
 					if (cm != null)
 					{
-						for (TrendGraph tg : cm.getTrendGraphs().values())
-						{
-							String tgName = tg.getName(); 
-							if (    tgName.equals("aaCpuGraph") 
-							     || tgName.equals("ConnectionsGraph") 
-							     || tgName.equals("aaReadWriteGraph") 
-							     || tgName.equals("aaPacketGraph") 
-							   )
-							{
-								tg.setEnable(true);
-							}
-						}
+						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU,             true);
+						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION,         true);
+						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE, true);
+						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,       true);
+						if (aseVersion >= 15033)
+							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION,    true);
+					}
+
+					// GRAPHS in SYSLOAD
+					if (aseVersion >= 15500 && hasMonRole)
+					{
+						cm = GetCounters.getCmByName(GetCounters.CM_NAME__SYS_LOAD);
+						if (cm != null)
+							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, true);
+					}
+
+					// GRAPHS in PROC_CACHE_MODULE_USAGE
+					if (aseVersion >= 15010 && hasMonRole)
+					{
+						cm = GetCounters.getCmByName(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE);
+						if (cm != null)
+							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, true);
 					}
 				}
 			}
