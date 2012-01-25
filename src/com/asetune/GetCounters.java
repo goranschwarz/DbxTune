@@ -497,6 +497,40 @@ extends Thread
 	public static final String CM_DESC__OS_MPSTAT               = "OS CPU(mpstat)";
 	
 	
+	// GRAPHS
+	public static final String CM_GRAPH_NAME__SUMMARY__AA_CPU                    = "aaCpuGraph";
+	public static final String CM_GRAPH_NAME__SUMMARY__TRANSACTION               = "TransGraph";
+	public static final String CM_GRAPH_NAME__SUMMARY__CONNECTION                = "ConnectionsGraph";
+	public static final String CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE        = "aaReadWriteGraph";
+	public static final String CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET              = "aaPacketGraph";
+
+	public static final String CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK         = "ChkptHkGraph";
+
+	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";
+	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT       = "DbLogSizeLeftGraph";
+	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph";
+
+	public static final String CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT = "TempDbLogSemapContGraph";
+	
+	public static final String CM_GRAPH_NAME__ENGINE__CPU_SUM                    = "cpuSum";
+	public static final String CM_GRAPH_NAME__ENGINE__CPU_ENG                    = "cpuEng";
+	
+	public static final String CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH      = "AvgRunQLengthGraph";
+	public static final String CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH   = "EngineRunQLengthGraph";
+
+	public static final String CM_GRAPH_NAME__DATA_CACHE__ACTIVITY               = "CacheGraph";
+	
+	public static final String CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS          = "diskIo";
+
+	public static final String CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME      = "devSvcTime";
+
+	public static final String CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC   = "ProcCacheGraph";
+
+	public static final String CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE = "ProcCacheModuleUsageGraph";
+	
+	public static final String CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC   = "StatementCacheGraph";
+
+	
 	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
 	public static List<CountersModel> getCmList()
 	{ 
@@ -1159,7 +1193,7 @@ extends Thread
 			{
 				int aseVersion = getServerVersion();
 
-				if ("aaCpuGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SUMMARY__AA_CPU.equals(tgdp.getName()))
 				{
 					Double cpuUser        = getDiffValueAsDouble(0, "cpu_busy");
 					Double cpuSystem      = getDiffValueAsDouble(0, "cpu_io");
@@ -1194,12 +1228,12 @@ extends Thread
 					}
 				}
 
-				if ("TransGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SUMMARY__TRANSACTION.equals(tgdp.getName()))
 				{
 					if (aseVersion < 15033)
 					{
 						// disable the transactions graph checkbox...
-						TrendGraph tg = getTrendGraph("TransGraph");
+						TrendGraph tg = getTrendGraph(CM_GRAPH_NAME__SUMMARY__TRANSACTION);
 						if (tg != null)
 						{
 							JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
@@ -1220,7 +1254,7 @@ extends Thread
 					}
 				}
 
-				if ("ConnectionsGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SUMMARY__CONNECTION.equals(tgdp.getName()))
 				{	
 					Double[] arr = new Double[3];
 
@@ -1234,7 +1268,7 @@ extends Thread
 					tgdp.setData(arr);
 				}
 
-				if ("aaReadWriteGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE.equals(tgdp.getName()))
 				{	
 					Double[] arr = new Double[2];
 
@@ -1247,7 +1281,7 @@ extends Thread
 					tgdp.setData(arr);
 				}
 
-				if ("aaPacketGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET.equals(tgdp.getName()))
 				{	
 					Double[] arr = new Double[3];
 
@@ -1265,11 +1299,11 @@ extends Thread
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		tmp.setTabPanel(null);
-		tmp.addTrendGraphData("aaCpuGraph",       new TrendGraphDataPoint("aaCpuGraph",       new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }));
-		tmp.addTrendGraphData("TransGraph",       new TrendGraphDataPoint("TransGraph",       new String[] { "Transactions" }));
-		tmp.addTrendGraphData("ConnectionsGraph", new TrendGraphDataPoint("ConnectionsGraph", new String[] { "UserConnections", "distinctLogins", "@@connections" }));
-		tmp.addTrendGraphData("aaReadWriteGraph", new TrendGraphDataPoint("aaReadWriteGraph", new String[] { "@@total_read", "@@total_write" }));
-		tmp.addTrendGraphData("aaPacketGraph",    new TrendGraphDataPoint("aaPacketGraph",    new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SUMMARY__AA_CPU,             new TrendGraphDataPoint(CM_GRAPH_NAME__SUMMARY__AA_CPU,             new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SUMMARY__TRANSACTION,        new TrendGraphDataPoint(CM_GRAPH_NAME__SUMMARY__TRANSACTION,        new String[] { "Transactions" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SUMMARY__CONNECTION,         new TrendGraphDataPoint(CM_GRAPH_NAME__SUMMARY__CONNECTION,         new String[] { "UserConnections", "distinctLogins", "@@connections" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE, new TrendGraphDataPoint(CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE, new String[] { "@@total_read", "@@total_write" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,       new TrendGraphDataPoint(CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,       new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }));
 		if (AseTune.hasGUI())
 		{
 			tmp.addTableModelListener( MainFrame.getSummaryPanel() );
@@ -1277,7 +1311,7 @@ extends Thread
 			TrendGraph tg = null;
 
 			// GRAPH: aaCpuGraph
-			tg = new TrendGraph("aaCpuGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SUMMARY__AA_CPU,
 					"CPU Summary, Global Variables", 	// Menu Checkbox text
 					"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
 					new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
@@ -1285,7 +1319,7 @@ extends Thread
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
 			// GRAPH: Transaction Graph
-			tg = new TrendGraph("TransGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SUMMARY__TRANSACTION,
 					// Menu Checkbox text
 					"Transaction per second",
 					// Label 
@@ -1295,7 +1329,7 @@ extends Thread
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
 			// GRAPH: Connections Graph
-			tg = new TrendGraph("ConnectionsGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SUMMARY__CONNECTION,
 					// Menu Checkbox text
 					"Connections/Users in ASE",
 					// Label 
@@ -1305,7 +1339,7 @@ extends Thread
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
 			// GRAPH: @@total_read, @@total_write
-			tg = new TrendGraph("aaReadWriteGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE,
 					// Menu Checkbox text
 					"Disk read/write, Global Variables",
 					// Label 
@@ -1315,7 +1349,7 @@ extends Thread
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
 			// GRAPH: @@pack_received, @@pack_sent
-			tg = new TrendGraph("aaPacketGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,
 					// Menu Checkbox text
 					"Network Packets received/sent, Global Variables",
 					// Label 
@@ -2417,7 +2451,7 @@ extends Thread
 				// FIXME: this will probably NOT work on Cluster Edition...
 				//        Should we just check the local InstanceID or should we do "sum"
 				//
-				if ("ChkptHkGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK.equals(tgdp.getName()))
 				{
 					int pos_Command = -1, pos_PhysicalWrites = -1;
 
@@ -2497,7 +2531,7 @@ extends Thread
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
 		tmp.setDiffDissColumns( new String[] {"WaitTime"} );
-		tmp.addTrendGraphData("ChkptHkGraph", new TrendGraphDataPoint("ChkptHkGraph", new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK, new TrendGraphDataPoint(CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK, new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }));
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
@@ -2555,7 +2589,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("ChkptHkGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK,
 					"Chekpoint and HK Writes", 	// Menu Checkbox text
 					"Checkpoint and Housekeeper Writes Per Second", // Label 
 					new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }, 
@@ -3220,7 +3254,7 @@ extends Thread
 				// Get what databases should be part of the graphs
 				Map<String, Integer> dbMap = DbSelectionForGraphsDialog.getDbsInGraphList(this);
 
-				if ("DbLogSemapContGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT.equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
 					Double[] dArray = new Double[dbMap.size()];
@@ -3241,7 +3275,7 @@ extends Thread
 					tgdp.setLabel(lArray);
 					tgdp.setData(dArray);
 				}
-				if ("DbLogSizeLeftGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT.equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
 					Double[] dArray = new Double[dbMap.size()];
@@ -3262,7 +3296,7 @@ extends Thread
 					tgdp.setLabel(lArray);
 					tgdp.setData(dArray);
 				}
-				if ("DbLogSizeUsedPctGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT.equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
 					Double[] dArray = new Double[dbMap.size()];
@@ -3288,9 +3322,9 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("DbLogSemapContGraph",   new TrendGraphDataPoint("DbLogSemapContGraph",   new String[] { "runtime-replaced" }));
-		tmp.addTrendGraphData("DbLogSizeLeftGraph",    new TrendGraphDataPoint("DbLogSizeLeftGraph",    new String[] { "runtime-replaced" }));
-		tmp.addTrendGraphData("DbLogSizeUsedPctGraph", new TrendGraphDataPoint("DbLogSizeUsedPctGraph", new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT, new TrendGraphDataPoint(CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT, new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT,      new TrendGraphDataPoint(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT,      new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT,  new TrendGraphDataPoint(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT,  new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
 			final String finalDisplayName = displayName;
@@ -3568,21 +3602,21 @@ extends Thread
 
 			// GRAPH
 			TrendGraph tg = null;
-			tg = new TrendGraph("DbLogSemapContGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT,
 					"DB Transaction Log Semaphore Contention", // Menu Checkbox text
 					"DB Transaction Log Semaphore Contention in Percent", // Label on the graph
 					new String[] { "runtime-replaced" }, 
 					false, tmp, false, -1);
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
-			tg = new TrendGraph("DbLogSizeLeftGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT,
 					"DB Transaction Log Space left in MB", // Menu Checkbox text
 					"DB Transaction Log Space left to use in MB", // Label on the graph
 					new String[] { "runtime-replaced" }, 
 					false, tmp, false, -1);
 			tmp.addTrendGraph(tg.getName(), tg, true);
 			
-			tg = new TrendGraph("DbLogSizeUsedPctGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT,
 					"DB Transaction Log Space used in PCT", // Menu Checkbox text
 					"DB Transaction Log Space used in Percent", // Label on the graph
 					new String[] { "runtime-replaced" }, 
@@ -3805,7 +3839,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("TempDbLogSemapContGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT.equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
 					Double[] dArray = new Double[this.size()];
@@ -3826,7 +3860,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("TempDbLogSemapContGraph", new TrendGraphDataPoint("TempDbLogSemapContGraph", new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT, new TrendGraphDataPoint(CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT, new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -3838,7 +3872,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("TempDbLogSemapContGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT,
 					"TempDB Transaction Log Semaphore Contention", // Menu Checkbox text
 					"TempDB Transaction Log Semaphore Contention in Percent", // Label on the graph
 					new String[] { "runtime-replaced" }, 
@@ -4205,7 +4239,7 @@ extends Thread
 				int aseVersion = getServerVersion();
 				// NOTE: IOCPUTime was introduced in ASE 15.5
 
-				if ("cpuSum".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__ENGINE__CPU_SUM.equals(tgdp.getName()))
 				{
 					Double[] dataArray  = new Double[3];
 					String[] labelArray = new String[3];
@@ -4240,7 +4274,7 @@ extends Thread
 					tgdp.setLabel(labelArray);
 					tgdp.setData(dataArray);
 				}
-				if ("cpuEng".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__ENGINE__CPU_ENG.equals(tgdp.getName()))
 				{
 					// Set label on the TrendGraph if we are above 15.5
 					if (aseVersion >= 15500)
@@ -4363,8 +4397,8 @@ extends Thread
 		};
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("cpuSum", new TrendGraphDataPoint("cpuSum", new String[] { "System+User CPU", "System CPU", "User CPU" }));
-		tmp.addTrendGraphData("cpuEng", new TrendGraphDataPoint("cpuEng", new String[] { "eng-0" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__ENGINE__CPU_SUM, new TrendGraphDataPoint(CM_GRAPH_NAME__ENGINE__CPU_SUM, new String[] { "System+User CPU", "System CPU", "User CPU" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__ENGINE__CPU_ENG, new TrendGraphDataPoint(CM_GRAPH_NAME__ENGINE__CPU_ENG, new String[] { "eng-0" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -4377,14 +4411,14 @@ extends Thread
 
 			// GRAPH
 			TrendGraph tg = null;
-			tg = new TrendGraph("cpuSum",
+			tg = new TrendGraph(CM_GRAPH_NAME__ENGINE__CPU_SUM,
 					"CPU Summary", 	// Menu Checkbox text
 					"CPU Summary for all Engines (using monEngine)", // Label 
 					new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 					true, tmp, true, -1);
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
-			tg = new TrendGraph("cpuEng",
+			tg = new TrendGraph(CM_GRAPH_NAME__ENGINE__CPU_ENG,
 					"CPU per Engine", // Menu Checkbox text
 					"CPU Usage per Engine (System + User)", // Label 
 					new String[] { "eng-0" }, 
@@ -4488,12 +4522,12 @@ extends Thread
 			{
 				int aseVersion = getServerVersion();
 
-				if ("AvgRunQLengthGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 				{
 					if (aseVersion < 15500)
 					{
 						// disable the transactions graph checkbox...
-						TrendGraph tg = getTrendGraph("AvgRunQLengthGraph");
+						TrendGraph tg = getTrendGraph(CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH);
 						if (tg != null)
 						{
 							JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
@@ -4518,12 +4552,12 @@ extends Thread
 					}
 				}
 
-				if ("EngineRunQLengthGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 				{
 					if (aseVersion < 15500)
 					{
 						// disable the transactions graph checkbox...
-						TrendGraph tg = getTrendGraph("EngineRunQLengthGraph");
+						TrendGraph tg = getTrendGraph(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH);
 						if (tg != null)
 						{
 							JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
@@ -4576,8 +4610,8 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("AvgRunQLengthGraph",    new TrendGraphDataPoint("AvgRunQLengthGraph", new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }));
-		tmp.addTrendGraphData("EngineRunQLengthGraph", new TrendGraphDataPoint("EngineRunQLengthGraph", new String[] { "-runtime-replaced-" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH,    new TrendGraphDataPoint(CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH,    new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, new String[] { "-runtime-replaced-" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -4589,7 +4623,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("AvgRunQLengthGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH,
 					"Run Queue Length, Server Wide", // Menu Checkbox text
 					"Run Queue Length, Average for all instances (only in 15.5 and later)", // Label on the graph
 					new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
@@ -4597,7 +4631,7 @@ extends Thread
 			tmp.addTrendGraph(tg.getName(), tg, true);
 
 			// GRAPH
-			tg = new TrendGraph("EngineRunQLengthGraph",
+			tg = new TrendGraph(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH,
 					"Run Queue Length, Per Engine", // Menu Checkbox text
 					"Run Queue Length, Average over last minute, Per Engine (only in 15.5 and later)", // Label on the graph
 					new String[] { "-runtime-replaced-" }, 
@@ -4772,7 +4806,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("CacheGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__DATA_CACHE__ACTIVITY.equals(tgdp.getName()))
 				{
 					Double[] arr = new Double[3];
 
@@ -4878,7 +4912,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("CacheGraph", new TrendGraphDataPoint("CacheGraph", new String[] { "Logical Reads", "Physical Reads", "Writes" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__DATA_CACHE__ACTIVITY, new TrendGraphDataPoint(CM_GRAPH_NAME__DATA_CACHE__ACTIVITY, new String[] { "Logical Reads", "Physical Reads", "Writes" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -4890,7 +4924,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("CacheGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__DATA_CACHE__ACTIVITY,
 					// Menu Checkbox text
 					"Data Caches Activity",
 					// Label 
@@ -5568,7 +5602,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("diskIo".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS.equals(tgdp.getName()))
 				{
 					Double[] arr = new Double[5];
 					arr[0] = this.getRateValue("User Data",   "IOs");
@@ -5629,7 +5663,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("diskIo", new TrendGraphDataPoint("diskIo", new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS, new TrendGraphDataPoint(CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS, new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -5641,7 +5675,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("diskIo",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS,
 					"Disk IO", 	// Menu Checkbox text
 					"Number of Disk IO Operations per Second", // Label 
 					new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" }, 
@@ -5766,7 +5800,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("devSvcTime".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME.equals(tgdp.getName()))
 				{
 					Double[] arr = new Double[2];
 					arr[0] = this.getDiffValueMax("AvgServ_ms"); // MAX
@@ -5819,7 +5853,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("devSvcTime", new TrendGraphDataPoint("devSvcTime", new String[] { "Max", "Average" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME, new TrendGraphDataPoint(CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME, new String[] { "Max", "Average" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -5831,7 +5865,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("devSvcTime",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME,
 					"Device IO Service Time", 	// Menu Checkbox text
 					"Device IO Service Time in Milliseconds", // Label 
 					new String[] { "Max", "Average" }, 
@@ -7096,7 +7130,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("ProcCacheGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC.equals(tgdp.getName()))
 				{
 					Double[] arr = new Double[2];
 
@@ -7113,7 +7147,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("ProcCacheGraph", new TrendGraphDataPoint("ProcCacheGraph", new String[] { "Requests", "Loads" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC, new TrendGraphDataPoint(CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC, new String[] { "Requests", "Loads" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -7125,7 +7159,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("ProcCacheGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC,
 					// Menu Checkbox text
 					"Procedure Cache Requests",
 					// Label 
@@ -8043,7 +8077,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("ProcCacheModuleUsageGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE.equals(tgdp.getName()))
 				{
 					// Write 1 "line" for every database
 					Double[] dArray = new Double[this.size()];
@@ -8064,7 +8098,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("ProcCacheModuleUsageGraph", new TrendGraphDataPoint("ProcCacheModuleUsageGraph", new String[] { "runtime-replaced" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, new TrendGraphDataPoint(CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -8076,7 +8110,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("ProcCacheModuleUsageGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE,
 					"Procedure Cache Module Usage", // Menu Checkbox text
 					"Procedure Cache Module Usage (in page count)", // Label on the graph
 					new String[] { "runtime-replaced" }, 
@@ -8425,7 +8459,7 @@ extends Thread
 			@Override
 			public void updateGraphData(TrendGraphDataPoint tgdp)
 			{
-				if ("StatementCacheGraph".equals(tgdp.getName()))
+				if (CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC.equals(tgdp.getName()))
 				{
 					Double[] arr = new Double[4];
 
@@ -8444,7 +8478,7 @@ extends Thread
 
 		tmp.setDisplayName(displayName);
 		tmp.setDescription(description);
-		tmp.addTrendGraphData("StatementCacheGraph", new TrendGraphDataPoint("StatementCacheGraph", new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }));
+		tmp.addTrendGraphData(CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC, new TrendGraphDataPoint(CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC, new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }));
 		if (AseTune.hasGUI())
 		{
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
@@ -8456,7 +8490,7 @@ extends Thread
 			tmp.setTabPanel( tcp );
 
 			// GRAPH
-			TrendGraph tg = new TrendGraph("StatementCacheGraph",
+			TrendGraph tg = new TrendGraph(CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC,
 					// Menu Checkbox text
 					"Statement Cache Requests",
 					// Label 

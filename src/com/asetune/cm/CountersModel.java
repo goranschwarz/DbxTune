@@ -1565,6 +1565,24 @@ implements Cloneable, ITableTooltip
 	{
 		return _trendGraphs;
 	}
+
+	public void setTrendGraphEnable(String name, boolean enable)
+	{
+		TrendGraph tg = getTrendGraph(name);
+		if (tg == null)
+			throw new RuntimeException("The TrendGraph '"+name+"', couldn't be found in the CounterModel '"+getName()+"'.");
+
+		tg.setEnable(enable);
+	}
+
+	public boolean isTrendGraphEnabled(String name)
+	{
+		TrendGraph tg = getTrendGraph(name);
+		if (tg == null)
+			throw new RuntimeException("The TrendGraph '"+name+"', couldn't be found in the CounterModel '"+getName()+"'.");
+
+		return tg.isGraphEnabled();
+	}
 	//-------------------------------------------
 	// END: TrendGraph
 	//-------------------------------------------
