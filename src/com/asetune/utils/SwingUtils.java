@@ -3,11 +3,17 @@
  */
 package com.asetune.utils;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dialog;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Frame;
 import java.awt.Point;
 import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -22,14 +28,19 @@ import java.util.logging.Level;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.WindowConstants;
 import javax.swing.border.Border;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
@@ -38,6 +49,10 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXErrorPane;
@@ -74,6 +89,135 @@ public class SwingUtils
 		}
 	}
 
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param userPanel If you want to add some extra components in a special panel below the error message
+	 */
+	public static void showInfoMessageExt(Component owner, String title, String msg, JCheckBox chkbox, JPanel userPanel)
+	{
+		showMessageExt(Level.INFO, owner, title, msg, chkbox, userPanel);
+	}
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param userPanel If you want to add some extra components in a special panel below the error message
+	 */
+	public static void showWarnMessageExt(Component owner, String title, String msg, JCheckBox chkbox, JPanel userPanel)
+	{
+		showMessageExt(Level.WARNING, owner, title, msg, chkbox, userPanel);
+	}
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param userPanel If you want to add some extra components in a special panel below the error message
+	 */
+	public static void showErrorMessageExt(Component owner, String title, String msg, JCheckBox chkbox, JPanel userPanel)
+	{
+		showMessageExt(Level.SEVERE, owner, title, msg, chkbox, userPanel);
+	}
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param userPanel If you want to add some extra components in a special panel below the error message
+	 */
+	private static void showMessageExt(final Level errorLevel, Component owner, String title, String msg, JCheckBox chkbox, JPanel userPanel)
+	{
+		final JDialog dialog;
+		if      (owner instanceof Dialog) dialog = new JDialog( (Dialog) owner );
+		else if (owner instanceof Frame)  dialog = new JDialog( (Frame)  owner );
+		else if (owner instanceof Window) dialog = new JDialog( (Window) owner );
+		else dialog = new JDialog();
+
+		JPanel msgPanel    = new JPanel(new MigLayout());
+		JPanel bottomPanel = new JPanel(new MigLayout());
+
+		// Create a close button
+		JButton close_but = new JButton("Close");
+		close_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				dialog.setVisible(false);
+			}
+		});
+
+		final String iconProp;
+		if      (errorLevel.equals(Level.INFO))    iconProp = "OptionPane.informationIcon";
+		else if (errorLevel.equals(Level.WARNING)) iconProp = "OptionPane.warningIcon";
+		else                                       iconProp = "OptionPane.errorIcon";
+
+		// Icon to be displayed
+		JLabel icon_lbl = new JLabel(UIManager.getIcon(iconProp));
+
+		// Create the error message component
+		//JLabel errorMessage  = new JLabel(msg);
+		// To get JLabel "selectable" so we can copy paste from it, use JEditorPane
+		JEditorPane errorMessage = new JEditorPane(new HTMLEditorKit().getContentType(), msg);
+		errorMessage.setText(msg);
+		// add a CSS rule to force body tags to use the default label font
+		// instead of the value in javax.swing.text.html.default.csss
+		Font font = UIManager.getFont("Label.font");
+		String bodyRule = "body { font-family: " + font.getFamily() + "; " + "font-size: " + font.getSize() + "pt; }";
+		((HTMLDocument)errorMessage.getDocument()).getStyleSheet().addRule(bodyRule);
+
+		errorMessage.setOpaque(false);
+		errorMessage.setBorder(null);
+		errorMessage.setEditable(false);
+
+		// Add components to the MESSAGE PANEL
+		msgPanel.add(icon_lbl,     "gap 20 20 20 20, top, left, split");
+//		msgPanel.add(errorMessage, "gap 20 20 20 20, grow, push, wrap");
+
+		// If we add the JEditorPane, using MigLayout, it gets to big...
+		JPanel dummyPanel = new JPanel(new BorderLayout());
+		dummyPanel.add(errorMessage);
+		msgPanel.add(dummyPanel, "gap 20 20 20 0, grow, push, wrap");
+
+		// Add components to the "footer"
+		Component comp = chkbox;
+		if (comp == null)
+			comp = new JLabel("");
+		bottomPanel.add(comp,      "split, grow, push");
+		bottomPanel.add(close_but, "tag right, wrap");
+
+		// Add all the panels to a base panel, which we add to the dialog
+		JPanel panel = new JPanel(new BorderLayout());
+		panel.add(msgPanel,    BorderLayout.NORTH);
+		panel.add(bottomPanel, BorderLayout.SOUTH);
+		if (userPanel != null)
+		{
+			JPanel tmpPanel = new JPanel(new MigLayout());
+			tmpPanel.add(userPanel, "gap 65 20, grow, push, wrap");
+			
+			panel.add(tmpPanel, BorderLayout.CENTER);
+		}
+
+		// set properties to the dialog
+		dialog.setContentPane(panel);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		dialog.setTitle(title);
+		dialog.setModal(true);
+		dialog.pack();
+
+		dialog.setLocationRelativeTo(owner);
+
+		// Finally show the dialog
+		dialog.setVisible(true);
+	}
 
 	// INFO panels
 	public static void showInfoMessage(String title, String msg)

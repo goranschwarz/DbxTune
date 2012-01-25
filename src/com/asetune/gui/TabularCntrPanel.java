@@ -19,6 +19,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -130,12 +132,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	private static final String[]	FILTER_OP_STR_ARR_SHORT				= { "EQ", "NE", "GT", "LT" };
 
 	private JPanel					_filterPanel;
-	private JLabel					_filterColumn_lbl					= new JLabel("Filter column");
+	private JLabel					_filterColumn_lbl					= new JLabel("Column");
 	private JComboBox				_filterColumn_cb					= new JComboBox();
 	private JLabel					_filterOperation_lbl				= new JLabel("Operation");
 	private JComboBox				_filterOperation_cb					= new JComboBox();
 	private JLabel					_filterValue_lbl					= new JLabel("Value");
 	private JTextField				_filterValue_tf						= new JTextField();
+	private JButton                 _filterValue_but                    = new JButton("X");
 	private JCheckBox				_filterNoZeroCounters_chk			= new JCheckBox("Do NOT show unchanged counter rows");
 
 	private boolean					            _tableRowFilterIsSet         = false;
@@ -1556,19 +1559,26 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		AutoCompleteDecorator.decorate(_filterColumn_cb);
 		AutoCompleteDecorator.decorate(_filterOperation_cb);
 		
-		_filterColumn_cb.setToolTipText("Column that you want to filter on.");
-		_filterOperation_cb.setToolTipText("Operation to use when filtering data.");
-		_filterValue_tf.setToolTipText("Value to filter on. If column is 'string' then regexp will be used for operator 'Equal' and 'Not Equal'.");
-		_filterNoZeroCounters_chk.setToolTipText("Filter out rows where all 'diff/rate' counters are 0.");
+		_filterColumn_cb         .setToolTipText("<html>Column that you want to filter on.</html>");
+		_filterOperation_cb      .setToolTipText("<html>Operation to use when filtering data.</html>");
+		_filterValue_tf          .setToolTipText("<html>Value to filter on, in the specified Column. <br><br>RegExp will be used for operator 'Equal' and 'Not Equal' (even for integer values).<br>To Apply the filter value, simply press &lt;return&gt;, leave the field, or press the apply button to the right.<br><br><b>Example</b>: '^2$|38|39|40' if you want to filter on DBID: 2,38,39,40<br></html>");
+		_filterValue_but         .setToolTipText("<html>Apply the filter.<br><br><b>Note</b>: This is also done if you press &lt;return&gt; in the value field or 'leaving/losingFocus' of the value field.</html>");
+		_filterNoZeroCounters_chk.setToolTipText("<html>Filter out rows where all 'diff/rate' counters are 0.</html>");
 
+		_filterValue_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/filter_value_apply.png"));
+		_filterValue_but.setText(null);
+		_filterValue_but.setContentAreaFilled(false);
+		_filterValue_but.setMargin( new Insets(0,0,0,0) );
+		
 		panel.add(_filterColumn_lbl, "");
-		panel.add(_filterColumn_cb, "growx, wrap");
+		panel.add(_filterColumn_cb,  "growx, wrap");
 
 		panel.add(_filterOperation_lbl, "");
-		panel.add(_filterOperation_cb, "growx, wrap");
+		panel.add(_filterOperation_cb,  "growx, wrap");
 
 		panel.add(_filterValue_lbl, "");
-		panel.add(_filterValue_tf, "growx, wrap");
+		panel.add(_filterValue_tf,  "split, growx");
+		panel.add(_filterValue_but, "gapx 0 0, wrap");
 
 		panel.add(_filterNoZeroCounters_chk, "span, wrap");
 
@@ -1874,6 +1884,27 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				saveFilterProps();
 			}
 		});
+		_filterValue_tf.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				filterAction(null, "VALUE");
+				saveFilterProps();
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
+		});
+		_filterValue_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				filterAction(e, "VALUE");
+				saveFilterProps();
+			}
+		});
+
 
 		_filterNoZeroCounters_chk.addActionListener(new ActionListener()
 		{
@@ -3372,6 +3403,10 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			{
 				setWatermarkText(_cm.getProblemDesc());
 			}
+			else if ( _cm.getState() != CountersModel.State.NORMAL)
+			{
+				setWatermarkText(_cm.getStateDescription());
+			}
 			else if ( _cm.getSampleException() != null )
 			{
 				// Make long string a little bit more readable split with
@@ -3419,7 +3454,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		{
 			if ( _cmDisplay == null )
 			{
-				setWatermarkText("No Stored data for the intervall was found.");
+				setWatermarkText("No Stored data for the interval was found.");
 			}
 			else if ( !_cmDisplay.hasDiffData() )
 			{
@@ -3623,7 +3658,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		if ( _inMemHistSampleTime == null )
 		{
-			_logger.warn("In Memory History Sample Time has not been set...");
+			_logger.info("In Memory History Sample Time has not been set...");
 			return;
 		}
 

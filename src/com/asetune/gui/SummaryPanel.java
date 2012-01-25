@@ -1154,7 +1154,8 @@ implements TableModelListener, GTabbedPane.ShowProperties
 	public void showProperties()
 	{
 		CountersModel cm = GetCounters.getCmByName(CM_NAME);
-		new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
+		ShowCmPropertiesDialog dialog = new ShowCmPropertiesDialog(MainFrame.getInstance(), getIcon(), cm);
+		dialog.setVisible(true);
 	}
 	/*---------------------------------------------------
 	 ** END: implementing: GTabbedPane.ShowProperties

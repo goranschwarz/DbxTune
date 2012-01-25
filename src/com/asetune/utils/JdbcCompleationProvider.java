@@ -87,6 +87,10 @@ extends DefaultCompletionProvider
 	{
 		super.addCompletion(c);
 	}
+	public void addJdbcCompletions(List<JdbcTableCompletion> list)
+	{
+		super.addCompletions(list);
+	}
 
     /**
      * same as getAlreadyEnteredText(), but '.' are included in the word.
@@ -183,23 +187,26 @@ extends DefaultCompletionProvider
 		if (_needRefresh)
 		{
 			// Clear old completions
-			super.completions.clear();
+			clear();
+//			super.completions.clear();
 
 			_schemaNames.clear();
 
 			// Restore the "saved" completions
-			for (Completion c : _savedComplitionList)
-				super.addCompletion(c);
+//			for (Completion c : _savedComplitionList)
+//				super.addCompletion(c);
+			super.addCompletions(_savedComplitionList);
 
 			// DO THE REFRESH
 			List<JdbcTableCompletion> list = refreshJdbcCompletion();
 
-			if (list != null)
+			if (list != null && list.size() > 0)
 			{
 				// Add the completion list
-				for (JdbcTableCompletion entry : list)
-					addJdbcCompletion(entry);
-	
+//				for (JdbcTableCompletion entry : list)
+//					addJdbcCompletion(entry);
+				addJdbcCompletions(list);
+
 				_needRefresh = false;
 			}
 		} // end _needRefresh
@@ -257,7 +264,29 @@ extends DefaultCompletionProvider
 			}
 		}
 
-		return super.getCompletionsImpl(comp);
+//		return super.getCompletionsImpl(comp);
+		return getCompletionsSimple(comp);
+	}
+
+	private List getCompletionsSimple(JTextComponent comp)
+	{
+		List retList = new ArrayList();
+		String text = getAlreadyEnteredText(comp);
+
+		if ( text != null )
+		{
+			for (Object o : completions)
+			{
+				if (o instanceof Completion)
+				{
+					Completion c = (Completion) o;
+					if (Util.startsWithIgnoreCase(c.getInputText(), text))
+						retList.add(c);
+				}
+			}
+		}
+
+		return retList;
 	}
 
     /**
@@ -365,6 +394,17 @@ extends DefaultCompletionProvider
 		{
 			// This is the object that will be returned.
 			ArrayList<JdbcTableCompletion> completionList = new ArrayList<JdbcTableCompletion>();
+			boolean cancel = false;
+			
+			@Override
+			public boolean canDoCancel() { return true; };
+			
+			@Override
+			public void cancel() 
+			{
+				_logger.info("refreshJdbcCompletion(), CANCEL has been called.");
+				cancel = true; 
+			};
 			
 			@Override
 			public Object doWork()
@@ -396,6 +436,9 @@ extends DefaultCompletionProvider
 								String tabDesc = rs.getString(2);
 //									System.out.println("_aseMonTableDesc.put('"+tabName+"', '"+tabDesc+"')");
 								_aseMonTableDesc.put(tabName, tabDesc);
+
+								if (cancel)
+									return null;
 							}
 							rs.close();
 							stmnt.close();
@@ -471,6 +514,9 @@ extends DefaultCompletionProvider
 						}
 
 						tableInfoList.add(ti);
+						
+						if (cancel)
+							return null;
 					}
 					rs.close();
 
@@ -597,7 +643,10 @@ extends DefaultCompletionProvider
 							}
 						}
 
-					}
+						if (cancel)
+							break;
+
+					} // end: for (TableInfo ti : tableInfoList)
 					
 					wait.setState("Creating Code Completions.");
 					for (TableInfo ti : tableInfoList)

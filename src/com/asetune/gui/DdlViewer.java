@@ -543,28 +543,36 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			AbstractMutableTreeTableNode tn = (AbstractMutableTreeTableNode)ddlm.getRoot();
 
 			tn = findEntry(tn, dbname, objectName, 0);
-//			System.out.println("findEntry(): TN ="+(tn ==null?"-null-":tn.getClass().getName()));
-//			System.out.println("findEntry(): VAL="+(tn ==null?"-null-":tn.toString()));
+			if (tn == null)
+			{
+				String htmlMsg = "<html>The object '"+objectName+"' wasn't found in the DDL View storage.</html>";
+				SwingUtils.showInfoMessageExt(this, "Object not found", htmlMsg, null, null);
+			}
+			else
+			{
+//				System.out.println("findEntry(): TN ="+(tn ==null?"-null-":tn.getClass().getName()));
+//				System.out.println("findEntry(): VAL="+(tn ==null?"-null-":tn.toString()));
 
-			TreeTableNode[] pathArr = ddlm.getPathToRoot(tn);
-//			System.out.println("PATH="+pathArr);
+				TreeTableNode[] pathArr = ddlm.getPathToRoot(tn);
+//				System.out.println("PATH="+pathArr);
 
-			TreePath currentPath = new TreePath(pathArr);
-			
-//			_treeTable.setSelectionPath(currentPath);
-			_treeTable.expandPath(currentPath);
-			_treeTable.scrollPathToVisible(currentPath);
+				TreePath currentPath = new TreePath(pathArr);
+				
+//				_treeTable.setSelectionPath(currentPath);
+				_treeTable.expandPath(currentPath);
+				_treeTable.scrollPathToVisible(currentPath);
 
-			int row = _treeTable.getRowForPath(currentPath);
-			_treeTable.setRowSelectionInterval(row, row);
+				int row = _treeTable.getRowForPath(currentPath);
+				_treeTable.setRowSelectionInterval(row, row);
 
-			// Load detailes for current entry
-			doActionShow();
+				// Load detailes for current entry
+				doActionShow();
 
-//			TreePath currentPath = new TreePath(tn.getPath());
-//			_tree.setSelectionPath(currentPath);
-//			_tree.expandPath(currentPath);
-//			_tree.scrollPathToVisible(currentPath);
+//				TreePath currentPath = new TreePath(tn.getPath());
+//				_tree.setSelectionPath(currentPath);
+//				_tree.expandPath(currentPath);
+//				_tree.scrollPathToVisible(currentPath);
+			}
 		}
 //		System.out.println("END:setViewEntry(dbname='"+dbname+"', objectname='"+objectName+"')");
 		return false;

@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -41,10 +42,13 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.GetCounters;
 import com.asetune.Version;
+import com.asetune.cm.CountersModel;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -67,7 +71,6 @@ public class AseConfigMonitoringDialog
 	private static final int PDC_MEDIUM   = 4;
 	private static final int PDC_LARGE    = 5;
 
-	
 	private static final String ON_EXIT_STR[] = { "none", "disable", "prompt" };
 
 	private static final int ON_EXIT_NONE    = 0;
@@ -76,18 +79,22 @@ public class AseConfigMonitoringDialog
 
 	private static final String default_configurabelMemoryText = " MB available for reconfiguration.";
 
-	private Connection         _conn          = null;
-	private boolean            _configErrors  = false;
+	private static final String ASE_CONFIG       = "ASE_CONFIG";
 
-	private int                _aseVersionNum = 0;
+	private Connection         _conn             = null;
+	private boolean            _configErrors     = false;
+
+	private int                _aseVersionNum    = 0;
+	private boolean            _isClusterEnabled = false;
 
 	/** Save tool tip in a Map so we can restore them later */
-	private ToolTipStore       _tts           = new ToolTipStore();
+	private ToolTipStore       _tts              = new ToolTipStore();
 
 	
 	// PANEL: MONITORING
 	private JPanel             _monitoringPanel_1             = null;
 	private JPanel             _monitoringPanel_2             = null;
+	private JPanel             _monitoringPanel_3             = null;
 	private JCheckBox          _enableMonitoring_chk          = new JCheckBox("Enable monitoring");
 	private JCheckBox          _perObjectStatisticsActive_chk = new JCheckBox("Per object statistics active");
 	private JCheckBox          _statementStatisticsActive_chk = new JCheckBox("Statement statistics active");
@@ -182,6 +189,18 @@ public class AseConfigMonitoringDialog
 		_conn = conn;
 		
 		setAseVersion(aseVersionNum);
+		if ( AseConnectionUtils.isConnectionOk(_conn, false, null) )
+		{
+			// Try to get a new version number if it doesn't exist...
+			if (_aseVersionNum <= 0)
+			{
+				_aseVersionNum    = AseConnectionUtils.getAseVersionNumber(_conn);
+				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
+
+				_logger.debug("init() Need to refresh the ASE Server version number, it is now '"+_aseVersionNum+"', isClusterEnabled="+_isClusterEnabled+".");
+			}
+		}
+
 		initComponents();
 		pack();
 
@@ -272,12 +291,14 @@ public class AseConfigMonitoringDialog
 		panel   .setLayout(new BorderLayout());
 		topPanel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
 
+		setConfigProps();
 		_monitoringPanel_1 = createMonitoringPanel();
 		_monitoringPanel_2 = createOtherMonitorConfigPanel();
+		_monitoringPanel_3 = createOnExitPanel();
 
-		topPanel.add(_monitoringPanel_1,    "growx");
-		topPanel.add(_monitoringPanel_2,    "growx");
-		topPanel.add(createOnExitPanel(),   "growx");
+		topPanel.add(_monitoringPanel_1, "growx");
+		topPanel.add(_monitoringPanel_2, "growx");
+		topPanel.add(_monitoringPanel_3, "growx");
 
 		// ADD TOP and OK panel
 		panel.add(new JScrollPane(topPanel), BorderLayout.CENTER);
@@ -288,11 +309,43 @@ public class AseConfigMonitoringDialog
 		setContentPane(panel);
 	}
 
+	private void setConfigProps()
+	{
+		_enableMonitoring_chk         .putClientProperty(ASE_CONFIG, "enable monitoring"             );
+		_perObjectStatisticsActive_chk.putClientProperty(ASE_CONFIG, "per object statistics active"  );
+		_statementStatisticsActive_chk.putClientProperty(ASE_CONFIG, "statement statistics active"   );
+		_statementCacheMonitoring_chk .putClientProperty(ASE_CONFIG, "enable stmt cache monitoring"  );
+		_objectLockwaitTiming_chk     .putClientProperty(ASE_CONFIG, "object lockwait timing"        );
+		_processWaitEvents_chk        .putClientProperty(ASE_CONFIG, "process wait events"           );
+		_sqlBatchCapture_chk          .putClientProperty(ASE_CONFIG, "SQL batch capture"             );
+		_waitEventTiming_chk          .putClientProperty(ASE_CONFIG, "wait event timing"             );
+		_lockTimeoutPipeActive_chk    .putClientProperty(ASE_CONFIG, "lock timeout pipe active"      );
+		_deadlockPipeActive_chk       .putClientProperty(ASE_CONFIG, "deadlock pipe active"          );
+		_errorlogPipeActive_chk       .putClientProperty(ASE_CONFIG, "errorlog pipe active"          );
+		_sqlTextPipeActive_chk        .putClientProperty(ASE_CONFIG, "sql text pipe active"          );
+		_statementPipeActive_chk      .putClientProperty(ASE_CONFIG, "statement pipe active"         );
+		_planTextPipeActive_chk       .putClientProperty(ASE_CONFIG, "plan text pipe active"         );
+		_lockTimeoutPipeMaxMessages_sp.putClientProperty(ASE_CONFIG, "lock timeout pipe max messages");
+		_deadlockPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "deadlock pipe max messages"    );
+		_errorlogPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "errorlog pipe max messages"    );
+		_sqlTextPipeMaxMessages_sp    .putClientProperty(ASE_CONFIG, "sql text pipe max messages"    );
+		_statementPipeMaxMessages_sp  .putClientProperty(ASE_CONFIG, "statement pipe max messages"   );
+		_planTextPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "plan text pipe max messages"   );
+		_maxSqlTextMonitored_sp       .putClientProperty(ASE_CONFIG, "max SQL text monitored"        );
+
+		_cfgCapMissingStatistics_chk  .putClientProperty(ASE_CONFIG, "capture missing statistics"    );
+		_cfgEnableMetricsCapture_chk  .putClientProperty(ASE_CONFIG, "enable metrics capture"        );
+		_cfgMetricsElapMax_sp         .putClientProperty(ASE_CONFIG, "metrics elap max"              );
+		_cfgMetricsExecMax_sp         .putClientProperty(ASE_CONFIG, "metrics exec max"              );
+		_cfgMetricsLioMax_sp          .putClientProperty(ASE_CONFIG, "metrics lio max"               );
+		_cfgMetricsPioMax_sp          .putClientProperty(ASE_CONFIG, "metrics pio max"               );
+	}
+
 	private JPanel createMonitoringPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("sp_configure 'Monitoring'", true);
 		panel.setLayout(new MigLayout("gap 0","[][grow,fill]",""));   // insets Top Left Bottom Right
-
+		
 		//--- TOOLTIP 
 		// The ToolTip is also used to display configuration problems...
 		// So the ToolTipStore is used to reset the original ToolTip when problem is solved.
@@ -314,14 +367,14 @@ public class AseConfigMonitoringDialog
 		_errorlogPipeActive_chk        .setToolTipText(_tts.add(_errorlogPipeActive_chk,        "errorlog pipe active indicates whether the Adaptive Server will collect historical errorlog monitoring information."));
 		_errorlogPipeMaxMessages_sp    .setToolTipText(_tts.add(_errorlogPipeMaxMessages_sp,    "errorlog pipe max messages specifies the maximum number of messages that can be stored for historical errorlog text."));
 
-		_sqlTextPipeActive_chk         .setToolTipText(_tts.add(_sqlTextPipeActive_chk,         "sql text pipe active indicates whether the Adaptive Server will collect historical sql batch text information. (This may degrade performance up to 5%)"));
-		_sqlTextPipeMaxMessages_sp     .setToolTipText(_tts.add(_sqlTextPipeMaxMessages_sp,     "sql text pipe max messages specifies the maximum number of messages that can be stored for historical sql text. (This may degrade performance up to 5%)"));
+		_sqlTextPipeActive_chk         .setToolTipText(_tts.add(_sqlTextPipeActive_chk,         "<html>sql text pipe active indicates whether the Adaptive Server will collect historical sql batch text information.<br>  <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
+		_sqlTextPipeMaxMessages_sp     .setToolTipText(_tts.add(_sqlTextPipeMaxMessages_sp,     "<html>sql text pipe max messages specifies the maximum number of messages that can be stored for historical sql text.<br> <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
 
-		_statementPipeActive_chk       .setToolTipText(_tts.add(_statementPipeActive_chk,       "statement pipe active indicates whether the Adaptive Server will collect historical statement level monitoring information. (This may degrade performance up to 10%)"));
-		_statementPipeMaxMessages_sp   .setToolTipText(_tts.add(_statementPipeMaxMessages_sp,   "statement pipe max messages specifies the maximum number of messages that can be stored for historical statement text. (This may degrade performance up to 10%)"));
+		_statementPipeActive_chk       .setToolTipText(_tts.add(_statementPipeActive_chk,       "<html>statement pipe active indicates whether the Adaptive Server will collect historical statement level monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
+		_statementPipeMaxMessages_sp   .setToolTipText(_tts.add(_statementPipeMaxMessages_sp,   "<html>statement pipe max messages specifies the maximum number of messages that can be stored for historical statement text.<br>      <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
 
-		_planTextPipeActive_chk        .setToolTipText(_tts.add(_planTextPipeActive_chk,        "plan text pipe active indicates whether the Adaptive Server will collect historical plan text monitoring information. (This may degrade performance up to 25%)"));
-		_planTextPipeMaxMessages_sp    .setToolTipText(_tts.add(_planTextPipeMaxMessages_sp,    "plan text pipe max messages specifies the maximum number of messages that can be stored for historical plan text. (This may degrade performance up to 25%)"));
+		_planTextPipeActive_chk        .setToolTipText(_tts.add(_planTextPipeActive_chk,        "<html>plan text pipe active indicates whether the Adaptive Server will collect historical plan text monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
+		_planTextPipeMaxMessages_sp    .setToolTipText(_tts.add(_planTextPipeMaxMessages_sp,    "<html>plan text pipe max messages specifies the maximum number of messages that can be stored for historical plan text.<br>     <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
 
 		_maxSqlTextMonitored_lbl       .setToolTipText(_tts.add(_maxSqlTextMonitored_lbl,       "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
 		_maxSqlTextMonitored_sp        .setToolTipText(_tts.add(_maxSqlTextMonitored_sp,        "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
@@ -392,7 +445,7 @@ public class AseConfigMonitoringDialog
 			"Missing Statistics are captured in the system catalogs, and can be view from <i>dbname</i>..sysstatistics <br>" +
 			"<br>" +
 			"This metrics is used in the Performance Counter Tab 'Missing Statistics'.<br>" +
-			"<b>Note:</b> This is available in ASE 15.0.3 ESD#1 and above.</html>" +
+			"<b>Note:</b> This is available in ASE 15.0.3 ESD#1 and above." +
 			"</html>";
 		_cfgCapMissingStatistics_chk   .setToolTipText(_tts.add(_cfgCapMissingStatistics_chk, toolTipText));
 
@@ -403,7 +456,7 @@ public class AseConfigMonitoringDialog
 			"metrics for statements in a stored procedure are saved in the procedure cache.<br>" +
 			"<br>" +
 			"This metrics is used in the Performance Counter Tab 'QP Metrics'.<br>" +
-			"<b>Note:</b> This is available in ASE 15.0.2 and above.</html>" +
+			"<b>Note:</b> This is available in ASE 15.0.2 and above." +
 			"</html>";
 		_cfgEnableMetricsCapture_chk.setToolTipText(_tts.add(_cfgEnableMetricsCapture_chk, toolTipText));
 
@@ -413,7 +466,7 @@ public class AseConfigMonitoringDialog
 			"<br>" +
 			"Unit: milliseconds<br>" +
 			"Note: <code><b>metrics elap max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
-			"Note: This is available in ASE 15.0.2 and above.</html>" +
+			"Note: This is available in ASE 15.0.2 and above." +
 			"</html>";
 		_cfgMetricsElapMax_lbl.setToolTipText(_tts.add(_cfgMetricsElapMax_lbl, toolTipText));
 		_cfgMetricsElapMax_sp .setToolTipText(_tts.add(_cfgMetricsElapMax_sp,  toolTipText));
@@ -424,7 +477,7 @@ public class AseConfigMonitoringDialog
 			"<br>" +
 			"Unit: milliseconds<br>" +
 			"Note: <code><b>metrics exec max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
-			"Note: This is available in ASE 15.0.2 and above.</html>" +
+			"Note: This is available in ASE 15.0.2 and above." +
 			"</html>";
 		_cfgMetricsExecMax_lbl.setToolTipText(_tts.add(_cfgMetricsExecMax_lbl, toolTipText));
 		_cfgMetricsExecMax_sp .setToolTipText(_tts.add(_cfgMetricsExecMax_sp,  toolTipText));
@@ -435,7 +488,7 @@ public class AseConfigMonitoringDialog
 			"<br>" +
 			"Unit: logical pages<br>" +
 			"Note: <code><b>metrics lio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
-			"Note: This is available in ASE 15.0.2 and above.</html>" +
+			"Note: This is available in ASE 15.0.2 and above." +
 			"</html>";
 		_cfgMetricsLioMax_lbl .setToolTipText(_tts.add(_cfgMetricsLioMax_lbl, toolTipText));
 		_cfgMetricsLioMax_sp  .setToolTipText(_tts.add(_cfgMetricsLioMax_sp,  toolTipText));
@@ -446,7 +499,7 @@ public class AseConfigMonitoringDialog
 			"<br>" +
 			"Unit: logical pages<br>" +
 			"Note: <code><b>metrics pio max</b></code> has an effect only when <code><b>enable metrics capture</b></code> is on. <br>" +
-			"Note: This is available in ASE 15.0.2 and above.</html>" +
+			"Note: This is available in ASE 15.0.2 and above." +
 			"</html>";
 		_cfgMetricsPioMax_lbl .setToolTipText(_tts.add(_cfgMetricsPioMax_lbl, toolTipText));
 		_cfgMetricsPioMax_sp  .setToolTipText(_tts.add(_cfgMetricsPioMax_sp,  toolTipText));
@@ -473,7 +526,7 @@ public class AseConfigMonitoringDialog
 
 	private JPanel createOnExitPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Disable Monitoring On Exit", true);
+		JPanel panel = SwingUtils.createPanel("Disable Monitoring On Disconnect Or Exit", true);
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
 		//--- TOOLTIP
@@ -524,7 +577,15 @@ public class AseConfigMonitoringDialog
 
 
 	
-	
+	private void disableAllInput()
+	{
+		SwingUtils.setEnabled(_monitoringPanel_1, false);
+		SwingUtils.setEnabled(_monitoringPanel_2, false);
+		SwingUtils.setEnabled(_monitoringPanel_3, false);
+		_apply.setEnabled(false);
+		_ok.setEnabled(false);
+	}
+
 	/*---------------------------------------------------
 	** BEGIN: override methods
 	**---------------------------------------------------
@@ -533,13 +594,13 @@ public class AseConfigMonitoringDialog
 	{
 		_logger.debug("AseConfigMonitoringDialog.setVisible("+visible+")");
 
-		if ( ! AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE) )
-		{
-			String msg = "Sorry, you need 'sa_role' to configure monitoring parameters. Ask you'r System Administrator to configure this.";
-			SwingUtils.showErrorMessage(this, "Not authorized to do sp_configure", msg, null);
-			
-			return;
-		}
+//		if ( ! AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE) )
+//		{
+//			String msg = "Sorry, you need 'sa_role' to configure monitoring parameters. Ask you'r System Administrator to configure this.";
+//			SwingUtils.showErrorMessage(this, "Not authorized to do sp_configure", msg, null);
+//			
+//			return;
+//		}
 
 		_configErrors = false;
 		if ( visible )
@@ -552,6 +613,8 @@ public class AseConfigMonitoringDialog
 			{
 				_aseVersionNum = AseConnectionUtils.getAseVersionNumber(_conn);
 				_logger.debug("setVisible("+visible+") Need to refresh the ASE Server version number, it is now '"+_aseVersionNum+"'.");
+
+				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
 			}
 
 			_predefinedConfigs_cbx.setSelectedIndex(PDC_FROM_ASE);
@@ -567,6 +630,19 @@ public class AseConfigMonitoringDialog
 
 		if (visible)
 			loadProps();
+
+		// IF NOT SA, disable input...
+		if ( visible && ! AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE) )
+		{
+			String msg = "<html>" +
+				"Sorry, you need 'sa_role' to <b>change</b> monitoring parameters.<br>" +
+				"Ask you'r System Administrator to configure this.<br>" +
+				"<br>" +
+				"At this moment you can only <b>view</b> how monitoring is configured" +
+				"</html>";
+			SwingUtils.showErrorMessage(this, "Not authorized to do sp_configure", msg, null);
+			disableAllInput();
+		}
 
 		super.setVisible(visible);
 	}
@@ -1228,7 +1304,7 @@ public class AseConfigMonitoringDialog
 //		return _onExitAsk_rb.isSelected();
 //	}
 
-	public static int onExit(Component parent, Connection conn)
+	public static int onExit(Component parent, Connection conn, boolean canBeAborted)
 	{
 //		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -1255,19 +1331,35 @@ public class AseConfigMonitoringDialog
 		if (onExitDoNotDisable)
 			return 0;
 
+		// No need to continue, if config is already DISABLED
+		boolean isEnabled = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
+		if ( ! isEnabled )
+			return 0;
+
 		
 		boolean disable = onExitAutoDisable;
 
 		if ( onExitPrompt )
 		{
+			String cancelDesc = "";
+			if (canBeAborted)
+				cancelDesc =	"<br><li>If 'Cancel' the Disconnect will be aborted.<br></li>";
+
 			str = "<html>" +
 					"Do you want to disable ASE monitoring when exiting "+Version.getAppName()+"<br>" +
-					"<br>" +
-					"If yes the following SQL statement will be sent to the ASE Server:<br>" +
-					"<b>exec sp_configure 'enable monitoring', 0</b><br>" +
-					"<br>" +
+					"<ul>" +
+					"<li>" +
+					   "If 'Yes' the following SQL statement will be sent to the ASE Server:<br>" +
+					   "<b>exec sp_configure 'enable monitoring', 0</b><br>" +
+					"</li>" +
+					cancelDesc +
 					"</html>";
-			int answer = JOptionPane.showConfirmDialog(parent, str, "Disable Monitoring On Exit", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+			int optionType = JOptionPane.YES_NO_OPTION;
+			if (canBeAborted)
+				optionType = JOptionPane.YES_NO_CANCEL_OPTION;
+
+			int answer = JOptionPane.showConfirmDialog(parent, str, "Disable Monitoring On Disconnect Or Exit", optionType, JOptionPane.QUESTION_MESSAGE);
 			_logger.debug("onExitPrompt: "+answer);
  			
 			if ( answer == JOptionPane.YES_OPTION )
@@ -1302,7 +1394,7 @@ public class AseConfigMonitoringDialog
 				
 				if ( otherAseTuneCount > 0 )
 				{
-					JOptionPane.showMessageDialog(parent, "There are "+otherAseTuneCount+" other '"+Version.getAppName()+"' applications connected to the ASE Server. I can't disable monitoring for the moment.", "Disable Monitoring On Exit", JOptionPane.INFORMATION_MESSAGE);
+					JOptionPane.showMessageDialog(parent, "There are "+otherAseTuneCount+" other '"+Version.getAppName()+"' applications connected to the ASE Server. I can't disable monitoring for the moment.", "Disable Monitoring On Disconnect Or Exit", JOptionPane.INFORMATION_MESSAGE);
 				}
 				else
 				{
@@ -1389,9 +1481,47 @@ public class AseConfigMonitoringDialog
 
 		protected String add(JComponent comp, String toolTipText)
 		{
-			_storage.put(comp, toolTipText);
-			return toolTipText;
+			String tt = toolTipText;
+
+			// remove <html> at START
+			if (tt.startsWith("<html>") || tt.startsWith("<HTML>"))
+				tt = tt.substring("<html>".length());
+
+			// remove </html> at END
+			if (tt.endsWith("</html>") || tt.endsWith("<HTML>"))
+				tt = tt.substring(0, tt.length()-"</html>".length());
+			
+
+			// Add BEGIN html tags
+			tt = "<html>"+tt;
+
+			// Add CM's that depends on this configuration
+			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
+			if ( ! StringUtil.isNullOrBlank(cfg) )
+			{
+				List<CountersModel> cmList = GetCounters.getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
+				if (cmList.size() > 0)
+				{
+					tt += "<br><br>";
+					tt += "Configuration '<b>"+cfg+"</b>', must be set for the following Performance Counters to work.";
+					tt += "<ul>";
+					for (CountersModel cm : cmList)
+					{
+						tt += "<li>";
+						tt += cm.getDisplayName();
+						tt += "</li>";
+					}
+					tt += "</ul>";
+				}
+			}
+
+			// Add END html tag
+			tt += "</html>";
+
+			_storage.put(comp, tt);
+			return tt;
 		}
+
 		protected String get(JComponent comp)
 		{
 			return _storage.get(comp);

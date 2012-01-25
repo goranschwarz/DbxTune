@@ -912,21 +912,21 @@ public class MainFrame
 			{
 				saveProps();
 				saveTcpProps();
-				if (AseTune.getCounterCollector().isMonConnected())
-				{
-					int answer = AseConfigMonitoringDialog.onExit(_instance, AseTune.getCounterCollector().getMonConnection());
-
-					// This means that a "prompt" was raised to ask for "disable monitoring"
-					// AND the user pressed CANCEL button
-					if (answer > 0)
-						return;
-				}
+//				if (AseTune.getCounterCollector().isMonConnected())
+//				{
+//					int answer = AseConfigMonitoringDialog.onExit(_instance, AseTune.getCounterCollector().getMonConnection());
+//
+//					// This means that a "prompt" was raised to ask for "disable monitoring"
+//					// AND the user pressed CANCEL button
+//					if (answer > 0)
+//						return;
+//				}
 
 				// stop the collector thread
 				if (GetCounters.hasInstance())
 					GetCounters.getInstance().shutdown();
 
-				action_disconnect(null);
+				action_disconnect(null, false);
 				
 //				dispose();
 				System.exit(0);
@@ -1023,7 +1023,7 @@ public class MainFrame
 			action_connect(e);
 
 		if (ACTION_DISCONNECT.equals(actionCmd))
-			action_disconnect(e);
+			action_disconnect(e, true);
 
 		if (ACTION_EXIT.equals(actionCmd))
 			action_exit(e);
@@ -1052,7 +1052,7 @@ public class MainFrame
 			action_openGraphViewDialog(e);
 
 		if (ACTION_OPEN_ASE_CONFIG_MON.equals(actionCmd))
-			AseConfigMonitoringDialog.showDialog(this, AseTune.getCounterCollector().getMonConnection(), -1);
+			action_openAseMonitorConfigDialog(e);
 
 		if (ACTION_OPEN_ASE_CONFIG_VIEW.equals(actionCmd))
 			AseConfigViewDialog.showDialog(this);
@@ -1822,7 +1822,37 @@ public class MainFrame
 
 				CheckForUpdates.sendConnectInfoNoBlock(connType);
 
-				// Set title...
+				// if not MON_ROLE or MonitoringNotEnabled, show all GRAPHS available for this mode (global variables)
+				boolean setMinimalGraphConfig = false;
+				Connection conn = AseTune.getCounterCollector().getMonConnection();
+
+				// MON_ROLE
+				if ( ! AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE) )
+					setMinimalGraphConfig = true;
+
+				// enable monitoring
+				if ( ! AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring") )
+					setMinimalGraphConfig = true;
+
+				if ( setMinimalGraphConfig )
+				{
+					CountersModel cm = GetCounters.getCmByName(GetCounters.CM_NAME__SUMMARY);
+					if (cm != null)
+					{
+						for (TrendGraph tg : cm.getTrendGraphs().values())
+						{
+							String tgName = tg.getName(); 
+							if (    tgName.equals("aaCpuGraph") 
+							     || tgName.equals("ConnectionsGraph") 
+							     || tgName.equals("aaReadWriteGraph") 
+							     || tgName.equals("aaPacketGraph") 
+							   )
+							{
+								tg.setEnable(true);
+							}
+						}
+					}
+				}
 			}
 		} // end: ASE_CONN
 
@@ -1886,7 +1916,7 @@ public class MainFrame
 	 * TODO: use the action_disconnectWithProgress() instead, but this needs more work before it's used...
 	 * @param e
 	 */
-	private void action_disconnect(ActionEvent e)
+	private void action_disconnect(ActionEvent e, final boolean canBeAborted)
 	{
 		String disconnectFrom = null;
 
@@ -1940,6 +1970,21 @@ public class MainFrame
 					}
 				}
 		
+				// Do disable of monitoring ???
+				if (AseTune.getCounterCollector().isMonConnected())
+				{
+					int answer = AseConfigMonitoringDialog.onExit(_instance, AseTune.getCounterCollector().getMonConnection(), canBeAborted);
+
+					// This means that a "prompt" was raised to ask for "disable monitoring"
+					// AND the user pressed ABORT/CANCEL button
+					if (answer > 0)
+					{
+						if (getCnt != null)
+							getCnt.enableRefresh();
+						return null;
+					}
+				}
+
 				// Send usage info, as a background thread.
 				// Clearing components etc, will hopefully take some time...
 				// But it's a time "hole" here, which can be done better
@@ -2118,6 +2163,19 @@ public class MainFrame
 		if (ret == JOptionPane.OK_OPTION)
 		{
 		}
+	}
+
+	private void action_openAseMonitorConfigDialog(ActionEvent e)
+	{
+		Connection conn = AseTune.getCounterCollector().getMonConnection();
+		AseConfigMonitoringDialog.showDialog(this, conn, -1);
+
+		// If monitoring is NOT enabled anymore, do disconnect
+		// By the way, changes can only be made if you have SA_ROLE
+		boolean hasSaRole           = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
+		boolean isMonitoringEnabled = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
+		if ( ! isMonitoringEnabled && hasSaRole )
+			action_disconnect(e, false);
 	}
 
 	private void action_about(ActionEvent e)
@@ -3264,7 +3322,7 @@ public class MainFrame
 		else if (type == ST_CONNECT)
 		{
 //			if (_conn != null)
-			if (AseTune.getCounterCollector().isMonConnected())
+			if (AseTune.getCounterCollector().isMonConnected(true, true))
 			{
 				_statusStatus    .setText("Just Connected...");
 				_statusStatus2   .setText(ST_DEFAULT_STATUS2_FIELD);

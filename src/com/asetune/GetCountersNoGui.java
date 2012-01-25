@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -568,7 +569,7 @@ public class GetCountersNoGui
 				}
 				catch (SQLException e)
 				{
-					String msg = AseConnectionUtils.getMessageFromSQLException(e); 
+					String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
 					_logger.error("Problems when connecting to a ASE Server. "+msg);
 
 					// JZ00L: Login failed
@@ -653,6 +654,15 @@ public class GetCountersNoGui
 			// When 10 MB of memory or less, write some info about that.
 			Memory.checkMemoryUsage(10);
 
+			// Set the CM's to be in normal refresh state
+			for (CountersModel cm : _CMList)
+			{
+				if (cm == null)
+					continue;
+
+				cm.setState(CountersModel.State.NORMAL);
+			}
+
 			try
 			{
 				String    aseServerName    = null;
@@ -681,6 +691,37 @@ public class GetCountersNoGui
 						counterClearTime = rs.getTimestamp(4);
 					}
 					rs.close();
+				//	stmt.close();
+
+					// CHECK IF ASE is in SHUTDOWN mode...
+					boolean aseInShutdown = false;
+					SQLWarning w = stmt.getWarnings();
+					while(w != null)
+					{
+						// Msg=6002: A SHUTDOWN command is already in progress. Please log off.
+						if (w.getErrorCode() == 6002)
+						{
+							aseInShutdown = true;
+							break;
+						}
+						
+						w = w.getNextWarning();
+					}
+					if (aseInShutdown)
+					{
+						String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
+						_logger.info(msgLong);
+
+						for (CountersModel cm : _CMList)
+						{
+							if (cm == null)
+								continue;
+
+							cm.setState(CountersModel.State.SRV_IN_SHUTDOWN);
+						}
+
+						continue; // goto: while (_running)
+					}
 					stmt.close();
 				}
 				catch (SQLException sqlex)

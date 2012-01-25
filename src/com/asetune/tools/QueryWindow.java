@@ -183,6 +183,9 @@ public class QueryWindow
 	private JDialog     _jdialog         = null;
 	private String      _titlePrefix     = null;
 
+	private JButton     _connect_but     = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+	private JButton     _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+
 	// if we start from the CMD Line, add a few extra stuff
 	//---------------------------------------
 	private JMenuBar            _main_mb                = new JMenuBar();
@@ -430,12 +433,12 @@ public class QueryWindow
 			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, ActionEvent.ALT_MASK));
 
 			// TOOLBAR
-			JButton connect    = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-			JButton disConnect = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
 
 			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
-			_toolbar.add(connect);
-			_toolbar.add(disConnect);
+			_toolbar.add(_connect_but);
+			_toolbar.add(_disconnect_but);
 
 			//--------------------------
 			// MENU - Icons
@@ -635,48 +638,55 @@ public class QueryWindow
 			}
 		});
 
-		// ACTION for "exec"
-		_exec.addActionListener(new ActionListener()
-		{
-			public void actionPerformed(ActionEvent e)
-			{
-				actionExecute(e, false);
-			}
-		});
 
-		// ACTION for "exec"
-		_execGuiShowplan.addActionListener(new ActionListener()
-		{
-			public void actionPerformed(ActionEvent e)
-			{
-				actionExecute(e, true);
-			}
-		});
+		_exec           .addActionListener(this);
+		_execGuiShowplan.addActionListener(this);
+		_dbs_cobx       .addActionListener(this);
+		_copy           .addActionListener(this);
 
-		// ACTION for "database context"
-		_dbs_cobx.addActionListener(new ActionListener()
-		{
-			public void actionPerformed(ActionEvent e)
-			{
-				useDb( (String) _dbs_cobx.getSelectedItem() );
-				
-				// mark code completion for refresh
-				_jdbcTableCompleationProvider.setNeedRefresh();
-			}
-		});
-		
+//		// ACTION for "exec"
+//		_exec.addActionListener(new ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				actionExecute(e, false);
+//			}
+//		});
+//
+//		// ACTION for "exec"
+//		_execGuiShowplan.addActionListener(new ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				actionExecute(e, true);
+//			}
+//		});
+//
+//		// ACTION for "database context"
+//		_dbs_cobx.addActionListener(new ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				useDb( (String) _dbs_cobx.getSelectedItem() );
+//				
+//				// mark code completion for refresh
+//				_jdbcTableCompleationProvider.setNeedRefresh();
+//			}
+//		});
+//		
+//		// ACTION for "copy"
+//		_copy.addActionListener(new ActionListener()
+//		{
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				actionCopy(e);
+//			}
+//		});
+
+
 		// Refresh the database list (if ASE)
 		if (_conn != null && _connType == ConnectionDialog.ASE_CONN)
 			setDbNames();
-
-		// ACTION for "copy"
-		_copy.addActionListener(new ActionListener()
-		{
-			public void actionPerformed(ActionEvent e)
-			{
-				actionCopy(e);
-			}
-		});
 
 		// Kick of a initial SQL query, if one is specified.
 		if (StringUtil.isNullOrBlank(sql))
@@ -696,7 +706,6 @@ public class QueryWindow
 		// Set initial size of the JFrame, and make it visable
 		//this.setSize(600, 400);
 		//this.setVisible(true);
-
 	}
 
 	/**
@@ -731,7 +740,7 @@ public class QueryWindow
 	**--------------------------------------------------*/
 	public void actionPerformed(ActionEvent e)
 	{
-//		Object source    = e.getSource();
+		Object source    = e.getSource();
 		String actionCmd = e.getActionCommand();
 
 		_logger.debug("ACTION '"+actionCmd+"'.");
@@ -744,6 +753,30 @@ public class QueryWindow
 
 		if (ACTION_EXIT.equals(actionCmd))
 			action_exit(e);
+
+		// ACTION for "exec"
+		if (_exec.equals(source))
+			actionExecute(e, false);
+
+		// ACTION for "GUI exec"
+		if (_execGuiShowplan.equals(source))
+			actionExecute(e, true);
+
+		// ACTION for "database context"
+		if (_dbs_cobx.equals(source))
+		{
+			useDb( (String) _dbs_cobx.getSelectedItem() );
+			
+			// mark code completion for refresh
+			_jdbcTableCompleationProvider.setNeedRefresh();
+		}
+		
+		// ACTION for "copy"
+		if (_copy.equals(source))
+			actionCopy(e);
+
+
+		setComponentVisibility();
 	}
 	/*---------------------------------------------------
 	** END: implementing ActionListener
@@ -817,15 +850,31 @@ public class QueryWindow
 	}
 	private void setComponentVisibility()
 	{
-		if (_conn == null)
+		
+//		if (_conn == null)
+		if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
 		{
+			_connect_mi     .setEnabled(true);
+			_connect_but    .setEnabled(true);
+			_disconnect_mi  .setEnabled(false);
+			_disconnect_but .setEnabled(false);
+			
 			_dbs_cobx       .setEnabled(false);
 			_exec           .setEnabled(false);
 			_rsInTabs       .setEnabled(false);
 			_setOptions     .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 			
+			setSrvInTitle("not connected");
+
 			return;
+		}
+		else
+		{
+			_connect_mi     .setEnabled(false);
+			_connect_but    .setEnabled(false);
+			_disconnect_mi  .setEnabled(true);
+			_disconnect_but .setEnabled(true);
 		}
 
 		if ( _connType == ConnectionDialog.ASE_CONN)
@@ -889,6 +938,9 @@ public class QueryWindow
 
 	private void actionExecute(ActionEvent e, boolean guiExec)
 	{
+		if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
+			action_connect(e);
+
 		// If we had an JTabbedPane, what was the last index
 		_lastTabIndex = -1;
 		for (int i=0; i<_resPanel.getComponentCount(); i++)
@@ -1950,17 +2002,46 @@ public class QueryWindow
 
 		// Add a couple of "shorthand" completions. These completions don't
 		// require the input text to be the same thing as the replacement text.
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', '#G'",                 "Cache Size"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig", "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'", "Cache Partitions"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']", "Pool Size"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'", "Pool Wash Size"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",  "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'memory'",                                     "Memory left for reconfigure"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'Monitoring'",                                 "Check Monitor configuration"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",   "exec sp_configure 'nondefault'",                                 "Get changed configuration parameters"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",    "exec sp_helptext 'tabName', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",  "Get procedure text, with line numbers"));
-		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",    "exec sp_helptext 'tabName', NULL, NULL, 'showsql,ddlgen'",       "Get procedure text, as DDL"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",        "exec sp_helptext 'tabName', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_helptext",        "exec sp_helptext 'tabName', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
 
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
+
+		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, "sp_cacheconfig",
+				"/*  \n" +
+				"** Below is commands/instructions to setup a log cache on a 2K server \n" +
+				"** If you have another server page size, values needs to be changed \n" +
+				"** select @@maxpagesize/1024 to get the servers page size \n" +
+				"*/ \n" +
+				"-- Create a cache that holds transaction log(s) \n" +
+				"exec sp_cacheconfig 'log_cache', '500M', 'logonly', 'relaxed', 'cache_partition=1' \n" +
+				" \n" +
+				"-- Most of the memory should be in the 4K pool (2 pages per IO) \n" +
+				"sp_poolconfig 'log_cache', '495M', '4K', '2K' -- size the 4K pool to #MB, grab memory from the 2K pool \n" +
+				" \n" +
+				"-- and maybe some in the 16K (8 pages) pool \n" +
+				"-- sp_poolconfig 'log_cache', '#M', '16K', '2K'  \n" +
+				" \n" +
+				"-- To bind a database transaction log to a Named Cache, it has to be in single user mode \n" +
+				"exec sp_dboption  'dbname', 'single', 'true' \n" +
+				"exec sp_bindcache 'log_cache', 'dbname', 'syslogs' \n" +
+				"exec sp_dboption  'dbname', 'single', 'false' \n" +
+				" \n" +
+				"-- Change the LOG IO SIZE (default is 4K or: 2 pages per IO) \n" +
+				"--dbname..sp_logiosize '8' -- to use the 8K memory pool (4 pages per IO) \n" +
+				"",
+				"Create a 'log cache' and bind database(s) to it."));
+		
 		// monTables
 		jdbcProvider.addCompletion(new ShorthandCompletion(jdbcProvider, 
 				"monTables",  

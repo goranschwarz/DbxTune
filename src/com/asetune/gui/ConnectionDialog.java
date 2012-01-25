@@ -1511,9 +1511,13 @@ public class ConnectionDialog
 						null);
 				return;
 			}
-			AseConnectionFactory.setInterfaces(file);
-			refreshServers();
-			_aseIfile_save = file;
+			if (AseConnectionFactory.setInterfaces(file))
+			{
+				// On success, reload the servers
+				refreshServers();
+				_aseIfile_save = file;
+				_aseIfile_txt.setText(file);
+			}
 		}
 		catch (Exception e)
 		{
@@ -1521,6 +1525,30 @@ public class ConnectionDialog
 				"Problems setting the Name Service file '"+file+"'." +
 				"\n\n" + e.getMessage(), e);
 			
+			// Maybe try to edit the file
+			if (e.getMessage().indexOf("unknown format") >= 0)//unknown format
+			{
+				String str = 
+					"<html>" +
+					"Do you want to edit the file "+file+"<br>" +
+					"<br>" +
+					"It looks like it was 'unknown format', which could be fixed if you edit the file.<br>" +
+					"</html>";
+				int answer = JOptionPane.showConfirmDialog(this, str, "Edit file", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if ( answer == JOptionPane.YES_OPTION )
+				{
+					String currentSrvName = _aseServer_cbx.getSelectedItem().toString(); 
+	//				String ifile = _aseIfile_txt.getText(); 
+					InterfaceFileEditor ife = new InterfaceFileEditor(this, file);
+					int rc = ife.open();
+					if (rc == InterfaceFileEditor.OK)
+					{
+						loadNewInterfaces( file );
+						_aseServer_cbx.setSelectedItem(currentSrvName);
+					}
+					return;
+				}
+			}
 			_aseIfile_txt.setText(_aseIfile_save);
 		}
 	}
@@ -1721,18 +1749,18 @@ public class ConnectionDialog
 		}
 	}
 	
-	@SuppressWarnings("unused")
-	private boolean checkForMonitorOptions()
-	{
-//System.out.println(">>>>> checkForMonitorOptions");
-		MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Checking for Monitor Options...");
-
-		boolean b = AseConnectionUtils.checkForMonitorOptions(_aseConn, _aseUser_txt.getText(), true, this, "enable monitoring");
-
-		MainFrame.setStatus(MainFrame.ST_CONNECT);
-//System.out.println("<<<<< checkForMonitorOptions");
-		return b;
-	}
+//	@SuppressWarnings("unused")
+//	private boolean checkForMonitorOptions()
+//	{
+////System.out.println(">>>>> checkForMonitorOptions");
+//		MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Checking for Monitor Options...");
+//
+//		boolean b = AseConnectionUtils.checkForMonitorOptions(_aseConn, _aseUser_txt.getText(), true, this, "enable monitoring");
+//
+//		MainFrame.setStatus(MainFrame.ST_CONNECT);
+////System.out.println("<<<<< checkForMonitorOptions");
+//		return b;
+//	}
 
 	/**
 	 * Make a SSH connection object, but do NOT connect

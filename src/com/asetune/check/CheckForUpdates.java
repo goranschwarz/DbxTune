@@ -129,7 +129,7 @@ public class CheckForUpdates
 
 	private static int     _checkId = -1;
 
-	private final static int DEFAULT_TIMEOUT = 6*1000;
+	private final static int DEFAULT_TIMEOUT = 10*1000;
 
 //	static
 //	{
@@ -171,7 +171,7 @@ public class CheckForUpdates
 	private InputStream sendHttpParams(String urlStr, QueryString urlParams)
 	throws MalformedURLException, IOException
 	{
-		return sendHttpParams(urlStr, urlParams, 3*1000);
+		return sendHttpParams(urlStr, urlParams, DEFAULT_TIMEOUT);
 	}
 	private InputStream sendHttpParams(String urlStr, QueryString urlParams, int timeoutInMs)
 	throws MalformedURLException, IOException
@@ -187,7 +187,7 @@ public class CheckForUpdates
 
 		// open the connection and prepare it to POST
 		URLConnection conn = url.openConnection();
-		conn.setConnectTimeout(timeoutInMs); // 3 seconds
+		conn.setConnectTimeout(timeoutInMs); 
 
 		// Return the response
 		return conn.getInputStream();
@@ -218,7 +218,7 @@ public class CheckForUpdates
 
 		// open the connection and prepare it to POST
 		URLConnection conn = url.openConnection();
-		conn.setConnectTimeout(timeoutInMs); // 3 seconds
+		conn.setConnectTimeout(timeoutInMs); 
 		conn.setDoOutput(true);
 		OutputStreamWriter out = new OutputStreamWriter(conn.getOutputStream(), "ASCII");
 

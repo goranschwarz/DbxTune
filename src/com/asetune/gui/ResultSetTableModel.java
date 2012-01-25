@@ -8,6 +8,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,8 @@ public class ResultSetTableModel
 	int	_numcols;
 
 	private ArrayList<String>            _type        = new ArrayList<String>();
-	private ArrayList<String>            _sqlType     = new ArrayList<String>();
+	private ArrayList<String>            _sqlTypeStr  = new ArrayList<String>();
+	private ArrayList<Integer>           _sqlTypeInt  = new ArrayList<Integer>();
 	private ArrayList<String>            _cols        = new ArrayList<String>();
 	private ArrayList<Integer>           _displaySize = new ArrayList<Integer>();
 	private ArrayList<ArrayList<Object>> _rows        = new ArrayList<ArrayList<Object>>();
@@ -56,7 +58,8 @@ public class ResultSetTableModel
 		{
 			_cols       .add(rsmd.getColumnLabel(c));
 			_type       .add(rsmd.getColumnClassName(c));
-			_sqlType    .add(rsmd.getColumnTypeName(c));
+			_sqlTypeStr .add(rsmd.getColumnTypeName(c));
+			_sqlTypeInt .add(rsmd.getColumnType(c));
 			_displaySize.add(new Integer( Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length()) ) );
 
 //			System.out.println("name='"+_cols.get(c-1)+"', getColumnClassName("+c+")='"+_type.get(c-1)+"', getColumnTypeName("+c+")='"+_sqlType.get(c-1)+"'.");
@@ -74,7 +77,19 @@ public class ResultSetTableModel
 			ArrayList<Object> row = new ArrayList<Object>();
 			for (int c=1; c<_numcols; c++)
 			{
-				Object o = rs.getObject(c);
+//				Object o = rs.getObject(c);
+				Object o = null;
+				int type = _sqlTypeInt.get(c-1);
+
+				switch(type)
+				{
+				case Types.CLOB:
+						o = rs.getString(c);
+						break;
+				default:
+						o = rs.getObject(c);
+						break;
+				}
 				
 				if (o instanceof String)
 					row.add(((String)o).trim());

@@ -3,10 +3,13 @@ package com.asetune.gui.swing;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.concurrent.ExecutionException;
 
+import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.SwingWorker;
@@ -61,16 +64,19 @@ import com.asetune.utils.StringUtil;
  */
 public class WaitForExecDialog
 extends JDialog
-implements PropertyChangeListener
+implements PropertyChangeListener, ActionListener
 {
 	private static Logger _logger = Logger.getLogger(WaitForExecDialog.class);
 	private static final long serialVersionUID = 1L;
+
+	private BgExecutor      _execClass       = null;
 
 	private JLabel          _label           = new JLabel("Waiting...", JLabel.CENTER);
 
 	private JLabel          _state_lbl       = new JLabel();
 	private RSyntaxTextArea _extraText_txt   = null;
 	private RTextScrollPane _extraText_sroll = null;
+	private JButton         _cancel_but      = new JButton("Cancel");
 
 	public WaitForExecDialog(Window owner, String waitForLabel)
 	{
@@ -84,6 +90,8 @@ implements PropertyChangeListener
 		if (waitForLabel != null)
 			_label.setText(waitForLabel);
 		_label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+
+		_cancel_but.setToolTipText("CANCEL current operation.");
 
 		if (extraString != null)
 		{
@@ -99,14 +107,29 @@ implements PropertyChangeListener
 
 		add(_label,        "push, grow, wrap");
 		add(_state_lbl,    "wrap");
+		add(_cancel_but,   "center, hidemode 3");
 		if (extraString != null)
 			add(_extraText_sroll, "push, grow, wrap");
+
+		_cancel_but.addActionListener(this);
 
 		pack();
 		setSize( getSize().width + 50, getSize().height + 35);
 		setLocationRelativeTo(owner);
 	}
 	
+	@Override
+	public void actionPerformed(ActionEvent e)
+	{
+		Object source = e.getSource();
+		
+		if (_cancel_but.equals(source))
+		{
+			if (_execClass != null)
+				_execClass.cancel();
+		}
+	}
+
 	public void markExtraText(String str)
 	{
 		if ( ! StringUtil.isNullOrBlank(str) && _extraText_txt != null)
@@ -185,6 +208,8 @@ implements PropertyChangeListener
 	 */
 	public Object execAndWait(final BgExecutor execClass)
 	{
+		_execClass = execClass;
+
 		// Execute in a Swing Thread
 		SwingWorker<Object, Object> doBgThread = new SwingWorker<Object, Object>()
 		{
@@ -193,7 +218,7 @@ implements PropertyChangeListener
 			{
 				try 
 				{
-					return execClass.doWork();
+					return _execClass.doWork();
 				} 
 				catch (Throwable t) 
 				{
@@ -205,9 +230,11 @@ implements PropertyChangeListener
 		};
 		doBgThread.addPropertyChangeListener(this);
 		doBgThread.execute();
-	
+
+		_cancel_but.setVisible(_execClass.canDoCancel());
+
 		//the dialog will be visible until the SwingWorker is done
-		this.setVisible(true); 
+		setVisible(true); 
 		
 		try
 		{
@@ -228,8 +255,27 @@ implements PropertyChangeListener
 	/**
 	 * Like the Runnable interface
 	 */
-	public interface BgExecutor
+	public abstract static class BgExecutor
 	{
-		Object doWork();
+		/**
+		 * Here is where the work will be done
+		 * @return
+		 */
+		public abstract Object doWork();
+
+		/**
+		 * If the cancel button is pressed, this method will be called
+		 */
+		public void cancel()
+		{
+		}
+
+		/**
+		 * Should the cancel button be visible or not. 
+		 */
+		public boolean canDoCancel()
+		{
+			return false;
+		}
 	}
 }
