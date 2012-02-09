@@ -1349,7 +1349,7 @@ public class AseConnectionUtils
 				rs.close();
 			}
 			
-			// Check if user has mon_role
+			// Get various roles
 			_logger.debug("Verify mon_role");
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery("sp_activeroles");
@@ -1365,6 +1365,12 @@ public class AseConnectionUtils
 				if (roleName.equals("mon_role"))       has_mon_role       = true;
 				if (roleName.equals("sybase_ts_role")) has_sybase_ts_role = true;
 			}
+
+			//---------------------------------
+			// check for MON_ROLE
+			//---------------------------------
+			final String propKey_showDialogOnNoRole_mon_role = "AseConnectionUtils.showDialogOnNoRole.mon_role";
+
 			if ( ! has_mon_role )
 			{
 				// Try to grant access to current user
@@ -1396,15 +1402,13 @@ public class AseConnectionUtils
 					_logger.info("Automatic grant of 'mon_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
 				}
 
-				final String propKey = "AseConnectionUtils.showDialogOnNoRole.mon_role";
-
 				// If mon_role was still unsuccessfull
 				if ( ! has_mon_role )
 				{
 					String msg = "You need 'mon_role' to access monitoring tables";
-					_logger.error(msg);
+					_logger.warn(msg);
 
-					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey, true);
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey_showDialogOnNoRole_mon_role, true);
 					if (gui && showInfo)
 					{
 						String msgHtml = 
@@ -1449,7 +1453,7 @@ public class AseConnectionUtils
 								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 								if (conf == null)
 									return;
-								conf.setProperty(propKey, ((JCheckBox)e.getSource()).isSelected());
+								conf.setProperty(propKey_showDialogOnNoRole_mon_role, ((JCheckBox)e.getSource()).isSelected());
 								conf.save();
 							}
 						});
@@ -1459,17 +1463,22 @@ public class AseConnectionUtils
 					}
 //					return false;
 				}
-				else
-				{
-					// Remove the 'Show this information on next connect attempt.' if we have access
-					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-					if (conf != null)
-					{
-						conf.remove(propKey);
-						conf.save();
-					}
-				}
 			} // end: ! has_mon_role
+			else
+			{
+				// Remove the 'Show this information on next connect attempt.' if we have access
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf != null)
+				{
+					conf.remove(propKey_showDialogOnNoRole_mon_role);
+					conf.save();
+				}
+			}
+			
+			//---------------------------------
+			// check for SYBASE_TS_ROLE
+			//---------------------------------
+			final String propKey_showDialogOnNoRole_sybase_ts_role = "AseConnectionUtils.showDialogOnNoRole.sybase_ts_role";
 
 			if ( ! has_sybase_ts_role )
 			{
@@ -1501,8 +1510,6 @@ public class AseConnectionUtils
 					_logger.info("Automatic grant of 'sybase_ts_role' to user '"+user+"' can't be done. This since the user '"+user+"' doesn't have 'sso_role'.");
 				}
 
-				final String propKey = "AseConnectionUtils.showDialogOnNoRole.sybase_ts_role";
-
 				// If mon_role was still unsuccessfull
 				// but show the message only if you have mon_role, otherwise it will be to many messages
 				if ( ! has_sybase_ts_role && has_mon_role )
@@ -1510,7 +1517,7 @@ public class AseConnectionUtils
 					String msg = "You may need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.";
 					_logger.warn(msg);
 
-					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey, true);
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey_showDialogOnNoRole_sybase_ts_role, true);
 					if (gui && showInfo)
 					{
 						String msgHtml = 
@@ -1541,7 +1548,7 @@ public class AseConnectionUtils
 								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 								if (conf == null)
 									return;
-								conf.setProperty(propKey, ((JCheckBox)e.getSource()).isSelected());
+								conf.setProperty(propKey_showDialogOnNoRole_sybase_ts_role, ((JCheckBox)e.getSource()).isSelected());
 								conf.save();
 							}
 						});
@@ -1553,24 +1560,26 @@ public class AseConnectionUtils
 								msgHtml, chk, null);
 					}
 				}
-				else
-				{
-					// Remove the 'Show this information on next connect attempt.' if we have access
-					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-					if (conf != null)
-					{
-						conf.remove(propKey);
-						conf.save();
-					}
-				}
 			} // end: ! has_sybase_ts_role
+			else
+			{
+				// Remove the 'Show this information on next connect attempt.' if we have access
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf != null)
+				{
+					conf.remove(propKey_showDialogOnNoRole_sybase_ts_role);
+					conf.save();
+				}
+			}
 
+			//---------------------------------
 			// force master
 			sql = "use master";
 			stmt.executeUpdate(sql);
 
 			_logger.debug("Verify monTables existance");
 
+			//---------------------------------
 			// Check if montables are configured
 			if (has_mon_role)
 			{
@@ -1612,6 +1621,10 @@ public class AseConnectionUtils
 				}
 			}
 
+			//---------------------------------
+			// Check if configuration 'xxx' is activated
+			// if not maybe open the Configuration Dialog, but only if 'sa_role'
+			//---------------------------------
 			if (has_mon_role)
 			{
 				// Check if configuration 'xxx' is activated
@@ -1640,6 +1653,9 @@ public class AseConnectionUtils
 								"  <li>Connections/Users in ASE</li>" +
 								"  <li>Disk read/write, Global Variables</li>" +
 								"  <li>Network Packets received/sent, Global Variables</li>" +
+								"  <li>Transaction per second       <b>(only in 15.0.3 esd#3 and later)</b></li>" +
+								"  <li>Run Queue Length, Per Engine <b>(only in 15.5 and later)</b></li>" +
+								"  <li>Procedure Cache Module Usage <b>(only in 15.0.1 and later)</li>" +
 								"</ul>" +
 								"</html>";
 							JPanel tmpPanel = new JPanel(new MigLayout());

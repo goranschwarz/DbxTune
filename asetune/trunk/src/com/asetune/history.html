@@ -19,6 +19,34 @@ li   {margin-bottom: 6px}
 <H2>2012-xx-xx</H2>
 <UL>
 	<LI>
+	<b>New: in tab the 'Waits', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'WaitTime' and/or number of 'Waits' by the individual Events, or as a summary at the Wait Event Class<br> 
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Devices', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'TotalIOs', 'Reads', 'APFReads' and 'Writes' in different graphs.<br>
+	The distribution in the graphs are by Logical Device Name<br> 
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'IOSum', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'IOs', 'IOTime', 'AvgServ_ms' in different graphs.<br> 
+	The distribution in the graphs are by 'IOType' (User Data, User Log, Tempdb Data, Tempdb log, System)<br> 
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Procedure Cache Module Usage', graph(s) on the right hand side (local Graph)</b><br>
+	You can view Active Memory Usage, by ModuleName<br> 
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Procedure Cache Memory Usage', graph(s) on the right hand side (local Graph)</b><br>
+	You can view Active Memory Usage, with one Summary Graph, or one graph for each 'ModuleName'<br> 
+	The distribution in the graphs are by 'AllocatorName'<br> 
+	</LI>
+
+	<LI>
 	<b>Change: users does not require 'mon_role' and 'enable monitoring' anymore</b><br>
 	If a user logs in without 'mon_role' or if 'enable monitoring' is not enabled, AseTune
 	will still allow the user to login.<br>
@@ -26,6 +54,25 @@ li   {margin-bottom: 6px}
 	of course be very limited. The Summary panel will still be maintained, in there you have
 	access to ASE Servers global variables for CPU, Disk and Network. Graphs connected to the 
 	summary fields will automatically be enabled.<br> 
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Cached Objects'</b><br>
+	<ul>
+	   <li><code>ProcessesAccessing</code> - Number of processes currently accessing the object</li>
+	   <li><code>TotalSizeKBDiff   </code> - <code>TotalSizeKB</code> as diff calculated from previous sample</li>
+	   <li><code>CachedKBDiff      </code> - <code>CachedKB</code> as diff calculated from previous sample</li>
+	   <li><code>TableCachedPct    </code> - How much of this table is kept in the cache. <b>Formula</b>: <code>CachedKB/TotalSizeKB * 100</code></li>
+	   <li><code>CacheID           </code> - Just the ID of the cache</li>
+	   <li><code>TotalCacheSizeKB  </code> - The size of the data cache where this table is residing</li>
+	   <li><code>CacheUsagePct     </code> - How much space does this table use of the whole cache. <b>Formula</b>: <code>CachedKB/TotalCacheSizeKB * 100</code></li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: When you get a out-of-memory pop up.</b><br>
+	When you get a out-of-memory, I previously just purged the in-memory history<br>
+	In addition I also now lower the in-memory history size to 1 minute<br> 
 	</LI>
 
 	<LI>
@@ -60,6 +107,13 @@ li   {margin-bottom: 6px}
 	<b>Bug fix: Code completion in the SQL Window tool.</b><br>
 	Fixed some issues here, and also added some more static completions.<br>
 	The code completion initialization, can now be canceled.
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counters, restore selected row after refresh.</b><br>
+	Restore of selected row in the table did not work as supposed.<br>
+	Now it tries to restore current selected table row by using the primary key, if it can't
+	use the primary key, it will try to fall back to last selected model row.<br>
 	</LI>
 
 </UL>

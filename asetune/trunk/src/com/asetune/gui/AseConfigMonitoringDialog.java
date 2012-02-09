@@ -1336,6 +1336,11 @@ public class AseConfigMonitoringDialog
 		if ( ! isEnabled )
 			return 0;
 
+		// No need to continue, if we do NOT hace SA_ROLE
+		boolean hasSaRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
+		if ( ! hasSaRole )
+			return 0;
+
 		
 		boolean disable = onExitAutoDisable;
 

@@ -42,6 +42,7 @@ extends JPanel
 	private final String GRAPH_LAYOUT_PROP = "push, grow, hidemode 3, wrap";
 	private final String FACEBOOK_URL      = "http://www.facebook.com/pages/AseTune/223112614400980"; 
 	private final String SOURCEFORGE_URL   = "http://sourceforge.net/projects/asetune/"; 
+	private final String DONATE_URL        = "http://www.asetune.com/donate.html"; 
 
 	private JLabel             _maxChartHistoryInMinutes_lbl = new JLabel();
 	private SpinnerNumberModel _maxChartHistoryInMinutes_spm = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
@@ -52,6 +53,7 @@ extends JPanel
 	private JSpinner           _maxInMemHistoryInMinutes_sp  = new JSpinner(_maxInMemHistoryInMinutes_spm);
 	private JCheckBox          _maxInMemHistoryInMinutes_chk = new JCheckBox("Same as Graph History", true);
 
+	private JButton            _donate_but                   = new GButton();
 	private JButton            _sourceforge_but              = new GButton();
 	private JButton            _facebook_but                 = new GButton();
 	
@@ -90,6 +92,12 @@ extends JPanel
 		_maxInMemHistoryInMinutes_sp .setToolTipText("<html>How many minutes should be available in the in-memory history.<br>To view in-memory history, click the magnifying/db button on the tool bar.</html>");
 		_maxInMemHistoryInMinutes_chk.setToolTipText("Use same value for 'In-Memory History' as for 'Trends Graph History'.");
 
+		_donate_but.setName("DONATE"); // just for trace
+		_donate_but.setToolTipText("<html>Goto "+Version.getAppName()+" home page where you can read more about how you can support the project.<br><br>"+DONATE_URL+"<html>");
+		_donate_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/donate.gif"));
+		_donate_but.setContentAreaFilled(false);
+		_donate_but.setMargin( new Insets(0,0,0,0) );
+		
 		_sourceforge_but.setName("SF"); // just for trace
 		_sourceforge_but.setToolTipText("<html>Goto "+Version.getAppName()+" at Sourceforge. Here you can: <UL> <LI>Recommend "+Version.getAppName()+" to others</LI> <LI>Make comments/recommendations</LI> <LI>Add: Support Questions</LI> <LI>Add: Bug Reports</LI> <LI>Add: Feature Requests</LI> </UL>"+SOURCEFORGE_URL+"<html>");
 		_sourceforge_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/sourceforge_logo.png"));
@@ -120,6 +128,7 @@ extends JPanel
 		topPanel.add(_maxInMemHistoryInMinutes_sp,  "gap 5");
 		topPanel.add(_maxInMemHistoryInMinutes_chk, "pushx");
 
+		topPanel.add(_donate_but,      "hidemode 3"); _donate_but.setVisible(false);
 		topPanel.add(_sourceforge_but, "hidemode 2");
 		topPanel.add(_facebook_but,    "hidemode 2");
 
@@ -216,6 +225,26 @@ extends JPanel
 				}
 			}
 		});
+
+		// SOURCEFORGE
+		_donate_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (_desktop == null)
+					return;
+
+				try
+				{
+					_desktop.browse(new URI(DONATE_URL));
+				}
+				catch (Exception ex)
+				{
+					_logger.error("Problems when open the donate page '"+DONATE_URL+"'. Caught: "+e);
+				}
+			}
+		});
 	}
 
 	private void setChartMaxHistoryTimeInMinutes(int minutes)
@@ -241,7 +270,36 @@ extends JPanel
 		}
 	}
 
-	
+
+	/**
+	 * this should relly be implemented better...<br>
+	 * Current implementation is not enable/disable, it's just disable=setToOneMinute, enable=setToDefault
+	 * 
+	 * @param enable
+	 */
+	public void setInMemHistoryEnable(boolean enable)
+	{
+		if ( ! enable )
+		{
+			// in-sync_chkbox=false, spinner=enabled
+			_maxInMemHistoryInMinutes_chk.setSelected(false);
+			_maxInMemHistoryInMinutes_sp.setEnabled(true);
+
+			setInMemMaxHistoryTimeInMinutes(1);
+		}
+		else
+		{
+			// in-sync_chkbox=true, spinner=disabled
+			_maxInMemHistoryInMinutes_chk.setSelected(true);
+			_maxInMemHistoryInMinutes_sp.setEnabled(false);
+
+			// get chart history and use that
+			int minutes = _maxChartHistoryInMinutes_spm.getNumber().intValue();
+			setInMemMaxHistoryTimeInMinutes(minutes);
+		}
+		saveProps();
+	}
+
 	private void setInMemMaxHistoryTimeInMinutes(int minutes)
 	{
 		_logger.debug("set-In-Mem-MaxHistoryTimeInMinutes(minutes="+minutes+")");

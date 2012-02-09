@@ -1080,6 +1080,27 @@ public class SwingUtils
 			panel.getComponent(i).setEnabled(enable);
 		}
 	}
+	public static void setEnabled(JPanel panel, boolean enable, Component... disregard)
+	{
+//		if (panel == null)
+//			return;
+
+		panel.setEnabled(enable);
+		for (int i = 0; i < panel.getComponentCount(); i++)
+		{
+			Component comp = panel.getComponent(i);
+
+			// check for components that should be "disregarded"
+			boolean doAction = true;
+			if (disregard != null)
+				for (Component dc : disregard)
+					if (dc.equals(comp))
+						doAction = false;
+
+			if (doAction)
+				comp.setEnabled(enable);
+		}
+	}
 
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////

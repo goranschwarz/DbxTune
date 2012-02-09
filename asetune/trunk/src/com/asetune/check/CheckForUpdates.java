@@ -47,6 +47,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
+import com.asetune.utils.StringUtil;
 import com.btr.proxy.search.ProxySearch;
 import com.btr.proxy.search.ProxySearch.Strategy;
 
@@ -768,7 +769,10 @@ public class CheckForUpdates
 		String srvName          = "";
 		String srvIpPort        = "";
 		String srvUser          = "";
+		String srvUserRoles     = "";
 		String srvVersionStr    = "";
+		String srvSortOrderId   = "";
+		String srvSortOrderName = "";
 
 		String usePcs           = "";
 		String pcsConfig        = "";
@@ -782,7 +786,15 @@ public class CheckForUpdates
 			srvName          = AseConnectionFactory.getServer();
 			srvIpPort        = AseConnectionFactory.getHostPortStr();
 			srvUser          = AseConnectionFactory.getUser();
+			srvUserRoles     = "not_initialized";
 			srvVersionStr    = mtd.aseVersionStr;
+			srvSortOrderId   = mtd.aseSortId + "";
+			srvSortOrderName = mtd.aseSortName;
+
+			// Get role list from the Summary CM
+			CountersModel summaryCm = GetCounters.getCmByName(GetCounters.CM_NAME__SUMMARY);
+			if (summaryCm != null && summaryCm.isRuntimeInitialized())
+				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
 
 			usePcs           = "false";
 			pcsConfig        = "";
@@ -804,7 +816,10 @@ public class CheckForUpdates
 			srvName          = "offline-read";
 			srvIpPort        = "offline-read";
 			srvUser          = "offline-read";
+			srvUserRoles     = "offline-read";
 			srvVersionStr    = "offline-read";
+			srvSortOrderId   = "offline-read";
+			srvSortOrderName = "offline-read";
 
 			usePcs           = "true";
 			pcsConfig        = "";
@@ -835,7 +850,10 @@ public class CheckForUpdates
 		urlParams.add("srvName",             srvName);
 		urlParams.add("srvIpPort",           srvIpPort);
 		urlParams.add("srvUser",             srvUser);
+		urlParams.add("srvUserRoles",        srvUserRoles);
 		urlParams.add("srvVersionStr",       srvVersionStr);
+		urlParams.add("srvSortOrderId",      srvSortOrderId);
+		urlParams.add("srvSortOrderName",    srvSortOrderName);
 
 		urlParams.add("usePcs",              usePcs);
 		urlParams.add("pcsConfig",           pcsConfig);

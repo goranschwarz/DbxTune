@@ -33,7 +33,10 @@
 	$srvName            = getUrlParam('srvName');
 	$srvIpPort          = getUrlParam('srvIpPort');
 	$srvUser            = getUrlParam('srvUser');
+	$srvUserRoles       = getUrlParam('srvUserRoles');
 	$srvVersionStr      = getUrlParam('srvVersionStr');
+	$srvSortOrderId     = getUrlParam('srvSortOrderId');
+	$srvSortOrderName   = getUrlParam('srvSortOrderName');
 
 	$usePcs             = getUrlParam('usePcs');
 	$pcsConfig          = getUrlParam('pcsConfig');
@@ -70,7 +73,10 @@
 		srvName,
 		srvIpPort,
 		srvUser,
+		srvUserRoles,
 		srvVersionStr,
+		srvSortOrderId,
+		srvSortOrderName,
 
 		usePcs,
 		pcsConfig
@@ -89,7 +95,10 @@
 		'$srvName',
 		'$srvIpPort',
 		'$srvUser',
+		'$srvUserRoles',
 		'$srvVersionStr',
+		'$srvSortOrderId',
+		'$srvSortOrderName',
 
 		'$usePcs',
 		'$pcsConfig'

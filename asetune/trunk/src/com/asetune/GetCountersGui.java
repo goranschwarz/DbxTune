@@ -373,6 +373,10 @@ public class GetCountersGui
 					sleep(10000);
 //					try { Thread.sleep(10000); }
 //					catch (InterruptedException ignore)	{}
+
+					// DUMMY to: TEST OUT-OF-MEMORY
+					//ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_OUT_OF_MEMORY);
+					//MainFrame.getInstance().actionPerformed(doGcEvent);
 				}
 
 
