@@ -66,6 +66,11 @@ public class MonTablesDictionary
 	/** sp_version 'installmontables' Status string */
 	public String installmasterStatus = "";
 
+	/** ASE Sort Order ID */
+	public int     aseSortId   = -1;
+	/** ASE Sort Order Name */
+	public String  aseSortName = "";
+
 	public class MonTableEntry
 	{
 		public int       _tableID         = 0;    // Unique identifier for the table
@@ -318,6 +323,7 @@ public class MonTablesDictionary
 				aseVersionStr = rs.getString(1);
 			}
 			rs.close();
+			stmt.close();
 
 			aseVersionNum = AseConnectionUtils.aseVersionStringToNumber(aseVersionStr);
 
@@ -330,6 +336,32 @@ public class MonTablesDictionary
 			if (_hasGui)
 				SwingUtils.showErrorMessage("MonTablesDictionary - initializeVersionInfo", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
 			return;
+		}
+
+		// SORT order ID and NAME
+		try
+		{
+			sql="declare @sortid tinyint, @charid tinyint \n" +
+				"select @sortid = value from master..syscurconfigs where config = 123 \n" +
+				"select @charid = value from master..syscurconfigs where config = 131  \n" +
+				"\n" +
+				"select id, name \n" +
+				"from master.dbo.syscharsets \n" + 
+				"where id = @sortid and csid = @charid \n";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				aseSortId   = rs.getInt   (1);
+				aseSortName = rs.getString(2);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("initializeVersionInfo, Sort order information", ex);
 		}
 	}
 
@@ -476,6 +508,32 @@ public class MonTablesDictionary
 			if (_hasGui)
 				SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
 			return;
+		}
+
+		// SORT order ID and NAME
+		try
+		{
+			sql="declare @sortid tinyint, @charid tinyint \n" +
+				"select @sortid = value from master..syscurconfigs where config = 123 \n" +
+				"select @charid = value from master..syscurconfigs where config = 131  \n" +
+				"\n" +
+				"select id, name \n" +
+				"from master.dbo.syscharsets \n" + 
+				"where id = @sortid and csid = @charid \n";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				aseSortId   = rs.getInt   (1);
+				aseSortName = rs.getString(2);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("initializeVersionInfo, Sort order information", ex);
 		}
 
 		// sp_version

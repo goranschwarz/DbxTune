@@ -103,6 +103,8 @@ implements TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _listeners_lbl                = new JLabel();
 	private JTextField       _aseVersion_txt               = new JTextField();
 	private JLabel           _aseVersion_lbl               = new JLabel();
+	private JTextField       _asePageSize_txt              = new JTextField();
+	private JLabel           _asePageSize_lbl              = new JLabel();
 	private JTextField       _lastSampleTime_txt           = new JTextField();
 	private JLabel           _lastSampleTime_lbl           = new JLabel();
 
@@ -410,6 +412,12 @@ implements TableModelListener, GTabbedPane.ShowProperties
 		_aseVersion_txt       .setToolTipText(tooltip);
 		_aseVersion_txt       .setEditable(false);
 
+		tooltip = "The PageSize is taken from @@maxpagesize, which is presented in bytes.";
+		_asePageSize_lbl      .setText("ASE Page Size");
+		_asePageSize_lbl      .setToolTipText(tooltip);
+		_asePageSize_txt      .setToolTipText(tooltip);
+		_asePageSize_txt      .setEditable(false);
+
 		tooltip = "Time of list sample.";
 		_lastSampleTime_lbl   .setText("Sample time");
 		_lastSampleTime_lbl   .setToolTipText(tooltip);
@@ -622,6 +630,9 @@ implements TableModelListener, GTabbedPane.ShowProperties
 		
 		panel.add(_aseVersion_lbl,        "");
 		panel.add(_aseVersion_txt,        "growx, wrap");
+		
+		panel.add(_asePageSize_lbl,       "");
+		panel.add(_asePageSize_txt,       "growx, wrap");
 		
 		panel.add(_lastSampleTime_lbl,    "");
 		panel.add(_lastSampleTime_txt,    "growx, wrap");
@@ -844,6 +855,7 @@ implements TableModelListener, GTabbedPane.ShowProperties
 		_listeners_txt         .setCaretPosition(0);
 		_aseVersion_txt        .setText(cm.getAbsString (0, "aseVersion").replaceFirst("Adaptive Server Enterprise/", ""));
 		_aseVersion_txt        .setCaretPosition(0);
+		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 
 		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
@@ -975,6 +987,7 @@ implements TableModelListener, GTabbedPane.ShowProperties
 		_atAtServerName_txt    .setText("");
 		_listeners_txt         .setText("");
 		_aseVersion_txt        .setText("");
+		_asePageSize_txt       .setText("");
 		_lastSampleTime_txt    .setText("");
 
 		_startDate_txt         .setText("");

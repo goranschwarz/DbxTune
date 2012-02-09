@@ -1238,6 +1238,9 @@ public class MainFrame
 			InMemoryCounterHandler imch = InMemoryCounterHandler.getInstance();
 			imch.clear(true);
 
+			TrendGraphDashboardPanel tgdp = SummaryPanel.getInstance().getGraphPanel();
+			tgdp.setInMemHistoryEnable(false);
+
 			System.gc();
 
 			int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
@@ -1249,6 +1252,9 @@ public class MainFrame
 					"\n" +
 					"I have cleared the In Memory Counter History! \n" +
 					"This will hopefully get us going again. \n" +
+					"\n" +
+					"The In Memory Counter History, will also be set to 1 minute! \n" +
+					"This reduce the memory usage in the future.\n" +
 					"\n" +
 					"Note: you can raise the memory parameter -Xmx###m in the "+Version.getAppName()+" start script.\n" +
 					"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
@@ -1848,7 +1854,8 @@ public class MainFrame
 						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION,         true);
 						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE, true);
 						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,       true);
-						if (aseVersion >= 15033)
+
+						if (aseVersion >= 15033 && hasMonRole)
 							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION,    true);
 					}
 
@@ -1867,7 +1874,7 @@ public class MainFrame
 						if (cm != null)
 							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, true);
 					}
-				}
+				} // end: setMinimalGraphConfig
 			}
 		} // end: ASE_CONN
 

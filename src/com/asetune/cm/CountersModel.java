@@ -1872,6 +1872,12 @@ implements Cloneable, ITableTooltip
 	{
 		_activeRoleList = activeRoleList;
 	}
+	/** if not initialized it will return null */
+	public List<String> getActiveRoles()
+	{
+		return _activeRoleList;
+	}
+
 	/** check if the <b>locally cached</b> List of role names contains the role */
 	public boolean isRoleActive(String role)
 	{
@@ -3620,7 +3626,7 @@ implements Cloneable, ITableTooltip
 		return _rateData;
 	}
 
-	private CounterTableModel getCounterData()
+	public CounterTableModel getCounterData()
 	{
 		return getCounterData(_dataSource);
 	}
@@ -3964,7 +3970,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getSumValuePCT: Cant find the column '" + colname + "'.");
+			_logger.info("getSumValue: Cant find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -4023,7 +4029,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getSumValuePCT: Cant find the column '" + colname + "'.");
+			_logger.info("getCountGtZero: Cant find the column '" + colname + "'.");
 			return 0;
 		}
 		if (data.getRowCount() == 0)

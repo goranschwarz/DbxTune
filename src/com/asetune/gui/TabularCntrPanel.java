@@ -58,6 +58,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.event.RowSorterEvent;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
@@ -198,7 +199,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	// This panel will be used for any checkboxes etc that is local to any specific tables.
 
 	// DATA TABLE panel
-	private GTable                  _dataTable                          = new GTable();
+	private GTable                  _dataTable                          = null;
 
 	private JPopupMenu				_tablePopupMenu						= null;
 
@@ -219,6 +220,34 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_cm          = cm;
 		_displayName = displayName;
 
+		// Create a specialized GTable
+		_dataTable = new GTable()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void sorterChanged(RowSorterEvent e) 
+			{
+				super.sorterChanged(e);
+
+				// the sort is DONE, we may want to do special stuff like rebuilding graphs
+				if (e.getType() == RowSorterEvent.Type.SORTED)
+				{
+					TableModel tm = _dataTable.getModel();
+
+					if (tm instanceof CountersModel)
+					{
+						CountersModel cm = (CountersModel) tm;
+						TabularCntrPanel tcp = cm.getTabPanel();
+						if (tcp != null)
+						{
+							tcp.updateExtendedInfoPanel();
+						}
+					}
+				}
+			}
+		};
+		
 		// Initialize various table filters
 		_tableRowFilterValAndOp      = new RowFilterValueAndOp(_dataTable);
 		_tableRowFilterDiffCntIsZero = new RowFilterDiffCounterIsZero(_dataTable);
@@ -226,8 +255,6 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		_tableRowFilterList.add(_tableRowFilterValAndOp);
 		_tableRowFilterList.add(_tableRowFilterDiffCntIsZero);
 		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
-		// This has to be done later ??? maybe the Sorter IS NOT yet installed...
-		//_dataTable.setRowFilter(_tableRowFilter); 
 
 		initComponents();
 
@@ -1750,6 +1777,12 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		return null;
 	}
 
+	protected JPanel getLocalOptionsPanel()
+	{
+		return _localOptionsPanel;
+	}
+
+
 	/**
 	 * Update the panel that sit's "above" the JTable, this can include various information that 
 	 * extends the JTable with alternate graphical representation.
@@ -1775,7 +1808,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 		panel.setPreferredSize(new Dimension(0, 0));
 		panel.setMinimumSize(new Dimension(0, 0));
-		mainSplitPane.setDividerLocation(0);
+		mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 
 		return panel;
 	}
@@ -1794,6 +1827,16 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	{
 		return _mainSplitPane;
 	}
+
+	/**
+	 * Get default divider location of the MAIN SplitPane Diveder Location
+	 * @return (defult is 0, which is at the top, or to the left)
+	 */
+	protected int getDefaultMainSplitPaneDividerLocation()
+	{
+		return 0;
+	}
+
 
 	/**
 	 * 
@@ -1928,6 +1971,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_ABS);
+
+				updateExtendedInfoPanel();
 			}
 		});
 
@@ -1942,6 +1987,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_DIFF);
+
+				updateExtendedInfoPanel();
 			}
 		});
 
@@ -1956,6 +2003,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_RATE);
+				
+				updateExtendedInfoPanel();
 			}
 		});
 
@@ -2171,6 +2220,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 				_tableRowFilterDiffCntIsZero.resetFilter();
 			}
 			setWatermark();
+			updateExtendedInfoPanel();
+
 			return;
 		}
 
@@ -2211,6 +2262,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			}
 		}
 		setWatermark();
+		updateExtendedInfoPanel();
 	}
 
 	/*---------------------------------------------------
@@ -2335,7 +2387,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		
 		JSplitPane mainSplitPane = getMainSplitPane();
 		if (mainSplitPane != null)
-			tmpConf.setProperty(keyPrefix+"mainSplitPane.dividerLocation",  _mainSplitPane.getDividerLocation());
+		{
+			int dividerLocation  = _mainSplitPane.getDividerLocation();
+			if (dividerLocation > 0)
+				tmpConf.setProperty(keyPrefix+"mainSplitPane.dividerLocation",  dividerLocation);
+			else
+				tmpConf.remove(keyPrefix+"mainSplitPane.dividerLocation");
+
+		}
 
 		tmpConf.save();
 	}
@@ -2351,12 +2410,13 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		if (conf == null)
 			return;
 
-		int defaultDividerLocation = 0;
 		JSplitPane mainSplitPane = getMainSplitPane();
 		if (mainSplitPane != null)
 		{
-			defaultDividerLocation = mainSplitPane.getDividerLocation();
-			int dividerLocation  = conf.getIntProperty(keyPrefix+"mainSplitPane.dividerLocation",  defaultDividerLocation);
+			int dividerLocation  = conf.getIntProperty(keyPrefix+"mainSplitPane.dividerLocation",  0);
+
+			if (dividerLocation == 0)
+				dividerLocation = getDefaultMainSplitPaneDividerLocation();
 
 			_mainSplitPane.setDividerLocation(dividerLocation);
 		}

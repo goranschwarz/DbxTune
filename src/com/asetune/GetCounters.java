@@ -7,6 +7,7 @@ package com.asetune;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -20,6 +21,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -61,13 +63,20 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.labels.ItemLabelAnchor;
 import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.MultiplePiePlot;
+import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.StackedBarRenderer;
+import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.ui.RectangleEdge;
+import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
+import org.jfree.util.TableOrder;
 
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -1091,6 +1100,7 @@ extends Thread
 						", clusterCoordId     = " + (isClusterEnabled ? "convert(varchar(3), @@clustercoordid)" : "'Not Enabled'") + " \n" +
 						", timeIsNow          = getdate() \n" +
 						", NetworkAddressInfo = " + nwAddrInfo + " \n" +
+						", asePageSize        = @@maxpagesize \n" +
 
 						", bootcount          = @@bootcount \n" + // from 12.5.0.3
 						", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
@@ -1230,7 +1240,13 @@ extends Thread
 
 				if (CM_GRAPH_NAME__SUMMARY__TRANSACTION.equals(tgdp.getName()))
 				{
-					if (aseVersion < 15033)
+					int tranPos = -1;
+					if (getCounterDataAbs() != null)
+						tranPos = getCounterDataAbs().findColumn("Transactions");
+					
+					// if you don't have 'mon_role', the column 'Transactions' is not part of the 
+					// resultset even if we are above 15.0.3 ESD#3
+					if ( aseVersion < 15033 || tranPos == -1 )
 					{
 						// disable the transactions graph checkbox...
 						TrendGraph tg = getTrendGraph(CM_GRAPH_NAME__SUMMARY__TRANSACTION);
@@ -2708,7 +2724,7 @@ extends Thread
 		description  = "<html>" +
 			"What different resources are a Server SPID waiting for.<br>" +
 			"<br>" +
-			"<br>Note</b>: This is in experimental mode, it mighttake to much resources<br>" +
+			"<br>Note</b>: This is in experimental mode, it might take to much resources<br>" +
 			"</html>";
 		
 		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
@@ -3331,11 +3347,15 @@ extends Thread
 			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
 			{
 				private static final long	serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__OPEN_DATABASES;
 				
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
 				private CategoryDataset createDataset(JXTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
-					boolean generateDummy = conf.getBooleanProperty(CM_NAME__OPEN_DATABASES + ".generateDummyGraphWhenNotConnected", false);
+					boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
 
 					DefaultCategoryDataset categoryDataset = new DefaultCategoryDataset();
 
@@ -3385,7 +3405,7 @@ extends Thread
 				{
 					// Get Graph Orientation: VERTICAL or HORIZONTAL
 					Configuration conf = Configuration.getCombinedConfiguration();
-					String orientationStr = conf.getProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
+					String orientationStr = conf.getProperty(CM_NAME+".graph.PlotOrientation", "AUTO");
 
 					PlotOrientation orientation = PlotOrientation.VERTICAL;
 					if (orientationStr.equals("VERTICAL"))   orientation = PlotOrientation.VERTICAL;
@@ -3413,6 +3433,7 @@ extends Thread
 					// code from TabularCntrlPanel
 					//------------------------------------------------
 					CategoryPlot plot = chart.getCategoryPlot();
+					plot.setNoDataMessage("No data available");
 					StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
 
 					if (orientation.equals(PlotOrientation.VERTICAL))
@@ -3468,9 +3489,14 @@ extends Thread
 
 
 				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					return 150;
+				}
+
+				@Override
 				protected JPanel createExtendedInfoPanel()
 				{
-					JSplitPane mainSplitPane = getMainSplitPane();
 					JPanel panel = SwingUtils.createPanel("Extended Information", false);
 					panel.setLayout(new BorderLayout());
 
@@ -3479,7 +3505,10 @@ extends Thread
 					panel.add( new ChartPanel(chart) );
 
 					// Size of the panel
-					mainSplitPane.setDividerLocation(150);
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
 					return panel;
 				}
 
@@ -3490,10 +3519,14 @@ extends Thread
 					JXTable dataTable = getDataTable();
 					if (panel     == null) return;
 
-					// If the panel is so small, that is not visible, don't update the graph
+					// If the panel is so small, make it bigger 
 					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
 					if (dividerLocation == 0)
-						return;
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
 					
 //					if ( ! isMonConnected() )
 //						dataTable = null;
@@ -3540,7 +3573,7 @@ extends Thread
 
 					// Set initial value for Graph Orientation
 					Configuration conf = Configuration.getCombinedConfiguration();
-					String orientationStr = conf.getProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
+					String orientationStr = conf.getProperty(CM_NAME+".graph.PlotOrientation", "AUTO");
 					String orientation = graphTypeArr[0]; // set as default
 					if (orientationStr.equals("AUTO"))       orientation = graphTypeArr[0];
 					if (orientationStr.equals("VERTICAL"))   orientation = graphTypeArr[1];
@@ -3573,11 +3606,13 @@ extends Thread
 						public void actionPerformed(ActionEvent e)
 						{
 							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
 							
 							String type = graphType_cbx.getSelectedItem().toString();
-							if (type.equals("Auto"))       conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "AUTO");
-							if (type.equals("Vertical"))   conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "VERTICAL");
-							if (type.equals("Horizontal")) conf.setProperty(CM_NAME__OPEN_DATABASES+".graph.PlotOrientation", "HORIZONTAL");
+							if (type.equals("Auto"))       conf.setProperty(CM_NAME+".graph.PlotOrientation", "AUTO");
+							if (type.equals("Vertical"))   conf.setProperty(CM_NAME+".graph.PlotOrientation", "VERTICAL");
+							if (type.equals("Horizontal")) conf.setProperty(CM_NAME+".graph.PlotOrientation", "HORIZONTAL");
 							conf.save();
 							
 							updateExtendedInfoPanel();
@@ -4080,7 +4115,548 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long   serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__SYS_WAIT;
+
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
+				private static final String  PROPKEY_enableGraph   = CM_NAME + ".graph.enable";
+				private static final boolean DEFAULT_enableGraph   = true;
+
+				private static final String  PROPKEY_graphType     = CM_NAME + ".graph.type";
+				private static final String  VALUE_graphType_PIE   = "PIE";
+				private static final String  VALUE_graphType_BAR   = "BAR";
+				private static final String  DEFAULT_graphType     = VALUE_graphType_PIE;
+
+				private static final String  PROPKEY_showLegend    = CM_NAME + ".graph.show.legend";
+				private static final boolean DEFAULT_showLegend    = true;
+
+//				private static final String  PROPKEY_includeWaitId250      = CM_NAME + ".graph.include.id.250";
+//				private static final boolean DEFAULT_includeWaitId250      = true;
+
+				private static final String  PROPKEY_generateEvent         = CM_NAME + ".graph.generate.event";
+				private static final boolean DEFAULT_generateEvent         = true;
+
+				private static final String  PROPKEY_generateEventWaitTime = CM_NAME + ".graph.generate.event.waitTime";
+				private static final boolean DEFAULT_generateEventWaitTime = true;
+
+				private static final String  PROPKEY_generateEventWaits    = CM_NAME + ".graph.generate.event.waits";
+				private static final boolean DEFAULT_generateEventWaits    = true;
+
+				private static final String  PROPKEY_generateClass         = CM_NAME + ".graph.generate.class";
+				private static final boolean DEFAULT_generateClass         = false;
+
+				private static final String  PROPKEY_generateClassWaitTime = CM_NAME + ".graph.generate.class.waitTime";
+				private static final boolean DEFAULT_generateClassWaitTime = true;
+
+				private static final String  PROPKEY_generateClassWaits    = CM_NAME + ".graph.generate.class.waits";
+				private static final boolean DEFAULT_generateClassWaits    = true;
+
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean generateDummy         = conf.getBooleanProperty(PROPKEY_generateDummy,         DEFAULT_generateDummy);
+//					boolean includeWaitId250      = conf.getBooleanProperty(PROPKEY_includeWaitId250,      DEFAULT_includeWaitId250);
+					boolean generateEvent         = conf.getBooleanProperty(PROPKEY_generateEvent,         DEFAULT_generateEvent);
+					boolean generateEventWaitTime = conf.getBooleanProperty(PROPKEY_generateEventWaitTime, DEFAULT_generateEventWaitTime);
+					boolean generateEventWaits    = conf.getBooleanProperty(PROPKEY_generateEventWaits,    DEFAULT_generateEventWaits);
+					boolean generateClass         = conf.getBooleanProperty(PROPKEY_generateClass,         DEFAULT_generateClass);
+					boolean generateClassWaitTime = conf.getBooleanProperty(PROPKEY_generateClassWaitTime, DEFAULT_generateClassWaitTime);
+					boolean generateClassWaits    = conf.getBooleanProperty(PROPKEY_generateClassWaits,    DEFAULT_generateClassWaits);
+
+					DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int ClassName_pos   = tm.findColumn("Class");
+						int EventName_pos   = tm.findColumn("Event");
+						int WaitEventID_pos = tm.findColumn("WaitEventID");
+						int WaitTime_pos    = tm.findColumn("WaitTime"); 
+						int Waits_pos       = tm.findColumn("Waits");
+
+						CountersModel cm = getDisplayCm();
+						if (cm == null)
+							cm = getCm();
+
+						if (cm != null)
+						{
+							Map<String, Double> classesWaitTime = new LinkedHashMap<String, Double>();
+							Map<String, Double> classesWaits    = new LinkedHashMap<String, Double>();
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String ClassName   = (String)dataTable.getValueAt(r, ClassName_pos);
+								String EventName   = (String)dataTable.getValueAt(r, EventName_pos);
+								Number WaitEventID = (Number)dataTable.getValueAt(r, WaitEventID_pos);
+								Number WaitTime    = (Number)dataTable.getValueAt(r, WaitTime_pos);
+								Number Waits       = (Number)dataTable.getValueAt(r, Waits_pos);
+
+//								// SKIP Wait EventId 250
+//								if ( ! includeWaitId250 && WaitEventID.intValue() == 250)
+//									continue;
+
+								if (generateClass)
+								{
+									Double sumWaitTime = classesWaitTime.get(ClassName);
+									Double sumWaits    = classesWaits   .get(ClassName);
+
+									classesWaitTime.put(ClassName, new Double(sumWaitTime==null ? WaitTime.doubleValue() : sumWaitTime + WaitTime.doubleValue()) );
+									classesWaits   .put(ClassName, new Double(sumWaits   ==null ? Waits   .doubleValue() : sumWaits    + Waits   .doubleValue()) );
+								}
+								
+								if (generateEvent)
+								{
+									if (generateEventWaitTime)
+										dataset.addValue(WaitTime.doubleValue(), EventName, "Event - WaitTime");
+	
+									if (generateEventWaits)
+										dataset.addValue(Waits.doubleValue(), EventName, "Event - Waits");
+								}
+							}
+							if (generateClass)
+							{
+								if (generateClassWaitTime)
+								{
+									for (Map.Entry<String,Double> entry : classesWaitTime.entrySet()) 
+									{
+										String key = entry.getKey();
+										Double val = entry.getValue();
+										dataset.addValue(val, "(class) "+key, "Class - WaitTime");
+									}
+								}
+								
+								if (generateClassWaits)
+								{
+									for (Map.Entry<String,Double> entry : classesWaits.entrySet()) 
+									{
+										String key = entry.getKey();
+										Double val = entry.getValue();
+										dataset.addValue(val, "(class) "+key, "Class - Waits");
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+//						generateDummy = true;
+						if (generateDummy)
+						{
+							dataset.addValue(1, "Dummy Event A", "WaitTime - by Event");
+							dataset.addValue(2, "Dummy Event B", "WaitTime - by Event");
+							dataset.addValue(3, "Dummy Event C", "WaitTime - by Event");
+							dataset.addValue(4, "Dummy Event D", "WaitTime - by Event");
+
+							dataset.addValue(5, "Dummy Event E", "Waits - by Event");
+							dataset.addValue(6, "Dummy Event F", "Waits - by Event");
+							dataset.addValue(7, "Dummy Event G", "Waits - by Event");
+
+							dataset.addValue(8, "Dummy Class A", "WaitTime - by Class");
+							dataset.addValue(9, "Dummy Class B", "WaitTime - by Class");
+
+							dataset.addValue(10,"Dummy Class C", "Waits - by Class");
+						}
+					}
+
+					return dataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean createPieChart = conf.getProperty(       PROPKEY_graphType,  DEFAULT_graphType).equals(VALUE_graphType_PIE);
+					boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
+
+					// some "statics" that can be used in the graphs
+					final String          chartTitle              = "Wait Event Graph - by Event and by Class";
+					final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+					final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
+
+					final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+					
+					if (createPieChart)
+					{
+						final JFreeChart chart = ChartFactory.createMultiplePieChart(
+								null,                   // chart title
+								dataset,                // dataset
+								TableOrder.BY_COLUMN,
+								showLegend,             // include legend
+								true,
+								false
+						);
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+						
+						final MultiplePiePlot plot = (MultiplePiePlot) chart.getPlot();
+						plot.setNoDataMessage("No data available");
+	//					plot.setBackgroundPaint(Color.white);
+	//					plot.setOutlineStroke(new BasicStroke(1.0f));
+						plot.setLimit(0.05); // 5% or less goes to "Others"
+
+						// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
+						final JFreeChart subchart = plot.getPieChart();
+						TextTitle seriesTitle = new TextTitle("Series Title", TextTitle.DEFAULT_FONT); // "Series Title" will be overwritten later on
+				        seriesTitle.setPosition(RectangleEdge.BOTTOM);
+				        subchart.setTitle(seriesTitle);
+				        subchart.setBackgroundPaint(getBackground());
+
+				        // Set properties for the "labels" that points out what in the PIE we are looking at.
+						final PiePlot p = (PiePlot) subchart.getPlot();
+						p.setLabelFont(defaultLabelFont);
+//						p.setInteriorGap(0.30);
+//						p.setBackgroundPaint(null);
+//						p.setOutlineStroke(null);
+						p.setLabelGenerator(new StandardPieSectionLabelGenerator("{2}, {0}, {1}", NumberFormat.getNumberInstance(), NumberFormat.getPercentInstance()));
+						p.setLabelGap(0.01D); // how close to the edges can the label be printed ??? 0.01 = 1%
+						p.setMaximumLabelWidth(0.20D); // 30% of plot width
+						return chart;
+					}
+					else
+					{
+						PlotOrientation orientation = PlotOrientation.VERTICAL;
+					//	orientation = PlotOrientation.HORIZONTAL;
+
+						JFreeChart chart = ChartFactory.createStackedBarChart(
+								null,                     // Title
+								null,                     // categoryAxisLabel
+								null,                     // valueAxisLabel
+								dataset,                  // dataset
+								orientation,              // orientation
+								showLegend,               // legend
+								true,                     // tooltips
+								false);                   // urls
+
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+
+						//------------------------------------------------
+						// code from TabularCntrlPanel
+						//------------------------------------------------
+						CategoryPlot plot = chart.getCategoryPlot();
+						plot.setNoDataMessage("No data available");
+//						plot.setLimit(0.05); // 5%
+
+					    NumberAxis numAxis = (NumberAxis)plot.getRangeAxis();
+					    numAxis.setNumberFormatOverride(NumberFormat.getPercentInstance());
+//					    numAxis.setUpperBound(1); // 100%
+
+						StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+						renderer.setRenderAsPercentages(true);
+						renderer.setDrawBarOutline(false);
+						renderer.setBaseItemLabelsVisible(true);
+
+					    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
+					    renderer.setPositiveItemLabelPositionFallback(ilp);
+					    renderer.setNegativeItemLabelPositionFallback(ilp);
+
+					    // set label to be: pct, label, value   
+					    // 3=pct, 0=dataLabel, 2=dataValue
+					    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
+					    renderer.setBaseItemLabelGenerator(scilg);
+					    renderer.setBaseItemLabelsVisible(true);
+					    renderer.setBaseItemLabelFont(defaultLabelFont);
+
+						return chart;
+					}
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(null))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+					return panel;
+				}
+
+				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 60% for table, 40% for graph;
+					return 6 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(5);
+
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+				}
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, make it bigger 
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
+					
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+				}
+
+				private void helperActionSave(String key, boolean b)
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf == null)
+						return;
+					
+					conf.setProperty(key, b);
+					conf.save();
+					
+					updateExtendedInfoPanel();
+				}
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+//					final JCheckBox includeWaitId250_chk      = new JCheckBox("Include 'WaitID=250, waiting for incoming network data' in graphs.");
+					final JCheckBox generateEvent_chk         = new JCheckBox("Genereate Graphs for Events");
+					final JCheckBox generateEventWaitTime_chk = new JCheckBox("WaitTime");
+					final JCheckBox generateEventWaits_chk    = new JCheckBox("Waits");
+					final JCheckBox generateClass_chk         = new JCheckBox("Genereate Graphs for Classes");
+					final JCheckBox generateClassWaitTime_chk = new JCheckBox("WaitTime");
+					final JCheckBox generateClassWaits_chk    = new JCheckBox("Waits");
+
+					final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
+					final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
+
+					String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
+					final JLabel    graphType_lbl    = new JLabel("Type");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip;
+					tooltip = 
+						"<html>" +
+						"If you want to include/exclude data in the graphs, use the 'filters' panel.<br>" +
+						"The Graph is based on what is visible in the Table..." +
+						"</html>";
+					panel.setToolTipText(tooltip);
+
+					enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+					showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
+
+//					tooltip = 
+//						"<html>" +
+//						"If you want to include 'WaitID=250, waiting for incoming network data' in graphs..<br>" +
+//						"<br>" +
+//						"<br>" +
+//						"Another way to include/exclude event types in the graphs, is to use the 'filters' panel.<br>" +
+//						"The Graph is based on what is visible in the Table..." +
+//						"</html>";
+//					includeWaitId250_chk.setToolTipText(tooltip);
+
+					tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					generateEvent_chk.setToolTipText("<html>Include 'Events' data in the Graph.</html>");
+					generateClass_chk.setToolTipText("<html>Include 'Classes' data in the Graph.</html>");
+
+					// SET INITIAL VALUES for components
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
+					if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
+					graphType_cbx.setSelectedItem(orientation);
+
+//					includeWaitId250_chk     .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,      DEFAULT_includeWaitId250));
+					generateEvent_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,         DEFAULT_generateEvent));
+					generateEventWaitTime_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime, DEFAULT_generateEventWaitTime));
+					generateEventWaits_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,    DEFAULT_generateEventWaits));
+					generateClass_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,         DEFAULT_generateClass));
+					generateClassWaitTime_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime, DEFAULT_generateClassWaitTime));
+					generateClassWaits_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,    DEFAULT_generateClassWaits));
+
+					enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+					showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+					
+					// ACTION LISTENERS
+//					includeWaitId250_chk.addActionListener(new ActionListener()
+//					{
+//						public void actionPerformed(ActionEvent e)
+//						{
+//							helperActionSave(PROPKEY_includeWaitId250, ((JCheckBox)e.getSource()).isSelected());
+//						}
+//					});
+
+					enableGraph_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
+							SwingUtils.setEnabled(getLocalOptionsPanel(), ((JCheckBox)e.getSource()).isSelected(), (JCheckBox)e.getSource());
+							updateExtendedInfoPanel();
+						}
+					});
+
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
+							
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
+							if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
+							conf.save();
+							
+							updateExtendedInfoPanel();
+						}
+					});
+
+					showLegend_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					generateEvent_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							boolean b = ((JCheckBox)e.getSource()).isSelected();
+							helperActionSave(PROPKEY_generateEvent, ((JCheckBox)e.getSource()).isSelected());
+							generateEventWaitTime_chk.setEnabled(b);
+							generateEventWaits_chk   .setEnabled(b);
+						}
+					});
+					generateEventWaitTime_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateEventWaitTime, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					generateEventWaits_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateEventWaits, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+
+
+					generateClass_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							boolean b = ((JCheckBox)e.getSource()).isSelected();
+							helperActionSave(PROPKEY_generateClass, b);
+							generateClassWaitTime_chk.setEnabled(b);
+							generateClassWaits_chk   .setEnabled(b);
+						}
+					});
+					generateClassWaitTime_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateClassWaitTime, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					generateClassWaits_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateClassWaits, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					// ADD to panel
+//					panel.add(includeWaitId250_chk,      "wrap");
+					panel.add(enableGraph_chk,           "split");
+					panel.add(graphType_lbl,             "");
+					panel.add(graphType_cbx,             "wrap");
+
+					panel.add(generateEvent_chk,         "split");
+					panel.add(generateEventWaitTime_chk, "");
+					panel.add(generateEventWaits_chk,    "wrap");
+
+					panel.add(generateClass_chk,         "split");
+					panel.add(generateClassWaitTime_chk, "");
+					panel.add(generateClassWaits_chk,    "wrap");
+
+					panel.add(showLegend_chk,            "wrap");
+
+					// enable disable all subcomponents in panel
+					SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+
+					if (enableGraph_chk.isSelected())
+					{
+						// initial enabled or not
+						generateEventWaitTime_chk.setEnabled(generateEvent_chk.isSelected());
+						generateEventWaits_chk   .setEnabled(generateEvent_chk.isSelected());
+						generateClassWaitTime_chk.setEnabled(generateClass_chk.isSelected());
+						generateClassWaits_chk   .setEnabled(generateClass_chk.isSelected());
+					}
+
+					return panel;
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_wait_activity.png") );
 			tcp.setCm(tmp);
@@ -5476,7 +6052,455 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+//			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long   serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__DEVICE_IO;
+
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
+				private static final String  PROPKEY_enableGraph   = CM_NAME + ".graph.enable";
+				private static final boolean DEFAULT_enableGraph   = true;
+
+				private static final String  PROPKEY_graphType     = CM_NAME + ".graph.type";
+				private static final String  VALUE_graphType_PIE   = "PIE";
+				private static final String  VALUE_graphType_BAR   = "BAR";
+				private static final String  DEFAULT_graphType     = VALUE_graphType_PIE;
+
+				private static final String  PROPKEY_showLegend    = CM_NAME + ".graph.show.legend";
+				private static final boolean DEFAULT_showLegend    = true;
+
+
+				private static final String  PROPKEY_generateTotalIo = CM_NAME + ".graph.generate.io.total";
+				private static final boolean DEFAULT_generateTotalIo = true;
+
+				private static final String  PROPKEY_generateRead    = CM_NAME + ".graph.generate.io.read";
+				private static final boolean DEFAULT_generateRead    = false;
+
+				private static final String  PROPKEY_generateApfRead = CM_NAME + ".graph.generate.io.read.apf";
+				private static final boolean DEFAULT_generateApfRead = false;
+
+				private static final String  PROPKEY_generateWrite   = CM_NAME + ".graph.generate.io.write";
+				private static final boolean DEFAULT_generateWrite   = false;
+
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean generateDummy   = conf.getBooleanProperty(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+					boolean generateTotalIo = conf.getBooleanProperty(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo);
+					boolean generateRead    = conf.getBooleanProperty(PROPKEY_generateRead,    DEFAULT_generateRead);
+					boolean generateApfRead = conf.getBooleanProperty(PROPKEY_generateApfRead, DEFAULT_generateApfRead);
+					boolean generateWrite   = conf.getBooleanProperty(PROPKEY_generateWrite,   DEFAULT_generateWrite);
+
+					DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int LogicalName_pos = tm.findColumn("LogicalName");
+						int TotalIOs_pos    = tm.findColumn("TotalIOs");
+						int Reads_pos       = tm.findColumn("Reads");
+						int APFReads_pos    = tm.findColumn("APFReads"); 
+						int Writes_pos      = tm.findColumn("Writes");
+
+//						int ReadsPct_pos    = tm.findColumn("ReadsPct");
+//						int APFReadsPct_pos = tm.findColumn("APFReadsPct");
+//						int WritesPct_pos   = tm.findColumn("WritesPct");
+
+						CountersModel cm = getDisplayCm();
+						if (cm == null)
+							cm = getCm();
+
+						if (cm != null)
+						{
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String LogicalName = (String)dataTable.getValueAt(r, LogicalName_pos);
+								Number TotalIOs    = (Number)dataTable.getValueAt(r, TotalIOs_pos);
+								Number Reads       = (Number)dataTable.getValueAt(r, Reads_pos);
+								Number APFReads    = (Number)dataTable.getValueAt(r, APFReads_pos);
+								Number Writes      = (Number)dataTable.getValueAt(r, Writes_pos);
+
+//								Number ReadsPct    = (Number)dataTable.getValueAt(r, ReadsPct_pos);
+//								Number APFReadsPct = (Number)dataTable.getValueAt(r, APFReadsPct_pos);
+//								Number WritesPct   = (Number)dataTable.getValueAt(r, WritesPct_pos);
+
+								// This looked like a good idea, but it did not look good at all
+								//String LogicalNameTotalIo = LogicalName + " (R="+ReadsPct+"%,APFR="+APFReadsPct+"%,W="+WritesPct+"%)";
+
+								if (generateTotalIo)
+									dataset.addValue(TotalIOs.doubleValue(), LogicalName, "TotalIOs");
+
+								if (generateRead)
+									dataset.addValue(Reads.doubleValue(),    LogicalName, "Reads");
+
+								if (generateApfRead)
+									dataset.addValue(APFReads.doubleValue(), LogicalName, "APFReads");
+
+								if (generateWrite)
+									dataset.addValue(Writes.doubleValue(),   LogicalName, "Writes");
+							}
+						}
+					}
+					else
+					{
+//						generateDummy = true;
+						if (generateDummy)
+						{
+							dataset.addValue(1, "Dummy Device A", "TotalIOs");
+							dataset.addValue(2, "Dummy Device B", "TotalIOs");
+							dataset.addValue(3, "Dummy Device C", "TotalIOs");
+							dataset.addValue(4, "Dummy Device D", "TotalIOs");
+
+							dataset.addValue(5, "Dummy Device E", "Reads");
+							dataset.addValue(6, "Dummy Device F", "Reads");
+							dataset.addValue(7, "Dummy Device G", "Reads");
+
+							dataset.addValue(8, "Dummy Device A", "APFReads");
+							dataset.addValue(9, "Dummy Device B", "APFReads");
+
+							dataset.addValue(10,"Dummy Device C", "Writes");
+						}
+					}
+
+					return dataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean createPieChart = conf.getProperty(       PROPKEY_graphType,  DEFAULT_graphType).equals(VALUE_graphType_PIE);
+					boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
+
+					// some "statics" that can be used in the graphs
+					final String          chartTitle              = "Device IO Graph - by TotalIOs, Reads, APFReads, Writes";
+					final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+					final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
+
+					final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+					
+					if (createPieChart)
+					{
+						final JFreeChart chart = ChartFactory.createMultiplePieChart(
+								null,                   // chart title
+								dataset,                // dataset
+								TableOrder.BY_COLUMN,
+								showLegend,             // include legend
+								true,
+								false
+						);
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+						
+						final MultiplePiePlot plot = (MultiplePiePlot) chart.getPlot();
+						plot.setNoDataMessage("No data available");
+	//					plot.setBackgroundPaint(Color.white);
+	//					plot.setOutlineStroke(new BasicStroke(1.0f));
+						plot.setLimit(0.05); // 5% or less goes to "Others"
+
+						// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
+						final JFreeChart subchart = plot.getPieChart();
+						TextTitle seriesTitle = new TextTitle("Series Title", TextTitle.DEFAULT_FONT); // "Series Title" will be overwritten later on
+				        seriesTitle.setPosition(RectangleEdge.BOTTOM);
+				        subchart.setTitle(seriesTitle);
+				        subchart.setBackgroundPaint(getBackground());
+
+				        // Set properties for the "labels" that points out what in the PIE we are looking at.
+						final PiePlot p = (PiePlot) subchart.getPlot();
+						p.setLabelFont(defaultLabelFont);
+//						p.setInteriorGap(0.30);
+//						p.setBackgroundPaint(null);
+//						p.setOutlineStroke(null);
+						p.setLabelGenerator(new StandardPieSectionLabelGenerator("{2}, {0}, {1}", NumberFormat.getNumberInstance(), NumberFormat.getPercentInstance()));
+						p.setLabelGap(0.01D); // how close to the edges can the label be printed ??? 0.01 = 1%
+						p.setMaximumLabelWidth(0.20D); // 30% of plot width
+						return chart;
+					}
+					else
+					{
+						PlotOrientation orientation = PlotOrientation.VERTICAL;
+					//	orientation = PlotOrientation.HORIZONTAL;
+
+						JFreeChart chart = ChartFactory.createStackedBarChart(
+								null,                     // Title
+								null,                     // categoryAxisLabel
+								null,                     // valueAxisLabel
+								dataset,                  // dataset
+								orientation,              // orientation
+								showLegend,               // legend
+								true,                     // tooltips
+								false);                   // urls
+
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+
+						//------------------------------------------------
+						// code from TabularCntrlPanel
+						//------------------------------------------------
+						CategoryPlot plot = chart.getCategoryPlot();
+						plot.setNoDataMessage("No data available");
+//						plot.setLimit(0.05); // 5%
+
+					    NumberAxis numAxis = (NumberAxis)plot.getRangeAxis();
+					    numAxis.setNumberFormatOverride(NumberFormat.getPercentInstance());
+//					    numAxis.setUpperBound(1); // 100%
+
+						StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+						renderer.setRenderAsPercentages(true);
+						renderer.setDrawBarOutline(false);
+						renderer.setBaseItemLabelsVisible(true);
+
+					    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
+					    renderer.setPositiveItemLabelPositionFallback(ilp);
+					    renderer.setNegativeItemLabelPositionFallback(ilp);
+
+					    // set label to be: pct, label, value   
+					    // 3=pct, 0=dataLabel, 2=dataValue
+					    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
+					    renderer.setBaseItemLabelGenerator(scilg);
+					    renderer.setBaseItemLabelsVisible(true);
+					    renderer.setBaseItemLabelFont(defaultLabelFont);
+
+						return chart;
+					}
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(null))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+					return panel;
+				}
+
+				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 70% for table, 30% for graph;
+					return 7 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(5);
+
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+				}
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, make it bigger 
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+				}
+
+				private void helperActionSave(String key, boolean b)
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf == null)
+						return;
+					
+					conf.setProperty(key, b);
+					conf.save();
+					
+					updateExtendedInfoPanel();
+				}
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					final JCheckBox generateTotalIo_chk = new JCheckBox("TotalIOs");
+					final JCheckBox generateRead_chk    = new JCheckBox("Reads");
+					final JCheckBox generateApfRead_chk = new JCheckBox("APFReads");
+					final JCheckBox generateWrite_chk   = new JCheckBox("Writes");
+
+					final JCheckBox enableGraph_chk     = new JCheckBox("Show Graph");
+					final JCheckBox showLegend_chk      = new JCheckBox("Show Legend");
+
+					String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
+					final JLabel    graphType_lbl    = new JLabel("Type");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip;
+					tooltip = 
+						"<html>" +
+						"If you want to include/exclude data in the graphs, use the 'filters' panel.<br>" +
+						"The Graph is based on what is visible in the Table..." +
+						"</html>";
+					panel.setToolTipText(tooltip);
+
+					enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+					showLegend_chk .setToolTipText("Show Legend, which describes all data value types");
+
+					tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					generateTotalIo_chk.setToolTipText("<html>Include 'TotalIOs' data in the Graph.</html>");
+					generateRead_chk   .setToolTipText("<html>Include 'Reads'    data in the Graph.</html>");
+					generateApfRead_chk.setToolTipText("<html>Include 'APFReads' data in the Graph.</html>");
+					generateWrite_chk  .setToolTipText("<html>Include 'Writes'   data in the Graph.</html>");
+
+					// SET INITIAL VALUES for components
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
+					if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
+					graphType_cbx.setSelectedItem(orientation);
+
+					generateTotalIo_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo));
+					generateRead_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateRead,    DEFAULT_generateRead));
+					generateApfRead_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateApfRead, DEFAULT_generateApfRead));
+					generateWrite_chk  .setSelected(conf.getBooleanProperty(PROPKEY_generateWrite,   DEFAULT_generateWrite));
+
+					enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+					showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
+							
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
+							if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
+							conf.save();
+							
+							updateExtendedInfoPanel();
+						}
+					});
+
+					enableGraph_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
+							SwingUtils.setEnabled(getLocalOptionsPanel(), ((JCheckBox)e.getSource()).isSelected(), (JCheckBox)e.getSource());
+							updateExtendedInfoPanel();
+						}
+					});
+					showLegend_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					generateTotalIo_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateTotalIo, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					generateRead_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateRead, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					generateApfRead_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateApfRead, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					generateWrite_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateWrite, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					// ADD to panel
+					panel.add(enableGraph_chk,     "split");
+					panel.add(graphType_lbl,       "");
+					panel.add(graphType_cbx,       "wrap");
+
+					panel.add(generateTotalIo_chk, "split");
+					panel.add(generateRead_chk,    "");
+					panel.add(generateApfRead_chk, "");
+					panel.add(generateWrite_chk,   "wrap");
+
+					panel.add(showLegend_chk,      "wrap");
+
+					// enable disable all subcomponents in panel
+					SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+					
+					return panel;
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_device_activity.png") );
 			tcp.setCm(tmp);
@@ -5666,7 +6690,417 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS, new TrendGraphDataPoint(CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS, new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+//			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long   serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__IO_QUEUE_SUM;
+
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
+				private static final String  PROPKEY_enableGraph   = CM_NAME + ".graph.enable";
+				private static final boolean DEFAULT_enableGraph   = true;
+
+				private static final String  PROPKEY_graphType     = CM_NAME + ".graph.type";
+				private static final String  VALUE_graphType_PIE   = "PIE";
+				private static final String  VALUE_graphType_BAR   = "BAR";
+				private static final String  DEFAULT_graphType     = VALUE_graphType_PIE;
+
+				private static final String  PROPKEY_showLegend    = CM_NAME + ".graph.show.legend";
+				private static final boolean DEFAULT_showLegend    = true;
+
+				private static final String  PROPKEY_generateIOs        = CM_NAME + ".graph.generate.ios";
+				private static final boolean DEFAULT_generateIOs        = true;
+
+				private static final String  PROPKEY_generateIOTime     = CM_NAME + ".graph.generate.ioTime";
+				private static final boolean DEFAULT_generateIOTime     = true;
+
+				private static final String  PROPKEY_generateAvgServ_ms = CM_NAME + ".graph.generate.avgServMs";
+				private static final boolean DEFAULT_generateAvgServ_ms = false;
+
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean generateDummy     = conf.getBooleanProperty(PROPKEY_generateDummy,      DEFAULT_generateDummy);
+					boolean generateIOs       = conf.getBooleanProperty(PROPKEY_generateIOs,        DEFAULT_generateIOs);
+					boolean generateIOTime    = conf.getBooleanProperty(PROPKEY_generateIOTime,     DEFAULT_generateIOTime);
+					boolean generateAvgServMs = conf.getBooleanProperty(PROPKEY_generateAvgServ_ms, DEFAULT_generateAvgServ_ms);
+
+					DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int IOType_pos     = tm.findColumn("IOType");
+						int IOs_pos        = tm.findColumn("IOs");
+						int IOTime_pos     = tm.findColumn("IOTime");
+						int AvgServ_ms_pos = tm.findColumn("AvgServ_ms"); 
+
+						CountersModel cm = getDisplayCm();
+						if (cm == null)
+							cm = getCm();
+
+						if (cm != null)
+						{
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String IOType     = (String)dataTable.getValueAt(r, IOType_pos);
+								Number IOs        = (Number)dataTable.getValueAt(r, IOs_pos);
+								Number IOTime     = (Number)dataTable.getValueAt(r, IOTime_pos);
+								Number AvgServ_ms = (Number)dataTable.getValueAt(r, AvgServ_ms_pos);
+
+								if (generateIOs)       dataset.addValue(IOs       .doubleValue(), IOType, "IOs");
+								if (generateIOTime)    dataset.addValue(IOTime    .doubleValue(), IOType, "IOTime");
+								if (generateAvgServMs) dataset.addValue(AvgServ_ms.doubleValue(), IOType, "AvgServ_ms");
+							}
+						}
+					}
+					else
+					{
+//						generateDummy = true;
+						if (generateDummy)
+						{
+							dataset.addValue(5, "User Data",   "IOs");
+							dataset.addValue(4, "User Log",    "IOs");
+							dataset.addValue(3, "Tempdb Data", "IOs");
+							dataset.addValue(2, "Tempdb Log",  "IOs");
+							dataset.addValue(1, "System",      "IOs");
+
+							dataset.addValue(50, "User Data",   "IOTime");
+							dataset.addValue(40, "User Log",    "IOTime");
+							dataset.addValue(30, "Tempdb Data", "IOTime");
+							dataset.addValue(20, "Tempdb Log",  "IOTime");
+							dataset.addValue(10, "System",      "IOTime");
+
+						}
+					}
+
+					return dataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean createPieChart = conf.getProperty(       PROPKEY_graphType,  DEFAULT_graphType).equals(VALUE_graphType_PIE);
+					boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
+
+					// some "statics" that can be used in the graphs
+					final String          chartTitle              = "IO Graph - User Data/Log, Tempdb Data/Log, System";
+					final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+					final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
+
+					final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+					
+					if (createPieChart)
+					{
+						final JFreeChart chart = ChartFactory.createMultiplePieChart(
+								null,                   // chart title
+								dataset,                // dataset
+								TableOrder.BY_COLUMN,
+								showLegend,             // include legend
+								true,
+								false
+						);
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+						
+						final MultiplePiePlot plot = (MultiplePiePlot) chart.getPlot();
+						plot.setNoDataMessage("No data available");
+	//					plot.setBackgroundPaint(Color.white);
+	//					plot.setOutlineStroke(new BasicStroke(1.0f));
+//						plot.setLimit(0.05); // 5% or less goes to "Others"
+
+						// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
+						final JFreeChart subchart = plot.getPieChart();
+						TextTitle seriesTitle = new TextTitle("Series Title", TextTitle.DEFAULT_FONT); // "Series Title" will be overwritten later on
+				        seriesTitle.setPosition(RectangleEdge.BOTTOM);
+				        subchart.setTitle(seriesTitle);
+				        subchart.setBackgroundPaint(getBackground());
+
+				        // Set properties for the "labels" that points out what in the PIE we are looking at.
+						final PiePlot p = (PiePlot) subchart.getPlot();
+						p.setLabelFont(defaultLabelFont);
+//						p.setInteriorGap(0.30);
+//						p.setBackgroundPaint(null);
+//						p.setOutlineStroke(null);
+						p.setLabelGenerator(new StandardPieSectionLabelGenerator("{2}, {0}, {1}", NumberFormat.getNumberInstance(), NumberFormat.getPercentInstance()));
+						p.setLabelGap(0.01D); // how close to the edges can the label be printed ??? 0.01 = 1%
+						p.setMaximumLabelWidth(0.20D); // 30% of plot width
+						return chart;
+					}
+					else
+					{
+						PlotOrientation orientation = PlotOrientation.VERTICAL;
+					//	orientation = PlotOrientation.HORIZONTAL;
+
+						JFreeChart chart = ChartFactory.createStackedBarChart(
+								null,                     // Title
+								null,                     // categoryAxisLabel
+								null,                     // valueAxisLabel
+								dataset,                  // dataset
+								orientation,              // orientation
+								showLegend,               // legend
+								true,                     // tooltips
+								false);                   // urls
+
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+
+						//------------------------------------------------
+						// code from TabularCntrlPanel
+						//------------------------------------------------
+						CategoryPlot plot = chart.getCategoryPlot();
+						plot.setNoDataMessage("No data available");
+//						plot.setLimit(0.05); // 5%
+
+					    NumberAxis numAxis = (NumberAxis)plot.getRangeAxis();
+					    numAxis.setNumberFormatOverride(NumberFormat.getPercentInstance());
+//					    numAxis.setUpperBound(1); // 100%
+
+						StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+						renderer.setRenderAsPercentages(true);
+						renderer.setDrawBarOutline(false);
+						renderer.setBaseItemLabelsVisible(true);
+
+					    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
+					    renderer.setPositiveItemLabelPositionFallback(ilp);
+					    renderer.setNegativeItemLabelPositionFallback(ilp);
+
+					    // set label to be: pct, label, value   
+					    // 3=pct, 0=dataLabel, 2=dataValue
+					    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
+					    renderer.setBaseItemLabelGenerator(scilg);
+					    renderer.setBaseItemLabelsVisible(true);
+					    renderer.setBaseItemLabelFont(defaultLabelFont);
+
+						return chart;
+					}
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(null))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+					return panel;
+				}
+
+				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 30% for table, 57% for graph;
+					return 3 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(5);
+
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+				}
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, make it bigger 
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+				}
+
+				private void helperActionSave(String key, boolean b)
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf == null)
+						return;
+					
+					conf.setProperty(key, b);
+					conf.save();
+					
+					updateExtendedInfoPanel();
+				}
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					final JCheckBox enableIOs_chk        = new JCheckBox("IOs");
+					final JCheckBox enableIOTime_chk     = new JCheckBox("IOTime");
+					final JCheckBox enableAvgServ_ms_chk = new JCheckBox("AvgServ_ms");
+
+					final JCheckBox enableGraph_chk     = new JCheckBox("Show Graph");
+					final JCheckBox showLegend_chk      = new JCheckBox("Show Legend");
+
+					String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
+					final JLabel    graphType_lbl    = new JLabel("Type");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip;
+					tooltip = 
+						"<html>" +
+						"If you want to include/exclude data in the graphs, use the 'filters' panel.<br>" +
+						"The Graph is based on what is visible in the Table..." +
+						"</html>";
+					panel.setToolTipText(tooltip);
+
+					enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+					showLegend_chk .setToolTipText("Show Legend, which describes all data value types");
+
+					enableIOs_chk        .setToolTipText("Show number of IO's per type");
+					enableIOTime_chk     .setToolTipText("Show IO Time per type");
+					enableAvgServ_ms_chk .setToolTipText("Show Average Device Service Time in Milliseconds per type");
+
+					tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					// SET INITIAL VALUES for components
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
+					if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
+					graphType_cbx.setSelectedItem(orientation);
+
+					enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+					showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+
+					enableIOs_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateIOs,        DEFAULT_generateIOs));
+					enableIOTime_chk    .setSelected(conf.getBooleanProperty(PROPKEY_generateIOTime,     DEFAULT_generateIOTime));
+					enableAvgServ_ms_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateAvgServ_ms, DEFAULT_generateAvgServ_ms));
+
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
+							
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
+							if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
+							conf.save();
+							
+							updateExtendedInfoPanel();
+						}
+					});
+
+					enableGraph_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
+							SwingUtils.setEnabled(getLocalOptionsPanel(), ((JCheckBox)e.getSource()).isSelected(), (JCheckBox)e.getSource());
+							updateExtendedInfoPanel();
+						}
+					});
+					showLegend_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					enableIOs_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateIOs, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					enableIOTime_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateIOTime, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+					enableAvgServ_ms_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateAvgServ_ms, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					// ADD to panel
+					panel.add(enableGraph_chk,      "split");
+					panel.add(graphType_lbl,        "");
+					panel.add(graphType_cbx,        "wrap");
+
+					panel.add(enableIOs_chk,        "split");
+					panel.add(enableIOTime_chk,     "");
+					panel.add(enableAvgServ_ms_chk, "wrap");
+
+					panel.add(showLegend_chk,       "wrap");
+
+					// enable disable all subcomponents in panel
+					SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+					
+					return panel;
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_io_queue_sum_activity.png") );
 			tcp.setCm(tmp);
@@ -6081,7 +7515,7 @@ extends Thread
 					"  waits        = sum(convert("+datatype+",W.value)), \n" +
 					"  spins        = sum(convert("+datatype+",S.value)), \n" +
 					"  contention   = convert(numeric(4,1), null), \n" +
-					"  spinsPerWait = convert(numeric(9,1), null), \n" +
+					"  spinsPerWait = convert(numeric(12,1), null), \n" +
 					"  description  = convert(varchar(100), '') \n" +
 					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S \n" +
 					"WHERE P.field_id = W.field_id \n" +
@@ -6119,7 +7553,7 @@ extends Thread
 					"  waits        = convert("+datatype+",W.value), \n" +
 					"  spins        = convert("+datatype+",S.value), \n" +
 					"  contention   = convert(numeric(4,1), null), \n" +
-					"  spinsPerWait = convert(numeric(9,1), null), \n" +
+					"  spinsPerWait = convert(numeric(12,1), null), \n" +
 					"  description  = N.spin_desc \n" +
 					"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S, #spin_names N \n" +
 					"WHERE P.field_id = W.field_id \n" +
@@ -6369,16 +7803,31 @@ extends Thread
 				private static final long	serialVersionUID	= 1L;
 				
 				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 60% for table, 40% for graph;
+					return 6 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
 				protected void updateExtendedInfoPanel()
 				{
 					JPanel  panel = getExtendedInfoPanel();
 					if (panel == null) 
 						return;
 
-					// If the panel is so small, that is not visible, don't update the graph
+					// If the panel is so small, make it bigger 
 					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
 					if (dividerLocation == 0)
-						return;
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
 					
 //					if ( ! isMonConnected() )
 //						return;
@@ -6414,7 +7863,6 @@ extends Thread
 				@Override
 				protected JPanel createExtendedInfoPanel()
 				{
-//					JSplitPane mainSplitPane = getMainSplitPane();
 					JPanel panel = SwingUtils.createPanel("Extended Information", false);
 	
 					panel.setLayout(new BorderLayout());
@@ -6436,6 +7884,12 @@ extends Thread
 //					panel.setMinimumSize(new Dimension(0, 0));
 //					panel.setSize(new Dimension(0, 500));
 //					mainSplitPane.setDividerLocation(150);
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
 					return panel;
 				}
 
@@ -6446,9 +7900,9 @@ extends Thread
 					mainSplitPane.setBorder(null);
 					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
 					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
-					mainSplitPane.setDividerSize(3);
+					mainSplitPane.setDividerSize(5);
 
-					mainSplitPane.setDividerLocation(700);
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 				}
 
 				private JTree createTreeSpSysmon()
@@ -7577,8 +9031,8 @@ extends Thread
 		monTables    = new String[] {"monCachedObject"};
 		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {};
-		colsCalcDiff = new String[] {"CachedKB", "TotalSizeKB"};
-		colsCalcPCT  = new String[] {};
+		colsCalcDiff = new String[] {"CachedKBDiff", "TotalSizeKBDiff"};
+		colsCalcPCT  = new String[] {"TableCachedPct", "CacheUsagePct"};
 		pkList       = new LinkedList<String>();
 		     pkList.add("DBID");
 		     pkList.add("ObjectID");
@@ -7602,6 +9056,36 @@ extends Thread
 			@Override
 			public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
+				try 
+				{
+					MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+					mtd.addColumn("monCachedObject", "TableCachedPct",   
+					                                                "<html>" +
+					                                                    "How much of the Table is cached.<br> " +
+					                                                    "<b>Formula</b>: TableCachedPct = CachedKB/(TotalSizeKB*1.0) * 100.0<br>" +
+					                                                "</html>");
+					mtd.addColumn("monCachedObject", "TotalCacheSizeKB",   
+					                                                "<html>" +
+					                                                    "Total Cache Size of the Data Cache where the table is bound to.<br> " +
+					                                                    "<b>Formula</b>: <br>select CacheID, TotalCacheSizeKB = sum(AllocatedKB) <br>from master..monCachePool <br>group by CacheID<br>" +
+					                                                "</html>");
+					mtd.addColumn("monCachedObject", "CacheUsagePct",   
+					                                                "<html>" +
+					                                                    "How much of the Cache does this Table use.<br> " +
+					                                                    "<b>Formula</b>: CacheUsagePct = CachedKB/(TotalCacheSizeKB*1.0) * 100.0<br>" +
+					                                                "</html>");
+					mtd.addColumn("monCachedObject", "CachedKBDiff",
+					                                                "<html>" +
+					                                                    "How many KB of this Table is cached, since previous sample<br> " +
+					                                                    "<b>Formula</b>: simply CachedKB as diff calculated value<br>" +
+					                                                "</html>");
+					mtd.addColumn("monCachedObject", "TotalSizeKBDiff", 
+					                                                "<html>" +
+					                                                    "Total Table Size in KB, since previous sample.<br> " +
+					                                                    "<b>Formula</b>: simply TotalSizeKB as diff calculated value<br>" +
+					                                                "</html>");
+				}
+				catch (NameNotFoundException e) {/*ignore*/}
 			}
 
 			@Override
@@ -7619,6 +9103,8 @@ extends Thread
 				if (aseVersion >= 15000)
 					pkCols.add("PartitionID");
 
+				pkCols.add("CacheID");
+
 				return pkCols;
 			}
 
@@ -7628,23 +9114,55 @@ extends Thread
 				String cols1, cols2, cols3;
 				cols1 = cols2 = cols3 = "";
 
+				String preDropTempTables = 
+					"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
+					"if ((select object_id('#cacheInfo')) is not null) drop table #cacheInfo \n";
+
+				String populateTempTables = 
+					"/*------ Snapshot, cache size -------*/ \n" +
+					"select CacheName, CacheID, TotalCacheSizeKB = sum(AllocatedKB) \n" +
+					"into #cacheInfo \n" +
+					"from master..monCachePool \n" +
+					"group by CacheName, CacheID \n";
+				
+				String postDropTempTables = 
+					"/*------ drop tempdb objects -------*/ \n" +
+					"drop table #cacheInfo\n";
+
 				if (isClusterEnabled)
 				{
-					cols1 += "InstanceID, ";
+					cols1 += "M.InstanceID, ";
 				}
 
-				cols1 += "DBID, ObjectID, IndexID, DBName,  ObjectName, ObjectType, \n";
-				cols2 += "";
-				cols3 += "CachedKB, CacheName";
+//				TODO: add column PctUsageOfCache = CachedKB/CacheSizeInKb<-- This needs to be pupulated somehow
+					
+				String TableCachedPct = "";
 				if (aseVersion >= 15000)
-				{
-					cols2 += "PartitionID, PartitionName, TotalSizeKB, \n";
-				}
+					TableCachedPct = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
+				
+				cols1 += "M.DBID, M.ObjectID, M.IndexID, M.DBName, M.ObjectName, M.ObjectType, \n";
+				cols2 += "";
+				cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, "+TableCachedPct+"M.CacheName, M.CacheID, \n" +
+				         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
+
+				if (aseVersion >= 15504) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+					cols2 += "M.ProcessesAccessing, \n";
+
+				if (aseVersion >= 15000)
+					cols2 += "M.PartitionID, M.PartitionName, M.TotalSizeKB, TotalSizeKBDiff=M.TotalSizeKB, \n";
 
 				String sql = 
+					preDropTempTables + 
+					"\n" +
+					populateTempTables +
+					"\n" +
+					"/*------ SQL to get data -------*/ \n" +
 					"select " + cols1 + cols2 + cols3 + "\n" +
-					"from master..monCachedObject \n" +
-					"order by CachedKB desc";
+					"from master..monCachedObject M, #cacheInfo T \n" +
+					"where M.CacheID = T.CacheID \n" +
+					"order by M.CachedKB desc\n" +
+					"\n" +
+					postDropTempTables;
 
 				return sql;
 			}
@@ -7668,7 +9186,7 @@ extends Thread
 
 		// If QUERY TIMEOUT is not set, set this to X second, because this can take time. 
 		if (tmp.getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			tmp.setQueryTimeout(30);
+			tmp.setQueryTimeout(60);
 
 		if (AseTune.hasGUI())
 		{
@@ -8015,8 +9533,6 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		
-		// FIXME: fix table description
-		
 		name         = CM_NAME__PROC_CACHE_MODULE_USAGE;
 		displayName  = CM_DESC__PROC_CACHE_MODULE_USAGE;
 		description  = "What module of the ASE Server is using the 'procedure cache' or 'dynamic memory pool'";
@@ -8101,7 +9617,361 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, new TrendGraphDataPoint(CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+//			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long	serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__PROC_CACHE_MODULE_USAGE;
+				
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
+				private static final String  PROPKEY_enableGraph   = CM_NAME + ".graph.enable";
+				private static final boolean DEFAULT_enableGraph   = true;
+
+				private static final String  PROPKEY_graphType     = CM_NAME + ".graph.type";
+				private static final String  VALUE_graphType_PIE   = "PIE";
+				private static final String  VALUE_graphType_BAR   = "BAR";
+				private static final String  DEFAULT_graphType     = VALUE_graphType_PIE;
+
+				private static final String  PROPKEY_showLegend    = CM_NAME + ".graph.show.legend";
+				private static final boolean DEFAULT_showLegend    = true;
+
+				
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
+
+					DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int ModuleName_pos = tm.findColumn("ModuleName");
+						int Active_pos     = tm.findColumn("Active");
+
+						CountersModel cm = getDisplayCm();
+						if (cm == null)
+							cm = getCm();
+
+						if (cm != null)
+						{
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String ModuleName = (String)dataTable.getValueAt(r, ModuleName_pos);
+								Number Active     = (Number)dataTable.getValueAt(r, Active_pos);
+
+								dataset.addValue(Active.doubleValue(), ModuleName, "Active - ModuleName");
+							}
+						}
+					}
+					else
+					{
+//						generateDummy = true;
+						if (generateDummy)
+						{
+							dataset.addValue(1, "Dummy Module A", "Active - ModuleName");
+							dataset.addValue(2, "Dummy Module B", "Active - ModuleName");
+							dataset.addValue(3, "Dummy Module C", "Active - ModuleName");
+							dataset.addValue(4, "Dummy Module D", "Active - ModuleName");
+							dataset.addValue(5, "Dummy Module E", "Active - ModuleName");
+							dataset.addValue(6, "Dummy Module F", "Active - ModuleName");
+							dataset.addValue(7, "Dummy Module G", "Active - ModuleName");
+							dataset.addValue(8, "Dummy Module H", "Active - ModuleName");
+							dataset.addValue(9, "Dummy Module I", "Active - ModuleName");
+							dataset.addValue(10,"Dummy Module J", "Active - ModuleName");
+						}
+					}
+
+					return dataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean createPieChart = conf.getProperty(       PROPKEY_graphType,  DEFAULT_graphType).equals(VALUE_graphType_PIE);
+					boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
+
+					// some "statics" that can be used in the graphs
+					final String          chartTitle              = "Active Memory per Module";
+					final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+					final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
+
+					final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+					
+					if (createPieChart)
+					{
+						final JFreeChart chart = ChartFactory.createMultiplePieChart(
+								null,                   // chart title
+								dataset,                // dataset
+								TableOrder.BY_COLUMN,
+								showLegend,             // include legend
+								true,
+								false
+						);
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+						
+						final MultiplePiePlot plot = (MultiplePiePlot) chart.getPlot();
+						plot.setNoDataMessage("No data available");
+	//					plot.setBackgroundPaint(Color.white);
+	//					plot.setOutlineStroke(new BasicStroke(1.0f));
+						plot.setLimit(0.05); // 5% or less goes to "Others"
+
+						// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
+						final JFreeChart subchart = plot.getPieChart();
+						TextTitle seriesTitle = new TextTitle("Series Title", TextTitle.DEFAULT_FONT); // "Series Title" will be overwritten later on
+				        seriesTitle.setPosition(RectangleEdge.BOTTOM);
+				        subchart.setTitle(seriesTitle);
+				        subchart.setBackgroundPaint(getBackground());
+
+				        // Set properties for the "labels" that points out what in the PIE we are looking at.
+						final PiePlot p = (PiePlot) subchart.getPlot();
+						p.setLabelFont(defaultLabelFont);
+//						p.setInteriorGap(0.30);
+//						p.setBackgroundPaint(null);
+//						p.setOutlineStroke(null);
+						p.setLabelGenerator(new StandardPieSectionLabelGenerator("{2}, {0}, {1}", NumberFormat.getNumberInstance(), NumberFormat.getPercentInstance()));
+						p.setLabelGap(0.01D); // how close to the edges can the label be printed ??? 0.01 = 1%
+						p.setMaximumLabelWidth(0.20D); // 30% of plot width
+						return chart;
+					}
+					else
+					{
+						PlotOrientation orientation = PlotOrientation.VERTICAL;
+					//	orientation = PlotOrientation.HORIZONTAL;
+
+						JFreeChart chart = ChartFactory.createStackedBarChart(
+								null,                     // Title
+								null,                     // categoryAxisLabel
+								null,                     // valueAxisLabel
+								dataset,                  // dataset
+								orientation,              // orientation
+								showLegend,               // legend
+								true,                     // tooltips
+								false);                   // urls
+
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+
+						//------------------------------------------------
+						// code from TabularCntrlPanel
+						//------------------------------------------------
+						CategoryPlot plot = chart.getCategoryPlot();
+						plot.setNoDataMessage("No data available");
+//						plot.setLimit(0.05); // 5%
+
+					    NumberAxis numAxis = (NumberAxis)plot.getRangeAxis();
+					    numAxis.setNumberFormatOverride(NumberFormat.getPercentInstance());
+//					    numAxis.setUpperBound(1); // 100%
+
+						StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+						renderer.setRenderAsPercentages(true);
+						renderer.setDrawBarOutline(false);
+						renderer.setBaseItemLabelsVisible(true);
+
+					    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
+					    renderer.setPositiveItemLabelPositionFallback(ilp);
+					    renderer.setNegativeItemLabelPositionFallback(ilp);
+
+					    // set label to be: pct, label, value   
+					    // 3=pct, 0=dataLabel, 2=dataValue
+					    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
+					    renderer.setBaseItemLabelGenerator(scilg);
+					    renderer.setBaseItemLabelsVisible(true);
+					    renderer.setBaseItemLabelFont(defaultLabelFont);
+
+						return chart;
+					}
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(null))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+					return panel;
+				}
+
+				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 60% for table, 40% for graph;
+					return 6 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(5);
+
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+				}
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, make it bigger 
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
+					
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+				}
+
+				private void helperActionSave(String key, boolean b)
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf == null)
+						return;
+					
+					conf.setProperty(key, b);
+					conf.save();
+					
+					updateExtendedInfoPanel();
+				}
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
+					final JCheckBox showLegend_chk = new JCheckBox("Show Legend");
+
+					String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
+					final JLabel    graphType_lbl    = new JLabel("Type");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip;
+					tooltip = 
+						"<html>" +
+						"If you want to include/exclude data in the graphs, use the 'filters' panel.<br>" +
+						"The Graph is based on what is visible in the Table..." +
+						"</html>";
+					panel.setToolTipText(tooltip);
+
+					enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+					showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
+
+					tooltip = "<html>Do you want the 'Graph' to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					// SET INITIAL VALUES for components
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
+					if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
+					graphType_cbx.setSelectedItem(orientation);
+
+					enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+					showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+
+					// ACTION LISTENERS
+					enableGraph_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
+							SwingUtils.setEnabled(getLocalOptionsPanel(), ((JCheckBox)e.getSource()).isSelected(), (JCheckBox)e.getSource());
+							updateExtendedInfoPanel();
+						}
+					});
+
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
+
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
+							if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
+							conf.save();
+
+							updateExtendedInfoPanel();
+						}
+					});
+
+					showLegend_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					// ADD to panel
+					panel.add(enableGraph_chk,     "split");
+					panel.add(graphType_lbl,       "");
+					panel.add(graphType_cbx,       "wrap");
+					panel.add(showLegend_chk,      "wrap");
+
+					// enable disable all subcomponents in panel
+					SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+
+					return panel;
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_proc_cache_module_usage.png") );
 			tcp.setCm(tmp);
@@ -8131,8 +10001,6 @@ extends Thread
 		//-----------------------------------------
 		//-----------------------------------------
 		//-----------------------------------------
-		
-		// FIXME: fix table description
 		
 		name         = CM_NAME__PROC_CACHE_MEMORY_USAGE;
 		displayName  = CM_DESC__PROC_CACHE_MEMORY_USAGE;
@@ -8220,7 +10088,420 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+//			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			{
+				private static final long	serialVersionUID	= 1L;
+				private static final String CM_NAME = CM_NAME__PROC_CACHE_MEMORY_USAGE;
+				
+				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
+				private static final boolean DEFAULT_generateDummy = false;
+
+				private static final String  PROPKEY_enableGraph   = CM_NAME + ".graph.enable";
+				private static final boolean DEFAULT_enableGraph   = true;
+
+				private static final String  PROPKEY_graphType     = CM_NAME + ".graph.type";
+				private static final String  VALUE_graphType_PIE   = "PIE";
+				private static final String  VALUE_graphType_BAR   = "BAR";
+				private static final String  DEFAULT_graphType     = VALUE_graphType_PIE;
+
+				private static final String  PROPKEY_showLegend    = CM_NAME + ".graph.show.legend";
+				private static final boolean DEFAULT_showLegend    = true;
+
+				private static final String  PROPKEY_generateSummary = CM_NAME + ".graph.generate.summary";
+				private static final boolean DEFAULT_generateSummary = true;
+
+				private static final String  PROPKEY_generateModules = CM_NAME + ".graph.generate.modules";
+				private static final boolean DEFAULT_generateModules = false;
+
+				private static final String  PROPKEY_showEmptyGraphs = CM_NAME + ".graph.show.empty";
+				private static final boolean DEFAULT_showEmptyGraphs = false;
+
+				private CategoryDataset createDataset(JXTable dataTable)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean generateDummy   = conf.getBooleanProperty(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+					boolean generateSummary = conf.getBooleanProperty(PROPKEY_generateSummary, DEFAULT_generateSummary);
+					boolean generateModules = conf.getBooleanProperty(PROPKEY_generateModules, DEFAULT_generateModules);
+					boolean showEmptyGraphs = conf.getBooleanProperty(PROPKEY_showEmptyGraphs, DEFAULT_showEmptyGraphs);
+
+					DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+					if (dataTable != null)
+					{
+						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
+						int ModuleName_pos    = tm.findColumn("ModuleName");
+						int AllocatorName_pos = tm.findColumn("AllocatorName");
+						int Active_pos        = tm.findColumn("Active");
+
+						CountersModel cm = getDisplayCm();
+						if (cm == null)
+							cm = getCm();
+
+						if (cm != null)
+						{
+							for(int r=0; r<dataTable.getRowCount(); r++)
+							{
+								String ModuleName    = (String)dataTable.getValueAt(r, ModuleName_pos);
+								String AllocatorName = (String)dataTable.getValueAt(r, AllocatorName_pos);
+								Number Active        = (Number)dataTable.getValueAt(r, Active_pos);
+
+								if (generateSummary && (showEmptyGraphs || Active.doubleValue() > 0.0) )
+									dataset.addValue(Active.doubleValue(), ModuleName+":"+AllocatorName, "SUMMARY");
+
+								if (generateModules && (showEmptyGraphs || Active.doubleValue() > 0.0) )
+									dataset.addValue(Active.doubleValue(), AllocatorName, ModuleName);
+							}
+						}
+					}
+					else
+					{
+//						generateDummy = true;
+						if (generateDummy)
+						{
+							dataset.addValue(1, "Dummy Module A", "Active - ModuleName/AllocatorName");
+							dataset.addValue(2, "Dummy Module B", "Active - ModuleName/AllocatorName");
+							dataset.addValue(3, "Dummy Module C", "Active - ModuleName/AllocatorName");
+							dataset.addValue(4, "Dummy Module D", "Active - ModuleName/AllocatorName");
+							dataset.addValue(5, "Dummy Module E", "Active - ModuleName/AllocatorName");
+							dataset.addValue(6, "Dummy Module F", "Active - ModuleName/AllocatorName");
+							dataset.addValue(7, "Dummy Module G", "Active - ModuleName/AllocatorName");
+							dataset.addValue(8, "Dummy Module H", "Active - ModuleName/AllocatorName");
+							dataset.addValue(9, "Dummy Module I", "Active - ModuleName/AllocatorName");
+							dataset.addValue(10,"Dummy Module J", "Active - ModuleName/AllocatorName");
+						}
+					}
+
+					return dataset;
+				}
+				private JFreeChart createChart(CategoryDataset dataset)
+				{
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean createPieChart = conf.getProperty(       PROPKEY_graphType,  DEFAULT_graphType).equals(VALUE_graphType_PIE);
+					boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
+
+					// some "statics" that can be used in the graphs
+					final String          chartTitle              = "Active Memory per Module";
+					final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+					final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
+
+					final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+					
+					if (createPieChart)
+					{
+						final JFreeChart chart = ChartFactory.createMultiplePieChart(
+								null,                   // chart title
+								dataset,                // dataset
+								TableOrder.BY_COLUMN,
+								showLegend,             // include legend
+								true,
+								false
+						);
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+						
+						final MultiplePiePlot plot = (MultiplePiePlot) chart.getPlot();
+						plot.setNoDataMessage("No data available");
+	//					plot.setBackgroundPaint(Color.white);
+	//					plot.setOutlineStroke(new BasicStroke(1.0f));
+						plot.setLimit(0.05); // 5% or less goes to "Others"
+
+						// Set the sub-charts TITLES FONT and position (stolen from jfreechart, MultiplePiePlot.java, constructor)
+						final JFreeChart subchart = plot.getPieChart();
+						TextTitle seriesTitle = new TextTitle("Series Title", TextTitle.DEFAULT_FONT); // "Series Title" will be overwritten later on
+				        seriesTitle.setPosition(RectangleEdge.BOTTOM);
+				        subchart.setTitle(seriesTitle);
+				        subchart.setBackgroundPaint(getBackground());
+
+				        // Set properties for the "labels" that points out what in the PIE we are looking at.
+						final PiePlot p = (PiePlot) subchart.getPlot();
+						p.setLabelFont(defaultLabelFont);
+//						p.setInteriorGap(0.30);
+//						p.setBackgroundPaint(null);
+//						p.setOutlineStroke(null);
+						p.setLabelGenerator(new StandardPieSectionLabelGenerator("{2}, {0}, {1}", NumberFormat.getNumberInstance(), NumberFormat.getPercentInstance()));
+						p.setLabelGap(0.01D); // how close to the edges can the label be printed ??? 0.01 = 1%
+						p.setMaximumLabelWidth(0.20D); // 30% of plot width
+						return chart;
+					}
+					else
+					{
+						PlotOrientation orientation = PlotOrientation.VERTICAL;
+					//	orientation = PlotOrientation.HORIZONTAL;
+
+						JFreeChart chart = ChartFactory.createStackedBarChart(
+								null,                     // Title
+								null,                     // categoryAxisLabel
+								null,                     // valueAxisLabel
+								dataset,                  // dataset
+								orientation,              // orientation
+								showLegend,               // legend
+								true,                     // tooltips
+								false);                   // urls
+
+						chart.setBackgroundPaint(getBackground());
+						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
+
+						// Set FONT SIZE for legend (button what are part of the graph)
+						List<LegendTitle> legendList = chart.getSubtitles();
+						for (LegendTitle lt : legendList)
+						{
+							lt.setItemFont(defaultLegendItemFont);
+							lt.setItemLabelPadding(defaultLegendItemInsets);
+						}
+
+						//------------------------------------------------
+						// code from TabularCntrlPanel
+						//------------------------------------------------
+						CategoryPlot plot = chart.getCategoryPlot();
+						plot.setNoDataMessage("No data available");
+//						plot.setLimit(0.05); // 5%
+
+						// Tilt DBName 45 degree left
+						CategoryAxis domainAxis = plot.getDomainAxis();
+						if (orientation.equals(PlotOrientation.VERTICAL))
+							domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+
+						NumberAxis numAxis = (NumberAxis)plot.getRangeAxis();
+					    numAxis.setNumberFormatOverride(NumberFormat.getPercentInstance());
+//					    numAxis.setUpperBound(1); // 100%
+
+						StackedBarRenderer renderer = (StackedBarRenderer) plot.getRenderer();
+						renderer.setRenderAsPercentages(true);
+						renderer.setDrawBarOutline(false);
+						renderer.setBaseItemLabelsVisible(true);
+
+					    ItemLabelPosition ilp = new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.CENTER, TextAnchor.CENTER, 0.0D);
+					    renderer.setPositiveItemLabelPositionFallback(ilp);
+					    renderer.setNegativeItemLabelPositionFallback(ilp);
+
+					    // set label to be: pct, label, value   
+					    // 3=pct, 0=dataLabel, 2=dataValue
+					    StandardCategoryItemLabelGenerator scilg = new StandardCategoryItemLabelGenerator("{3}, {0}, {2}", NumberFormat.getInstance());
+					    renderer.setBaseItemLabelGenerator(scilg);
+					    renderer.setBaseItemLabelsVisible(true);
+					    renderer.setBaseItemLabelFont(defaultLabelFont);
+
+						return chart;
+					}
+				}
+
+				@Override
+				protected JPanel createExtendedInfoPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Extended Information", false);
+					panel.setLayout(new BorderLayout());
+
+					// Size of the panel
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane != null)
+						mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(null))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+					return panel;
+				}
+
+				@Override
+				protected int getDefaultMainSplitPaneDividerLocation()
+				{
+					JSplitPane mainSplitPane = getMainSplitPane();
+					if (mainSplitPane == null)
+						return 0;
+
+					// Use 60% for table, 40% for graph;
+					return 6 * (mainSplitPane.getSize().width/10);
+				}
+
+				@Override
+				protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
+				{
+					mainSplitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					mainSplitPane.setBorder(null);
+					mainSplitPane.add(dataPanel,         JSplitPane.LEFT);
+					mainSplitPane.add(extendedInfoPanel, JSplitPane.RIGHT);
+					mainSplitPane.setDividerSize(5);
+
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+				}
+				@Override
+				protected void updateExtendedInfoPanel()
+				{
+					JPanel  panel     = getExtendedInfoPanel();
+					JXTable dataTable = getDataTable();
+					if (panel     == null) return;
+
+					// If the panel is so small, make it bigger 
+					int dividerLocation = getMainSplitPane() == null ? 0 : getMainSplitPane().getDividerLocation();
+					if (dividerLocation == 0)
+					{
+						JSplitPane mainSplitPane = getMainSplitPane();
+						if (mainSplitPane != null)
+							mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
+					}
+					
+					Configuration conf = Configuration.getCombinedConfiguration();
+					boolean enableGraph = conf.getBooleanProperty(PROPKEY_enableGraph,DEFAULT_enableGraph);
+
+					// Remove and add components to panel
+					panel.removeAll();
+					if (enableGraph)
+						panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
+					else
+						panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+				}
+
+				private void helperActionSave(String key, boolean b)
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf == null)
+						return;
+					
+					conf.setProperty(key, b);
+					conf.save();
+					
+					updateExtendedInfoPanel();
+				}
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Local Options", true);
+					panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+
+					final JCheckBox generateSummary_chk    = new JCheckBox("Generate Summary Graph");
+					final JCheckBox generateModules_chk    = new JCheckBox("Generate Graph per Module");
+					final JCheckBox showEmptyGraphs_chk    = new JCheckBox("Show Empty Graphs");
+
+					final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
+					final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
+
+					String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
+					final JLabel    graphType_lbl    = new JLabel("Type");
+					final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+
+					String tooltip;
+					tooltip = 
+						"<html>" +
+						"If you want to include/exclude data in the graphs, use the 'filters' panel.<br>" +
+						"The Graph is based on what is visible in the Table..." +
+						"</html>";
+					panel.setToolTipText(tooltip);
+
+					enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
+					showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
+
+					tooltip = "<html>Do you want the 'Graph' to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
+					graphType_lbl.setToolTipText(tooltip);
+					graphType_cbx.setToolTipText(tooltip);
+
+					// SET INITIAL VALUES for components
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
+					String orientation = graphTypeArr[0]; // set as default
+					if (orientationStr.equals(VALUE_graphType_PIE)) orientation = graphTypeArr[0];
+					if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
+					graphType_cbx.setSelectedItem(orientation);
+
+					generateSummary_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateSummary, DEFAULT_generateSummary));
+					generateModules_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateModules, DEFAULT_generateModules));
+					showEmptyGraphs_chk.setSelected(conf.getBooleanProperty(PROPKEY_showEmptyGraphs, DEFAULT_showEmptyGraphs));
+
+					enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
+					showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
+
+					// ACTION LISTENERS
+					enableGraph_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
+							SwingUtils.setEnabled(getLocalOptionsPanel(), ((JCheckBox)e.getSource()).isSelected(), (JCheckBox)e.getSource());
+							updateExtendedInfoPanel();
+						}
+					});
+
+					graphType_cbx.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf == null)
+								return;
+
+							String type = graphType_cbx.getSelectedItem().toString();
+							if (type.equals("Pie Chart")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_PIE);
+							if (type.equals("Bar Graph")) conf.setProperty(PROPKEY_graphType, VALUE_graphType_BAR);
+							conf.save();
+
+							updateExtendedInfoPanel();
+						}
+					});
+
+					showLegend_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					generateSummary_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateSummary, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					generateModules_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_generateModules, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					showEmptyGraphs_chk.addActionListener(new ActionListener()
+					{
+						public void actionPerformed(ActionEvent e)
+						{
+							helperActionSave(PROPKEY_showEmptyGraphs, ((JCheckBox)e.getSource()).isSelected());
+						}
+					});
+
+					// ADD to panel
+					panel.add(enableGraph_chk,     "split");
+					panel.add(graphType_lbl,       "");
+					panel.add(graphType_cbx,       "wrap");
+
+					panel.add(generateSummary_chk, "wrap");
+					panel.add(generateModules_chk, "wrap");
+					panel.add(showEmptyGraphs_chk, "split");
+
+					panel.add(showLegend_chk,      "wrap");
+
+					// enable disable all subcomponents in panel
+					SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
+
+					return panel;
+				}
+			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_proc_cache_memory_usage.png") );
 			tcp.setCm(tmp);

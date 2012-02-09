@@ -732,39 +732,104 @@ extends JXTable
 	}
 	private void privateTableChanged(TableModelEvent e)
 	{
-		// new Exception().printStackTrace();
-
-		// TODO: try to get PK from the CounterModel (or SamplingCnt.getPkForRow()) 
-		//       then restore: row=SamplingCnt.getRowForPk(); convertModelToView(); setSelectionInterval()
-
-		int viewSelectedRow = getSelectedRow();
-		int modelRowBefore = -1;
-		if ( viewSelectedRow >= 0 )
-			modelRowBefore = convertRowIndexToModel(getSelectedRow());
-
-		super.tableChanged(e);
-
 		// it looks like either JTable or JXTable looses the selected row
 		// after "fireTableDataChanged" has been called...
 		// So try to set it back to where it previously was!
-		if ( modelRowBefore >= 0 )
+		// NOTE: value is set in valueChanged(ListSelectionEvent e), when a rows is selected.
+		try
 		{
-			// If no rows in model, no need to restore selected row.
-			if (getRowCount() > 0 && modelRowBefore < getRowCount())
+			_inPrivateTableChanged = true;
+
+			super.tableChanged(e);
+
+			// restore current selected row by PK
+			// _currentSelectedModelPk is maintained in valueChanged(ListSelectionEvent e)
+			if (_lastSelectedModelPk != null)
 			{
-				int viewRowNow = convertRowIndexToView(modelRowBefore);
-				if ( viewRowNow >= 0 )
-					getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
+				TableModel tm = getModel();
+				if (tm instanceof CountersModel)
+				{
+					CountersModel cm = (CountersModel)tm;
+					int modelPkRow = cm.getCounterData().getRowNumberForPkValue(_lastSelectedModelPk);
+					if (modelPkRow >= 0)
+					{
+						int viewRow = convertRowIndexToView(modelPkRow);
+						if ( viewRow >= 0 )
+							getSelectionModel().setSelectionInterval(viewRow, viewRow);
+					}
+				}
+			}
+			else
+			{
+				// try use previous selected row, which we remembered at the start 
+				if ( _lastSelectedModelRow >= 0 )
+				{
+					// If no rows in model, no need to restore selected row.
+					if (getRowCount() > 0 && _lastSelectedModelRow < getRowCount())
+					{
+						int viewRowNow = convertRowIndexToView(_lastSelectedModelRow);
+						if ( viewRowNow >= 0 )
+							getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
+					}
+				}
+			}
+			
+	
+			// event: AbstactTableModel.fireTableStructureChanged
+			if ( SwingUtils.isStructureChanged(e) )
+			{
+				_tableStructureChangedFlag = true;
+				loadColumnLayout();
 			}
 		}
-
-		// event: AbstactTableModel.fireTableStructureChanged
-		if ( SwingUtils.isStructureChanged(e) )
+		finally
 		{
-			_tableStructureChangedFlag = true;
-			loadColumnLayout();
+			_inPrivateTableChanged = false;			
 		}
 	}
+
+	private boolean _inPrivateTableChanged = false; // true when inside method privateTableChanged
+	private String  _lastSelectedModelPk   = null;  // remember last selected row PK (only if TableModel support this)
+	private int     _lastSelectedModelRow  = -1;    // remember last selected row (used as a fall back if PK, can't be used)
+
+	/** implements ListSelectionListener, remember last selected row (by Primary Key) */
+	@Override
+    public void valueChanged(ListSelectionEvent e) 
+	{
+		// Call super to do all it's dirty work.
+		super.valueChanged(e);
+
+		if (_inPrivateTableChanged)
+			return;
+
+		// If we are still moving the mouse
+		if (e.getValueIsAdjusting()) 
+            return;
+
+		// Reset
+		_lastSelectedModelPk  = null;
+		_lastSelectedModelRow = -1;
+
+		// no rows, get out of here
+		if (getRowCount() <= 0 || getColumnCount() <= 0) 
+			return;
+
+		// Get selected row
+		int viewRow = getSelectedRow();
+		if ( viewRow >= 0 )
+			_lastSelectedModelRow = convertRowIndexToModel(viewRow);
+
+		// Save current selected PK
+		if (_lastSelectedModelRow >= 0)
+		{
+			TableModel tm = getModel();
+			if (tm instanceof CountersModel)
+			{
+				CountersModel cm = (CountersModel)tm;
+				_lastSelectedModelPk = cm.getCounterData().getPkValue(_lastSelectedModelRow);
+			}
+		}
+    }
 
 	// public TableCellRenderer getCellRenderer(int row, int column)
 	// {

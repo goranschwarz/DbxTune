@@ -145,6 +145,11 @@
 
 		// doCleanup("ALTER TABLE asemon_usage ADD user_home varchar(50) AFTER user_name");
 
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSortOrderId   varchar(5)  AFTER srvVersionStr");
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSortOrderName varchar(30) AFTER srvSortOrderId");
+
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvUserRoles varchar(80)  AFTER srvUser");
+		//doCleanup("ALTER TABLE asemon_connect_info       MODIFY srvUserRoles varchar(160)");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
