@@ -164,7 +164,8 @@ public class QueryWindow
 	private JButton     _setOptions      = new JButton("Set");        // Do various set ... options
 	private JButton     _copy            = new JButton("Copy Res");    // Copy All resultsets to clipboard
 //	private JCheckBox   _showplan        = new JCheckBox("GUI Showplan", false);
-	private JCheckBox   _rsInTabs        = new JCheckBox("Resultsets in Tabbed Panel", false);
+	private JCheckBox   _rsInTabs        = new JCheckBox("In Tabbed Panel", false);
+	private JCheckBox   _asPlainText     = new JCheckBox("As Plain Text", false);
 	private JComboBox   _dbs_cobx        = new JComboBox();
 	private JPanel      _resPanel        = new JPanel();
 	private JScrollPane _resPanelScroll  = new JScrollPane(_resPanel);
@@ -515,6 +516,7 @@ public class QueryWindow
 		
 		_dbs_cobx.setToolTipText("<html>Change database context.</html>");
 		_rsInTabs.setToolTipText("<html>Check this if you want to have multiple result sets in individual tabs.</html>");
+		_asPlainText.setToolTipText("<html>No fancy output, just write the output as 'plan text'.</html>");
 		_copy    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 		_query   .setToolTipText("<html>" +
 									"Put your SQL query here.<br>" +
@@ -595,10 +597,11 @@ public class QueryWindow
 		top.add(_queryScroll, BorderLayout.CENTER);
 		top.setMinimumSize(new Dimension(300, 100));
 
-		bottom.add(_dbs_cobx,       "split 5");
+		bottom.add(_dbs_cobx,       "split 6");
 		bottom.add(_exec,           "");
 		bottom.add(_execGuiShowplan,"");
 		bottom.add(_rsInTabs,       "");
+		bottom.add(_asPlainText,    "");
 		bottom.add(_setOptions,     "");
 //		bottom.add(_showplan,       "");
 		bottom.add(_copy,           "right, wrap");
@@ -862,6 +865,7 @@ public class QueryWindow
 			_dbs_cobx       .setEnabled(false);
 			_exec           .setEnabled(false);
 			_rsInTabs       .setEnabled(false);
+			_asPlainText    .setEnabled(false);
 			_setOptions     .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 			
@@ -882,6 +886,7 @@ public class QueryWindow
 			_dbs_cobx       .setEnabled(true);
 			_exec           .setEnabled(true);
 			_rsInTabs       .setEnabled(true);
+			_asPlainText    .setEnabled(true);
 			_setOptions     .setEnabled(true);
 			_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
 
@@ -898,6 +903,7 @@ public class QueryWindow
 			_dbs_cobx       .setEnabled(false);
 			_exec           .setEnabled(true);
 			_rsInTabs       .setEnabled(true);
+			_asPlainText    .setEnabled(true);
 			_setOptions     .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 
@@ -918,6 +924,7 @@ public class QueryWindow
 				_dbs_cobx       .setEnabled(false);
 				_exec           .setEnabled(false);
 				_rsInTabs       .setEnabled(false);
+				_asPlainText    .setEnabled(false);
 				_setOptions     .setEnabled(false);
 				_execGuiShowplan.setEnabled(false);
 
@@ -1629,35 +1636,46 @@ public class QueryWindow
 						// Append, messages and Warnings to _resultCompList, if any
 						putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-");
 						putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-");
-	
-						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true);
-						for (SQLWarning sqlw : tm.getSQLWarningList())
-							putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-");
-	
-						// Create the JTable, using the just created TableModel/ResultSet
-						JXTable tab = new JXTable(tm);
-						tab.setSortable(true);
-						tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-						tab.packAll(); // set size so that all content in all cells are visible
-						tab.setColumnControlVisible(true);
-						tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-						tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-//						SwingUtils.calcColumnWidths(tab);
-	
-						// Add a popup menu
-						tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
-	
-//						for(int i=0; i<tm.getColumnCount(); i++)
-//						{
-//							Object o = tm.getValueAt(0, i);
-//							if (o!=null)
-//								System.out.println("Col="+i+", Class="+o.getClass()+", Comparable="+((o instanceof Comparable)?"true":"false"));
-//							else
-//								System.out.println("Col="+i+", ---NULL--");
-//						}
-						// Add the JTable to a list for later use
-						_resultCompList.add(tab);
+
+						if (_asPlainText.isSelected())
+						{
+							ResultSetTableModel tm = new ResultSetTableModel(rs, true);
+							for (SQLWarning sqlw : tm.getSQLWarningList())
+								putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-");
+							
+							_resultCompList.add(new JPlainResultSet(tm));
+						}
+						else
+						{
+							// Convert the ResultSet into a TableModel, which fits on a JTable
+							ResultSetTableModel tm = new ResultSetTableModel(rs, true);
+							for (SQLWarning sqlw : tm.getSQLWarningList())
+								putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-");
+		
+							// Create the JTable, using the just created TableModel/ResultSet
+							JXTable tab = new JXTable(tm);
+							tab.setSortable(true);
+							tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+							tab.packAll(); // set size so that all content in all cells are visible
+							tab.setColumnControlVisible(true);
+							tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+							tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+//							SwingUtils.calcColumnWidths(tab);
+		
+							// Add a popup menu
+							tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
+		
+//							for(int i=0; i<tm.getColumnCount(); i++)
+//							{
+//								Object o = tm.getValueAt(0, i);
+//								if (o!=null)
+//									System.out.println("Col="+i+", Class="+o.getClass()+", Comparable="+((o instanceof Comparable)?"true":"false"));
+//								else
+//									System.out.println("Col="+i+", ---NULL--");
+//							}
+							// Add the JTable to a list for later use
+							_resultCompList.add(tab);
+						}
 	
 						// Append, messages and Warnings to _resultCompList, if any
 						putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-");
@@ -1844,7 +1862,16 @@ public class QueryWindow
 				// There might be "just" print statements... 
 				for (JComponent jcomp: _resultCompList)
 				{
-					if (jcomp instanceof JAseMessage)
+					if (jcomp instanceof JPlainResultSet)
+					{
+						JPlainResultSet prs = (JPlainResultSet) jcomp;
+						sb.append(prs.getText());
+						sb.append("\n");
+						sb.append("(").append(prs.getRowCount()).append(" row affected)\n");
+						sb.append("\n");
+						
+					}
+					else if (jcomp instanceof JAseMessage)
 					{
 						JAseMessage msg = (JAseMessage) jcomp;
 //						msg.setFont( _aseMsgFont );
@@ -1976,6 +2003,48 @@ public class QueryWindow
 //		}
 	}
 
+	private class JPlainResultSet 
+	extends JTextArea
+	{
+		private static final long serialVersionUID = 1L;
+
+		ResultSetTableModel _tm = null;
+
+		public JPlainResultSet(final ResultSetTableModel rstm)
+		{
+			super(rstm.toTableString());
+			_tm = rstm;
+			_init();
+		}
+
+		public int getRowCount()
+		{
+			return _tm.getRowCount();
+		}
+
+		private void _init()
+		{
+			super.setEditable(false);
+
+			if (_aseMsgFont == null)
+				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+			setFont(_aseMsgFont);
+
+			setLineWrap(true);
+			setWrapStyleWord(true);
+//			setOpaque(false); // Transparent
+		}
+
+//		public boolean isFocusable()
+//		{
+//			return false;
+//		}
+//
+//		public boolean isRequestFocusEnabled()
+//		{
+//			return false;
+//		}
+	}
 
 
 	
