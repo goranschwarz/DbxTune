@@ -17,6 +17,7 @@ import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.hostmon.MonitorIo;
 import com.asetune.hostmon.MonitorMpstat;
+import com.asetune.hostmon.MonitorUpTime;
 import com.asetune.hostmon.MonitorUserDefined;
 import com.asetune.hostmon.MonitorVmstat;
 import com.asetune.hostmon.OsTable;
@@ -40,7 +41,8 @@ extends CountersModel
 	public static final int HOSTMON_IOSTAT   = 1; 
 	public static final int HOSTMON_VMSTAT   = 2; 
 	public static final int HOSTMON_MPSTAT   = 3; 
-	public static final int HOSTMON_UD_CLASS = 4;
+	public static final int HOSTMON_UPTIME   = 4; 
+	public static final int HOSTMON_UD_CLASS = 5;
 	private String _udModuleName = null;
 
 	public static String getTypeExplanation(int type)
@@ -48,6 +50,7 @@ extends CountersModel
 		if (type == HOSTMON_IOSTAT)   return "HOSTMON_IOSTAT";
 		if (type == HOSTMON_VMSTAT)   return "HOSTMON_VMSTAT";
 		if (type == HOSTMON_MPSTAT)   return "HOSTMON_MPSTAT";
+		if (type == HOSTMON_UPTIME)   return "HOSTMON_UPTIME";
 		if (type == HOSTMON_UD_CLASS) return "HOSTMON_UD_CLASS";
 		return "UNKNOWN TYPE("+type+")";
 	}
@@ -98,6 +101,7 @@ extends CountersModel
 			if      (_hostMonType == HOSTMON_IOSTAT) _hostMonitor = MonitorIo    .createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_VMSTAT) _hostMonitor = MonitorVmstat.createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_MPSTAT) _hostMonitor = MonitorMpstat.createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_UPTIME) _hostMonitor = MonitorUpTime.createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_UD_CLASS)
 			{
 				Configuration conf = null;
@@ -257,6 +261,7 @@ extends CountersModel
 			if      (_hostMonType == HOSTMON_IOSTAT)   _offlineMetadataArr = MonitorIo    .createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_VMSTAT)   _offlineMetadataArr = MonitorVmstat.createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_MPSTAT)   _offlineMetadataArr = MonitorMpstat.createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_UPTIME)   _offlineMetadataArr = MonitorUpTime.createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_UD_CLASS) _offlineMetadataArr = MonitorUserDefined.createOfflineMetaData(_udModuleName);
 	
 			_offlineMetadata = null;
@@ -555,11 +560,12 @@ extends CountersModel
 		{
 			ret += "<br>";
 			ret += "Some Basic info:<br>";
-			ret += "getName: "     + getName()                   + "<br>";
-			ret += "getCommand: "  + _hostMonitor.getCommand()   + "<br>";
-			ret += "getSleepTime: "+ _hostMonitor.getSleepTime() + "<br>";
-			ret += "isPaused: "    + _hostMonitor.isPaused()     + "<br>";
-			ret += "isRunning: "   + _hostMonitor.isRunning()    + "<br>";
+			ret += "getName: "     + getName()                           + "<br>";
+			ret += "getCommand: "  + _hostMonitor.getCommand()           + "<br>";
+			ret += "getSleepTime: "+ _hostMonitor.getSleepTime()         + "<br>";
+			ret += "isPaused: "    + _hostMonitor.isPaused()             + "<br>";
+			ret += "isRunning: "   + _hostMonitor.isRunning()            + "<br>";
+			ret += "isStreaming: " + _hostMonitor.isOsCommandStreaming() + "<br>";
 		}
 
 		return ret;

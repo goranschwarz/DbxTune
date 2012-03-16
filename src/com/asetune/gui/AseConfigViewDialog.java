@@ -35,16 +35,17 @@ implements ActionListener
 
 	private JLabel                 _freeMb          = new JLabel();
 	
-	private AseConfigPanel         _aseConfigPanel           = new AseConfigPanel();
-//	private AseCacheConfigPanel    _aseCacheConfigPanel = new AseCacheConfigPanel();
-	private AseConfigTextPanel     _aseConfigCachePanel      = new AseConfigTextPanel(ConfigType.AseCacheConfig);
-	private AseConfigTextPanel     _aseConfigHelpDbPanel     = new AseConfigTextPanel(ConfigType.AseHelpDb);
-	private AseConfigTextPanel     _aseConfigHelpDevicePanel = new AseConfigTextPanel(ConfigType.AseHelpDevice);
-	private AseConfigTextPanel     _aseConfigHelpServerPanel = new AseConfigTextPanel(ConfigType.AseHelpServer);
-	private AseConfigTextPanel     _aseConfigTraceflagsPanel = new AseConfigTextPanel(ConfigType.AseTraceflags);
-	private AseConfigTextPanel     _aseConfigSpVersionPanel  = new AseConfigTextPanel(ConfigType.AseSpVersion);
-	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
-	private AseConfigTextPanel     _aseConfigMonitorCfgPanel = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
+	private AseConfigPanel         _aseConfigPanel            = new AseConfigPanel();
+//	private AseCacheConfigPanel    _aseCacheConfigPanel       = new AseCacheConfigPanel();
+	private AseConfigTextPanel     _aseConfigCachePanel       = new AseConfigTextPanel(ConfigType.AseCacheConfig);
+	private AseConfigTextPanel     _aseConfigHelpDbPanel      = new AseConfigTextPanel(ConfigType.AseHelpDb);
+	private AseConfigTextPanel     _aseConfigHelpDevicePanel  = new AseConfigTextPanel(ConfigType.AseHelpDevice);
+	private AseConfigTextPanel     _aseConfigHelpServerPanel  = new AseConfigTextPanel(ConfigType.AseHelpServer);
+	private AseConfigTextPanel     _aseConfigTraceflagsPanel  = new AseConfigTextPanel(ConfigType.AseTraceflags);
+	private AseConfigTextPanel     _aseConfigSpVersionPanel   = new AseConfigTextPanel(ConfigType.AseSpVersion);
+	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel  = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
+	private AseConfigTextPanel     _aseConfigMonitorCfgPanel  = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
+	private AseConfigTextPanel     _aseConfigLicenseInfoPanel = new AseConfigTextPanel(ConfigType.AseLicenseInfo);
 	
 	private AseConfigViewDialog(Frame owner)
 	{
@@ -122,6 +123,7 @@ implements ActionListener
 		tabPane.add("sp_version",       _aseConfigSpVersionPanel);
 		tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
 		tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
+		tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
 
 		panel.add(tabPane,               "grow, height 100%, width 100%");
 		panel.add(createOkCancelPanel(), "grow, push, bottom");

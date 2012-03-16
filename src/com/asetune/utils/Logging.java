@@ -117,7 +117,7 @@ public class Logging
 			if (noDefaultLoggerMessage)
 			{
 				System.out.println("This application are using 'log4j' as the logging subsystem, go to 'http://logging.apache.org/log4j/' for how to configure it.");
-				System.out.println("Cant find a 'log4j.rootLogger' in the configuration file. I will create a ConsoleAppender called 'console' with the default loglevel of 'INFO'.");
+				System.out.println("Can't find a 'log4j.rootLogger' in the configuration file. I will create a ConsoleAppender called 'console' with the default loglevel of 'INFO'.");
 				if (_propFile != null)
 				{
 					System.out.println("To change debug level add 'log4j.logger.classNameToDebug=DEBUG' to the config file '"+_propFile+"'.");

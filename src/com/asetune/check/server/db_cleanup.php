@@ -103,9 +103,11 @@
 
 		doCleanup("delete from asemon_usage              where user_name = 'gorans' ");
 		doCleanup("delete from asemon_connect_info       where userName  = 'gorans' ");
+		doCleanup("delete from asemon_mda_info           where userName  = 'gorans' ");
 		doCleanup("delete from asemon_udc_info           where userName  = 'gorans' ");
 		doCleanup("delete from asemon_counter_usage_info where userName  = 'gorans' ");
 		doCleanup("delete from asemon_error_info         where userName  = 'gorans' ");
+		doCleanup("delete from asemon_error_info2        where userName  = 'gorans' ");
 
 		// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup("delete from asemon_udc_info");
@@ -151,15 +153,26 @@
 		//doCleanup("ALTER TABLE asemon_connect_info ADD srvUserRoles varchar(80)  AFTER srvUser");
 		//doCleanup("ALTER TABLE asemon_connect_info       MODIFY srvUserRoles varchar(160)");
 
+		//doCleanup("ALTER TABLE asemon_mda_info ADD TableID int AFTER TableName");
+		//doCleanup("ALTER TABLE asemon_mda_info ADD type char(1) FIRST");
+		//doCleanup("ALTER TABLE asemon_mda_info DROP PRIMARY KEY");
+		//doCleanup("ALTER TABLE asemon_mda_info ADD PRIMARY KEY (type, srvVersion, isClusterEnabled, TableName, ColumnName)");
+
+//doCleanup("
+//CREATE TABLE asemon_mda_info...
+//");
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
 	else if ( $doAction == "check" )
 	{
 		describe("asemon_usage");
 		describe("asemon_connect_info");
+		describe("asemon_mda_info");
 		describe("asemon_udc_info");
 		describe("asemon_counter_usage_info");
 		describe("asemon_error_info");
+		describe("asemon_error_info2");
+		describe("asemon_error_info_save");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

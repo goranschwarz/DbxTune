@@ -18,7 +18,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.text.ParseException;
@@ -48,6 +52,7 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.btr.proxy.search.ProxySearch;
 import com.btr.proxy.search.ProxySearch.Strategy;
 
@@ -85,6 +90,7 @@ public class CheckForUpdates
 	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
 	private   static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
 	private   static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
+	private   static final String ASETUNE_MDA_INFO_URL           = "http://www.asetune.com/mda_info.php";
 	private   static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
 	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
 	private   static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
@@ -94,6 +100,8 @@ public class CheckForUpdates
 
 
 	private static boolean _sendConnectInfo      = true;
+	private static boolean _sendMdaInfo          = true;
+	private static int     _sendMdaInfoBatchSize = 25;
 	private static boolean _sendUdcInfo          = true;
 	private static boolean _sendCounterUsageInfo = true;
 	private static boolean _sendLogInfoWarning   = false;
@@ -130,7 +138,7 @@ public class CheckForUpdates
 
 	private static int     _checkId = -1;
 
-	private final static int DEFAULT_TIMEOUT = 10*1000;
+	private final static int DEFAULT_TIMEOUT = 20*1000;
 
 //	static
 //	{
@@ -255,6 +263,7 @@ public class CheckForUpdates
 	static
 	{
 //		_logger.setLevel(Level.TRACE);
+//		_logger.setLevel(Level.DEBUG);
 		init();
 	}
 
@@ -464,9 +473,27 @@ public class CheckForUpdates
 								_sendUdcInfo = bVal;
 								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
 							}
+							else if (key.equalsIgnoreCase("sendMdaInfo"))
+							{
+								_sendMdaInfo = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendMdaInfoBatchSize"))
+							{
+								try
+								{
+									int intVal = Integer.parseInt(val);
+									_sendMdaInfoBatchSize = intVal;
+									_logger.debug("Setting option '"+key+"' to '"+intVal+"'.");
+								}
+								catch (NumberFormatException ex)
+								{
+									_logger.warn("Problems reading option '"+key+"', with value '"+val+"'. Can't convert to Integer. Caught: "+ex);
+								}
+							}
 							else if (key.equalsIgnoreCase("sendCounterUsageInfo"))
 							{
-								_sendUdcInfo = bVal;
+								_sendCounterUsageInfo = bVal;
 								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
 							}
 							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
@@ -731,7 +758,7 @@ public class CheckForUpdates
 
 		if (_checkId < 0)
 		{
-			_logger.debug("No checkId was disovered when trying to send connection info, skipping this.");
+			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
 			return;
 		}
 
@@ -881,6 +908,11 @@ public class CheckForUpdates
 				if (line.startsWith("DONE:"))
 				{
 				}
+				if (line.startsWith("SEND_MDA_INFO:"))
+				{
+					_logger.info("Received info to collect MDA Information.");
+					sendMdaInfoNoBlock();
+				}
 			}
 			in.close();
 
@@ -892,6 +924,273 @@ public class CheckForUpdates
 		}
 	}
 
+
+
+
+
+
+	/**
+	 * 
+	 */
+	public static void sendMdaInfoNoBlock()
+	{
+		if ( ! _sendMdaInfo )
+		{
+			_logger.debug("Send 'MDA info' has been disabled.");
+			return;
+		}
+
+		Runnable doLater = new Runnable()
+		{
+			public void run()
+			{
+				CheckForUpdates connInfo = new CheckForUpdates();
+				connInfo.sendMdaInfo();
+			}
+		};
+		Thread checkThread = new Thread(doLater);
+		checkThread.setName("sendMdaInfo");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Send info on connection
+	 */
+	public void sendMdaInfo()
+	{
+		// URL TO USE
+		String urlStr = ASETUNE_MDA_INFO_URL;
+
+		if ( ! _sendMdaInfo )
+		{
+			_logger.debug("Send 'MDA info' has been disabled.");
+			return;
+		}
+
+		if (_checkId < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
+			return;
+		}
+
+		if ( ! MonTablesDictionary.hasInstance() )
+		{
+			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
+			return;
+		}
+		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		if (mtd == null)
+		{
+			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
+			return;
+		}
+
+		if (mtd.aseVersionNum <= 0)
+		{
+			_logger.debug("MonTablesDictionary aseVersionNum is zero, stopping here.");
+			return;
+		}
+
+		if (mtd.installmasterVersionNum > 0 && mtd.aseVersionNum != mtd.installmasterVersionNum)
+		{
+			_logger.info("MonTablesDictionary aseVersionNum("+mtd.aseVersionNum+") and installmasterVersionNum("+mtd.installmasterVersionNum+") is not in sync, so we don't want to send MDA info about this.");
+			return;
+		}
+
+		if ( ! GetCounters.getInstance().isMonConnected() )
+		{
+			_logger.debug("No ASE Connection to the monitored server.");
+			return;
+		}
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId          = _checkId + "";
+		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		String srvVersion       = mtd.aseVersionNum + "";
+		String isClusterEnabled = mtd.isClusterEnabled + "";		
+
+		// Keep the Query objects in a list, because the "MDA" info WILL have multiple sends.
+		List<QueryString> sendQueryList = new ArrayList<QueryString>();
+		int rowCountSum = 0;
+
+		// Get MDA information 
+		try
+		{
+			// monTables
+			String sql_monTables_rowCount = 
+				"select count(*) from master.dbo.monTables";
+
+			String sql_monTables = 
+				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
+			    "from master.dbo.monTables t \n";
+
+			// monTableColumns
+			String sql_monTableColumns_rowCount = 
+				"select count(*) from master.dbo.monTableColumns";
+
+			String sql_monTableColumns = 
+				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
+			    "from master.dbo.monTableColumns c \n";
+			
+			// monTableParameters
+			String sql_monTableParameters_rowCount = 
+				"select count(*) from master.dbo.monTableParameters";
+
+			String sql_monTableParameters = 
+				"select type='P', p.TableName, p.TableID, p.ParameterName, p.ParameterID, p.TypeName, p.Length, Indicators=-1, p.Description  \n" +
+			    "from master.dbo.monTableParameters p \n";
+
+
+			// monTables
+			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
+					sql_monTables_rowCount, sql_monTables, 
+					_sendMdaInfoBatchSize, sendQueryList);
+
+			// monTableColumns
+			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
+					sql_monTableColumns_rowCount, sql_monTableColumns, 
+					_sendMdaInfoBatchSize, sendQueryList);
+
+			// monTableParameters
+			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
+					sql_monTableParameters_rowCount, sql_monTableParameters, 
+					_sendMdaInfoBatchSize, sendQueryList);
+		}
+		catch (SQLException e)
+		{
+			sendQueryList.clear();
+			_logger.debug("Problems when getting MDA information. Caught: "+e, e);
+		}
+
+		if (sendQueryList.size() > 0)
+		{
+			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.aseVersionNum+"'.");
+			long startTime = System.currentTimeMillis();
+			for (QueryString urlEntry : sendQueryList)
+			{
+				try
+				{
+					// SEND OFF THE REQUEST
+					InputStream in;
+					if (_useHttpPost)
+						in = sendHttpPost(urlStr, urlEntry);
+					else
+						in = sendHttpParams(urlStr, urlEntry);
+		
+					LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+					String line;
+					String responseLines = "";
+					while ((line = lr.readLine()) != null)
+					{
+						_logger.debug("response line "+lr.getLineNumber()+": " + line);
+						responseLines += line;
+						if (line.startsWith("ERROR:"))
+						{
+							_logger.warn("When doing MDA info 'ERROR:' response row, which looked like '" + line + "'.");
+						}
+						if (line.startsWith("DONE:"))
+						{
+						}
+					}
+					in.close();
+				}
+				catch (IOException ex)
+				{
+					_logger.debug("when trying to send MDA info, we had problems", ex);
+				}
+			}
+			String execTimeStr = TimeUtils.msToTimeStr(System.currentTimeMillis() - startTime);
+			_logger.info("sendMdaInfo: this took '"+execTimeStr+"' for all "+sendQueryList.size()+" batches, rows send was "+rowCountSum+".");
+		}
+	}
+
+	private int getMdaInfo(
+			Connection conn,
+			String checkId, 
+			String clientTime, 
+			String userName, 
+			String srvVersionNum, 
+			String isClusterEnabled, 
+			String sqlGetCount, 
+			String sqlGetValues,
+			int batchSize,
+			List<QueryString> sendQueryList)
+	throws SQLException
+	{
+		Statement  stmt = conn.createStatement();
+		ResultSet  rs;
+
+		// get expected rows
+		int expectedRows = 0;
+		rs = stmt.executeQuery(sqlGetCount);
+		while ( rs.next() )
+			expectedRows = rs.getInt(1);
+		rs.close();
+
+		// get VALUES
+		rs = stmt.executeQuery(sqlGetValues);
+
+		int rowId        = 0;
+		int batchCounter = 0;
+		QueryString urlParams = new QueryString();
+
+		while ( rs.next() )
+		{
+			rowId++;
+
+			if (batchCounter == 0)
+			{
+				if (_logger.isDebugEnabled())
+					urlParams.add("debug",    "true");
+
+				urlParams.add("checkId",            checkId);
+				urlParams.add("clientTime",         clientTime);
+				urlParams.add("userName",           userName);
+
+				urlParams.add("srvVersion",         srvVersionNum);
+				urlParams.add("isClusterEnabled",   isClusterEnabled);
+
+				urlParams.add("expectedRows",       expectedRows+"");
+			}
+
+			urlParams.add("type"        + "-" + batchCounter, rs.getString(1)); // NOTE NOT yet added to PHP and database
+			urlParams.add("TableName"   + "-" + batchCounter, rs.getString(2));
+			urlParams.add("TableID"     + "-" + batchCounter, rs.getString(3));
+			urlParams.add("ColumnName"  + "-" + batchCounter, rs.getString(4));
+			urlParams.add("ColumnID"    + "-" + batchCounter, rs.getString(5));
+			urlParams.add("TypeName"    + "-" + batchCounter, rs.getString(6));
+			urlParams.add("Length"      + "-" + batchCounter, rs.getString(7));
+			urlParams.add("Indicators"  + "-" + batchCounter, rs.getString(8));
+			urlParams.add("Description" + "-" + batchCounter, rs.getString(9));
+
+			urlParams.add("rowId"       + "-" + batchCounter, rowId+"");
+
+			batchCounter++;
+
+			// start new batch OR on last row
+			if (batchCounter >= batchSize || rowId >= expectedRows)
+			{
+				// add number of records added to this entry
+				urlParams.add("batchSize",      batchCounter+"");
+//System.out.println("QueryString: length="+urlParams.length()+", entries="+urlParams.entryCount()+".");
+
+				batchCounter = 0;
+				sendQueryList.add(urlParams);
+				urlParams = new QueryString();
+			}
+		}
+
+		rs.close();
+		stmt.close();
+		
+		return rowId;
+	}
 
 
 
@@ -945,7 +1244,7 @@ public class CheckForUpdates
 
 		if (_checkId < 0)
 		{
-			_logger.debug("No checkId was disovered when trying to send UDC info, skipping this.");
+			_logger.debug("No checkId was discovered when trying to send UDC info, skipping this.");
 			return;
 		}
 
@@ -1393,6 +1692,12 @@ public class CheckForUpdates
 			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 			if (msg.startsWith("When trying to initialize Counters Model")) 
 				return;
+			
+			if (msg.startsWith("SamplingCnt(CMrepAgent).getCnt : 99000 ERROR: Found NO database that was marked for replication"))
+				return;
+			if (msg.startsWith("Date problems for table 'CMstmntCacheDetails"))
+				return;
+			
 		}
 		
 		if (_sendLogInfoCount > _sendLogInfoThreshold)
@@ -1700,8 +2005,8 @@ public class CheckForUpdates
 
 	private static class QueryString
 	{
-
-		private StringBuffer	query	= new StringBuffer();
+		private StringBuffer	_query	= new StringBuffer();
+		private int             _entries = 0;
 
 		public QueryString()
 		{
@@ -1712,10 +2017,20 @@ public class CheckForUpdates
 			encode(name, value);
 		}
 
+//		public int entryCount()
+//		{
+//			return _entries;
+//		}
+//
+//		public int length()
+//		{
+//			return _query.length();
+//		}
+
 		public synchronized void add(String name, String value)
 		{
-			if (query.length() > 0)
-				query.append('&');
+			if (_query.length() > 0)
+				_query.append('&');
 			encode(name, value);
 		}
 
@@ -1729,9 +2044,11 @@ public class CheckForUpdates
 
 			try
 			{
-				query.append(URLEncoder.encode(name, "UTF-8"));
-				query.append('=');
-				query.append(URLEncoder.encode(value, "UTF-8"));
+				_query.append(URLEncoder.encode(name, "UTF-8"));
+				_query.append('=');
+				_query.append(URLEncoder.encode(value, "UTF-8"));
+				
+				_entries++;
 			}
 			catch (UnsupportedEncodingException ex)
 			{
@@ -1741,7 +2058,7 @@ public class CheckForUpdates
 
 		public String getQuery()
 		{
-			return query.toString();
+			return _query.toString();
 		}
 
 		public String toString()

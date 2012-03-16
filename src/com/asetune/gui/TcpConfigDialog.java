@@ -2,6 +2,7 @@ package com.asetune.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dialog;
 import java.awt.Frame;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
@@ -47,6 +48,7 @@ import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
+import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.GetCounters;
 import com.asetune.GetCountersGui;
@@ -78,6 +80,7 @@ implements ActionListener, TableModelListener
 	private JButton                _ok              = new JButton("OK");
 	private JButton                _cancel          = new JButton("Cancel");
 	private JButton                _apply           = new JButton("Apply");
+	private boolean                _madeChanges     = false;
 	
 	private static final String DIALOG_TITLE = "Settings for All Collector Tabs";
 
@@ -114,13 +117,29 @@ implements ActionListener, TableModelListener
 
 		initComponents();
 	}
+	private TcpConfigDialog(Dialog owner)
+	{
+		super(owner, DIALOG_TITLE, true);
+//		_owner           = owner;
 
-	public static void showDialog(Frame owner)
+		initComponents();
+	}
+
+	public static boolean showDialog(Frame owner)
 	{
 		TcpConfigDialog params = new TcpConfigDialog(owner);
 		params.setLocationRelativeTo(owner);
 		params.setVisible(true);
 		params.dispose();
+		return params._madeChanges;
+	}
+	public static boolean showDialog(Dialog owner)
+	{
+		TcpConfigDialog params = new TcpConfigDialog(owner);
+		params.setLocationRelativeTo(owner);
+		params.setVisible(true);
+		params.dispose();
+		return params._madeChanges;
 	}
 
 	/*---------------------------------------------------
@@ -174,6 +193,8 @@ implements ActionListener, TableModelListener
 				"<li> To <b>Remove</b> a template, just press the 'Remove..' button and button and choose a template name to deleted. </li>" +
 				"</UL>" +
 				"If all selected values in the table is matching a template, that template name will be displayed in the drop down list.<br>" +
+				"<br>" +
+				"<b>Note:</b> User Defined Counters is <b>not</b> saved/restored in the templates, only <i>System Performance Counters</i><br>" +
 				"</html>");
 
 		String tooltip = "<html>" +
@@ -454,20 +475,23 @@ implements ActionListener, TableModelListener
 
 	private void doApply()
 	{
-		for (int r=0; r<_table.getRowCount(); r++)
+//		TableModel tm = _table.getModel();
+		LocalTableModel tm = (LocalTableModel)_table.getModel();
+
+		for (int r=0; r<tm.getRowCount(); r++)
 		{
-			String  tabName      = (String)  _table.getValueAt(r, TAB_POS_TAB_NAME);
+			String  tabName      = (String)  tm.getValueAt(r, TAB_POS_TAB_NAME);
 
-			int     queryTimeout = ((Integer) _table.getValueAt(r, TAB_POS_QUERY_TIMEOUT)).intValue();
-			int     postpone     = ((Integer) _table.getValueAt(r, TAB_POS_POSTPONE)).intValue();
-			boolean paused       = ((Boolean) _table.getValueAt(r, TAB_POS_PAUSED)).booleanValue();
-			boolean bgPoll       = ((Boolean) _table.getValueAt(r, TAB_POS_BG)).booleanValue();
-			boolean rnc20        = ((Boolean) _table.getValueAt(r, TAB_POS_RNC20)).booleanValue();
+			int     queryTimeout = ((Integer) tm.getValueAt(r, TAB_POS_QUERY_TIMEOUT)).intValue();
+			int     postpone     = ((Integer) tm.getValueAt(r, TAB_POS_POSTPONE)).intValue();
+			boolean paused       = ((Boolean) tm.getValueAt(r, TAB_POS_PAUSED)).booleanValue();
+			boolean bgPoll       = ((Boolean) tm.getValueAt(r, TAB_POS_BG)).booleanValue();
+			boolean rnc20        = ((Boolean) tm.getValueAt(r, TAB_POS_RNC20)).booleanValue();
 
-			boolean storePcs     = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_PCS)).booleanValue();
-			boolean storeAbs     = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_ABS)).booleanValue();
-			boolean storeDiff    = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
-			boolean storeRate    = ((Boolean) _table.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
+			boolean storePcs     = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_PCS)).booleanValue();
+			boolean storeAbs     = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_ABS)).booleanValue();
+			boolean storeDiff    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
+			boolean storeRate    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
 
 			CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
 			
@@ -480,29 +504,31 @@ implements ActionListener, TableModelListener
 			if (_logger.isDebugEnabled())
 			{
 				String debugStr = "doApply() name="+StringUtil.left("'"+tabName+"'", 30) +
-					" queryTimeout="+(_table.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
-					" postpone="    +(_table.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
-					" paused="      +(_table.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
-					" bg="          +(_table.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
-					" rnc20="       +(_table.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
-					" pcs="         +(_table.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
-					" pcsAbs="      +(_table.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
-					" pcsDiff="     +(_table.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
-					" pcsRate="     +(_table.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
+					" queryTimeout="+(tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
+					" postpone="    +(tm.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
+					" paused="      +(tm.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
+					" bg="          +(tm.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
+					" rnc20="       +(tm.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
+					" pcs="         +(tm.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
+					" pcsAbs="      +(tm.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
+					" pcsDiff="     +(tm.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
+					" pcsRate="     +(tm.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
 				_logger.debug(debugStr);
 			}
 
-			if (_table.isCellChanged(r, TAB_POS_QUERY_TIMEOUT)) cm.setQueryTimeout(                 queryTimeout, true);
-			if (_table.isCellChanged(r, TAB_POS_POSTPONE     )) cm.setPostponeTime(                 postpone,   true);
-			if (_table.isCellChanged(r, TAB_POS_PAUSED       )) cm.setPauseDataPolling(             paused,     true);
-			if (_table.isCellChanged(r, TAB_POS_BG           )) cm.setBackgroundDataPollingEnabled( bgPoll,     true);
-			if (_table.isCellChanged(r, TAB_POS_RNC20        )) cm.setNegativeDiffCountersToZero(   rnc20,      true);
+			if (tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT)) cm.setQueryTimeout(                 queryTimeout, true);
+			if (tm.isCellChanged(r, TAB_POS_POSTPONE     )) cm.setPostponeTime(                 postpone,   true);
+			if (tm.isCellChanged(r, TAB_POS_PAUSED       )) cm.setPauseDataPolling(             paused,     true);
+			if (tm.isCellChanged(r, TAB_POS_BG           )) cm.setBackgroundDataPollingEnabled( bgPoll,     true);
+			if (tm.isCellChanged(r, TAB_POS_RNC20        )) cm.setNegativeDiffCountersToZero(   rnc20,      true);
 
-			if (_table.isCellChanged(r, TAB_POS_STORE_PCS    )) cm.setPersistCounters(    storePcs,  true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_ABS    )) cm.setPersistCountersAbs( storeAbs,  true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_DIFF   )) cm.setPersistCountersDiff(storeDiff, true);
-			if (_table.isCellChanged(r, TAB_POS_STORE_RATE   )) cm.setPersistCountersRate(storeRate, true);
+			if (tm.isCellChanged(r, TAB_POS_STORE_PCS    )) cm.setPersistCounters(    storePcs,  true);
+			if (tm.isCellChanged(r, TAB_POS_STORE_ABS    )) cm.setPersistCountersAbs( storeAbs,  true);
+			if (tm.isCellChanged(r, TAB_POS_STORE_DIFF   )) cm.setPersistCountersDiff(storeDiff, true);
+			if (tm.isCellChanged(r, TAB_POS_STORE_RATE   )) cm.setPersistCountersRate(storeRate, true);
 		}
+
+		_madeChanges = true;
 
 		_table.resetCellChanges();
 		_apply.setEnabled(false);
@@ -544,7 +570,7 @@ implements ActionListener, TableModelListener
 
   	private void loadProps()
   	{
-		int     width     = 735;  // initial window with   if not opened before
+		int     width     = 820;  // initial window with   if not opened before
 		int     height    = 630;  // initial window height if not opened before
 		int     x         = -1;
 		int     y         = -1;
@@ -724,21 +750,22 @@ implements ActionListener, TableModelListener
 				boolean pcsDiff      = ppe.getBooleanMandatoryProperty(name, "pcsDiff");
 				boolean pcsRate      = ppe.getBooleanMandatoryProperty(name, "pcsRate");
 	
-				for (int r=0; r<_table.getRowCount(); r++)
+				TableModel tm = _table.getModel();
+				for (int r=0; r<tm.getRowCount(); r++)
 				{
-					String tabName = _table.getValueAt(r, TAB_POS_TAB_NAME).toString();
+					String tabName = tm.getValueAt(r, TAB_POS_TAB_NAME).toString();
 					if (tabName.equals(name))
 					{
 //System.out.println("PPE: Setting values for tab '"+tabName+"'.");
-						_table.setValueAt(queryTimeout, r, TAB_POS_QUERY_TIMEOUT);
-						_table.setValueAt(postpone,     r, TAB_POS_POSTPONE);
-						_table.setValueAt(paused,       r, TAB_POS_PAUSED);
-						_table.setValueAt(bg,           r, TAB_POS_BG);
-						_table.setValueAt(resetNC20,    r, TAB_POS_RNC20);
-						_table.setValueAt(storePcs,     r, TAB_POS_STORE_PCS);
-						_table.setValueAt(pcsAbs,       r, TAB_POS_STORE_ABS);
-						_table.setValueAt(pcsDiff,      r, TAB_POS_STORE_DIFF);
-						_table.setValueAt(pcsRate,      r, TAB_POS_STORE_RATE);
+						tm.setValueAt(queryTimeout, r, TAB_POS_QUERY_TIMEOUT);
+						tm.setValueAt(postpone,     r, TAB_POS_POSTPONE);
+						tm.setValueAt(paused,       r, TAB_POS_PAUSED);
+						tm.setValueAt(bg,           r, TAB_POS_BG);
+						tm.setValueAt(resetNC20,    r, TAB_POS_RNC20);
+						tm.setValueAt(storePcs,     r, TAB_POS_STORE_PCS);
+						tm.setValueAt(pcsAbs,       r, TAB_POS_STORE_ABS);
+						tm.setValueAt(pcsDiff,      r, TAB_POS_STORE_DIFF);
+						tm.setValueAt(pcsRate,      r, TAB_POS_STORE_RATE);
 					}	
 				}
 			}
@@ -754,19 +781,27 @@ implements ActionListener, TableModelListener
 
 	private PropPropEntry getPpeFromTable()
 	{
+		TableModel tm = _table.getModel();
+
 		PropPropEntry ppe = new PropPropEntry();
 		for (int r=0; r<_table.getRowCount(); r++)
 		{
-			String tabName = _table.getValueAt(r, TAB_POS_TAB_NAME).toString();
-			ppe.put(tabName, "queryTimeout", _table.getValueAt(r, TAB_POS_QUERY_TIMEOUT).toString());
-			ppe.put(tabName, "postpone",     _table.getValueAt(r, TAB_POS_POSTPONE)     .toString());
-			ppe.put(tabName, "paused",       _table.getValueAt(r, TAB_POS_PAUSED)       .toString());
-			ppe.put(tabName, "bg",           _table.getValueAt(r, TAB_POS_BG)           .toString());
-			ppe.put(tabName, "resetNC20",    _table.getValueAt(r, TAB_POS_RNC20)        .toString());
-			ppe.put(tabName, "storePcs",     _table.getValueAt(r, TAB_POS_STORE_PCS)    .toString());
-			ppe.put(tabName, "pcsAbs",       _table.getValueAt(r, TAB_POS_STORE_ABS)    .toString());
-			ppe.put(tabName, "pcsDiff",      _table.getValueAt(r, TAB_POS_STORE_DIFF)   .toString());
-			ppe.put(tabName, "pcsRate",      _table.getValueAt(r, TAB_POS_STORE_RATE)   .toString());
+			String tabName = tm.getValueAt(r, TAB_POS_TAB_NAME).toString();
+
+			// Do not generate UDC User Defined Counters
+			CountersModel cm = GetCounters.getCmByDisplayName(tabName);
+			if ( cm != null && ! cm.isSystemCm() )
+				continue;
+
+			ppe.put(tabName, "queryTimeout", tm.getValueAt(r, TAB_POS_QUERY_TIMEOUT).toString());
+			ppe.put(tabName, "postpone",     tm.getValueAt(r, TAB_POS_POSTPONE)     .toString());
+			ppe.put(tabName, "paused",       tm.getValueAt(r, TAB_POS_PAUSED)       .toString());
+			ppe.put(tabName, "bg",           tm.getValueAt(r, TAB_POS_BG)           .toString());
+			ppe.put(tabName, "resetNC20",    tm.getValueAt(r, TAB_POS_RNC20)        .toString());
+			ppe.put(tabName, "storePcs",     tm.getValueAt(r, TAB_POS_STORE_PCS)    .toString());
+			ppe.put(tabName, "pcsAbs",       tm.getValueAt(r, TAB_POS_STORE_ABS)    .toString());
+			ppe.put(tabName, "pcsDiff",      tm.getValueAt(r, TAB_POS_STORE_DIFF)   .toString());
+			ppe.put(tabName, "pcsRate",      tm.getValueAt(r, TAB_POS_STORE_RATE)   .toString());
 		}
 		return ppe;
 	}
@@ -962,18 +997,19 @@ implements ActionListener, TableModelListener
 	**---------------------------------------------------
 	*/
 
-	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
+	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Group Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
 	private static final int TAB_POS_ICON          = 0;
 	private static final int TAB_POS_TAB_NAME      = 1;
-	private static final int TAB_POS_QUERY_TIMEOUT = 2;
-	private static final int TAB_POS_POSTPONE      = 3;
-	private static final int TAB_POS_PAUSED        = 4;
-	private static final int TAB_POS_BG            = 5;
-	private static final int TAB_POS_RNC20         = 6;
-	private static final int TAB_POS_STORE_PCS     = 7;
-	private static final int TAB_POS_STORE_ABS     = 8;
-	private static final int TAB_POS_STORE_DIFF    = 9;
-	private static final int TAB_POS_STORE_RATE    = 10;
+	private static final int TAB_POS_GROUP_NAME    = 2;
+	private static final int TAB_POS_QUERY_TIMEOUT = 3;
+	private static final int TAB_POS_POSTPONE      = 4;
+	private static final int TAB_POS_PAUSED        = 5;
+	private static final int TAB_POS_BG            = 6;
+	private static final int TAB_POS_RNC20         = 7;
+	private static final int TAB_POS_STORE_PCS     = 8;
+	private static final int TAB_POS_STORE_ABS     = 9;
+	private static final int TAB_POS_STORE_DIFF    = 10;
+	private static final int TAB_POS_STORE_RATE    = 11;
 
 	private static final Color TAB_PCS_COL_BG = new Color(240, 240, 240);
 //	private static final Color TAB_PCS_COL_BG = new Color(243, 243, 243);
@@ -1117,6 +1153,13 @@ implements ActionListener, TableModelListener
 
 			// Populate the table
 			refreshTable();
+			
+			// hide 'Group Name' if no child's are found
+			if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+			{
+				TableColumnModelExt tcmx = (TableColumnModelExt)this.getColumnModel();
+				tcmx.getColumnExt(TAB_HEADER[TAB_POS_GROUP_NAME]).setVisible(false);
+			}
 		}
 
 		/** What table header was the last header we visited */
@@ -1135,13 +1178,18 @@ implements ActionListener, TableModelListener
 				public String getToolTipText(MouseEvent e)
 				{
 					String tip = null;
+
 					int col = getColumnModel().getColumnIndexAtX(e.getPoint().x);
 					if (col < 0) return null;
 
-					switch(col)
+					int mcol = convertColumnIndexToModel(col);
+					if (mcol < 0) return null;
+
+					switch(mcol)
 					{
 					case TAB_POS_ICON:          tip = null; break;
 					case TAB_POS_TAB_NAME:      tip = "Name of Tab/Collector."; break;
+					case TAB_POS_GROUP_NAME:    tip = "What Group does this performance counter belong to"; break;
 					case TAB_POS_QUERY_TIMEOUT: tip = "The SQL Query Timeout value in seconds. For how long should we wait for a replay from the ASE Server for this specific Performance Counter."; break;
 					case TAB_POS_POSTPONE:      tip = "If you want to skip some intermediate samples, Here you can specify minimum seconds between samples."; break;
 					case TAB_POS_PAUSED:        tip = "Pause data polling for this Tab. This makes the values easier to read..."; break;
@@ -1166,6 +1214,8 @@ implements ActionListener, TableModelListener
 				public void mouseMoved(MouseEvent e)
 				{
 					_lastTableHeaderColumn = getColumnModel().getColumnIndexAtX(e.getX());
+					if (_lastTableHeaderColumn >= 0)
+						_lastTableHeaderColumn = convertColumnIndexToModel(_lastTableHeaderColumn);
 				}
 				public void mouseDragged(MouseEvent e) {/*ignore*/}
 			});
@@ -1178,14 +1228,14 @@ implements ActionListener, TableModelListener
 		{
 			String tip = null;
 			Point p = e.getPoint();
-			int row = super.convertRowIndexToModel( rowAtPoint(p)<0 ? 0 : rowAtPoint(p) );
-			int col = super.convertColumnIndexToModel(columnAtPoint(p));
+			int mrow = super.convertRowIndexToModel( rowAtPoint(p)<0 ? 0 : rowAtPoint(p) );
+			int mcol = super.convertColumnIndexToModel(columnAtPoint(p));
 
-			if (col > TAB_POS_POSTPONE)
+			if (mcol > TAB_POS_POSTPONE)
 			{
 				tip = "Right click on the header column to mark or unmark all rows.";
 			}
-			if (row >= 0)
+			if (mrow >= 0)
 			{
 				//TableModel model = getModel();
 			}
@@ -1194,33 +1244,106 @@ implements ActionListener, TableModelListener
 			return "<html>" + tip + "</html>";
 		}
 
+//		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+//		public Component prepareRenderer(TableCellRenderer renderer, int row, int col)
+//		{
+//			int mrow = super.convertRowIndexToModel(row);
+//			int mcol = super.convertColumnIndexToModel(col);
+//
+//			Component c = super.prepareRenderer(renderer, mrow, mcol);
+//			if (mcol == TAB_POS_BG)
+//			{
+//				c.setEnabled( isCellEditable(mrow, mcol) );
+//			}
+//			if (mcol >= TAB_POS_STORE_PCS)
+//			{
+//				c.setBackground(TAB_PCS_COL_BG);
+//				if (mcol > TAB_POS_STORE_PCS)
+//				{
+//					// if not editable, lets disable it
+//					// calling isCellEditable instead of getModel().isCellEditable(row, column)
+//					// does the viewRow->modelRow translation for us.
+//					c.setEnabled( isCellEditable(mrow, mcol) );
+//				}
+//			}
+//			return c;
+//		}
 		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
-		public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
+		public Component prepareRenderer(TableCellRenderer renderer, int row, int col)
 		{
-			Component c = super.prepareRenderer(renderer, row, column);
-			if (column == TAB_POS_BG)
+			int view_TAB_POS_BG         = convertColumnIndexToView(TAB_POS_BG);
+			int view_TAB_POS_STORE_PCS  = convertColumnIndexToView(TAB_POS_STORE_PCS);
+
+			Component c = super.prepareRenderer(renderer, row, col);
+			if (col == view_TAB_POS_BG)
 			{
-				c.setEnabled( isCellEditable(row, column) );
+				c.setEnabled( isCellEditable(row, col) );
 			}
-			if (column >= TAB_POS_STORE_PCS)
+			if (col >= view_TAB_POS_STORE_PCS)
 			{
 				c.setBackground(TAB_PCS_COL_BG);
-				if (column > TAB_POS_STORE_PCS)
+				if (col > view_TAB_POS_STORE_PCS)
 				{
 					// if not editable, lets disable it
 					// calling isCellEditable instead of getModel().isCellEditable(row, column)
 					// does the viewRow->modelRow translation for us.
-					c.setEnabled( isCellEditable(row, column) );
+					c.setEnabled( isCellEditable(row, col) );
 				}
 			}
 			return c;
 		}
 
+//		/** Populate information in the table */
+//		protected void refreshTable()
+//		{
+//			Vector<Object> row = new Vector<Object>();
+//
+//			DefaultTableModel tm = (DefaultTableModel)getModel();
+//
+//			JTabbedPane tabPane = MainFrame.getTabbedPane();
+//			if (tabPane == null)
+//				return;
+//
+//			while (tm.getRowCount() > 0)
+//				tm.removeRow(0);
+//
+//			int tabCount = tabPane.getTabCount();
+//			for (int t=0; t<tabCount; t++)
+//			{
+//				Component comp = tabPane.getComponentAt(t);
+//
+//				if (comp instanceof TabularCntrPanel)
+//				{
+//					TabularCntrPanel tcp = (TabularCntrPanel) comp;
+//					CountersModel    cm  = tcp.getCm();
+//					if (cm != null)
+//					{
+//						row = new Vector<Object>();
+//
+//						row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+//						row.add(cm.getDisplayName());   // TAB_POS_TAB_NAME
+//
+//						row.add(new Integer( cm.getQueryTimeout()) );
+//						row.add(new Integer( cm.getPostponeTime()) );
+//						row.add(new Boolean( cm.isDataPollingPaused() ));
+//						row.add(new Boolean( cm.isBackgroundDataPollingEnabled() ));
+//						row.add(new Boolean( cm.isNegativeDiffCountersToZero() ));
+//
+//						row.add(new Boolean( cm.isPersistCountersEnabled() ));
+//						row.add(new Boolean( cm.isPersistCountersAbsEnabled() ));
+//						row.add(new Boolean( cm.isPersistCountersDiffEnabled() ));
+//						row.add(new Boolean( cm.isPersistCountersRateEnabled() ));
+//
+//						tm.addRow(row);
+//					}
+//				}
+//			}
+//			resetCellChanges();
+//			packAll(); // set size so that all content in all cells are visible
+//		}
 		/** Populate information in the table */
 		protected void refreshTable()
 		{
-			Vector<Object> row = new Vector<Object>();
-
 			DefaultTableModel tm = (DefaultTableModel)getModel();
 
 			JTabbedPane tabPane = MainFrame.getTabbedPane();
@@ -1230,21 +1353,35 @@ implements ActionListener, TableModelListener
 			while (tm.getRowCount() > 0)
 				tm.removeRow(0);
 
-			int tabCount = tabPane.getTabCount();
-			for (int t=0; t<tabCount; t++)
-			{
-				Component comp = tabPane.getComponentAt(t);
+			refreshTable(tabPane, tm, null);
 
-				if (comp instanceof TabularCntrPanel)
+			resetCellChanges();
+			packAll(); // set size so that all content in all cells are visible
+		}
+		private void refreshTable(JTabbedPane tabPane, DefaultTableModel tm, String groupName)
+		{
+			for (int t=0; t<tabPane.getTabCount(); t++)
+			{
+				Component comp    = tabPane.getComponentAt(t);
+				String    tabName = tabPane.getTitleAt(t);
+
+				if (comp instanceof JTabbedPane)
+					refreshTable((JTabbedPane)comp, tm, tabName);
+				else if (comp instanceof TabularCntrPanel)
 				{
 					TabularCntrPanel tcp = (TabularCntrPanel) comp;
 					CountersModel    cm  = tcp.getCm();
+					
+					if (StringUtil.isNullOrBlank(groupName))
+						groupName = tcp.getGroupName();
+
 					if (cm != null)
 					{
-						row = new Vector<Object>();
+						Vector<Object> row = new Vector<Object>();
 
 						row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
 						row.add(cm.getDisplayName());   // TAB_POS_TAB_NAME
+						row.add(groupName);
 
 						row.add(new Integer( cm.getQueryTimeout()) );
 						row.add(new Integer( cm.getPostponeTime()) );
@@ -1261,18 +1398,16 @@ implements ActionListener, TableModelListener
 					}
 				}
 			}
-			resetCellChanges();
-			packAll(); // set size so that all content in all cells are visible
 		}
 
-		public boolean isCellChanged(int row, int col)
-		{
-			int mrow = super.convertRowIndexToModel(row);
-			int mcol = super.convertColumnIndexToModel(col);
-			
-			LocalTableModel tm = (LocalTableModel)getModel();
-			return tm.isCellChanged(mrow, mcol);
-		}
+//		public boolean isCellChanged(int row, int col)
+//		{
+//			int mrow = super.convertRowIndexToModel(row);
+//			int mcol = super.convertColumnIndexToModel(col);
+//			
+//			LocalTableModel tm = (LocalTableModel)getModel();
+//			return tm.isCellChanged(mrow, mcol);
+//		}
 
 		/** typically called from any "apply" button. */
 		public void resetCellChanges()

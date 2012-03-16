@@ -4,6 +4,7 @@
 package com.asetune.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
@@ -20,6 +21,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -34,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -56,6 +59,7 @@ import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.PopupMenuEvent;
@@ -126,6 +130,28 @@ public class MainFrame
 	private static final String ST_DEFAULT_SERVER_LISTENERS= "ASE Server listens on address";
 
 	//-------------------------------------------------
+	// GROUPS for JTabbedPane
+	public static final String    TCP_GROUP_OBJECT_ACCESS  = "Object/Access";
+	public static final String    TCP_GROUP_SERVER         = "Server";
+	public static final String    TCP_GROUP_DISK           = "Disk";
+	public static final String    TCP_GROUP_CACHE          = "Cache";
+	public static final String    TCP_GROUP_HOST_MONITOR   = "Host Monitor";
+	public static final String    TCP_GROUP_UDC            = "User Defined";
+	
+	public static final ImageIcon TCP_GROUP_ICON_OBJECT_ACCESS = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_object_access.png");
+	public static final ImageIcon TCP_GROUP_ICON_SERVER        = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_server.png");
+	public static final ImageIcon TCP_GROUP_ICON_DISK          = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_disk.png");
+	public static final ImageIcon TCP_GROUP_ICON_CACHE         = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_caches.png");
+	public static final ImageIcon TCP_GROUP_ICON_HOST_MONITOR  = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_host_monitor.png");
+	public static final ImageIcon TCP_GROUP_ICON_UDC           = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_udc.png");
+
+	//-------------------------------------------------
+	// PROPERTIES KEYS
+	public static final String    PROPKEY_useTcpGroups          = "MainFrame.useTcpGroups";
+	public static final boolean   DEFAULT_useTcpGroups          = true;
+//	public static final boolean   DEFAULT_useTcpGroups          = false;
+	
+	//-------------------------------------------------
 	// Actions
 	public static final String ACTION_CONNECT                   = "CONNECT";
 	public static final String ACTION_DISCONNECT                = "DISCONNECT";
@@ -135,6 +161,7 @@ public class MainFrame
 	public static final String ACTION_OPEN_OFFLINE_SESSION_VIEW = "OPEN_OFFLINE_SESSION_VIEW";
 	public static final String ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES      = "TOGGLE_AUTO_RESIZE_PC_TABLES";
 	public static final String ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE = "TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE";
+	public static final String ACTION_GROUP_TCP_IN_TAB_PANE     = "GROUP_TCP_IN_TAB_PANE";
 	public static final String ACTION_OPEN_REFRESH_RATE         = "OPEN_REFRESH_RATE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW     = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW     = "OPEN_GRAPH_GRAPH_VIEW";
@@ -210,6 +237,7 @@ public class MainFrame
 	private JMenuItem           _refreshRate_mi         = new JMenuItem("Refresh Rate...");
 	private JCheckBoxMenuItem   _autoResizePcTable_mi   = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
 	private JCheckBoxMenuItem   _autoRefreshOnTabChange_mi = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
+	private JCheckBoxMenuItem   _groupTcpInTabPane_mi   = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
 	private JMenuItem           _aseConfigView_mi       = new JMenuItem("View ASE Configuration...");
 	private JMenuItem           _tcpSettingsConf_mi     = new JMenuItem("Change 'Performance Counter' Options...");
 	private JMenuItem           _counterTabView_mi      = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
@@ -233,7 +261,7 @@ public class MainFrame
 	private JMenu               _help_m                 = new JMenu("Help");
 	private JMenuItem           _about_mi               = new JMenuItem("About");
 
-	private static GTabbedPane  _mainTabbedPane         = new GTabbedPane();
+	private static GTabbedPane  _mainTabbedPane         = new XGTabbedPane("MainFrame_MainTabbedPane");
 
 	//-------------------------------------------------
 	// STATUS Panel
@@ -294,7 +322,14 @@ public class MainFrame
 
 	/** DDL Viewer GUI */
 	private DdlViewer _ddlViewer = null;
+	
 	//-------------------------------------------------
+
+	public static boolean useTcpGroups()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		return conf.getBooleanProperty(PROPKEY_useTcpGroups, DEFAULT_useTcpGroups);
+	}
 
 	public static int getRefreshInterval()      { return _refreshInterval; }
 	public static int getRefreshIntervalNoGui() { return _refreshNoGuiInterval; }
@@ -415,10 +450,11 @@ public class MainFrame
 		_offlineSessionsView_mi   .setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
 		_autoResizePcTable_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
 		_autoRefreshOnTabChange_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_on_tab_change.png"));
+		_groupTcpInTabPane_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/group_tcp_in_tab_pane.png"));
 		_refreshRate_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
 		_aseConfigView_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
 		_tcpSettingsConf_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
-		_counterTabView_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.gif"));
+		_counterTabView_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.png"));
 		_graphView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
 		_graphs_m                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
 		
@@ -454,6 +490,7 @@ public class MainFrame
 			_preferences_m.add(_autoResizePcTable_mi);
 			_preferences_m.add(_autoRefreshOnTabChange_mi);
 			_preferences_m.add(_refreshRate_mi);
+			_preferences_m.add(_groupTcpInTabPane_mi);
 		_view_m.add(_aseConfigView_mi);
 		_view_m.add(_tcpSettingsConf_mi);
 		_view_m.add(_counterTabView_mi);
@@ -484,6 +521,7 @@ public class MainFrame
 		_offlineSessionsView_mi   .setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
 		_autoResizePcTable_mi     .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
 		_autoRefreshOnTabChange_mi.setActionCommand(ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE);
+		_groupTcpInTabPane_mi     .setActionCommand(ACTION_GROUP_TCP_IN_TAB_PANE);
 		_refreshRate_mi           .setActionCommand(ACTION_OPEN_REFRESH_RATE);
 		_aseConfigView_mi         .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
 		_tcpSettingsConf_mi       .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
@@ -512,6 +550,7 @@ public class MainFrame
 		_offlineSessionsView_mi   .addActionListener(this);
 		_autoResizePcTable_mi     .addActionListener(this);
 		_autoRefreshOnTabChange_mi.addActionListener(this);
+		_groupTcpInTabPane_mi     .addActionListener(this);
 		_refreshRate_mi           .addActionListener(this);
 		_aseConfigView_mi         .addActionListener(this);
 		_tcpSettingsConf_mi       .addActionListener(this);
@@ -584,22 +623,64 @@ public class MainFrame
 				// remove all old items (if any)
 				tabSelectorNoSortPopupMenu.removeAll();
 
+//				// Get all titles into a list
+//				ArrayList<String> tabStrList = new ArrayList<String>();
+//				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
+//					tabStrList.add(_mainTabbedPane.getTitleAt(t));
+//
+//				// Sort the list
+//				//Collections.sort(tabStrList);
+//
+//				// Now create menu items in the correct order
+//				for (String name : tabStrList)
+//				{
+//					int tabIndex = _mainTabbedPane.indexOfTab(name);
+//
+//					JMenuItem mi = new JMenuItem();
+//					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
+//					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
+//					mi.addActionListener(new ActionListener()
+//					{
+//						@Override
+//						public void actionPerformed(ActionEvent e)
+//						{
+//							Object o = e.getSource();
+//							if (o instanceof JMenuItem)
+//							{
+//								JMenuItem mi = (JMenuItem) o;
+//								String tabName = mi.getText();
+//								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
+//								_mainTabbedPane.setSelectedIndex(tabIndex);
+//							}
+//						}
+//					});
+//
+//					tabSelectorNoSortPopupMenu.add(mi);
+//				}
 				// Get all titles into a list
-				ArrayList<String> tabStrList = new ArrayList<String>();
-				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
-					tabStrList.add(_mainTabbedPane.getTitleAt(t));
+//				List<String> tabStrList = _mainTabbedPane.getAllTitles();
+				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
 
 				// Sort the list
 				//Collections.sort(tabStrList);
 
 				// Now create menu items in the correct order
+				String lastGroup = null;
 				for (String name : tabStrList)
 				{
-					int tabIndex = _mainTabbedPane.indexOfTab(name);
+					final String[] sa = name.split(";");
+					final String tabName   = sa[0];
+					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
+					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+
+					// Add separator on new groups
+					if ( lastGroup != null && ! lastGroup.equals(groupName) )
+						tabSelectorNoSortPopupMenu.add(new JSeparator() );
+					lastGroup = groupName;
 
 					JMenuItem mi = new JMenuItem();
-					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
-					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
+					mi.setText(menuText);
+					mi.setIcon(_mainTabbedPane.getIconAtTitle(tabName));
 					mi.addActionListener(new ActionListener()
 					{
 						@Override
@@ -609,9 +690,8 @@ public class MainFrame
 							if (o instanceof JMenuItem)
 							{
 								JMenuItem mi = (JMenuItem) o;
-								String tabName = mi.getText();
-								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
-								_mainTabbedPane.setSelectedIndex(tabIndex);
+								//String tabName = mi.getText();
+								_mainTabbedPane.setSelectedTitle(tabName);
 							}
 						}
 					});
@@ -637,10 +717,44 @@ public class MainFrame
 				// remove all old items (if any)
 				tabSelectorSortedPopupMenu.removeAll();
 
+//				// Get all titles into a list
+//				ArrayList<String> tabStrList = new ArrayList<String>();
+//				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
+//					tabStrList.add(_mainTabbedPane.getTitleAt(t));
+//
+//				// Sort the list
+//				Collections.sort(tabStrList);
+//
+//				// Now create menu items in the correct order
+//				for (String name : tabStrList)
+//				{
+//					int tabIndex = _mainTabbedPane.indexOfTab(name);
+//
+//					JMenuItem mi = new JMenuItem();
+//					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
+//					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
+//					mi.addActionListener(new ActionListener()
+//					{
+//						@Override
+//						public void actionPerformed(ActionEvent e)
+//						{
+//							Object o = e.getSource();
+//							if (o instanceof JMenuItem)
+//							{
+//								JMenuItem mi = (JMenuItem) o;
+//								String tabName = mi.getText();
+//								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
+//								_mainTabbedPane.setSelectedIndex(tabIndex);
+//							}
+//						}
+//					});
+//
+//					tabSelectorSortedPopupMenu.add(mi);
+//				}
 				// Get all titles into a list
-				ArrayList<String> tabStrList = new ArrayList<String>();
-				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
-					tabStrList.add(_mainTabbedPane.getTitleAt(t));
+//				List<String> tabStrList = _mainTabbedPane.getAllTitles();
+//				List<String> tabStrList = _mainTabbedPane.getAllTitles("<html><b>${TAB_NAME}</b> - ${GROUP_NAME}</html>");
+				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
 
 				// Sort the list
 				Collections.sort(tabStrList);
@@ -648,11 +762,13 @@ public class MainFrame
 				// Now create menu items in the correct order
 				for (String name : tabStrList)
 				{
-					int tabIndex = _mainTabbedPane.indexOfTab(name);
-
+					final String[] sa = name.split(";");
+					final String tabName   = sa[0];
+					final String groupName = sa.length > 1 ? " - <i>"+sa[1]+"</i>" : "";
+					final String menuText = "<html><b>"+tabName+"</b>"+groupName+"</html>";
 					JMenuItem mi = new JMenuItem();
-					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
-					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
+					mi.setText(menuText);
+					mi.setIcon(_mainTabbedPane.getIconAtTitle(tabName));
 					mi.addActionListener(new ActionListener()
 					{
 						@Override
@@ -662,9 +778,8 @@ public class MainFrame
 							if (o instanceof JMenuItem)
 							{
 								JMenuItem mi = (JMenuItem) o;
-								String tabName = mi.getText();
-								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
-								_mainTabbedPane.setSelectedIndex(tabIndex);
+								//String tabName = mi.getText();
+								_mainTabbedPane.setSelectedTitle(tabName);
 							}
 						}
 					});
@@ -886,6 +1001,38 @@ public class MainFrame
 		// Add Summary TAB
 		_mainTabbedPane.addTab("Summary", _summaryPanel.getIcon(), _summaryPanel, "Trend Graphs");
 
+		// Add Group panels
+		if (useTcpGroups())
+		{
+			// DIALOG: Change 'Tab Titles' Order and Visibility...
+			// does not yet work with "sub tabs", so simply hide this until it works
+			_counterTabView_mi.setVisible(false);
+
+			GTabbedPane tabGroupServer       = new GTabbedPane("MainFrame_TabbedPane_Server");
+			GTabbedPane tabGroupObjectAccess = new GTabbedPane("MainFrame_TabbedPane_ObjectAccess");
+			GTabbedPane tabGroupCache        = new GTabbedPane("MainFrame_TabbedPane_Cache");
+			GTabbedPane tabGroupDisk         = new GTabbedPane("MainFrame_TabbedPane_Disk");
+			GTabbedPane tabGroupHostMonitor  = new GTabbedPane("MainFrame_TabbedPane_HostMonitor");
+			GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
+
+			_mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
+			_mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
+			_mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
+			_mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
+			_mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
+			_mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,           getGroupToolTipText(TCP_GROUP_UDC));
+			
+			tabGroupUdc.setEmptyTabMessage(
+				"No User Defined Performance Counters has been added.\n" +
+				"\n" +
+				"To create one just follow the Wizard under:\n" +
+				"Menu -> Tools -> Create 'User Defined Counter' Wizard...\n" +
+				"\n" +
+				"This enables you to write Performance Counters on you'r Application Tables,\n" +
+				"which enables you to measure Application specific performance issues.\n" +
+				"Or simply write you'r own MDA table queries...");
+		}
+
 
 		//--------------------------
 		// add myself as a listener to the GuiLogAppender
@@ -1042,6 +1189,9 @@ public class MainFrame
 		if (ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE.equals(actionCmd))
 			action_toggleAutoRefreshOnTabChange(e);
 
+		if (ACTION_GROUP_TCP_IN_TAB_PANE.equals(actionCmd))
+			action_toggleGroupTcpInTabPane(e);
+
 		if (ACTION_OPEN_REFRESH_RATE.equals(actionCmd))
 			action_refreshRate(e);
 
@@ -1058,7 +1208,7 @@ public class MainFrame
 			AseConfigViewDialog.showDialog(this);
 
 		if (ACTION_OPEN_TCP_PANEL_CONFIG.equals(actionCmd))
-			TcpConfigDialog.showDialog(_instance);			
+			TcpConfigDialog.showDialog(_instance);
 
 		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
 			new ProcessDetailFrame(-1);
@@ -1369,28 +1519,21 @@ public class MainFrame
 	public void stateChanged(ChangeEvent e)
 	{
 		Object source = e.getSource();
-		
+
 		//------------------------------------------------------
 		// TabPane changes
 		//------------------------------------------------------
-		if (source.equals(_mainTabbedPane))
+		if ( source instanceof JTabbedPane && _mainTabbedPane.contains((JTabbedPane)source) )
 		{
-			int selectedTab = _mainTabbedPane.getSelectedIndex();
-			if (selectedTab < 0)
-				return;
-
-			String currentTab = _mainTabbedPane.getTitleAt(selectedTab);
-			if (_logger.isDebugEnabled())
-			{
-				_logger.debug("state changed for panel named '" + currentTab + "'.");
-			}
-	
+			String selectedTabTitle = _mainTabbedPane.getSelectedTitle(true);
+			if (selectedTabTitle == null)
+				return;	
 	
 			// LOOP all TabularCntrPanel to check which is the current one...
 			// if it should be done
 			for (TabularCntrPanel tcp : _TcpMap.values())
 			{
-				if (currentTab.equals(tcp.getPanelName()))
+				if (selectedTabTitle.equals(tcp.getPanelName()))
 				{
 					_currentPanel = tcp;
 					_currentPanel.tabSelected();
@@ -2150,6 +2293,15 @@ public class MainFrame
 	{
 		saveProps();
 	}
+	private void action_toggleGroupTcpInTabPane(ActionEvent e)
+	{
+		saveProps();
+		SwingUtils.showInfoMessage(this, "Restart is needed to take effect", 
+			"<html>" +
+			"A <b>restart</b> of the application is needed for this change to take effect.<br>" +
+			"Sorry for that..." +
+			"</html>");
+	}
 
 	private void action_refreshRate(ActionEvent e)
 	{
@@ -2536,13 +2688,67 @@ public class MainFrame
 		if ( ! AseTune.hasGUI() )
 			return;
 
-		_mainTabbedPane.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
+		String groupName = tcp.getGroupName();
+		if ( ! StringUtil.isNullOrBlank(groupName) && useTcpGroups())
+		{
+			GTabbedPane gtp = _mainTabbedPane;
+			int index = gtp.indexOfTab(groupName);
+			if (index >= 0)
+			{
+				Component comp = _mainTabbedPane.getComponentAt(index);
+				if (comp instanceof GTabbedPane)
+					gtp = (GTabbedPane) comp;
+			}
+			else
+			{
+				gtp = new GTabbedPane();
+				_mainTabbedPane.addTab(groupName, getGroupIcon(groupName), gtp, getGroupToolTipText(groupName));
+			}
+			gtp.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
+		}
+		else
+		{
+			_mainTabbedPane.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
+		}
+
 		_TcpMap.put(tcp.getPanelName(), tcp);
 	}
 
 	/**
+	 * get icon for a specific group
+	 * @param groupName
+	 * @return an icon for the specified group, null if unknown/undefined group
 	 */
-	public static JTabbedPane getTabbedPane()
+	private static Icon getGroupIcon(String groupName)
+	{
+		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return TCP_GROUP_ICON_OBJECT_ACCESS;
+		if (TCP_GROUP_SERVER       .equals(groupName)) return TCP_GROUP_ICON_SERVER;
+		if (TCP_GROUP_DISK         .equals(groupName)) return TCP_GROUP_ICON_DISK;
+		if (TCP_GROUP_CACHE        .equals(groupName)) return TCP_GROUP_ICON_CACHE;
+		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return TCP_GROUP_ICON_HOST_MONITOR;
+		if (TCP_GROUP_UDC          .equals(groupName)) return TCP_GROUP_ICON_UDC;
+		return null;
+	}
+
+	/**
+	 * get tooltip for a specific group
+	 * @param groupName
+	 * @return an tooltip text for the specified group, null if unknown/undefined group
+	 */
+	private static String getGroupToolTipText(String groupName)
+	{
+		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return "<html>Performace Counters on Object and various Statements that Accesses data</html>";
+		if (TCP_GROUP_SERVER       .equals(groupName)) return "<html>Performace Counters on a Server Level</html>";
+		if (TCP_GROUP_DISK         .equals(groupName)) return "<html>Performace Counters for Devices / Disk acesses</html>";
+		if (TCP_GROUP_CACHE        .equals(groupName)) return "<html>Performace Counters for various Caches</html>";
+		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return "<html>Performace Counters on a Operating System Level</html>";
+		if (TCP_GROUP_UDC          .equals(groupName)) return "<html>Performace Counters that <b>you</b> have defined</html>";
+		return null;
+	}
+	
+	/**
+	 */
+	public static GTabbedPane getTabbedPane()
 	{
 		// We are probably in NO-GUI mode
 		if ( ! AseTune.hasGUI() )
@@ -3025,7 +3231,7 @@ public class MainFrame
 	 */
 	public static Component getActiveTab()
 	{
-		return _mainTabbedPane.getSelectedComponent();
+		return _mainTabbedPane.getSelectedComponent(true);
 	}
 	
 	/**
@@ -3097,6 +3303,7 @@ public class MainFrame
 			mf._refreshRate_mi            .setEnabled(true);
 			mf._autoResizePcTable_mi      .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi .setEnabled(true); // always TRUE
+			mf._groupTcpInTabPane_mi      .setEnabled(true); // always TRUE
 			mf._aseConfigView_mi          .setEnabled(true);
 			mf._tcpSettingsConf_mi        .setEnabled(true); // always TRUE
 			mf._counterTabView_mi         .setEnabled(true); // always TRUE
@@ -3144,6 +3351,7 @@ public class MainFrame
 			mf._refreshRate_mi            .setEnabled(false);
 			mf._autoResizePcTable_mi      .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi .setEnabled(true); // always TRUE
+			mf._groupTcpInTabPane_mi      .setEnabled(true); // always TRUE
 			mf._aseConfigView_mi          .setEnabled(true);
 			mf._tcpSettingsConf_mi        .setEnabled(true); // always TRUE
 			mf._counterTabView_mi         .setEnabled(true); // always TRUE
@@ -3191,6 +3399,7 @@ public class MainFrame
 			mf._refreshRate_mi            .setEnabled(false);
 			mf._autoResizePcTable_mi      .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi .setEnabled(true); // always TRUE
+			mf._groupTcpInTabPane_mi      .setEnabled(true); // always TRUE
 			mf._aseConfigView_mi          .setEnabled(false);
 			mf._tcpSettingsConf_mi        .setEnabled(true); // always TRUE
 			mf._counterTabView_mi         .setEnabled(true); // always TRUE
@@ -3637,6 +3846,7 @@ public class MainFrame
 
 		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
 		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
+		tmpConf.setProperty(PROPKEY_useTcpGroups,                          _groupTcpInTabPane_mi.isSelected());
 
 		tmpConf.setProperty("mainTabbedPane.tabLayoutPolicy", _mainTabbedPane.getTabLayoutPolicy());
 
@@ -3703,6 +3913,8 @@ public class MainFrame
 
 		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 		_autoRefreshOnTabChange_mi.setSelected(bool);
+
+		_groupTcpInTabPane_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_useTcpGroups, DEFAULT_useTcpGroups));
 
 	}
 	/*---------------------------------------------------
@@ -3856,4 +4068,125 @@ public class MainFrame
 			_mainframe._offlineSelectionTimer.stop();
 		}
 	}
-}
+
+	/**
+	 * Extended GTabbedPane, which checks all subTabs if they have valid data, if so paint a green stripe...<br>
+	 * This will simply "highlight" that we have valid data under this tab.
+	 */
+	private static class XGTabbedPane
+	extends GTabbedPane 
+	{
+		private static final long serialVersionUID = 1L;
+
+		// Decides if we should place the indicator to left or right on the icon.
+		private boolean _indicatorToLeft = true;
+		
+		private Icon[] _originIcons    = {};
+		private Icon[] _indicatorIcons = {};
+
+		public XGTabbedPane(String name)
+		{
+			super(name);
+
+			// check what look and feel we are using, then decide where the indicator marker goes
+			// only one I know that has the 'tab' icons to right of the text is 'GTK'
+			String lookAndFeelName = UIManager.getLookAndFeel().getName();
+			_indicatorToLeft = true;
+			if ( lookAndFeelName != null && lookAndFeelName.equals("GTK look and feel") )
+				_indicatorToLeft = false;
+		}
+
+		@Override
+		public void paintSpecial()
+		{
+			// First call the super to do it's job
+			super.paintSpecial();
+
+			// resize origin/indicator array
+			if (_originIcons.length < getTabCount())
+			{
+				_originIcons    = new Icon[getTabCount()];
+				_indicatorIcons = new Icon[getTabCount()];
+
+				// Initialize the 'origin' icon
+				// NOTE: this will not work if we have changed the original icon since we have added icons... 
+				//       then it might be better to wrok with a ArrayList instead 
+				for (int t=0; t<getTabCount(); t++)
+					_originIcons[t] = getIconAt(t);
+			}
+
+			// Loop the tabs, in this (the main tabs)
+			for (int tcL1=0; tcL1<getTabCount(); tcL1++)
+			{
+				// We only need to check sub components if the tab is a TabbedPane
+				Component compL1 = getComponentAt(tcL1);
+				if (compL1 instanceof JTabbedPane)
+				{
+					JTabbedPane tpL1 = (JTabbedPane) compL1;
+
+					// If we dont have a icon for the tab, go to the next tab
+					Icon icon = _originIcons[tcL1];
+					if (icon == null)
+						continue;
+
+					boolean anyTcpHasValidSampleData = false;
+
+					// Now loop the second level
+					for (int tcL2=0; tcL2<tpL1.getTabCount(); tcL2++)
+					{
+						// we only chek "valid sample data" for TabularCntrPanel components
+						Component compL2 = tpL1.getComponentAt(tcL2);
+						if (compL2 instanceof TabularCntrPanel)
+						{
+							TabularCntrPanel tcp = (TabularCntrPanel) compL2;
+							if (tcp.hasValidSampleData())
+							{
+								anyTcpHasValidSampleData = true;
+								break; // noo need to contune when we have found one...
+							}
+						}
+					}
+
+					// set INDICATOR or ORIGINAL icon
+					if (anyTcpHasValidSampleData)
+					{
+						// Get cached indicator icon, if none was found create one...
+						Icon indicatorIcon = _indicatorIcons[tcL1]; 
+						if ( indicatorIcon == null )
+						{
+							// Image, which we will paint a green stripe and the Icon on
+							BufferedImage im = new BufferedImage(icon.getIconWidth() + 2, icon.getIconHeight(), BufferedImage.TRANSLUCENT);
+							Graphics2D img = im.createGraphics();
+							img.setColor(Color.GREEN);
+
+							if ( _indicatorToLeft )
+							{
+								icon.paintIcon(null, img, 2, 0);
+								img.fillRect(0, 0, 2, icon.getIconHeight());
+							}
+							else
+							{
+								icon.paintIcon(null, img, 0, 0);
+								img.fillRect(icon.getIconWidth(), 0, 2, icon.getIconHeight());
+							}
+
+							// Cache the created indicator icon
+							indicatorIcon = new ImageIcon(im);
+							_indicatorIcons[tcL1] = indicatorIcon;
+						}
+
+						// set the "green" striped icon
+						setIconAt(tcL1, indicatorIcon);
+					}
+					else
+					{
+						// Swap icon back to original
+						Icon originIcon = _originIcons[tcL1]; 
+						setIconAt(tcL1, originIcon);
+					}
+				} // end: compL1
+			} // end: loop tabs on mainTabbedPane
+		} // end: paintSpecial()
+	} // end: XGTabbedPane
+
+} // END: MAIN CLASS

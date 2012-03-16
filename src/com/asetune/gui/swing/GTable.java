@@ -32,6 +32,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableModelEvent;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
@@ -48,6 +49,7 @@ import org.jdesktop.swingx.table.TableColumnExt;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.Version;
+import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.utils.Configuration;
@@ -320,6 +322,43 @@ extends JXTable
 //			}
 //		}
 //	}
+
+	/**
+	 * Like findColumn() on the TableModel<br>
+	 * @return -1: If the column name is doesn't exists in the view (could be hidden) nor in the Model
+	 */
+	public int findViewColumn(String colName)
+	{
+		int viewColPos  = -1;
+		int modelColPos = -1;
+
+		// Get the model position
+		TableModel tm = getModel();
+		if (tm instanceof AbstractTableModel)
+		{
+			modelColPos = ((AbstractTableModel)tm).findColumn(colName);
+		}
+		else
+		{
+			for (int c=0; c<tm.getColumnCount(); c++) 
+			{
+				if (colName.equals(tm.getColumnName(c))) 
+				{
+					modelColPos = c;
+					break;
+				}
+			}
+		}
+		if (modelColPos < 0)
+			return -1;
+
+		viewColPos = convertColumnIndexToView(modelColPos);
+		if (viewColPos < 0)
+			_logger.debug(getName()+ ": findViewColumn('"+colName+"'): modelIndex="+modelColPos+", viewIndex="+viewColPos+", the column must be hidden in the view.");
+
+		return viewColPos;
+	}
+
 
     public void printColumnLayout(String prefix)
 	{
@@ -749,13 +788,16 @@ extends JXTable
 				TableModel tm = getModel();
 				if (tm instanceof CountersModel)
 				{
-					CountersModel cm = (CountersModel)tm;
-					int modelPkRow = cm.getCounterData().getRowNumberForPkValue(_lastSelectedModelPk);
-					if (modelPkRow >= 0)
+					CounterTableModel ctm = ((CountersModel)tm).getCounterData();
+					if (ctm != null)
 					{
-						int viewRow = convertRowIndexToView(modelPkRow);
-						if ( viewRow >= 0 )
-							getSelectionModel().setSelectionInterval(viewRow, viewRow);
+						int modelPkRow = ctm.getRowNumberForPkValue(_lastSelectedModelPk);
+						if (modelPkRow >= 0)
+						{
+							int viewRow = convertRowIndexToView(modelPkRow);
+							if ( viewRow >= 0 )
+								getSelectionModel().setSelectionInterval(viewRow, viewRow);
+						}
 					}
 				}
 			}

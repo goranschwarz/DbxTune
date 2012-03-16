@@ -830,6 +830,17 @@ implements Cloneable, ITableTooltip
 			getTabPanel().setQueryTimeout(queryTimeout);
 	}
 
+	/** Used by the: Create 'Offline Session' Wizard */
+	public Configuration getLocalConfiguration()
+	{
+		return null;
+	}
+	/** Used by the: Create 'Offline Session' Wizard */
+	public String getLocalConfigurationDescription(String propName)
+	{
+		return "";
+	}
+
 	/**
 	 * Called from GeCountersGui/GetCountersNoGui to check if we should querey the monitored server
 	 * for Counters. 
@@ -1373,7 +1384,11 @@ implements Cloneable, ITableTooltip
 								CounterTableModel ctmAbs  = cm.getCounterDataAbs();
 								CounterTableModel ctmDiff = cm.getCounterDataDiff();
 								CounterTableModel ctmRate = cm.getCounterDataRate();
-								if (ctmRate != null)
+								if (ctmRate == null)
+								{
+									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+								}
+								else
 								{
 									int spid_pos = ctmRate.findColumn("SPID");
 									int rowCount = ctmRate.getRowCount();
@@ -1416,6 +1431,7 @@ implements Cloneable, ITableTooltip
 										}
 									}
 								}
+								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
 							}
 						}
 					} // end: offline
@@ -1844,6 +1860,8 @@ implements Cloneable, ITableTooltip
 
 	public boolean equalsTabPanel(Component comp)
 	{
+		if (comp == null)
+			return false;
 		return comp.equals(tabPanel);
 	}
 
@@ -2644,6 +2662,23 @@ implements Cloneable, ITableTooltip
 	{
 	}
 
+
+	/** 
+	 * In here we can choose the discard/change values from ResultSet, when doing SQL Refresh <br>
+	 * overridden to change the "resultset"
+	 * 
+	 * @param cnt the SamplingCnt object, if you want to access meta data
+	 * @param thisRow a List<Object> with the currect row we just pulled of from the ResultSet
+	 * @param prevRow a List<Object> with the last row that was added to the SamplingCnt
+	 * 
+	 * @return true to add row, false to discard row
+	 */
+	public boolean hookInSqlRefreshBeforeAddRow(SamplingCnt cnt, List<Object> thisRow, List<Object> prevRow)
+	{
+		return true;
+	}
+
+
 	/**
 	 * Check if we are connected to any "online" data source 
 	 * @return
@@ -3326,7 +3361,6 @@ implements Cloneable, ITableTooltip
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
 
-
 	/**
 	 * Request DDL information for first 10 rows
 	 * 
@@ -3805,7 +3839,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getRowIdsWhere: Cant find the column '" + colname + "'.");
+			_logger.info("getRowIdsWhere: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -3850,7 +3884,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getMaxValue: Cant find the column '" + colname + "'.");
+			_logger.info("getMaxValue: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -3910,7 +3944,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getMinValue: Cant find the column '" + colname + "'.");
+			_logger.info("getMinValue: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -3970,7 +4004,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getSumValue: Cant find the column '" + colname + "'.");
+			_logger.info("getSumValue: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -4029,7 +4063,7 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.info("getCountGtZero: Cant find the column '" + colname + "'.");
+			_logger.info("getCountGtZero: Can't find the column '" + colname + "'.");
 			return 0;
 		}
 		if (data.getRowCount() == 0)

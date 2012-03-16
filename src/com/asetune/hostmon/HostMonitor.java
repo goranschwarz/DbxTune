@@ -594,9 +594,12 @@ implements Runnable
 	 */
 	public void shutdown()
 	{
-		_logger.info(getModuleName()+" Was asked to to a shutdown.");
 		_running = false;
-		_thread.interrupt();
+		if (_thread != null)
+		{
+			_logger.info(getModuleName()+" Was asked to to a shutdown.");
+			_thread.interrupt();
+		}
 	}
 
 	/**

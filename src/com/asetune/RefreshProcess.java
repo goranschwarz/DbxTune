@@ -1502,7 +1502,7 @@ public class RefreshProcess extends Thread
 		}
 		else
 		{
-			pdf.batchTextArea.setText("Cant find text for procedure.");
+			pdf.batchTextArea.setText("Can't find text for procedure.");
 		}
 	}
 

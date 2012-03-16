@@ -80,6 +80,32 @@ CREATE TABLE asemon_connect_info
 		PRIMARY KEY (checkId, connectId, serverAddTime)
 );
 
+CREATE TABLE asemon_mda_info
+(
+		type                    char(1),
+		checkId                 int,
+        serverAddTime           timestamp,
+        clientTime              timestamp,
+        userName                varchar(30),
+
+        srvVersion              int,
+        isClusterEnabled        int,
+
+        rowId                   int,
+        expectedRows            int,
+
+        TableName               varchar(255),
+		TableID                 int,
+		ColumnName              varchar(255),
+		ColumnID                int,
+		TypeName                varchar(30),
+		Length                  int,
+		Indicators              int,
+		Description             varchar(400),
+
+		PRIMARY KEY (type, srvVersion, isClusterEnabled, TableName, ColumnName)
+);
+
 CREATE TABLE asemon_udc_info
 (
 		checkId                 int,
@@ -113,6 +139,48 @@ CREATE TABLE asemon_counter_usage_info
 );
 
 CREATE TABLE asemon_error_info
+(
+	checkId                 int,
+	sendCounter             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+
+	srvVersion              varchar(30),
+	appVersion              varchar(30),
+
+	logLevel                varchar(10),
+	logThreadName           varchar(50),
+	logClassName            varchar(50),
+	logLocation             varchar(100),
+	logMessage              varchar(4096),
+	logStacktrace           varchar(4096),
+
+	PRIMARY KEY (checkId, sendCounter, serverAddTime)
+);
+
+CREATE TABLE asemon_error_info2
+(
+	checkId                 int,
+	sendCounter             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+
+	srvVersion              varchar(30),
+	appVersion              varchar(30),
+
+	logLevel                varchar(10),
+	logThreadName           varchar(50),
+	logClassName            varchar(50),
+	logLocation             varchar(100),
+	logMessage              varchar(4096),
+	logStacktrace           varchar(4096),
+
+	PRIMARY KEY (checkId, sendCounter, serverAddTime)
+);
+
+CREATE TABLE asemon_error_info_save
 (
 	checkId                 int,
 	sendCounter             int,

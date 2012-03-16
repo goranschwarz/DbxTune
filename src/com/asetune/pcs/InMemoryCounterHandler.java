@@ -85,7 +85,7 @@ implements Runnable
 		int hist = Configuration.getCombinedConfiguration().getIntProperty("InMemoryCounterHandler.history", -1);
 		if (hist == -1)
 		{
-			_logger.info("Cant find property 'InMemoryCounterHandler.history', using default '"+_saveTimeInSec+"'.");
+			_logger.info("Can't find property 'InMemoryCounterHandler.history', using default '"+_saveTimeInSec+"'.");
 		}
 		else
 		{

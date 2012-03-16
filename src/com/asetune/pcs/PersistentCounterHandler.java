@@ -639,7 +639,7 @@ implements Runnable
 	
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
-					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getObjectName()+"' ";
+					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
 	
 					ss = new AseSqlScript(conn, 10);
 					try	{ 

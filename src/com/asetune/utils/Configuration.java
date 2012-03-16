@@ -120,7 +120,7 @@ extends Properties
 		Configuration conf = _instMap.get(confName);
 		if ( conf == null )
 		{
-			_logger.warn("Cant find any configuration named '"+confName+"', creating a new one.");
+			_logger.warn("Can't find any configuration named '"+confName+"', creating a new one.");
 			conf = new Configuration();
 			_instMap.put(confName, conf);
 		}

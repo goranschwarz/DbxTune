@@ -1,5 +1,6 @@
 package com.asetune.gui.swing;
 
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
@@ -29,11 +30,13 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -72,7 +75,10 @@ public class GTabbedPaneViewDialog
 	private JButton                 _apply          = new JButton("Apply");
 	private int                     _dialogReturnSt = JOptionPane.CANCEL_OPTION; //JOptionPane.CLOSED_OPTION;
 
-	private enum TabPos {Icon, Visible, Name, Description}; 
+	/** used to determine if the columns 'GroupIcon' and 'GroupName' should be visible when showing the dialog */
+	private boolean _hasGroups = false;
+
+	private enum TabPos {GroupIcon, GroupName, TabIcon, TabVisible, TabName, TabDescription}; 
 
 	private GTabbedPaneViewDialog(Frame owner, GTabbedPane gTabbedPane)
 	{
@@ -202,15 +208,21 @@ public class GTabbedPaneViewDialog
 		List<String> newTabOrder = new ArrayList<String>();
 
 		// Loop all the rows in the table and make changes
-		for (int r=0; r<_table.getRowCount(); r++)
+		TableModel tm = _table.getModel();
+		for (int r=0; r<tm.getRowCount(); r++)
 		{
-			String tabName  = (String) _table.getValueAt(r, TabPos.Name.ordinal());
-			Boolean visible = (Boolean)_table.getValueAt(r, TabPos.Visible.ordinal());
+			String groupName = (String) tm.getValueAt(r, TabPos.GroupName .ordinal());
+			String tabName   = (String) tm.getValueAt(r, TabPos.TabName   .ordinal());
+			Boolean visible  = (Boolean)tm.getValueAt(r, TabPos.TabVisible.ordinal());
 
-			_gTabbedPane.setVisibleAtModel(tabName, visible);
+			_gTabbedPane.setVisibleAtModel(groupName, tabName, visible);
+
+			String addStr = tabName;
+			if ( ! StringUtil.isNullOrBlank(groupName) )
+				addStr = groupName + GTabbedPane.GROUP_STR_SEPARATOR + tabName;
 
 			if (visible)
-				newTabOrder.add(tabName);
+				newTabOrder.add(addStr);
 		}
 
 		// make the new tab order in the GTabbedPane
@@ -239,8 +251,19 @@ public class GTabbedPaneViewDialog
 			DefaultTableModel dtm = (DefaultTableModel) _table.getModel();
 			if (toRow >= 0)
 			{
-				dtm.moveRow(row, row, toRow);
-				_table.getSelectionModel().setSelectionInterval(toRow, toRow);
+				String atGroupName = dtm.getValueAt(row,   TabPos.GroupName.ordinal()) + "";
+				String toGroupName = dtm.getValueAt(toRow, TabPos.GroupName.ordinal()) + "";
+
+				if (atGroupName.equals(toGroupName))
+				{
+					dtm.moveRow(row, row, toRow);
+					_table.getSelectionModel().setSelectionInterval(toRow, toRow);
+				}
+				else
+				{
+					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>"+atGroupName+"</b><br>To group: <b>"+toGroupName+"</b><br></html>");
+					return;
+				}
 			}
 		}
 
@@ -257,8 +280,19 @@ public class GTabbedPaneViewDialog
 			DefaultTableModel dtm = (DefaultTableModel) _table.getModel();
 			if (toRow < dtm.getRowCount())
 			{
-				dtm.moveRow(row, row, toRow);
-				_table.getSelectionModel().setSelectionInterval(toRow, toRow);
+				String atGroupName = dtm.getValueAt(row,   TabPos.GroupName.ordinal()) + "";
+				String toGroupName = dtm.getValueAt(toRow, TabPos.GroupName.ordinal()) + "";
+
+				if (atGroupName.equals(toGroupName))
+				{
+					dtm.moveRow(row, row, toRow);
+					_table.getSelectionModel().setSelectionInterval(toRow, toRow);
+				}
+				else
+				{
+					SwingUtils.showInfoMessage(this, "Can't move to another group", "<html>Trying to move into a new group<br>This is not supported for the moment<br><br>From group: <b>"+atGroupName+"</b><br>To group: <b>"+toGroupName+"</b><br></html>");
+					return;
+				}
 			}
 		}
 
@@ -302,21 +336,35 @@ public class GTabbedPaneViewDialog
 		}
 	}
 
-	private void toTabOrder(DefaultTableModel tm, List<String> originTabOrder)
+	private void toTabOrder(DefaultTableModel tm, List<String> tabOrder)
 	{
 //		System.out.println("toTabOrder(): ___CALLED___: originTabOrder()="+originTabOrder.size());
 //		System.out.println("toTabOrder(): originTabOrderList="+originTabOrder);
-		for (int oi=0; oi<originTabOrder.size(); oi++)
+		for (int oi=0; oi<tabOrder.size(); oi++)
 		{
-			String tabName = originTabOrder.get(oi);
+			String entry = tabOrder.get(oi);
+			String[] sa = entry.split(GTabbedPane.GROUP_STR_SEPARATOR);
+
+			String groupName = "";
+			String tabName   = entry;
+			if (sa.length > 1)
+			{
+				groupName = sa[ sa.length - 2 ];
+				tabName   = sa[ sa.length - 1 ];
+			}
 			int moveRow = -1;
 			for (int tr=0; tr<tm.getRowCount(); tr++)
 			{
-//				System.out.println("toTabOrder()-SEARCH: originListIndex="+oi+", originTabName="+StringUtil.left(tabName, 20)+", tabRow="+tr+", tabRowName="+tm.getValueAt(tr, TabPos.Name.ordinal()));
-				if ( tabName.equals( tm.getValueAt(tr, TabPos.Name.ordinal()) ) )
+//				System.out.println("toTabOrder()-SEARCH: originListIndex="+oi+", originTabName="+StringUtil.left(tabName, 20)+", tabRow="+tr+", tabRowName="+tm.getValueAt(tr, TabPos.TabName.ordinal()));
+				Object rowTabName   = tm.getValueAt(tr, TabPos.TabName  .ordinal());
+				Object rowGroupName = tm.getValueAt(tr, TabPos.GroupName.ordinal());
+				if (rowGroupName == null)
+					rowGroupName = "";
+
+				if ( tabName.equals(rowTabName) && (groupName.equals(rowGroupName)) )
 				{
 					moveRow = tr;
-//					System.out.println("toTabOrder()--FOUND: tabRow="+tr+", tabRowName="+tm.getValueAt(tr, TabPos.Name.ordinal()));
+//					System.out.println("toTabOrder()--FOUND: tabRow="+tr+", tabRowName="+tm.getValueAt(tr, TabPos.TabName.ordinal()));
 					break;
 				}
 			}
@@ -350,13 +398,14 @@ public class GTabbedPaneViewDialog
 		boolean enabled = false;
 
 		// Check for changes
-		for (int r=0; r<_table.getRowCount(); r++)
+		TableModel tm = _table.getModel();
+		for (int r=0; r<tm.getRowCount(); r++)
 		{
-			String  rowTabName = (String) _table.getValueAt(r, TabPos.Name.ordinal());
-			Boolean rowVisible = (Boolean)_table.getValueAt(r, TabPos.Visible.ordinal());
+			String  rowTabName = (String) tm.getValueAt(r, TabPos.TabName.ordinal());
+			Boolean rowVisible = (Boolean)tm.getValueAt(r, TabPos.TabVisible.ordinal());
 
-			String  startTabName = (String) _tableModelAtStart.getValueAt(r, TabPos.Name.ordinal());
-			Boolean startVisible = (Boolean)_tableModelAtStart.getValueAt(r, TabPos.Visible.ordinal());
+			String  startTabName = (String) _tableModelAtStart.getValueAt(r, TabPos.TabName.ordinal());
+			Boolean startVisible = (Boolean)_tableModelAtStart.getValueAt(r, TabPos.TabVisible.ordinal());
 
 			if ( ! rowTabName.equals(startTabName) ) enabled = true;
 			if ( ! rowVisible.equals(startVisible) ) enabled = true;
@@ -383,10 +432,12 @@ public class GTabbedPaneViewDialog
 		// Create a TABLE
 		Vector<String> tabHead = new Vector<String>();
 		tabHead.setSize(TabPos.values().length);
-		tabHead.set(TabPos.Icon       .ordinal(), "Icon");
-		tabHead.set(TabPos.Visible    .ordinal(), "Visible");
-		tabHead.set(TabPos.Name       .ordinal(), "Name");
-		tabHead.set(TabPos.Description.ordinal(), "Description");
+		tabHead.set(TabPos.GroupIcon     .ordinal(), "Group");
+		tabHead.set(TabPos.GroupName     .ordinal(), "GroupName");
+		tabHead.set(TabPos.TabIcon       .ordinal(), "Icon");
+		tabHead.set(TabPos.TabVisible    .ordinal(), "Visible");
+		tabHead.set(TabPos.TabName       .ordinal(), "Name");
+		tabHead.set(TabPos.TabDescription.ordinal(), "Description");
 
 		Vector<Vector<Object>> tabData = populateTable();
 
@@ -396,13 +447,14 @@ public class GTabbedPaneViewDialog
 
 			public Class<?> getColumnClass(int column) 
 			{
-				if (column == TabPos.Icon   .ordinal()) return Icon.class;
-				if (column == TabPos.Visible.ordinal()) return Boolean.class;
+				if (column == TabPos.GroupIcon .ordinal()) return Icon.class;
+				if (column == TabPos.TabIcon   .ordinal()) return Icon.class;
+				if (column == TabPos.TabVisible.ordinal()) return Boolean.class;
 				return Object.class;
 			}
 			public boolean isCellEditable(int row, int col)
 			{
-				if (col == TabPos.Visible.ordinal())
+				if (col == TabPos.TabVisible.ordinal())
 					return true;
 
 				return false;
@@ -418,30 +470,87 @@ public class GTabbedPaneViewDialog
 		table.setShowGrid(false);
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+		// Hide columns if not in group mode
+		if ( ! _hasGroups )
+		{
+			TableColumnModelExt tcmx = (TableColumnModelExt)table.getColumnModel();
+			tcmx.getColumnExt("Group")    .setVisible(false);
+			tcmx.getColumnExt("GroupName").setVisible(false);
+		}
+
 		SwingUtils.calcColumnWidths(table);
 
 		return table;
 	}
 
+//	private Vector<Vector<Object>> populateTable()
+//	{
+//		Vector<Vector<Object>> tab = new Vector<Vector<Object>>();
+//		Vector<Object>         row = new Vector<Object>();
+//
+//		for (int t=0; t<_gTabbedPane.getModelTabCount(); t++)
+//		{
+//			row = new Vector<Object>();
+//			row.setSize(TabPos.values().length);
+//			
+//			row.set(TabPos.TabIcon       .ordinal(), _gTabbedPane.getIconAtModel(t));
+//			row.set(TabPos.TabVisible    .ordinal(), _gTabbedPane.isVisibleAtModel(t));
+//			row.set(TabPos.TabName       .ordinal(), _gTabbedPane.getTitleAtModel(t));
+//			row.set(TabPos.TabDescription.ordinal(), StringUtil.stripHtml(_gTabbedPane.getToolTipTextAtModel(t)));
+//
+//			tab.add(row);
+//		}
+//
+//		return tab;
+//	}
 	private Vector<Vector<Object>> populateTable()
 	{
 		Vector<Vector<Object>> tab = new Vector<Vector<Object>>();
-		Vector<Object>         row = new Vector<Object>();
+		populateTable(null, 0, _gTabbedPane, tab);
 
-		for (int t=0; t<_gTabbedPane.getModelTabCount(); t++)
-		{
-			row = new Vector<Object>();
-			row.setSize(TabPos.values().length);
-			
-			row.set(TabPos.Icon       .ordinal(), _gTabbedPane.getIconAtModel(t));
-			row.set(TabPos.Visible    .ordinal(), _gTabbedPane.isVisibleAtModel(t));
-			row.set(TabPos.Name       .ordinal(), _gTabbedPane.getTitleAtModel(t));
-			row.set(TabPos.Description.ordinal(), StringUtil.stripHtml(_gTabbedPane.getToolTipTextAtModel(t)));
-
-			tab.add(row);
-		}
+//System.out.println("GTabbedPane:populateTable() table="+tab);
+//		for (int i=0; i<tab.size(); i++)
+//			System.out.println("row("+i+")="+tab.get(i));
+//		for (Vector<Object> v : tab)
+//			System.out.println("row="+v);
 
 		return tab;
+	}
+
+	private void populateTable(GTabbedPane parentTabPane, int parentPos, GTabbedPane tabPane, Vector<Vector<Object>> table)
+	{
+//System.out.println("GTabbedPane:populateTable() parentTabPane="+(parentTabPane==null?"null":parentTabPane.getTitleAtModel(parentPos))+", parentPos="+parentPos);
+		for (int t=0; t<tabPane.getModelTabCount(); t++)
+		{
+			Component comp = tabPane.getComponentAt(t);
+			if (comp instanceof GTabbedPane)
+				populateTable(tabPane, t, (GTabbedPane)comp, table);
+			else
+			{
+				Vector<Object>         row = new Vector<Object>();
+
+				row = new Vector<Object>();
+				row.setSize(TabPos.values().length);
+				
+				if (parentTabPane != null)
+				{
+					row.set(TabPos.GroupIcon.ordinal(), parentTabPane.getIconAtModel(parentPos));
+					row.set(TabPos.GroupName.ordinal(), parentTabPane.getTitleAtModel(parentPos));
+					
+					_hasGroups = true;
+				}
+
+				row.set(TabPos.TabIcon       .ordinal(), tabPane.getIconAtModel(t));
+				row.set(TabPos.TabVisible    .ordinal(), tabPane.isVisibleAtModel(t));
+				row.set(TabPos.TabName       .ordinal(), tabPane.getTitleAtModel(t));
+				row.set(TabPos.TabDescription.ordinal(), StringUtil.stripHtml(tabPane.getToolTipTextAtModel(t)));
+
+//System.out.println("  GTabbedPane:populateTable() row.set(tabName='"+tabPane.getTitleAtModel(t)+"')");
+//System.out.println("  -table.add:row="+row);
+				table.add(row);				
+			}
+
+		}
 	}
 
 	//--------------------------------------------------
@@ -473,6 +582,24 @@ public class GTabbedPaneViewDialog
 			_gtabs.add(  "6-Data Caches", new TabularCntrPanel("6-Data Caches") );
 			_gtabs.add(  "7-Pools",       new TabularCntrPanel("7-Pools") );
 			_gtabs.add(  "8-Devices",     new TabularCntrPanel("8-Devices") );
+			
+			GTabbedPane grp1 = new GTabbedPane();
+				grp1.add("0-grp1", new TabularCntrPanel("0-grp1"));
+				grp1.add("1-grp1", new TabularCntrPanel("1-grp1"));
+				grp1.add("2-grp1", new TabularCntrPanel("2-grp1"));
+				grp1.add("3-grp1", new TabularCntrPanel("3-grp1"));
+			GTabbedPane grp2 = new GTabbedPane();
+				grp2.add("0-grp2", new TabularCntrPanel("0-grp2"));
+				grp2.add("1-grp2", new TabularCntrPanel("1-grp2"));
+				grp2.add("2-grp2", new TabularCntrPanel("2-grp2"));
+			GTabbedPane grp3 = new GTabbedPane();
+				grp3.add("0-grp3", new TabularCntrPanel("0-grp3"));
+				grp3.add("1-grp3", new TabularCntrPanel("1-grp3"));
+
+			_gtabs.add("Group-1", grp1);
+			_gtabs.add("Group-2", grp2);
+			_gtabs.add("Group-3", grp3);
+
 			add(_gtabs);
 
 			_gtabs.addChangeListener(this);

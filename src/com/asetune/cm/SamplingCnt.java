@@ -4,6 +4,9 @@
 
 package com.asetune.cm;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
@@ -24,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.StringUtil;
 
 
@@ -305,7 +309,10 @@ extends CounterTableModel
 
 	public String getPkValue(int row)
 	{
-		return _rowidToKey.get(row);
+		if (_rowidToKey != null && row >= 0 && row < _rowidToKey.size())
+			return _rowidToKey.get(row);
+
+		return null;
 	}
 	public int getRowNumberForPkValue(String pkStr)
 	{
@@ -432,6 +439,165 @@ extends CounterTableModel
 		}
 	}
 
+//	public boolean getCnt(CountersModel cm, Connection conn, String sql, List<String> pkList)
+//	throws SQLException
+//	{
+//		int queryTimeout = cm.getQueryTimeout();
+//		if (_logger.isDebugEnabled())
+//			_logger.debug(_name+": queryTimeout="+queryTimeout);
+//
+//		try
+//		{
+//			String sendSql = "select getdate() \n" + sql;
+//
+//			Statement stmnt = conn.createStatement();
+//			ResultSet rs;
+//
+//			stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+_name+"'.");
+//
+//			_rows   = new ArrayList<List<Object>>();
+//
+//			//FIXME: allow 'go' in the string, then we should send multiple batches
+//			//       this will take care about creating tempdb tables prior to executing a batch that depends on it. 
+//
+//			if (_logger.isTraceEnabled())
+//			{
+//				_logger.trace("Sending SQL: "+sendSql);
+//			}
+//
+//			int rsNum = 0;
+//			int rowsAffected = 0;
+//			boolean hasRs = stmnt.execute(sendSql);
+//			checkWarnings(stmnt);
+//			do
+//			{
+//				if (hasRs)
+//				{
+//					// Get next result set to work with
+//					rs = stmnt.getResultSet();
+//					checkWarnings(stmnt);
+//
+//					if (rsNum == 0)
+//					{
+//						while(rs.next())
+//							samplingTime = rs.getTimestamp(1);
+//					}
+//					else
+//					{
+//						ResultSetMetaData rsmd = rs.getMetaData();
+//						if ( ! cm.hasResultSetMetaData() )
+//							cm.setResultSetMetaData(rsmd);
+//
+//						if (readResultset(cm, rs, rsmd, pkList, rsNum))
+//							rs.close();
+//
+//						checkWarnings(stmnt);
+//					}
+//
+//					rsNum++;
+//				}
+//
+//				// Treat update/row count(s)
+//				rowsAffected = stmnt.getUpdateCount();
+//				if (rowsAffected >= 0)
+//				{
+//				}
+//
+//				// Check if we have more result sets
+//				hasRs = stmnt.getMoreResults();
+//
+//				_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+//			}
+//			while (hasRs || rowsAffected != -1);
+//
+//			checkWarnings(stmnt);
+//
+//			// Close the statement
+//			stmnt.close();
+//
+//			return true;
+//		}
+//		catch (SQLException sqlEx)
+//		{
+//			_logger.warn("SamplingCnt("+_name+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+//			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
+//			{
+//				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");
+//			}
+//
+//			//return false;
+//			throw sqlEx;
+//		}
+//	}
+
+	// special stuff:
+	// - Messages on the ResultSet is stored in a column named 'msgAsColValue'
+	// - check the variable "_pos_msgAsColValue" for more...
+	//
+	// if The ResultSet contains a column named "msgAsColValue" or similar, stuff the message in that column
+	// The intention for this is to fix: 
+	//    select show_plan(-1,SSQLID,-1,-1) as Showplan, * from monCachedStatement
+	// the above query delivers: msg + resultset for row row 1, msg + resultset for row row 2...
+	// Example:
+	//
+	// SELECT InstanceID, SSQLID, 
+	//        show_plan(-1,SSQLID,-1,-1) as Showplan, 
+	//        Hashkey, UserID, SUserID, DBID, 
+	//        show_cached_text(SSQLID) as sqltext 
+	// FROM monCachedStatement
+	// 
+	// Msg: QUERY PLAN FOR STATEMENT 1 (at line 1).
+	// Msg:
+	// Msg:
+	// Msg:    STEP 1
+	// Msg:        The type of query is SELECT.
+	// Msg:
+	// Msg:        1 operator(s) under root
+	// Msg:
+	// Msg:       |ROOT:EMIT Operator (VA = 1)
+	// Msg:       |
+	// Msg:       |   |SCAN Operator (VA = 0)
+	// Msg:       |   |  FROM TABLE
+	// Msg:       |   |  monDeadLock
+	// Msg:       |   | External Definition: $monCachedStatement
+	// 
+	// Rs row 1: InstanceID SSQLID      Showplan    Hashkey     UserID      SUserID     DBID
+	// Rs row 1:         sqltext
+	// Rs row 1: ---------- ----------- ----------- ----------- ----------- ----------- ------
+	// Rs row 1:         --------------------------------------------------------------------------------------------------------------------
+	// Rs row 1:          0    71220424           0  1836678972           1           1      1
+	// Rs row 1:         select * from monDeadLock
+	// 
+	// Msg: QUERY PLAN FOR STATEMENT 1 (at line 1).
+	// Msg:
+	// Msg:
+	// Msg:    STEP 1
+	// Msg:        The type of query is SELECT.
+	// Msg:
+	// Msg:        2 operator(s) under root
+	// Msg:
+	// Msg:       |ROOT:EMIT Operator (VA = 2)
+	// Msg:       |
+	// Msg:       |   |SCALAR AGGREGATE Operator (VA = 1)
+	// Msg:       |   |  Evaluate Ungrouped MAXIMUM AGGREGATE.
+	// Msg:       |   |
+	// Msg:       |   |   |SCAN Operator (VA = 0)
+	// Msg:       |   |   |  FROM TABLE
+	// Msg:       |   |   |  monWaitEventInfo
+	// Msg:       |   |   | External Definition: $monCachedStatement
+	// 
+	// Rs row 2: InstanceID SSQLID      Showplan    Hashkey     UserID      SUserID     DBID
+	// Rs row 2:         sqltext
+	// Rs row 2: ---------- ----------- ----------- ----------- ----------- ----------- ------
+	// Rs row 2:         --------------------------------------------------------------------------------------------------------------------
+	// Rs row 2:          0   954699569           0   286605408           1           1      1
+	// Rs row 2:         select max(WaitEventID) from monWaitEventInfo
+
+	/**
+	 * Get counters...
+	 */
 	public boolean getCnt(CountersModel cm, Connection conn, String sql, List<String> pkList)
 	throws SQLException
 	{
@@ -452,120 +618,91 @@ extends CounterTableModel
 
 			_rows   = new ArrayList<List<Object>>();
 
-			if (_logger.isTraceEnabled())
-			{
-				_logger.trace("Sending SQL: "+sendSql);
-			}
+			// Allow 'go' in the string, then we should send multiple batches
+			// this will take care about dropping tempdb tables prior to executing a batch that depends on it.
+			// is a query batch we can't do:
+			//     if ((select object_id('#cacheInfo')) is not null) drop table #cacheInfo 
+			//     select CacheName, CacheID into #cacheInfo from master..monCachePool 
+			// The second row will fail...
+			//     Msg 12822, Level 16, State 1:
+			//     Server 'GORAN_1_DS', Line 5, Status 0, TranState 0:
+			//     Cannot create temporary table '#cacheInfo'. Prefix name '#cacheInfo' is already in use by another temporary table '#cacheInfo'.
+			// So we need to send the statemenmts in two separate batches
+			// so instead do:
+			//     if ((select object_id('#cacheInfo')) is not null) drop table #cacheInfo 
+			//     go
+			//     select CacheName, CacheID into #cacheInfo from master..monCachePool 
+			// Then it works...
 
-			// The below is solved with:
-			// - Messages on the ResultSet is stored in a column named 'msgAsColValue'
-			// - check the variable "_pos_msgAsColValue" for more...
-			//
-			// if The ResultSet contains a column named "msgAsColValue" or similar, stuff the message in that column
-			// The intention for this is to fix: 
-			//    select show_plan(-1,SSQLID,-1,-1) as Showplan, * from monCachedStatement
-			// the above query delivers: msg + resultset for row row 1, msg + resultset for row row 2...
-			// Example:
-			//
-			// SELECT InstanceID, SSQLID, 
-			//        show_plan(-1,SSQLID,-1,-1) as Showplan, 
-			//        Hashkey, UserID, SUserID, DBID, 
-			//        show_cached_text(SSQLID) as sqltext 
-			// FROM monCachedStatement
-			// 
-			// Msg: QUERY PLAN FOR STATEMENT 1 (at line 1).
-			// Msg:
-			// Msg:
-			// Msg:    STEP 1
-			// Msg:        The type of query is SELECT.
-			// Msg:
-			// Msg:        1 operator(s) under root
-			// Msg:
-			// Msg:       |ROOT:EMIT Operator (VA = 1)
-			// Msg:       |
-			// Msg:       |   |SCAN Operator (VA = 0)
-			// Msg:       |   |  FROM TABLE
-			// Msg:       |   |  monDeadLock
-			// Msg:       |   | External Definition: $monCachedStatement
-			// 
-			// Rs row 1: InstanceID SSQLID      Showplan    Hashkey     UserID      SUserID     DBID
-			// Rs row 1:         sqltext
-			// Rs row 1: ---------- ----------- ----------- ----------- ----------- ----------- ------
-			// Rs row 1:         --------------------------------------------------------------------------------------------------------------------
-			// Rs row 1:          0    71220424           0  1836678972           1           1      1
-			// Rs row 1:         select * from monDeadLock
-			// 
-			// Msg: QUERY PLAN FOR STATEMENT 1 (at line 1).
-			// Msg:
-			// Msg:
-			// Msg:    STEP 1
-			// Msg:        The type of query is SELECT.
-			// Msg:
-			// Msg:        2 operator(s) under root
-			// Msg:
-			// Msg:       |ROOT:EMIT Operator (VA = 2)
-			// Msg:       |
-			// Msg:       |   |SCALAR AGGREGATE Operator (VA = 1)
-			// Msg:       |   |  Evaluate Ungrouped MAXIMUM AGGREGATE.
-			// Msg:       |   |
-			// Msg:       |   |   |SCAN Operator (VA = 0)
-			// Msg:       |   |   |  FROM TABLE
-			// Msg:       |   |   |  monWaitEventInfo
-			// Msg:       |   |   | External Definition: $monCachedStatement
-			// 
-			// Rs row 2: InstanceID SSQLID      Showplan    Hashkey     UserID      SUserID     DBID
-			// Rs row 2:         sqltext
-			// Rs row 2: ---------- ----------- ----------- ----------- ----------- ----------- ------
-			// Rs row 2:         --------------------------------------------------------------------------------------------------------------------
-			// Rs row 2:          0   954699569           0   286605408           1           1      1
-			// Rs row 2:         select max(WaitEventID) from monWaitEventInfo
-			
-			int rsNum = 0;
-			int rowsAffected = 0;
-			boolean hasRs = stmnt.execute(sendSql);
-			checkWarnings(stmnt);
-			do
+
+			// treat each 'go' rows as a individual execution
+			// readCommand(), does the job
+			//int batchCount = AseSqlScript.countSqlGoBatches(sendSql);
+			int batchCounter = 0;
+			BufferedReader br = new BufferedReader( new StringReader(sendSql) );
+			for(String sqlBatch=AseSqlScript.readCommand(br); sqlBatch!=null; sqlBatch=AseSqlScript.readCommand(br))
 			{
-				if (hasRs)
+				sendSql = sqlBatch;
+
+				if (_logger.isDebugEnabled())
 				{
-					// Get next result set to work with
-					rs = stmnt.getResultSet();
-					checkWarnings(stmnt);
+					_logger.debug("##### BEGIN (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug(sendSql);
+					_logger.debug("##### END   (send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+					_logger.debug("");
+				}
 
-					if (rsNum == 0)
+	
+				int rsNum = 0;
+				int rowsAffected = 0;
+				boolean hasRs = stmnt.execute(sendSql);
+				checkWarnings(stmnt);
+				do
+				{
+					if (hasRs)
 					{
-						while(rs.next())
-							samplingTime = rs.getTimestamp(1);
-					}
-					else
-					{
-						ResultSetMetaData rsmd = rs.getMetaData();
-						if ( ! cm.hasResultSetMetaData() )
-							cm.setResultSetMetaData(rsmd);
-
-						if (readResultset(rs, rsmd, pkList, rsNum))
-							rs.close();
-
+						// Get next result set to work with
+						rs = stmnt.getResultSet();
 						checkWarnings(stmnt);
+
+						// first resultset in first command batch, will be the "select getdate()"
+						if (rsNum == 0 && batchCounter == 0)
+						{
+							while(rs.next())
+								samplingTime = rs.getTimestamp(1);
+						}
+						else
+						{
+							ResultSetMetaData rsmd = rs.getMetaData();
+							if ( ! cm.hasResultSetMetaData() )
+								cm.setResultSetMetaData(rsmd);
+	
+							if (readResultset(cm, rs, rsmd, pkList, rsNum))
+								rs.close();
+	
+							checkWarnings(stmnt);
+						}
+	
+						rsNum++;
 					}
-
-					rsNum++;
+	
+					// Treat update/row count(s)
+					rowsAffected = stmnt.getUpdateCount();
+					if (rowsAffected >= 0)
+					{
+					}
+	
+					// Check if we have more result sets
+					hasRs = stmnt.getMoreResults();
+	
+					_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
 				}
-
-				// Treat update/row count(s)
-				rowsAffected = stmnt.getUpdateCount();
-				if (rowsAffected >= 0)
-				{
-				}
-
-				// Check if we have more result sets
-				hasRs = stmnt.getMoreResults();
-
-				_logger.trace( "--hasRs="+hasRs+", rsNum="+rsNum+", rowsAffected="+rowsAffected );
+				while (hasRs || rowsAffected != -1);
+	
+				checkWarnings(stmnt);
+				batchCounter++;
 			}
-			while (hasRs || rowsAffected != -1);
-
-			checkWarnings(stmnt);
+			br.close();
 
 			// Close the statement
 			stmnt.close();
@@ -579,20 +716,15 @@ extends CounterTableModel
 			{
 				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");
 			}
-//			if (sqlEx.getMessage().equals("JZ0C0: Connection is already closed."))
-//			{
-//				GetCounters.setRefreshing(false);
-//				MainFrame.terminateConnection();
-//			}
+
 			//return false;
 			throw sqlEx;
 		}
-//		catch (Exception ev)
-//		{
-//			_logger.error("SamplingCnt.getCnt : " + ev);
-//			ev.printStackTrace();
-//			return false;
-//		}
+		catch (IOException ex)
+		{
+			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			throw new SQLException("While reading the input SQL 'go' String, caught: "+ex, ex);
+		}
 	}
 
 	/**
@@ -606,7 +738,7 @@ extends CounterTableModel
 	 * @return
 	 * @throws SQLException
 	 */
-	private boolean readResultset(ResultSet rs, ResultSetMetaData rsmd, List<String> pkList, int rsNum)
+	private boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, List<String> pkList, int rsNum)
 	throws SQLException
 	{
 		if (_colNames == null)
@@ -699,6 +831,7 @@ extends CounterTableModel
 		// Load counters in memory
 		int rsRowNum = 0;
 		List<Object> row;
+		List<Object> prevRow = null;
 		Object val;
 		StringBuilder key;
 		_logger.debug("---");
@@ -846,7 +979,14 @@ extends CounterTableModel
 				}
 			}
 
-			// save HKEY with corresponding row
+			// in this hook you can choose to discard the row
+			// also you can aggregate the row into one "super" row
+			// check CM '', which is doing SQL Statement "collapsing" of several SQL text rows into a "super" row
+			// if the method returns FALSE, then we want to SKIP the row
+			if ( ! cm.hookInSqlRefreshBeforeAddRow(this, row, prevRow) )
+				continue;
+
+			// save PrimaryKey with corresponding row
 //			if (_colIsPk != null)
 			if (pkList != null)
 			{
@@ -856,9 +996,7 @@ extends CounterTableModel
 				_keysToRowid.put(keyStr, new Integer(rowId));
 				_rowidToKey.add(keyStr);
 				if (_logger.isTraceEnabled())
-				{
 					_logger.trace("   >> key='"+key+"', rowId="+rowId+", _rowidToKey.addPos="+(_rowidToKey.size()-1));
-				}
 			}
 
 			if (_logger.isDebugEnabled())
@@ -866,6 +1004,8 @@ extends CounterTableModel
 
 			// ADD the row
 			_rows.add(row);
+
+			prevRow = row;
 
 			rsRowNum++;
 		}

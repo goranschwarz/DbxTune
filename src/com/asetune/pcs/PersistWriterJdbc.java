@@ -666,7 +666,7 @@ public class PersistWriterJdbc
 				// Admin rights are required to execute this command, as it affects all connections. 
 				// This command commits an open transaction. This setting is persistent.
 				// SET DEFAULT LOCK_TIMEOUT int
-				dbExecSetting("SET DEFAULT_LOCK_TIMEOUT 15000");
+				dbExecSetting("SET DEFAULT_LOCK_TIMEOUT 30000");
 
 				// If IGNORECASE is enabled, text columns in newly created tables will be 
 				// case-insensitive. Already existing tables are not affected. 
@@ -713,7 +713,7 @@ public class PersistWriterJdbc
 				// longer than the given value. The default timeout is 0, meaning no timeout.
 				// This command does not commit a transaction, and rollback does not affect it.
 				// SET QUERY_TIMEOUT int
-				dbExecSetting("SET QUERY_TIMEOUT 15000");
+				dbExecSetting("SET QUERY_TIMEOUT 30000");
 
 				// Sets the trace level for file the file or system out stream. Levels are: 0=off, 
 				// 1=error, 2=info, 3=debug. The default level is 1 for file and 0 for system out. 
@@ -2057,7 +2057,7 @@ public class PersistWriterJdbc
 
 		if ( ! tgdp.hasData() )
 		{
-			_logger.info("The graph '"+tgdp.getName()+"' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint="+tgdp);
+			_logger.debug("The graph '"+tgdp.getName()+"' has NO DATA for this sample time, so write will be skipped. TrendGraphDataPoint="+tgdp);
 			return;
 		}
 		if (_shutdownWithNoWait)

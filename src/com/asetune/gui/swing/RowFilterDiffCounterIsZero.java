@@ -92,7 +92,7 @@ extends RowFilter<TableModel, Integer>
 			cols[i] = getColumnPos(table, colNames[i]);
 			if (cols[i] == -1)
 			{
-				_logger.warn("Cant find column name '"+colNames[i]+"' in JTable when setting filter.");
+				_logger.debug("Can't find column name '"+colNames[i]+"' in JTable when setting filter.");
 			}
 			else
 			{
