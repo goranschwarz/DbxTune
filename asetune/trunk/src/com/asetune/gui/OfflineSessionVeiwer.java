@@ -584,6 +584,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			_logger.info("Loading UDC, User Defined Counters from Offline Storage Database into the GUI.");
 			GetCounters.createUserDefinedCounterModels(udcConf);
 		}
+		else
+		{
+			_logger.info("No UDC, User Defined Counters was found in the Offline Storage Database.");
+		}
 	}
 
 	public void doActionShow()

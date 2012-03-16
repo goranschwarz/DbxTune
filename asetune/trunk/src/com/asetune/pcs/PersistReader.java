@@ -25,7 +25,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import javax.swing.JTabbedPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.EventListenerList;
@@ -38,6 +37,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -713,7 +713,7 @@ implements Runnable
 			"select \"ParamName\", \"ParamValue\" \n" +
 			"from \"MonSessionParams\" \n" +
 			"where 1=1 \n" +
-			"  and \"SessionStartTime\" < '"+sampleId+"' \n" +
+			"  and \"SessionStartTime\" = '"+sampleId+"' \n" +
 			"  and \"Type\"            in ('system.config', 'user.config', 'temp.config') \n" +
 			"  and \"ParamName\"     like 'udc.%' \n";
 
@@ -1042,7 +1042,7 @@ implements Runnable
 	 */
 	private void sortOfflineCm()
 	{
-		JTabbedPane tabPane = MainFrame.getTabbedPane();
+		GTabbedPane tabPane = MainFrame.getTabbedPane();
 		if (tabPane == null)
 			return;
 
@@ -1054,13 +1054,12 @@ implements Runnable
 		// Holds 'names' that wasn't found in the TAB, add those at the end
 		LinkedList<String> misses = new LinkedList<String>();
 
-		int tabCount = tabPane.getTabCount();
-		for (int t=0; t<tabCount; t++)
-		{
-			Component comp = tabPane.getComponentAt(t);
+		for (String tabName : tabPane.getAllTitles())
+		{			
+			Component comp = tabPane.getComponentAtTitle(tabName);
 			String name = comp.getName();
-			
-			_logger.debug("sortOfflineCm() Working on tab "+t+": "+name);
+
+			_logger.debug("sortOfflineCm() Working on tab named '"+tabName+", component name '"+name+"'");
 
 			// Get the OfflineCm for this TAB and store it in the new Map
 			OfflineCm ocm = originOfflineCmMap.get(name);
@@ -1068,7 +1067,7 @@ implements Runnable
 			{
 				// If the OCM can't be found in the list, it just means that
 				// The CM has no tables in the Counter Storage
-				// So we dont really need the code for "misses", but lets keep it for now.
+				// So we don't really need the code for "misses", but lets keep it for now.
 				//misses.add(name);
 			}
 			else
@@ -1107,9 +1106,9 @@ implements Runnable
 								if (originGraphList.size() > 0)
 								{
 									_logger.warn("The sorting of 'ocm.graphList' for ocm '"+name+"' failed. Continuing with old/unsorted List");
-									_logger.debug("sortOfflineCm() originGraphList: "+originGraphList);
-									_logger.debug("sortOfflineCm() sortedGraphList: "+sortedGraphList);
-									_logger.debug("sortOfflineCm() ocm.graphList:   "+ocm.graphList);
+									_logger.debug("sortOfflineCm() originGraphList("+originGraphList.size()+"): "+StringUtil.toCommaStr(originGraphList));
+									_logger.debug("sortOfflineCm() sortedGraphList("+sortedGraphList.size()+"): "+StringUtil.toCommaStr(sortedGraphList));
+									_logger.debug("sortOfflineCm() ocm.graphList  ("+ocm.graphList.size()+")  : "+StringUtil.toCommaStr(ocm.graphList));
 								}
 								else
 								{
@@ -1138,10 +1137,10 @@ implements Runnable
 		if (originOfflineCmMap.size() > 0)
 		{
 			_logger.warn("The sorting of '_offlineCmMap' failed. Continuing with old/unsorted Map");
-			_logger.debug("sortOfflineCm() originOfflineCmMap: "+originOfflineCmMap);
-			_logger.debug("sortOfflineCm() sortedOfflineCmMap: "+sortedOfflineCmMap);
-			_logger.debug("sortOfflineCm() misses:             "+misses);
-			_logger.debug("sortOfflineCm() _offlineCmMap:      "+_offlineCmMap);
+			_logger.debug("sortOfflineCm() originOfflineCmMap("+originOfflineCmMap.size()+"): "+StringUtil.toCommaStr(originOfflineCmMap));
+			_logger.debug("sortOfflineCm() sortedOfflineCmMap("+sortedOfflineCmMap.size()+"): "+StringUtil.toCommaStr(sortedOfflineCmMap));
+			_logger.debug("sortOfflineCm() misses            ("+misses.size()            +"): "+StringUtil.toCommaStr(misses));
+			_logger.debug("sortOfflineCm() _offlineCmMap     ("+_offlineCmMap.size()     +"): "+StringUtil.toCommaStr(_offlineCmMap));
 		}
 		else
 		{
@@ -1404,7 +1403,7 @@ implements Runnable
 		CountersModel cm = GetCounters.getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Cant find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '"+cmName+"'.");
 			return;
 		}
 		
@@ -1544,7 +1543,7 @@ implements Runnable
 		CountersModel cm = GetCounters.getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Cant find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '"+cmName+"'.");
 			return;
 		}
 		if (true) loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
@@ -1754,7 +1753,7 @@ implements Runnable
 		CountersModel cm = GetCounters.getCmByName(cmName);
 		if (cm == null)
 		{
-			_logger.warn("Cant find any CM named '"+cmName+"'.");
+			_logger.warn("Can't find any CM named '"+cmName+"'.");
 			return null;
 		}
 

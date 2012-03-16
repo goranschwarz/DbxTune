@@ -374,7 +374,7 @@ public class SwingUtils
 //		System.out.println("---->>>>>>>>>>>>>>>>>> Using the icon '"+url+"'.");
 		if (url == null)
 		{
-			_logger.error("Cant find the resource for class='"+clazz+"', filename='"+filename+"'.");
+			_logger.error("Can't find the resource for class='"+clazz+"', filename='"+filename+"'.");
 			return null;
 		}
 

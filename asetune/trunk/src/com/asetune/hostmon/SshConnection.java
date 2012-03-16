@@ -135,7 +135,7 @@ public class SshConnection
 	throws IOException
 	{
 		if (_isAuthenticated == false)
-			throw new IOException("Cant't do reconnect yet, you need to have a valid connection first. This means that you need to caoonect with a successful authentication first.");
+			throw new IOException("Can't do reconnect yet, you need to have a valid connection first. This means that you need to caoonect with a successful authentication first.");
 
 		_conn.close();
 

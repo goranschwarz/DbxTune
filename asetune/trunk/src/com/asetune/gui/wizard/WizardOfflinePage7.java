@@ -7,11 +7,8 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 
-import javax.swing.JButton;
 import javax.swing.JComponent;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
@@ -22,16 +19,18 @@ import org.netbeans.spi.wizard.WizardPage;
 import com.asetune.gui.swing.MultiLineLabel;
 
 
+//PAGE 4
 public class WizardOfflinePage7
 extends WizardPage
 implements ActionListener
 {
     private static final long serialVersionUID = 1L;
-	private static final String WIZ_NAME = "filename";
-	private static final String WIZ_DESC = "Filename";
-	private static final String WIZ_HELP = "A filename where this information should be stored to.";
+	private static final String WIZ_NAME = "sample-time";
+	private static final String WIZ_DESC = "Sample time";
+	private static final String WIZ_HELP = "How long should we sleep between samples.\nThis is specified in seconds.";
 
-	private JTextField _storeFile = new JTextField("");
+	private JTextField _sampleTime          = new JTextField("60");
+	private JTextField _shutdownAfterXHours = new JTextField("");
 
 	public static String getDescription() { return WIZ_DESC; }
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
@@ -42,21 +41,27 @@ implements ActionListener
 		
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
+		_sampleTime.setName("sampleTime");
+		_shutdownAfterXHours.setName("shutdownAfterXHours");
+
 		// Add a helptext
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
-		_storeFile.setName("storeFile");
+		add(new JLabel("Sample time"));
+		add(_sampleTime, "growx");
+		add(new JLabel("Seconds"), "wrap 40");
 
-		add(new JLabel("Filename"));
-		add(_storeFile, "growx");
-		JButton button = new JButton("...");
-		button.addActionListener(this);
-		button.putClientProperty("NAME", "BUTTON_STORE_FILE");
-		add(button, "wrap");
 
-//		add(new JLabel("Filename 23"));
-//		add(new JTextField(), "growx");
-//		add(new JButton(",,,"), "wrap");
+		String label = "<html>Shutdown or stop the no-gui process after X number after it has been started.</html>";
+
+		add( new MultiLineLabel(label), "span, wrap 10" );
+		add(new JLabel("Shutdown after # hours"));
+		add(_shutdownAfterXHours, "growx");
+		add(new JLabel("Hours"));
+
+
+		
+		
 		initData();
 	}
 
@@ -74,8 +79,28 @@ implements ActionListener
 		//System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
 
 		String problem = "";
-		if ( _storeFile.getText().trim().length() <= 0) problem += "Filename, ";
+		if ( _sampleTime.getText().trim().length() <= 0) problem += "Sample time, ";
 
+		// Check if it's a integer
+		if (_sampleTime.getText().trim().length() > 0)
+		{
+			try { Integer.parseInt( _sampleTime.getText().trim() ); }
+			catch (NumberFormatException e)
+			{
+				return "Sample time needs to be a number.";
+			}
+		}
+		
+		// Check if _shutdownAfterXHours is integer
+		if (_shutdownAfterXHours.getText().trim().length() > 0)
+		{
+			try { Integer.parseInt( _shutdownAfterXHours.getText().trim() ); }
+			catch (NumberFormatException e)
+			{
+				return "'Shutdown after # hours' needs to be a number or empty.";
+			}
+		}
+		
 		if (problem.length() > 0)
 		{
 			// Discard last ', '
@@ -93,24 +118,6 @@ implements ActionListener
 			name = "-null-";
 
 //		System.out.println("Source("+name+"): " + src);
-
-		if (name.equals("BUTTON_STORE_FILE"))
-		{
-			JFileChooser fc = new JFileChooser();
-			if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-				fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
-
-			int returnVal = fc.showOpenDialog(null);
-			if (returnVal == JFileChooser.APPROVE_OPTION) 
-	        {
-				File file = fc.getSelectedFile();
-
-				//This is where a real application would open the file.
-				String filename = file.getAbsolutePath();
-				//System.out.println("Opening '" + filename + "'.");
-
-				_storeFile.setText( filename );
-	        }
-		}
 	}
 }
+

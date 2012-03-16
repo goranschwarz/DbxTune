@@ -61,6 +61,10 @@ implements Iterable<String>
 		String[] strArr = confVal.split(";");
 		for (int i=0; i<strArr.length; i++)
 		{
+			String strEntry = strArr[i].trim();
+			if (StringUtil.isNullOrBlank(strEntry))
+				continue;
+
 			try 
 			{
 				// each entry looks like: colName={modelPos=1,viewPos=1,isVisible=true,sort=unsorted}
@@ -68,12 +72,13 @@ implements Iterable<String>
 //				ColumnHeaderPropsEntry chpe = ColumnHeaderPropsEntry.parseKeyValue(strArr[i]);
 //				colProps.put(chpe._colName, chpe);
 
-				Entry entry = new Entry(strArr[i]);
+				Entry entry = new Entry(strEntry);
 				_keys.put(entry._propName, entry);
 			}
 			catch (ParseException e)
 			{
-				_logger.info("Problems parsing '"+confVal+"' with string '"+strArr[i]+"'. Caught: "+e);
+				_logger.info("Problems parsing '"+confVal+"' with string '"+strEntry+"'. Caught: "+e);
+				_logger.debug("Problems parsing '"+confVal+"' with string '"+strEntry+"'. Caught: "+e, e);
 				continue;
 			}
 		}	

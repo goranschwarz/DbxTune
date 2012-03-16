@@ -48,7 +48,6 @@ import javax.swing.JRadioButton;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
@@ -67,7 +66,6 @@ import javax.swing.table.TableModel;
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
-import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -78,6 +76,7 @@ import org.jdesktop.swingx.table.ColumnControlButton;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.DockUndockManagement;
 import com.asetune.gui.swing.EmptyTableModel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPaneWindowProps;
@@ -97,7 +96,13 @@ import com.asetune.xmenu.TablePopupFactory;
 
 public class TabularCntrPanel 
 extends JPanel 
-implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbedPane.SpecialTabPainter, ConnectionFactory, TableModelListener, ClipboardOwner
+implements 
+	DockUndockManagement, // from GTabbedPane
+	GTabbedPane.ShowProperties, 
+	GTabbedPane.SpecialTabPainter, 
+	ConnectionFactory, 
+	TableModelListener, 
+	ClipboardOwner
 {
 	private static Logger			_logger								= Logger.getLogger(TabularCntrPanel.class);
 
@@ -111,6 +116,8 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	private ImageIcon				_indicatorIcon						= null;
 	// Decides if we should place the indicator to left or right on the icon.
 	private boolean					_indicatorToLeft					= true;	
+
+	private String					_groupName						    = null;
 
 	// Below is members for open the Panel into a Frame
 	private JButton					_tabDockUndockButton				= new JButton();
@@ -215,10 +222,11 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 ** BEGIN: constructors
 	 **---------------------------------------------------
 	 */
-	public TabularCntrPanel(String displayName, CountersModel cm)
+	public TabularCntrPanel(String displayName, CountersModel cm, String groupName)
 	{
 		_cm          = cm;
 		_displayName = displayName;
+		_groupName   = groupName;
 
 		// Create a specialized GTable
 		_dataTable = new GTable()
@@ -237,11 +245,20 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 					if (tm instanceof CountersModel)
 					{
-						CountersModel cm = (CountersModel) tm;
-						TabularCntrPanel tcp = cm.getTabPanel();
+						final CountersModel cm = (CountersModel) tm;
+						final TabularCntrPanel tcp = cm.getTabPanel();
 						if (tcp != null)
 						{
-							tcp.updateExtendedInfoPanel();
+							// do the updateExtendedInfoPanel() deferred
+							Runnable doRun = new Runnable()
+							{
+								@Override
+								public void run()
+								{
+									tcp.updateExtendedInfoPanel();
+								}
+							};
+							SwingUtilities.invokeLater(doRun);
 						}
 					}
 				}
@@ -267,9 +284,20 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 		if ( lookAndFeelName != null && lookAndFeelName.equals("GTK look and feel") )
 			_indicatorToLeft = false;
 	}
+
+	public TabularCntrPanel(String displayName, CountersModel cm)
+	{
+		this(displayName, null, null);
+	}
+
+	public TabularCntrPanel(String displayName, String groupName)
+	{
+		this(displayName, null, groupName);
+	}
+
 	public TabularCntrPanel(String displayName)
 	{
-		this(displayName, null);
+		this(displayName, null, null);
 	}
 
 	/*---------------------------------------------------
@@ -277,7 +305,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 **---------------------------------------------------
 	 */
 
-	protected JXTable getDataTable()
+	protected GTable getDataTable()
 	{
 		return _dataTable;
 	}
@@ -583,6 +611,18 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	public String getName()
 	{
 		return _cm != null ? _cm.getName() : null;
+	}
+
+	/** get group name this TCP belongs to, null if not part of a group (then it should be presented at the TOP level, like Summary). */
+	public String getGroupName()
+	{
+		return _groupName;
+	}
+
+	/** set group name this TCP belongs to, null if not part of a group (then it should be presented at the TOP level, like Summary). */
+	public void setGroupName(String groupName)
+	{
+		_groupName = groupName;
 	}
 
 	// implementing: TableModelListener
@@ -1486,7 +1526,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	 */
 
 	/*---------------------------------------------------
-	 ** BEGIN: implementing: GTabbedPane.DockUndockManagement
+	 ** BEGIN: implementing: DockUndockManagement
 	 **---------------------------------------------------
 	 */
 	// This will be called when this object is added to a GTabbedPane
@@ -1566,7 +1606,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 	}
 
 	/*---------------------------------------------------
-	 ** END: implementing: GTabbedPane.DockUndockManagement
+	 ** END: implementing: DockUndockManagement
 	 **---------------------------------------------------
 	 */
 
@@ -2258,7 +2298,7 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			}
 			catch(IllegalArgumentException ex) // When row wasn't found in: _dataTable.getColumn(column).getModelIndex()
 			{
-				_logger.info("Cant find column '"+column+"' in the datatable '"+_dataTable.getName()+"'.");
+				_logger.info("Can't find column '"+column+"' in the datatable '"+_dataTable.getName()+"'.");
 			}
 		}
 		setWatermark();
@@ -3404,6 +3444,38 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			return comp;
 		}
 	}
+//	private static class HighlighterPctData extends PainterHighlighter
+//	{
+//		public HighlighterPctData(HighlightPredicate predicate)
+//		{
+//			super(predicate);
+//		}
+//
+//		@SuppressWarnings("rawtypes")
+//		@Override
+//		protected Component doHighlight(Component renderer, ComponentAdapter adapter) 
+//		{
+////			float end = getEndOfGradient((Number) adapter.getValue());
+//			RelativePainter painter = (RelativePainter) getPainter();
+////			painter.setXFraction(end);
+//			((PainterAware) renderer).setPainter(painter);
+//			return renderer;
+//		}
+////		@Override
+////		protected Component doHighlight(Component comp, ComponentAdapter adapter)
+////		{
+////			Object value = adapter.getFilteredValueAt(adapter.row, adapter.convertColumnIndexToModel(adapter.column));
+////			if ( value instanceof Number )
+////			{
+////				comp.setForeground(Color.RED);
+////				if ( ((Number) value).doubleValue() != 0 )
+////				{
+////					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
+////				}
+////			}
+////			return comp;
+////		}
+//	}
 
 	/*---------------------------------------------------
 	 ** END: Highlighter stuff for the JXTable
@@ -4080,12 +4152,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 
 				_indicatorIcon = new ImageIcon(im);
 			}
-			JTabbedPane jtp = MainFrame.getTabbedPane();
-			int jtpIndex = jtp.indexOfTab(_icon);
-			if ( jtpIndex != -1 )
-			{
-				jtp.setIconAt(jtpIndex, _indicatorIcon);
-			}
+			GTabbedPane gtp = MainFrame.getTabbedPane();
+			gtp.setIconAtTitle(getPanelName(), _indicatorIcon);
+//			JTabbedPane jtp = MainFrame.getTabbedPane();
+//			int jtpIndex = jtp.indexOfTab(_icon);
+//			if ( jtpIndex != -1 )
+//			{
+//				jtp.setIconAt(jtpIndex, _indicatorIcon);
+//			}
 		}
 		else
 		{
@@ -4095,12 +4169,14 @@ implements GTabbedPane.DockUndockManagement, GTabbedPane.ShowProperties, GTabbed
 			// g.clearRect(pX, pY, pW, pH);
 
 			// Swap icon back to original
-			JTabbedPane jtp = MainFrame.getTabbedPane();
-			int jtpIndex = jtp.indexOfTab(_indicatorIcon);
-			if ( jtpIndex != -1 )
-			{
-				jtp.setIconAt(jtpIndex, _icon);
-			}
+			GTabbedPane gtp = MainFrame.getTabbedPane();
+			gtp.setIconAtTitle(getPanelName(), _icon);
+//			JTabbedPane jtp = MainFrame.getTabbedPane();
+//			int jtpIndex = jtp.indexOfTab(_indicatorIcon);
+//			if ( jtpIndex != -1 )
+//			{
+//				jtp.setIconAt(jtpIndex, _icon);
+//			}
 		}
 	}
 

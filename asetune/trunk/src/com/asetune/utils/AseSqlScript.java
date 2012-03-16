@@ -579,26 +579,47 @@ implements SybMessageHandler
 	 * @return see description above
 	 * @throws IOException
 	 */
+//	public static String readCommand(BufferedReader br) 
+//	throws IOException 
+//	{
+//		String outStr = "";
+//		try 
+//		{
+//			String row = null;
+//			for (row=br.readLine(); row!=null && !row.trim().equalsIgnoreCase("go"); row=br.readLine()) 
+//			{
+//				outStr = outStr + row + "\n";
+//			}
+//			if ( row == null && outStr.length() == 0)
+//				return null;
+//		} 
+//		catch (IOException e) 
+//		{
+//			outStr = null;
+//			throw e;
+//		}
+//		return (outStr == null) ? null : outStr.trim();
+//	}
 	public static String readCommand(BufferedReader br) 
 	throws IOException 
 	{
-		String outStr = "";
+		StringBuilder sb = new StringBuilder();
 		try 
 		{
 			String row = null;
 			for (row=br.readLine(); row!=null && !row.trim().equalsIgnoreCase("go"); row=br.readLine()) 
 			{
-				outStr = outStr + row + "\n";
+				sb.append(row).append("\n");
 			}
-			if ( row == null && outStr.length() == 0)
+			if ( row == null && sb.length() == 0)
 				return null;
 		} 
 		catch (IOException e) 
 		{
-			outStr = null;
+			sb = null;
 			throw e;
 		}
-		return (outStr == null) ? null : outStr.trim();
+		return (sb == null) ? null : sb.toString();
 	}
 //	private String readCommand(BufferedReader br) 
 //	throws IOException 
@@ -883,7 +904,7 @@ implements SybMessageHandler
 			// Check that we have a connection
 			if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
 			{
-				_logger.error("Connection is already closed. Cant execute the sql script.");
+				_logger.error("Connection is already closed. Can't execute the SQL script.");
 			}
 				
 			if ( dbname != null && !dbname.equals("") )

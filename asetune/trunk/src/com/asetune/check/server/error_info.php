@@ -50,7 +50,21 @@
 	$logMessage    = mysql_real_escape_string($logMessage);
 	$logStacktrace = mysql_real_escape_string($logStacktrace);
 
-	$sql = "insert into asemon_error_info
+	//------------------------------------------
+	// Normally all errors goes to 'asemon_error_info', but some errors goes to 'asemon_error_info2'
+	// for example timeouts
+	$toTableName = "asemon_error_info";
+
+	if (    strpos($logStacktrace, "java.sql.SQLException: JZ006:", 0) === 0                                   // Caught IOException: java.net.SocketTimeoutException: Read timed out
+	     || strpos($logStacktrace, "java.sql.SQLException: JZ0C0:", 0) === 0                                   // java.sql.SQLException: JZ0C0: Connection is already closed
+	     || strpos($logStacktrace, "com.sybase.jdbc3.jdbc.SybSQLException: ERROR: Found NO database", 0) === 0 // com.sybase.jdbc3.jdbc.SybSQLException: ERROR: Found NO database that was marked for replication
+	   ) 
+	{
+		$toTableName = "asemon_error_info2";
+	}
+	
+
+	$sql = "insert into $toTableName 
 	(
 		checkId,
 		sendCounter,

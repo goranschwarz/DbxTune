@@ -14,15 +14,15 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.Vector;
 
 import javax.swing.DefaultComboBoxModel;
@@ -59,6 +59,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
+import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.AseTune;
 import com.asetune.GetCounters;
@@ -185,28 +186,29 @@ public class ConnectionDialog
 	
 	//---- PCS panel
 	@SuppressWarnings("unused")
-	private JPanel             _pcsPanel            = null;
-	private ImageIcon          _pcsImageIcon        = SwingUtils.readImageIcon(Version.class, "images/pcs_write_32.png");
-	private JLabel             _pcsIcon             = new JLabel(_pcsImageIcon);
-	private MultiLineLabel     _pcsHelp             = new MultiLineLabel();
-	private JLabel             _pcsWriter_lbl       = new JLabel("PCS Writer");
-	private JComboBox          _pcsWriter_cbx       = new JComboBox();
-	private JLabel             _pcsJdbcDriver_lbl   = new JLabel("JDBC Driver");
-	private JComboBox          _pcsJdbcDriver_cbx   = new JComboBox();
-	private JLabel             _pcsJdbcUrl_lbl      = new JLabel("JDBC Url"); 
-	private JComboBox          _pcsJdbcUrl_cbx      = new JComboBox();
-	private JButton            _pcsJdbcUrl_but      = new JButton("...");
-	private JLabel             _pcsJdbcUsername_lbl = new JLabel("Username");
-	private JTextField         _pcsJdbcUsername_txt = new JTextField("sa");
-	private JLabel             _pcsJdbcPassword_lbl = new JLabel("Password");
-	private JTextField         _pcsJdbcPassword_txt = new JPasswordField();
-	private JLabel             _pcsTestConn_lbl     = new JLabel();
-	private JButton            _pcsTestConn_but     = new JButton("Test Connection");
-	private JXTable            _pcsSessionTable     = null;
-	private JButton            _pcsTabSelectAll_but = new JButton("Select All");
-	private JButton            _pcsTabDeSelectAll_but = new JButton("Deselect All");
-	private JButton            _pcsTabTemplate_but  = new JButton("Set to Template");
-	private boolean            _useCmForPcsTable    = true;
+	private JPanel             _pcsPanel                   = null;
+	private ImageIcon          _pcsImageIcon               = SwingUtils.readImageIcon(Version.class, "images/pcs_write_32.png");
+	private JLabel             _pcsIcon                    = new JLabel(_pcsImageIcon);
+	private MultiLineLabel     _pcsHelp                    = new MultiLineLabel();
+	private JLabel             _pcsWriter_lbl              = new JLabel("PCS Writer");
+	private JComboBox          _pcsWriter_cbx              = new JComboBox();
+	private JLabel             _pcsJdbcDriver_lbl          = new JLabel("JDBC Driver");
+	private JComboBox          _pcsJdbcDriver_cbx          = new JComboBox();
+	private JLabel             _pcsJdbcUrl_lbl             = new JLabel("JDBC Url"); 
+	private JComboBox          _pcsJdbcUrl_cbx             = new JComboBox();
+	private JButton            _pcsJdbcUrl_but             = new JButton("...");
+	private JLabel             _pcsJdbcUsername_lbl        = new JLabel("Username");
+	private JTextField         _pcsJdbcUsername_txt        = new JTextField("sa");
+	private JLabel             _pcsJdbcPassword_lbl        = new JLabel("Password");
+	private JTextField         _pcsJdbcPassword_txt        = new JPasswordField();
+	private JLabel             _pcsTestConn_lbl            = new JLabel();
+	private JButton            _pcsTestConn_but            = new JButton("Test Connection");
+	private PcsTable           _pcsSessionTable            = null;
+	private JButton            _pcsTabSelectAll_but        = new JButton("Select All");
+	private JButton            _pcsTabDeSelectAll_but      = new JButton("Deselect All");
+	private JButton            _pcsTabTemplate_but         = new JButton("Reset"); // "Set to Template"
+	private JButton            _pcsOpenTcpConfigDialog_but = new JButton("Dialog...");
+	private boolean            _useCmForPcsTable           = true;
 	// Specific options if we are using H2 as PCS
 	private JCheckBox          _pcsH2Option_startH2NetworkServer_chk = new JCheckBox("Start H2 Database as a Network Server", false);
 	//---- PCS:DDL Lookup & Store
@@ -729,6 +731,7 @@ public class ConnectionDialog
 				"  <li> <code> iostat </code></li>" +
 				"  <li> <code> vmstat </code></li>" +
 				"  <li> <code> mpstat </code></li>" +
+				"  <li> <code> uptime </code></li>" +
 				"</ul>" +
 		    "If you are using <b>Veritas</b> as the Disk IO subsystem and want to sample disk statistics with <b>vxstat</b> and not iostat.<br>" +
 		    "Make sure <b>vxstat</b> is executable and in the <b>$PATH</b> off the user that you're connecting to the Operating System with.<br>" +
@@ -985,152 +988,36 @@ public class ConnectionDialog
 		return panel;
 	}
 
-	private static final int PCS_TAB_POS_ICON       = 0;
-	private static final int PCS_TAB_POS_TAB_NAME   = 1;
-	private static final int PCS_TAB_POS_POSTPONE   = 2;
-	private static final int PCS_TAB_POS_STORE_PCS  = 3;
-	private static final int PCS_TAB_POS_STORE_ABS  = 4;
-	private static final int PCS_TAB_POS_STORE_DIFF = 5;
-	private static final int PCS_TAB_POS_STORE_RATE = 6;
-	private static final int PCS_TAB_POS_LONG_DESC  = 7;
-	private static final int PCS_TAB_POS_CM_NAME    = 8;
-	private static final int PCS_TAB_POS_MAX        = 9; // NOT a column just the MAX value
-
-	private static final Color PCS_TAB_PCS_COL_BG = new Color(240, 240, 240);
-
 	private JPanel createPcsTablePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("What Counter Data should be Persisted", true);
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
-		// Add a helptext
-//		panel.add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
-		_pcsSessionTable = new JXTable()
-		{
-			private static final long	serialVersionUID	= 1L;
+		_pcsSessionTable = new PcsTable();
 
-			/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
-			public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
-			{
-				Component c = super.prepareRenderer(renderer, row, column);
-
-				if (column >= PCS_TAB_POS_STORE_PCS && column <= PCS_TAB_POS_STORE_RATE)
-				{
-					c.setBackground(PCS_TAB_PCS_COL_BG);
-					if ((column >= PCS_TAB_POS_STORE_ABS && column <= PCS_TAB_POS_STORE_RATE) || row == 0)
-					{
-						// if not editable, lets disable it
-						// calling isCellEditable instead of getModel().isCellEditable(row, column)
-						// does the viewRow->modelRow translation for us.
-						c.setEnabled( isCellEditable(row, column) );
-					}
-				}
-				return c;
-			}
-		};
-
-		// Create a TABLE
-		Vector<String> tabHead = new Vector<String>();
-		tabHead.setSize(PCS_TAB_POS_MAX);
-		tabHead.set(PCS_TAB_POS_POSTPONE,   "Postpone");
-		tabHead.set(PCS_TAB_POS_STORE_PCS,  "Sample");
-		tabHead.set(PCS_TAB_POS_STORE_ABS,  "Abs");
-		tabHead.set(PCS_TAB_POS_STORE_DIFF, "Diff");
-		tabHead.set(PCS_TAB_POS_STORE_RATE, "Rate");
-		tabHead.set(PCS_TAB_POS_ICON,       "Icon");
-		tabHead.set(PCS_TAB_POS_TAB_NAME,   "Short Desc");
-		tabHead.set(PCS_TAB_POS_CM_NAME,    "CM Name");
-		tabHead.set(PCS_TAB_POS_LONG_DESC,  "Long Description");
-		
-		Vector<Vector<Object>> tabData = populatePcsTable();
-
-		DefaultTableModel defaultTabModel = new DefaultTableModel(tabData, tabHead)
-		{
-            private static final long serialVersionUID = 1L;
-
-			@Override
-			public Class<?> getColumnClass(int column) 
-			{
-				if (column == PCS_TAB_POS_POSTPONE)   return Integer.class;
-				if (column == PCS_TAB_POS_STORE_PCS)  return Boolean.class;
-				if (column == PCS_TAB_POS_STORE_ABS)  return Boolean.class;
-				if (column == PCS_TAB_POS_STORE_DIFF) return Boolean.class;
-				if (column == PCS_TAB_POS_STORE_RATE) return Boolean.class;
-				if (column == PCS_TAB_POS_ICON)       return Icon.class;
-				return Object.class;
-			}
-			@Override
-			public boolean isCellEditable(int row, int col)
-			{
-				if (row == 0) // CMSummary
-					return false;
-
-				if (col == PCS_TAB_POS_POSTPONE)
-					return true;
-
-				if (col == PCS_TAB_POS_STORE_PCS)
-					return true;
-
-				if (col <= PCS_TAB_POS_STORE_RATE)
-				{
-					// get some values from the MODEL viewRow->modelRow translation should be done before calling isCellEditable
-					boolean storePcs    = ((Boolean) getValueAt(row, PCS_TAB_POS_STORE_PCS)).booleanValue();
-					String tabName      = (String)   getValueAt(row, PCS_TAB_POS_TAB_NAME);
-
-					//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
-
-					// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-					CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
-					if (cm != null)
-					{
-						if (col == PCS_TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
-						if (col == PCS_TAB_POS_STORE_DIFF) return storePcs && cm.isPersistCountersDiffEditable();
-						if (col == PCS_TAB_POS_STORE_RATE) return storePcs && cm.isPersistCountersRateEditable();
-					}
-				}
-				return false;
-			}
-		};
-		defaultTabModel.addTableModelListener(this);
-
-		_pcsSessionTable.setModel( defaultTabModel );
-//		_pcsSessionTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-//		_pcsSessionTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-//		_pcsSessionTable.setAutoscrolls(true);
-//		_pcsSessionTable.doLayout();
-		_pcsSessionTable.setShowGrid(false);
-//		_pcsSessionTable.setShowHorizontalLines(false);
-//		_pcsSessionTable.setShowVerticalLines(false);
-//		_pcsSessionTable.setMaximumSize(new Dimension(10000, 10000));
-
-		_pcsSessionTable.setSortable(true);
-		_pcsSessionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		_pcsSessionTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		_pcsSessionTable.packAll(); // set size so that all content in all cells are visible
-		_pcsSessionTable.setSortable(true);
-		_pcsSessionTable.setColumnControlVisible(true);
-
-//		SwingUtils.calcColumnWidths(_pcsSessionTable);
-
-		// Set minimum: HEIGHT
-//		_pcsSessionTable.setMinimumSize(new Dimension(1666, 1666)); // Dimension(width, height)
+		PcsTableModel tm = (PcsTableModel) _pcsSessionTable.getModel();
+		tm.addTableModelListener(this);
 
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_pcsSessionTable);
 //		jScrollPane.setMaximumSize(new Dimension(10000, 10000));
 		panel.add(jScrollPane, "push, grow, height 100%, wrap");
 
-		panel.add(_pcsTabSelectAll_but,   "split");
-		panel.add(_pcsTabDeSelectAll_but, "split");
-		panel.add(_pcsTabTemplate_but,    "");
+		panel.add(_pcsTabSelectAll_but,        "split");
+		panel.add(_pcsTabDeSelectAll_but,      "split");
+		panel.add(_pcsTabTemplate_but,         "");
+		panel.add(new JLabel(),                "pushx, growx");
+		panel.add(_pcsOpenTcpConfigDialog_but, "");
 
 		// ADD ACTION LISTENERS
-		_pcsTabSelectAll_but  .addActionListener(this);
-		_pcsTabDeSelectAll_but.addActionListener(this);
-		_pcsTabTemplate_but   .addActionListener(this);
+		_pcsTabSelectAll_but       .addActionListener(this);
+		_pcsTabDeSelectAll_but     .addActionListener(this);
+		_pcsTabTemplate_but        .addActionListener(this);
+		_pcsOpenTcpConfigDialog_but.addActionListener(this);
 
 		// TOOLTIP
-		_pcsTabTemplate_but.setToolTipText("Use current setting of the tabs as a template.");
+		_pcsTabTemplate_but        .setToolTipText("Use current setting of the Performance Counter tabs as a template.");
+		_pcsOpenTcpConfigDialog_but.setToolTipText("Open the 'All Performance Counter' options dialog. From here you can use other templates.");
 
 		return panel;
 	}
@@ -1234,112 +1121,200 @@ public class ConnectionDialog
 
 		return panel;
 	}
-	
-	private Vector<Vector<Object>> populatePcsTable()
-	{
-		Vector<Vector<Object>> tab = new Vector<Vector<Object>>();
-		Vector<Object>         row = new Vector<Object>();
-
-		if (_useCmForPcsTable)
-		{
-			Iterator<CountersModel> iter = GetCounters.getCmList().iterator();
-			while (iter.hasNext())
-			{
-				CountersModel cm = iter.next();
-				
-				if (cm != null)
-				{
-					row = new Vector<Object>();
-					row.setSize(PCS_TAB_POS_MAX);
-					row.set(PCS_TAB_POS_POSTPONE,   new Integer(cm.getPostponeTime()));
-					row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()));
-					row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
-					row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(cm.isPersistCountersDiffEnabled()));
-					row.set(PCS_TAB_POS_STORE_RATE, new Boolean(cm.isPersistCountersRateEnabled()));
-
-					row.set(PCS_TAB_POS_TAB_NAME,   cm.getDisplayName());
-					row.set(PCS_TAB_POS_CM_NAME,    cm.getName());
-					row.set(PCS_TAB_POS_ICON,       cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
-					row.set(PCS_TAB_POS_LONG_DESC,  cm.getDescription().replaceAll("\\<.*?\\>", ""));
-//					row.add(new Boolean( cm.isPersistCountersEnabled() ));
-//					row.add(cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
-//					row.add(cm.getName());
-//					row.add(cm.getDisplayName());
-//					row.add(cm.getDescription().replaceAll("\\<.*?\\>", "")); // STRIP HTML Tags from the description.
-					tab.add(row);
-					
-					if (cm.getName().equals(SummaryPanel.CM_NAME))
-					{
-						row.set(PCS_TAB_POS_ICON, SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
-					}
-				}
-			}
-		}
-		else
-		{
-			row = new Vector<Object>();
-			row.setSize(PCS_TAB_POS_MAX);
-			row.set(PCS_TAB_POS_POSTPONE,   new Integer(0));
-			row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_RATE, new Boolean(true));
-			row.set(PCS_TAB_POS_TAB_NAME,   "Summary");
-			row.set(PCS_TAB_POS_CM_NAME,    "cmSummary");
-			row.set(PCS_TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_summary_activity.png"));
-			row.set(PCS_TAB_POS_LONG_DESC,  "All the fields on the left hand side of the graphs.");
-			tab.add(row);
-	
-			row = new Vector<Object>();
-			row.setSize(PCS_TAB_POS_MAX);
-			row.set(PCS_TAB_POS_POSTPONE,   new Integer(0));
-			row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_RATE, new Boolean(true));
-			row.set(PCS_TAB_POS_TAB_NAME,   "CPU Usage");
-			row.set(PCS_TAB_POS_CM_NAME,    "cmCpu");
-			row.set(PCS_TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_engine_activity.png"));
-			row.set(PCS_TAB_POS_LONG_DESC,  "bla bla bla... asfdha dkjfg askj gfakj gfkajgshd fagsakgdfakdfhs kjfhgoiqay edatfshjghv kfdsjhgaks dfajhdfskjdf glkash df.");
-			tab.add(row);
-	
-			row = new Vector<Object>();
-			row.setSize(PCS_TAB_POS_MAX);
-			row.set(PCS_TAB_POS_POSTPONE,   new Integer(0));
-			row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(true));
-			row.set(PCS_TAB_POS_STORE_RATE, new Boolean(true));
-			row.set(PCS_TAB_POS_TAB_NAME,   "Device Usage");
-			row.set(PCS_TAB_POS_CM_NAME,    "cmDevice");
-			row.set(PCS_TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/cm_device_activity.png"));
-			row.set(PCS_TAB_POS_LONG_DESC,  "wwwwwwwwwwwwwwww wwww ttttt uuuuuu bla bla bla... hhhhhhhhhhhhh  kkkkkkkkkkkk yyyyyyy ssssssssssssssssss ggggggggggggg w wwww aaaaa.");
-			tab.add(row);
-	
-			for (int i=0; i<40; i++)
-			{
-				row = new Vector<Object>();
-				row.setSize(PCS_TAB_POS_MAX);
-				row.set(PCS_TAB_POS_POSTPONE,   new Integer(0));
-				row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(true));
-				row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(true));
-				row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(true));
-				row.set(PCS_TAB_POS_STORE_RATE, new Boolean(true));
-				row.set(PCS_TAB_POS_TAB_NAME,   "Dummy Tab "+i);
-				row.set(PCS_TAB_POS_CM_NAME,    "cmDummy"+i);
-				row.set(PCS_TAB_POS_ICON,       SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png"));
-				row.set(PCS_TAB_POS_LONG_DESC,  UUID.randomUUID().toString() + " : " + UUID.randomUUID().toString());
-				tab.add(row);
-			}			
-		}
-
-		return tab;
-	}
 	/*---------------------------------------------------
 	** END: component initialization
 	**---------------------------------------------------
 	*/
 
+	/*---------------------------------------------------
+	** BEGIN: subclasses for PCS Table
+	**---------------------------------------------------
+	*/
+	private static final String[] PCS_TAB_HEADER = {"Icon", "Short Desc", "Group", "Timeout", "Postpone", "Store", "Abs", "Diff", "Rate", "Long Description", "CM Name"};
+	private static final int PCS_TAB_POS_ICON       = 0;
+	private static final int PCS_TAB_POS_TAB_NAME   = 1; //fix PCS_TAB_POS_GROUP_NAME or use TcpConfigDialog
+	private static final int PCS_TAB_POS_GROUP_NAME = 2; 
+	private static final int PCS_TAB_POS_TIMEOUT    = 3;
+	private static final int PCS_TAB_POS_POSTPONE   = 4;
+	private static final int PCS_TAB_POS_STORE_PCS  = 5;
+	private static final int PCS_TAB_POS_STORE_ABS  = 6;
+	private static final int PCS_TAB_POS_STORE_DIFF = 7;
+	private static final int PCS_TAB_POS_STORE_RATE = 8;
+	private static final int PCS_TAB_POS_LONG_DESC  = 9;
+	private static final int PCS_TAB_POS_CM_NAME    = 10;
+
+	private static final Color PCS_TAB_PCS_COL_BG = new Color(240, 240, 240);
+
+	/** PcsTable */
+	private static class PcsTable
+	extends JXTable
+	{
+		private static final long	serialVersionUID	= 1L;
+
+		PcsTable()
+		{
+			super();
+			setModel( new PcsTableModel() );
+
+			setShowGrid(false);
+			setSortable(true);
+			setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+			packAll(); // set size so that all content in all cells are visible
+			setColumnControlVisible(true);
+
+			// Populate the table
+			refreshTable();
+			
+			// hide 'Group Name' if no child's are found
+			if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+			{
+				TableColumnModelExt tcmx = (TableColumnModelExt)this.getColumnModel();
+				tcmx.getColumnExt(PCS_TAB_HEADER[PCS_TAB_POS_GROUP_NAME]).setVisible(false);
+			}
+		}
+
+		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+		public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
+		{
+			Component c = super.prepareRenderer(renderer, row, column);
+
+			int view_PCS_TAB_POS_STORE_PCS  = convertColumnIndexToView(PCS_TAB_POS_STORE_PCS);
+			int view_PCS_TAB_POS_STORE_ABS  = convertColumnIndexToView(PCS_TAB_POS_STORE_ABS);
+			int view_PCS_TAB_POS_STORE_RATE = convertColumnIndexToView(PCS_TAB_POS_STORE_RATE);
+			
+			if (column >= view_PCS_TAB_POS_STORE_PCS && column <= view_PCS_TAB_POS_STORE_RATE)
+			{
+				c.setBackground(PCS_TAB_PCS_COL_BG);
+				if ((column >= view_PCS_TAB_POS_STORE_ABS && column <= view_PCS_TAB_POS_STORE_RATE) || row == 0)
+				{
+					// if not editable, lets disable it
+					// calling isCellEditable instead of getModel().isCellEditable(row, column)
+					// does the viewRow->modelRow translation for us.
+					c.setEnabled( isCellEditable(row, column) );
+				}
+			}
+			return c;
+		}
+
+		/** Populate information in the table */
+		protected void refreshTable()
+		{
+			DefaultTableModel tm = (DefaultTableModel)getModel();
+
+			JTabbedPane tabPane = MainFrame.getTabbedPane();
+			if (tabPane == null)
+				return;
+
+			while (tm.getRowCount() > 0)
+				tm.removeRow(0);
+
+			refreshTable(tabPane, tm, null);
+
+			packAll(); // set size so that all content in all cells are visible
+		}
+		private void refreshTable(JTabbedPane tabPane, DefaultTableModel tm, String groupName)
+		{
+			for (int t=0; t<tabPane.getTabCount(); t++)
+			{
+				Component comp    = tabPane.getComponentAt(t);
+				String    tabName = tabPane.getTitleAt(t);
+
+				if (comp instanceof JTabbedPane)
+					refreshTable((JTabbedPane)comp, tm, tabName);
+				else if (comp instanceof TabularCntrPanel)
+				{
+					TabularCntrPanel tcp = (TabularCntrPanel) comp;
+					CountersModel    cm  = tcp.getCm();
+					
+					if (StringUtil.isNullOrBlank(groupName))
+						groupName = tcp.getGroupName();
+
+					if (cm != null)
+					{
+						Vector<Object> row = new Vector<Object>();
+						row.setSize(PCS_TAB_HEADER.length);
+						
+						row.set(PCS_TAB_POS_TIMEOUT,    new Integer(cm.getQueryTimeout()));
+						row.set(PCS_TAB_POS_POSTPONE,   new Integer(cm.getPostponeTime()));
+						row.set(PCS_TAB_POS_STORE_PCS,  new Boolean(cm.isPersistCountersEnabled()));
+						row.set(PCS_TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
+						row.set(PCS_TAB_POS_STORE_DIFF, new Boolean(cm.isPersistCountersDiffEnabled()));
+						row.set(PCS_TAB_POS_STORE_RATE, new Boolean(cm.isPersistCountersRateEnabled()));
+	
+						row.set(PCS_TAB_POS_TAB_NAME,   cm.getDisplayName());
+						row.set(PCS_TAB_POS_GROUP_NAME, groupName);
+						row.set(PCS_TAB_POS_CM_NAME,    cm.getName());
+						row.set(PCS_TAB_POS_ICON,       cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+						row.set(PCS_TAB_POS_LONG_DESC,  cm.getDescription().replaceAll("\\<.*?\\>", ""));
+
+						tm.addRow(row);
+					}
+				}
+			}
+		} // end: refreshTable
+	}
+
+	/** PcsTableModel */
+	private static class PcsTableModel 
+	extends DefaultTableModel
+	{
+        private static final long serialVersionUID = 1L;
+
+        PcsTableModel()
+		{
+			super();
+			setColumnIdentifiers(PCS_TAB_HEADER);
+		}
+
+		@Override
+		public Class<?> getColumnClass(int column) 
+		{
+			if (column == PCS_TAB_POS_TIMEOUT)    return Integer.class;
+			if (column == PCS_TAB_POS_POSTPONE)   return Integer.class;
+			if (column == PCS_TAB_POS_STORE_PCS)  return Boolean.class;
+			if (column == PCS_TAB_POS_STORE_ABS)  return Boolean.class;
+			if (column == PCS_TAB_POS_STORE_DIFF) return Boolean.class;
+			if (column == PCS_TAB_POS_STORE_RATE) return Boolean.class;
+			if (column == PCS_TAB_POS_ICON)       return Icon.class;
+			return Object.class;
+		}
+		@Override
+		public boolean isCellEditable(int row, int col)
+		{
+			if (col == PCS_TAB_POS_TIMEOUT)
+				return true;
+
+			if (col == PCS_TAB_POS_POSTPONE)
+				return true;
+
+			if (col == PCS_TAB_POS_STORE_PCS)
+				return true;
+
+			if (col <= PCS_TAB_POS_STORE_RATE)
+			{
+				// get some values from the MODEL viewRow->modelRow translation should be done before calling isCellEditable
+				boolean storePcs    = ((Boolean) getValueAt(row, PCS_TAB_POS_STORE_PCS)).booleanValue();
+				String tabName      = (String)   getValueAt(row, PCS_TAB_POS_TAB_NAME);
+
+				//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
+
+				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
+				CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
+				if (cm != null)
+				{
+					if (col == PCS_TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
+					if (col == PCS_TAB_POS_STORE_DIFF) return storePcs && cm.isPersistCountersDiffEditable();
+					if (col == PCS_TAB_POS_STORE_RATE) return storePcs && cm.isPersistCountersRateEditable();
+				}
+			}
+			return false;
+		}
+	}
+	/*---------------------------------------------------
+	** END: subclasses for PCS Table
+	**---------------------------------------------------
+	*/
 
 	
 	
@@ -1410,7 +1385,7 @@ public class ConnectionDialog
 					rows++;
 			}
 			if (rows == 0 && problem.equals(""))
-				problem = "Atleast one session needs to be checked.";
+				problem = "Atleast one Performance Counter needs to be checked.";
 		}
 
 		else if (_aseHostMonitor_chk.isSelected())
@@ -2028,6 +2003,137 @@ public class ConnectionDialog
 			return false;
 		}
 		
+		// Get some info about what we connected to.
+    	DatabaseMetaData dbmd = null;
+    	try	{ dbmd = _offlineConn.getMetaData(); } catch (Throwable ignore) {}
+		if (dbmd != null)
+		{
+			String getDriverName             = "-";
+			String getDriverVersion          = "-";
+			int    getDriverMajorVersion     = -1;
+			int    getDriverMinorVersion     = -1;
+			int    getJDBCMajorVersion       = -1;
+			int    getJDBCMinorVersion       = -1;
+
+			String getDatabaseProductName    = "-";
+			String getDatabaseProductVersion = "-";
+			int    getDatabaseMajorVersion   = -1;
+			int    getDatabaseMinorVersion   = -1;
+
+			try	{ getDriverName             = dbmd.getDriverName();             } catch (Throwable ignore) {}
+			try	{ getDriverVersion          = dbmd.getDriverVersion();          } catch (Throwable ignore) {}
+			try	{ getDriverMajorVersion     = dbmd.getDriverMajorVersion();     } catch (Throwable ignore) {}
+			try	{ getDriverMinorVersion     = dbmd.getDriverMinorVersion();     } catch (Throwable ignore) {}
+			try	{ getJDBCMajorVersion       = dbmd.getJDBCMajorVersion();       } catch (Throwable ignore) {}
+			try	{ getJDBCMinorVersion       = dbmd.getJDBCMinorVersion();       } catch (Throwable ignore) {}
+
+			try	{ getDatabaseProductName    = dbmd.getDatabaseProductName();    } catch (Throwable ignore) {}
+			try	{ getDatabaseProductVersion = dbmd.getDatabaseProductVersion(); } catch (Throwable ignore) {}
+			try	{ getDatabaseMajorVersion   = dbmd.getDatabaseMajorVersion();   } catch (Throwable ignore) {}
+			try	{ getDatabaseMinorVersion   = dbmd.getDatabaseMinorVersion();   } catch (Throwable ignore) {}
+
+			_logger.info("Connected using JDBC driver Name='"+getDriverName
+					+"', Version='"         +getDriverVersion
+					+"', MajorVersion='"    +getDriverMajorVersion
+					+"', MinorVersion='"    +getDriverMinorVersion
+					+"', JdbcMajorVersion='"+getJDBCMajorVersion
+					+"', JdbcMinorVersion='"+getJDBCMinorVersion
+					+"'.");
+			_logger.info("Connected to Database Product Name='"+getDatabaseProductName
+					+"', Version='"     +getDatabaseProductVersion
+					+"', MajorVersion='"+getDatabaseMajorVersion
+					+"', MinorVersion='"+getDatabaseMinorVersion
+					+"'.");
+
+			// if H2
+			// Set some specific stuff
+			if ( PersistWriterJdbc.DB_PROD_NAME_H2.equals(getDatabaseProductName) )
+			{
+				String dbProdName = getDatabaseProductName;
+
+				_logger.info("Do H2 Specific settings for the database.");
+
+				// Sets the size of the cache in KB (each KB being 1024 bytes) for the current database. 
+				// The default value is 16384 (16 MB). The value is rounded to the next higher power 
+				// of two. Depending on the virtual machine, the actual memory required may be higher.
+				//dbExecSetting(_offlineConn, dbProdName, "SET CACHE_SIZE int");
+
+				// Sets the compression algorithm for BLOB and CLOB data. Compression is usually slower, 
+				// but needs less disk space. LZF is faster but uses more space.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET COMPRESS_LOB { NO | LZF | DEFLATE }
+				//dbExecSetting(_offlineConn, dbProdName, "SET COMPRESS_LOB DEFLATE");
+
+				// Sets the default lock timeout (in milliseconds) in this database that is used for 
+				// the new sessions. The default value for this setting is 1000 (one second).
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET DEFAULT LOCK_TIMEOUT int
+				dbExecSetting(_offlineConn, dbProdName, "SET DEFAULT_LOCK_TIMEOUT 30000");
+
+				// If IGNORECASE is enabled, text columns in newly created tables will be 
+				// case-insensitive. Already existing tables are not affected. 
+				// The effect of case-insensitive columns is similar to using a collation with 
+				// strength PRIMARY. Case-insensitive columns are compared faster than when 
+				// using a collation. String literals and parameters are however still considered 
+				// case sensitive even if this option is set.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent. 
+				// This setting can be appended to the database URL: jdbc:h2:test;IGNORECASE=TRUE
+				// SET IGNORECASE { TRUE | FALSE }
+				//dbExecSetting(_offlineConn, dbProdName, "SET IGNORECASE TRUE");
+
+				// Sets the transaction log mode. The values 0, 1, and 2 are supported, 
+				// the default is 2. This setting affects all connections.
+				// LOG 0 means the transaction log is disabled completely. It is the fastest mode, 
+				//       but also the most dangerous: if the process is killed while the database is open
+				//       in this mode, the data might be lost. It must only be used if this is not a 
+				//       problem, for example when initially loading a database, or when running tests.
+				// LOG 1 means the transaction log is enabled, but FileDescriptor.sync is disabled. 
+				//       This setting is about half as fast as with LOG 0. This setting is useful if 
+				//       no protection against power failure is required, but the data must be protected 
+				//       against killing the process.
+				// LOG 2 (the default) means the transaction log is enabled, and FileDescriptor.sync 
+				//       is called for each checkpoint. This setting is about half as fast as LOG 1. 
+				//       Depending on the file system, this will also protect against power failure 
+				//       in the majority if cases.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is not persistent. 
+				// This setting can be appended to the database URL: jdbc:h2:test;LOG=0
+				// SET LOG int
+				//dbExecSetting(_offlineConn, dbProdName, "SET LOG 1");
+
+				// Sets the maximum size of an in-place LOB object. LOB objects larger that this size 
+				// are stored in a separate file, otherwise stored directly in the database (in-place). 
+				// The default max size is 1024. This setting has no effect for in-memory databases.
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction. This setting is persistent.
+				// SET MAX_LENGTH_INPLACE_LOB int
+				//dbExecSetting(_offlineConn, dbProdName, "SET MAX_LENGTH_INPLACE_LOB 4096");
+
+				// Set the query timeout of the current session to the given value. The timeout is 
+				// in milliseconds. All kinds of statements will throw an exception if they take 
+				// longer than the given value. The default timeout is 0, meaning no timeout.
+				// This command does not commit a transaction, and rollback does not affect it.
+				// SET QUERY_TIMEOUT int
+				dbExecSetting(_offlineConn, dbProdName, "SET QUERY_TIMEOUT 30000");
+
+				// Sets the trace level for file the file or system out stream. Levels are: 0=off, 
+				// 1=error, 2=info, 3=debug. The default level is 1 for file and 0 for system out. 
+				// To use SLF4J, append ;TRACE_LEVEL_FILE=4 to the database URL when opening the database.
+				// This setting is not persistent. Admin rights are required to execute this command, 
+				// as it affects all connections. This command does not commit a transaction, 
+				// and rollback does not affect it. This setting can be appended to the 
+				// database URL: jdbc:h2:test;TRACE_LEVEL_SYSTEM_OUT=3
+				// SET { TRACE_LEVEL_FILE | TRACE_LEVEL_SYSTEM_OUT } int
+				//dbExecSetting("");
+
+				// 
+				//dbExec("");
+			}
+		}
+		
 		//
 		// FIXME: open a dialog where we show what information is in the offline database store
 //		new OfflineSessionVeiwer(_owner);
@@ -2035,6 +2141,42 @@ public class ConnectionDialog
 
 		return _offlineConn != null;
 	}
+	private boolean dbExecSetting(Connection conn, String dbProductName, String sql)
+	{
+		_logger.info(dbProductName+": "+sql);
+		try
+		{
+			return dbExec(conn, sql, true);
+		}
+		catch (SQLException ignore)
+		{
+			return false;
+		}
+	}
+
+	private boolean dbExec(Connection conn, String sql, boolean printErrors)
+	throws SQLException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("SEND SQL: " + sql);
+		}
+
+		try
+		{
+			Statement s = conn.createStatement();
+			s.execute(sql);
+			s.close();
+		}
+		catch(SQLException e)
+		{
+			_logger.warn("Problems when executing sql statement: "+sql);
+			throw e;
+		}
+
+		return true;
+	}
+
 
 	/**
 	 * Test to connect
@@ -2301,6 +2443,14 @@ public class ConnectionDialog
 			setToTemplate();
 		}
 
+		// --- PCS: BUTTON: "Open " 
+		if (_pcsOpenTcpConfigDialog_but.equals(source))
+		{
+			boolean madeChanges = TcpConfigDialog.showDialog(this);
+			if (madeChanges)
+				_pcsSessionTable.refreshTable();
+		}
+
 		// --- PCS: COMBOBOX: JDBC URL ---
 		if (_pcsJdbcUrl_cbx.equals(source))
 		{
@@ -2468,16 +2618,18 @@ public class ConnectionDialog
 					// setPersistCounters for all CM:s
 					if (_useCmForPcsTable)
 					{
-						for(int r=0; r<_pcsSessionTable.getRowCount(); r++)
+						TableModel tm = _pcsSessionTable.getModel();
+						for(int r=0; r<tm.getRowCount(); r++)
 						{
 							for (CountersModel cm : GetCounters.getCmList())
 							{
-								String  rowName      = (String)   _pcsSessionTable.getValueAt(r, PCS_TAB_POS_CM_NAME);
-								Integer pcsPostpone  = (Integer)  _pcsSessionTable.getValueAt(r, PCS_TAB_POS_POSTPONE);
-								boolean pcsStore     = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
-								boolean pcsStoreAbs  = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
-								boolean pcsStoreDiff = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
-								boolean pcsStoreRate = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
+								String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
+								Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
+								Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
+								boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
+								boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
+								boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
+								boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
 								String  cmName   = cm.getName();
 								if (cmName.equals(rowName))
 								{
@@ -2486,6 +2638,7 @@ public class ConnectionDialog
 									cm.setPersistCountersDiff(pcsStoreDiff,           true);
 									cm.setPersistCountersRate(pcsStoreRate,           true);
 									cm.setPostponeTime       (pcsPostpone.intValue(), true);
+									cm.setQueryTimeout       (pcsTimeout.intValue(),  true);
 									continue;
 								}
 							}
@@ -2493,16 +2646,18 @@ public class ConnectionDialog
 					}
 					else
 					{
-						for(int r=0; r<_pcsSessionTable.getRowCount(); r++)
+						TableModel tm = _pcsSessionTable.getModel();
+						for(int r=0; r<tm.getRowCount(); r++)
 						{
-							String  rowName      = (String)   _pcsSessionTable.getValueAt(r, PCS_TAB_POS_CM_NAME);
-							Integer pcsPostpone  = (Integer)  _pcsSessionTable.getValueAt(r, PCS_TAB_POS_POSTPONE);
-							boolean pcsStore     = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
-							boolean pcsStoreAbs  = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
-							boolean pcsStoreDiff = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
-							boolean pcsStoreRate = ((Boolean) _pcsSessionTable.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
+							String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
+							Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
+							Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
+							boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
+							boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
+							boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
+							boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
 							
-							System.out.println("OK: name="+StringUtil.left(rowName,25)+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+", postpone="+pcsPostpone+".");
+							System.out.println("OK: name="+StringUtil.left(rowName,25)+", timeout="+pcsTimeout+", postpone="+pcsPostpone+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+".");
 						}
 					}
 				} // end: PCS CONNECT
@@ -2688,8 +2843,10 @@ public class ConnectionDialog
 			if (cm == null)
 				continue;
 
+			tm.setValueAt(new Integer(cm.getQueryTimeout()),              r, PCS_TAB_POS_TIMEOUT);
 			tm.setValueAt(new Integer(cm.getPostponeTime()),              r, PCS_TAB_POS_POSTPONE);
-			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()), r, PCS_TAB_POS_STORE_PCS);
+//			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()), r, PCS_TAB_POS_STORE_PCS);
+			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled()),     r, PCS_TAB_POS_STORE_PCS);
 			tm.setValueAt(new Boolean(cm.isPersistCountersAbsEnabled()),  r, PCS_TAB_POS_STORE_ABS);
 			tm.setValueAt(new Boolean(cm.isPersistCountersDiffEnabled()), r, PCS_TAB_POS_STORE_DIFF);
 			tm.setValueAt(new Boolean(cm.isPersistCountersRateEnabled()), r, PCS_TAB_POS_STORE_RATE);

@@ -30,7 +30,7 @@ import com.asetune.utils.SwingUtils;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseHelpDb, AseHelpDevice, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig};
+	public enum ConfigType {AseCacheConfig, AseHelpDb, AseHelpDevice, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -101,6 +101,10 @@ public abstract class AseConfigText
 
 		case AseMonitorConfig:
 			aseConfigText = new AseConfigText.MonitorConfig();
+			break;
+
+		case AseLicenseInfo:
+			aseConfigText = new AseConfigText.LicenceInfo();
 			break;
 
 		default:
@@ -407,7 +411,7 @@ public abstract class AseConfigText
 		@Override
 		protected String getSqlCurrentConfig(int aseVersion)
 		{
-			return
+			String sql = 
 				"select ConfigSnapshotAtDateTime = convert(varchar(30),getdate(),109) \n" +
 
 				"print '' \n" +
@@ -435,6 +439,32 @@ public abstract class AseConfigText
 				"print '######################################################################################' \n" +
 				"exec sp_cacheconfig \n" +
 				"\n"; 
+			
+			if (aseVersion >= 15700)
+			{
+				sql += 
+					"\n" +
+					"print '' \n" +
+					"print '######################################################################################' \n" +
+					"print '## select * from master..syscacheinfo' \n" +
+					"print '######################################################################################' \n" +
+					"select * from master..syscacheinfo \n" +
+
+					"print '' \n" +
+					"print '######################################################################################' \n" +
+					"print '## select * from master..syspoolinfo' \n" +
+					"print '######################################################################################' \n" +
+					"select * from master..syspoolinfo \n" +
+
+					"print '' \n" +
+					"print '######################################################################################' \n" +
+					"print '## select * from master..syscachepoolinfo' \n" +
+					"print '######################################################################################' \n" +
+					"select * from master..syscachepoolinfo \n" +
+					"\n";
+			}
+
+			return sql;
 		}
 	}
 
@@ -595,6 +625,12 @@ public abstract class AseConfigText
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_monitorconfig 'all'"; }
 	}
 	
+	public static class LicenceInfo extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master..monLicense"; }
+	}
+	
 	
 	/*---------------------------------------------------
 	**---------------------------------------------------
@@ -655,6 +691,10 @@ public abstract class AseConfigText
 			c = AseConfigText.getInstance(ConfigType.AseMonitorConfig);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseMonitorConfig).getConfig()=\n"+c.getConfig());
+
+			c = AseConfigText.getInstance(ConfigType.AseLicenseInfo);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseLicenseInfo).getConfig()=\n"+c.getConfig());
 		}
 		catch (Exception e)
 		{

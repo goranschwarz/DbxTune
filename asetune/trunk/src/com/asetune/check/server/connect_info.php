@@ -114,6 +114,46 @@
 	mysql_query($sql) or die("ERROR: " . mysql_error());
 
 	//------------------------------------------
+	// CHECK if client should send MDA information
+	// This is if ASE Version has NOT been saved previously
+	// SELECT count(*) from asemon_mda_info where srvVersion = $srvVersion and isClusterEnabled = $isClusterEnabled
+	$sql = "
+		IF EXISTS (SELECT 1 FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled) 
+		THEN
+			SELECT 1 as 'has_ase_version';
+		ELSE
+			SELECT 0 as 'has_ase_version';
+		END IF;
+		";
+	$sql = "SELECT count(*) FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled ";
+
+	if ( $debug == "true" )
+		echo "DEBUG EXECUTING SQL: $sql\n";
+
+	$hasMdaInfo = 1;
+	$result = mysql_query($sql);
+	if (!$result)
+	{
+		if ( $debug == "true" )
+			echo "DEBUG NO resultset for query\n";
+	}
+	else
+	{
+		while($row = mysql_fetch_row($result))
+		{
+			$hasMdaInfo = $row[0];
+			if ( $debug == "true" )
+				echo "DEBUG read row: $hasMdaInfo \n";
+		}
+		mysql_free_result($result);
+	}
+	if ( $debug == "true" )
+		echo "DEBUG hasMdaInfo: $hasMdaInfo \n";
+	if ($hasMdaInfo == 0)
+		echo "SEND_MDA_INFO: true\n";
+
+
+	//------------------------------------------
 	// Close connection to the database
 	mysql_close() or die("ERROR: " . mysql_error());
 

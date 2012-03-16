@@ -3,13 +3,17 @@
  */
 package com.asetune.gui.swing;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -19,7 +23,9 @@ import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
 import javax.swing.Icon;
@@ -41,15 +47,20 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
+
 
 
 
 
 public class GTabbedPane
     extends JTabbedPane
-    implements MouseListener
+    implements MouseListener, DockUndockManagement
 {
 	private static Logger _logger = Logger.getLogger(GTabbedPane.class);
+	public static final String GROUP_STR_SEPARATOR = ":";
+
 	/*---------------------------------------------------
 	** Constants
 	**---------------------------------------------------
@@ -70,6 +81,9 @@ public class GTabbedPane
 	private int        _lastMouseClickAtTabIndex = -1;
 	private GTabbedPane _thisGTabbedPane   = null;
 
+	/** when we have passed Constructor initialization this would be true */
+	private boolean _initialized = false;
+	
 	static
 	{
 //		_logger.setLevel(Level.TRACE);
@@ -82,6 +96,12 @@ public class GTabbedPane
 	public GTabbedPane()
 	{
 		super();
+		init();
+	}
+	public GTabbedPane(String name)
+	{
+		super();
+		setName(name);
 		init();
 	}
 	public GTabbedPane(int tabPlacement)
@@ -102,7 +122,279 @@ public class GTabbedPane
 		_tabMenu = createTabPopupMenu();
 
 		setTabLayoutPolicy( super.getTabLayoutPolicy() );
+		setWatermarkAnchor(this);
+		_initialized = true;
 	}
+
+	
+	/*---------------------------------------------------
+	** BEGIN: Overridden Listener stuff
+	**--------------------------------------------------- */
+	/** keep a set of listers, so we can add */
+	private Set<ChangeListener> _localChangeListeners = new LinkedHashSet<ChangeListener>();
+
+	public void addChangeListener(ChangeListener l) 
+	{
+//System.out.println("GTabbedPane("+getName()+").addChangeListener(): "+l);
+		super.addChangeListener(l);
+		
+		if ( _initialized )
+		{
+			if (_localChangeListeners == null)
+				_localChangeListeners = new LinkedHashSet<ChangeListener>();
+			_localChangeListeners.add(l);
+	
+			// Add the lister to any sub JTabbedPane (for the moment only 1 level down)
+			for (int t=0; t<getTabCount(); t++)
+			{
+				Component comp = getComponentAt(t);
+				if (comp instanceof JTabbedPane)
+					((JTabbedPane)comp).addChangeListener(l);
+			}
+		}
+	}
+
+	public void removeChangeListener(ChangeListener l) 
+	{
+		super.removeChangeListener(l);
+
+		if ( _initialized )
+		{
+			if (_localChangeListeners != null)
+				_localChangeListeners.remove(l);
+	
+			// Remove the lister from any sub JTabbedPane (for the moment only 1 level down)
+			for (int t=0; t<getTabCount(); t++)
+			{
+				Component comp = getComponentAt(t);
+				if (comp instanceof JTabbedPane)
+					((JTabbedPane)comp).removeChangeListener(l);
+			}
+		}
+	}
+	/*---------------------------------------------------
+	** END: Methods for multi level GTabbedPane
+	**--------------------------------------------------- */
+
+    
+    
+    /*---------------------------------------------------
+	** BEGIN: Methods for multi level GTabbedPane
+	**--------------------------------------------------- */
+
+	/**
+	 * does this TabbedPane contain any of the components (or if comp == this)
+	 */
+	public boolean contains(Component comp)
+	{
+		return contains(this, comp);
+	}
+	private static boolean contains(JTabbedPane tp, Component comp)
+	{
+		if (tp.equals(comp))
+			return true;
+
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			Component tcomp = tp.getComponentAt(t);
+			if (tcomp.equals(comp))
+				return true;
+
+			if (tcomp instanceof JTabbedPane)
+				if (contains((JTabbedPane)tcomp, tcomp))
+					return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Get selected tab title
+	 * @param doSubLevels   do you want to search any "sub TabbedPanels"
+	 * @return the Title of the selected tab, if getSubLevels=true it will be the lowest level, if none is selected null will be returned.
+	 */
+	public String getSelectedTitle(boolean doSubLevels)
+	{
+		return getSelectedTitle(this, doSubLevels);
+	}
+	private static String getSelectedTitle(JTabbedPane tp, boolean doSubLevels)
+	{
+		int index = tp.getSelectedIndex();
+		if (index < 0)
+			return null;
+
+		Component comp = tp.getComponentAt(index);
+		if (comp instanceof JTabbedPane && doSubLevels)
+			return getSelectedTitle((JTabbedPane)comp, doSubLevels);
+		else
+			return tp.getTitleAt(index);
+	}
+
+	/** 
+	 * Get selected component 
+	 * @param doSubLevels do you want to get component for lowest level of "sub TabbedPanels" 
+	 * @return the Component of the selected tab, if getSubLevels=true it will be the lowest level, if none is selected null will be returned.
+	 */
+	public Component getSelectedComponent(boolean doSubLevels)
+	{
+		return getSelectedComponent(this, doSubLevels);
+	}
+	@Override
+	public Component getSelectedComponent()
+	{
+		return getSelectedComponent(this, true);
+	}
+	private static Component getSelectedComponent(JTabbedPane tp, boolean doSubLevels)
+	{
+		int index = tp.getSelectedIndex();
+		if (index < 0)
+			return null;
+
+		Component comp = tp.getComponentAt(index);
+		if (comp instanceof JTabbedPane && doSubLevels)
+			return getSelectedComponent((JTabbedPane)comp, doSubLevels);
+		else
+			return tp.getComponentAt(index);
+	}
+
+	/**
+	 * Does this TabbedPane has any sub TabPanels
+	 * @return true or false
+	 */
+	public boolean hasChildPanels()
+	{
+		return hasChildPanels(this);
+	}
+	public static boolean hasChildPanels(JTabbedPane tp)
+	{
+		if (tp == null)
+			return false;
+
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			Component comp = tp.getComponentAt(t);
+			if (comp instanceof JTabbedPane)
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * return all titles in the TabbedPane, if there are sub TabbedPane those will also be added to the list
+	 * @param format can contain <code>${TAB_NAME}</code> and <code>${GROUP_NAME}</code> which will be replaced with real values
+	 */
+	public List<String> getAllTitles(String format)
+	{
+		ArrayList<String> titles = new ArrayList<String>();
+		getAllTitles(this, titles, format, null);
+		return titles;
+	}
+
+	/**
+	 * return all titles in the TabbedPane, if there are sub TabbedPane those will also be added to the list
+	 */
+	public List<String> getAllTitles()
+	{
+		ArrayList<String> titles = new ArrayList<String>();
+		getAllTitles(this, titles, null, null);
+		return titles;
+	}
+	/** append titles to the list */
+	private void getAllTitles(JTabbedPane tp, List<String> list, String format, String parentName)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			Component comp = tp.getComponentAt(t);
+			String tabTitle = tp.getTitleAt(t);
+			if (comp instanceof JTabbedPane)
+				getAllTitles((JTabbedPane)comp, list, format, tabTitle);
+			else
+			{
+				String formatedStr = tabTitle;
+				if ( ! StringUtil.isNullOrBlank(format) )
+				{
+					formatedStr = format;
+					formatedStr = formatedStr.replace("${TAB_NAME}",   tabTitle);
+					formatedStr = formatedStr.replace("${GROUP_NAME}", parentName == null ? "" : parentName);
+				}
+				list.add(formatedStr);
+			}
+		}
+	}
+
+	/**
+	 * same as setSelectedIndex(), but works with a title name instead of the index.<br>
+	 * If the TabbedPane is nested (has sub TabbedPanes) those will also be searched for the title. <br>
+	 * Note: the first matching title will be set as the selected tab.
+	 * 
+	 * @param title Title Name you want to set as selected. 
+	 * @return true if we found a title to set as selected, false if not.
+	 */
+	public boolean setSelectedTitle(String title)
+	{
+		return setSelectedTitle(this, title);
+	}
+	private boolean setSelectedTitle(JTabbedPane tp, String title)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			Component comp = tp.getComponentAt(t);
+			String tabTitle = tp.getTitleAt(t);
+			if (comp instanceof JTabbedPane)
+			{
+				boolean b = setSelectedTitle((JTabbedPane)comp, title);
+				if (b)
+				{
+					tp.setSelectedIndex(t);
+					return true;
+				}
+			}
+			else
+			{
+				if (tabTitle.equals(title))
+				{
+					tp.setSelectedIndex(t);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * If there are TabbedPanes nested, get the parents name...
+	 * @param title name of the title we want to search for
+	 * 
+	 * @return the Parent Title name, or null if we can't find the title 
+	 */
+	public String getParentTitleName(String title)
+	{
+		return getParentTitleName(this, title, null);
+	}
+	private String getParentTitleName(JTabbedPane tp, String title, String parent)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			Component comp = tp.getComponentAt(t);
+			String tabTitle = tp.getTitleAt(t);
+			if (comp instanceof JTabbedPane)
+			{
+				String p = getParentTitleName((JTabbedPane)comp, title, tabTitle);
+				if (p != null)
+					return p;
+			}
+			else
+			{
+				if (tabTitle.equals(title) && parent != null)
+					return parent;
+			}
+		}
+		return null;
+	}
+
+	/*---------------------------------------------------
+	** END: Methods for multi level GTabbedPane
+	**--------------------------------------------------- */
+
 
 	/*---------------------------------------------------
 	** Methods
@@ -782,6 +1074,28 @@ public class GTabbedPane
 		for (String tabName : tabNameList)
 			setVisibleAtModel(tabName, toVisible);
 	}
+	/** FIXME: this only works with 2 level now, can it be fixed to work on any depth */
+	public void setVisibleAtModel(String parentName, String tabName, boolean toVisible)
+	{
+		GTabbedPane tp = this;
+		if ( ! StringUtil.isNullOrBlank(parentName) )
+		{
+			int index = tp.indexOfTab(parentName);
+			if (index >= 0)
+			{
+				Component comp = tp.getComponentAt(index);
+				if (comp instanceof GTabbedPane)
+					tp = (GTabbedPane) comp;
+			}
+		}
+		int modelIndex = tp.getModelExtendedEntryIndex(tabName);
+		if (modelIndex < 0)
+		{
+			_logger.warn("setVisibleAtModel(parentName='"+parentName+"', tabName='"+tabName+"', toVisible="+toVisible+") Couldn't find tabName. modelIndex="+modelIndex);
+			return; // FIXME: maybe throw an exception here
+		}
+		tp.setVisibleAtModel(modelIndex, toVisible);
+	}
 	public void setVisibleAtModel(String tabName, boolean toVisible)
 	{
 		int modelIndex = getModelExtendedEntryIndex(tabName);
@@ -972,6 +1286,19 @@ public class GTabbedPane
 		return ((TabExtendedEntry)_extEntry.get(modelIndex))._comp;
 	}
 
+	/** 
+	 * Returns the index of the component from the model, if not found -1 is returned. 
+	 */
+	public int modelIndexOfComponent(Component comp) 
+	{
+		if (comp != null)
+			for (int m=0; m<_extEntry.size(); m++)
+				if ( comp.equals( ((TabExtendedEntry)_extEntry.get(m))._comp ) )
+					return m;
+
+		return -1;
+	}
+
 	/**
 	 * Get the tab names in which order they were added.
 	 * @return A list of Strings (tab names)
@@ -985,6 +1312,31 @@ public class GTabbedPane
 
 		return tabOrder;
 	}
+//	public List<String> getModelTabOrder()
+//	{
+//		List<String> tabOrder = new ArrayList<String>();
+//
+//		getModelTabOrder(this, tabOrder, null);
+//
+//		return tabOrder;
+//	}
+//	private void getModelTabOrder(GTabbedPane tp, List<String> list, String parentTabName)
+//	{
+//		for (int t=0; t<tp.getModelTabCount(); t++)
+//		{
+//			Component comp  = tp.getComponentAtModel(t);
+//			String tabTitle = tp.getTitleAtModel(t);
+//
+//			String str = tabTitle;
+//			if (parentTabName != null) 
+//				str = parentTabName + GROUP_STR_SEPARATOR + tabTitle;
+//
+//			if (comp instanceof GTabbedPane)
+//				getModelTabOrder((GTabbedPane)comp, list, str);
+//			else
+//				list.add(str);
+//		}
+//	}
 
 	/**
 	 * Get the tab names in view order (non visible tabs wont be in the list)
@@ -1001,6 +1353,15 @@ public class GTabbedPane
 	 * @param includeNonVisible true if you also want the non visible columns in the list
 	 * @return A list of Strings (tab names)
 	 */
+//	public List<String> getTabOrder(boolean includeNonVisible)
+//	{
+//		List<String> tabOrder = new ArrayList<String>();
+//
+//		getTabOrder(includeNonVisible, this, tabOrder, null);
+//
+////System.out.println("getTabOrder(includeNonVisible="+includeNonVisible+") returns: "+tabOrder);
+//		return tabOrder;
+//	}
 	public List<String> getTabOrder(boolean includeNonVisible)
 	{
 		List<String> tabOrder = new ArrayList<String>();
@@ -1027,6 +1388,27 @@ public class GTabbedPane
 		return tabOrder;
 	}
 
+//	private void getTabOrder(boolean includeNonVisible, GTabbedPane tp, List<String> list, String parentTabName)
+//	{
+//		for (int t=0; t<tp.getModelTabCount(); t++)
+//		{
+//			Component comp  = tp.getComponentAtModel(t);
+//			String tabTitle = tp.getTitleAtModel(t);
+//
+//			String str = tabTitle;
+//			if (parentTabName != null) 
+//				str = parentTabName + GROUP_STR_SEPARATOR + tabTitle;
+//
+//			// If it's hidden and not to be included
+//			if ( ! includeNonVisible && ! tp.isVisibleAtModel(t) )
+//				continue;
+//
+//			if (comp instanceof GTabbedPane)
+//				getTabOrder(includeNonVisible, (GTabbedPane)comp, list, str);
+//			else
+//				list.add(str);
+//		}
+//	}
 
 	/**
 	 * Set the order of the tabs
@@ -1236,7 +1618,9 @@ public class GTabbedPane
 	** END: extending JTabbedPane methods
 	**---------------------------------------------------
 	*/
-
+//	private static class TabOrder
+//	{
+//	}
 	
 	/*---------------------------------------------------
 	** BEGIN: overloaded methods from: JTabbedPane
@@ -1247,11 +1631,34 @@ public class GTabbedPane
 	 * This also Updates the pupup menu in what mode we are in. 
 	 * Then it calls super... 
 	 */
+//	@Override
+//	public void setTabLayoutPolicy(int policy)
+//	{
+//		JMenuItem wrap   = getMenuItemNamed("WRAP");
+//		JMenuItem scroll = getMenuItemNamed("SCROLL");
+//
+//		if (wrap   != null &&   wrap instanceof JRadioButtonMenuItem)
+//			((JRadioButtonMenuItem)wrap)  .setSelected( policy == JTabbedPane.WRAP_TAB_LAYOUT );
+//
+//		if (scroll != null && scroll instanceof JRadioButtonMenuItem)
+//			((JRadioButtonMenuItem)scroll).setSelected( policy == JTabbedPane.SCROLL_TAB_LAYOUT );
+//		
+//		super.setTabLayoutPolicy(policy);
+//	}
+// NOTE: below needs more work and test before it can be used
 	@Override
 	public void setTabLayoutPolicy(int policy)
 	{
-		JMenuItem wrap   = getMenuItemNamed("WRAP");
-		JMenuItem scroll = getMenuItemNamed("SCROLL");
+		setTabLayoutPolicy(this, policy);
+	}
+	public void super_setTabLayoutPolicy(int policy)
+	{
+		super.setTabLayoutPolicy(policy);
+	}
+	private static void setTabLayoutPolicy(GTabbedPane tp, int policy)
+	{
+		JMenuItem wrap   = ((GTabbedPane)tp).getMenuItemNamed("WRAP");
+		JMenuItem scroll = ((GTabbedPane)tp).getMenuItemNamed("SCROLL");
 
 		if (wrap   != null &&   wrap instanceof JRadioButtonMenuItem)
 			((JRadioButtonMenuItem)wrap)  .setSelected( policy == JTabbedPane.WRAP_TAB_LAYOUT );
@@ -1259,7 +1666,17 @@ public class GTabbedPane
 		if (scroll != null && scroll instanceof JRadioButtonMenuItem)
 			((JRadioButtonMenuItem)scroll).setSelected( policy == JTabbedPane.SCROLL_TAB_LAYOUT );
 		
-		super.setTabLayoutPolicy(policy);
+		tp.super_setTabLayoutPolicy(policy);
+
+		if (tp._initialized)
+		{
+			for (int t=0; t<tp.getTabCount(); t++)
+			{
+				Component comp      = tp.getComponentAt(t);
+				if (comp instanceof GTabbedPane)
+					setTabLayoutPolicy((GTabbedPane)comp, policy);
+			}		
+		}
 	}
 
 //	/**	  Adds a component with a tab title defaulting to the name of the component which is the result of calling component.getName. */
@@ -1378,6 +1795,14 @@ public class GTabbedPane
 					setDockOrUndockButton(index, button, true);
 			}
 
+		}
+
+		// Add listeners that has been added by addChangeListener() on the "top" level
+		if (component instanceof JTabbedPane)
+		{
+			JTabbedPane tp = (JTabbedPane) component;
+			for (ChangeListener l : _localChangeListeners)
+				tp.addChangeListener(l);
 		}
 
 		// Add it to JTabbedPane
@@ -1516,6 +1941,220 @@ public class GTabbedPane
 	** END: overloaded methods from: JTabbedPane
 	**---------------------------------------------------
 	*/
+
+	
+	/** 
+	 * Sets the icon at first matching title (in this or any sub TabbedPan) to icon which can be null. 
+	 * This does not set disabled icon at icon. 
+	 * If the new Icon is different than the current Icon and disabled icon is not explicitly set, the LookAndFeel 
+	 * will be asked to generate a disabled Icon. To explicitly set disabled icon, use setDisableIconAt(). 
+	 * An internal exception is raised if there is no tab at that index. 
+	 */
+	public void setIconAtTitle(String title, Icon icon)
+	{
+		setIconAtTitle(this, title, icon);
+	}
+	private static boolean setIconAtTitle(JTabbedPane tp, String title, Icon icon)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				tp.setIconAt(t, icon);
+				return true;
+			}
+
+			if (comp instanceof JTabbedPane)
+			{
+				if (setIconAtTitle((JTabbedPane)comp, title, icon))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get icon at first matching title (in this or any sub TabbedPan) to component.
+	 */
+	public Icon getIconAtTitle(String title)
+	{
+		return getIconAtTitle(this, title, true);
+	}
+	public Icon getIconAtTitle(String title, boolean doSubLevels)
+	{
+		return getIconAtTitle(this, title, doSubLevels);
+	}
+	private static Icon getIconAtTitle(JTabbedPane tp, String title, boolean doSubLevels)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+				return tp.getIconAt(t);
+
+			if (comp instanceof JTabbedPane && doSubLevels)
+			{
+				Icon icon = getIconAtTitle((JTabbedPane)comp, title, doSubLevels);
+				if (icon != null)
+					return icon;
+			}
+		}
+		return null;
+	}
+
+	/** 
+	 * Sets the tooltip text at first matching title (in this or any sub TabbedPan) to toolTipText which can be null. 
+	 */
+	public void setToolTipTextAtTitle(String title, String toolTipText)
+	{
+		setToolTipTextAtTitle(this, title, toolTipText);
+	}
+	private static boolean setToolTipTextAtTitle(JTabbedPane tp, String title, String toolTipText)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				tp.setToolTipTextAt(t, toolTipText);
+				return true;
+			}
+
+			if (comp instanceof JTabbedPane)
+			{
+				if (setToolTipTextAtTitle((JTabbedPane)comp, title, toolTipText))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get tooltip text at first matching title (in this or any sub TabbedPan) to component.
+	 */
+	public String getToolTipTextAtTitle(String title)
+	{
+		return getToolTipTextAtTitle(this, title, true);
+	}
+	public String getToolTipTextAtTitle(String title, boolean doSubLevels)
+	{
+		return getToolTipTextAtTitle(this, title, doSubLevels);
+	}
+	private static String getToolTipTextAtTitle(JTabbedPane tp, String title, boolean doSubLevels)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+				return tp.getToolTipTextAt(t);
+
+			if (comp instanceof JTabbedPane && doSubLevels)
+			{
+				String tt = getToolTipTextAtTitle((JTabbedPane)comp, title, doSubLevels);
+				if (tt != null)
+					return tt;
+			}
+		}
+		return null;
+	}
+
+	/** 
+	 * Sets the component at first matching title (in this or any sub TabbedPan) to component. 
+	 */
+	public void setComponentAtTitle(String title, Component component)
+	{
+		setComponentAtTitle(this, title, component);
+	}
+	private static boolean setComponentAtTitle(JTabbedPane tp, String title, Component component)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				tp.setComponentAt(t, component);
+				return true;
+			}
+
+			if (comp instanceof JTabbedPane)
+			{
+				if (setComponentAtTitle((JTabbedPane)comp, title, component))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Get component at first matching title (in this or any sub TabbedPan) to component.
+	 */
+	public Component getComponentAtTitle(String title)
+	{
+		return getComponentAtTitle(this, title, true);
+	}
+	public Component getComponentAtTitle(String title, boolean doSubLevels)
+	{
+		return getComponentAtTitle(this, title, doSubLevels);
+	}
+	private static Component getComponentAtTitle(JTabbedPane tp, String title, boolean doSubLevels)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+				return comp;
+
+			if (comp instanceof JTabbedPane && doSubLevels)
+			{
+				Component c = getComponentAtTitle((JTabbedPane)comp, title, doSubLevels);
+				if (c != null)
+					return c;
+			}
+		}
+		return null;
+	}
+
+	/** 
+	 * Sets the title at first matching title (in this or any sub TabbedPan) to title which can be null. 
+	 */
+	public void setTitleAtTitle(String title, String newTitle)
+	{
+		setTitleAtTitle(this, title, newTitle);
+	}
+	private static boolean setTitleAtTitle(JTabbedPane tp, String title, String newTitle)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				tp.setTitleAt(t, newTitle);
+				return true;
+			}
+
+			if (comp instanceof JTabbedPane)
+			{
+				if (setTitleAtTitle((JTabbedPane)comp, title, newTitle))
+					return true;
+			}
+		}
+		return false;
+	}
 
 	
 	
@@ -1711,6 +2350,13 @@ public class GTabbedPane
 					return;
 				}
 
+				// If we double clicked on it, locate it into its own window
+				if ( tabComp instanceof GTabbedPane )
+				{
+					windowOpenClose(tabIndex);
+					return;
+				}
+
 				// Bring it back to the TabbedPane, in the same location as before.
 				if ( tabComp instanceof TabExtendedEntry )
 				{
@@ -1721,7 +2367,7 @@ public class GTabbedPane
 
 				JOptionPane.showMessageDialog(this, 
 					"The tab named '"+tabName+"' Can't be UnDocked.\n" +
-					"It needs to be a JPanel or implements the interface 'GTabbedPane.DockUndockManagement'.", 
+					"It needs to be a JPanel or implements the interface 'DockUndockManagement'.", 
 					"UnDock", JOptionPane.ERROR_MESSAGE);
 				return;
 			} // end: double-click
@@ -1837,47 +2483,47 @@ public class GTabbedPane
 
 
 
-	public interface DockUndockManagement
-	{
-//		/** Sets the button that could be used to dock/undock */
-//		public void setDockUndockButton(JButton button);
-
-		/** 
-		 * Get a button that should be used to dock/undock<p> 
-		 * The default GUI rules will be applied for the button. 
-		 * Default GUI = no text, no border, Icon is fetched using getWindow{Dock|Undock}Icon() 
-		 */
-		public JButton getDockUndockButton();
-
-		/**
-		 * called just before the component is docked back into the TabbedPane
-		 * @return true if we allow the dock operation
-		 */
-		public boolean beforeDock();
-
-		/**
-		 * called after the component has been docked back into the TabbedPane
-		 */
-		public void afterDock();
-
-		/**
-		 * called just before the component is Undocked to its own frame
-		 * @return true if we allow the undock operation
-		 */
-		public boolean beforeUndock();
-
-		/**
-		 * called after the component has been undocked to its own frame
-		 */
-		public void afterUndock();
-
-		/**
-		 * 
-		 */
-		public void saveWindowProps(GTabbedPaneWindowProps winProps);
-		public GTabbedPaneWindowProps getWindowProps();
-
-	}
+//	public interface DockUndockManagement
+//	{
+////		/** Sets the button that could be used to dock/undock */
+////		public void setDockUndockButton(JButton button);
+//
+//		/** 
+//		 * Get a button that should be used to dock/undock<p> 
+//		 * The default GUI rules will be applied for the button. 
+//		 * Default GUI = no text, no border, Icon is fetched using getWindow{Dock|Undock}Icon() 
+//		 */
+//		public JButton getDockUndockButton();
+//
+//		/**
+//		 * called just before the component is docked back into the TabbedPane
+//		 * @return true if we allow the dock operation
+//		 */
+//		public boolean beforeDock();
+//
+//		/**
+//		 * called after the component has been docked back into the TabbedPane
+//		 */
+//		public void afterDock();
+//
+//		/**
+//		 * called just before the component is Undocked to its own frame
+//		 * @return true if we allow the undock operation
+//		 */
+//		public boolean beforeUndock();
+//
+//		/**
+//		 * called after the component has been undocked to its own frame
+//		 */
+//		public void afterUndock();
+//
+//		/**
+//		 * 
+//		 */
+//		public void saveWindowProps(GTabbedPaneWindowProps winProps);
+//		public GTabbedPaneWindowProps getWindowProps();
+//
+//	}
 
 	
 	
@@ -1943,7 +2589,7 @@ public class GTabbedPane
 		super.paintComponent(g);
 		paintSpecial();
 	}
-	private void paintSpecial() 
+	protected void paintSpecial() 
 	{
 		int tabCount = getTabCount();
 		for (int tabIndex=0; tabIndex<tabCount; tabIndex++)
@@ -1955,14 +2601,218 @@ public class GTabbedPane
 
 				Rectangle r = getUI().getTabBounds(this, tabIndex);
 				Graphics g = this.getGraphics().create(r.x, r.y, r.width, r.height);
-//				System.out.println("getTabBounds(xxx,"+tabIndex+"): Rectangle="+r+", g="+g);
 
 				stp.paintTabHeader((Graphics2D)g);
 			}
+		}
+
+		if (_watermark != null)
+		{
+			if (tabCount == 0)
+				_watermark.setWatermarkText(getEmptyTabMessage());
+			else
+				_watermark.setWatermarkText(null);
 		}
 	}
 	/*---------------------------------------------------
 	** END: special paint code
 	**---------------------------------------------------
 	*/
+	private String _noComponentsStr = "No Components has been added to this tab";
+	public String getEmptyTabMessage()
+	{
+		return _noComponentsStr;
+	}
+	public void setEmptyTabMessage(String str)
+	{
+		_noComponentsStr = str;
+	}
+	/*---------------------------------------------------
+	 ** BEGIN: Watermark stuff
+	 **---------------------------------------------------
+	 */
+	private Watermark _watermark = null;
+
+	public void setWatermarkText(String str)
+	{
+		_logger.debug(getName() + ".setWatermarkText('" + str + "')");
+		if (_watermark != null)
+			_watermark.setWatermarkText(str);
+	}
+
+	public void setWatermarkAnchor(JComponent comp)
+	{
+		_watermark = new Watermark(comp, "");
+	}
+
+	private class Watermark extends AbstractComponentDecorator
+	{
+		public Watermark(JComponent target, String text)
+		{
+			super(target);
+			if ( text == null )
+				text = "";
+			_textSave = text;
+			_textBr   = text.split("\n");
+		}
+
+//		private String		_restartText	= "Note: Restart "+Version.getAppName()+" after you have enabled the configuration.";
+		private String		_restartText	= "Note: Reconnect to ASE Server after you have enabled the configuration.";
+		private String[]	_textBr			= null; // Break Lines by '\n'
+		private String      _textSave       = null; // Save last text so we dont need to do repaint if no changes.
+		private Graphics2D	g				= null;
+		private Rectangle	r				= null;
+
+		@Override
+		public void paint(Graphics graphics)
+		{
+			if ( _textBr == null || _textBr != null && _textBr.length < 0 )
+				return;
+
+			r = getDecorationBounds();
+			g = (Graphics2D) graphics;
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Font f = g.getFont();
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+			g.setColor(new Color(128, 128, 128, 128));
+
+			FontMetrics fm = g.getFontMetrics();
+			int maxStrWidth = 0;
+			int maxStrHeight = fm.getHeight();
+
+			// get max with for all of the lines
+			for (int i = 0; i < _textBr.length; i++)
+			{
+				int CurLineStrWidth = fm.stringWidth(_textBr[i]);
+				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+			}
+			int xPos = (r.width - maxStrWidth) / 2;
+			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 1.3);
+
+			int spConfigureCount = 0;
+
+			// Print all the lines
+			for (int i = 0; i < _textBr.length; i++)
+			{
+				g.drawString(_textBr[i], xPos, (yPos + (maxStrHeight * i)));
+
+				if ( _textBr[i].startsWith("sp_configure") )
+					spConfigureCount++;
+			}
+
+			if ( spConfigureCount > 0 )
+			{
+				int yPosRestartText = yPos + (maxStrHeight * (_textBr.length + 1));
+				g.drawString(_restartText, xPos, yPosRestartText);
+			}
+		}
+
+		public void setWatermarkText(String text)
+		{
+			if ( text == null )
+				text = "";
+
+			// If text has NOT changed, no need to continue
+			if (text.equals(_textSave))
+				return;
+
+			_textSave = text;
+
+			_textBr = text.split("\n");
+			_logger.debug("setWatermarkText: to '" + text + "'.");
+
+			repaint();
+		}
+	}
+
+	/*---------------------------------------------------
+	 ** END: Watermark stuff
+	 **---------------------------------------------------
+	 */
+	/*---------------------------------------------------
+	 ** BEGIN: implementing: DockUndockManagement
+	 **---------------------------------------------------
+	 */
+	// This will be called when this object is added to a GTabbedPane
+	// This
+	@Override
+	public JButton getDockUndockButton()
+	{
+		return null;
+	}
+
+	@Override
+	public boolean beforeDock()
+	{
+		return true;
+	}
+
+	@Override
+	public boolean beforeUndock()
+	{
+		return true;
+	}
+
+	@Override
+	public void afterDock()
+	{
+	}
+
+	@Override
+	public void afterUndock()
+	{
+	}
+
+	@Override
+	public void saveWindowProps(GTabbedPaneWindowProps wp)
+	{
+		String name = getName();
+		if (StringUtil.isNullOrBlank(name))
+			return;
+
+		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+		if ( conf == null )
+			return;
+
+		_logger.trace(name + ": saveWindowProps(wp): " + wp);
+
+		String base = "GTabbedPane." + name + ".";
+		conf.setProperty(base + "window.active", wp.undocked);
+
+		if ( wp.width  > 0 ) conf.setProperty(base + "window.width",  wp.width);
+		if ( wp.height > 0 ) conf.setProperty(base + "window.height", wp.height);
+		if ( wp.posX   > 0 ) conf.setProperty(base + "window.pos.x",  wp.posX);
+		if ( wp.posY   > 0 ) conf.setProperty(base + "window.pos.y",  wp.posY);
+
+		conf.save();
+	}
+
+	@Override
+	public GTabbedPaneWindowProps getWindowProps()
+	{
+		String name = getName();
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if ( conf == null )
+			return null;
+
+		GTabbedPaneWindowProps wp = new GTabbedPaneWindowProps();
+		String base = "GTabbedPane." + getName() + ".";
+		wp.undocked = conf.getBooleanProperty(base + "window.active", false);
+		wp.width    = conf.getIntProperty    (base + "window.width", -1);
+		wp.height   = conf.getIntProperty    (base + "window.height", -1);
+		wp.posX     = conf.getIntProperty    (base + "window.pos.x", -1);
+		wp.posY     = conf.getIntProperty    (base + "window.pos.y", -1);
+
+		_logger.trace(name + ": getWindowProps(): return " + wp);
+
+		return wp;
+	}
+
+	/*---------------------------------------------------
+	 ** END: implementing: DockUndockManagement
+	 **---------------------------------------------------
+	 */
 }

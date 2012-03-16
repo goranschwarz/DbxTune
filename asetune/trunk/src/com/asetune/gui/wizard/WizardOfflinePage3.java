@@ -25,12 +25,14 @@ import javax.swing.table.TableModel;
 import net.miginfocom.swing.MigLayout;
 
 import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.MainFrame;
 import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
@@ -55,16 +57,19 @@ implements ActionListener, TableModelListener
 //	private static final int TAB_POS_CM_NAME    = 7;
 //	private static final int TAB_POS_LONG_DESC  = 8;
 //	private static final int TAB_POS_MAX        = 9; // not a column, it's just the MAX ID +1 
+
+	private static final String[] TAB_HEADER = {"Icon", "Short Desc", "Group", "Timeout", "Postpone", "Store", "Abs", "Diff", "Rate", "Long Description", "CM Name"};
 	private static final int TAB_POS_ICON       = 0;
 	private static final int TAB_POS_TAB_NAME   = 1;
-	private static final int TAB_POS_POSTPONE   = 2;
-	private static final int TAB_POS_STORE_PCS  = 3;
-	private static final int TAB_POS_STORE_ABS  = 4;
-	private static final int TAB_POS_STORE_DIFF = 5;
-	private static final int TAB_POS_STORE_RATE = 6;
-	private static final int TAB_POS_LONG_DESC  = 7;
-	private static final int TAB_POS_CM_NAME    = 8;
-	private static final int TAB_POS_MAX        = 9; // not a column, it's just the MAX ID +1 
+	private static final int TAB_POS_GROUP_NAME = 2; 
+	private static final int TAB_POS_TIMEOUT    = 3;
+	private static final int TAB_POS_POSTPONE   = 4;
+	private static final int TAB_POS_STORE_PCS  = 5;
+	private static final int TAB_POS_STORE_ABS  = 6;
+	private static final int TAB_POS_STORE_DIFF = 7;
+	private static final int TAB_POS_STORE_RATE = 8;
+	private static final int TAB_POS_LONG_DESC  = 9;
+	private static final int TAB_POS_CM_NAME    = 10;
 
 	private static final Color TAB_PCS_COL_BG = new Color(240, 240, 240);
 
@@ -77,10 +82,14 @@ implements ActionListener, TableModelListener
 		{
 			Component c = super.prepareRenderer(renderer, row, column);
 
-			if (column >= TAB_POS_STORE_PCS && column <= TAB_POS_STORE_RATE)
+			int view_TAB_POS_STORE_PCS  = convertColumnIndexToView(TAB_POS_STORE_PCS);
+			int view_TAB_POS_STORE_ABS  = convertColumnIndexToView(TAB_POS_STORE_ABS);
+			int view_TAB_POS_STORE_RATE = convertColumnIndexToView(TAB_POS_STORE_RATE);
+			
+			if (column >= view_TAB_POS_STORE_PCS && column <= view_TAB_POS_STORE_RATE)
 			{
 				c.setBackground(TAB_PCS_COL_BG);
-				if ((column >= TAB_POS_STORE_ABS && column <= TAB_POS_STORE_RATE) || row == 0)
+				if ((column >= view_TAB_POS_STORE_ABS && column <= view_TAB_POS_STORE_RATE) || row == 0)
 				{
 					// if not editable, lets disable it
 					// calling isCellEditable instead of getModel().isCellEditable(row, column)
@@ -106,16 +115,18 @@ implements ActionListener, TableModelListener
 
 		// Create a TABLE
 		Vector<String> tabHead = new Vector<String>();
-		tabHead.setSize(TAB_POS_MAX);
-		tabHead.set(TAB_POS_POSTPONE,   "Postpone");
-		tabHead.set(TAB_POS_STORE_PCS,  "Sample");
-		tabHead.set(TAB_POS_STORE_ABS,  "Abs");
-		tabHead.set(TAB_POS_STORE_DIFF, "Diff");
-		tabHead.set(TAB_POS_STORE_RATE, "Rate");
-		tabHead.set(TAB_POS_ICON,       "Icon");
-		tabHead.set(TAB_POS_TAB_NAME,   "Short Desc");
-		tabHead.set(TAB_POS_CM_NAME,    "CM Name");
-		tabHead.set(TAB_POS_LONG_DESC,  "Long Description");
+		tabHead.setSize(TAB_HEADER.length);
+		tabHead.set(TAB_POS_TIMEOUT,    TAB_HEADER[TAB_POS_TIMEOUT]);
+		tabHead.set(TAB_POS_POSTPONE,   TAB_HEADER[TAB_POS_POSTPONE]);
+		tabHead.set(TAB_POS_STORE_PCS,  TAB_HEADER[TAB_POS_STORE_PCS]);
+		tabHead.set(TAB_POS_STORE_ABS,  TAB_HEADER[TAB_POS_STORE_ABS]);
+		tabHead.set(TAB_POS_STORE_DIFF, TAB_HEADER[TAB_POS_STORE_DIFF]);
+		tabHead.set(TAB_POS_STORE_RATE, TAB_HEADER[TAB_POS_STORE_RATE]);
+		tabHead.set(TAB_POS_ICON,       TAB_HEADER[TAB_POS_ICON]);
+		tabHead.set(TAB_POS_TAB_NAME,   TAB_HEADER[TAB_POS_TAB_NAME]);
+		tabHead.set(TAB_POS_GROUP_NAME, TAB_HEADER[TAB_POS_GROUP_NAME]);
+		tabHead.set(TAB_POS_CM_NAME,    TAB_HEADER[TAB_POS_CM_NAME]);
+		tabHead.set(TAB_POS_LONG_DESC,  TAB_HEADER[TAB_POS_LONG_DESC]);
 
 		Vector<Vector<Object>> tabData = populateTable();
 
@@ -125,6 +136,7 @@ implements ActionListener, TableModelListener
 
 			public Class<?> getColumnClass(int column) 
 			{
+				if (column == TAB_POS_TIMEOUT)    return Integer.class;
 				if (column == TAB_POS_POSTPONE)   return Integer.class;
 				if (column == TAB_POS_STORE_PCS)  return Boolean.class;
 				if (column == TAB_POS_STORE_ABS)  return Boolean.class;
@@ -137,6 +149,9 @@ implements ActionListener, TableModelListener
 			{
 				if (row == 0) // CMSummary
 					return false;
+
+				if (col == TAB_POS_TIMEOUT)
+					return true;
 
 				if (col == TAB_POS_POSTPONE)
 					return true;
@@ -179,6 +194,13 @@ implements ActionListener, TableModelListener
 
 		SwingUtils.calcColumnWidths(_sessionTable);
 
+		// hide 'Group Name' if no child's are found
+		if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+		{
+			TableColumnModelExt tcmx = (TableColumnModelExt)_sessionTable.getColumnModel();
+			tcmx.getColumnExt(TAB_HEADER[TAB_POS_GROUP_NAME]).setVisible(false);
+		}
+
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_sessionTable);
 //		jScrollPane.setMaximumSize(new Dimension(10000, 10000));
@@ -195,7 +217,7 @@ implements ActionListener, TableModelListener
 		button.putClientProperty("NAME", "BUTTON_DESELECT_ALL");
 		add(button, "split");
 
-		button = new JButton("Set to Template");
+		button = new JButton("Reset");
 		button.setToolTipText("Use current setting of the tabs as a template.");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEMPLATE");
@@ -221,7 +243,8 @@ implements ActionListener, TableModelListener
 				if (cm != null)
 				{
 					row = new Vector<Object>();
-					row.setSize(TAB_POS_MAX);
+					row.setSize(TAB_HEADER.length);
+					row.set(TAB_POS_TIMEOUT,    new Integer(cm.getQueryTimeout()));
 					row.set(TAB_POS_POSTPONE,   new Integer(cm.getPostponeTime()));
 					row.set(TAB_POS_STORE_PCS,  new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()));
 					row.set(TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
@@ -244,7 +267,8 @@ implements ActionListener, TableModelListener
 		else
 		{
 			row = new Vector<Object>();
-			row.setSize(TAB_POS_MAX);
+			row.setSize(TAB_HEADER.length);
+			row.set(TAB_POS_TIMEOUT,    new Integer(0));
 			row.set(TAB_POS_POSTPONE,   new Integer(0));
 			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
 			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
@@ -257,7 +281,8 @@ implements ActionListener, TableModelListener
 			tab.add(row);
 	
 			row = new Vector<Object>();
-			row.setSize(TAB_POS_MAX);
+			row.setSize(TAB_HEADER.length);
+			row.set(TAB_POS_TIMEOUT,    new Integer(0));
 			row.set(TAB_POS_POSTPONE,   new Integer(0));
 			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
 			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
@@ -270,7 +295,8 @@ implements ActionListener, TableModelListener
 			tab.add(row);
 	
 			row = new Vector<Object>();
-			row.setSize(TAB_POS_MAX);
+			row.setSize(TAB_HEADER.length);
+			row.set(TAB_POS_TIMEOUT,    new Integer(0));
 			row.set(TAB_POS_POSTPONE,   new Integer(0));
 			row.set(TAB_POS_STORE_PCS,  new Boolean(true));
 			row.set(TAB_POS_STORE_ABS,  new Boolean(true));
@@ -285,7 +311,8 @@ implements ActionListener, TableModelListener
 			for (int i=0; i<40; i++)
 			{
 				row = new Vector<Object>();
-				row.setSize(TAB_POS_MAX);
+				row.setSize(TAB_HEADER.length);
+				row.set(TAB_POS_TIMEOUT,    new Integer(0));
 				row.set(TAB_POS_POSTPONE,   new Integer(0));
 				row.set(TAB_POS_STORE_PCS,  new Boolean(true));
 				row.set(TAB_POS_STORE_ABS,  new Boolean(true));
@@ -317,6 +344,7 @@ implements ActionListener, TableModelListener
 		TableModel tm = _sessionTable.getModel();
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
+			Integer timeout   = (Integer) tm.getValueAt(r, TAB_POS_TIMEOUT);
 			Integer postpone  = (Integer) tm.getValueAt(r, TAB_POS_POSTPONE);
 			boolean storePcs  = ((Boolean)tm.getValueAt(r, TAB_POS_STORE_PCS)).booleanValue();
 			boolean storeAbs  = ((Boolean)tm.getValueAt(r, TAB_POS_STORE_ABS)).booleanValue();
@@ -332,6 +360,7 @@ implements ActionListener, TableModelListener
 			// and will be used for User Defined Counter checking...
 			putWizardData( "to-be-discarded" + "." + cmName, cmName);
 
+			putWizardData( cmName+"."+CountersModel.PROP_queryTimeout,         timeout.toString());
 			putWizardData( cmName+"."+CountersModel.PROP_postponeTime,         postpone.toString());
 
 			putWizardData( cmName+"."+CountersModel.PROP_persistCounters,      storePcs  +"");
@@ -379,6 +408,9 @@ implements ActionListener, TableModelListener
 
 				if (_sessionTable.isCellEditable(r, TAB_POS_POSTPONE))
 					tm.setValueAt(new Integer(0), r, TAB_POS_POSTPONE);
+
+				if (_sessionTable.isCellEditable(r, TAB_POS_TIMEOUT))
+					tm.setValueAt(new Integer(0), r, TAB_POS_TIMEOUT);
 			}
 		}
 
@@ -408,8 +440,9 @@ implements ActionListener, TableModelListener
 			if (cm == null)
 				continue;
 
+			tm.setValueAt(new Integer(cm.getQueryTimeout()),              r, TAB_POS_TIMEOUT);
 			tm.setValueAt(new Integer(cm.getPostponeTime()),              r, TAB_POS_POSTPONE);
-			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled() || cm.isBackgroundDataPollingEnabled()), r, TAB_POS_STORE_PCS);
+			tm.setValueAt(new Boolean(cm.isPersistCountersEnabled()),     r, TAB_POS_STORE_PCS);
 			tm.setValueAt(new Boolean(cm.isPersistCountersAbsEnabled()),  r, TAB_POS_STORE_ABS);
 			tm.setValueAt(new Boolean(cm.isPersistCountersDiffEnabled()), r, TAB_POS_STORE_DIFF);
 			tm.setValueAt(new Boolean(cm.isPersistCountersRateEnabled()), r, TAB_POS_STORE_RATE);

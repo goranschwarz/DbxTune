@@ -218,7 +218,7 @@ implements TableModelListener, GTabbedPane.ShowProperties
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Cant create the summary panel", ex);
+			_logger.error("Can't create the summary panel", ex);
 		}
 	}
 

@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.util.HashMap;
 
 import com.asetune.tools.QueryWindow;
+import com.asetune.utils.AseConnectionUtils;
 
 
 /**
@@ -41,6 +42,44 @@ extends XmenuActionBase
 			sql = sql.replaceAll("\\$\\{"+pv+"\\}", getParamValue(pv));
 		}
 
+		// NOTE:
+		// if the tag: <getOwner(DBNameStr,ObjectNameStr)> exists, then lookup and grab the first 
+		// owner we find for a objects, if there are more than one table, with different owners, 
+		// just grab the first one.
+		if (sql.indexOf("<getOwner(") >= 0)
+		{
+			String dbname  = null;
+			String objname = null;
+
+			int startPos = sql.indexOf("<getOwner(") + "<getOwner(".length();
+			int endPos   = sql.indexOf(")>");
+			if (endPos >= 0)
+			{
+				String tagData = sql.substring(startPos, endPos);
+//System.out.println("tagData='"+tagData+"'.");
+				String sa[] = tagData.split(",");
+				if (sa.length < 2)
+				{
+					// to few parameters... what to do?
+				}
+				else
+				{
+					dbname  = sa[0].trim();
+					objname = sa[1].trim();
+	
+					String owner = AseConnectionUtils.getObjectOwner(conn, dbname, objname);
+					
+					// finally replace "<getOwner(...)>" with the object owner
+					sql = sql.replaceAll("<getOwner(.*)>", owner);
+				}
+			}
+			else
+			{
+				// Can't find the end... what to do?
+			}
+		}
+		
+		
 
 		QueryWindow qf = new QueryWindow(conn, sql, isCloseConnOnExit(), QueryWindow.WindowType.JFRAME);
 		qf.openTheWindow();

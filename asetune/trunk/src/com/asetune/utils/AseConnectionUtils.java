@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
@@ -1092,12 +1093,12 @@ public class AseConnectionUtils
 			}
 			else
 			{
-				_logger.warn("There ASE version string seems to be faulty, cant find any '.' in the version number subsection '" + aseVersionNumberStr + "'.");
+				_logger.warn("There ASE version string seems to be faulty, can't find any '.' in the version number subsection '" + aseVersionNumberStr + "'.");
 			}
 		}
 		else
 		{
-			_logger.warn("There ASE version string seems to be faulty, cant find any / in the string '" + versionStr + "'.");
+			_logger.warn("There ASE version string seems to be faulty, can't find any / in the string '" + versionStr + "'.");
 		}
 
 		return aseVersionNumber;
@@ -1318,6 +1319,25 @@ public class AseConnectionUtils
 				aseVersionStr = rs.getString(1);
 			}
 			rs.close();
+
+			if ( ! aseVersionStr.startsWith("Adaptive Server Enterprise") )
+			{
+				String msg = "This doesn't look like an ASE server. @@version='"+aseVersionStr+"'.";
+				_logger.error(msg);
+				if (gui)
+				{
+					String msgHtml = 
+						"<html>" +
+						"This doesn't look like an Sybase ASE server.<br>" +
+						"<br>" +
+						"The Version String is '<code>"+aseVersionStr+"</code>'. <br>" +
+						"In my book this ain't a ASE Server, so I can't continue.<br>" +
+						"</html>";
+
+					SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
+				}
+				return false;
+			}
 
 			int aseVersionNumFromVerStr = aseVersionStringToNumber(aseVersionStr);
 			aseVersionNum = Math.max(aseVersionNum, aseVersionNumFromVerStr);
@@ -2616,7 +2636,7 @@ public class AseConnectionUtils
 			sqlSb.append("select @prevWaitEventId = ").append(waitEventID).append(" \n");
 			sqlSb.append("     \n");
 			sqlSb.append("select @nowWaitEventId = WaitEventID \n");
-			sqlSb.append("from monProcess \n");
+			sqlSb.append("from master..monProcess \n");
 			sqlSb.append("where SPID = @spid \n");
 			sqlSb.append("     \n");
 			sqlSb.append("if (@@rowcount = 0) \n");
@@ -2635,13 +2655,13 @@ public class AseConnectionUtils
 			sqlSb.append("    declare @nowWaitDescription  varchar(60), @nowClassDescription  varchar(60) \n");
 			sqlSb.append("    \n");
 			sqlSb.append("    select @prevWaitDescription  = WI.Description,  \n");
-			sqlSb.append("           @prevClassDescription = (select CI.Description from monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
-			sqlSb.append("    from monWaitEventInfo WI \n");
+			sqlSb.append("           @prevClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
+			sqlSb.append("    from master..monWaitEventInfo WI \n");
 			sqlSb.append("    where WI.WaitEventID = @prevWaitEventId \n");
 			sqlSb.append("    \n");
 			sqlSb.append("    select @nowWaitDescription  = WI.Description,  \n");
-			sqlSb.append("           @nowClassDescription = (select CI.Description from monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
-			sqlSb.append("    from monWaitEventInfo WI \n");
+			sqlSb.append("           @nowClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
+			sqlSb.append("    from master..monWaitEventInfo WI \n");
 			sqlSb.append("    where WI.WaitEventID = @nowWaitEventId \n");
 			sqlSb.append("    \n");
 			sqlSb.append("    print 'The WaitEventID was changed from %1! to %2!, so there is no reason to do DBCC stacktrace anymore.', @prevWaitEventId, @nowWaitEventId \n");
@@ -2818,6 +2838,52 @@ public class AseConnectionUtils
 	}
 	
 	/**
+	 * Get object owner
+	 * 
+	 * @param conn       Connection to the database
+	 * @param dbname     Name of the database
+	 * @param objectName Name of the procedure/view/trigger...
+	 * 
+	 * @return owner of the object name
+	 */
+	public static String getObjectOwner(Connection conn, String dbname, String objectName)
+	{
+		if (StringUtil.isNullOrBlank(dbname))     throw new RuntimeException("getObjectOwner(): dbname='"     + dbname     + "', which is blank or null. This is mandatory.");
+		if (StringUtil.isNullOrBlank(objectName)) throw new RuntimeException("getObjectOwner(): objectName='" + objectName + "', which is blank or null. This is mandatory.");
+
+		dbname     = dbname    .trim();
+		objectName = objectName.trim();
+
+		String sql = 
+			"select owner = u.name \n" +
+			"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+			"where o.name = '"+objectName+"' \n" +
+			"  and o.uid  = u.uid";
+
+		String owner = "dbo";
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				owner = rs.getString(1);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems when executing sql: "+sql, ex);
+		}
+
+		if (StringUtil.isNullOrBlank(owner))
+			owner = "dbo";
+
+		return owner;
+	}
+
+	/**
 	 * Get (procedure) text about an object
 	 * 
 	 * @param conn       Connection to the database
@@ -2987,6 +3053,36 @@ public class AseConnectionUtils
 		}
 
 		return returnText;
+	}
+	
+	/**
+	 * find a column name in a ResultSetMetaData
+	 * @param rsmd
+	 * @param colLabel
+	 * @return -1 if not found, otherwise the column id, starting at 1
+	 */
+	public static int findColumn(ResultSetMetaData rsmd, String colLabel)
+	{
+		if (rsmd     == null) throw new IllegalArgumentException("findColumn(ResultSetMetaData rsmd, String colLabel): rsmd can't be null");
+		if (colLabel == null) throw new IllegalArgumentException("findColumn(ResultSetMetaData rsmd, String colLabel): colLabel can't be null");
+
+		int col_pos = -1;
+		try
+		{
+			for (int i=1; i<=rsmd.getColumnCount(); i++)
+			{
+				if (colLabel.equals(rsmd.getColumnLabel(i)))
+				{
+					col_pos = i;
+					break;
+				}
+			}
+		}
+		catch(SQLException e)
+		{
+			_logger.error("Problems accessing ResultSetMetaData, caught: "+e, e);
+		}
+		return col_pos;
 	}
 }
 

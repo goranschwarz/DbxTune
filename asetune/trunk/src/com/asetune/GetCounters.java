@@ -14,6 +14,7 @@ import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -37,10 +38,6 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
-import javax.swing.JTree;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -49,7 +46,6 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
-import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -94,10 +90,12 @@ import com.asetune.gui.SplashWindow;
 import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.gui.swing.GTable;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sp_sysmon.SpSysmon;
+import com.asetune.sql.ResultSetMetaDataChangable;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MathUtils;
@@ -504,6 +502,9 @@ extends Thread
 
 	public static final String CM_NAME__OS_MPSTAT               = "CMosMpstat";
 	public static final String CM_DESC__OS_MPSTAT               = "OS CPU(mpstat)";
+	
+	public static final String CM_NAME__OS_UPTIME               = "CMosUptime";
+	public static final String CM_DESC__OS_UPTIME               = "OS Load Average";
 	
 	
 	// GRAPHS
@@ -1620,6 +1621,26 @@ extends Thread
 				return pkCols;
 			}
 
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public Configuration getLocalConfiguration()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				Configuration lc = new Configuration();
+
+				lc.setProperty(getName()+".TabRowCount",  conf.getBooleanProperty(getName()+".TabRowCount", true));
+
+				return lc;
+			}
+
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public String getLocalConfigurationDescription(String propName)
+			{
+				if (propName.equals(getName()+".TabRowCount")) return "Sample Table Row Count using ASE functions row_count() and data_pages()";
+				return "";
+			}
+
 			@Override
 			public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 			{
@@ -1987,7 +2008,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS)
 			{
 				private static final long serialVersionUID = 1L;
 
@@ -2270,6 +2291,7 @@ extends Thread
 					"if ((select object_id('#monProcessActivity')) is not null) drop table #monProcessActivity \n" +
 					"if ((select object_id('#monProcess'))         is not null) drop table #monProcess         \n" +
 					"if ((select object_id('#monProcessNetIO'))    is not null) drop table #monProcessNetIO    \n" +
+					"go \n" +
 					"\n";
 
 				String createTempTables =
@@ -2342,6 +2364,26 @@ extends Thread
 				return preDropTempTables + createTempTables + sql + dropTempTables;
 			}
 
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public Configuration getLocalConfiguration()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				Configuration lc = new Configuration();
+
+				lc.setProperty(getName()+".sample.systemThreads",  conf.getBooleanProperty(getName()+".sample.systemThreads", true));
+
+				return lc;
+			}
+
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public String getLocalConfigurationDescription(String propName)
+			{
+				if (propName.equals(getName()+".sample.systemThreads")) return "Sample System SPID's that executes in the ASE Server";
+				return "";
+			}
+
 			@Override
 			public String getSql()
 			{
@@ -2410,13 +2452,13 @@ extends Thread
 
 				if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 				{
-					_logger.debug("Cant find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+					_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
 					return;
 				}
 				
 				if (pos_BlockingSPID < 0)
 				{
-					_logger.debug("Cant find the position for column ('BlockingSPID'="+pos_BlockingSPID+")");
+					_logger.debug("Can't find the position for column ('BlockingSPID'="+pos_BlockingSPID+")");
 					return;
 				}
 				
@@ -2493,7 +2535,7 @@ extends Thread
 
 					if (pos_Command < 0 || pos_PhysicalWrites < 0)
 					{
-						_logger.debug("Cant find the position for column ('Command'="+pos_Command+", 'PhysicalWrites'="+pos_PhysicalWrites+")");
+						_logger.debug("Can't find the position for column ('Command'="+pos_Command+", 'PhysicalWrites'="+pos_PhysicalWrites+")");
 						return;
 					}
 					
@@ -2551,7 +2593,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -2834,6 +2876,26 @@ extends Thread
 				return sql;
 			}
 
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public Configuration getLocalConfiguration()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				Configuration lc = new Configuration();
+
+				lc.setProperty(getName()+".sample.extraWhereClause",  conf.getProperty(getName()+".sample.extraWhereClause", ""));
+
+				return lc;
+			}
+
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public String getLocalConfigurationDescription(String propName)
+			{
+				if (propName.equals(getName()+".sample.extraWhereClause")) return "Add extra where clause to the query that fetches WaitTime for SPID's. Example: SPID in (select spid from master..sysprocesses where program_name = 'isql')";
+				return "";
+			}
+
 			@Override
 			public String getSql()
 			{
@@ -2899,7 +2961,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER)
 			{
 				private static final long serialVersionUID = 1L;
 
@@ -3344,7 +3406,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String finalDisplayName = displayName;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER)
 			{
 				private static final long	serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__OPEN_DATABASES;
@@ -3352,7 +3414,7 @@ extends Thread
 				private static final String  PROPKEY_generateDummy = CM_NAME + ".graph.generate.dummyWhenNotConnected";
 				private static final boolean DEFAULT_generateDummy = false;
 
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
@@ -3361,10 +3423,9 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int DBName_pos          = tm.findColumn("DBName");
-						int LogSizeFreeInMb_pos = tm.findColumn("LogSizeFreeInMb"); // numeric(10,1)
-						int LogSizeUsedPct_pos  = tm.findColumn("LogSizeUsedPct");  // numeric(10,1)
+						int DBName_pos          = dataTable.findViewColumn("DBName");
+						int LogSizeFreeInMb_pos = dataTable.findViewColumn("LogSizeFreeInMb"); // numeric(10,1)
+						int LogSizeUsedPct_pos  = dataTable.findViewColumn("LogSizeUsedPct");  // numeric(10,1)
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -3378,7 +3439,10 @@ extends Thread
 								String DBName          = (String)dataTable.getValueAt(r, DBName_pos);
 								Number LogSizeFreeInMb = (Number)dataTable.getValueAt(r, LogSizeFreeInMb_pos);
 								Number LogSizeUsedPct  = (Number)dataTable.getValueAt(r, LogSizeUsedPct_pos);
-	
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
+
 								if (dbList.keySet().contains(DBName))
 									categoryDataset.addValue(LogSizeUsedPct, LogSizeFreeInMb+" MB FREE", DBName);
 							}
@@ -3515,8 +3579,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -3898,7 +3962,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT, new TrendGraphDataPoint(CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT, new String[] { "runtime-replaced" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_db_activity.png") );
 			tcp.setCm(tmp);
@@ -4115,7 +4179,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER)
 			{
 				private static final long   serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__SYS_WAIT;
@@ -4155,7 +4219,7 @@ extends Thread
 				private static final String  PROPKEY_generateClassWaits    = CM_NAME + ".graph.generate.class.waits";
 				private static final boolean DEFAULT_generateClassWaits    = true;
 
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy         = conf.getBooleanProperty(PROPKEY_generateDummy,         DEFAULT_generateDummy);
@@ -4171,12 +4235,11 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int ClassName_pos   = tm.findColumn("Class");
-						int EventName_pos   = tm.findColumn("Event");
-						int WaitEventID_pos = tm.findColumn("WaitEventID");
-						int WaitTime_pos    = tm.findColumn("WaitTime"); 
-						int Waits_pos       = tm.findColumn("Waits");
+						int ClassName_pos   = dataTable.findViewColumn("Class");
+						int EventName_pos   = dataTable.findViewColumn("Event");
+//						int WaitEventID_pos = dataTable.findViewColumn("WaitEventID");
+						int WaitTime_pos    = dataTable.findViewColumn("WaitTime"); 
+						int Waits_pos       = dataTable.findViewColumn("Waits");
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -4190,13 +4253,16 @@ extends Thread
 							{
 								String ClassName   = (String)dataTable.getValueAt(r, ClassName_pos);
 								String EventName   = (String)dataTable.getValueAt(r, EventName_pos);
-								Number WaitEventID = (Number)dataTable.getValueAt(r, WaitEventID_pos);
+//								Number WaitEventID = (Number)dataTable.getValueAt(r, WaitEventID_pos);
 								Number WaitTime    = (Number)dataTable.getValueAt(r, WaitTime_pos);
 								Number Waits       = (Number)dataTable.getValueAt(r, Waits_pos);
 
 //								// SKIP Wait EventId 250
 //								if ( ! includeWaitId250 && WaitEventID.intValue() == 250)
 //									continue;
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"'.");
 
 								if (generateClass)
 								{
@@ -4290,6 +4356,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -4340,6 +4407,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -4426,8 +4494,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -4977,7 +5045,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__ENGINE__CPU_ENG, new TrendGraphDataPoint(CM_GRAPH_NAME__ENGINE__CPU_ENG, new String[] { "eng-0" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_engine_activity.png") );
 			tcp.setCm(tmp);
@@ -5114,17 +5182,22 @@ extends Thread
 					else
 					{
 						int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
-						Double[] arr = new Double[5];
-						arr[0] = this.getAbsValueAvg(rqRows, "Sample");
-						arr[1] = this.getAbsValueAvg(rqRows, "Avg_1min");
-						arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
-						arr[3] = this.getAbsValueAvg(rqRows, "Max_1min");
-						arr[4] = this.getAbsValueAvg(rqRows, "Max_5min");
-						_logger.debug("updateGraphData(AvgRunQLengthGraph): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
+						if (rqRows == null)
+							_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), retuned null, so I can't do more here.");
+						else
+						{
+							Double[] arr = new Double[5];
+							arr[0] = this.getAbsValueAvg(rqRows, "Sample");
+							arr[1] = this.getAbsValueAvg(rqRows, "Avg_1min");
+							arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
+							arr[3] = this.getAbsValueAvg(rqRows, "Max_1min");
+							arr[4] = this.getAbsValueAvg(rqRows, "Max_5min");
+							_logger.debug("updateGraphData(AvgRunQLengthGraph): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
 
-						// Set the values
-						tgdp.setDate(this.getTimestamp());
-						tgdp.setData(arr);
+							// Set the values
+							tgdp.setDate(this.getTimestamp());
+							tgdp.setData(arr);
+						}
 					}
 				}
 
@@ -5145,40 +5218,45 @@ extends Thread
 					{
 						// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
 						int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
-						Double[] data  = new Double[rqRows.length];
-						String[] label = new String[rqRows.length];
-						for (int i=0; i<rqRows.length; i++)
+						if (rqRows == null)
+							_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'run queue length'), retuned null, so I can't do more here.");
+						else
 						{
-							int rowId = rqRows[i];
+							Double[] data  = new Double[rqRows.length];
+							String[] label = new String[rqRows.length];
+							for (int i=0; i<rqRows.length; i++)
+							{
+								int rowId = rqRows[i];
 
-							// get LABEL
-							String instanceId   = null;
-							if (isClusterEnabled())
-								instanceId = this.getAbsString(rowId, "InstanceID");
-							String engineNumber = this.getAbsString(rowId, "EngineNumber");
+								// get LABEL
+								String instanceId   = null;
+								if (isClusterEnabled())
+									instanceId = this.getAbsString(rowId, "InstanceID");
+								String engineNumber = this.getAbsString(rowId, "EngineNumber");
 
-							// in Cluster Edition the labels will look like 'eng-{InstanceId}:{EngineNumber}'
-							// in ASE SMP Version the labels will look like 'eng-{EngineNumber}'
-							if (instanceId == null)
-								label[i] = "eng-" + engineNumber;
-							else
-								label[i] = "eng-" + instanceId + ":" + engineNumber;
+								// in Cluster Edition the labels will look like 'eng-{InstanceId}:{EngineNumber}'
+								// in ASE SMP Version the labels will look like 'eng-{EngineNumber}'
+								if (instanceId == null)
+									label[i] = "eng-" + engineNumber;
+								else
+									label[i] = "eng-" + instanceId + ":" + engineNumber;
 
-							// get DATA
-							data[i]  = this.getAbsValueAsDouble(rowId, "Avg_1min");
+								// get DATA
+								data[i]  = this.getAbsValueAsDouble(rowId, "Avg_1min");
+							}
+							if (_logger.isDebugEnabled())
+							{
+								String debugStr = "";
+								for (int i=0; i<data.length; i++)
+									debugStr += label[i] + "='"+data[i]+"', ";
+								_logger.debug("updateGraphData(EngineRunQLengthGraph): "+debugStr);
+							}
+
+							// Set the values
+							tgdp.setDate(this.getTimestamp());
+							tgdp.setLabel(label);
+							tgdp.setData(data);
 						}
-						if (_logger.isDebugEnabled())
-						{
-							String debugStr = "";
-							for (int i=0; i<data.length; i++)
-								debugStr += label[i] + "='"+data[i]+"', ";
-							_logger.debug("updateGraphData(EngineRunQLengthGraph): "+debugStr);
-						}
-
-						// Set the values
-						tgdp.setDate(this.getTimestamp());
-						tgdp.setLabel(label);
-						tgdp.setData(data);
 					}
 				}
 			}
@@ -5190,7 +5268,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, new String[] { "-runtime-replaced-" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_sysload_activity.png") );
 			tcp.setCm(tmp);
@@ -5491,7 +5569,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__DATA_CACHE__ACTIVITY, new TrendGraphDataPoint(CM_GRAPH_NAME__DATA_CACHE__ACTIVITY, new String[] { "Logical Reads", "Physical Reads", "Writes" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_cache_activity.png") );
 			tcp.setCm(tmp);
@@ -5768,7 +5846,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_pool_activity.png") );
 			tcp.setCm(tmp);
@@ -6053,7 +6131,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 //			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_DISK)
 			{
 				private static final long   serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__DEVICE_IO;
@@ -6085,7 +6163,7 @@ extends Thread
 				private static final String  PROPKEY_generateWrite   = CM_NAME + ".graph.generate.io.write";
 				private static final boolean DEFAULT_generateWrite   = false;
 
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy   = conf.getBooleanProperty(PROPKEY_generateDummy,   DEFAULT_generateDummy);
@@ -6098,16 +6176,15 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int LogicalName_pos = tm.findColumn("LogicalName");
-						int TotalIOs_pos    = tm.findColumn("TotalIOs");
-						int Reads_pos       = tm.findColumn("Reads");
-						int APFReads_pos    = tm.findColumn("APFReads"); 
-						int Writes_pos      = tm.findColumn("Writes");
+						int LogicalName_pos = dataTable.findViewColumn("LogicalName");
+						int TotalIOs_pos    = dataTable.findViewColumn("TotalIOs");
+						int Reads_pos       = dataTable.findViewColumn("Reads");
+						int APFReads_pos    = dataTable.findViewColumn("APFReads"); 
+						int Writes_pos      = dataTable.findViewColumn("Writes");
 
-//						int ReadsPct_pos    = tm.findColumn("ReadsPct");
-//						int APFReadsPct_pos = tm.findColumn("APFReadsPct");
-//						int WritesPct_pos   = tm.findColumn("WritesPct");
+//						int ReadsPct_pos    = dataTable.findViewColumn("ReadsPct");
+//						int APFReadsPct_pos = dataTable.findViewColumn("APFReadsPct");
+//						int WritesPct_pos   = dataTable.findViewColumn("WritesPct");
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -6129,6 +6206,9 @@ extends Thread
 
 								// This looked like a good idea, but it did not look good at all
 								//String LogicalNameTotalIo = LogicalName + " (R="+ReadsPct+"%,APFR="+APFReadsPct+"%,W="+WritesPct+"%)";
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": LogicalName("+LogicalName_pos+")='"+LogicalName+"', TotalIOs("+TotalIOs_pos+")='"+TotalIOs+"', Reads("+Reads_pos+")='"+Reads+"', APFReads("+APFReads_pos+")='"+APFReads+"', Writes("+Writes_pos+")='"+Writes+"'.");
 
 								if (generateTotalIo)
 									dataset.addValue(TotalIOs.doubleValue(), LogicalName, "TotalIOs");
@@ -6194,6 +6274,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -6244,6 +6325,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -6330,8 +6412,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -6691,7 +6773,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 //			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_DISK)
 			{
 				private static final long   serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__IO_QUEUE_SUM;
@@ -6719,7 +6801,7 @@ extends Thread
 				private static final String  PROPKEY_generateAvgServ_ms = CM_NAME + ".graph.generate.avgServMs";
 				private static final boolean DEFAULT_generateAvgServ_ms = false;
 
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy     = conf.getBooleanProperty(PROPKEY_generateDummy,      DEFAULT_generateDummy);
@@ -6731,11 +6813,10 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int IOType_pos     = tm.findColumn("IOType");
-						int IOs_pos        = tm.findColumn("IOs");
-						int IOTime_pos     = tm.findColumn("IOTime");
-						int AvgServ_ms_pos = tm.findColumn("AvgServ_ms"); 
+						int IOType_pos     = dataTable.findViewColumn("IOType");
+						int IOs_pos        = dataTable.findViewColumn("IOs");
+						int IOTime_pos     = dataTable.findViewColumn("IOTime");
+						int AvgServ_ms_pos = dataTable.findViewColumn("AvgServ_ms"); 
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -6750,6 +6831,9 @@ extends Thread
 								Number IOTime     = (Number)dataTable.getValueAt(r, IOTime_pos);
 								Number AvgServ_ms = (Number)dataTable.getValueAt(r, AvgServ_ms_pos);
 
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": IOType("+IOType_pos+")='"+IOType+"', IOs("+IOs_pos+")='"+IOs+"', IOTime("+IOTime_pos+")='"+IOTime+"', AvgServ_ms("+AvgServ_ms_pos+")='"+AvgServ_ms+"'.");
+								
 								if (generateIOs)       dataset.addValue(IOs       .doubleValue(), IOType, "IOs");
 								if (generateIOTime)    dataset.addValue(IOTime    .doubleValue(), IOType, "IOTime");
 								if (generateAvgServMs) dataset.addValue(AvgServ_ms.doubleValue(), IOType, "AvgServ_ms");
@@ -6805,6 +6889,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -6855,6 +6940,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -6941,8 +7027,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -7290,7 +7376,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME, new TrendGraphDataPoint(CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME, new String[] { "Max", "Average" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_DISK);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_io_queue_activity.png") );
 			tcp.setCm(tmp);
@@ -7422,6 +7508,7 @@ extends Thread
 					"if ((select object_id('#sysmonitorsP')) is not null) drop table #sysmonitorsP \n" +
 					"if ((select object_id('#sysmonitorsW')) is not null) drop table #sysmonitorsW \n" +
 					"if ((select object_id('#sysmonitorsS')) is not null) drop table #sysmonitorsS \n" +
+					"go \n" +
 					"\n";
 				
 				String sqlCreateTmpTabCache = 
@@ -7687,7 +7774,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_spinlock_activity.png") );
 			tcp.setCm(tmp);
@@ -7798,7 +7885,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER)
 			{
 				private static final long	serialVersionUID	= 1L;
 				
@@ -7905,118 +7992,118 @@ extends Thread
 					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 				}
 
-				private JTree createTreeSpSysmon()
-				{
-					DefaultMutableTreeNode top = new DefaultMutableTreeNode("sp_sysmon");
-					DefaultMutableTreeNode heading = new DefaultMutableTreeNode("");
-					DefaultMutableTreeNode subHead = new DefaultMutableTreeNode("");
-	
-					heading = new DefaultMutableTreeNode("Kernel Utilization");
-					top.add(heading);
-					subHead = new DefaultMutableTreeNode("Config");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Runnable Process Search Count"));
-					subHead.add(new DefaultMutableTreeNode("I/O Polling Process Count"));
-	
-					subHead = new DefaultMutableTreeNode("Engine Busy Utilization");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Engine 0"));
-	
-					subHead = new DefaultMutableTreeNode("CPU Yields by Engine");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Engine 0"));
-	
-					subHead = new DefaultMutableTreeNode("Network Checks");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Non-Blocking"));
-					subHead.add(new DefaultMutableTreeNode("Blocking"));
-					subHead.add(new DefaultMutableTreeNode("Total Network I/O Checks"));
-					subHead.add(new DefaultMutableTreeNode("Avg Net I/Os per Check"));
-	
-					subHead = new DefaultMutableTreeNode("Disk I/O Checks");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Total Disk I/O Checks"));
-					subHead.add(new DefaultMutableTreeNode("Checks Returning I/O"));
-					subHead.add(new DefaultMutableTreeNode("Avg Disk I/Os Returned"));
-	
-					heading = new DefaultMutableTreeNode("Worker Process Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Parallel Query Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Task Management");
-					top.add(heading);
-	
-					subHead = new DefaultMutableTreeNode("Task Context Switches by Engine");
-					heading.add(subHead);
-					subHead.add(new DefaultMutableTreeNode("Engine 0"));
-	
-					subHead = new DefaultMutableTreeNode("Task Context Switches Due To");
-					heading.add(subHead);
-	
-					subHead.add(new DefaultMutableTreeNode("Voluntary Yields"));
-					subHead.add(new DefaultMutableTreeNode("Cache Search Misses"));
-					subHead.add(new DefaultMutableTreeNode("Exceeding I/O batch size"));
-					subHead.add(new DefaultMutableTreeNode("System Disk Writes"));
-					subHead.add(new DefaultMutableTreeNode("Logical Lock Contention"));
-					subHead.add(new DefaultMutableTreeNode("Address Lock Contention"));
-					subHead.add(new DefaultMutableTreeNode("Latch Contention"));
-					subHead.add(new DefaultMutableTreeNode("Log Semaphore Contention"));
-					subHead.add(new DefaultMutableTreeNode("PLC Lock Contention"));
-					subHead.add(new DefaultMutableTreeNode("Group Commit Sleeps"));
-					subHead.add(new DefaultMutableTreeNode("Last Log Page Writes"));
-					subHead.add(new DefaultMutableTreeNode("Modify Conflicts"));
-					subHead.add(new DefaultMutableTreeNode("I/O Device Contention"));
-					subHead.add(new DefaultMutableTreeNode("Network Packet Received"));
-					subHead.add(new DefaultMutableTreeNode("Network Packet Sent"));
-					subHead.add(new DefaultMutableTreeNode("Network services"));
-					subHead.add(new DefaultMutableTreeNode("Other Causes"));
-	
-					heading = new DefaultMutableTreeNode("Application Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("ESP Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Transaction Profile");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Transaction Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Index Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Metadata Cache Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Lock Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Data Cache Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Procedure Cache Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Memory Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Recovery Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Disk I/O Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Network I/O Management");
-					top.add(heading);
-	
-					heading = new DefaultMutableTreeNode("Replication Agent");
-					top.add(heading);
-	
-					return new JTree(new DefaultTreeModel(top));
-				}
+//				private JTree createTreeSpSysmon()
+//				{
+//					DefaultMutableTreeNode top = new DefaultMutableTreeNode("sp_sysmon");
+//					DefaultMutableTreeNode heading = new DefaultMutableTreeNode("");
+//					DefaultMutableTreeNode subHead = new DefaultMutableTreeNode("");
+//	
+//					heading = new DefaultMutableTreeNode("Kernel Utilization");
+//					top.add(heading);
+//					subHead = new DefaultMutableTreeNode("Config");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Runnable Process Search Count"));
+//					subHead.add(new DefaultMutableTreeNode("I/O Polling Process Count"));
+//	
+//					subHead = new DefaultMutableTreeNode("Engine Busy Utilization");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+//	
+//					subHead = new DefaultMutableTreeNode("CPU Yields by Engine");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+//	
+//					subHead = new DefaultMutableTreeNode("Network Checks");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Non-Blocking"));
+//					subHead.add(new DefaultMutableTreeNode("Blocking"));
+//					subHead.add(new DefaultMutableTreeNode("Total Network I/O Checks"));
+//					subHead.add(new DefaultMutableTreeNode("Avg Net I/Os per Check"));
+//	
+//					subHead = new DefaultMutableTreeNode("Disk I/O Checks");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Total Disk I/O Checks"));
+//					subHead.add(new DefaultMutableTreeNode("Checks Returning I/O"));
+//					subHead.add(new DefaultMutableTreeNode("Avg Disk I/Os Returned"));
+//	
+//					heading = new DefaultMutableTreeNode("Worker Process Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Parallel Query Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Task Management");
+//					top.add(heading);
+//	
+//					subHead = new DefaultMutableTreeNode("Task Context Switches by Engine");
+//					heading.add(subHead);
+//					subHead.add(new DefaultMutableTreeNode("Engine 0"));
+//	
+//					subHead = new DefaultMutableTreeNode("Task Context Switches Due To");
+//					heading.add(subHead);
+//	
+//					subHead.add(new DefaultMutableTreeNode("Voluntary Yields"));
+//					subHead.add(new DefaultMutableTreeNode("Cache Search Misses"));
+//					subHead.add(new DefaultMutableTreeNode("Exceeding I/O batch size"));
+//					subHead.add(new DefaultMutableTreeNode("System Disk Writes"));
+//					subHead.add(new DefaultMutableTreeNode("Logical Lock Contention"));
+//					subHead.add(new DefaultMutableTreeNode("Address Lock Contention"));
+//					subHead.add(new DefaultMutableTreeNode("Latch Contention"));
+//					subHead.add(new DefaultMutableTreeNode("Log Semaphore Contention"));
+//					subHead.add(new DefaultMutableTreeNode("PLC Lock Contention"));
+//					subHead.add(new DefaultMutableTreeNode("Group Commit Sleeps"));
+//					subHead.add(new DefaultMutableTreeNode("Last Log Page Writes"));
+//					subHead.add(new DefaultMutableTreeNode("Modify Conflicts"));
+//					subHead.add(new DefaultMutableTreeNode("I/O Device Contention"));
+//					subHead.add(new DefaultMutableTreeNode("Network Packet Received"));
+//					subHead.add(new DefaultMutableTreeNode("Network Packet Sent"));
+//					subHead.add(new DefaultMutableTreeNode("Network services"));
+//					subHead.add(new DefaultMutableTreeNode("Other Causes"));
+//	
+//					heading = new DefaultMutableTreeNode("Application Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("ESP Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Transaction Profile");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Transaction Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Index Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Metadata Cache Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Lock Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Data Cache Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Procedure Cache Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Memory Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Recovery Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Disk I/O Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Network I/O Management");
+//					top.add(heading);
+//	
+//					heading = new DefaultMutableTreeNode("Replication Agent");
+//					top.add(heading);
+//	
+//					return new JTree(new DefaultTreeModel(top));
+//				}
 			};
 			
 			tcp.setToolTipText( description );
@@ -8178,7 +8265,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_repagent_activity.png") );
 			tcp.setCm(tmp);
@@ -8383,7 +8470,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_cached_procedures_activity.png") );
 			tcp.setCm(tmp);
@@ -8604,7 +8691,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC, new TrendGraphDataPoint(CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC, new String[] { "Requests", "Loads" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_procedure_cache_activity.png") );
 			tcp.setCm(tmp);
@@ -8812,7 +8899,7 @@ extends Thread
 
 				if (pos_SPID < 0 || pos_ContextID < 0 || pos_MaxContextID < 0)
 				{
-					_logger.debug("Cant find the position for columns ('SPID'"+pos_SPID+", 'ContextID'="+pos_ContextID+", 'MaxContextID'="+pos_MaxContextID+")");
+					_logger.debug("Can't find the position for columns ('SPID'"+pos_SPID+", 'ContextID'="+pos_ContextID+", 'MaxContextID'="+pos_MaxContextID+")");
 					return;
 				}
 				
@@ -8869,7 +8956,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_procedure_call_stack_activity.png") );
 			tcp.setCm(tmp);
@@ -9116,7 +9203,8 @@ extends Thread
 
 				String preDropTempTables = 
 					"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
-					"if ((select object_id('#cacheInfo')) is not null) drop table #cacheInfo \n";
+					"if ((select object_id('#cacheInfo')) is not null) drop table #cacheInfo \n" +
+					"go \n";
 
 				String populateTempTables = 
 					"/*------ Snapshot, cache size -------*/ \n" +
@@ -9136,9 +9224,13 @@ extends Thread
 
 //				TODO: add column PctUsageOfCache = CachedKB/CacheSizeInKb<-- This needs to be pupulated somehow
 					
-				String TableCachedPct = "";
+				String TableCachedPct    = "";
+				String TotalSizeKB_where = "";
 				if (aseVersion >= 15000)
-					TableCachedPct = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
+				{
+					TableCachedPct    = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
+					TotalSizeKB_where = "  and M.TotalSizeKB > 0 \n";
+				}
 				
 				cols1 += "M.DBID, M.ObjectID, M.IndexID, M.DBName, M.ObjectName, M.ObjectType, \n";
 				cols2 += "";
@@ -9160,6 +9252,7 @@ extends Thread
 					"select " + cols1 + cols2 + cols3 + "\n" +
 					"from master..monCachedObject M, #cacheInfo T \n" +
 					"where M.CacheID = T.CacheID \n" +
+					TotalSizeKB_where +
 					"order by M.CachedKB desc\n" +
 					"\n" +
 					postDropTempTables;
@@ -9190,7 +9283,7 @@ extends Thread
 
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_objects_in_cache_activity.png") );
 			tcp.setCm(tmp);
@@ -9317,7 +9410,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_errorlog_activity.png") );
 			tcp.setCm(tmp);
@@ -9438,7 +9531,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_deadlock_activity.png") );
 			tcp.setCm(tmp);
@@ -9509,7 +9602,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_lock_timeout_activity.png") );
 			tcp.setCm(tmp);
@@ -9618,7 +9711,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 //			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE)
 			{
 				private static final long	serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__PROC_CACHE_MODULE_USAGE;
@@ -9638,7 +9731,7 @@ extends Thread
 				private static final boolean DEFAULT_showLegend    = true;
 
 				
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
@@ -9647,9 +9740,8 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int ModuleName_pos = tm.findColumn("ModuleName");
-						int Active_pos     = tm.findColumn("Active");
+						int ModuleName_pos = dataTable.findViewColumn("ModuleName");
+						int Active_pos     = dataTable.findViewColumn("Active");
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -9661,6 +9753,9 @@ extends Thread
 							{
 								String ModuleName = (String)dataTable.getValueAt(r, ModuleName_pos);
 								Number Active     = (Number)dataTable.getValueAt(r, Active_pos);
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ModuleName("+ModuleName_pos+")='"+ModuleName+"', Active("+Active_pos+")='"+Active+"'.");
 
 								dataset.addValue(Active.doubleValue(), ModuleName, "Active - ModuleName");
 							}
@@ -9713,6 +9808,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -9763,6 +9859,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -9849,8 +9946,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -10089,7 +10186,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 //			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE)
 			{
 				private static final long	serialVersionUID	= 1L;
 				private static final String CM_NAME = CM_NAME__PROC_CACHE_MEMORY_USAGE;
@@ -10117,7 +10214,7 @@ extends Thread
 				private static final String  PROPKEY_showEmptyGraphs = CM_NAME + ".graph.show.empty";
 				private static final boolean DEFAULT_showEmptyGraphs = false;
 
-				private CategoryDataset createDataset(JXTable dataTable)
+				private CategoryDataset createDataset(GTable dataTable)
 				{
 					Configuration conf = Configuration.getCombinedConfiguration();
 					boolean generateDummy   = conf.getBooleanProperty(PROPKEY_generateDummy,   DEFAULT_generateDummy);
@@ -10129,10 +10226,9 @@ extends Thread
 
 					if (dataTable != null)
 					{
-						AbstractTableModel tm = (AbstractTableModel)dataTable.getModel();
-						int ModuleName_pos    = tm.findColumn("ModuleName");
-						int AllocatorName_pos = tm.findColumn("AllocatorName");
-						int Active_pos        = tm.findColumn("Active");
+						int ModuleName_pos    = dataTable.findViewColumn("ModuleName");
+						int AllocatorName_pos = dataTable.findViewColumn("AllocatorName");
+						int Active_pos        = dataTable.findViewColumn("Active");
 
 						CountersModel cm = getDisplayCm();
 						if (cm == null)
@@ -10145,6 +10241,9 @@ extends Thread
 								String ModuleName    = (String)dataTable.getValueAt(r, ModuleName_pos);
 								String AllocatorName = (String)dataTable.getValueAt(r, AllocatorName_pos);
 								Number Active        = (Number)dataTable.getValueAt(r, Active_pos);
+
+								if (_logger.isDebugEnabled())
+									_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ModuleName("+ModuleName_pos+")='"+ModuleName+"', AllocatorName("+AllocatorName_pos+")='"+AllocatorName+"', Active("+Active_pos+")='"+Active+"'.");
 
 								if (generateSummary && (showEmptyGraphs || Active.doubleValue() > 0.0) )
 									dataset.addValue(Active.doubleValue(), ModuleName+":"+AllocatorName, "SUMMARY");
@@ -10201,6 +10300,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -10251,6 +10351,7 @@ extends Thread
 						chart.setTitle(new TextTitle(chartTitle, TextTitle.DEFAULT_FONT));
 
 						// Set FONT SIZE for legend (button what are part of the graph)
+						@SuppressWarnings("unchecked")
 						List<LegendTitle> legendList = chart.getSubtitles();
 						for (LegendTitle lt : legendList)
 						{
@@ -10342,8 +10443,8 @@ extends Thread
 				@Override
 				protected void updateExtendedInfoPanel()
 				{
-					JPanel  panel     = getExtendedInfoPanel();
-					JXTable dataTable = getDataTable();
+					JPanel panel     = getExtendedInfoPanel();
+					GTable dataTable = getDataTable();
 					if (panel     == null) return;
 
 					// If the panel is so small, make it bigger 
@@ -10762,7 +10863,7 @@ extends Thread
 		tmp.addTrendGraphData(CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC, new TrendGraphDataPoint(CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC, new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }));
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_statement_cache_activity.png") );
 			tcp.setCm(tmp);
@@ -11024,15 +11125,42 @@ extends Thread
 				return sql;
 			}
 
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public Configuration getLocalConfiguration()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				Configuration lc = new Configuration();
+
+				lc.setProperty(getName()+".sample.sqlText",  conf.getBooleanProperty(getName()+".sample.sqlText",   false));
+				lc.setProperty(getName()+".sample.xmlPlan",  conf.getBooleanProperty(getName()+".sample.xmlPlan",   false));
+				lc.setProperty(getName()+".sample.showplan", conf.getBooleanProperty(getName()+".sample.showplan",  false));
+
+				return lc;
+			}
+
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public String getLocalConfigurationDescription(String propName)
+			{
+				if (propName.equals(getName()+".sample.sqlText"))  return "Get SQL Text (using: show_cached_text(SSQLID)) assosiated with the Cached Statement.";
+				if (propName.equals(getName()+".sample.xmlPlan"))  return "Get Showplan assosiated with the Cached Statement.";
+				if (propName.equals(getName()+".sample.showplan")) return "Get XML Plan (using: show_cached_plan_in_xml(SSQLID, 0)) assosiated with the Cached Statement, Note only in 15.7 and above.";
+				return "";
+			}
+	
 			@Override
 			public String getSql()
 			{
 				String sql = super.getSql();
 				
+				final String DEFAULT_xmlPlan_levelOfDetail = "0";
+				
 				Configuration conf = Configuration.getCombinedConfiguration();
-				boolean sampleSqlText_chk  = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.sqlText",  false);
-				boolean sampleXmlPlan_chk  = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.xmlPlan",  false);
-				boolean sampleShowplan_chk = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.showplan", false);
+				boolean sampleSqlText_chk    = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.sqlText",  false);
+				boolean sampleXmlPlan_chk    = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.xmlPlan",  false);
+				boolean sampleShowplan_chk   = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.showplan", false);
+				String xmlPlan_levelOfDetail = (conf == null) ? "0"   : conf.getProperty(       getName()+".sample.xmlPlan.levelOfDetail", DEFAULT_xmlPlan_levelOfDetail);
 
 				//----- SQL TEXT
 				String hasSqlText = "convert(bit,1)";
@@ -11049,8 +11177,12 @@ extends Thread
 				//----- XML PLAN
 				if (getServerVersion() >= 15700)
 				{
+					// Check if the xmlPlan_levelOfDetail is an Integer, if not set it to a default value...
+					try { Integer.parseInt(xmlPlan_levelOfDetail); }
+					catch (NumberFormatException e) { xmlPlan_levelOfDetail = DEFAULT_xmlPlan_levelOfDetail; }
+
 					String hasXmlPlan = "convert(bit,1)";
-					String  doXmlPlan = "show_cached_plan_in_xml(SSQLID, 0)";
+					String  doXmlPlan = "show_cached_plan_in_xml(SSQLID, 0, "+xmlPlan_levelOfDetail+")";
 					if ( ! sampleXmlPlan_chk )
 					{
 						hasXmlPlan = "convert(bit,0)";
@@ -11157,7 +11289,7 @@ extends Thread
 		{
 //			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_CACHE)
 			{
 				private static final long	serialVersionUID	= 1L;
 				private JCheckBox sampleXmlPlan_chk;
@@ -11452,7 +11584,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_process_object_activity.png") );
 			tcp.setCm(tmp);
@@ -11606,7 +11738,8 @@ extends Thread
 		needVersion  = 0;
 		needCeVersion= 0;
 		monTables    = new String[] {"monProcessStatement", "monProcess"};
-		needRole     = new String[] {"mon_role", "sybase_ts_role"};
+//		needRole     = new String[] {"mon_role", "sybase_ts_role"};
+		needRole     = new String[] {"mon_role"};
 		needConfig   = new String[] {"enable monitoring=1", "statement statistics active=1", "wait event timing=1"};
 		colsCalcDiff = new String[] {"MemUsageKB", "PhysicalReads", "LogicalReads", "PagesModified", "PacketsSent", "PacketsReceived", "pssinfo_tempdb_pages"};
 		colsCalcPCT  = new String[] {};
@@ -11721,8 +11854,9 @@ extends Thread
 				         dbNameCol+", procname=isnull(object_name(S.ProcedureID,S.DBID),''), linenum=S.LineNumber, \n" +
 				         "P.Command, P.Application, \n" +
 				         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
-				         "S.CpuTime, S.WaitTime, ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n" +
-				         "UsefullExecTime = (datediff(ms, S.StartTime, getdate()) - S.WaitTime), \n" +
+				         "S.CpuTime, S.WaitTime, \n" +
+				         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+				         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 				         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 				         "P.SecondsWaiting, P.WaitEventID, \n" +
 				         "WaitClassDesc=convert(varchar(50),''), \n" +
@@ -11788,7 +11922,8 @@ extends Thread
 				         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
 				         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
 				         "P.Command, P.Application, \n" +
-				         "CpuTime=-1, WaitTime=-1, ExecTimeInMs=-1, \n" +
+				         "CpuTime=-1, WaitTime=-1, \n" +
+				         "ExecTimeInMs    = -1, \n" +
 				         "UsefullExecTime = -1, \n" +
 				         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 				         "P.SecondsWaiting, P.WaitEventID, \n" +
@@ -11829,6 +11964,34 @@ extends Thread
 			       + "  /* UNION ALL */ \n\n"
 			       + x_sql;
 			}
+
+			/** Used by the: Create 'Offline Session' Wizard */
+			@Override
+			public Configuration getLocalConfiguration()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				Configuration lc = new Configuration();
+
+				lc.setProperty(getName()+".sample.showplan",       conf.getBooleanProperty(getName()+".sample.showplan",       true));
+				lc.setProperty(getName()+".sample.monSqltext",     conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
+				lc.setProperty(getName()+".sample.dbccSqltext",    conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
+				lc.setProperty(getName()+".sample.procCallStack",  conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
+				lc.setProperty(getName()+".sample.dbccStacktrace", conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
+
+				return lc;
+			}
+
+			@Override
+			public String getLocalConfigurationDescription(String propName)
+			{
+				if (propName.equals(getName()+".sample.showplan"))       return "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.";
+				if (propName.equals(getName()+".sample.monSqltext"))     return "Do 'dbcc sqltext(spid)' on every row in the table.";
+				if (propName.equals(getName()+".sample.dbccSqltext"))    return "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table.";
+				if (propName.equals(getName()+".sample.procCallStack"))  return "Do 'sp_showplan spid' on every row in the table.";
+				if (propName.equals(getName()+".sample.dbccStacktrace")) return "Do 'dbcc stacktrace(spid)' on every row in the table.";
+				return "";
+			}
+
 
 			@Override
 			public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
@@ -12040,55 +12203,55 @@ extends Thread
 
 				if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
 				{
-					_logger.debug("Cant find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+					_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
 					return;
 				}
 				
 				if (pos_SPID < 0 || pos_HasShowPlan < 0 || pos_ShowPlanText < 0)
 				{
-					_logger.debug("Cant find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
+					_logger.debug("Can't find the position for columns ('SPID'="+pos_SPID+", 'HasShowPlan'="+pos_HasShowPlan+", 'ShowPlanText'="+pos_ShowPlanText+")");
 					return;
 				}
 
 				if (pos_HasDbccSqlText < 0 || pos_DbccSqlText < 0)
 				{
-					_logger.debug("Cant find the position for columns ('HasDbccSqlText'="+pos_HasDbccSqlText+", 'DbccSqlText'="+pos_DbccSqlText+")");
+					_logger.debug("Can't find the position for columns ('HasDbccSqlText'="+pos_HasDbccSqlText+", 'DbccSqlText'="+pos_DbccSqlText+")");
 					return;
 				}
 
 				if (pos_HasProcCallStack < 0 || pos_ProcCallStack < 0)
 				{
-					_logger.debug("Cant find the position for columns ('HasProcCallStack'="+pos_HasProcCallStack+", 'ProcCallStack'="+pos_ProcCallStack+")");
+					_logger.debug("Can't find the position for columns ('HasProcCallStack'="+pos_HasProcCallStack+", 'ProcCallStack'="+pos_ProcCallStack+")");
 					return;
 				}
 
 				if (pos_HasMonSqlText < 0 || pos_MonSqlText < 0)
 				{
-					_logger.debug("Cant find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
+					_logger.debug("Can't find the position for columns (''HasMonSqlText'="+pos_HasMonSqlText+", 'MonSqlText'="+pos_MonSqlText+")");
 					return;
 				}
 
 				if (pos_HasStacktrace < 0 || pos_DbccStacktrace < 0)
 				{
-					_logger.debug("Cant find the position for columns ('HasShowplan'="+pos_HasStacktrace+", 'DbccStacktrace'="+pos_DbccStacktrace+")");
+					_logger.debug("Can't find the position for columns ('HasShowplan'="+pos_HasStacktrace+", 'DbccStacktrace'="+pos_DbccStacktrace+")");
 					return;
 				}
 				
 				if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
 				{
-					_logger.debug("Cant find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
+					_logger.debug("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
 					return;
 				}
 				
 				if (pos_multiSampled < 0)
 				{
-					_logger.debug("Cant find the position for columns ('multiSampled'="+pos_multiSampled+")");
+					_logger.debug("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
 					return;
 				}
 				
 				if (pos_StartTime < 0)
 				{
-					_logger.debug("Cant find the position for columns ('StartTime'="+pos_StartTime+")");
+					_logger.debug("Can't find the position for columns ('StartTime'="+pos_StartTime+")");
 					return;
 				}
 				
@@ -12290,9 +12453,15 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS)
 			{
 				private static final long	serialVersionUID	= 1L;
+
+				JCheckBox l_sampleMonSqltext_chk;
+				JCheckBox l_sampleDbccSqltext_chk;
+				JCheckBox l_sampleProcCallStack_chk;
+				JCheckBox l_sampleShowplan_chk;
+				JCheckBox l_sampleDbccStacktrace_chk;
 
 				@Override
 				protected JPanel createLocalOptionsPanel()
@@ -12309,31 +12478,31 @@ extends Thread
 
 //					Configuration conf = Configuration.getInstance(Configuration.TEMP);
 					Configuration conf = Configuration.getCombinedConfiguration();
-					JCheckBox sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
-					JCheckBox sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
-					JCheckBox sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
-					JCheckBox sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
-					JCheckBox sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
+					l_sampleMonSqltext_chk     = new JCheckBox("Get Monitored SQL Text",   conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
+					l_sampleDbccSqltext_chk    = new JCheckBox("Get DBCC SQL Text",        conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
+					l_sampleProcCallStack_chk  = new JCheckBox("Get Procedure Call Stack", conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
+					l_sampleShowplan_chk       = new JCheckBox("Get Showplan",             conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",       true));
+					l_sampleDbccStacktrace_chk = new JCheckBox("Get ASE Stacktrace",       conf == null ? true : conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
 
-					sampleMonSqltext_chk    .setName(getName()+".sample.monSqltext");
-					sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
-					sampleProcCallStack_chk .setName(getName()+".sample.procCallStack");
-					sampleShowplan_chk      .setName(getName()+".sample.showplan");
-					sampleDbccStacktrace_chk.setName(getName()+".sample.dbccStacktrace");
+					l_sampleMonSqltext_chk    .setName(getName()+".sample.monSqltext");
+					l_sampleDbccSqltext_chk   .setName(getName()+".sample.dbccSqltext");
+					l_sampleProcCallStack_chk .setName(getName()+".sample.procCallStack");
+					l_sampleShowplan_chk      .setName(getName()+".sample.showplan");
+					l_sampleDbccStacktrace_chk.setName(getName()+".sample.dbccStacktrace");
 					
-					sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
-					sampleDbccSqltext_chk   .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.</html>");
-					sampleProcCallStack_chk .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
-					sampleShowplan_chk      .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
-					sampleDbccStacktrace_chk.setToolTipText("<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.</html>");
+					l_sampleMonSqltext_chk    .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
+					l_sampleDbccSqltext_chk   .setToolTipText("<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
+					l_sampleProcCallStack_chk .setToolTipText("<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>");
+					l_sampleShowplan_chk      .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
+					l_sampleDbccStacktrace_chk.setToolTipText("<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
 
-					panel.add(sampleMonSqltext_chk,     "");
-					panel.add(sampleProcCallStack_chk,  "wrap");
-					panel.add(sampleDbccSqltext_chk,    "wrap");
-					panel.add(sampleShowplan_chk,       "wrap");
-					panel.add(sampleDbccStacktrace_chk, "wrap");
+					panel.add(l_sampleMonSqltext_chk,     "");
+					panel.add(l_sampleProcCallStack_chk,  "wrap");
+					panel.add(l_sampleDbccSqltext_chk,    "wrap");
+					panel.add(l_sampleShowplan_chk,       "wrap");
+					panel.add(l_sampleDbccStacktrace_chk, "wrap");
 
-					sampleMonSqltext_chk.addActionListener(new ActionListener()
+					l_sampleMonSqltext_chk.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
 						{
@@ -12344,7 +12513,7 @@ extends Thread
 							conf.save();
 						}
 					});
-					sampleDbccSqltext_chk.addActionListener(new ActionListener()
+					l_sampleDbccSqltext_chk.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
 						{
@@ -12355,7 +12524,7 @@ extends Thread
 							conf.save();
 						}
 					});
-					sampleProcCallStack_chk.addActionListener(new ActionListener()
+					l_sampleProcCallStack_chk.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
 						{
@@ -12366,7 +12535,7 @@ extends Thread
 							conf.save();
 						}
 					});
-					sampleShowplan_chk.addActionListener(new ActionListener()
+					l_sampleShowplan_chk.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
 						{
@@ -12377,7 +12546,7 @@ extends Thread
 							conf.save();
 						}
 					});
-					sampleDbccStacktrace_chk.addActionListener(new ActionListener()
+					l_sampleDbccStacktrace_chk.addActionListener(new ActionListener()
 					{
 						public void actionPerformed(ActionEvent e)
 						{
@@ -12390,6 +12559,35 @@ extends Thread
 					});
 					
 					return panel;
+				}
+				@Override
+				public void checkLocalComponents()
+				{
+					CountersModel cm = getCm();
+					if (cm != null)
+					{
+						if (cm.isRuntimeInitialized())
+						{
+							// disable some options if we do not have 'sybase_ts_role'
+							if ( cm.isRoleActive(AseConnectionUtils.SYBASE_TS_ROLE))
+							{
+								l_sampleDbccSqltext_chk   .setEnabled(true);
+								l_sampleDbccStacktrace_chk.setEnabled(true);
+							}
+							else
+							{
+								l_sampleDbccSqltext_chk   .setEnabled(false);
+								l_sampleDbccStacktrace_chk.setEnabled(false);
+	
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf != null)
+								{
+									conf.setProperty(localName+".sample.dbccSqltext",    false);
+									conf.setProperty(localName+".sample.dbccStacktrace", false);
+								}
+							}
+						} // end isRuntimeInitialized
+					} // end (cm != null)
 				}
 			};
 			tcp.setToolTipText( description );
@@ -12581,7 +12779,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String finalDisplayName = displayName;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -12738,7 +12936,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_OBJECT_ACCESS);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_missing_stats_activity.png") );
 			tcp.setCm(tmp);
@@ -12752,7 +12950,8 @@ extends Thread
 			{
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
-					if ("colList".equals(adapter.getColumnName(adapter.column)))
+					int modelCol = adapter.convertColumnIndexToModel(adapter.column);
+					if ("colList".equals(adapter.getColumnName(modelCol)))
 					{
 						String cellVal = adapter.getString();
 						if (cellVal != null && cellVal.indexOf("(not indexed!)") >= 0)
@@ -12873,6 +13072,59 @@ extends Thread
 				String sql = "exec sp_asetune_qp_metrics";
 				return sql;
 			}
+
+			@Override
+			/** override this so we can change datatype for column 'qtext' from varchar(255) -> text */
+			public void setResultSetMetaData(ResultSetMetaData rsmd)
+			{
+				int qtext_pos = AseConnectionUtils.findColumn(rsmd, "qtext");
+				if (qtext_pos == -1)
+				{
+					super.setResultSetMetaData(rsmd);
+				}
+				else
+				{
+					ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
+					xe.setExtendedEntry(qtext_pos, java.sql.Types.CLOB);
+					super.setResultSetMetaData(xe);
+				}
+			}
+
+			/** "collapse" all rows for DBName, id, sequence... the column "qtext" into one row (the first row DBName, id, sequence=0) */
+			@Override
+			public boolean hookInSqlRefreshBeforeAddRow(SamplingCnt cnt, List<Object> thisRow, List<Object> prevRow)
+			{
+				if (thisRow == null || prevRow == null)
+					return true;
+
+				int DBName_pos   = cnt.findColumn("DBName");
+				int id_pos       = cnt.findColumn("id");
+				int sequence_pos = cnt.findColumn("sequence");
+				int qtext_pos    = cnt.findColumn("qtext");
+				
+				String  DBName   = (String) thisRow.get(DBName_pos);
+				Integer id       = (Integer)thisRow.get(id_pos);
+				Integer sequence = (Integer)thisRow.get(sequence_pos);
+				String  qtext    = (String) thisRow.get(qtext_pos);
+
+				if (sequence.intValue() > 0)
+				{
+					String  prev_DBName   = (String) prevRow.get(DBName_pos);
+					Integer prev_id       = (Integer)prevRow.get(id_pos);
+					Integer prev_sequence = (Integer)prevRow.get(sequence_pos);
+					String  prev_qtext    = (String) prevRow.get(qtext_pos);
+
+					if (DBName.equals(prev_DBName) && id.equals(prev_id) && prev_sequence.intValue() == 0)
+					{
+//System.out.println(" < hookInSqlRefreshBeforeAddRow("+cnt.getName()+"): collapsing DBName='"+DBName+"', id="+id+", sequence="+sequence+", qtext='"+qtext+"'.");
+						prevRow.set(qtext_pos, prev_qtext + qtext);
+//System.out.println("   hookInSqlRefreshBeforeAddRow("+cnt.getName()+"): privRow:   DBName='"+DBName+"', id="+id+", sequence="+prevRow.get(sequence_pos)+", qtext='"+prev_qtext+"'.");
+//System.out.println("   hookInSqlRefreshBeforeAddRow("+cnt.getName()+"): newPrivRow:DBName='"+DBName+"', id="+id+", sequence="+prevRow.get(sequence_pos)+", qtext='"+prevRow.get(qtext_pos)+"'.");
+						return false;
+					}
+				}
+				return true;
+			}
 		};
 
 		// Need stored proc 'sp_missing_stats'
@@ -12888,7 +13140,7 @@ extends Thread
 		if (AseTune.hasGUI())
 		{
 			final String localName = name;
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), tmp)
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), tmp, MainFrame.TCP_GROUP_OBJECT_ACCESS)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -13060,7 +13312,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName());
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_SERVER);
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_sp_monitorconfig.png") );
 			tcp.setCm(tmp);
@@ -13092,7 +13344,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_HOST_MONITOR)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -13252,7 +13504,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_HOST_MONITOR)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -13412,7 +13664,7 @@ extends Thread
 		tmp.setDescription(description);
 		if (AseTune.hasGUI())
 		{
-			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName())
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_HOST_MONITOR)
 			{
 				private static final long	serialVersionUID	= 1L;
 
@@ -13543,6 +13795,167 @@ extends Thread
 			};
 			tcp.setToolTipText( description );
 			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_hostmon_mpstat.png") );
+			tcp.setCm(tmp);
+			MainFrame.addTcp( tcp );
+		
+			tmp.setTabPanel( tcp );
+		}
+		
+		_CMList.add(tmp);
+
+
+		
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
+		// OS uptime
+		//-----------------------------------------
+		//-----------------------------------------
+		//-----------------------------------------
+		name         = CM_NAME__OS_UPTIME;
+		displayName  = CM_DESC__OS_UPTIME;
+		description  = "Executes: 'uptime' on the Operating System, to get 'Load Average'";
+		
+		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
+		
+		tmp = new CounterModelHostMonitor(name, CounterModelHostMonitor.HOSTMON_UPTIME, null, true);
+
+		tmp.setDisplayName(displayName);
+		tmp.setDescription(description);
+		if (AseTune.hasGUI())
+		{
+			TabularCntrPanel tcp = new TabularCntrPanel(tmp.getDisplayName(), MainFrame.TCP_GROUP_HOST_MONITOR)
+			{
+				private static final long	serialVersionUID	= 1L;
+
+				JLabel  l_hostmonThreadNotInit_lbl;
+				JLabel  l_hostmonThreadIsRunning_lbl;
+//				JLabel  l_hostmonThreadIsStopped_lbl;
+				JLabel  l_hostmonHostname_lbl;
+//				JButton l_hostmonStart_but;
+//				JButton l_hostmonStop_but;
+
+				@Override
+				protected JPanel createLocalOptionsPanel()
+				{
+					JPanel panel = SwingUtils.createPanel("Host Monitor", true);
+					panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
+					panel.setToolTipText(
+						"<html>" +
+							"Use this panel to check or controll the underlying Host Monitoring Thread.<br>" +
+							"You can Start and/or Stop the hostmon thread.<br>" +
+						"</html>");
+
+					l_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
+					l_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
+//					l_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
+					l_hostmonHostname_lbl         = new JLabel();
+//					l_hostmonStart_but            = new JButton("Start");
+//					l_hostmonStop_but             = new JButton("Stop");
+
+					l_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread has not yet been initialized.</html>");
+					l_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+//					l_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+					l_hostmonHostname_lbl       .setToolTipText("<html>What hostname are we monitoring.</html>");
+//					l_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
+//					l_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
+
+					l_hostmonThreadNotInit_lbl  .setVisible(true);
+					l_hostmonThreadIsRunning_lbl.setVisible(false);
+//					l_hostmonThreadIsStopped_lbl.setVisible(false);
+//					l_hostmonStart_but          .setVisible(false);
+//					l_hostmonStop_but           .setVisible(false);
+
+					panel.add( l_hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
+					panel.add( l_hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
+//					panel.add( l_hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
+					panel.add( l_hostmonHostname_lbl,        "hidemode 3, wrap 10");
+//					panel.add( l_hostmonStart_but,           "hidemode 3, wrap");
+//					panel.add( l_hostmonStop_but,            "hidemode 3, wrap");
+
+//					l_hostmonStart_but.addActionListener(new ActionListener()
+//					{
+//						public void actionPerformed(ActionEvent e)
+//						{
+//							CountersModel cm = getCm();
+//							if (cm != null)
+//							{
+//								HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+//								if (hostMonitor != null)
+//								{
+//									try
+//									{
+//										hostMonitor.setPaused(false);
+//										hostMonitor.start();
+//									}
+//									catch (Exception ex)
+//									{
+//										SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
+//									}
+//								}
+//							}
+//						}
+//					});
+//
+//					l_hostmonStop_but.addActionListener(new ActionListener()
+//					{
+//						public void actionPerformed(ActionEvent e)
+//						{
+//							CountersModel cm = getCm();
+//							if (cm != null)
+//							{
+//								HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+//								if (hostMonitor != null)
+//								{
+//									hostMonitor.setPaused(true);
+//									hostMonitor.shutdown();
+//								}
+//							}
+//						}
+//					});
+					return panel;
+				}
+
+				@Override
+				public void checkLocalComponents()
+				{
+					CountersModel cm = getCm();
+					if (cm != null)
+					{
+						HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+						if (hostMonitor != null)
+						{
+							boolean isRunning = hostMonitor.isRunning();
+							boolean isPaused  = hostMonitor.isPaused();
+
+							l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
+							l_hostmonThreadNotInit_lbl  .setVisible( false );
+							l_hostmonThreadIsRunning_lbl.setVisible(   isRunning || !hostMonitor.isOsCommandStreaming() );
+//							l_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
+//							l_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
+							l_hostmonHostname_lbl       .setText("<html> Host: <b>"+hostMonitor.getHostname()+"</b></html>");
+//							l_hostmonStart_but          .setVisible( ! isRunning );
+//							l_hostmonStop_but           .setVisible(   isRunning );
+
+							if (isPaused)
+								setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
+						}
+						else
+						{
+							setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
+							l_hostmonThreadNotInit_lbl  .setVisible( true );
+							l_hostmonThreadIsRunning_lbl.setVisible( false );
+//							l_hostmonThreadIsStopped_lbl.setVisible( false );
+//							l_hostmonStart_but          .setVisible( false );
+//							l_hostmonStop_but           .setVisible( false );
+							if (cm.getSampleException() != null)
+								setWatermarkText(cm.getSampleException().toString());
+						}
+					}
+				}
+			};
+			tcp.setToolTipText( description );
+			tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/cm_hostmon_uptime.png") );
 			tcp.setCm(tmp);
 			MainFrame.addTcp( tcp );
 		
@@ -13785,7 +14198,7 @@ extends Thread
 			TabularCntrPanel tcp = null;
 			if (AseTune.hasGUI())
 			{
-				tcp = new TabularCntrPanel(udcDisplayName);
+				tcp = new TabularCntrPanel(udcDisplayName, MainFrame.TCP_GROUP_UDC);
 				tcp.setToolTipText( udcDescription );
 				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
 				tcp.setCm(cm);
@@ -13838,12 +14251,12 @@ extends Thread
 
 		if (udcGraphDataCols == null)
 		{
-			_logger.error("Cant add a graph to the User Defined Counter '"+name+"', no 'graph.data.cols' has been defined.");
+			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.cols' has been defined.");
 			addGraph = false;
 		}
 		if (udcGraphDataMethods == null)
 		{
-			_logger.error("Cant add a graph to the User Defined Counter '"+name+"', no 'graph.data.methods' has been defined.");
+			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.methods' has been defined.");
 			addGraph = false;
 		}
 		if (udcGraphDataLabels == null)
@@ -13853,7 +14266,7 @@ extends Thread
 		else if (udcGraphTypeStr.equalsIgnoreCase("byRow"))	udcGraphType = TrendGraph.TYPE_BY_ROW;
 		else
 		{
-			_logger.error("Cant add a graph to the User Defined Counter '"+name+"', no 'graph.type' can only be 'byCol' or 'byRow'.");
+			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.type' can only be 'byCol' or 'byRow'.");
 			addGraph = false;
 		}
 
@@ -13873,12 +14286,12 @@ extends Thread
 
 		if (udcGraphDataColsArr.length != udcGraphDataMethodsArr.length)
 		{
-			_logger.error("Cant add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.methods' has "+udcGraphDataMethodsArr.length+" entries, they has to be equal.");
+			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.methods' has "+udcGraphDataMethodsArr.length+" entries, they has to be equal.");
 			addGraph = false;
 		}
 		if (udcGraphDataColsArr.length != udcGraphDataLabelsArr.length)
 		{
-			_logger.error("Cant add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.labels' has "+udcGraphDataLabelsArr.length+" entries, they has to be equal.");
+			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.labels' has "+udcGraphDataLabelsArr.length+" entries, they has to be equal.");
 			addGraph = false;
 		}
 
@@ -13990,7 +14403,7 @@ extends Thread
 			TabularCntrPanel tcp = null;
 			if (AseTune.hasGUI())
 			{
-				tcp = new TabularCntrPanel(udcDisplayName)
+				tcp = new TabularCntrPanel(udcDisplayName, MainFrame.TCP_GROUP_HOST_MONITOR)
 				{
 					private static final long	serialVersionUID	= 1L;
 

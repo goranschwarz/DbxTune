@@ -7,19 +7,24 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Map.Entry;
+import java.util.Vector;
 
-import javax.swing.JLabel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
+import javax.swing.Icon;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
 
+import org.jdesktop.swingx.JXTable;
 import org.netbeans.spi.wizard.WizardPage;
 
-import com.asetune.Version;
+import com.asetune.GetCounters;
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
-import com.asetune.utils.StringUtil;
-
+import com.asetune.utils.Configuration;
 
 
 public class WizardOfflinePage4
@@ -27,23 +32,21 @@ extends WizardPage
 implements ActionListener
 {
     private static final long serialVersionUID = 1L;
-//	private static Logger _logger          = Logger.getLogger(WizardOfflinePage4.class);
-
-	private static final String WIZ_NAME = "SshConnection";
-	private static final String WIZ_DESC = "Host Monitor Connection information";
-	private static final String WIZ_HELP = "If you selected any Performance Counter Module in the previous page that was of the type 'Host Monitor'\nThen you need to specify SSH (Secure Shell) information, otherwise we can't connect to it when polling for Performance Counters.";
-
-	private JLabel     _noHostMonWasSelected = new JLabel("<html><b>No Host Monitor, Performance Counter was selected.</b> Just press <b>Next</b> to continue.</b></html>");
-
-//	private boolean    _firtsTimeRender = true;
-
-	private JTextField _sshHostname = new JTextField();
-	private JTextField _sshPort     = new JTextField(); 
-	private JTextField _sshUsername = new JTextField();
-	private JTextField _sshPassword = new JPasswordField();
+	private static final String WIZ_NAME = "local-options";
+	private static final String WIZ_DESC = "Performance Counters Options";
+	private static final String WIZ_HELP = "Some Performance Counters has local options, which you can edit here. Click 'Value' cell to change the desired value.";
 
 	public static String getDescription() { return WIZ_DESC; }
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
+
+	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Local Option", "Value", "Description"};
+	private static final int TAB_POS_ICON         = 0;
+	private static final int TAB_POS_TAB_NAME     = 1;
+	private static final int TAB_POS_OPTION       = 2;
+	private static final int TAB_POS_OPTION_VALUE = 3;
+	private static final int TAB_POS_OPTION_DESC  = 4;
+
+	private JXTable _optionsTable = new JXTable();
 
 	public WizardOfflinePage4()
 	{
@@ -51,122 +54,101 @@ implements ActionListener
 		
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
-		_sshHostname.setName("sshHostname");
-		_sshPort    .setName("sshPort");
-		_sshUsername.setName("sshUsername");
-		_sshPassword.setName("sshPassword");
-
-		// tool tip
-		_sshHostname.setToolTipText("What host name should we connect to when polling for Performance Counters.");
-		_sshPort    .setToolTipText("Port number, the SSH server runs on.");
-		_sshUsername.setToolTipText("User name to be used when logging on the the above host name.");
-		_sshPassword.setToolTipText("Password, you can override this with the '-p' command line switch when starting "+Version.getAppName()+" in no-gui mode, and yes the stored value is encrypted.");
-		_noHostMonWasSelected.setToolTipText("");
-
-		_noHostMonWasSelected.setVisible(false);
-		
 		// Add a helptext
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
-		add(_noHostMonWasSelected, "span 2, growx, hidemode 3, wrap 20");
+		// Create a TABLE
+		Vector<String> tabHead = new Vector<String>();
+		tabHead.setSize(TAB_HEADER.length);
+		tabHead.set(TAB_POS_ICON,         TAB_HEADER[TAB_POS_ICON]);
+		tabHead.set(TAB_POS_TAB_NAME,     TAB_HEADER[TAB_POS_TAB_NAME]);
+		tabHead.set(TAB_POS_OPTION,       TAB_HEADER[TAB_POS_OPTION]);
+		tabHead.set(TAB_POS_OPTION_VALUE, TAB_HEADER[TAB_POS_OPTION_VALUE]);
+		tabHead.set(TAB_POS_OPTION_DESC,  TAB_HEADER[TAB_POS_OPTION_DESC]);
 
-		add(new JLabel("SSH Hostname"));
-		add(_sshHostname, "growx, wrap");
+		Vector<Vector<Object>> tabData = populateTable();
 
-		add(new JLabel("SSH Port"));
-		add(_sshPort,     "growx, wrap");
-
-		add(new JLabel("Username"));
-		add(_sshUsername, "growx, wrap");
-
-		add(new JLabel("Password"));
-		add(_sshPassword, "growx, wrap");
-
-		initData();
-	}
-
-	private void initData()
-	{
-		// Set initial text for jdbc driver && kick of the action...
-//		_sshHostname.setText(  );
-	}
-
-	/** Called when we enter the page */
-	@Override
-	protected void renderingPage()
-    {
-		String val = (String) getWizardData("to-be-discarded.HostMonitorIsSelected");
-		boolean hasHostMonSelection = (val != null && val.trim().equalsIgnoreCase("true"));
-
-		if (hasHostMonSelection)
+		DefaultTableModel defaultTabModel = new DefaultTableModel(tabData, tabHead)
 		{
-			_noHostMonWasSelected.setVisible(false);
-			_sshHostname.setEnabled(true);
-			_sshPort    .setEnabled(true);
-			_sshUsername.setEnabled(true);
-			_sshPassword.setEnabled(true);
+            private static final long serialVersionUID = 1L;
 
-			if (_sshHostname.getText().trim().length() == 0)
+			public Class<?> getColumnClass(int column) 
 			{
-				String aseHost = getWizardData("aseHost").toString();
-				if (aseHost != null && ! aseHost.equals(""))
+				if (column == TAB_POS_ICON)       return Icon.class;
+				return Object.class;
+			}
+			public boolean isCellEditable(int row, int col)
+			{
+				if (col == TAB_POS_OPTION_VALUE)
+					return true;
+
+				return false;
+			}
+		};
+
+		_optionsTable.setModel( defaultTabModel );
+		_optionsTable.setSortable(false);
+		_optionsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		_optionsTable.setShowGrid(false);
+		_optionsTable.packAll();
+
+		JScrollPane jScrollPane = new JScrollPane();
+		jScrollPane.setViewportView(_optionsTable);
+
+		add(jScrollPane, "span, grow, height 100%, wrap");
+	}
+
+	private Vector<Vector<Object>> populateTable()
+	{
+		Vector<Vector<Object>> tab = new Vector<Vector<Object>>();
+		Vector<Object>         row = new Vector<Object>();
+
+		boolean debug = false;
+		if (!debug)
+		{
+			for (CountersModel cm : GetCounters.getCmList())
+			{
+				if (cm != null)
 				{
-					String oshostname = "";
-					String[] hosts = StringUtil.commaStrToArray(aseHost);
-					for (String host : hosts)
+					Configuration conf = cm.getLocalConfiguration();
+					if (conf != null)
 					{
-						if (host.equals("localhost")) continue;
-						if (host.equals("127.0.0.1")) continue;
-						oshostname = host;
-						break;
+						for (Entry<Object, Object> entry : conf.entrySet()) 
+						{
+							String key  = (String)entry.getKey();
+							String val  = (String)entry.getValue();
+							String desc = cm.getLocalConfigurationDescription(key);
+
+							row = new Vector<Object>();
+							row.setSize(TAB_HEADER.length);
+
+							row.set(TAB_POS_ICON,         cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+							row.set(TAB_POS_TAB_NAME,     cm.getDisplayName());
+							row.set(TAB_POS_OPTION,       key);
+							row.set(TAB_POS_OPTION_VALUE, val);
+							row.set(TAB_POS_OPTION_DESC,  desc);
+
+							tab.add(row);
+						}
 					}
-					_sshHostname.setText(oshostname);
 				}
-				_sshPort.setText("22");
-				_sshUsername.setText("sybase");
 			}
 		}
-		else
-		{
-			_noHostMonWasSelected.setVisible(true);
-			_sshHostname.setEnabled(false);
-			_sshPort    .setEnabled(false);
-			_sshUsername.setEnabled(false);
-			_sshPassword.setEnabled(false);
-		}
 
-//	    _firtsTimeRender = false;
-    }
+		return tab;
+	}
 
+	@Override
 	protected String validateContents(Component comp, Object event)
 	{
-		// If the nothing needs to be done, then return here.
-		if (_noHostMonWasSelected.isVisible())
-			return null;
-
-		// CHECK required fields
-		String problem = "";
-		if ( _sshHostname.getText().trim().length() <= 0) problem += "Hostname, ";
-		if ( _sshPort    .getText().trim().length() <= 0) problem += "Port, ";
-		if ( _sshUsername.getText().trim().length() <= 0) problem += "User, ";
-		if ( _sshPassword.getText().trim().length() <= 0) problem += "Password, ";
-
-		if (problem.length() > 0  &&  problem.endsWith(", "))
+		TableModel tm = _optionsTable.getModel();
+		for (int r=0; r<tm.getRowCount(); r++)
 		{
-			// Discard last ', '
-			problem = problem.substring(0, problem.length()-2);
+			String  option    = (String)  tm.getValueAt(r, TAB_POS_OPTION);
+			String  optionVal = (String)  tm.getValueAt(r, TAB_POS_OPTION_VALUE);
+			
+			putWizardData( option, optionVal);
 		}
-		if ( problem.length() > 0 )
-			return "Following fields can't be empty: "+problem;
-
-
-		// CHECK port number
-		try { Integer.parseInt(_sshPort.getText()); }
-		catch (NumberFormatException e)
-		{
-			return "Port must be a NUMBER, current value is '"+_sshPort.getText()+"'.";
-		}
-
 		return null;
 	}
 
@@ -174,3 +156,4 @@ implements ActionListener
 	{
 	}
 }
+

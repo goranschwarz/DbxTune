@@ -33,6 +33,7 @@
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?conn=first"          >Connection Info Report (first 500)</A>    <BR>
 <A HREF="http://www.asemon.se/usage_report.php?conn=all"            >Connection Info Report, ALL</A>           <BR>
+<A HREF="http://www.asemon.se/usage_report.php?mda=all"             >MDA Info Report, ALL</A>                  <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A>     <BR>
 <BR>
@@ -40,6 +41,8 @@
 <A HREF="http://www.asemon.se/usage_report.php?usage=all"           >Counter Usage Info Report, ALL</A>        <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>            <BR>
+<!--<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumTimeout">Error Info Report, Summary Timeouts</A>   <BR>-->
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">   Error Info Report, Summary Saved</A>      <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report (first 500)</A>         <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all"       >Error Info Report, ALL</A>                <BR>
 <BR>
@@ -65,12 +68,14 @@ DB Cleanup:
 	$rpt_summary_asever     = $_GET['summary_asever'];
 	$rpt_summary_user       = $_GET['summary_user'];
 	$rpt_conn               = $_GET['conn'];
+	$rpt_mda                = $_GET['mda'];
 	$rpt_udc                = $_GET['udc'];
 	$rpt_usage              = $_GET['usage'];
 	$rpt_errorInfo          = $_GET['errorInfo'];
 	$rpt_full               = $_GET['full'];
 
 	$del_deleteLogId        = $_GET['deleteLogId'];
+	$save_saveLogId         = $_GET['saveLogId'];
 
 	// sub command
 	$rpt_onDomain           = $_GET['onDomain'];
@@ -143,8 +148,11 @@ DB Cleanup:
 				else if ( $colname == "showLogId" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";
 
-				else if ( $colname == "deleteLogId" )
+				else if ( $colname == "deleteLogId" || $colname == "deleteLogId2" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "saveLogId" || $colname == "saveLogId2" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&saveLogId=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "callerIpAddress" )
 					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
@@ -178,98 +186,13 @@ DB Cleanup:
 
 	//-------------------------------------------
 	// CONNECT to database
+	//-------------------------------------------
 //	mysql_connect("localhost", "asemon_stat", "asemon") or die(mysql_error());
 //	mysql_select_db("asemon_stat") or die(mysql_error());
 
 //	$db=mysql_connect("localhost", "asemon_se", "qazZSE44") or die(mysql_error());
 	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die(mysql_error());
 	mysql_select_db("asemon_se", $db) or die(mysql_error());
-
-	//-------------------------------------------
-	// SOME EXTRA STUFF
-	//-------------------------------------------
-//	$sql = "drop table asemon_counter_usage_info
-//		";  mysql_query($sql) or die("ERROR: " . mysql_error());
-//	$sql = "
-//		";  mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "
-	//		CREATE TABLE xxx
-	//		(
-	//				col1                 int,
-	//
-	//				PRIMARY KEY (xxx, yyy)
-	//		);
-	//	";
-	//	mysql_query($sql) or die("ERROR: " . mysql_error());
-
-	//	$sql = "delete from asemon_usage where user_name = 'rlarsson'";        mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "delete from asemon_usage where user_name = 'gorans'";          mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "delete from asemon_usage where user_name = ''";                mysql_query($sql) or die("ERROR: " . mysql_error());
-
-	//	$sql = "alter table asemon_usage add column sun_desktop   varchar(15)";        mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "alter table asemon_usage add column user_country  varchar(5)";         mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "alter table asemon_usage add column user_language varchar(5)";         mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "alter table asemon_usage add column user_timezone varchar(15)";        mysql_query($sql) or die("ERROR: " . mysql_error());
-
-	//	$sql = "alter table asemon_connect_info add column srvVersionStr varchar(100)";         mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "alter table asemon_connect_info MODIFY column srvVersionStr varchar(150)";	    mysql_query($sql) or die("ERROR: " . mysql_error());
-
-	//	$sql = "delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'";   mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "delete from asemon_connect_info       where userName  = 'gorans' or userName  = 'sybase'";   mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "delete from asemon_udc_info           where userName  = 'gorans' or userName  = 'sybase'";   mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	$sql = "delete from asemon_counter_usage_info where userName  = 'gorans' or userName  = 'sybase'";   mysql_query($sql) or die("ERROR: " . mysql_error());
-
-//	mysql_query("delete from asemon_udc_info where udcKey like 'udc_monCIPCEndpoints%' or udcKey like 'udc_dummyDuplicate%'");
-//	mysql_query("delete from asemon_udc_info");
-
-//	mysql_query("DROP TABLE sumDomainStartPriv");
-//	mysql_query("CREATE TABLE sumDomainStartPriv
-//		(
-//			domainName        varchar(50),
-//			usageCount        int,
-//			lastStarted       datetime,
-//			pollTime          datetime,
-//
-//			PRIMARY KEY (domainName)
-//		)
-//	") or die("ERROR: " . mysql_error());
-//
-//	mysql_query("DROP   TABLE sumDomainStartNow;");
-//	mysql_query("CREATE TABLE sumDomainStartNow
-//		(
-//			domainName        varchar(50),
-//			usageCount        int,
-//			lastStarted       datetime,
-//			pollTime          datetime,
-//
-//			PRIMARY KEY (domainName)
-//		)
-//	") or die("ERROR: " . mysql_error());
-//
-//	mysql_query("DROP   TABLE sumSybaseUsersStartPriv;");
-//	mysql_query("CREATE TABLE sumSybaseUsersStartPriv
-//		(
-//			userName          varchar(50),
-//			usageCount        int,
-//			lastStarted       datetime,
-//			pollTime          datetime,
-//
-//			PRIMARY KEY (userName)
-//		)
-//	") or die("ERROR: " . mysql_error());
-//
-//	mysql_query("DROP   TABLE sumSybaseUsersStartNow;");
-//	mysql_query("CREATE TABLE sumSybaseUsersStartNow
-//		(
-//			userName          varchar(50),
-//			usageCount        int,
-//			lastStarted       datetime,
-//			pollTime          datetime,
-//
-//			PRIMARY KEY (userName)
-//		)
-//	") or die("ERROR: " . mysql_error());
-
 
 	//-------------------------------------------
 	// ON_DOMAIN
@@ -382,6 +305,22 @@ DB Cleanup:
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "asemon_error_info on: $rpt_onId");
+
+		// sending query
+		$result = mysql_query("SELECT * FROM asemon_error_info2 WHERE checkId = " . $rpt_onId);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "asemon_error_info2 on: $rpt_onId");
+
+		// sending query
+		$result = mysql_query("SELECT * FROM asemon_error_info_save WHERE checkId = " . $rpt_onId);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "asemon_error_info_save on: $rpt_onId");
 	}
 
 
@@ -390,6 +329,11 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $rpt_summary_count == "true" )
 	{
+	echo "<H2>Statistics per MONTH</H2>";
+
+	echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
+	echo "<TR>";
+	echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
 		// Summary Report, Start Count, per month
 		//------------------------------------------
@@ -410,10 +354,41 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Start Count, per month");
+		htmlResultset($result, "START Count");
+	echo "	</TD>";
+
+	echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, CONNECT Count, per month
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+				count(*)             as ConnectCount
+			FROM asemon_connect_info
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y %b')
+			ORDER BY
+				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "ASE CONNECT Count");
+	echo "	</TD>";
+	echo "</TR>";
+	echo "</TABLE>";
 
 
+	echo "<H2>Statistics per DAY</H2>";
 
+	echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
+	echo "<TR>";
+	echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
 		// Summary Report, Start Count, per day
 		//------------------------------------------
@@ -435,7 +410,35 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Start Count, per day");
+		htmlResultset($result, "START Count");
+	echo "	</TD>";
+
+	echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Connect Count, per day
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')  as usageDate,
+				count(*)             as connectCount
+			FROM asemon_connect_info
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')
+			ORDER BY
+				1 desc
+			LIMIT 30
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "ASE CONNECT Count");
+	echo "	</TD>";
+	echo "</TR>";
+	echo "</TABLE>";
 
 
 		//------------------------------------------
@@ -778,6 +781,115 @@ DB Cleanup:
 
 
 	//-------------------------------------------
+	// MDA INFO
+	//-------------------------------------------
+	if ( $rpt_mda != "" )
+	{
+		//-----------------------------
+		$label = "ASE Version MDA Info Summary";
+		$sql = "
+			SELECT srvVersion, isClusterEnabled, count(*) as tables, sum(ColumnID) as cols, sum(Length) as params
+			FROM asemon_mda_info
+			WHERE type = 'T'
+			GROUP BY srvVersion, isClusterEnabled
+			ORDER BY srvVersion, isClusterEnabled
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, $label);
+
+
+	//	//-----------------------------
+	//	$label = "ASE Version MDA Info Summary XXX";
+	//	$sql = "
+	//		SELECT srvVersion, isClusterEnabled, count(distinct TableName) as tables, count(*) as cols
+	//		FROM asemon_mda_info
+	//		WHERE type = 'C'
+	//		GROUP BY srvVersion, isClusterEnabled
+	//		ORDER BY srvVersion, isClusterEnabled
+	//	";
+	//
+	//	// sending query
+	//	$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+	//	if (!$result) {
+	//		die("Query to show fields from table failed");
+	//	}
+	//	htmlResultset($result, $label);
+
+
+		//-----------------------------
+		$label = "ASE Version MDA TABLE Info ";
+		$sql = "
+			SELECT srvVersion, isClusterEnabled, TableName, rowId, TableID, ColumnID as cols, Length as params, Description
+			FROM asemon_mda_info
+			WHERE type = 'T'
+			ORDER BY srvVersion, isClusterEnabled, TableName
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, $label);
+
+
+		//-----------------------------
+		$label = "MDA Info Report (TABLE)";
+		$sql = "
+			SELECT *
+			FROM asemon_mda_info
+			WHERE type = 'T'
+			ORDER BY srvVersion, isClusterEnabled, rowId
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, $label);
+
+		//-----------------------------
+		$label = "MDA Info Report (TABLE-COLUMNS)";
+		$sql = "
+			SELECT *
+			FROM asemon_mda_info
+			WHERE type = 'C'
+			ORDER BY srvVersion, isClusterEnabled, rowId
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, $label);
+
+		//-----------------------------
+		$label = "MDA Info Report (TABLE-PARAMS)";
+		$sql = "
+			SELECT *
+			FROM asemon_mda_info
+			WHERE type = 'P'
+			ORDER BY srvVersion, isClusterEnabled, rowId
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, $label);
+	}
+
+
+
+	//-------------------------------------------
 	// UDC INFO
 	//-------------------------------------------
 	if ( $rpt_udc == "true" )
@@ -846,21 +958,129 @@ DB Cleanup:
 	//-------------------------------------------
 	// ERROR INFO
 	//-------------------------------------------
-	if ( !empty($rpt_errorInfo) || !empty($del_deleteLogId) )
+	if ( !empty($rpt_errorInfo) || !empty($del_deleteLogId) || !empty($save_saveLogId) )
 	{
 		if ( is_numeric($del_deleteLogId) )
 		{
+			echo "<h4>Cleaning up table 'asemon_error_info', 'asemon_error_info2' and 'asemon_error_info_save' for checkId: $del_deleteLogId </h4>\n";
+
+			//---------
 			$sql = "DELETE from asemon_error_info where checkId = $del_deleteLogId";
 
-			echo "<br><br><br><br>\n";
-			echo "<h4>Cleaning up table 'asemon_error_info' for checkId: $del_deleteLogId </h4>\n";
 			echo "EXEC: <code>$sql</code><br>\n";
 			mysql_query($sql) or die("ERROR: " . mysql_error());
 			printf("Records affected: %d<br>\n", mysql_affected_rows());
 			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info2 where checkId = $del_deleteLogId";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysql_query($sql) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info_save where checkId = $del_deleteLogId";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysql_query($sql) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+
+			//reset
+			$sql = "";
+		}
+
+		if ( is_numeric($save_saveLogId) )
+		{
+			echo "<h4>Moving records from table 'asemon_error_info' and 'asemon_error_info2' to 'asemon_error_info_save' for checkId: $del_deleteLogId </h4>\n";
+
+			//---------
+			$sql1 = "INSERT into asemon_error_info_save    select * from asemon_error_info where checkId = $save_saveLogId";
+			$sql2 = "DELETE from asemon_error_info where checkId = $save_saveLogId";
+
+			echo "EXEC: <code>$sql1</code><br>\n";
+			mysql_query($sql1) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+
+			echo "EXEC: <code>$sql2</code><br>\n";
+			mysql_query($sql2) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+
+			//---------
+			$sql1 = "INSERT into asemon_error_info_save    select * from asemon_error_info2 where checkId = $save_saveLogId";
+			$sql2 = "DELETE from asemon_error_info2 where checkId = $save_saveLogId";
+
+			echo "EXEC: <code>$sql1</code><br>\n";
+			mysql_query($sql1) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+
+			echo "EXEC: <code>$sql2</code><br>\n";
+			mysql_query($sql2) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+
+			//reset
+			$sql = "";
 		}
 
 		if ( $rpt_errorInfo == "sum" )
+		{
+			$sql = "
+				SELECT
+					checkId,
+					checkId            as showLogId,
+					max(serverAddTime) as maxServerAddTime,
+					checkId            as deleteLogId,
+					checkId            as saveLogId,
+					userName,
+					srvVersion,
+					appVersion,
+					count(sendCounter) as records,
+					max(sendCounter)   as maxSendCounter
+				FROM asemon_error_info
+				GROUP BY checkId, userName, srvVersion, appVersion
+				ORDER BY checkId desc
+				LIMIT 500
+			";
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+
+			$sql = "
+				SELECT
+					checkId,
+					checkId            as showLogId,
+					max(serverAddTime) as maxServerAddTime,
+					checkId            as deleteLogId,
+					checkId            as saveLogId,
+					userName,
+					srvVersion,
+					appVersion,
+					count(sendCounter) as records,
+					max(sendCounter)   as maxSendCounter
+				FROM asemon_error_info2
+				GROUP BY checkId, userName, srvVersion, appVersion
+				ORDER BY checkId desc
+				LIMIT 500
+			";
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
+
+			//reset
+			$sql = "";
+		}
+
+		if ( $rpt_errorInfo == "sumSave" )
 		{
 			$sql = "
 				SELECT
@@ -873,7 +1093,7 @@ DB Cleanup:
 					appVersion,
 					count(sendCounter) as records,
 					max(sendCounter)   as maxSendCounter
-				FROM asemon_error_info
+				FROM asemon_error_info_save
 				GROUP BY checkId, userName, srvVersion, appVersion
 				ORDER BY checkId desc
 				LIMIT 500
@@ -883,7 +1103,68 @@ DB Cleanup:
 		if ( is_numeric($rpt_errorInfo) )
 		{
 			$sql = "
-				SELECT checkId,
+				SELECT 'NEW' as type, 
+					checkId,
+					checkId as deleteLogId,
+					checkId as saveLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId2,
+					logStacktrace
+				FROM asemon_error_info
+				WHERE checkId = $rpt_errorInfo
+				ORDER BY sendCounter
+			";
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
+
+			$sql = "
+				SELECT 'TIMEOUT' as type, 
+					checkId,
+					checkId as deleteLogId,
+					checkId as saveLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId2,
+					logStacktrace
+				FROM asemon_error_info2
+				WHERE checkId = $rpt_errorInfo
+				ORDER BY sendCounter
+			";
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
+
+			$sql = "
+				SELECT 'SAVED' as type, 
+					checkId,
 					checkId as deleteLogId,
 					sendCounter,
 					serverAddTime,
@@ -896,11 +1177,21 @@ DB Cleanup:
 					logClassName,
 					logLocation,
 					logMessage,
-					logStacktrace
-				FROM asemon_error_info
+					checkId as deleteLogId2,
+ 					logStacktrace
+				FROM asemon_error_info_save
 				WHERE checkId = $rpt_errorInfo
 				ORDER BY sendCounter
 			";
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
+
+			//reset
+			$sql = "";
 		}
 
 		if ( $rpt_errorInfo == "first" )
@@ -908,6 +1199,7 @@ DB Cleanup:
 			$sql = "
 				SELECT checkId,
 					checkId as deleteLogId,
+					checkId as saveLogId,
 					sendCounter,
 					serverAddTime,
 					clientTime,
@@ -919,6 +1211,8 @@ DB Cleanup:
 					logClassName,
 					logLocation,
 					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId,
 					logStacktrace
 				FROM asemon_error_info
 				ORDER BY checkId desc, sendCounter
@@ -931,6 +1225,7 @@ DB Cleanup:
 			$sql = "
 				SELECT checkId,
 					checkId as deleteLogId,
+					checkId as saveLogId,
 					sendCounter,
 					serverAddTime,
 					clientTime,
@@ -942,18 +1237,23 @@ DB Cleanup:
 					logClassName,
 					logLocation,
 					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId,
 					logStacktrace
 				FROM asemon_error_info
 				ORDER BY checkId desc, sendCounter
 			";
 		}
 
-		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-		if (!$result) {
-			die("Query to show fields from table failed");
+		if ( $sql != "" )
+		{
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
 		}
-		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
 
 	}
 

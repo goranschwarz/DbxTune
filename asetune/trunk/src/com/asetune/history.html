@@ -19,31 +19,52 @@ li   {margin-bottom: 6px}
 <H2>2012-xx-xx</H2>
 <UL>
 	<LI>
+	<b>New layout of Performance Counters</b><br>
+	It started to be "to many tabs", so now the Performance Counters are grouped in "sub tabs"<br>
+	The wollowing tab groups are available
+	<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=2>
+		<TR><TH>Group Name</TH> <TH>Hold Performance Counters</TH></TR>
+		<TR><TD NOWRAP>Server        </TD> <TD>'Processes', 'SPID Waits', 'Databases', 'Temp Db', 'Waits', 'Engines', 'System Load', 'Spinlock Sum', 'Sysmon Raw', 'RepAgent', 'Errorlog', 'Deadlock', 'Lock Timeout', 'sp_monitorconfig'.</TD></TR>
+		<TR><TD NOWRAP>Object/Access </TD> <TD>'Objects', 'Procedure Call Stack', 'Active Objects', 'Active Statements', 'Blocking', 'Missing Statistics', 'QP Metrics'.</TD></TR>
+		<TR><TD NOWRAP>Cache         </TD> <TD>'Caches', 'Pools', 'Cached Procedures', 'Procedure Cache Load', 'Cached Objects', 'Proc Cache Module Usage', 'Proc Cache Memory Usage', 'Statement Cache', 'Statement Cache Details'.</TD></TR>
+		<TR><TD NOWRAP>Disk          </TD> <TD>'Devices', 'IO Sum', 'IO Queue'.</TD></TR>
+		<TR><TD NOWRAP>Host Monitor  </TD> <TD>'OS Disk Stat', 'OS CPU(vmstat)', 'OS CPU(mpstat)', 'OS Load Average'.</TD></TR>
+		<TR><TD NOWRAP>User Defined  </TD> <TD>Performance Counters created by <b>you</b> or any other user.</TD></TR>
+	</TABLE>
+	If you want to have the old behaviour, with no sub group, this can be changed in View-&gt;Preferences-&gt;Group Performance Counters<br>
+	</LI>
+
+	<LI>
 	<b>New: in tab the 'Waits', graph(s) on the right hand side (local Graph)</b><br>
-	You can view 'WaitTime' and/or number of 'Waits' by the individual Events, or as a summary at the Wait Event Class<br> 
+	You can view 'WaitTime' and/or number of 'Waits' by the individual Events, or as a summary at the Wait Event Class<br>
 	</LI>
 
 	<LI>
 	<b>New: in the tab 'Devices', graph(s) on the right hand side (local Graph)</b><br>
 	You can view 'TotalIOs', 'Reads', 'APFReads' and 'Writes' in different graphs.<br>
-	The distribution in the graphs are by Logical Device Name<br> 
+	The distribution in the graphs are by Logical Device Name<br>
 	</LI>
 
 	<LI>
 	<b>New: in the tab 'IOSum', graph(s) on the right hand side (local Graph)</b><br>
-	You can view 'IOs', 'IOTime', 'AvgServ_ms' in different graphs.<br> 
-	The distribution in the graphs are by 'IOType' (User Data, User Log, Tempdb Data, Tempdb log, System)<br> 
+	You can view 'IOs', 'IOTime', 'AvgServ_ms' in different graphs.<br>
+	The distribution in the graphs are by 'IOType' (User Data, User Log, Tempdb Data, Tempdb log, System)<br>
 	</LI>
 
 	<LI>
 	<b>New: in the tab 'Procedure Cache Module Usage', graph(s) on the right hand side (local Graph)</b><br>
-	You can view Active Memory Usage, by ModuleName<br> 
+	You can view Active Memory Usage, by ModuleName<br>
 	</LI>
 
 	<LI>
 	<b>New: in the tab 'Procedure Cache Memory Usage', graph(s) on the right hand side (local Graph)</b><br>
-	You can view Active Memory Usage, with one Summary Graph, or one graph for each 'ModuleName'<br> 
-	The distribution in the graphs are by 'AllocatorName'<br> 
+	You can view Active Memory Usage, with one Summary Graph, or one graph for each 'ModuleName'<br>
+	The distribution in the graphs are by 'AllocatorName'<br>
+	</LI>
+
+	<LI>
+	<b>New: tab 'OS Load Average' in the Host Monitor group</b><br>
+	Show 'Load Average' from the OS, this is grabbed from the os command 'uptime'<br>
 	</LI>
 
 	<LI>
@@ -52,8 +73,8 @@ li   {margin-bottom: 6px}
 	will still allow the user to login.<br>
 	But the environment will be <b>restricted</b>. Number of available Performance Counters will
 	of course be very limited. The Summary panel will still be maintained, in there you have
-	access to ASE Servers global variables for CPU, Disk and Network. Graphs connected to the 
-	summary fields will automatically be enabled.<br> 
+	access to ASE Servers global variables for CPU, Disk and Network. Graphs connected to the
+	summary fields will automatically be enabled.<br>
 	</LI>
 
 	<LI>
@@ -70,9 +91,25 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>New: In the Wizard 'Create Offline Session', added Performance Counters Local Options</b><br>
+	A new page where you can change Local Options for Performance Counters.<br>
+	</LI>
+
+	<LI>
+	<b>New: In 'ASE Configuration' view, added a ta for Licenses</b><br>
+	A new tab which shows information from monLicenses.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: in Performance Counter 'QP Metrics', collapse all qtext column rows into 1 row.</b><br>
+	Previously only 255 bytes chunks of the SQL text (qtext) was displayed per row, and the sequence was incremented for every row/chunk<br>
+	Now all SQL chunks are "collapsed" into the sequence 0 row. So only 1 row is presented per saved SQL Statement<br>
+	</LI>
+
+	<LI>
 	<b>Enhancement: When you get a out-of-memory pop up.</b><br>
 	When you get a out-of-memory, I previously just purged the in-memory history<br>
-	In addition I also now lower the in-memory history size to 1 minute<br> 
+	In addition I also now lower the in-memory history size to 1 minute<br>
 	</LI>
 
 	<LI>
@@ -84,7 +121,7 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>Bug fix: Dialog "Configure ASE for Monitoring", Disable Monitoring.</b><br>
-	If you have <b>disabled</b> monitoring using the Dialog "Configure ASE for Monitoring", 
+	If you have <b>disabled</b> monitoring using the Dialog "Configure ASE for Monitoring",
 	then monitoring can not continue, so lets simply do disconnect... <br>
 	</LI>
 
@@ -92,7 +129,7 @@ li   {margin-bottom: 6px}
 	<b>Bug fix: Connection Dialog, choosing a sql.ini/interfaces file.</b><br>
 	Sometimes the old sql.ini/interfaces file was loaded, this is better now.<br>
 	Also if you choose a new sql.ini/interfaces file, and it not in the correct format
-	a question will pop up, to ask if you want to edit the file.<br>   
+	a question will pop up, to ask if you want to edit the file.<br>
 	</LI>
 
 	<LI>
@@ -106,7 +143,7 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Bug fix: Code completion in the SQL Window tool.</b><br>
 	Fixed some issues here, and also added some more static completions.<br>
-	The code completion initialization, can now be canceled.
+	The code completion initialization, can now be canceled.<br>
 	</LI>
 
 	<LI>
@@ -114,6 +151,18 @@ li   {margin-bottom: 6px}
 	Restore of selected row in the table did not work as supposed.<br>
 	Now it tries to restore current selected table row by using the primary key, if it can't
 	use the primary key, it will try to fall back to last selected model row.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Tabs with graphs, failed if columns were moved/reordered</b><br>
+	In tabs that has graphs, sometimes failed creating the graph.<br>
+	This was only in the case when users had moved/reordered columns, then I used index position
+	instead of model position when getting data.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Various small fixes</b><br>
+	As always, various bug fixes that I have forgot about or to small to mention.<br>
 	</LI>
 
 </UL>
@@ -127,7 +176,7 @@ li   {margin-bottom: 6px}
 	A new tool 'ASE Application Tracing', for details see http://www.sybase.com/files/White_Papers/ASE15-apptrace-070507-wp.pdf
 	for more information how this works.<br>
 	This is just a GUI on top of ASE 'set tracefile ...' functionality.<br>
-	The add on for the GUI is that it can work with remote files, so you can start the trace on your 
+	The add on for the GUI is that it can work with remote files, so you can start the trace on your
 	local client (probably a PC), tehn if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
 	will be opened to do tail of the trace file. This makes it <b>much</b> easier to view the trace file.<br>
 	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
@@ -158,7 +207,7 @@ li   {margin-bottom: 6px}
 	Using Ctrl+Space you bring up SQL Code Completion, for table names and columns<br>
 	For the moment I don't use a parser to check where in the SQL code you are, so for the moment
 	it's kind off basic... Column completion work works in a limited way for table aliases.<br>
-	Please report strange behavior...<br> 
+	Please report strange behavior...<br>
 	</LI>
 
 	<LI>
@@ -181,19 +230,19 @@ li   {margin-bottom: 6px}
 		<li>MainMenu -&gt; Tools -&gt; DDL Viewer</li>
 		<li>Any Performance Counter: Right click menu -&gt; DDL Viewer</li>
 	</ul>
-	<b>Note:</b> For the moment 'DDL View' is only available in "offline" mode. In the future this 
+	<b>Note:</b> For the moment 'DDL View' is only available in "offline" mode. In the future this
 	could also be implemented for "online" access.
 	</LI>
 
 	<LI>
 	<b>New: Performance Counter 'SPID Waits'</b><br>
-	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID. 
+	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID.
 	So there could be quite a bunch of rows in this one...<br>
 	</LI>
 
 	<LI>
 	<b>New functionality in Tab: Databases</b><br>
-	A local bar graph "Transaction Log Space Usage in Percent". Colors of the bars 
+	A local bar graph "Transaction Log Space Usage in Percent". Colors of the bars
 	(green = less than 80% usage, orange = between 80-90% usage, red = above 90% usage)<br>
 	A Dialog has also been created to choose what databases should be part of both the local
 	bar graph and the attached trend graphs. This is on the button "Set 'Graph' databases".<br>
@@ -220,7 +269,7 @@ li   {margin-bottom: 6px}
 	I changed it back to display the table name using <code>object_name(...)</code>, and also added a column (in ase 15.0.2 or higher)<br>
 	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
 	</LI>
-	
+
 	<LI>
 	<b>Change: tab 'Objects': Added some columns</b><br>
 	<ul>
@@ -230,7 +279,7 @@ li   {margin-bottom: 6px}
 	</ul>
 	The above columns will make it easier to check if many LogicalReads "ok", meaning is this on a small or large table<br>
 	This can be disabled/enabled from the Local Options, in the 'Objects' tab.
-	Or from any of the configuration files, using property 'CMobjectActivity.TabRowCount=true|false'<br>  
+	Or from any of the configuration files, using property 'CMobjectActivity.TabRowCount=true|false'<br>
 	<b>Note:</b>The column 'Remark' should be treaded as 'experimental', use tooltip on the cell to get more information about the remark.<br>
 	</LI>
 
@@ -286,7 +335,7 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>Change: "Extended Info Panel" on all Performance Counter tabs.</b><br>
-	The "Extended Info Panel" on each 'tab' has previously always been invisible/minimized. Now the 
+	The "Extended Info Panel" on each 'tab' has previously always been invisible/minimized. Now the
 	divider location is saved to the user temporary properties. This so we can remember how
 	large the Extended Info Panel is for the 'Databases' or other Performance Counter tabs.<br>
 	</LI>
@@ -305,7 +354,7 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>GUI Change: in all Performance Counters when reading offline database.</b><br>
 	Previously the field 'Clear Time' was empty, this field is not visible in offline mode anymore<br>
-	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is 
+	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is
 	displaying, this makes it easier to detect if we are looking at the correct data.<br>
 	</LI>
 
@@ -440,7 +489,7 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>bug fix: Tab Summary, Databases: Timeout when creating new databases.</b><br>
 	Added 'readpast' to sub selects on sysdatabases & sysusages, this will hopefully just
-	skipping reading this row from the ASE Version where locking schema 'datarows' has been 
+	skipping reading this row from the ASE Version where locking schema 'datarows' has been
 	used for System tables. If I remember correctly this is ASE 15.x<br>
 	</LI>
 
@@ -471,7 +520,7 @@ li   {margin-bottom: 6px}
 	<b>bug fix: Persistent Counter Storage, Strings can be overflowed.</b><br>
 	When storing to long Strings in the PCS, in H2 we got Exception: org.h2.jdbc.JdbcBatchUpdateException: Value too long for column<br>
 	Solution: If the string we are going to store is "longer" that the database allowed storage size, then
-	truncate the end of the string (the part of the string that we want be able to store), 
+	truncate the end of the string (the part of the string that we want be able to store),
 	and add '...' as a marker that is has been truncated.
 	</LI>
 
@@ -526,7 +575,7 @@ li   {margin-bottom: 6px}
 <UL>
 	<LI>
 	<b>Bug fix: Connecting to ASE</b><br>
-	If $SYBASE was set, but "$SYBASE/ini" directory or "$SYBASE/ini/sql.ini" file didn't exist, the 
+	If $SYBASE was set, but "$SYBASE/ini" directory or "$SYBASE/ini/sql.ini" file didn't exist, the
 	Connection Dialog complained about: Connecting to a different ASE Version, This is NOT supported now...<br>
 	This is now fixed.
 	</LI>
@@ -584,14 +633,14 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Changes in: Performance Counter "Spinlock Sum"</b><br>
 	Rewrote the query to use temporary tables for 'sysmonitors' instead of the "real" table.<br>
-	This will hopefully be much faster, at least for ASE prior to ASE 15.0.2 
+	This will hopefully be much faster, at least for ASE prior to ASE 15.0.2
 	</LI>
 
 	<LI>
 	<b>Limitation: for Persistent Counter Storage, when using ASE earlier than 15.0</b><br>
 	I wont allow pre 15.0 ASE servers to act as PCS. This because long table names are not allowed.<br>
 	If you have any complaints about this, please inform me.<br>
-	Also if the Page Size is less than 4K, I will issue a warning message saying that you may run 
+	Also if the Page Size is less than 4K, I will issue a warning message saying that you may run
 	into problems. This because the PCS is probably storing wider rows than 1961 bytes.
 	</LI>
 
@@ -670,7 +719,7 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>New: Added shortcut buttons to Sourceforge and Facebook at the Summary Panel.</b>
-	This is just a simple way to get people to use SourceForge and Facebook to do bug and enhance reports 
+	This is just a simple way to get people to use SourceForge and Facebook to do bug and enhance reports
 	</LI>
 
 	<LI>
@@ -743,20 +792,20 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>New: Added ASE configuration to dialog 'Configure ASE for Monitoring'</b><br>
-	'capture missing statistics', 'enable metrics capture',	
+	'capture missing statistics', 'enable metrics capture',
 	'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max' in the
 	dialog 'Configure ASE for Monitoring'. <br>
 	Also moved this dialog to the 'tools' menu instead of 'view'.
 	</LI>
 
 	<LI>
-	<b>Add: in tab "Objects" added some columns.</b><br> 
+	<b>Add: in tab "Objects" added some columns.</b><br>
 	Note: this is only done if we connect to ASE CE of version 15.5 ESD#1 or above<br>
-	Added columns: <code>MaxPhysicalLockWaitTime, MaxTransferReqWaitTime, MaxServiceTime, 
-		AvgQueueWaitTime, MaxQueueWaitTime, MaxTimeWaitedOnLocalUsers, MaxTransferSendWaitTime, 
+	Added columns: <code>MaxPhysicalLockWaitTime, MaxTransferReqWaitTime, MaxServiceTime,
+		AvgQueueWaitTime, MaxQueueWaitTime, MaxTimeWaitedOnLocalUsers, MaxTransferSendWaitTime,
 		MaxIOServiceTime, MaxDowngradeServiceTime</code> <br>
 	</LI>
-	
+
 	<LI>
 	New: in log4j window</b><br>
 	a checkbox if the window should be opened on errors, or simply stay in background
@@ -801,13 +850,13 @@ li   {margin-bottom: 6px}
 	  <li>
 		Show "what" SQL statement you are executing in a pop-up.<br>
 		The pop-up will disappear when first result set arrives.<br>
-	    This makes it easier to see what is happening when executing statements via pop-up 
-	    menu ("right click") on JTables, for example some commands does take a substantial time, 
+	    This makes it easier to see what is happening when executing statements via pop-up
+	    menu ("right click") on JTables, for example some commands does take a substantial time,
 	    then we want to know what has been sent to the server.
 	  </li>
 	</ul>
 	</LI>
-	
+
 	<LI>
 	<b>Changed behavior: Tools-&gt;Capture SQL </b><br>
 	If config "plan text pipe active" wasn't enabled, a message window was displayed asking you to reconfigure.
@@ -886,7 +935,7 @@ li   {margin-bottom: 6px}
 	<b>Bug fix: Graph 'Number of disk operations per second'.</b><br>
 	The labels did not represent the correct counter, so wrong counter value was displayed for some of the labels.
 	</LI>
-	
+
 </UL>
 
 <!-- ========================================================================== -->
@@ -1018,12 +1067,12 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>nogui mode:</b><br> 
+	<b>nogui mode:</b><br>
 	Added <code>-f | --finish</code> switch, which shutdown or stop the no-gui service after # hours<br>
 	</LI>
 
 	<LI>
-	<b>nogui mode:</b><br> 
+	<b>nogui mode:</b><br>
 	Changed <code>-d | --dbname</code> switch, which specifies the offline URL string.<br>
 	<code>-d|--dbname</code> Now accepts variables <code>${DATE}, ${SERVERNAME}, ${ASEHOSTNAME}, ${ASEMON_HOME}, ${ASEMON_SAVE_DIR}</code><br>
 	<br>
@@ -1082,21 +1131,21 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>nogui mode:</b><br> 
+	<b>nogui mode:</b><br>
 	if you are using ASE to store the performance counters, then use DYNAMIC_PREPARE
 	and do 'set statement_cache off', this for performance reasons.<br>
 	NOTE: this is only done by specifying -D and -d switches for the moment.
 	</LI>
 
 	<LI>
-	<b>"offline-read" mode</b><br> 
+	<b>"offline-read" mode</b><br>
 	In "offline-read" mode, the "Offline Session Viewer" dialog checks for new Samples, which could arrive in the background.
 	A Watermark in the dialog will tell you how many new samples that has been stored since last "refresh".
 	Background storage of Performance Counters could for example be performed by the "no-gui" process if anyone has started that module.
 	</LI>
 
 	<LI>
-	<b>nogui mode:</b><br> 
+	<b>nogui mode:</b><br>
 	Added <code>-r | --reconfigure</code> switch<br>
 	This means that even if some ASE configuration options is not set, then configure them automatically. <br>
 	Configuration names and there defaults is presented below.<br>
@@ -1142,7 +1191,7 @@ li   {margin-bottom: 6px}
  	</LI>
 
 	<LI>
-	<b>SQL Tool</b><br> 
+	<b>SQL Tool</b><br>
 	The mouse wheel is now much faster when scrolling over graphs and SQL Tool Query result sets
 	</LI>
 

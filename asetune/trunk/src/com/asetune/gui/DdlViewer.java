@@ -207,7 +207,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		_depends_panel   = createDependsPanel();
 		_extraInfo_panel = createExtraInfoPanel();
 
-		_tabbedPane      = new GTabbedPane();
+		_tabbedPane      = new GTabbedPane("DdlVeiewer_MainTabbedPane");
 		_tabbedPane.add("Object Information", _object_panel);
 		_tabbedPane.add("optdiag",            _optDiag_panel);
 		_tabbedPane.add("sp_depends",         _depends_panel);

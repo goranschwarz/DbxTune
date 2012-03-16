@@ -59,6 +59,7 @@ public class CounterSetTemplates
 		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_IOSTAT               , GetCounters.CM_DESC__OS_IOSTAT               );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_VMSTAT               , GetCounters.CM_DESC__OS_VMSTAT               );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_MPSTAT               , GetCounters.CM_DESC__OS_MPSTAT               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__OS_UPTIME               , GetCounters.CM_DESC__OS_UPTIME               );
 
 		// LONG -> SHORT
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SUMMARY                 , GetCounters.CM_NAME__SUMMARY                 );
@@ -98,6 +99,7 @@ public class CounterSetTemplates
 		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_IOSTAT               , GetCounters.CM_NAME__OS_IOSTAT               );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_VMSTAT               , GetCounters.CM_NAME__OS_VMSTAT               );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_MPSTAT               , GetCounters.CM_NAME__OS_MPSTAT               );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__OS_UPTIME               , GetCounters.CM_NAME__OS_UPTIME               );
 
 
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -274,7 +276,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnMedium =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -312,7 +315,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnLarge =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -350,7 +354,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOnAll =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -388,7 +393,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 
 
@@ -432,7 +438,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOffMedium =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -470,7 +477,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOffLarge =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -508,7 +516,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 	public final static String systemTemplatePcsOffAll =
 		GetCounters.CM_DESC__OBJECT_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -546,7 +555,8 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__OS_IOSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
 		GetCounters.CM_DESC__OS_VMSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
-		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
+		GetCounters.CM_DESC__OS_MPSTAT               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};" +
+		GetCounters.CM_DESC__OS_UPTIME               +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=false,pcsRate=false};";
 
 
 	public final static PropPropEntry SYSTEM_TEMPLATE_SUMMARY_CM     = new PropPropEntry(systemSummaryCm);
