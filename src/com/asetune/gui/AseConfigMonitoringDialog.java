@@ -92,17 +92,18 @@ public class AseConfigMonitoringDialog
 
 	
 	// PANEL: MONITORING
-	private JPanel             _monitoringPanel_1             = null;
-	private JPanel             _monitoringPanel_2             = null;
-	private JPanel             _monitoringPanel_3             = null;
-	private JCheckBox          _enableMonitoring_chk          = new JCheckBox("Enable monitoring");
-	private JCheckBox          _perObjectStatisticsActive_chk = new JCheckBox("Per object statistics active");
-	private JCheckBox          _statementStatisticsActive_chk = new JCheckBox("Statement statistics active");
-	private JCheckBox          _statementCacheMonitoring_chk  = new JCheckBox("Statement Cache Monitoring");
-	private JCheckBox          _objectLockwaitTiming_chk      = new JCheckBox("Object lockwait timing");
-	private JCheckBox          _processWaitEvents_chk         = new JCheckBox("Process wait events");
-	private JCheckBox          _sqlBatchCapture_chk           = new JCheckBox("SQL batch capture");
-	private JCheckBox          _waitEventTiming_chk           = new JCheckBox("Wait event timing");
+	private JPanel             _monitoringPanel_1                = null;
+	private JPanel             _monitoringPanel_2                = null;
+	private JPanel             _monitoringPanel_3                = null;
+	private JCheckBox          _enableMonitoring_chk             = new JCheckBox("Enable monitoring");
+	private JCheckBox          _perObjectStatisticsActive_chk    = new JCheckBox("Per object statistics active");
+	private JCheckBox          _statementStatisticsActive_chk    = new JCheckBox("Statement statistics active");
+	private JCheckBox          _statementCacheMonitoring_chk     = new JCheckBox("Statement Cache Monitoring");
+	private JCheckBox          _captureCompressionStatistics_chk = new JCheckBox("Capture Compression Statistics");
+	private JCheckBox          _objectLockwaitTiming_chk         = new JCheckBox("Object lockwait timing");
+	private JCheckBox          _processWaitEvents_chk            = new JCheckBox("Process wait events");
+	private JCheckBox          _sqlBatchCapture_chk              = new JCheckBox("SQL batch capture");
+	private JCheckBox          _waitEventTiming_chk              = new JCheckBox("Wait event timing");
 
 	private JCheckBox          _lockTimeoutPipeActive_chk     = new JCheckBox("Lock Timeout pipe active");
 	private SpinnerNumberModel _lockTimeoutPipeMaxMessages_spm= new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
@@ -311,34 +312,35 @@ public class AseConfigMonitoringDialog
 
 	private void setConfigProps()
 	{
-		_enableMonitoring_chk         .putClientProperty(ASE_CONFIG, "enable monitoring"             );
-		_perObjectStatisticsActive_chk.putClientProperty(ASE_CONFIG, "per object statistics active"  );
-		_statementStatisticsActive_chk.putClientProperty(ASE_CONFIG, "statement statistics active"   );
-		_statementCacheMonitoring_chk .putClientProperty(ASE_CONFIG, "enable stmt cache monitoring"  );
-		_objectLockwaitTiming_chk     .putClientProperty(ASE_CONFIG, "object lockwait timing"        );
-		_processWaitEvents_chk        .putClientProperty(ASE_CONFIG, "process wait events"           );
-		_sqlBatchCapture_chk          .putClientProperty(ASE_CONFIG, "SQL batch capture"             );
-		_waitEventTiming_chk          .putClientProperty(ASE_CONFIG, "wait event timing"             );
-		_lockTimeoutPipeActive_chk    .putClientProperty(ASE_CONFIG, "lock timeout pipe active"      );
-		_deadlockPipeActive_chk       .putClientProperty(ASE_CONFIG, "deadlock pipe active"          );
-		_errorlogPipeActive_chk       .putClientProperty(ASE_CONFIG, "errorlog pipe active"          );
-		_sqlTextPipeActive_chk        .putClientProperty(ASE_CONFIG, "sql text pipe active"          );
-		_statementPipeActive_chk      .putClientProperty(ASE_CONFIG, "statement pipe active"         );
-		_planTextPipeActive_chk       .putClientProperty(ASE_CONFIG, "plan text pipe active"         );
-		_lockTimeoutPipeMaxMessages_sp.putClientProperty(ASE_CONFIG, "lock timeout pipe max messages");
-		_deadlockPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "deadlock pipe max messages"    );
-		_errorlogPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "errorlog pipe max messages"    );
-		_sqlTextPipeMaxMessages_sp    .putClientProperty(ASE_CONFIG, "sql text pipe max messages"    );
-		_statementPipeMaxMessages_sp  .putClientProperty(ASE_CONFIG, "statement pipe max messages"   );
-		_planTextPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "plan text pipe max messages"   );
-		_maxSqlTextMonitored_sp       .putClientProperty(ASE_CONFIG, "max SQL text monitored"        );
+		_enableMonitoring_chk            .putClientProperty(ASE_CONFIG, "enable monitoring"             );
+		_perObjectStatisticsActive_chk   .putClientProperty(ASE_CONFIG, "per object statistics active"  );
+		_statementStatisticsActive_chk   .putClientProperty(ASE_CONFIG, "statement statistics active"   );
+		_statementCacheMonitoring_chk    .putClientProperty(ASE_CONFIG, "enable stmt cache monitoring"  );
+		_captureCompressionStatistics_chk.putClientProperty(ASE_CONFIG, "capture compression statistics");
+		_objectLockwaitTiming_chk        .putClientProperty(ASE_CONFIG, "object lockwait timing"        );
+		_processWaitEvents_chk           .putClientProperty(ASE_CONFIG, "process wait events"           );
+		_sqlBatchCapture_chk             .putClientProperty(ASE_CONFIG, "SQL batch capture"             );
+		_waitEventTiming_chk             .putClientProperty(ASE_CONFIG, "wait event timing"             );
+		_lockTimeoutPipeActive_chk       .putClientProperty(ASE_CONFIG, "lock timeout pipe active"      );
+		_deadlockPipeActive_chk          .putClientProperty(ASE_CONFIG, "deadlock pipe active"          );
+		_errorlogPipeActive_chk          .putClientProperty(ASE_CONFIG, "errorlog pipe active"          );
+		_sqlTextPipeActive_chk           .putClientProperty(ASE_CONFIG, "sql text pipe active"          );
+		_statementPipeActive_chk         .putClientProperty(ASE_CONFIG, "statement pipe active"         );
+		_planTextPipeActive_chk          .putClientProperty(ASE_CONFIG, "plan text pipe active"         );
+		_lockTimeoutPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "lock timeout pipe max messages");
+		_deadlockPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "deadlock pipe max messages"    );
+		_errorlogPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "errorlog pipe max messages"    );
+		_sqlTextPipeMaxMessages_sp       .putClientProperty(ASE_CONFIG, "sql text pipe max messages"    );
+		_statementPipeMaxMessages_sp     .putClientProperty(ASE_CONFIG, "statement pipe max messages"   );
+		_planTextPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "plan text pipe max messages"   );
+		_maxSqlTextMonitored_sp          .putClientProperty(ASE_CONFIG, "max SQL text monitored"        );
 
-		_cfgCapMissingStatistics_chk  .putClientProperty(ASE_CONFIG, "capture missing statistics"    );
-		_cfgEnableMetricsCapture_chk  .putClientProperty(ASE_CONFIG, "enable metrics capture"        );
-		_cfgMetricsElapMax_sp         .putClientProperty(ASE_CONFIG, "metrics elap max"              );
-		_cfgMetricsExecMax_sp         .putClientProperty(ASE_CONFIG, "metrics exec max"              );
-		_cfgMetricsLioMax_sp          .putClientProperty(ASE_CONFIG, "metrics lio max"               );
-		_cfgMetricsPioMax_sp          .putClientProperty(ASE_CONFIG, "metrics pio max"               );
+		_cfgCapMissingStatistics_chk     .putClientProperty(ASE_CONFIG, "capture missing statistics"    );
+		_cfgEnableMetricsCapture_chk     .putClientProperty(ASE_CONFIG, "enable metrics capture"        );
+		_cfgMetricsElapMax_sp            .putClientProperty(ASE_CONFIG, "metrics elap max"              );
+		_cfgMetricsExecMax_sp            .putClientProperty(ASE_CONFIG, "metrics exec max"              );
+		_cfgMetricsLioMax_sp             .putClientProperty(ASE_CONFIG, "metrics lio max"               );
+		_cfgMetricsPioMax_sp             .putClientProperty(ASE_CONFIG, "metrics pio max"               );
 	}
 
 	private JPanel createMonitoringPanel()
@@ -349,79 +351,81 @@ public class AseConfigMonitoringDialog
 		//--- TOOLTIP 
 		// The ToolTip is also used to display configuration problems...
 		// So the ToolTipStore is used to reset the original ToolTip when problem is solved.
-		_enableMonitoring_chk          .setToolTipText(_tts.add(_enableMonitoring_chk,          "enable monitoring specifies whether the Adaptive Server will collect information for the Monitoring and Diagnostic System."));
-		_perObjectStatisticsActive_chk .setToolTipText(_tts.add(_perObjectStatisticsActive_chk, "per object statistics active determines whether the Adaptive Server will collect monitoring information on a per object basis."));
-		_statementStatisticsActive_chk .setToolTipText(_tts.add(_statementStatisticsActive_chk, "statement statistics active indicates whether ASE will collect ad-hoc statement monitoring information."));
-		_statementCacheMonitoring_chk  .setToolTipText(_tts.add(_statementCacheMonitoring_chk,  "<html>Use 'enable stmt cache monitoring' to configure Adaptive Server to collect the monitoring information on the statement cache.<br><b>Note:</b> This is available in ASE 12.5.2 and above.</html>"));
-		_objectLockwaitTiming_chk      .setToolTipText(_tts.add(_objectLockwaitTiming_chk,      "object lockwait timing specifies whether the Adaptive Server will collect timing data on lock requests."));
-		_processWaitEvents_chk         .setToolTipText(_tts.add(_processWaitEvents_chk,         "process event timing specifies whether the Adaptive Server will collect monitoring data on wait events for individual processes."));
-		_sqlBatchCapture_chk           .setToolTipText(_tts.add(_sqlBatchCapture_chk,           "SQL batch capture indicates whether the Adaptive Server will collect sql batch text for each process."));
-		_waitEventTiming_chk           .setToolTipText(_tts.add(_waitEventTiming_chk,           "wait event timing specifies whether the Adaptive Server will collect monitoring data for all wait events."));
+		_enableMonitoring_chk            .setToolTipText(_tts.add(_enableMonitoring_chk,             "enable monitoring specifies whether the Adaptive Server will collect information for the Monitoring and Diagnostic System."));
+		_perObjectStatisticsActive_chk   .setToolTipText(_tts.add(_perObjectStatisticsActive_chk,    "per object statistics active determines whether the Adaptive Server will collect monitoring information on a per object basis."));
+		_statementStatisticsActive_chk   .setToolTipText(_tts.add(_statementStatisticsActive_chk,    "statement statistics active indicates whether ASE will collect ad-hoc statement monitoring information."));
+		_statementCacheMonitoring_chk    .setToolTipText(_tts.add(_statementCacheMonitoring_chk,     "<html>Use 'enable stmt cache monitoring' to configure Adaptive Server to collect the monitoring information on the statement cache.<br><b>Note:</b> This is available in ASE 12.5.2 and above.</html>"));
+		_captureCompressionStatistics_chk.setToolTipText(_tts.add(_captureCompressionStatistics_chk, "<html>Use 'capture compression statistics' to configure Adaptive Server to collect the monitoring information on the data compression.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
+		_objectLockwaitTiming_chk        .setToolTipText(_tts.add(_objectLockwaitTiming_chk,         "object lockwait timing specifies whether the Adaptive Server will collect timing data on lock requests."));
+		_processWaitEvents_chk           .setToolTipText(_tts.add(_processWaitEvents_chk,            "process event timing specifies whether the Adaptive Server will collect monitoring data on wait events for individual processes."));
+		_sqlBatchCapture_chk             .setToolTipText(_tts.add(_sqlBatchCapture_chk,              "SQL batch capture indicates whether the Adaptive Server will collect sql batch text for each process."));
+		_waitEventTiming_chk             .setToolTipText(_tts.add(_waitEventTiming_chk,              "wait event timing specifies whether the Adaptive Server will collect monitoring data for all wait events."));
 
-		_lockTimeoutPipeActive_chk     .setToolTipText(_tts.add(_lockTimeoutPipeActive_chk,     "<html>lock timeout pipe active controls whether Adaptive Server collects lock timeout messages.<br> If lock timeout pipe active and lock timeout pipe max messages are enabled, Adaptive Server collects the text for each lock timeout.<br> Retrieve the lock timeout messages from the monLockTimeout monitor table.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
-		_lockTimeoutPipeMaxMessages_sp .setToolTipText(_tts.add(_lockTimeoutPipeMaxMessages_sp, "<html>lock timeout pipe max messages determines the number of lock timeout messages Adaptive Server stores, and the amount of memory it allocates for the task.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
+		_lockTimeoutPipeActive_chk       .setToolTipText(_tts.add(_lockTimeoutPipeActive_chk,        "<html>lock timeout pipe active controls whether Adaptive Server collects lock timeout messages.<br> If lock timeout pipe active and lock timeout pipe max messages are enabled, Adaptive Server collects the text for each lock timeout.<br> Retrieve the lock timeout messages from the monLockTimeout monitor table.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
+		_lockTimeoutPipeMaxMessages_sp   .setToolTipText(_tts.add(_lockTimeoutPipeMaxMessages_sp,    "<html>lock timeout pipe max messages determines the number of lock timeout messages Adaptive Server stores, and the amount of memory it allocates for the task.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
 
-		_deadlockPipeActive_chk        .setToolTipText(_tts.add(_deadlockPipeActive_chk,        "deadlock pipe active indicates whether the Adaptive Server will collect historical deadlock monitoring information."));
-		_deadlockPipeMaxMessages_sp    .setToolTipText(_tts.add(_deadlockPipeMaxMessages_sp,    "deadlock pipe max messages specifies the maximum number of messages that can be stored for historical deadlock data."));
+		_deadlockPipeActive_chk          .setToolTipText(_tts.add(_deadlockPipeActive_chk,           "deadlock pipe active indicates whether the Adaptive Server will collect historical deadlock monitoring information."));
+		_deadlockPipeMaxMessages_sp      .setToolTipText(_tts.add(_deadlockPipeMaxMessages_sp,       "deadlock pipe max messages specifies the maximum number of messages that can be stored for historical deadlock data."));
 
-		_errorlogPipeActive_chk        .setToolTipText(_tts.add(_errorlogPipeActive_chk,        "errorlog pipe active indicates whether the Adaptive Server will collect historical errorlog monitoring information."));
-		_errorlogPipeMaxMessages_sp    .setToolTipText(_tts.add(_errorlogPipeMaxMessages_sp,    "errorlog pipe max messages specifies the maximum number of messages that can be stored for historical errorlog text."));
+		_errorlogPipeActive_chk          .setToolTipText(_tts.add(_errorlogPipeActive_chk,           "errorlog pipe active indicates whether the Adaptive Server will collect historical errorlog monitoring information."));
+		_errorlogPipeMaxMessages_sp      .setToolTipText(_tts.add(_errorlogPipeMaxMessages_sp,       "errorlog pipe max messages specifies the maximum number of messages that can be stored for historical errorlog text."));
 
-		_sqlTextPipeActive_chk         .setToolTipText(_tts.add(_sqlTextPipeActive_chk,         "<html>sql text pipe active indicates whether the Adaptive Server will collect historical sql batch text information.<br>  <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
-		_sqlTextPipeMaxMessages_sp     .setToolTipText(_tts.add(_sqlTextPipeMaxMessages_sp,     "<html>sql text pipe max messages specifies the maximum number of messages that can be stored for historical sql text.<br> <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
+		_sqlTextPipeActive_chk           .setToolTipText(_tts.add(_sqlTextPipeActive_chk,            "<html>sql text pipe active indicates whether the Adaptive Server will collect historical sql batch text information.<br>  <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
+		_sqlTextPipeMaxMessages_sp       .setToolTipText(_tts.add(_sqlTextPipeMaxMessages_sp,        "<html>sql text pipe max messages specifies the maximum number of messages that can be stored for historical sql text.<br> <b>Note</b>: This may degrade ASE performance up to 5%</html>"));
 
-		_statementPipeActive_chk       .setToolTipText(_tts.add(_statementPipeActive_chk,       "<html>statement pipe active indicates whether the Adaptive Server will collect historical statement level monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
-		_statementPipeMaxMessages_sp   .setToolTipText(_tts.add(_statementPipeMaxMessages_sp,   "<html>statement pipe max messages specifies the maximum number of messages that can be stored for historical statement text.<br>      <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
+		_statementPipeActive_chk         .setToolTipText(_tts.add(_statementPipeActive_chk,          "<html>statement pipe active indicates whether the Adaptive Server will collect historical statement level monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
+		_statementPipeMaxMessages_sp     .setToolTipText(_tts.add(_statementPipeMaxMessages_sp,      "<html>statement pipe max messages specifies the maximum number of messages that can be stored for historical statement text.<br>      <b>Note</b>: This may degrade ASE performance up to 10%</html>"));
 
-		_planTextPipeActive_chk        .setToolTipText(_tts.add(_planTextPipeActive_chk,        "<html>plan text pipe active indicates whether the Adaptive Server will collect historical plan text monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
-		_planTextPipeMaxMessages_sp    .setToolTipText(_tts.add(_planTextPipeMaxMessages_sp,    "<html>plan text pipe max messages specifies the maximum number of messages that can be stored for historical plan text.<br>     <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
+		_planTextPipeActive_chk          .setToolTipText(_tts.add(_planTextPipeActive_chk,           "<html>plan text pipe active indicates whether the Adaptive Server will collect historical plan text monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
+		_planTextPipeMaxMessages_sp      .setToolTipText(_tts.add(_planTextPipeMaxMessages_sp,       "<html>plan text pipe max messages specifies the maximum number of messages that can be stored for historical plan text.<br>     <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
 
-		_maxSqlTextMonitored_lbl       .setToolTipText(_tts.add(_maxSqlTextMonitored_lbl,       "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
-		_maxSqlTextMonitored_sp        .setToolTipText(_tts.add(_maxSqlTextMonitored_sp,        "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
+		_maxSqlTextMonitored_lbl         .setToolTipText(_tts.add(_maxSqlTextMonitored_lbl,          "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
+		_maxSqlTextMonitored_sp          .setToolTipText(_tts.add(_maxSqlTextMonitored_sp,           "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
 
-		_predefinedConfigs_lbl         .setToolTipText(_tts.add(_predefinedConfigs_lbl,         "A pre defined value set of the above configurations."));
-		_predefinedConfigs_cbx         .setToolTipText(_tts.add(_predefinedConfigs_cbx,         "A pre defined value set of the above configurations."));
+		_predefinedConfigs_lbl           .setToolTipText(_tts.add(_predefinedConfigs_lbl,            "A pre defined value set of the above configurations."));
+		_predefinedConfigs_cbx           .setToolTipText(_tts.add(_predefinedConfigs_cbx,            "A pre defined value set of the above configurations."));
 
-		_configurabelMemory_lbl        .setToolTipText(_tts.add(_configurabelMemory_lbl,        "Available memory to be used for additional configurations or 'data caches' etc. This memory is basically not used by the ASE, meaning it's \"waste\" and ready for usage by someone..."));
+		_configurabelMemory_lbl          .setToolTipText(_tts.add(_configurabelMemory_lbl,           "Available memory to be used for additional configurations or 'data caches' etc. This memory is basically not used by the ASE, meaning it's \"waste\" and ready for usage by someone..."));
 
 		//--- LAYOUT
-		panel.add(_enableMonitoring_chk,          "wrap 15");
+		panel.add(_enableMonitoring_chk,             "wrap 15");
 
-		panel.add(_perObjectStatisticsActive_chk, "wrap");
-		panel.add(_statementStatisticsActive_chk, "wrap");
-		panel.add(_statementCacheMonitoring_chk,  "wrap");
-		panel.add(_objectLockwaitTiming_chk,      "wrap");
-		panel.add(_processWaitEvents_chk,         "wrap");
-		panel.add(_sqlBatchCapture_chk,           "wrap");
-		panel.add(_waitEventTiming_chk,           "wrap 15");
+		panel.add(_perObjectStatisticsActive_chk,    "wrap");
+		panel.add(_statementStatisticsActive_chk,    "wrap");
+		panel.add(_statementCacheMonitoring_chk,     "wrap");
+		panel.add(_captureCompressionStatistics_chk, "wrap");
+		panel.add(_objectLockwaitTiming_chk,         "wrap");
+		panel.add(_processWaitEvents_chk,            "wrap");
+		panel.add(_sqlBatchCapture_chk,              "wrap");
+		panel.add(_waitEventTiming_chk,              "wrap 15");
 
-		panel.add(_lockTimeoutPipeActive_chk,     "");
-		panel.add(_lockTimeoutPipeMaxMessages_sp, "right, pushx, wrap");
+		panel.add(_lockTimeoutPipeActive_chk,        "");
+		panel.add(_lockTimeoutPipeMaxMessages_sp,    "right, pushx, wrap");
 
-		panel.add(_deadlockPipeActive_chk,        "");
-		panel.add(_deadlockPipeMaxMessages_sp,    "right, pushx, wrap");
+		panel.add(_deadlockPipeActive_chk,           "");
+		panel.add(_deadlockPipeMaxMessages_sp,       "right, pushx, wrap");
 
-		panel.add(_errorlogPipeActive_chk,        "");
-		panel.add(_errorlogPipeMaxMessages_sp,    "right, pushx, wrap 10");
+		panel.add(_errorlogPipeActive_chk,           "");
+		panel.add(_errorlogPipeMaxMessages_sp,       "right, pushx, wrap 10");
 
-		panel.add(_sqlTextPipeActive_chk,         "");
-		panel.add(_sqlTextPipeMaxMessages_sp,     "right, pushx, wrap");
+		panel.add(_sqlTextPipeActive_chk,            "");
+		panel.add(_sqlTextPipeMaxMessages_sp,        "right, pushx, wrap");
 
-		panel.add(_statementPipeActive_chk,       "");
-		panel.add(_statementPipeMaxMessages_sp,   "right, pushx, wrap");
+		panel.add(_statementPipeActive_chk,          "");
+		panel.add(_statementPipeMaxMessages_sp,      "right, pushx, wrap");
 
-		panel.add(_planTextPipeActive_chk,        "");
-		panel.add(_planTextPipeMaxMessages_sp,    "right, pushx, wrap 15");
+		panel.add(_planTextPipeActive_chk,           "");
+		panel.add(_planTextPipeMaxMessages_sp,       "right, pushx, wrap 15");
 
-		panel.add(_maxSqlTextMonitored_lbl,       "");
-		panel.add(_maxSqlTextMonitored_sp,        "right, pushx, wrap 10");
+		panel.add(_maxSqlTextMonitored_lbl,          "");
+		panel.add(_maxSqlTextMonitored_sp,           "right, pushx, wrap 10");
 
-		panel.add(new JSeparator(),               "span, grow, push, wrap 10");
+		panel.add(new JSeparator(),                  "span, grow, push, wrap 10");
 
-		panel.add(_predefinedConfigs_lbl,         "");
-		panel.add(_predefinedConfigs_cbx,         "right, pushx, wrap 10");
+		panel.add(_predefinedConfigs_lbl,            "");
+		panel.add(_predefinedConfigs_cbx,            "right, pushx, wrap 10");
 
-		panel.add(_configurabelMemory_lbl,        "span, wrap");
+		panel.add(_configurabelMemory_lbl,           "span, wrap");
 
 		//--- ACTIONS
 		_predefinedConfigs_cbx.addActionListener(this);
@@ -690,6 +694,11 @@ public class AseConfigMonitoringDialog
 					if (_aseVersionNum >= 15020)
 						comp.setEnabled(true);
 				}
+				else if ( comp.equals(_captureCompressionStatistics_chk) )
+				{
+					if (_aseVersionNum >= 15700)
+						comp.setEnabled(true);
+				}
 				else if ( comp.equals(_cfgCapMissingStatistics_chk) )
 				{
 					if (_aseVersionNum >= 15031)
@@ -822,178 +831,183 @@ public class AseConfigMonitoringDialog
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_NONE]) ) // NONE
 		{
-			_enableMonitoring_chk         .setSelected(false);
+			_enableMonitoring_chk            .setSelected(false);
 
-			_perObjectStatisticsActive_chk.setSelected(false);
-			_statementStatisticsActive_chk.setSelected(false);
-			_statementCacheMonitoring_chk .setSelected(false);
-			_objectLockwaitTiming_chk     .setSelected(false);
-			_processWaitEvents_chk        .setSelected(false);
-			_sqlBatchCapture_chk          .setSelected(false);
-			_waitEventTiming_chk          .setSelected(false);
-			_lockTimeoutPipeActive_chk    .setSelected(false);
-			_deadlockPipeActive_chk       .setSelected(false);
-			_errorlogPipeActive_chk       .setSelected(false);
-			_sqlTextPipeActive_chk        .setSelected(false);
-			_planTextPipeActive_chk       .setSelected(false);
-			_statementPipeActive_chk      .setSelected(false);
+			_perObjectStatisticsActive_chk   .setSelected(false);
+			_statementStatisticsActive_chk   .setSelected(false);
+			_statementCacheMonitoring_chk    .setSelected(false);
+			_captureCompressionStatistics_chk.setSelected(false);
+			_objectLockwaitTiming_chk        .setSelected(false);
+			_processWaitEvents_chk           .setSelected(false);
+			_sqlBatchCapture_chk             .setSelected(false);
+			_waitEventTiming_chk             .setSelected(false);
+			_lockTimeoutPipeActive_chk       .setSelected(false);
+			_deadlockPipeActive_chk          .setSelected(false);
+			_errorlogPipeActive_chk          .setSelected(false);
+			_sqlTextPipeActive_chk           .setSelected(false);
+			_planTextPipeActive_chk          .setSelected(false);
+			_statementPipeActive_chk         .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm.setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_sqlTextPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
+			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
+			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
-//			_cfgCapMissingStatistics_chk  .setSelected(false);
-//			_cfgEnableMetricsCapture_chk  .setSelected(false);
-//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
+//			_cfgCapMissingStatistics_chk     .setSelected(false);
+//			_cfgEnableMetricsCapture_chk     .setSelected(false);
+//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MINIMAL]) ) // MINIMAL
 		{
-			_enableMonitoring_chk         .setSelected(true);
+			_enableMonitoring_chk            .setSelected(true);
 
-			_perObjectStatisticsActive_chk.setSelected(true);
-			_statementStatisticsActive_chk.setSelected(false);
-			_statementCacheMonitoring_chk .setSelected(false);
-			_objectLockwaitTiming_chk     .setSelected(false);
-			_processWaitEvents_chk        .setSelected(false);
-			_sqlBatchCapture_chk          .setSelected(false);
-			_waitEventTiming_chk          .setSelected(true);
-			_lockTimeoutPipeActive_chk    .setSelected(false);
-			_deadlockPipeActive_chk       .setSelected(false);
-			_errorlogPipeActive_chk       .setSelected(false);
-			_sqlTextPipeActive_chk        .setSelected(false);
-			_statementPipeActive_chk      .setSelected(false);
-			_planTextPipeActive_chk       .setSelected(false);
+			_perObjectStatisticsActive_chk   .setSelected(true);
+			_statementStatisticsActive_chk   .setSelected(false);
+			_statementCacheMonitoring_chk    .setSelected(false);
+			_captureCompressionStatistics_chk.setSelected(false);
+			_objectLockwaitTiming_chk        .setSelected(false);
+			_processWaitEvents_chk           .setSelected(false);
+			_sqlBatchCapture_chk             .setSelected(false);
+			_waitEventTiming_chk             .setSelected(true);
+			_lockTimeoutPipeActive_chk       .setSelected(false);
+			_deadlockPipeActive_chk          .setSelected(false);
+			_errorlogPipeActive_chk          .setSelected(false);
+			_sqlTextPipeActive_chk           .setSelected(false);
+			_statementPipeActive_chk         .setSelected(false);
+			_planTextPipeActive_chk          .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm.setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_sqlTextPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
+			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
+			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
-//			_cfgCapMissingStatistics_chk  .setSelected(false);
-//			_cfgEnableMetricsCapture_chk  .setSelected(false);
-//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
+//			_cfgCapMissingStatistics_chk     .setSelected(false);
+//			_cfgEnableMetricsCapture_chk     .setSelected(false);
+//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_SMALL]) ) // SMALL
 		{
-			_enableMonitoring_chk         .setSelected(true);
+			_enableMonitoring_chk            .setSelected(true);
 
-			_perObjectStatisticsActive_chk.setSelected(true);
-			_statementStatisticsActive_chk.setSelected(true);
-			_statementCacheMonitoring_chk .setSelected(true);
-			_objectLockwaitTiming_chk     .setSelected(true);
-			_processWaitEvents_chk        .setSelected(true);
-			_sqlBatchCapture_chk          .setSelected(false);
-			_waitEventTiming_chk          .setSelected(true);
-			_lockTimeoutPipeActive_chk    .setSelected(false);
-			_deadlockPipeActive_chk       .setSelected(false);
-			_errorlogPipeActive_chk       .setSelected(false);
-			_sqlTextPipeActive_chk        .setSelected(false);
-			_statementPipeActive_chk      .setSelected(false);
-			_planTextPipeActive_chk       .setSelected(false);
+			_perObjectStatisticsActive_chk   .setSelected(true);
+			_statementStatisticsActive_chk   .setSelected(true);
+			_statementCacheMonitoring_chk    .setSelected(true);
+			_captureCompressionStatistics_chk.setSelected(false);
+			_objectLockwaitTiming_chk        .setSelected(true);
+			_processWaitEvents_chk           .setSelected(true);
+			_sqlBatchCapture_chk             .setSelected(false);
+			_waitEventTiming_chk             .setSelected(true);
+			_lockTimeoutPipeActive_chk       .setSelected(false);
+			_deadlockPipeActive_chk          .setSelected(false);
+			_errorlogPipeActive_chk          .setSelected(false);
+			_sqlTextPipeActive_chk           .setSelected(false);
+			_statementPipeActive_chk         .setSelected(false);
+			_planTextPipeActive_chk          .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm.setValue( new Integer(0) );
-			_deadlockPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_errorlogPipeMaxMessages_spm   .setValue( new Integer(0) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_errorlogPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_sqlTextPipeMaxMessages_spm   .setValue( new Integer(0) );
-			_statementPipeMaxMessages_spm .setValue( new Integer(0) );
-			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
+			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
+			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_maxSqlTextMonitored_spm      .setValue( new Integer(0) );
+			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
-//			_cfgCapMissingStatistics_chk  .setSelected(false);
-//			_cfgEnableMetricsCapture_chk  .setSelected(false);
-//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
+//			_cfgCapMissingStatistics_chk     .setSelected(false);
+//			_cfgEnableMetricsCapture_chk     .setSelected(false);
+//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_MEDIUM]) ) // MEDIUM
 		{
-			_enableMonitoring_chk         .setSelected(true);
+			_enableMonitoring_chk            .setSelected(true);
 
-			_perObjectStatisticsActive_chk.setSelected(true);
-			_statementStatisticsActive_chk.setSelected(true);
-			_statementCacheMonitoring_chk .setSelected(true);
-			_objectLockwaitTiming_chk     .setSelected(true);
-			_processWaitEvents_chk        .setSelected(true);
-			_sqlBatchCapture_chk          .setSelected(true);
-			_waitEventTiming_chk          .setSelected(true);
-			_lockTimeoutPipeActive_chk    .setSelected(true);
-			_deadlockPipeActive_chk       .setSelected(true);
-			_errorlogPipeActive_chk       .setSelected(true);
-			_sqlTextPipeActive_chk        .setSelected(true);
-			_statementPipeActive_chk      .setSelected(true);
-			_planTextPipeActive_chk       .setSelected(false);
+			_perObjectStatisticsActive_chk   .setSelected(true);
+			_statementStatisticsActive_chk   .setSelected(true);
+			_statementCacheMonitoring_chk    .setSelected(true);
+			_captureCompressionStatistics_chk.setSelected(false);
+			_objectLockwaitTiming_chk        .setSelected(true);
+			_processWaitEvents_chk           .setSelected(true);
+			_sqlBatchCapture_chk             .setSelected(true);
+			_waitEventTiming_chk             .setSelected(true);
+			_lockTimeoutPipeActive_chk       .setSelected(true);
+			_deadlockPipeActive_chk          .setSelected(true);
+			_errorlogPipeActive_chk          .setSelected(true);
+			_sqlTextPipeActive_chk           .setSelected(true);
+			_statementPipeActive_chk         .setSelected(true);
+			_planTextPipeActive_chk          .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm.setValue( new Integer(500) );
-			_deadlockPipeMaxMessages_spm   .setValue( new Integer(500) );
-			_errorlogPipeMaxMessages_spm   .setValue( new Integer(200) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(500) );
+			_deadlockPipeMaxMessages_spm     .setValue( new Integer(500) );
+			_errorlogPipeMaxMessages_spm     .setValue( new Integer(200) );
 
-			_sqlTextPipeMaxMessages_spm   .setValue( new Integer(1000) );
-			_statementPipeMaxMessages_spm .setValue( new Integer(5000) );
-			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(1000) );
+			_statementPipeMaxMessages_spm    .setValue( new Integer(5000) );
+			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_maxSqlTextMonitored_spm      .setValue( new Integer(2048) );
+			_maxSqlTextMonitored_spm         .setValue( new Integer(2048) );
 
-//			_cfgCapMissingStatistics_chk  .setSelected(false);
-//			_cfgEnableMetricsCapture_chk  .setSelected(false);
-//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
+//			_cfgCapMissingStatistics_chk     .setSelected(false);
+//			_cfgEnableMetricsCapture_chk     .setSelected(false);
+//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
 		}
 		if ( str.equals(PDC_OPTIONS_STR[PDC_LARGE]) ) // LARGE
 		{
-			_enableMonitoring_chk         .setSelected(true);
+			_enableMonitoring_chk            .setSelected(true);
 
-			_perObjectStatisticsActive_chk.setSelected(true);
-			_statementStatisticsActive_chk.setSelected(true);
-			_statementCacheMonitoring_chk .setSelected(true);
-			_objectLockwaitTiming_chk     .setSelected(true);
-			_processWaitEvents_chk        .setSelected(true);
-			_sqlBatchCapture_chk          .setSelected(true);
-			_waitEventTiming_chk          .setSelected(true);
-			_lockTimeoutPipeActive_chk    .setSelected(true);
-			_deadlockPipeActive_chk       .setSelected(true);
-			_errorlogPipeActive_chk       .setSelected(true);
-			_sqlTextPipeActive_chk        .setSelected(true);
-			_statementPipeActive_chk      .setSelected(true);
-			_planTextPipeActive_chk       .setSelected(false);
+			_perObjectStatisticsActive_chk   .setSelected(true);
+			_statementStatisticsActive_chk   .setSelected(true);
+			_statementCacheMonitoring_chk    .setSelected(true);
+			_captureCompressionStatistics_chk.setSelected(true);
+			_objectLockwaitTiming_chk        .setSelected(true);
+			_processWaitEvents_chk           .setSelected(true);
+			_sqlBatchCapture_chk             .setSelected(true);
+			_waitEventTiming_chk             .setSelected(true);
+			_lockTimeoutPipeActive_chk       .setSelected(true);
+			_deadlockPipeActive_chk          .setSelected(true);
+			_errorlogPipeActive_chk          .setSelected(true);
+			_sqlTextPipeActive_chk           .setSelected(true);
+			_statementPipeActive_chk         .setSelected(true);
+			_planTextPipeActive_chk          .setSelected(false);
 
-			_lockTimeoutPipeMaxMessages_spm.setValue( new Integer(1000) );
-			_deadlockPipeMaxMessages_spm   .setValue( new Integer(1000) );
-			_errorlogPipeMaxMessages_spm   .setValue( new Integer(1000) );
+			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(1000) );
+			_deadlockPipeMaxMessages_spm     .setValue( new Integer(1000) );
+			_errorlogPipeMaxMessages_spm     .setValue( new Integer(1000) );
 
-			_sqlTextPipeMaxMessages_spm   .setValue( new Integer(5000) );
-			_statementPipeMaxMessages_spm .setValue( new Integer(50000) );
-			_planTextPipeMaxMessages_spm  .setValue( new Integer(0) );
+			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(5000) );
+			_statementPipeMaxMessages_spm    .setValue( new Integer(50000) );
+			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
-			_maxSqlTextMonitored_spm      .setValue( new Integer(4096) );
+			_maxSqlTextMonitored_spm         .setValue( new Integer(4096) );
 
-//			_cfgCapMissingStatistics_chk  .setSelected(false);
-//			_cfgEnableMetricsCapture_chk  .setSelected(false);
-//			_cfgMetricsElapMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsExecMax_spm        .setValue( new Integer(0) );
-//			_cfgMetricsLioMax_spm         .setValue( new Integer(0) );
-//			_cfgMetricsPioMax_spm         .setValue( new Integer(0) );
+//			_cfgCapMissingStatistics_chk     .setSelected(false);
+//			_cfgEnableMetricsCapture_chk     .setSelected(false);
+//			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsExecMax_spm           .setValue( new Integer(0) );
+//			_cfgMetricsLioMax_spm            .setValue( new Integer(0) );
+//			_cfgMetricsPioMax_spm            .setValue( new Integer(0) );
 		}
 	}
 
@@ -1055,26 +1069,27 @@ public class AseConfigMonitoringDialog
 //				String typeVal = rs.getString(7).trim();
 //				boolean isStatic = typeVal.equals("static");
 
-				if      ( config.equals("enable monitoring") )              _enableMonitoring_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("per object statistics active") )   _perObjectStatisticsActive_chk .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("statement statistics active") )    _statementStatisticsActive_chk .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("enable stmt cache monitoring") )   _statementCacheMonitoring_chk  .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("object lockwait timing") )         _objectLockwaitTiming_chk      .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("process wait events") )            _processWaitEvents_chk         .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("SQL batch capture") )              _sqlBatchCapture_chk           .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("wait event timing") )              _waitEventTiming_chk           .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("lock timeout pipe active") )       _lockTimeoutPipeActive_chk     .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("lock timeout pipe max messages") ) _lockTimeoutPipeMaxMessages_spm.setValue( new Integer(runVal) );
-				else if ( config.equals("deadlock pipe active") )           _deadlockPipeActive_chk        .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("deadlock pipe max messages") )     _deadlockPipeMaxMessages_spm   .setValue( new Integer(runVal) );
-				else if ( config.equals("errorlog pipe active") )           _errorlogPipeActive_chk        .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("errorlog pipe max messages") )     _errorlogPipeMaxMessages_spm   .setValue( new Integer(runVal) );
-				else if ( config.equals("sql text pipe active") )           _sqlTextPipeActive_chk         .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("sql text pipe max messages") )     _sqlTextPipeMaxMessages_spm    .setValue( new Integer(runVal) );
-				else if ( config.equals("statement pipe active") )          _statementPipeActive_chk       .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("statement pipe max messages") )    _statementPipeMaxMessages_spm  .setValue( new Integer(runVal) );
-				else if ( config.equals("plan text pipe active") )          _planTextPipeActive_chk        .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("plan text pipe max messages") )    _planTextPipeMaxMessages_spm   .setValue( new Integer(runVal) );
+				if      ( config.equals("enable monitoring") )              _enableMonitoring_chk            .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("per object statistics active") )   _perObjectStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("statement statistics active") )    _statementStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("enable stmt cache monitoring") )   _statementCacheMonitoring_chk    .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("capture compression statistics") ) _captureCompressionStatistics_chk.setSelected( runVal == 1 ? true : false); // but this is for the moment not part of sp_configure 'Monitoring'
+				else if ( config.equals("object lockwait timing") )         _objectLockwaitTiming_chk        .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("process wait events") )            _processWaitEvents_chk           .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("SQL batch capture") )              _sqlBatchCapture_chk             .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("wait event timing") )              _waitEventTiming_chk             .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("lock timeout pipe active") )       _lockTimeoutPipeActive_chk       .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("lock timeout pipe max messages") ) _lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(runVal) );
+				else if ( config.equals("deadlock pipe active") )           _deadlockPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("deadlock pipe max messages") )     _deadlockPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("errorlog pipe active") )           _errorlogPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("errorlog pipe max messages") )     _errorlogPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("sql text pipe active") )           _sqlTextPipeActive_chk           .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("sql text pipe max messages") )     _sqlTextPipeMaxMessages_spm      .setValue( new Integer(runVal) );
+				else if ( config.equals("statement pipe active") )          _statementPipeActive_chk         .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("statement pipe max messages") )    _statementPipeMaxMessages_spm    .setValue( new Integer(runVal) );
+				else if ( config.equals("plan text pipe active") )          _planTextPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("plan text pipe max messages") )    _planTextPipeMaxMessages_spm     .setValue( new Integer(runVal) );
 				else if ( config.equals("max SQL text monitored") )
 				{
 					if (cfgVal != runVal)
@@ -1117,6 +1132,10 @@ public class AseConfigMonitoringDialog
 				_cfgMetricsPioMax_spm       .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics pio max") );
 			}
 
+			if (_aseVersionNum >= 15700) 
+			{
+				_captureCompressionStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture compression statistics") > 0 );
+			}
 
 			// How much memory are there left for re-configuration
 			rs = stmt.executeQuery(
@@ -1263,6 +1282,7 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "per object statistics active",   _perObjectStatisticsActive_chk);
 		checkAndSetAseConfig(conn, "statement statistics active",    _statementStatisticsActive_chk);
 		checkAndSetAseConfig(conn, "enable stmt cache monitoring",   _statementCacheMonitoring_chk);
+		checkAndSetAseConfig(conn, "capture compression statistics", _captureCompressionStatistics_chk);
 		checkAndSetAseConfig(conn, "object lockwait timing",         _objectLockwaitTiming_chk);
 		checkAndSetAseConfig(conn, "process wait events",            _processWaitEvents_chk);
 		checkAndSetAseConfig(conn, "SQL batch capture",              _sqlBatchCapture_chk);

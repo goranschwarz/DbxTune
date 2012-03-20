@@ -1043,6 +1043,23 @@ public class CheckForUpdates
 				"select type='P', p.TableName, p.TableID, p.ParameterName, p.ParameterID, p.TypeName, p.Length, Indicators=-1, p.Description  \n" +
 			    "from master.dbo.monTableParameters p \n";
 
+			// sysobjects
+			String sql_sysobjects_rowCount = 
+				"select count(*) \n" +
+				"from sysobjects o, syscolumns c \n" +
+				"where o.id = c.id \n" +
+				"  and o.name like 'mon%' \n" +
+				"  and o.type = 'U' \n" +
+				"";
+			String sql_sysobjects = 
+				"select type='S', TableName = o.name, TableID = o.id, ColumnName = c.name, ColumnID = c.colid, TypeName = t.name, Length = t.length, Indicators = -1, Description = '' \n" +
+				"from sysobjects o, syscolumns c, systypes t \n" +
+				"where o.id = c.id \n" +
+				"  and c.usertype = t.usertype \n" +
+				"  and o.name like 'mon%' \n" +
+				"  and o.type = 'U' \n" +
+				"order by o.name, c.colid \n" +
+				"";
 
 			// monTables
 			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
@@ -1060,6 +1077,12 @@ public class CheckForUpdates
 			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
 					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
 					sql_monTableParameters_rowCount, sql_monTableParameters, 
+					_sendMdaInfoBatchSize, sendQueryList);
+
+			// ASE System Tables
+			rowCountSum += getMdaInfo(GetCounters.getInstance().getMonConnection(), 
+					checkId, clientTime, System.getProperty("user.name"), srvVersion, isClusterEnabled, 
+					sql_sysobjects_rowCount, sql_sysobjects, 
 					_sendMdaInfoBatchSize, sendQueryList);
 		}
 		catch (SQLException e)
