@@ -123,6 +123,10 @@ extends CountersModel
 	public static final String  PROPKEY_sample_dbccStacktrace     = PROP_PREFIX + ".sample.dbccStacktrace";
 	public static final boolean DEFAULT_sample_dbccStacktrace     = false;
 	
+	public static final String  PROPKEY_sample_freezeMda          = PROP_PREFIX + ".sample.freezeMda";
+	public static final boolean DEFAULT_sample_freezeMda          = true;
+	public static final int     NEED_SRV_VERSION_sample_freezeMda = 12540;
+	
 	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
 	public static final String  DEFAULT_sample_extraWhereClause   = "";
 
@@ -221,7 +225,7 @@ extends CountersModel
 			"\n" +
 			"if ((select object_id('tempdb.guest.monWaitClassInfo')) is null) \n" +
 			"   exec('select * into tempdb.guest.monWaitClassInfo from master..monWaitClassInfo') \n" +
-			"\n";
+			"";
 		
 	
 		return sql;
@@ -231,8 +235,20 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_freezeMda          = conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda);
 		String  sample_extraWhereClause   = conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
 		boolean sample_systemSpids        = conf.getBooleanProperty(PROPKEY_sample_systemSpids,      DEFAULT_sample_systemSpids);
+
+		// MDA Freeze
+		String sql_sample_freezeMda_declare = "";
+		String sql_sample_freezeMda_begin   = "";
+		String sql_sample_freezeMda_end     = "";
+		if (sample_freezeMda && aseVersion > NEED_SRV_VERSION_sample_freezeMda)
+		{
+			sql_sample_freezeMda_declare = "declare @status int \n";
+			sql_sample_freezeMda_begin   = "select @status = mdaconfig('freeze', 'begin') \n";
+			sql_sample_freezeMda_end     = "select @status = mdaconfig('freeze', 'end')   \n";
+		}
 
 		// Do we have extra where clauses
 		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
@@ -280,7 +296,10 @@ extends CountersModel
 			"  DbccStacktrace=convert(text,null) ";
 
 		// The above I had in the Properties file for a long time
-		String sql = "select " + cols + " \n" +
+		String sql = 
+			sql_sample_freezeMda_declare +
+			sql_sample_freezeMda_begin +
+			"select " + cols + " \n" +
 			"from master..monProcessActivity A, master..monProcessWaits W, tempdb.guest.monWaitEventInfo I, tempdb.guest.monWaitClassInfo C \n" +
 			"where A.SPID = W.SPID \n" +
 			"  and A.KPID = W.KPID \n" +
@@ -293,6 +312,7 @@ extends CountersModel
 			sql_sample_systemSpids +
 			"order by A.SPID, EventIdWaitTime desc \n" + 
 			optGoalPlan +
+			sql_sample_freezeMda_end +
 			"\n";
 
 		//------------------------------------------------
@@ -313,6 +333,7 @@ extends CountersModel
 		lc.setProperty(PROPKEY_sample_procCallStack,    conf.getBooleanProperty(PROPKEY_sample_procCallStack,    DEFAULT_sample_procCallStack));
 		lc.setProperty(PROPKEY_sample_showplan,         conf.getBooleanProperty(PROPKEY_sample_showplan,         DEFAULT_sample_showplan));
 		lc.setProperty(PROPKEY_sample_dbccStacktrace,   conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace,   DEFAULT_sample_dbccStacktrace));
+		lc.setProperty(PROPKEY_sample_freezeMda,        conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda));
 		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getBooleanProperty(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
 		lc.setProperty(PROPKEY_sample_systemSpids,      conf.getBooleanProperty(PROPKEY_sample_systemSpids,      DEFAULT_sample_systemSpids));
 		
@@ -327,8 +348,9 @@ extends CountersModel
 		if (propName.equals(PROPKEY_sample_procCallStack))    return CmSpidCpuWaitPanel.TOOLTIP_sample_procCallStack;
 		if (propName.equals(PROPKEY_sample_showplan))         return CmSpidCpuWaitPanel.TOOLTIP_sample_showplan;
 		if (propName.equals(PROPKEY_sample_dbccStacktrace))   return CmSpidCpuWaitPanel.TOOLTIP_sample_dbccStacktrace;
-		if (propName.equals(PROPKEY_sample_systemSpids))      return CmSpidCpuWaitPanel.TOOLTIP_sample_systemSpids;
+		if (propName.equals(PROPKEY_sample_freezeMda))        return CmSpidCpuWaitPanel.TOOLTIP_sample_freezeMda;
 		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmSpidCpuWaitPanel.TOOLTIP_sample_extraWhereClause;
+		if (propName.equals(PROPKEY_sample_systemSpids))      return CmSpidCpuWaitPanel.TOOLTIP_sample_systemSpids;
 	
 		return "";
 	}

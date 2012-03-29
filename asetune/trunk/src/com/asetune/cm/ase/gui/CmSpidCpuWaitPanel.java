@@ -36,6 +36,15 @@ extends TabularCntrPanel
 	public static final String  TOOLTIP_sample_procCallStack    = "<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>";
 	public static final String  TOOLTIP_sample_showplan         = "<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>";
 	public static final String  TOOLTIP_sample_dbccStacktrace   = "<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>";
+	public static final String  TOOLTIP_sample_freezeMda        = 
+		"<html>" +
+		"Freeze MDA Counters while querying the MDA tables in this Performance Counter.<br>" +
+		"<br>" +
+		"This will stop MDA counter updates during the freeze period so that data from multiple tables will be 'in sync'.<br>" +
+		"The negative side effect of this is that some counter incrementation wont happen while executing the SQL Statement that fetches data.<br>" +
+		"<br>" +
+		"<b>Note:</b> This only works on ASE Version "+AseConnectionUtils.versionIntToStr(CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda)+" or higher." +
+		"</html>";
 	public static final String  TOOLTIP_sample_systemSpids      = "<html>Include system SPID's</html>";
 	public static final String  TOOLTIP_sample_extraWhereClause = 
 		"<html>" +
@@ -137,6 +146,7 @@ extends TabularCntrPanel
 	private JCheckBox       _sampleProcCallStack_chk;
 	private JCheckBox       _sampleShowplan_chk;
 	private JCheckBox       _sampleDbccStacktrace_chk;
+	private JCheckBox       _sampleFreezeMda_chk;
 	private JCheckBox       _sampleSystemSpids_chk;
 	private RSyntaxTextArea _sampleExtraWhereClause_txt;
 	private JButton         _sampleExtraWhereClause_but;
@@ -145,7 +155,7 @@ extends TabularCntrPanel
 	protected JPanel createLocalOptionsPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Local Options", true);
-		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+		panel.setLayout(new MigLayout("flowy, ins 0, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +
 				"All the options in this panel executes additional SQL lookups in the database <b>after</b> the result set has been delivered.<br>" +
@@ -161,6 +171,7 @@ extends TabularCntrPanel
 		_sampleProcCallStack_chk    = new JCheckBox("Get Procedure Call Stack", conf == null ? CmSpidCpuWait.DEFAULT_sample_procCallStack  : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_procCallStack,  CmSpidCpuWait.DEFAULT_sample_procCallStack ));
 		_sampleShowplan_chk         = new JCheckBox("Get Showplan",             conf == null ? CmSpidCpuWait.DEFAULT_sample_showplan       : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_showplan,       CmSpidCpuWait.DEFAULT_sample_showplan      ));
 		_sampleDbccStacktrace_chk   = new JCheckBox("Get ASE Stacktrace",       conf == null ? CmSpidCpuWait.DEFAULT_sample_dbccStacktrace : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_dbccStacktrace, CmSpidCpuWait.DEFAULT_sample_dbccStacktrace));
+		_sampleFreezeMda_chk        = new JCheckBox("Freeze MDA Counters",      conf == null ? CmSpidCpuWait.DEFAULT_sample_freezeMda      : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_freezeMda,      CmSpidCpuWait.DEFAULT_sample_freezeMda     ));
 		_sampleSystemSpids_chk      = new JCheckBox("Get System SPID's",        conf == null ? CmSpidCpuWait.DEFAULT_sample_systemSpids    : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_systemSpids,    CmSpidCpuWait.DEFAULT_sample_systemSpids   ));
 		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
@@ -177,6 +188,7 @@ extends TabularCntrPanel
 		_sampleProcCallStack_chk   .setToolTipText(TOOLTIP_sample_procCallStack);
 		_sampleShowplan_chk        .setToolTipText(TOOLTIP_sample_showplan);
 		_sampleDbccStacktrace_chk  .setToolTipText(TOOLTIP_sample_dbccStacktrace);
+		_sampleFreezeMda_chk       .setToolTipText(TOOLTIP_sample_freezeMda);
 		_sampleExtraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
 		_sampleExtraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
 		_sampleSystemSpids_chk     .setToolTipText(TOOLTIP_sample_systemSpids);
@@ -189,16 +201,28 @@ extends TabularCntrPanel
 		_sampleExtraWhereClause_txt.setHighlightCurrentLine(false);
 		_sampleExtraWhereClause_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
-		panel.add(_sampleMonSqltext_chk,       "");                 // row 1 cell 1
-		panel.add(_sampleProcCallStack_chk,    "wrap");             // row 1 cell 2
-		panel.add(_sampleDbccSqltext_chk,      "");                 // row 2 cell 1
-		panel.add(_sampleSystemSpids_chk,      "wrap");             // row 2 cell 2
-		panel.add(_sampleShowplan_chk,         "");                 // row 3 cell 1
-		panel.add(_sampleExtraWhereClause_txt, "grow, push, wrap"); // row 3 cell 2
-		panel.add(_sampleDbccStacktrace_chk,   "");                 // row 4 cell 1
-		panel.add(_sampleExtraWhereClause_but, "wrap");             // row 4 cell 2
+//		panel.add(_sampleMonSqltext_chk,       "");                 // row 1 cell 1
+//		panel.add(_sampleProcCallStack_chk,    "wrap");             // row 1 cell 2
+//		panel.add(_sampleDbccSqltext_chk,      "");                 // row 2 cell 1
+//		panel.add(_sampleSystemSpids_chk,      "wrap");             // row 2 cell 2
+//		panel.add(_sampleShowplan_chk,         "");                 // row 3 cell 1
+//		panel.add(_sampleExtraWhereClause_txt, "grow, push, wrap"); // row 3 cell 2
+//		panel.add(_sampleDbccStacktrace_chk,   "");                 // row 4 cell 1
+//		panel.add(_sampleExtraWhereClause_but, "wrap");             // row 4 cell 2
 
+		panel.add(_sampleMonSqltext_chk,       "");
+		panel.add(_sampleDbccSqltext_chk,      "");
+		panel.add(_sampleShowplan_chk,         "");
+		panel.add(_sampleDbccStacktrace_chk,   "wrap");
 
+		panel.add(_sampleProcCallStack_chk,    "");
+		panel.add(_sampleSystemSpids_chk,      "");
+		panel.add(_sampleFreezeMda_chk,        "wrap");
+
+		panel.add(_sampleExtraWhereClause_txt, "spany 3, grow, push");
+		panel.add(_sampleExtraWhereClause_but, "wrap");
+
+		
 		_sampleMonSqltext_chk.addActionListener(new ActionListener()
 		{
 			public void actionPerformed(ActionEvent e)
@@ -255,6 +279,22 @@ extends TabularCntrPanel
 			}
 		});
 		
+		_sampleFreezeMda_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmSpidCpuWait.PROPKEY_sample_freezeMda, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+
 		_sampleSystemSpids_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -299,7 +339,7 @@ extends TabularCntrPanel
 			if (cm.isRuntimeInitialized())
 			{
 				// disable some options if we do not have 'sybase_ts_role'
-				if ( cm.isRoleActive(AseConnectionUtils.SYBASE_TS_ROLE))
+				if ( cm.isRoleActive(AseConnectionUtils.SYBASE_TS_ROLE) )
 				{
 					_sampleDbccSqltext_chk   .setEnabled(true);
 					_sampleDbccStacktrace_chk.setEnabled(true);
@@ -309,11 +349,32 @@ extends TabularCntrPanel
 					_sampleDbccSqltext_chk   .setEnabled(false);
 					_sampleDbccStacktrace_chk.setEnabled(false);
 
+					_sampleDbccSqltext_chk   .setSelected(false);
+					_sampleDbccStacktrace_chk.setSelected(false);
+
 					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 					if (conf != null)
 					{
 						conf.setProperty(CmSpidCpuWait.PROPKEY_sample_dbccSqlText,    false);
 						conf.setProperty(CmSpidCpuWait.PROPKEY_sample_dbccStacktrace, false);
+					}
+				}
+
+				// disable some options if we do not have ASE RELEASE 12.5.4
+				if ( cm.getServerVersion() >= CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda )
+				{
+					_sampleFreezeMda_chk.setEnabled(true);
+				}
+				else
+				{
+					_sampleFreezeMda_chk.setEnabled(false);
+					_sampleFreezeMda_chk.setSelected(false);
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmSpidCpuWait.PROPKEY_sample_freezeMda, false);
+						cm.setSql(null);
 					}
 				}
 			} // end isRuntimeInitialized
