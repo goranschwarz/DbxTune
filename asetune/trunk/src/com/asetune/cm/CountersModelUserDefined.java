@@ -25,6 +25,7 @@ public class CountersModelUserDefined
 	public CountersModelUserDefined
 	(
 			String              name,             // Name of the Counter Model
+			String              groupName,        // Group this belongs to
 			String              sql,              // SQL Used to grab a sample from the counter data
 			Map<Integer,String> sqlVerStr,        // a Map<Integer, String> that holds a Version and a specific SQL statement
 			List<String>        pkList,           // A list of columns that will be used during diff calculations to lookup values in previous samples
@@ -38,7 +39,7 @@ public class CountersModelUserDefined
 			boolean             negativeDiffCountersToZero // if diff calculations is negative, reset the counter to zero.
 	)
 	{
-		super(name, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
+		super(name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
 		
 		_sqlVerStr = sqlVerStr;
 	}

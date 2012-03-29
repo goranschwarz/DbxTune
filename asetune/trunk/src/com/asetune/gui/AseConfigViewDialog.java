@@ -19,6 +19,7 @@ import net.miginfocom.swing.MigLayout;
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.Cache;
 import com.asetune.AseConfigText.ConfigType;
+import com.asetune.GetCounters;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -33,19 +34,23 @@ implements ActionListener
 	private JButton                _ok              = new JButton("OK");
 	private JButton                _cancel          = new JButton("Cancel");
 
+	private JButton                _refresh         = new JButton("Refresh");
 	private JLabel                 _freeMb          = new JLabel();
 	
-	private AseConfigPanel         _aseConfigPanel            = new AseConfigPanel();
-//	private AseCacheConfigPanel    _aseCacheConfigPanel       = new AseCacheConfigPanel();
-	private AseConfigTextPanel     _aseConfigCachePanel       = new AseConfigTextPanel(ConfigType.AseCacheConfig);
-	private AseConfigTextPanel     _aseConfigHelpDbPanel      = new AseConfigTextPanel(ConfigType.AseHelpDb);
-	private AseConfigTextPanel     _aseConfigHelpDevicePanel  = new AseConfigTextPanel(ConfigType.AseHelpDevice);
-	private AseConfigTextPanel     _aseConfigHelpServerPanel  = new AseConfigTextPanel(ConfigType.AseHelpServer);
-	private AseConfigTextPanel     _aseConfigTraceflagsPanel  = new AseConfigTextPanel(ConfigType.AseTraceflags);
-	private AseConfigTextPanel     _aseConfigSpVersionPanel   = new AseConfigTextPanel(ConfigType.AseSpVersion);
-	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel  = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
-	private AseConfigTextPanel     _aseConfigMonitorCfgPanel  = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
-	private AseConfigTextPanel     _aseConfigLicenseInfoPanel = new AseConfigTextPanel(ConfigType.AseLicenseInfo);
+	private JTabbedPane            _tabPane                          = new JTabbedPane();
+	private AseConfigPanel         _aseConfigPanel                   = new AseConfigPanel();
+//	private AseCacheConfigPanel    _aseCacheConfigPanel              = new AseCacheConfigPanel();
+	private AseConfigTextPanel     _aseConfigCachePanel              = new AseConfigTextPanel(ConfigType.AseCacheConfig);
+	private AseConfigTextPanel     _aseConfigThreadPoolPanel         = new AseConfigTextPanel(ConfigType.AseThreadPool);
+	private AseConfigTextPanel     _aseConfigHelpDbPanel             = new AseConfigTextPanel(ConfigType.AseHelpDb);
+	private AseConfigTextPanel     _aseConfigHelpDevicePanel         = new AseConfigTextPanel(ConfigType.AseHelpDevice);
+	private AseConfigTextPanel     _aseConfigDeviceFsSpaceUsagePanel = new AseConfigTextPanel(ConfigType.AseDeviceFsSpaceUsage);
+	private AseConfigTextPanel     _aseConfigHelpServerPanel         = new AseConfigTextPanel(ConfigType.AseHelpServer);
+	private AseConfigTextPanel     _aseConfigTraceflagsPanel         = new AseConfigTextPanel(ConfigType.AseTraceflags);
+	private AseConfigTextPanel     _aseConfigSpVersionPanel          = new AseConfigTextPanel(ConfigType.AseSpVersion);
+	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel         = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
+	private AseConfigTextPanel     _aseConfigMonitorCfgPanel         = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
+	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(ConfigType.AseLicenseInfo);
 	
 	private AseConfigViewDialog(Frame owner)
 	{
@@ -84,6 +89,14 @@ implements ActionListener
 		dialog.dispose();
 	}
 
+	@Override
+	public void setVisible(boolean b)
+	{
+		super.setVisible(b);
+
+		// Refresh only enabled if connected to ASE, not offline for the moment
+		_refresh.setEnabled(GetCounters.getInstance().isMonConnected());
+	}
 	
 	private void init(Window owner)
 	{
@@ -113,19 +126,21 @@ implements ActionListener
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 0, wrap 1","",""));   // insets Top Left Bottom Right
 
-		JTabbedPane tabPane = new JTabbedPane();
-		tabPane.add("ASE Config",       _aseConfigPanel);
-		tabPane.add("Cache Config",     _aseConfigCachePanel);
-		tabPane.add("sp_helpdb",        _aseConfigHelpDbPanel);
-		tabPane.add("sp_helpdevice",    _aseConfigHelpDevicePanel);
-		tabPane.add("sp_helpserver",    _aseConfigHelpServerPanel);
-		tabPane.add("traceflags",       _aseConfigTraceflagsPanel);
-		tabPane.add("sp_version",       _aseConfigSpVersionPanel);
-		tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
-		tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
-		tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
+		//JTabbedPane tabPane = new JTabbedPane();
+		_tabPane.add("ASE Config",       _aseConfigPanel);
+		_tabPane.add("Cache Config",     _aseConfigCachePanel);
+		_tabPane.add("Thread Pools",     _aseConfigThreadPoolPanel);
+		_tabPane.add("sp_helpdb",        _aseConfigHelpDbPanel);
+		_tabPane.add("sp_helpdevice",    _aseConfigHelpDevicePanel);
+		_tabPane.add("Device FS Usage",  _aseConfigDeviceFsSpaceUsagePanel);
+		_tabPane.add("sp_helpserver",    _aseConfigHelpServerPanel);
+		_tabPane.add("traceflags",       _aseConfigTraceflagsPanel);
+		_tabPane.add("sp_version",       _aseConfigSpVersionPanel);
+		_tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
+		_tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
+		_tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
 
-		panel.add(tabPane,               "grow, height 100%, width 100%");
+		panel.add(_tabPane,              "grow, height 100%, width 100%");
 		panel.add(createOkCancelPanel(), "grow, push, bottom");
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
@@ -146,7 +161,8 @@ implements ActionListener
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
-		panel.add(_freeMb, "left");
+		panel.add(_refresh, "left");
+		panel.add(_freeMb,  "left");
 
 		// ADD the OK, Cancel, Apply buttons
 		panel.add(_ok,     "push, tag ok");
@@ -160,10 +176,13 @@ implements ActionListener
 //		_freeMb.setText(AseCacheConfig.getInstance().getFreeMemoryStr());
 		_freeMb.setText(((Cache) AseConfigText.getInstance(ConfigType.AseCacheConfig)).getFreeMemoryStr());
 
+		_refresh.setToolTipText("Re-read the configuration.");
+
 		// ADD ACTIONS TO COMPONENTS
 		_ok           .addActionListener(this);
 		_cancel       .addActionListener(this);
 //		_apply        .addActionListener(this);
+		_refresh      .addActionListener(this);
 
 		return panel;
 	}
@@ -172,6 +191,12 @@ implements ActionListener
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
+
+		// --- BUTTON: REFRESH ---
+		if (_refresh.equals(source))
+		{
+			doRefresh();
+		}
 
 		// --- BUTTON: CANCEL ---
 		if (_cancel.equals(source))
@@ -187,6 +212,23 @@ implements ActionListener
 			setVisible(false);
 		}
 
+	}
+
+	private void doRefresh()
+	{
+		for (int t=0; t<_tabPane.getTabCount(); t++)
+		{
+			Component comp = _tabPane.getComponentAt(t);
+
+			if (comp instanceof AseConfigPanel)
+			{
+				((AseConfigPanel)comp).refresh();
+			}
+			else if (comp instanceof AseConfigTextPanel)
+			{
+				((AseConfigTextPanel)comp).refresh();
+			}
+		}
 	}
 
 	private void doApply()

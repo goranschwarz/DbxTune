@@ -28,12 +28,12 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
 
@@ -168,7 +168,7 @@ implements ActionListener, TableModelListener
 					//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 					// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-					CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
+					CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
 					if (cm != null)
 					{
 						if (col == TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
@@ -256,7 +256,8 @@ implements ActionListener, TableModelListener
 					row.set(TAB_POS_LONG_DESC,  cm.getDescription().replaceAll("\\<.*?\\>", "")); // STRIP HTML Tags from the description.
 					tab.add(row);
 
-					if (cm.getName().equals(SummaryPanel.CM_NAME))
+//					if (cm.getName().equals(SummaryPanel.CM_NAME))
+					if (cm.getName().equals(CounterController.getSummaryCmName()))
 					{
 						row.set(TAB_POS_ICON, SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
 					}
@@ -368,7 +369,7 @@ implements ActionListener, TableModelListener
 			putWizardData( cmName+"."+CountersModel.PROP_persistCounters_diff, storeDiff +"");
 			putWizardData( cmName+"."+CountersModel.PROP_persistCounters_rate, storeRate +"");
 
-			CountersModel cm = GetCounters.getCmByName(cmName);
+			CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 			if (cm != null)
 			{
 				if (cm instanceof CounterModelHostMonitor && storePcs)
@@ -436,7 +437,7 @@ implements ActionListener, TableModelListener
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
 			String        cmName = (String)  tm.getValueAt(r, TAB_POS_CM_NAME);
-			CountersModel cm     = GetCounters.getCmByName(cmName);
+			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
 			if (cm == null)
 				continue;
 

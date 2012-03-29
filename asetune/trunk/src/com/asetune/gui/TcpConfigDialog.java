@@ -493,7 +493,7 @@ implements ActionListener, TableModelListener
 			boolean storeDiff    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
 			boolean storeRate    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
 
-			CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
+			CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
 			
 			if (cm == null)
 			{
@@ -789,7 +789,7 @@ implements ActionListener, TableModelListener
 			String tabName = tm.getValueAt(r, TAB_POS_TAB_NAME).toString();
 
 			// Do not generate UDC User Defined Counters
-			CountersModel cm = GetCounters.getCmByDisplayName(tabName);
+			CountersModel cm = GetCounters.getInstance().getCmByDisplayName(tabName);
 			if ( cm != null && ! cm.isSystemCm() )
 				continue;
 
@@ -1097,7 +1097,7 @@ implements ActionListener, TableModelListener
 					_logger.debug("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-				CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
+				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
 				if (cm != null)
 				{
 					if (col == TAB_POS_BG)         return cm.isBackgroundDataPollingEditable();

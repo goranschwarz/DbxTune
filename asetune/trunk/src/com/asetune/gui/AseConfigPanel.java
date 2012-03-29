@@ -11,6 +11,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 
 import javax.swing.JButton;
@@ -40,6 +42,9 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.AseConfig;
+import com.asetune.AseTune;
+import com.asetune.GetCounters;
+import com.asetune.pcs.PersistReader;
 import com.asetune.utils.SwingUtils;
 
 
@@ -69,6 +74,35 @@ implements ActionListener
 		init();
 	}
 
+
+	public void refresh()
+	{
+		Timestamp  ts        = null;
+		boolean    hasGui    = AseTune.hasGUI();
+		boolean    isOffline = false;
+		Connection conn      = null;
+
+		if (GetCounters.getInstance().isMonConnected())
+		{
+			ts        = null;
+			isOffline = false;
+			conn      = GetCounters.getInstance().getMonConnection();
+		}
+		else
+		{
+			ts        = null; // NOTE: this will not work, get the value from somewhere
+			isOffline = true;
+			conn      = PersistReader.getInstance().getConnection();
+		}
+
+		AseConfig aseConfig = AseConfig.getInstance();
+//		aseConfig.refresh(conn, ts);
+		aseConfig.initialize(conn, hasGui, isOffline, ts);
+
+		// 
+		_timestamp_txt.setText(AseConfig.getInstance().getTimestamp()+"");
+//		aseConfig.fireTableDataChanged();
+	}
 
 	private void init()
 	{

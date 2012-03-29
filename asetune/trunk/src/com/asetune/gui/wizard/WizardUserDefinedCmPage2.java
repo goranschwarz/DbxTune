@@ -186,7 +186,7 @@ implements ActionListener
 		String cmName = (String) getWizardData("cmTemplate");
 		if (cmName == null)
 			return;
-		CountersModel cm = GetCounters.getCmByName(cmName);
+		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			_sqlInit_txt    .setText( cm.getSqlInit() );
@@ -305,7 +305,7 @@ implements ActionListener
 			try 
 			{
 				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
-				QueryWindow qw = new QueryWindow(conn, sql, true, QueryWindow.WindowType.JDIALOG_MODAL);
+				QueryWindow qw = new QueryWindow(conn, sql, true, QueryWindow.WindowType.JDIALOG_MODAL, null);
 //				qw.setModal(true);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.TOOLKIT_EXCLUDE);
@@ -338,7 +338,7 @@ implements ActionListener
 		{
 			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
 			CountersModel cm = new CountersModel();
-			SamplingCnt sample = new SamplingCnt("asetune-wiz-udc-test", true, null);
+			SamplingCnt sample = new SamplingCnt("asetune-wiz-udc-test", true, null, null);
 			sample.getCnt(cm, conn, _sql_txt.getText(), null);
 
 			if (sample.getColumnCount() <= 0)

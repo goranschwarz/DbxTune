@@ -33,10 +33,10 @@ import net.miginfocom.swing.MigLayout;
 import org.jdesktop.swingx.JXTable;
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
 
@@ -115,14 +115,14 @@ implements ActionListener
 	{
 		// Check if we already have a CM with that name
 		String cmName = _name_txt.getText().trim();
-		CountersModel cm = GetCounters.getCmByName(cmName);
+		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			return "There is alraedy a CM named '"+cmName+"'.";
 		}
 
 		String cmDesc = _shortDesc_txt.getText().trim();
-		cm = GetCounters.getCmByDisplayName(cmDesc);
+		cm = GetCounters.getInstance().getCmByDisplayName(cmDesc);
 		if (cm != null)
 		{
 			return "The Short Description '"+cmDesc+"' is already used.";
@@ -174,7 +174,7 @@ implements ActionListener
 			if (cmName != null)
 			{
 				putWizardData("cmTemplate", cmName);
-				CountersModel cm = GetCounters.getCmByName(cmName);
+				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 				if (cm != null)
 				{
 					_name_txt     .setText(cm.getName()        + "Copy");
@@ -406,7 +406,8 @@ implements ActionListener
 					row.add(cm.getDescription().replaceAll("\\<.*?\\>", "")); // STRIP HTML Tags from the description.
 					tab.add(row);
 					
-					if (cm.getName().equals(SummaryPanel.CM_NAME))
+//					if (cm.getName().equals(SummaryPanel.CM_NAME))
+					if (cm.getName().equals(CounterController.getSummaryCmName()))
 					{
 						row.set(1, SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
 					}

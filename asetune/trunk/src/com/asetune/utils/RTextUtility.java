@@ -9,6 +9,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Highlighter;
 
 import org.fife.ui.rtextarea.ChangeableHighlightPainter;
+import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
 public class RTextUtility
@@ -20,9 +21,9 @@ public class RTextUtility
 
 	public static int markAll(JTextArea ta, Color color, Collection<String> toMarkColl)
 	{
-		boolean matchCase = true;
-		boolean wholeWord = true;
-		boolean regex     = false;
+//		boolean matchCase = true;
+//		boolean wholeWord = true;
+//		boolean regex     = false;
 
 		if (toMarkColl == null)
 			return 0;
@@ -40,8 +41,14 @@ public class RTextUtility
 			{
 				int caretPos = ta.getCaretPosition();
 
+				SearchContext searchCtx = new SearchContext();
+				searchCtx.setSearchFor(toMark);
+				searchCtx.setMatchCase(true);
+				searchCtx.setWholeWord(true);
+				
 				ta.setCaretPosition(0);
-				boolean found = SearchEngine.find(ta, toMark, true, matchCase, wholeWord, regex);
+//				boolean found = SearchEngine.find(ta, toMark, true, matchCase, wholeWord, regex);
+				boolean found = SearchEngine.find(ta, searchCtx);
 				while (found)
 				{
 					int start = ta.getSelectionStart();
@@ -57,7 +64,8 @@ public class RTextUtility
 					}
 
 					numMarked++;
-					found = SearchEngine.find(ta, toMark, true, matchCase, wholeWord, regex);
+//					found = SearchEngine.find(ta, toMark, true, matchCase, wholeWord, regex);
+					found = SearchEngine.find(ta, searchCtx);
 				}
 				ta.setCaretPosition(caretPos);
 				ta.repaint();

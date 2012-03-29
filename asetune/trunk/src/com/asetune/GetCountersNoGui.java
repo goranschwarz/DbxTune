@@ -24,7 +24,6 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -400,7 +399,8 @@ public class GetCountersNoGui
 	{
 		List<String> activeCmList = new ArrayList<String>();
 
-		activeCmList.add(SummaryPanel.CM_NAME);
+//		activeCmList.add(SummaryPanel.CM_NAME);
+		activeCmList.add(CounterController.getSummaryCmName());
 
 		PropPropEntry ppe = null;
 		if      (cmOptions.equalsIgnoreCase("small"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;

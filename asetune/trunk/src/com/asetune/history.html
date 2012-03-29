@@ -21,17 +21,18 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>New layout of Performance Counters</b><br>
 	It started to be "to many tabs", so now the Performance Counters are grouped in "sub tabs"<br>
-	The wollowing tab groups are available
+	The following tab groups are available
 	<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=2>
 		<TR><TH>Group Name</TH> <TH>Hold Performance Counters</TH></TR>
-		<TR><TD NOWRAP>Server        </TD> <TD>'Processes', 'SPID Waits', 'Databases', 'Temp Db', 'Waits', 'Engines', 'System Load', 'Spinlock Sum', 'Sysmon Raw', 'RepAgent', 'Errorlog', 'Deadlock', 'Lock Timeout', 'sp_monitorconfig'.</TD></TR>
-		<TR><TD NOWRAP>Object/Access </TD> <TD>'Objects', 'Procedure Call Stack', 'Active Objects', 'Active Statements', 'Blocking', 'Missing Statistics', 'QP Metrics'.</TD></TR>
+		<TR><TD NOWRAP>Server        </TD> <TD>'Processes', 'SPID Waits', 'SPID Activity', 'Databases', 'Temp Db', 'Waits', 'Engines', 'Threads', 'System Load', 'Spinlock Sum', 'Sysmon Raw', 'Errorlog', 'Deadlock', 'Lock Timeout', 'sp_monitorconfig', 'Work Queues'.</TD></TR>
+		<TR><TD NOWRAP>Object/Access </TD> <TD>'Objects', 'Procedure Call Stack', 'Active Objects', 'Active Statements', 'Blocking', 'Table Compression', 'Missing Statistics', 'QP Metrics'.</TD></TR>
 		<TR><TD NOWRAP>Cache         </TD> <TD>'Caches', 'Pools', 'Cached Procedures', 'Procedure Cache Load', 'Cached Objects', 'Proc Cache Module Usage', 'Proc Cache Memory Usage', 'Statement Cache', 'Statement Cache Details'.</TD></TR>
-		<TR><TD NOWRAP>Disk          </TD> <TD>'Devices', 'IO Sum', 'IO Queue'.</TD></TR>
+		<TR><TD NOWRAP>Disk          </TD> <TD>'Devices', 'IO Sum', 'IO Queue', 'IO Controllers'.</TD></TR>
+		<TR><TD NOWRAP>RepAgent      </TD> <TD>'Rep Senders', 'Log Activity', 'Log Scanners', 'Log Scanners Time', 'RA SQL Activity', 'RA SQL Misses', 'RepAgent Sysmon'.</TD></TR>
 		<TR><TD NOWRAP>Host Monitor  </TD> <TD>'OS Disk Stat', 'OS CPU(vmstat)', 'OS CPU(mpstat)', 'OS Load Average'.</TD></TR>
 		<TR><TD NOWRAP>User Defined  </TD> <TD>Performance Counters created by <b>you</b> or any other user.</TD></TR>
 	</TABLE>
-	If you want to have the old behaviour, with no sub group, this can be changed in View-&gt;Preferences-&gt;Group Performance Counters<br>
+	If you want to have the old behavior, with no sub group, this can be changed in View-&gt;Preferences-&gt;Group Performance Counters<br>
 	</LI>
 
 	<LI>
@@ -91,18 +92,84 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>New: Column in in tab 'Engines'</b><br>
+	ThreadID was introduced in 15.7.0<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Objects'</b><br>
+	ObjectCacheDate was introduced in 15.7.0: The date and time when the descriptor for this object was installed in the metadata cache	<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Statement Cache Details'</b><br>
+	StmtType was introduced in 15.7.0: The type of the cached statement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'RepAgent'</b><br>
+	<ul>
+	   <li>Rep Senders       - Provides information on Rep Agent Sender tasks.</li>
+	   <li>Log Activity      - Provides information on Rep Agent Log Activity.</li>
+	   <li>Log Scanners      - Provides information on Rep Agent Scanner tasks.</li>
+	   <li>Log Scanners Time - Provides information on the time spent by the Rep Agent Scanner tasks.</li>
+	   <li>RA SQL Activity   - Provides statistics on statements replicated as SQL for all open objects.</li>
+	   <li>RA SQL Misses     - Provides statistics on statements that could not be replicated as SQL for all open objects.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Server'</b><br>
+	<ul>
+	   <li>SPID Activity - SPID CPU and Wait Time activity per sample interval and a bunch of other values as well<br>
+	       This implementation was mainly done by Niklas Andersson.</li>
+	   <li>Threads       - Provides information on ASE threads.</li>
+	   <li>Work Queues   - Provides information on work queues.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Object Access'</b><br>
+	<ul>
+	   <li>Table Compression - Table Compression Information</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Disk'</b><br>
+	<ul>
+	   <li>IO Controllers - Provides information on I/O controllers.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
 	<b>New: In the Wizard 'Create Offline Session', added Performance Counters Local Options</b><br>
 	A new page where you can change Local Options for Performance Counters.<br>
 	</LI>
 
 	<LI>
-	<b>New: In 'ASE Configuration' view, added a tab for Licenses</b><br>
-	A new tab which shows information from monLicenses.<br>
+	<b>New: In 'ASE Configuration' view</b><br>
+	<ul>
+	   <li>A new tab which shows information from monThreadPool.       <i>Only from 15.7 and above</i> </li>
+	   <li>A new tab which shows information from monDeviceSpaceUsage. <i>Only from 15.7 and above</i> </li>
+	   <li>A new tab which shows information from monLicenses.         <i>Only from 15.0 and above</i> </li>
+	</ul>
+	Added a 'refresh' button.<br>
 	</LI>
 
 	<LI>
 	<b>New: In 'Configure ASE for Monitoring' dialog, added 'capture compression statistics'</b><br>
 	Added the sp_configure 'capture compression statistics' to the dialog.<br>
+	</LI>
+
+	<LI>
+	<b>New: Counters for ASE 15.7.0 ESD#1</b><br>
+	In tab 'Engines' added columns: <code>HkgcPendingItemsDcomp, HkgcOverflowsDcomp</code><br>
+	In tab 'Objects' added columns: <code>HkgcRequestsDcomp, HkgcPendingDcomp, HkgcOverflowsDcomp</code><br>
 	</LI>
 
 	<LI>
@@ -166,8 +233,31 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>Bug fix: All Tabs. Remember Abs/Diff/Rate counter settings</b><br>
+	Previously it was always set to RATE, but now last decision is saved and restored after restarts<br>
+	</LI>
+
+	<LI>
 	<b>Bug fix: Various small fixes</b><br>
 	As always, various bug fixes that I have forgot about or to small to mention.<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.3.165, Component: H2 database</li>
+	  <li>To version 2.0.2, Component: RSyntaxTextArea, AutoComplete</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Finally major code re-factoring has been done</b><br>
+	<ul>
+	  <li>All Performance Counters are now in individual files.</li>
+	  <li>Basic foundation for ability to add modules like RS, IQ, etc.<br>
+	      But it's a long way until this will be finalized.</li>
+	  <li>and more...</li>
+	</ul>
 	</LI>
 
 </UL>
@@ -182,7 +272,7 @@ li   {margin-bottom: 6px}
 	for more information how this works.<br>
 	This is just a GUI on top of ASE 'set tracefile ...' functionality.<br>
 	The add on for the GUI is that it can work with remote files, so you can start the trace on your
-	local client (probably a PC), tehn if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
+	local client (probably a PC), then if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
 	will be opened to do tail of the trace file. This makes it <b>much</b> easier to view the trace file.<br>
 	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
 	This is a really usefull tool if you want to trace what a specific SPID is doing in the server.<br>

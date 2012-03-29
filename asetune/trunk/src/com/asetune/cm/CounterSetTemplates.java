@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PropPropEntry;
 
@@ -38,7 +38,13 @@ public class CounterSetTemplates
 		_nameShortToLongMap.put(GetCounters.CM_NAME__IO_QUEUE                , GetCounters.CM_DESC__IO_QUEUE                );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__SPINLOCK_SUM            , GetCounters.CM_DESC__SPINLOCK_SUM            );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__SYSMON                  , GetCounters.CM_DESC__SYSMON                  );
-		_nameShortToLongMap.put(GetCounters.CM_NAME__REP_AGENT               , GetCounters.CM_DESC__REP_AGENT               );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SENDERS              , GetCounters.CM_DESC__RA_SENDERS              );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_LOGACTIVITY          , GetCounters.CM_DESC__RA_LOGACTIVITY          );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SCANNERS             , GetCounters.CM_DESC__RA_SCANNERS             );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SCANNERS_TIME        , GetCounters.CM_DESC__RA_SCANNERS_TIME        );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SQL_ACTIVITY         , GetCounters.CM_DESC__RA_SQL_ACTIVITY         );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SQL_MISSES           , GetCounters.CM_DESC__RA_SQL_MISSES           );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__RA_SYSMON               , GetCounters.CM_DESC__RA_SYSMON               );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__CACHED_PROC             , GetCounters.CM_DESC__CACHED_PROC             );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CACHE_LOAD         , GetCounters.CM_DESC__PROC_CACHE_LOAD         );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__PROC_CALL_STACK         , GetCounters.CM_DESC__PROC_CALL_STACK         );
@@ -53,6 +59,7 @@ public class CounterSetTemplates
 		_nameShortToLongMap.put(GetCounters.CM_NAME__ACTIVE_OBJECTS          , GetCounters.CM_DESC__ACTIVE_OBJECTS          );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__ACTIVE_STATEMENTS       , GetCounters.CM_DESC__ACTIVE_STATEMENTS       );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__BLOCKING                , GetCounters.CM_DESC__BLOCKING                );
+		_nameShortToLongMap.put(GetCounters.CM_NAME__TABLE_COMPRESSION       , GetCounters.CM_DESC__TABLE_COMPRESSION       );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__MISSING_STATISTICS      , GetCounters.CM_DESC__MISSING_STATISTICS      );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__QP_METRICS              , GetCounters.CM_DESC__QP_METRICS              );
 		_nameShortToLongMap.put(GetCounters.CM_NAME__SP_MONITOR_CONFIG       , GetCounters.CM_DESC__SP_MONITOR_CONFIG       );
@@ -78,7 +85,13 @@ public class CounterSetTemplates
 		_nameLongToShortMap.put(GetCounters.CM_DESC__IO_QUEUE                , GetCounters.CM_NAME__IO_QUEUE                );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SPINLOCK_SUM            , GetCounters.CM_NAME__SPINLOCK_SUM            );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SYSMON                  , GetCounters.CM_NAME__SYSMON                  );
-		_nameLongToShortMap.put(GetCounters.CM_DESC__REP_AGENT               , GetCounters.CM_NAME__REP_AGENT               );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SENDERS              , GetCounters.CM_NAME__RA_SENDERS              );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_LOGACTIVITY          , GetCounters.CM_NAME__RA_LOGACTIVITY          );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SCANNERS             , GetCounters.CM_NAME__RA_SCANNERS             );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SCANNERS_TIME        , GetCounters.CM_NAME__RA_SCANNERS_TIME        );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SQL_ACTIVITY         , GetCounters.CM_NAME__RA_SQL_ACTIVITY         );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SQL_MISSES           , GetCounters.CM_NAME__RA_SQL_MISSES           );
+		_nameShortToLongMap.put(GetCounters.CM_DESC__RA_SYSMON               , GetCounters.CM_NAME__RA_SYSMON               );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__CACHED_PROC             , GetCounters.CM_NAME__CACHED_PROC             );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CACHE_LOAD         , GetCounters.CM_NAME__PROC_CACHE_LOAD         );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__PROC_CALL_STACK         , GetCounters.CM_NAME__PROC_CALL_STACK         );
@@ -93,6 +106,7 @@ public class CounterSetTemplates
 		_nameLongToShortMap.put(GetCounters.CM_DESC__ACTIVE_OBJECTS          , GetCounters.CM_NAME__ACTIVE_OBJECTS          );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__ACTIVE_STATEMENTS       , GetCounters.CM_NAME__ACTIVE_STATEMENTS       );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__BLOCKING                , GetCounters.CM_NAME__BLOCKING                );
+		_nameLongToShortMap.put(GetCounters.CM_DESC__TABLE_COMPRESSION       , GetCounters.CM_NAME__TABLE_COMPRESSION       );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__MISSING_STATISTICS      , GetCounters.CM_NAME__MISSING_STATISTICS      );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__QP_METRICS              , GetCounters.CM_NAME__QP_METRICS              );
 		_nameLongToShortMap.put(GetCounters.CM_DESC__SP_MONITOR_CONFIG       , GetCounters.CM_NAME__SP_MONITOR_CONFIG       );
@@ -196,7 +210,8 @@ public class CounterSetTemplates
 	{
 		List<String> activeCmList = new ArrayList<String>();
 
-		activeCmList.add(SummaryPanel.CM_NAME);
+//		activeCmList.add(SummaryPanel.CM_NAME);
+		activeCmList.add(CounterController.getSummaryCmName());
 
 		PropPropEntry ppe = null;
 		if      (templateName.equalsIgnoreCase("small"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
@@ -256,7 +271,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -271,6 +292,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -295,7 +317,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -310,6 +338,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -334,7 +363,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -349,6 +384,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -373,7 +409,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -388,6 +430,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=true,  pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -418,7 +461,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -433,6 +482,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -457,7 +507,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -472,6 +528,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -496,7 +553,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -511,6 +574,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -535,7 +599,13 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__IO_QUEUE                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SPINLOCK_SUM            +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SYSMON                  +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
-		GetCounters.CM_DESC__REP_AGENT               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SENDERS              +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_LOGACTIVITY          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SCANNERS_TIME        +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_ACTIVITY         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SQL_MISSES           +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__RA_SYSMON               +"={queryTimeout=30, postpone=300, paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__CACHED_PROC             +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CACHE_LOAD         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__PROC_CALL_STACK         +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
@@ -550,6 +620,7 @@ public class CounterSetTemplates
 		GetCounters.CM_DESC__ACTIVE_OBJECTS          +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__ACTIVE_STATEMENTS       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=true,  storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__BLOCKING                +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
+		GetCounters.CM_DESC__TABLE_COMPRESSION       +"={queryTimeout=10, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__MISSING_STATISTICS      +"={queryTimeout=30, postpone=0,   paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__QP_METRICS              +"={queryTimeout=30, postpone=60,  paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +
 		GetCounters.CM_DESC__SP_MONITOR_CONFIG       +"={queryTimeout=10, postpone=3600,paused=false, bg=false, resetNC20=false, storePcs=false, pcsAbs=true, pcsDiff=true, pcsRate=true}; " +

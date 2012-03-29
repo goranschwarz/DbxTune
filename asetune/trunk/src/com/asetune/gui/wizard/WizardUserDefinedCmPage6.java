@@ -460,7 +460,7 @@ implements ActionListener, TableModelListener
 		String cmName = (String) getWizardData("cmTemplate");
 		if (cmName == null)
 			return;
-		CountersModel cm = GetCounters.getCmByName(cmName);
+		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			boolean hasTrendGraph = cm.hasTrendGraph();

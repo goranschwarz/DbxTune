@@ -20,7 +20,6 @@ import org.apache.log4j.Logger;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
@@ -173,7 +172,7 @@ public class GetCountersGui
 
 	@Override
 	/** called when GetCounters.closeMonConnection() */
-	protected void cleanupMonConnection()
+	public void cleanupMonConnection()
 	{
 		_canDoReconnect = false;
 	}
@@ -484,7 +483,8 @@ public class GetCountersGui
 
 						_logger.info(msgLong);
 						MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, msgLong);
-						SummaryPanel.getInstance().setWatermarkText(msgShort);
+//						SummaryPanel.getInstance().setWatermarkText(msgShort);
+						CounterController.getSummaryPanel().setWatermarkText(msgShort);
 
 						for (CountersModel cm : _CMList)
 						{

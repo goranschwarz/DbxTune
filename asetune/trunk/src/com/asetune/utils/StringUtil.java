@@ -486,28 +486,38 @@ public class StringUtil
 	/**
 	 * Left justify a string and fill extra spaces to the right
 	 */
-	public static String left(String str, int num)
+	public static String left(String str, int expandToSize)
 	{
-		return left(str, num, true);
+		return left(str, expandToSize, true);
 	}
 
 	/**
 	 * Left justify a string and fill extra spaces to the right
 	 */
-	public static String left(String str, int num, boolean allowGrow)
+	public static String left(String str, int expandToSize, boolean allowGrow)
 	{
+		// max size 128K for a sting to justify, it's big, but it's a limit...
+		int maxSize = 128 * 1024;
+
 		if ( allowGrow )
 		{
-			if ( str.length() > num )
-				num = str.length();
+			if ( str.length() > expandToSize )
+				expandToSize = str.length();
 		}
 
-		int maxPadSize = num - str.length();
+		if (expandToSize > maxSize)
+		{
+			_logger.warn("StringUtils.left(): expandToSize can't be above "+maxSize+", using this value. expandToSize="+expandToSize+", inStr.length()="+str.length());
+			expandToSize = maxSize;
+		}
+		int maxPadSize = expandToSize - str.length();
+		
 		String space = "                                                                                                                                                                                                                                                               ";
 		while (space.length() < maxPadSize)
+		{
 			space += "                                                                                                                                                                                                                                                               ";
-
-		return (str + space).substring(0, num);
+		}
+		return (str + space).substring(0, expandToSize);
 	}
 
 	/**

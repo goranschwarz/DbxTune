@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 import com.asetune.tools.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 
 
 /**
@@ -79,9 +80,9 @@ extends XmenuActionBase
 			}
 		}
 		
-		
+		sql = modifySql(sql);
 
-		QueryWindow qf = new QueryWindow(conn, sql, isCloseConnOnExit(), QueryWindow.WindowType.JFRAME);
+		QueryWindow qf = new QueryWindow(conn, sql, isCloseConnOnExit(), QueryWindow.WindowType.JFRAME, getConfiguration());
 		qf.openTheWindow();
 
 //				"print '11111111'\n" +
@@ -94,5 +95,25 @@ extends XmenuActionBase
 //				"");
 
 		
+	}
+
+	/** 
+	 * Hook to modify SQL before execution, implemented by subclasses... 
+	 * 
+	 * @param the SQL that is about to be executed
+	 * @return the new and modified SQL statement
+	 */
+	protected String modifySql(String sql)
+	{
+		return sql;
+	}
+	
+	/**
+	 * Get Properties/Configuration passed to QueryWindow Object
+	 * @return
+	 */
+	protected Configuration getConfiguration()
+	{
+		return null;
 	}
 }

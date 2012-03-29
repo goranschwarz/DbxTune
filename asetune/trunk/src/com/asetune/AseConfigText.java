@@ -30,7 +30,7 @@ import com.asetune.utils.SwingUtils;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseHelpDb, AseHelpDevice, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo};
+	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -75,12 +75,20 @@ public abstract class AseConfigText
 			aseConfigText = new AseConfigText.Cache();
 			break;
 
+		case AseThreadPool:
+			aseConfigText = new AseConfigText.ThreadPool();
+			break;
+
 		case AseHelpDb:
 			aseConfigText = new AseConfigText.HelpDb();
 			break;
 
 		case AseHelpDevice:
 			aseConfigText = new AseConfigText.HelpDevice();
+			break;
+
+		case AseDeviceFsSpaceUsage:
+			aseConfigText = new AseConfigText.DeviceFsSpaceUsage();
 			break;
 
 		case AseHelpServer:
@@ -468,6 +476,13 @@ public abstract class AseConfigText
 		}
 	}
 
+	public static class ThreadPool extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monThreadPool"; }
+		@Override public    int        needVersion()                       { return 15700; }
+	}
+
 	public static class HelpDb extends AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDb; }
@@ -478,6 +493,13 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdevice"; }
+	}
+
+	public static class DeviceFsSpaceUsage extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
+		@Override public    int        needVersion()                       { return 15700; }
 	}
 
 	public static class HelpServer extends AseConfigText
@@ -628,7 +650,8 @@ public abstract class AseConfigText
 	public static class LicenceInfo extends AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master..monLicense"; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monLicense"; }
+		@Override public    int        needVersion()                       { return 15000; }
 	}
 	
 	
@@ -664,6 +687,10 @@ public abstract class AseConfigText
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseCacheConfig).getConfig()=\n"+c.getConfig());
 
+			c = AseConfigText.getInstance(ConfigType.AseThreadPool);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseThreadPool).getConfig()=\n"+c.getConfig());
+
 			c = AseConfigText.getInstance(ConfigType.AseHelpDb);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseHelpdb).getConfig()=\n"+c.getConfig());
@@ -671,6 +698,10 @@ public abstract class AseConfigText
 			c = AseConfigText.getInstance(ConfigType.AseHelpDevice);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseHelpdevice).getConfig()=\n"+c.getConfig());
+
+			c = AseConfigText.getInstance(ConfigType.AseDeviceFsSpaceUsage);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseDeviceFsSpaceUsage).getConfig()=\n"+c.getConfig());
 
 			c = AseConfigText.getInstance(ConfigType.AseHelpServer);
 			c.initialize(conn, true, false, null);

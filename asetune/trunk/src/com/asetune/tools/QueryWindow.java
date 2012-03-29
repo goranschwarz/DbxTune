@@ -145,6 +145,9 @@ public class QueryWindow
 		JDIALOG_MODAL 
 	}
 
+	public final static boolean DEFAULT_asPlainText  = false;
+	public final static String  PROPERTY_asPlainText = "QueryWindow.asPlainText";
+	
 	/** Completion Provider for RSyntaxTextArea */
 	private JdbcCompleationProvider _jdbcTableCompleationProvider = null;
 
@@ -364,7 +367,7 @@ public class QueryWindow
 
 
 		// Create a QueryWindow component that uses the factory object.
-		QueryWindow qw = new QueryWindow(conn, sqlQuery, true, QueryWindow.WindowType.CMDLINE_JFRAME);
+		QueryWindow qw = new QueryWindow(conn, sqlQuery, true, QueryWindow.WindowType.CMDLINE_JFRAME, null);
 		qw.openTheWindow();
 	}
 
@@ -374,17 +377,17 @@ public class QueryWindow
 	 **/
 	public QueryWindow(Connection conn, WindowType winType)
 	{
-		this(conn, null, true, winType);
+		this(conn, null, true, winType, null);
 	}
 	public QueryWindow(Connection conn, boolean closeConnOnExit, WindowType winType)
 	{
-		this(conn, null, closeConnOnExit, winType);
+		this(conn, null, closeConnOnExit, winType, null);
 	}
 	public QueryWindow(Connection conn, String sql, WindowType winType)
 	{
-		this(conn, sql, true, winType);
+		this(conn, sql, true, winType, null);
 	}
-	public QueryWindow(Connection conn, String sql, boolean closeConnOnExit, WindowType winType)
+	public QueryWindow(Connection conn, String sql, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		if (winType == WindowType.CMDLINE_JFRAME)
 		{
@@ -526,6 +529,11 @@ public class QueryWindow
 									"<br>" +
 									"<br>" +
 								"</html>");
+
+		if (conf != null)
+		{
+			_asPlainText.setSelected( conf.getBooleanProperty(PROPERTY_asPlainText, DEFAULT_asPlainText));
+		}
 
 		_query.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 		_queryScroll.setLineNumbersEnabled(true);
@@ -1846,57 +1854,101 @@ public class QueryWindow
 			}
 			else
 			{
+//-----------------------
+//				_logger.trace("NO RS: "+_resultCompList.size());
+//				int msgCount = 0;
+//
+//				StringBuilder sb = new StringBuilder();
+//				sb.append("<html>");
+//				sb.append("<head>");
+//				sb.append("<style type=\"text/css\">");
+//				sb.append("<!-- body {font-family: Courier New; margin: 0px} -->");
+//				sb.append("<!-- pre  {font-family: Courier New; margin: 0px} -->");
+//				sb.append("</style>");
+//				sb.append("</head>");
+//				sb.append("<body>");
+//				sb.append("<pre>");
+//				// There might be "just" print statements... 
+//				for (JComponent jcomp: _resultCompList)
+//				{
+//					if (jcomp instanceof JPlainResultSet)
+//					{
+//						JPlainResultSet prs = (JPlainResultSet) jcomp;
+//						sb.append(prs.getText());
+//						sb.append("\n");
+//						sb.append("(").append(prs.getRowCount()).append(" row affected)\n");
+//						sb.append("\n");
+//						
+//					}
+//					else if (jcomp instanceof JAseMessage)
+//					{
+//						JAseMessage msg = (JAseMessage) jcomp;
+////						msg.setFont( _aseMsgFont );
+////						_logger.trace("NO-RS: JAseMessage: "+msg.getText());
+////						_resPanel.add(msg, "");
+////						sb.append("<P>").append(msg.getText()).append("</P>\n");
+////						sb.append(msg.getText()).append("<BR>\n");
+//						sb.append(msg.getText()).append("\n");
+//
+//						msgCount++;
+//					}
+//				}
+//				sb.append("</pre>");
+//				sb.append("</body>");
+//				sb.append("</html>");
+//
+////				JTextPane text = new JTextPane();
+//				JEditorPane textPane = new JEditorPane("text/html", sb.toString());
+//				textPane.setEditable(false);
+//				textPane.setOpaque(false);
+////				if (_aseMsgFont == null)
+////					_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+////				textPane.setFont(_aseMsgFont);
+//				
+//				_resPanel.add(textPane, "");
+//
+//				_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
+//-----------------------
 				_logger.trace("NO RS: "+_resultCompList.size());
 				int msgCount = 0;
 
-				StringBuilder sb = new StringBuilder();
-				sb.append("<html>");
-				sb.append("<head>");
-				sb.append("<style type=\"text/css\">");
-				sb.append("<!-- body {font-family: Courier New; margin: 0px} -->");
-				sb.append("<!-- pre  {font-family: Courier New; margin: 0px} -->");
-				sb.append("</style>");
-				sb.append("</head>");
-				sb.append("<body>");
-				sb.append("<pre>");
-				// There might be "just" print statements... 
+				RSyntaxTextArea out = new RSyntaxTextArea();
+
+				// Copy results to the output. 
 				for (JComponent jcomp: _resultCompList)
 				{
 					if (jcomp instanceof JPlainResultSet)
 					{
 						JPlainResultSet prs = (JPlainResultSet) jcomp;
-						sb.append(prs.getText());
-						sb.append("\n");
-						sb.append("(").append(prs.getRowCount()).append(" row affected)\n");
-						sb.append("\n");
+						out.append(prs.getText());
+						out.append("\n");
+						out.append("(" + prs.getRowCount() + " row affected)\n");
+						out.append("\n");
 						
 					}
 					else if (jcomp instanceof JAseMessage)
 					{
 						JAseMessage msg = (JAseMessage) jcomp;
-//						msg.setFont( _aseMsgFont );
-//						_logger.trace("NO-RS: JAseMessage: "+msg.getText());
-//						_resPanel.add(msg, "");
-//						sb.append("<P>").append(msg.getText()).append("</P>\n");
-//						sb.append(msg.getText()).append("<BR>\n");
-						sb.append(msg.getText()).append("\n");
+						out.append(msg.getText());
+						out.append("\n");
 
 						msgCount++;
 					}
 				}
-				sb.append("</pre>");
-				sb.append("</body>");
-				sb.append("</html>");
 
-//				JTextPane text = new JTextPane();
-				JEditorPane textPane = new JEditorPane("text/html", sb.toString());
-				textPane.setEditable(false);
-				textPane.setOpaque(false);
-//				if (_aseMsgFont == null)
-//					_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
-//				textPane.setFont(_aseMsgFont);
-				
-				_resPanel.add(textPane, "");
+				// If we have a XML text do some special stuff
+				boolean hasXml = out.getText().indexOf("<?xml ") >= 0;
+				if (hasXml)
+				{
+					out.setCodeFoldingEnabled(true);
+					out.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+					RTextScrollPane scroll = new RTextScrollPane(out);
+					_resPanel.add(scroll, "");
+				}
+				else
+				{
+					_resPanel.add(out, "");
+				}
 
 				_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
 			}
@@ -2514,7 +2566,7 @@ public class QueryWindow
 				"print '|17-33333333'\n" +
 				"select * from sysobjects \n" +
 				"select * from sysprocesses ",
-				true, QueryWindow.WindowType.JFRAME);
+				true, QueryWindow.WindowType.JFRAME, null);
 		qw.openTheWindow();
 	}	
 	/**

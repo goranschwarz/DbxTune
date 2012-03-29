@@ -819,7 +819,7 @@ public class CheckForUpdates
 			srvSortOrderName = mtd.aseSortName;
 
 			// Get role list from the Summary CM
-			CountersModel summaryCm = GetCounters.getCmByName(GetCounters.CM_NAME__SUMMARY);
+			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
 			if (summaryCm != null && summaryCm.isRuntimeInitialized())
 				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
 

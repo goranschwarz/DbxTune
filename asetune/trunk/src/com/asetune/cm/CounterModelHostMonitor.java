@@ -57,9 +57,10 @@ extends CountersModel
 	//----------------------------------------------------------------------------
 	// BEGIN: Constructors
 	//----------------------------------------------------------------------------
-	public CounterModelHostMonitor(String name,	int type, String udModuleName, boolean systemCm)
+	public CounterModelHostMonitor(String name,	String groupName, int type, String udModuleName, boolean systemCm)
 	{
 		super.setName(name);
+		super.setGroupName(groupName);
 		super.setSystemCm(systemCm);
 
 		_udModuleName = udModuleName;
@@ -68,7 +69,7 @@ extends CountersModel
 		// Check if name is OK
 		checkInConstructor();
 
-		setDataSource(DATA_ABS);
+		setDataSource(DATA_ABS, false);
 
 		// Load saved properties
 		super.loadProps();

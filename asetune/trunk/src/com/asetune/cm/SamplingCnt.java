@@ -17,6 +17,7 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,6 +42,7 @@ extends CounterTableModel
 	private   boolean            _negativeDiffCountersToZero = true;
 	protected String             _name           = null; // Used for debuging
 	private   String[]           _diffColNames   = null; // if we need to do PK merging...
+	private   SamplingCnt        _prevSample     = null; // used to calculate sample interval etc
 	private   List<String>       _colNames       = null;
 	private   List<Integer>      _colSqlType     = null;
 	private   List<String>       _colSqlTypeName = null;
@@ -59,14 +61,23 @@ extends CounterTableModel
 	 * NOTE: column name that reflects the merge count MUST be named 'dupMergeCount'/'dupRowCount'. */
 	private HashMap<String,Integer> _pkDupCountMap = null; 
 	
-	public  Timestamp     samplingTime;
-	public  long	      interval      = 0;
+	private Timestamp     _samplingTime  = null;
+	private long          _interval      = 0;
 
 	// If messages inside a ResultSet should be treated and appended to a column
 	// this is used for the StatementCache query: 
 	//     select show_plan(-1,SSQLID,-1,-1) as Showplan, * from monCachedStatement
 	// The column name should be: msgAsColValue
-	int _pos_msgAsColValue = -1;
+	private static final String SPECIAL_COLUMN_msgAsColValue = "msgAsColValue";
+	private int _pos_msgAsColValue = -1;
+
+	// If the column name is 'SampleTimeInMs', simply fill in the time in ms between samples.
+	// NOTE: not yet implemented.
+	private static final String SPECIAL_COLUMN_sampleTimeInMs = "sampleTimeInMs";
+	private int _pos_sampleTimeInMs = -1;
+
+	private static final String SPECIAL_COLUMN_dupMergeCount = "dupMergeCount";
+	private static final String SPECIAL_COLUMN_dupRowCount   = "dupRowCount";
 
 
 //	static
@@ -74,11 +85,12 @@ extends CounterTableModel
 //		_logger.setLevel(Level.TRACE);
 //	}
 
-	public SamplingCnt(String name, boolean negativeDiffCountersToZero, String[] diffColNames)
+	public SamplingCnt(String name, boolean negativeDiffCountersToZero, String[] diffColNames, SamplingCnt prevSample)
 	{
-		_name = name;
+		_name                       = name;
 		_negativeDiffCountersToZero = negativeDiffCountersToZero;
-		_diffColNames = diffColNames;
+		_diffColNames               = diffColNames;
+		_prevSample                 = prevSample;
 	}
 	/**
 	 * Used to clone the object
@@ -106,10 +118,11 @@ extends CounterTableModel
 		_colIsPk                    = sc._colIsPk;
 		_pkPosArray                 = sc._pkPosArray;
 		_rowidToKey                 = sc._rowidToKey;
-		samplingTime                = sc.samplingTime;
-		interval                    = sc.interval;
+		_samplingTime               = sc._samplingTime;
+		_interval                   = sc._interval;
 		_negativeDiffCountersToZero = sc._negativeDiffCountersToZero;
 		_diffColNames               = sc._diffColNames;
+		_prevSample                 = sc._prevSample;     // should we really copy this one...
 
 		if (cloneRows)
 		{
@@ -273,7 +286,22 @@ extends CounterTableModel
 	{
 		return _name;
 	}
-	
+
+	public Timestamp getSampleTime()
+	{
+		return _samplingTime;
+	}
+
+	public long getSampleTimeAsLong()
+	{
+		return _samplingTime.getTime();
+	}
+
+	public int getSampleInterval()
+	{
+		return (int) _interval;
+	}
+
 	public void setColumnNames(List<String> cols)
 	{
 		_colNames = new ArrayList<String>(cols);
@@ -669,7 +697,13 @@ extends CounterTableModel
 						if (rsNum == 0 && batchCounter == 0)
 						{
 							while(rs.next())
-								samplingTime = rs.getTimestamp(1);
+								_samplingTime = rs.getTimestamp(1);
+							
+							_interval = 0;
+							if (_prevSample != null)
+							{
+								_interval = _samplingTime.getTime() - _prevSample._samplingTime.getTime();
+							}
 						}
 						else
 						{
@@ -758,20 +792,22 @@ extends CounterTableModel
 
 			for (int i=1; i<=colCount; i++)
 			{
-				//String colname = rsmd.getColumnName(i); 
-				String colname = rsmd.getColumnLabel(i); 
+				String colName      = rsmd.getColumnLabel(i); 
+				int    colType      = rsmd.getColumnType(i);
+				String colTypeName  = rsmd.getColumnTypeName(i);
+				String colClassName = rsmd.getColumnClassName(i);
 
-				_colNames      .add(colname);
-				_colSqlType    .add(new Integer(rsmd.getColumnType(i)));
-				_colSqlTypeName.add(rsmd.getColumnTypeName(i));
-				_colClassName  .add(rsmd.getColumnClassName(i));
+				_colNames      .add(colName);
+				_colSqlType    .add(new Integer(colType));
+				_colSqlTypeName.add(colTypeName);
+				_colClassName  .add(colClassName);
 
 				// pkList could contain the ColumnName
 				// or a column position
 				_colIsPk[i-1] = false;
 				if ( pkList != null && pkList.size() > 0)
 				{
-					if ( pkList.contains(colname) ) 
+					if ( pkList.contains(colName) ) 
 						_colIsPk[i-1] = true;
 					if ( pkList.contains( Integer.toString(i) ) )
 						_colIsPk[i-1] = true;
@@ -782,13 +818,25 @@ extends CounterTableModel
 
 				// Special... if colname is "msgAsColValue", 
 				// all TDS Msg on the ResultSet should be added to this column
-				if ( "msgAsColValue".equals(colname) )
+				if ( SPECIAL_COLUMN_msgAsColValue.equals(colName) )
 					_pos_msgAsColValue = i;
 				// Note on the above:
 				// It would be nice to do, something like: 
 				// - strip away the msgAsColValue::theRealColName part and replace it with a "real" column name
 				// - but since the ResultSetMetaData is not writable, it can't be done
 				// - and the PersistWriterXXX uses the RSMD to get the column name... so the persist table would be faulty
+
+				// Special... if colname is "sampleTimeInMs", 
+				// Simply substitute/replace with the "last sample sample time" in this column
+				if ( SPECIAL_COLUMN_sampleTimeInMs.equals(colName) )
+				{
+					if (colType == Types.INTEGER)
+						_pos_sampleTimeInMs = i;
+					else
+					{
+						_logger.warn(getName()+": found column '"+SPECIAL_COLUMN_sampleTimeInMs+"', but it's not a INTEGER, so it will be treated as a normal column.");
+					}
+				}
 			}
 
 			if (pkList != null && (pkList.size() != tmpPkPos.size()) )
@@ -868,6 +916,10 @@ extends CounterTableModel
 				if (_pos_msgAsColValue == i)
 					val = msgAsColValue;
 
+				// Set the "sampleTimeInMs" in the resultset.
+				if (_pos_sampleTimeInMs == i)
+					val = new Integer( (int) _interval );
+
 				row.add(val);
 
 				// If this column is part of the PrimaryKey
@@ -901,8 +953,8 @@ extends CounterTableModel
 				{
 					List<Object> curRow = getRow(keyStr);
 
-					int dupMergeCountPos = findColumn("dupMergeCount");
-					int dupRowCountPos   = findColumn("dupRowCount");
+					int dupMergeCountPos = findColumn(SPECIAL_COLUMN_dupMergeCount);
+					int dupRowCountPos   = findColumn(SPECIAL_COLUMN_dupRowCount);
 
 					// Decide what action to take
 					int pkDuplicateAction = 0;
@@ -1264,7 +1316,7 @@ extends CounterTableModel
 					double val = 0;
 
 					// What to do if we CANT DO DIVISION
-					if (diff.interval == 0)
+					if (diff._interval == 0)
 						newObject = "N/A";
 
 					// Calculate rate
@@ -1277,7 +1329,7 @@ extends CounterTableModel
 							val = Double.parseDouble( originObject.toString() );
 
 						// interval is in MilliSec, so val has to be multiplied by 1000
-						val = (val * 1000) / diff.interval;
+						val = (val * 1000) / diff._interval;
 						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
 						// Set the new object
@@ -1320,17 +1372,17 @@ extends CounterTableModel
 		// Initialize result structure
 		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
 
-		long newTsMilli      = newSample.samplingTime.getTime();
-		long oldTsMilli      = oldSample.samplingTime.getTime();
-		int newTsNano        = newSample.samplingTime.getNanos();
-		int oldTsNano        = oldSample.samplingTime.getNanos();
+		long newTsMilli      = newSample._samplingTime.getTime();
+		long oldTsMilli      = oldSample._samplingTime.getTime();
+		int newTsNano        = newSample._samplingTime.getNanos();
+		int oldTsNano        = oldSample._samplingTime.getNanos();
 
 		// Check if TsMilli has really ms precision (not the case before JDK 1.4)
 		if ((newTsMilli - (newTsMilli / 1000) * 1000) == newTsNano / 1000000)
 			// JDK > 1.3.1
-			diffCnt.interval = newTsMilli - oldTsMilli;
+			diffCnt._interval = newTsMilli - oldTsMilli;
 		else
-			diffCnt.interval = newTsMilli - oldTsMilli + (newTsNano - oldTsNano) / 1000000;
+			diffCnt._interval = newTsMilli - oldTsMilli + (newTsNano - oldTsNano) / 1000000;
 
 		List<Object> newRow;
 		List<Object> oldRow;

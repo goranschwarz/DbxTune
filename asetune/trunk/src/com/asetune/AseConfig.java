@@ -404,6 +404,9 @@ extends AbstractTableModel
 			_aseConfigSectionList = null;
 			return;
 		}
+
+		// notify change
+		fireTableDataChanged();
 	}
 
 	/**
