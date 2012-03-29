@@ -617,11 +617,11 @@ public class ConnectionDialog
 //		panel.add(_aseOptionUsedForNoGui_chk,    "");
 		panel.add(_aseHostMonitor_chk,         "");
 
-		if (_showPcsTab)
-			panel.add(_aseOptionStore_chk,       "");
-
 		if (_showHostmonTab)
 			panel.add(_aseHostMonitor_chk,     "");
+
+		if (_showPcsTab)
+			panel.add(_aseOptionStore_chk,       "");
 
 		_aseOptionConnOnStart_chk.addActionListener(this);
 		_aseOptionStore_chk      .addActionListener(this);
@@ -1300,7 +1300,7 @@ public class ConnectionDialog
 				//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-				CountersModel cm  = GetCounters.getCmByDisplayName(tabName);
+				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
 				if (cm != null)
 				{
 					if (col == PCS_TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
@@ -2839,7 +2839,7 @@ public class ConnectionDialog
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
 			String        cmName = (String)  tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
-			CountersModel cm     = GetCounters.getCmByName(cmName);
+			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
 			if (cm == null)
 				continue;
 

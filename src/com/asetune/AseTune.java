@@ -446,7 +446,7 @@ public class AseTune
 		if (_gui)
 		{
 			// How many steps do we have, NOTE: needs to be updated if you add steps
-			SplashWindow.init(false, 33, 1000);
+			SplashWindow.init(false, GetCounters.NUMBER_OF_PERFORMANCE_COUNTERS, 1000);
 			SplashWindow.drawTopRight("Version: " + Version.getVersionStr());
 		}
 		else
@@ -474,8 +474,6 @@ public class AseTune
 		//--------------------------------------------------------------------
 		System.setProperty("h2.lobInDatabase", "true");  // H2 database version 1.2.134, can store BLOBS inside the database using this system property
 
-		//System.setProperty("h2.databaseToUpper", false); // this wont work after release X, needs to be in URL, damit
-		//System.setProperty("h2.maxCompactTime", 1000);   // this wont work after release X, needs to be in URL, damit
 		//--------------------------------------------------------------------
 		// Other setting below here
 		//--------------------------------------------------------------------
@@ -623,6 +621,7 @@ public class AseTune
 
 			// Create and Start the "collector" thread
 			getCnt = new GetCountersNoGui();
+			CounterController.setInstance(getCnt);
 			getCnt.init();
 			getCnt.start();
 
@@ -684,6 +683,7 @@ public class AseTune
 					try
 					{
 						getCnt = new GetCountersGui();
+						CounterController.setInstance(getCnt);
 						getCnt.init();
 						getCnt.start();
 					}
@@ -729,6 +729,40 @@ public class AseTune
 //	public static CommandLine getCmdLineParams()
 //	{
 //		return _cmdLine;
+//	}
+
+//	//-------------------------------------------------------------
+//	// Counter Controller
+//	//-------------------------------------------------------------
+//	private static ICounterController _counterController = null;
+//	public static ICounterController getCounterController()
+//	{
+//		return _counterController;
+//	}
+//	public static boolean hasCounterController()
+//	{
+//		return _counterController != null;
+//	}
+//	public static void setCounterController(ICounterController counterController)
+//	{
+//		_counterController = counterController;
+//	}
+
+//	//-------------------------------------------------------------
+//	// GUI Controller
+//	//-------------------------------------------------------------
+//	private static IGuiController _guiController = null;
+//	public static IGuiController getGuiController()
+//	{
+//		return _guiController;
+//	}
+//	public static boolean hasGuiController()
+//	{
+//		return _guiController != null;
+//	}
+//	public static void setGuiController(IGuiController guiController)
+//	{
+//		_guiController = guiController;
 //	}
 
 	/**

@@ -2064,6 +2064,8 @@ public class RefreshProcess extends Thread
 		String[] colsCalcPCT;
 //		List     pkList;
 
+		String groupName = "RefreshProcess";
+
 		//------------------------------------
 		//------------------------------------
 		// Objects
@@ -2108,7 +2110,7 @@ public class RefreshProcess extends Thread
 //		    "where 1=1 ";
 
 		CMProcObjects = new CountersModel(
-				"CMProcObjects", null, null, 
+				"CMProcObjects", groupName, null, null, 
 				colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
 		{
@@ -2238,7 +2240,7 @@ public class RefreshProcess extends Thread
 //				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
 //		{
 		CMProcWaits = new CountersModel(
-				"CMProcWaits", null, null,
+				"CMProcWaits", groupName, null, null,
 				colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
 		{
@@ -2377,7 +2379,7 @@ public class RefreshProcess extends Thread
 //			"where 1=1 ";
 
 		CMLocks = new CountersModel(
-				"CMLocks", null, null, 
+				"CMLocks", groupName, null, null, 
 				colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, false, true)
 		{

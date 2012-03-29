@@ -1,6 +1,8 @@
 package com.asetune.gui;
 
 import java.awt.BorderLayout;
+import java.sql.Connection;
+import java.sql.Timestamp;
 
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -8,6 +10,9 @@ import javax.swing.JTextArea;
 
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
+import com.asetune.AseTune;
+import com.asetune.GetCounters;
+import com.asetune.pcs.PersistReader;
 
 
 public class AseConfigTextPanel
@@ -28,6 +33,34 @@ extends JPanel
 		add(_textConfigScroll, BorderLayout.CENTER);
 		
 		init();
+	}
+
+	public void refresh()
+	{
+		Timestamp  ts        = null;
+		boolean    hasGui    = AseTune.hasGUI();
+		boolean    isOffline = false;
+		Connection conn      = null;
+
+		if (GetCounters.getInstance().isMonConnected())
+		{
+			ts        = null;
+			isOffline = false;
+			conn      = GetCounters.getInstance().getMonConnection();
+		}
+		else
+		{
+			ts        = null; // NOTE: this will not work, get the value from somewhere
+			isOffline = true;
+			conn      = PersistReader.getInstance().getConnection();
+		}
+
+		AseConfigText aseConfigText = AseConfigText.getInstance(_type);
+//		aseConfigText.refresh(conn, ts);
+		aseConfigText.initialize(conn, hasGui, isOffline, ts);
+
+		// refresh when the configuration was taken.
+		_textConfig.setText( aseConfigText.getConfig() );
 	}
 
 	private void init()

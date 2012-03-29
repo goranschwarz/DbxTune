@@ -73,7 +73,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
 import org.jdesktop.swingx.table.ColumnControlButton;
 
-import com.asetune.GetCounters;
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.DockUndockManagement;
@@ -283,11 +283,21 @@ implements
 		_indicatorToLeft = true;
 		if ( lookAndFeelName != null && lookAndFeelName.equals("GTK look and feel") )
 			_indicatorToLeft = false;
+
+		
+		// if we have CM, make some more stuff
+		if (cm != null)
+		{
+			setCm(cm);
+			setToolTipText( cm.getDescription() );
+
+			cm.setTabPanel(this);
+		}
 	}
 
 	public TabularCntrPanel(String displayName, CountersModel cm)
 	{
-		this(displayName, null, null);
+		this(displayName, null, cm.getGroupName());
 	}
 
 	public TabularCntrPanel(String displayName, String groupName)
@@ -298,6 +308,11 @@ implements
 	public TabularCntrPanel(String displayName)
 	{
 		this(displayName, null, null);
+	}
+
+	public TabularCntrPanel(CountersModel cm)
+	{
+		this(cm.getDisplayName(), cm, cm.getGroupName());
 	}
 
 	/*---------------------------------------------------
@@ -400,7 +415,8 @@ implements
 
 			// if Summary has attached, graphs, go and set the time line marker
 			// I know, wee should do this a bit further out (but I was lazy)
-			CountersModel summaryCm = GetCounters.getCmByName(SummaryPanel.CM_NAME);
+//			CountersModel summaryCm = GetCounters.getInstance().getCmByName(SummaryPanel.CM_NAME);
+			CountersModel summaryCm = CounterController.getSummaryCm();
 			if (summaryCm != null && summaryCm.hasTrendGraph() )
 				for (TrendGraph tg : summaryCm.getTrendGraphs().values())
 					tg.setTimeLineMarker(null);
@@ -428,11 +444,11 @@ implements
 			{
 				// Set what data to show according to what is chosen in the GUI
 				if ( _counterAbs_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_ABS);
+					_cmDisplay.setDataSource(CountersModel.DATA_ABS, false);
 				if ( _counterDelta_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_DIFF);
+					_cmDisplay.setDataSource(CountersModel.DATA_DIFF, false);
 				if ( _counterRate_rb.isSelected() )
-					_cmDisplay.setDataSource(CountersModel.DATA_RATE);
+					_cmDisplay.setDataSource(CountersModel.DATA_RATE, false);
 
 				_dataTable.setModel(_cmDisplay);
 				refreshFilterColumns(_cmDisplay);
@@ -448,7 +464,8 @@ implements
 
 				// if Summary has attached, graphs, go and set the time line marker
 				// I know, wee should do this a bit further out (but I was lazy)
-				CountersModel summaryCm = GetCounters.getCmByName(SummaryPanel.CM_NAME);
+//				CountersModel summaryCm = GetCounters.getInstance().getCmByName(SummaryPanel.CM_NAME);
+				CountersModel summaryCm = CounterController.getSummaryCm();
 				if (summaryCm != null && summaryCm.hasTrendGraph() )
 					for (TrendGraph tg : summaryCm.getTrendGraphs().values())
 						tg.setTimeLineMarker(_cmDisplay.getSampleTime());
@@ -1658,21 +1675,21 @@ implements
 		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "wrap 2, ins 0", "", "0[0]0"));
 
 		_counterDelta_rb.setForeground(Color.BLUE);
-		_counterRate_rb.setForeground(Color.BLUE);
+		_counterRate_rb .setForeground(Color.BLUE);
 		_counterPct1_lbl.setForeground(Color.RED);
 		_counterPct2_lbl.setForeground(Color.RED);
 
 		_counterRows_lbl.setToolTipText("Number of rows in the actual/visible. Where acual is numer of rows in the data model, and visible is rows after filtering...");
-		_counterAbs_rb.setToolTipText("Absolute values of the counters.");
+		_counterAbs_rb  .setToolTipText("Absolute values of the counters.");
 		_counterDelta_rb.setToolTipText("What is the difference since previous sample. Displayed with blue color.");
-		_counterRate_rb.setToolTipText("Divide the difference between two samples with time elipsed since last sample, then we get diff or rate per second. Displayed with blue color");
+		_counterRate_rb .setToolTipText("Divide the difference between two samples with time elipsed since last sample, then we get diff or rate per second. Displayed with blue color");
 
 		ButtonGroup group = new ButtonGroup();
 		group.add(_counterAbs_rb);
 		group.add(_counterDelta_rb);
 		group.add(_counterRate_rb);
 
-		panel.add(_counterAbs_rb, "");
+		panel.add(_counterAbs_rb,   "");
 		panel.add(_counterRows_lbl, "wrap");
 
 		panel.add(_counterDelta_rb, "");
@@ -2010,7 +2027,7 @@ implements
 					cm = _cmDisplay;
 
 				if ( cm != null )
-					cm.setDataSource(CountersModel.DATA_ABS);
+					cm.setDataSource(CountersModel.DATA_ABS, true);
 
 				updateExtendedInfoPanel();
 			}
@@ -2026,7 +2043,7 @@ implements
 					cm = _cmDisplay;
 
 				if ( cm != null )
-					cm.setDataSource(CountersModel.DATA_DIFF);
+					cm.setDataSource(CountersModel.DATA_DIFF, true);
 
 				updateExtendedInfoPanel();
 			}
@@ -2042,7 +2059,7 @@ implements
 					cm = _cmDisplay;
 
 				if ( cm != null )
-					cm.setDataSource(CountersModel.DATA_RATE);
+					cm.setDataSource(CountersModel.DATA_RATE, true);
 				
 				updateExtendedInfoPanel();
 			}

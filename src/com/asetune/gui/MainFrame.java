@@ -75,8 +75,10 @@ import org.apache.log4j.lf5.LogLevel;
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.GetCountersGui;
+import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.ProcessDetailFrame;
 import com.asetune.Version;
@@ -110,7 +112,7 @@ import com.asetune.utils.SwingUtils;
 
 public class MainFrame
     extends JFrame
-    implements ActionListener, ChangeListener, TableModelListener, TabOrderAndVisibilityListener, PersistentCounterHandler.PcsQueueChange
+    implements IGuiController, ActionListener, ChangeListener, TableModelListener, TabOrderAndVisibilityListener, PersistentCounterHandler.PcsQueueChange
 {
 	private static final long    serialVersionUID = 8984251025337127843L;
 	private static Logger        _logger          = Logger.getLogger(MainFrame.class);
@@ -133,8 +135,9 @@ public class MainFrame
 	// GROUPS for JTabbedPane
 	public static final String    TCP_GROUP_OBJECT_ACCESS  = "Object/Access";
 	public static final String    TCP_GROUP_SERVER         = "Server";
-	public static final String    TCP_GROUP_DISK           = "Disk";
 	public static final String    TCP_GROUP_CACHE          = "Cache";
+	public static final String    TCP_GROUP_DISK           = "Disk";
+	public static final String    TCP_GROUP_REP_AGENT      = "RepAgent";
 	public static final String    TCP_GROUP_HOST_MONITOR   = "Host Monitor";
 	public static final String    TCP_GROUP_UDC            = "User Defined";
 	
@@ -142,6 +145,7 @@ public class MainFrame
 	public static final ImageIcon TCP_GROUP_ICON_SERVER        = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_server.png");
 	public static final ImageIcon TCP_GROUP_ICON_DISK          = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_disk.png");
 	public static final ImageIcon TCP_GROUP_ICON_CACHE         = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_caches.png");
+	public static final ImageIcon TCP_GROUP_ICON_REP_AGENT     = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_repagent.png");
 	public static final ImageIcon TCP_GROUP_ICON_HOST_MONITOR  = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_host_monitor.png");
 	public static final ImageIcon TCP_GROUP_ICON_UDC           = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_udc.png");
 
@@ -311,7 +315,7 @@ public class MainFrame
 	
 	/** Keep a list of all TabularCntrPanel that you have initialized */
 	private static Map<String,TabularCntrPanel> _TcpMap           = new HashMap<String,TabularCntrPanel>();
-	private static SummaryPanel       _summaryPanel               = new SummaryPanel();
+//	private static SummaryPanel       _summaryPanel               = new SummaryPanel();
 	private static TabularCntrPanel   _currentPanel               = null;
 
 	/** Keep a list of user defined SQL statements that will be used for tooltip on a JTable cell level */
@@ -390,11 +394,24 @@ public class MainFrame
 		_instance = inst;
 	}
 	
+	@Override
+	public boolean hasGUI()
+	{
+		return AseTune.hasGUI();
+	}
+
+	@Override
+	public void splashWindowProgress(String msg)
+	{
+		SplashWindow.drawProgress(msg);
+	}
+
 	
 	/*---------------------------------------------------
 	** BEGIN: xxx
 	**---------------------------------------------------
 	*/
+	@Override
 	public void setVisible(boolean visible)
 	{
 		_guiInitTime = System.currentTimeMillis();
@@ -999,7 +1016,7 @@ public class MainFrame
 		
 		//--------------------------
 		// Add Summary TAB
-		_mainTabbedPane.addTab("Summary", _summaryPanel.getIcon(), _summaryPanel, "Trend Graphs");
+//		_mainTabbedPane.addTab("Summary", _summaryPanel.getIcon(), _summaryPanel, "Trend Graphs");
 
 		// Add Group panels
 		if (useTcpGroups())
@@ -1012,6 +1029,7 @@ public class MainFrame
 			GTabbedPane tabGroupObjectAccess = new GTabbedPane("MainFrame_TabbedPane_ObjectAccess");
 			GTabbedPane tabGroupCache        = new GTabbedPane("MainFrame_TabbedPane_Cache");
 			GTabbedPane tabGroupDisk         = new GTabbedPane("MainFrame_TabbedPane_Disk");
+			GTabbedPane tabGroupRepAgent     = new GTabbedPane("MainFrame_TabbedPane_RepAgent");
 			GTabbedPane tabGroupHostMonitor  = new GTabbedPane("MainFrame_TabbedPane_HostMonitor");
 			GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
 
@@ -1019,8 +1037,9 @@ public class MainFrame
 			_mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
 			_mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
 			_mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
+			_mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
 			_mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
-			_mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,           getGroupToolTipText(TCP_GROUP_UDC));
+			_mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
 			
 			tabGroupUdc.setEmptyTabMessage(
 				"No User Defined Performance Counters has been added.\n" +
@@ -1388,7 +1407,8 @@ public class MainFrame
 			InMemoryCounterHandler imch = InMemoryCounterHandler.getInstance();
 			imch.clear(true);
 
-			TrendGraphDashboardPanel tgdp = SummaryPanel.getInstance().getGraphPanel();
+//			TrendGraphDashboardPanel tgdp = SummaryPanel.getInstance().getGraphPanel();
+			TrendGraphDashboardPanel tgdp = CounterController.getSummaryPanel().getGraphPanel();
 			tgdp.setInMemHistoryEnable(false);
 
 			System.gc();
@@ -1730,7 +1750,8 @@ public class MainFrame
 			if (_currentPc != null)
 			{
 				// First load the Summary panel...
-				CountersModel summaryCm = _currentPc.getCm(SummaryPanel.CM_NAME);
+//				CountersModel summaryCm = _currentPc.getCm(SummaryPanel.CM_NAME);
+				CountersModel summaryCm = _currentPc.getCm(CounterController.getSummaryCmName());
 				if (summaryCm != null)
 					setSummaryData(summaryCm);
 
@@ -1820,7 +1841,8 @@ public class MainFrame
 		}
 
 		// if Summary has attached, graphs, go and set the time line marker
-		CountersModel summaryCm = GetCounters.getCmByName(SummaryPanel.CM_NAME);
+//		CountersModel summaryCm = GetCounters.getInstance().getCmByName(SummaryPanel.CM_NAME);
+		CountersModel summaryCm = CounterController.getSummaryCm();
 		if (summaryCm != null && summaryCm.hasTrendGraph() )
 			for (TrendGraph tg : summaryCm.getTrendGraphs().values())
 				tg.setTimeLineMarker(ts);
@@ -1990,7 +2012,7 @@ public class MainFrame
 				if ( setMinimalGraphConfig )
 				{
 					// GRAPHS in SUMMARY
-					CountersModel cm = GetCounters.getCmByName(GetCounters.CM_NAME__SUMMARY);
+					CountersModel cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
 					if (cm != null)
 					{
 						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU,             true);
@@ -2005,7 +2027,7 @@ public class MainFrame
 					// GRAPHS in SYSLOAD
 					if (aseVersion >= 15500 && hasMonRole)
 					{
-						cm = GetCounters.getCmByName(GetCounters.CM_NAME__SYS_LOAD);
+						cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SYS_LOAD);
 						if (cm != null)
 							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, true);
 					}
@@ -2013,7 +2035,7 @@ public class MainFrame
 					// GRAPHS in PROC_CACHE_MODULE_USAGE
 					if (aseVersion >= 15010 && hasMonRole)
 					{
-						cm = GetCounters.getCmByName(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE);
+						cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE);
 						if (cm != null)
 							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, true);
 					}
@@ -2023,7 +2045,8 @@ public class MainFrame
 
 		if ( connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_summaryPanel.setLocalServerName("Offline-read");
+//			_summaryPanel.setLocalServerName("Offline-read");
+			CounterController.getSummaryPanel().setLocalServerName("Offline-read");
 			setStatus(ST_OFFLINE_CONNECT);
 //			setOfflineMenuMode();
 
@@ -2162,7 +2185,8 @@ public class MainFrame
 				_logger.info("Clearing components...");
 
 				wait.setState("Clearing Summary Fields.");
-				SummaryPanel.getInstance().clearSummaryData();
+//				SummaryPanel.getInstance().clearSummaryData();
+				CounterController.getSummaryPanel().clearSummaryData();
 
 				for (CountersModel cm : GetCounters.getCmList())
 				{
@@ -2173,7 +2197,8 @@ public class MainFrame
 					}
 				}
 				wait.setState("Clearing Summary Graphs.");
-				SummaryPanel.getInstance().clearGraph();
+//				SummaryPanel.getInstance().clearGraph();
+				CounterController.getSummaryPanel().clearGraph();
 				
 				//--------------------------
 				// Close all cm's
@@ -2333,7 +2358,8 @@ public class MainFrame
 
 	private void action_openGraphViewDialog(ActionEvent e)
 	{
-		int ret = TrendGraphPanelReorderDialog.showDialog(this, SummaryPanel.getInstance().getGraphPanel());
+//		int ret = TrendGraphPanelReorderDialog.showDialog(this, SummaryPanel.getInstance().getGraphPanel());
+		int ret = TrendGraphPanelReorderDialog.showDialog(this, CounterController.getSummaryPanel().getGraphPanel());
 		if (ret == JOptionPane.OK_OPTION)
 		{
 		}
@@ -2678,6 +2704,35 @@ public class MainFrame
 		}
 	}
 
+	@Override
+	public void addPanel(JPanel panel)
+	{
+		if ( ! AseTune.hasGUI() )
+			return;
+
+		if (panel instanceof TabularCntrPanel)
+		{
+			addTcp( (TabularCntrPanel)panel );
+		}
+		else if (panel instanceof ISummaryPanel)
+		{
+			setSummaryPanel( (ISummaryPanel)panel );
+		}
+		else
+		{
+			_mainTabbedPane.addTab(panel.getName(), null, panel, null);
+		}
+	}
+
+	public void setSummaryPanel(ISummaryPanel panel)
+	{
+		int indexPos = 0;
+//		_mainTabbedPane.addTab("Summary", _summaryPanel.getIcon(), _summaryPanel, "Trend Graphs");
+		_mainTabbedPane.insertTab(panel.getPanelName(), panel.getIcon(), (Component) panel, panel.getDescription(), indexPos);
+
+		_mainTabbedPane.setSelectedIndex(indexPos);
+	}
+
 	/**
 	 * Add a Component to the Tab
 	 * @param tcp the component to add
@@ -2691,6 +2746,7 @@ public class MainFrame
 		String groupName = tcp.getGroupName();
 		if ( ! StringUtil.isNullOrBlank(groupName) && useTcpGroups())
 		{
+			_logger.debug("MainFrame.addTcp(): adding to group "+StringUtil.left("'"+groupName+"',", 20)+" tcpName='"+tcp.getName()+"'.");
 			GTabbedPane gtp = _mainTabbedPane;
 			int index = gtp.indexOfTab(groupName);
 			if (index >= 0)
@@ -2708,6 +2764,7 @@ public class MainFrame
 		}
 		else
 		{
+			_logger.debug("MainFrame.addTcp(): NO GROUP groupName='"+groupName+"', tcpName='"+tcp.getName()+"'.");
 			_mainTabbedPane.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
 		}
 
@@ -2723,8 +2780,9 @@ public class MainFrame
 	{
 		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return TCP_GROUP_ICON_OBJECT_ACCESS;
 		if (TCP_GROUP_SERVER       .equals(groupName)) return TCP_GROUP_ICON_SERVER;
-		if (TCP_GROUP_DISK         .equals(groupName)) return TCP_GROUP_ICON_DISK;
 		if (TCP_GROUP_CACHE        .equals(groupName)) return TCP_GROUP_ICON_CACHE;
+		if (TCP_GROUP_DISK         .equals(groupName)) return TCP_GROUP_ICON_DISK;
+		if (TCP_GROUP_REP_AGENT    .equals(groupName)) return TCP_GROUP_ICON_REP_AGENT;
 		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return TCP_GROUP_ICON_HOST_MONITOR;
 		if (TCP_GROUP_UDC          .equals(groupName)) return TCP_GROUP_ICON_UDC;
 		return null;
@@ -2739,8 +2797,9 @@ public class MainFrame
 	{
 		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return "<html>Performace Counters on Object and various Statements that Accesses data</html>";
 		if (TCP_GROUP_SERVER       .equals(groupName)) return "<html>Performace Counters on a Server Level</html>";
-		if (TCP_GROUP_DISK         .equals(groupName)) return "<html>Performace Counters for Devices / Disk acesses</html>";
 		if (TCP_GROUP_CACHE        .equals(groupName)) return "<html>Performace Counters for various Caches</html>";
+		if (TCP_GROUP_DISK         .equals(groupName)) return "<html>Performace Counters for Devices / Disk acesses</html>";
+		if (TCP_GROUP_REP_AGENT    .equals(groupName)) return "<html>Performace Counters for ASE Replication Agents</html>";
 		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return "<html>Performace Counters on a Operating System Level</html>";
 		if (TCP_GROUP_UDC          .equals(groupName)) return "<html>Performace Counters that <b>you</b> have defined</html>";
 		return null;
@@ -3034,7 +3093,7 @@ public class MainFrame
 							AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
 
 						// Open the SQL Window
-						QueryWindow qf = new QueryWindow(conn, sqlStr, true, QueryWindow.WindowType.JFRAME);
+						QueryWindow qf = new QueryWindow(conn, sqlStr, true, QueryWindow.WindowType.JFRAME, null);
 						qf.openTheWindow();
 					}
 					catch (Throwable t)
@@ -3239,7 +3298,8 @@ public class MainFrame
 	 */
 	public static void clearSummaryData()
 	{
-		_summaryPanel.clearSummaryData();
+//		_summaryPanel.clearSummaryData();
+		CounterController.getSummaryPanel().clearSummaryData();
 	}
 
 	/**
@@ -3247,16 +3307,21 @@ public class MainFrame
 	 */
 	public static void setSummaryData(CountersModel cm)
 	{
-		_summaryPanel.setSummaryData(cm);
+//		_summaryPanel.setSummaryData(cm);
+		CounterController.getSummaryPanel().setSummaryData(cm);
 	}
 
-	/**
-	 * Clears fields in the SummaryPanel
-	 */
-	public static SummaryPanel getSummaryPanel()
-	{
-		return _summaryPanel;
-	}
+//	/**
+//	 * Clears fields in the SummaryPanel
+//	 */
+//	public static ISummaryPanel getSummaryPanel()
+//	{
+//		return CounterController.getSummaryPanel();
+//	}
+//	public static SummaryPanel getSummaryPanel()
+//	{
+//		return _summaryPanel;
+//	}
 
 
 	/** If we are in off-line mode, this text can be set, and it will be displayed */
@@ -3537,10 +3602,15 @@ public class MainFrame
 				_statusPcsDdlLookupQueueSize.setVisible(false);
 				_statusPcsDdlStoreQueueSize .setVisible(false);
 
-				_summaryPanel.setLocalServerName("Offline-read");
+				if (CounterController.hasInstance())
+				{
+//					_summaryPanel.setLocalServerName("Offline-read");
+					CounterController.getSummaryPanel().setLocalServerName("Offline-read");
 
-				// SET WATERMARK
-				SummaryPanel.getInstance().setWatermark();
+					// SET WATERMARK
+//					SummaryPanel.getInstance().setWatermark();
+					CounterController.getSummaryPanel().setWatermark();
+				}
 
 				setMenuMode(ST_OFFLINE_CONNECT);
 			}
@@ -3573,10 +3643,15 @@ public class MainFrame
 				else
 					_statusServerListeners.setText("Need 'sa_role' to get listeners.");
 
-				_summaryPanel.setLocalServerName(_statusServerName.getText());
+				if (CounterController.hasInstance())
+				{
+//					_summaryPanel.setLocalServerName(_statusServerName.getText());
+					CounterController.getSummaryPanel().setLocalServerName(_statusServerName.getText());
 
-				// SET WATERMARK
-				SummaryPanel.getInstance().setWatermark();
+					// SET WATERMARK
+//					SummaryPanel.getInstance().setWatermark();
+					CounterController.getSummaryPanel().setWatermark();
+				}
 				
 				// Set servername in windows - title
 				String aseSrv      = AseConnectionFactory.getServer();
@@ -3612,10 +3687,15 @@ public class MainFrame
 			_statusPcsDdlLookupQueueSize.setVisible(false);
 			_statusPcsDdlStoreQueueSize .setVisible(false);
 
-			_summaryPanel.setLocalServerName("");
-
-			// SET WATERMARK
-			SummaryPanel.getInstance().setWatermark();
+			if (CounterController.hasInstance())
+			{
+//				_summaryPanel.setLocalServerName("");
+				CounterController.getSummaryPanel().setLocalServerName("");
+				
+				// SET WATERMARK
+//				SummaryPanel.getInstance().setWatermark();
+				CounterController.getSummaryPanel().setWatermark();
+			}
 
 			for (TabularCntrPanel tcp : _TcpMap.values())
 			{
@@ -3858,7 +3938,8 @@ public class MainFrame
 			tmpConf.setProperty("window.pos.y",  getLocationOnScreen().y);
 		}
 		
-		getSummaryPanel().saveLayoutProps();
+//		getSummaryPanel().saveLayoutProps();
+		CounterController.getSummaryPanel().saveLayoutProps();
 
 		tmpConf.save();
 	}

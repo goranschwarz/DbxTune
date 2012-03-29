@@ -64,6 +64,7 @@ import javax.swing.event.PopupMenuListener;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
@@ -192,8 +193,10 @@ implements ActionListener, MouseListener
 
 		if (chkboxText != null  &&  !chkboxText.equals(""))
 		{
+//			String extenedCheckboxText = "<html> <b>"+chkboxText+"</b> - <i>"+cm.getDisplayName()+"</i> </html>";
+			String extenedCheckboxText = "<html> "+chkboxText+" - <b>"+cm.getDisplayName()+"</b> </html>";
 //			_chkboxMenuItem = new JCheckBoxMenuItem(chkboxText, _initialVisible);
-			_chkboxMenuItem = new JCheckBoxMenuItem(chkboxText, true);
+			_chkboxMenuItem = new JCheckBoxMenuItem(extenedCheckboxText, true);
 			_chkboxMenuItem.addActionListener( this );
 		}
 
@@ -1045,7 +1048,8 @@ implements ActionListener, MouseListener
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), SummaryPanel.getInstance().getGraphPanel());
+//				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), SummaryPanel.getInstance().getGraphPanel());
+				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), CounterController.getSummaryPanel().getGraphPanel());
 				if (ret == JOptionPane.OK_OPTION)
 				{
 				}
@@ -1091,7 +1095,9 @@ implements ActionListener, MouseListener
 						final TrendGraph tg = cm.getTrendGraph(name);
 	
 						JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
-						mi.setText(tg.getLabel());
+//						mi.setText("<html> <b>"+tg.getLabel()+"</b> - <i>"+cm.getDisplayName()+"</i> </html>");
+						mi.setText("<html> "+tg.getLabel()+" - <b>"+cm.getDisplayName()+"</b> </html>");
+
 						mi.setSelected(tg.isGraphEnabled());
 						mi.addActionListener(new ActionListener()
 						{
@@ -1154,9 +1160,9 @@ implements ActionListener, MouseListener
 				trendGraphPopupMenu.removeAll();
 
 				// Get the CM: try short name and long name
-				CountersModel cm = GetCounters.getCmByName(cmName);
+				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 				if (cm == null)
-					cm = GetCounters.getCmByDisplayName(cmName);
+					cm = GetCounters.getInstance().getCmByDisplayName(cmName);
 				
 				if (cm == null)
 				{
@@ -1164,24 +1170,33 @@ implements ActionListener, MouseListener
 				}
 				else
 				{
-					// Now create menu items in the correct order
-					for (String name : cm.getTrendGraphNames())
+					String[] trendGraphs = cm.getTrendGraphNames();
+
+					if (trendGraphs == null || (trendGraphs != null && trendGraphs.length == 0))
 					{
-						final TrendGraph tg = cm.getTrendGraph(name);
-	
-						JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
-						mi.setText(tg.getLabel());
-						mi.setSelected(tg.isGraphEnabled());
-						mi.addActionListener(new ActionListener()
+						trendGraphPopupMenu.add(new JMenuItem("Performance Counter named '"+cmName+"' does NOT have any graphs attached to it."));
+					}
+					else
+					{
+						// Now create menu items in the correct order
+						for (String name : trendGraphs)
 						{
-							@Override
-							public void actionPerformed(ActionEvent e)
+							final TrendGraph tg = cm.getTrendGraph(name);
+		
+							JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
+							mi.setText(tg.getLabel());
+							mi.setSelected(tg.isGraphEnabled());
+							mi.addActionListener(new ActionListener()
 							{
-								tg.getViewMenuItem().doClick();
-							}
-						});
-	
-						trendGraphPopupMenu.add(mi);
+								@Override
+								public void actionPerformed(ActionEvent e)
+								{
+									tg.getViewMenuItem().doClick();
+								}
+							});
+		
+							trendGraphPopupMenu.add(mi);
+						}
 					}
 				}
 			}

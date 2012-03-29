@@ -65,9 +65,9 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 
 	// private JButton _apply = new JButton("Apply");
 
-	ChangeToJTabDialog(Frame owner, String message, JTabbedPane tabPane, String toTabName)
+	public ChangeToJTabDialog(Frame owner, String message, JTabbedPane tabPane, String toTabName)
 	{
-		super(owner, "Found Blocking Locks", false);
+		super(owner, message, false);
 
 		_message = message;
 		_tabPane = tabPane;

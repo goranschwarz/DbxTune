@@ -37,6 +37,7 @@ public class CountersModelAppend
 
 	public CountersModelAppend(
 		String name, 
+		String groupName, 
 		String sql, 
 		String[] monTables, 
 		String[] dependsOnRole, 
@@ -45,9 +46,9 @@ public class CountersModelAppend
 		int dependsOnCeVersion, 
 		boolean systemCm)
 	{
-		super(name, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
+		super(name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
 
-		setDataSource(DATA_ABS);
+		setDataSource(DATA_ABS, false);
 	}
 
 	@Override

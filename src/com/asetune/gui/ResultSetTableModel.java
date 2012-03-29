@@ -14,6 +14,8 @@ import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.utils.StringUtil;
 
 
@@ -28,6 +30,7 @@ public class ResultSetTableModel
     extends AbstractTableModel
 {
 	private static final long serialVersionUID = 1L;
+	private static Logger _logger = Logger.getLogger(ResultSetTableModel.class);
 
 	int	_numcols;
 
@@ -51,17 +54,33 @@ public class ResultSetTableModel
 	throws SQLException
 	{
 		_allowEdit = editable;
+		
+		int maxDisplaySize = 32768;
+		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
+		catch (NumberFormatException ignore) {};
 
 		ResultSetMetaData rsmd = rs.getMetaData();
 		_numcols = rsmd.getColumnCount() + 1;
 		for (int c=1; c<_numcols; c++)
 		{
-			_cols       .add(rsmd.getColumnLabel(c));
-			_type       .add(rsmd.getColumnClassName(c));
-			_sqlTypeStr .add(rsmd.getColumnTypeName(c));
-			_sqlTypeInt .add(rsmd.getColumnType(c));
-			_displaySize.add(new Integer( Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length()) ) );
+			String columnLabel       = rsmd.getColumnLabel(c);
+			String columnClassName   = rsmd.getColumnClassName(c);
+			String columnTypeName    = rsmd.getColumnTypeName(c);
+			int    columnType        = rsmd.getColumnType(c);
+			int    columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 
+			if (columnDisplaySize > maxDisplaySize)
+			{
+				_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'");
+				columnDisplaySize = maxDisplaySize;
+			}
+
+			_cols       .add(columnLabel);
+			_type       .add(columnClassName);
+			_sqlTypeStr .add(columnTypeName);
+			_sqlTypeInt .add(new Integer(columnType));
+			_displaySize.add(new Integer(columnDisplaySize));
+			
 //			System.out.println("name='"+_cols.get(c-1)+"', getColumnClassName("+c+")='"+_type.get(c-1)+"', getColumnTypeName("+c+")='"+_sqlType.get(c-1)+"'.");
 		}
 

@@ -266,7 +266,7 @@ extends XmenuActionBase
 					}
 					String sql = "exec "+dbname+"..sp_help '"+tabname+"'";
 
-					QueryWindow qw = new QueryWindow(_conn, sql, false, QueryWindow.WindowType.JFRAME);
+					QueryWindow qw = new QueryWindow(_conn, sql, false, QueryWindow.WindowType.JFRAME, null);
 					qw.openTheWindow();
 	            }
 			}

@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -34,13 +35,16 @@ import javax.swing.table.AbstractTableModel;
 import org.apache.log4j.Logger;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
+import com.asetune.ICounterController;
+import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.MonWaitEventIdDictionary;
 import com.asetune.RemarkDictionary;
 import com.asetune.TrendGraphDataPoint;
+import com.asetune.Version;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.SummaryPanel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
@@ -50,6 +54,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
@@ -67,6 +72,15 @@ implements Cloneable, ITableTooltip
 	public static final int    DATA_DIFF          = 2;
 	public static final int    DATA_RATE          = 3;
 
+	/** Who is responsible for collecting data for this CM */
+	private ICounterController  _counterController = null;
+
+	/** Who holds the GUI part of the CM */
+	private IGuiController      _guiController     = null;
+	
+	/** Filename of Icon that any GUI will use */
+	private String             _guiIconFile       = null;
+
 	/** SybMessageHaandler used when querying the monitored server */
 	private CmSybMessageHandler _sybMessageHandler = null;
 
@@ -77,6 +91,7 @@ implements Cloneable, ITableTooltip
 	private boolean            _systemCm;
 	private String             _displayName       = null;  // Name that will be tabname etc
 	private String             _description       = "";    // Can be used for tool tips etc
+	private String             _groupName         = null;
 	private String             _problemDesc       = "";    // Can be used for tool tips etc
 	private Exception          _sampleException   = null;
 
@@ -183,7 +198,7 @@ implements Cloneable, ITableTooltip
 	private SamplingCnt _diffData   = null;       // diff between newSample and oldSample data (not filtered)
 	private SamplingCnt _rateData   = null;       // diffData / sampleInterval
 	
-	private int _dataSource = DATA_RATE;
+	private int _dataSource = getDefaultDataSource();//DATA_RATE;
 
 	private boolean dataInitialized=false;
 	private boolean firstTimeSample=true;
@@ -311,6 +326,13 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	/** Override this to get the initial state */
+	public int getDefaultDataSource()
+	{
+		return DATA_RATE;
+	}
+
+
 	/*---------------------------------------------------
 	** BEGIN: constructors
 	**---------------------------------------------------
@@ -321,6 +343,7 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * @param name                        Name of the Counter Model
+	 * @param groupName                   Name of the Group this counter belongs to, can be null
 	 * @param sql                         SQL Used to grab a sample from the counter data
 	 * @param pkList                      A list of columns that will be used during diff calculations to lookup values in previous samples
 	 * @param diffColumns                 Columns to do diff calculations on
@@ -336,6 +359,7 @@ implements Cloneable, ITableTooltip
 	public CountersModel
 	(
 			String       name,             // Name of the Counter Model
+			String       groupName,        // Name of the Group this counter belongs to, can be null
 			String       sql,              // SQL Used to grab a sample from the counter data
 			List<String> pkList,           // A list of columns that will be used during diff calculations to lookup values in previous samples
 			String[]     diffColumns,      // Columns to do diff calculations on
@@ -349,12 +373,13 @@ implements Cloneable, ITableTooltip
 			boolean      systemCm
 	)
 	{
-		this(name, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
+		this(name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
 	}
 
 
 	/**
 	 * @param name                        Name of the Counter Model
+	 * @param groupName                   Name of the Group this counter belongs to, can be null
 	 * @param sql                         SQL Used to grab a sample from the counter data
 	 * @param pkList                      A list of columns that will be used during diff calculations to lookup values in previous samples
 	 * @param diffColumns                 Columns to do diff calculations on
@@ -371,6 +396,7 @@ implements Cloneable, ITableTooltip
 	public CountersModel
 	(
 			String       name,
+			String       groupName,
 			String       sql,
 			List<String> pkList,
 			String[]     diffColumns,
@@ -385,9 +411,14 @@ implements Cloneable, ITableTooltip
 			int          defaultPostponeTime
 	)
 	{
+		// NOT the best place to put it, but it was to complicated (to much work) to put it somewhere else
+		// lets rethinks this at a later stage.
+//		SplashWindow.drawProgress("Loading: Counter Model '"+name+"'");
+
 		// Initialize a model for use with a JTable
-		_name     = name;
-		_systemCm = systemCm;
+		_name      = name;
+		_groupName = groupName;
+		_systemCm  = systemCm;
 
 		// Check if name is OK
 		checkInConstructor(); 
@@ -471,6 +502,7 @@ implements Cloneable, ITableTooltip
 		c._negativeDiffCountersToZero = this._negativeDiffCountersToZero;
 
 		c._name                       = this._name;
+		c._groupName                  = this._groupName;
 		c._systemCm                   = this._systemCm;
 		c._displayName                = this._displayName;
 		c._description                = this._description;
@@ -678,6 +710,87 @@ implements Cloneable, ITableTooltip
 	**---------------------------------------------------
 	*/
 
+	/**
+	 * Set who is responsible for collecting the counters for this CounterModel
+	 * @param counterController
+	 */
+	protected void setCounterController(ICounterController counterController)
+	{
+		_counterController = counterController;
+		// If we have a Counter Controller, add the CM to it
+		if (_counterController != null)
+			_counterController.addCm(this);
+	}
+	/**
+	 * Get who is responsible for collecting the counters for this CounterModel
+	 * @return counterController
+	 */
+	public ICounterController getCounterController()
+	{
+		// Remove this, this is just for backward compatibility.
+		if (_counterController == null)
+			return AseTune.getCounterCollector();
+
+		return _counterController;
+	}
+
+	/**
+	 * <p>
+	 * Set the "main" GUI controller
+	 * </p>
+	 * <p>
+	 * If the tool was started in GUI mode, this will also create the GUI 
+	 * using method <code>createGui()</code> and add it to the GUI Controller
+	 * </p>
+	 * @param guiController
+	 */
+	protected void setGuiController(IGuiController guiController)
+	{
+		_guiController = guiController;
+		// If we have a GUI Controller, create a new GUI and add it to the Controller.
+		if (_guiController != null)
+		{
+			if (_guiController.hasGUI())
+			{
+				_guiController.addPanel(createGui());
+			}
+		}
+	}
+	
+	/**
+	 * Get the controlling GUI
+	 * @return
+	 */
+	public IGuiController getGuiController()
+	{
+		return _guiController;
+	}
+	
+	/** set Icon Filename which the GUI can use */
+	public void setIconFile(String filename)
+	{
+		_guiIconFile = filename;
+	}
+	/** get Icon Filename which the GUI can use */
+	public String getIconFile()
+	{
+		return _guiIconFile;
+	}
+
+	/**
+	 * Create a GUI panel, this one should be overridden by subclasses if you want to change behavior.
+	 */
+//	protected TabularCntrPanel createGui()
+	protected JPanel createGui()
+	{
+		TabularCntrPanel tcp = new TabularCntrPanel(this);
+
+		if (getIconFile() != null)
+			tcp.setIcon( SwingUtils.readImageIcon(Version.class, getIconFile()) );
+
+		return tcp;
+	}
+	
 	/** 
 	 * Used to set off-line counter data<br>
 	 * Most likely has to be override to handle local offline data for subclasses
@@ -685,9 +798,9 @@ implements Cloneable, ITableTooltip
 	public void setValueAt(int type, Object value, int row, int col)
 	{
 		CounterTableModel data = null;
-		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null); data = _newSample;} else data = _newSample;}
-		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null); data = _diffData;}  else data = _diffData;}
-		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null); data = _rateData;}  else data = _rateData;}
+		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
+		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
+		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
 		else
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
@@ -704,9 +817,9 @@ implements Cloneable, ITableTooltip
 	{
 //		CounterTableModel data = null;
 		SamplingCnt data = null;
-		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null); data = _newSample;} else data = _newSample;}
-		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null); data = _diffData;}  else data = _diffData;}
-		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null); data = _rateData;}  else data = _rateData;}
+		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
+		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
+		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
 		else
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
@@ -910,7 +1023,7 @@ implements Cloneable, ITableTooltip
 
 			// If we are not connected anymore, do not try to refresh
 			if (refresh)
-				refresh = AseTune.getCounterCollector().isMonConnected(false, true);
+				refresh = getCounterController().isMonConnected(false, true);
 
 			if ( ! refresh)
 				setValidSampleData(false);
@@ -1366,14 +1479,14 @@ implements Cloneable, ITableTooltip
 		{
 			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
 
-			if ( sql != null && ! AseTune.getCounterCollector().isMonConnected() )
+			if ( sql != null && ! getCounterController().isMonConnected() )
 			{
 				// IF SPID, get values from JTable in OFFLINE MODE
 				if ("SPID".equalsIgnoreCase(colName))
 				{
 					if (MainFrame.isOfflineConnected())
 					{
-						CountersModel cm = GetCounters.getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+						CountersModel cm = _counterController.getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
 						TabularCntrPanel tcp = cm.getTabPanel();
 						if (tcp != null)
 						{
@@ -1447,7 +1560,7 @@ implements Cloneable, ITableTooltip
 			{
 				try
 				{
-					Connection conn = AseTune.getCounterCollector().getMonConnection();
+					Connection conn = getCounterController().getMonConnection();
 
 					StringBuilder sb = new StringBuilder(300);
 					sb.append("<html>\n");
@@ -1568,7 +1681,8 @@ implements Cloneable, ITableTooltip
 		if (addToSummary)
 		{
 			MainFrame.addGraphViewMenu( tg.getViewMenuItem() );
-			SummaryPanel.getInstance().addTrendGraph(tg);
+//			SummaryPanel.getInstance().addTrendGraph(tg);
+			CounterController.getSummaryPanel().addTrendGraph(tg);
 		}
 	}
 	
@@ -2188,7 +2302,7 @@ implements Cloneable, ITableTooltip
 	}
 	public void doSqlClose()
 	{
-		doSqlClose(AseTune.getCounterCollector().getMonConnection());
+		doSqlClose(getCounterController().getMonConnection());
 	}
 	public void doSqlClose(Connection conn)
 	{
@@ -2218,7 +2332,7 @@ implements Cloneable, ITableTooltip
 	{
 		if (isInitialized())
 		{
-			if (AseTune.getCounterCollector().isMonConnected())
+			if (getCounterController().isMonConnected())
 				doSqlClose();
 		}
 	}
@@ -2513,7 +2627,7 @@ implements Cloneable, ITableTooltip
 	 * @param scriptName          Name of the script (from within the jar file or classpath) (mandatory)
 	 * @param needsRoleToRecreate What ROLE inside ASE server do we need to create this procedure (can be null, no roles would be checked)
 	 */
-	public void addDependsOnStoredProc(String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate)
+	public void addDependsOnStoredProc(String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
 	{
 		if (dbname            == null) throw new IllegalArgumentException("addDependsOnStoredProc(): 'dbname' cant be null");
 		if (procName          == null) throw new IllegalArgumentException("addDependsOnStoredProc(): 'procName' cant be null");
@@ -2524,12 +2638,19 @@ implements Cloneable, ITableTooltip
 		if (_dependsOnStoredProc == null)
 			_dependsOnStoredProc = new LinkedList<StoredProcCheck>();
 
-		StoredProcCheck spc = new StoredProcCheck(dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRoleToRecreate);
+		StoredProcCheck spc = new StoredProcCheck(dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRoleToRecreate, needSrvVersion);
 		_dependsOnStoredProc.add(spc);
 	}
 	
-	public boolean checkDependsOnStoredProc(Connection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate)
+	public boolean checkDependsOnStoredProc(Connection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
 	{
+		int srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
+		if (srvVersion < needSrvVersion)
+		{
+			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+AseConnectionUtils.versionIntToStr(srvVersion)+"', this procedure needs ASE Version '"+AseConnectionUtils.versionIntToStr(needSrvVersion)+"' to install.");
+			return false;
+		}
+
 		// If procName does not exists
 		// or is of an earlier version than procDateThreshold
 		// GO AND CREATE IT.
@@ -2605,7 +2726,7 @@ implements Cloneable, ITableTooltip
 		boolean rc = true;
 		for (StoredProcCheck spc : _dependsOnStoredProc)
 		{
-			boolean b = checkDependsOnStoredProc(conn, spc._dbname, spc._procName, spc._procDateThreshold, spc._scriptLocation, spc._scriptName, spc._needsRoleToRecreate);
+			boolean b = checkDependsOnStoredProc(conn, spc._dbname, spc._procName, spc._procDateThreshold, spc._scriptLocation, spc._scriptName, spc._needsRoleToRecreate, spc._needSrvVersion);
 			if ( ! b )
 				rc = false;
 		}
@@ -2650,6 +2771,21 @@ implements Cloneable, ITableTooltip
 		return _name;
 	}
 
+	/**
+	 * What group does this CM belong to
+	 * @param name
+	 */
+	protected void setGroupName(String groupName)
+	{
+		_groupName = groupName;
+	}
+	/**
+	 * @return What group does this CM belong to
+	 */
+	public String getGroupName()
+	{
+		return _groupName;
+	}
 
 	/**
 	 * do local calculation, this should be overridden for local calculations...
@@ -2685,7 +2821,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public boolean isConnected()
 	{
-		return AseTune.getCounterCollector().isMonConnected();
+		return getCounterController().isMonConnected();
 	}
 
 	/**
@@ -2791,7 +2927,7 @@ implements Cloneable, ITableTooltip
 
 		for (String cmName : cmList)
 		{
-			CountersModel cm = GetCounters.getCmByName(cmName);
+			CountersModel cm = _counterController.getCmByName(cmName);
 			if (cm != null)
 			{
 				long postpone = cm.getTimeToNextPostponedRefresh();
@@ -2923,7 +3059,7 @@ implements Cloneable, ITableTooltip
 
 		for (String cmName : cmList)
 		{
-			CountersModel cm = GetCounters.getCmByName(cmName);
+			CountersModel cm = _counterController.getCmByName(cmName);
 			if (cm == null)
 			{
 				String msg = "The cm '"+this.getName()+"' depends on '"+cmName+"', which can't be found.";
@@ -2966,7 +3102,7 @@ implements Cloneable, ITableTooltip
 	/** called from GUI to refresh data */
 	public final synchronized void refresh() throws Exception
 	{
-		refresh(AseTune.getCounterCollector().getMonConnection());
+		refresh(getCounterController().getMonConnection());
 	}
 
 	/** Refresh data */
@@ -3113,7 +3249,7 @@ implements Cloneable, ITableTooltip
 		//--------------------------------------------------
 		SamplingCnt tmpDiffData = null;
 		SamplingCnt tmpRateData = null;
-		SamplingCnt tmpNewSample = new SamplingCnt(_name, _negativeDiffCountersToZero, _diffColumns);
+		SamplingCnt tmpNewSample = new SamplingCnt(_name, _negativeDiffCountersToZero, _diffColumns, _prevSample);
 		try
 		{
 			setSampleException(null);
@@ -3158,17 +3294,21 @@ implements Cloneable, ITableTooltip
 		// Used later
 		final List<Integer> deletedRows = new ArrayList<Integer>();;
 
+		// Set sample time and interval
+		setSampleTime(    tmpNewSample.getSampleTime()     );
+		setSampleInterval(tmpNewSample.getSampleInterval() );
+
 		// If NO PK, then we dont need to do some stuff.
 		if ( ! doDiffCalc() )
 		{
-			setSampleTime(tmpNewSample.samplingTime);
-			setSampleInterval(0);
+//			setSampleTime(    tmpNewSample.getSampleTime()     );
+//			setSampleInterval(tmpNewSample.getSampleInterval() );
 
-			if (_prevSample != null)
-			{
-				tmpNewSample.interval = tmpNewSample.samplingTime.getTime() - _prevSample.samplingTime.getTime(); 
-				setSampleInterval(tmpNewSample.interval);
-			}
+//			if (_prevSample != null)
+//			{
+//				tmpNewSample.interval = tmpNewSample.samplingTime.getTime() - _prevSample.samplingTime.getTime(); 
+//				setSampleInterval(tmpNewSample.getSampleInterval());
+//			}
 
 			tmpDiffData = tmpNewSample;
 			tmpRateData = tmpNewSample;
@@ -3190,13 +3330,13 @@ implements Cloneable, ITableTooltip
 	
 			if (tmpDiffData == null)
 			{
-				setSampleTime(tmpNewSample.samplingTime);
-				setSampleInterval(0);	
+//				setSampleTime(tmpNewSample.samplingTime);
+//				setSampleInterval(0);	
 			}
 			else
 			{
-				setSampleTime(tmpDiffData.samplingTime);
-				setSampleInterval(tmpDiffData.interval);
+//				setSampleTime(tmpDiffData.samplingTime);
+//				setSampleInterval(tmpDiffData.interval);
 	
 				beginLcRefresh();
 
@@ -3585,7 +3725,7 @@ implements Cloneable, ITableTooltip
 //		selectedModelRow  = -1;
 
 		if (clearCmLevel > 50)
-			_dataSource = DATA_RATE;
+			_dataSource = getDefaultDataSource();
 
 		// Clear dates on panel
 		if (tabPanel != null)
@@ -3634,7 +3774,7 @@ implements Cloneable, ITableTooltip
 	{
 		return _dataSource;
 	}
-	public void setDataSource(int dataSource)
+	public void setDataSource(int dataSource, boolean saveProps)
 	{
 		if (dataSource != DATA_ABS && dataSource != DATA_DIFF && dataSource != DATA_RATE)
 			throw new RuntimeException("Unknown dataView was specified. you specified dataView="+dataSource+". known values: DATA_ABS="+DATA_ABS+", DATA_DIFF="+DATA_DIFF+", DATA_RATE="+DATA_RATE+".");
@@ -3645,6 +3785,9 @@ implements Cloneable, ITableTooltip
 		//fireTableStructureChanged(); // does resort, but: slow and makes GUI "hopp" (columns resize)
 		if (getTabPanel() != null)
 			getTabPanel().sortDatatable();
+
+		if (saveProps)
+			saveProps();
 	}
 	
 	protected CounterTableModel getCounterDataAbs()
@@ -3712,17 +3855,20 @@ implements Cloneable, ITableTooltip
 
 	public Timestamp getTimestamp()
 	{
-		if (_diffData == null)
-			return null;
-		return _diffData.samplingTime;
+		return (_newSample == null) ? null : _newSample.getSampleTime();
+
+//		if (_diffData == null)
+//			return null;
+//		return _diffData.samplingTime;
 	}
 
 	public int getLastSampleInterval()
 	{
-		if (_diffData != null)
-			return (int) _diffData.interval;
+		return (_newSample == null) ? 0 : _newSample.getSampleInterval();
 
-		return 0;
+//		if (_diffData != null)
+//			return (int) _diffData.interval;
+//		return 0;
 	}
 	
 	// Return number of rows in the diff table
@@ -4271,6 +4417,7 @@ implements Cloneable, ITableTooltip
 
 		if (tempProps != null)
 		{
+			tempProps.setProperty(base + PROP_currentDataSource,          getDataSource());
 			tempProps.setProperty(base + PROP_filterAllZeroDiffCounters,  isFilterAllZero());
 			tempProps.setProperty(base + PROP_sampleDataIsPaused,         isDataPollingPaused());
 			tempProps.setProperty(base + PROP_sampleDataInBackground,     isBackgroundDataPollingEnabled());
@@ -4305,7 +4452,9 @@ implements Cloneable, ITableTooltip
 		{
 			_inLoadProps = true;
 
-			setQueryTimeout(                 tempProps.getIntProperty(base + PROP_queryTimeout, getQueryTimeout()) );
+			setQueryTimeout(                 tempProps.getIntProperty(    base + PROP_queryTimeout,               getQueryTimeout()) );
+
+			setDataSource(                   tempProps.getIntProperty(    base + PROP_currentDataSource,          getDefaultDataSource())           ,false);
 
 			setFilterAllZero(                tempProps.getBooleanProperty(base + PROP_filterAllZeroDiffCounters,  isFilterAllZero())                ,false);
 			setPauseDataPolling(             tempProps.getBooleanProperty(base + PROP_sampleDataIsPaused,         isDataPollingPaused())            ,false);
@@ -4322,6 +4471,7 @@ implements Cloneable, ITableTooltip
 		}
 	}
 
+	public static final String PROP_currentDataSource          = "currentDataSource";
 	public static final String PROP_filterAllZeroDiffCounters  = "filterAllZeroDiffCounters";
 	public static final String PROP_sampleDataIsPaused         = "sampleDataIsPaused";
 	public static final String PROP_sampleDataInBackground     = "sampleDataInBackground";
@@ -4372,9 +4522,10 @@ implements Cloneable, ITableTooltip
 		Class<?> _scriptLocation;       // in what "directory" (actually a classname) do we find the script 
 		String   _scriptName;           // name of the script (from within the jar file or classpath)
 		String   _needsRoleToRecreate;  // what ROLE inside ASE server do we need to create this proc
+		int      _needSrvVersion;       // no need to create proc if server is below this version
 
 		StoredProcCheck(String dbname, String procName, Date procDateThreshold, 
-				Class<?> scriptLocation, String scriptName, String needsRoleToRecreate)
+				Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
 		{
 			_dbname              = dbname;
 			_procName            = procName;
@@ -4382,6 +4533,7 @@ implements Cloneable, ITableTooltip
 			_scriptLocation      = scriptLocation;
 			_scriptName          = scriptName;
 			_needsRoleToRecreate = needsRoleToRecreate;
+			_needSrvVersion      = needSrvVersion;
 		}
 	}
 }
