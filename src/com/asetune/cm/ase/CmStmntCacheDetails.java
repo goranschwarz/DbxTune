@@ -246,6 +246,14 @@ extends CountersModel
 		if (propName.equals(getName()+".sample.showplan")) return "Get XML Plan (using: show_cached_plan_in_xml(SSQLID, 0)) assosiated with the Cached Statement, Note only in 15.7 and above.";
 		return "";
 	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(getName()+".sample.sqlText"))  return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.xmlPlan"))  return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.showplan")) return Boolean.class.getSimpleName();
+		return "";
+	}
 
 	@Override
 	public String getSql()

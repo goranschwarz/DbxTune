@@ -953,6 +953,11 @@ implements Cloneable, ITableTooltip
 	{
 		return "";
 	}
+	/** Used by the: Create 'Offline Session' Wizard */
+	public String getLocalConfigurationDataType(String propName)
+	{
+		return "";
+	}
 
 	/**
 	 * Called from GeCountersGui/GetCountersNoGui to check if we should querey the monitored server

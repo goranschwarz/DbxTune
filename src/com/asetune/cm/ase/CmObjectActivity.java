@@ -197,6 +197,12 @@ extends CountersModel
 		if (propName.equals(getName()+".TabRowCount")) return "Sample Table Row Count using ASE functions row_count() and data_pages()";
 		return "";
 	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(getName()+".TabRowCount")) return Boolean.class.getSimpleName();
+		return "";
+	}
 
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)

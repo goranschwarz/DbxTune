@@ -350,6 +350,17 @@ extends CountersModel
 		if (propName.equals(getName()+".sample.dbccStacktrace")) return "Do 'dbcc stacktrace(spid)' on every row in the table.";
 		return "";
 	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(getName()+".sample.showplan"))       return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.monSqltext"))     return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.dbccSqltext"))    return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.procCallStack"))  return Boolean.class.getSimpleName();
+		if (propName.equals(getName()+".sample.dbccStacktrace")) return Boolean.class.getSimpleName();
+		return "";
+	}
+
 
 
 	@Override

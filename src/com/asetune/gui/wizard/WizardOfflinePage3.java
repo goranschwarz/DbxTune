@@ -28,7 +28,6 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
 
-import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -250,17 +249,19 @@ implements ActionListener, TableModelListener
 					row.set(TAB_POS_STORE_ABS,  new Boolean(cm.isPersistCountersAbsEnabled()));
 					row.set(TAB_POS_STORE_DIFF, new Boolean(cm.isPersistCountersDiffEnabled()));
 					row.set(TAB_POS_STORE_RATE, new Boolean(cm.isPersistCountersRateEnabled()));
-					row.set(TAB_POS_ICON,       cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+//					row.set(TAB_POS_ICON,       cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+					row.set(TAB_POS_ICON,       cm.getIconFile() == null ? null : SwingUtils.readImageIcon(Version.class, cm.getIconFile()));
 					row.set(TAB_POS_TAB_NAME,   cm.getDisplayName());
+					row.set(TAB_POS_GROUP_NAME, cm.getGroupName());
 					row.set(TAB_POS_CM_NAME,    cm.getName());
 					row.set(TAB_POS_LONG_DESC,  cm.getDescription().replaceAll("\\<.*?\\>", "")); // STRIP HTML Tags from the description.
 					tab.add(row);
 
 //					if (cm.getName().equals(SummaryPanel.CM_NAME))
-					if (cm.getName().equals(CounterController.getSummaryCmName()))
-					{
-						row.set(TAB_POS_ICON, SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
-					}
+//					if (cm.getName().equals(CounterController.getSummaryCmName()))
+//					{
+//						row.set(TAB_POS_ICON, SwingUtils.readImageIcon(Version.class, "images/summary_tab.png"));
+//					}
 				}
 			}
 			setToTemplate();
@@ -425,6 +426,7 @@ implements ActionListener, TableModelListener
 		//setProblem(validateContents(null,null));
 	}
 
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 		// This wasnt kicked off for a table change...
