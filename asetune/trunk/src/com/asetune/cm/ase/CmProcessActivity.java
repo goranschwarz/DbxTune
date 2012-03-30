@@ -272,6 +272,12 @@ extends CountersModel
 		if (propName.equals(getName()+".sample.systemThreads")) return "Sample System SPID's that executes in the ASE Server";
 		return "";
 	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(getName()+".sample.systemThreads")) return Boolean.class.getSimpleName();
+		return "";
+	}
 
 	@Override
 	public String getSql()

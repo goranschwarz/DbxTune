@@ -109,16 +109,16 @@ extends CountersModel
 	private static final String  PROP_PREFIX                       = CM_NAME;
 
 	public static final String  PROPKEY_sample_monSqlText         = PROP_PREFIX + ".sample.monSqltext";
-	public static final boolean DEFAULT_sample_monSqlText         = true;
+	public static final boolean DEFAULT_sample_monSqlText         = false;
 
 	public static final String  PROPKEY_sample_dbccSqlText        = PROP_PREFIX + ".sample.dbccSqltext";
 	public static final boolean DEFAULT_sample_dbccSqlText        = false;
 
 	public static final String  PROPKEY_sample_procCallStack      = PROP_PREFIX + ".sample.procCallStack";
-	public static final boolean DEFAULT_sample_procCallStack      = true;
+	public static final boolean DEFAULT_sample_procCallStack      = false;
 
 	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.procCallStack";
-	public static final boolean DEFAULT_sample_showplan           = true;
+	public static final boolean DEFAULT_sample_showplan           = false;
 
 	public static final String  PROPKEY_sample_dbccStacktrace     = PROP_PREFIX + ".sample.dbccStacktrace";
 	public static final boolean DEFAULT_sample_dbccStacktrace     = false;
@@ -334,7 +334,7 @@ extends CountersModel
 		lc.setProperty(PROPKEY_sample_showplan,         conf.getBooleanProperty(PROPKEY_sample_showplan,         DEFAULT_sample_showplan));
 		lc.setProperty(PROPKEY_sample_dbccStacktrace,   conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace,   DEFAULT_sample_dbccStacktrace));
 		lc.setProperty(PROPKEY_sample_freezeMda,        conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda));
-		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getBooleanProperty(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
+		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
 		lc.setProperty(PROPKEY_sample_systemSpids,      conf.getBooleanProperty(PROPKEY_sample_systemSpids,      DEFAULT_sample_systemSpids));
 		
 		return lc;
@@ -352,6 +352,20 @@ extends CountersModel
 		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmSpidCpuWaitPanel.TOOLTIP_sample_extraWhereClause;
 		if (propName.equals(PROPKEY_sample_systemSpids))      return CmSpidCpuWaitPanel.TOOLTIP_sample_systemSpids;
 	
+		return "";
+	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_monSqlText))       return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_dbccSqlText))      return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_procCallStack))    return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_showplan))         return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_dbccStacktrace))   return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_freezeMda))        return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_systemSpids))      return Boolean.class.getSimpleName();
+
 		return "";
 	}
 

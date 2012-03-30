@@ -213,6 +213,12 @@ extends CountersModel
 		if (propName.equals(getName()+".sample.extraWhereClause")) return "Add extra where clause to the query that fetches WaitTime for SPID's. Example: SPID in (select spid from master..sysprocesses where program_name = 'isql')";
 		return "";
 	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(getName()+".sample.extraWhereClause")) return String .class.getSimpleName();
+		return "";
+	}
 
 	@Override
 	public String getSql()
