@@ -1491,7 +1491,8 @@ implements Cloneable, ITableTooltip
 				{
 					if (MainFrame.isOfflineConnected())
 					{
-						CountersModel cm = _counterController.getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+						// FIXME: _counterController is NOT set for UDC Counters (especially when initialized from OfflineStorage)
+						CountersModel cm = getCounterController().getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
 						TabularCntrPanel tcp = cm.getTabPanel();
 						if (tcp != null)
 						{
@@ -1693,6 +1694,9 @@ implements Cloneable, ITableTooltip
 	
 	public TrendGraph getTrendGraph(String name)
 	{
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
 		return (TrendGraph) _trendGraphs.get(name);
 	}
 	
@@ -2932,7 +2936,7 @@ implements Cloneable, ITableTooltip
 
 		for (String cmName : cmList)
 		{
-			CountersModel cm = _counterController.getCmByName(cmName);
+			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm != null)
 			{
 				long postpone = cm.getTimeToNextPostponedRefresh();
@@ -3064,7 +3068,7 @@ implements Cloneable, ITableTooltip
 
 		for (String cmName : cmList)
 		{
-			CountersModel cm = _counterController.getCmByName(cmName);
+			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm == null)
 			{
 				String msg = "The cm '"+this.getName()+"' depends on '"+cmName+"', which can't be found.";

@@ -88,6 +88,7 @@ import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -672,6 +673,9 @@ implements ICounterController
 	 */
 	public CountersModel getCmByName(String name) 
 	{
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
 		for (CountersModel cm : _CMList)
 		{
 			if (cm != null && cm.getName().equalsIgnoreCase(name))
@@ -688,6 +692,9 @@ implements ICounterController
 	 */
 	public CountersModel getCmByDisplayName(String name) 
 	{
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
 		for (CountersModel cm : _CMList)
 		{
 			if (cm != null && cm.getDisplayName().equalsIgnoreCase(name))

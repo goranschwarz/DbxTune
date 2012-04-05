@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.BackwardNameCompatibility;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -71,6 +72,8 @@ implements Runnable
 	/** Hold information of last loaded session list, this can be used to send statistics */
 	private List<SessionInfo> _lastLoadedSessionList = null;
 
+	/** Used to get what version of AseTune that was used to store the Performance Counters, we might have to do backward name compatibility */
+	private MonVersionInfo _monVersionInfo = null;
 
 	/** hold information about if current selected sample */
 	private HashMap<String,CmIndicator> _currentIndicatorMap = new HashMap<String,CmIndicator>();
@@ -754,6 +757,7 @@ implements Runnable
 	 */
 	public Timestamp getPrevSample(Timestamp sampleId, Timestamp currentSampleTime, String cmName)
 	{
+		cmName = getNameTranslateCmToDb(cmName);
 		// Rewind to previous cmName that has data
 //		String sql = 
 //			"select top 1 \"SessionSampleTime\" \n" +
@@ -828,6 +832,7 @@ implements Runnable
 	 */
 	public Timestamp getNextSample(Timestamp sampleId, Timestamp currentSampleTime, String cmName)
 	{
+		cmName = getNameTranslateCmToDb(cmName);
 		// Fast Forward to next cmName that has data
 //		String sql = 
 //			"select top 1 \"SessionSampleTime\" \n" +
@@ -1019,6 +1024,9 @@ implements Runnable
 				if (_logger.isDebugEnabled())
 					_logger.debug("getStoredCms()-rs-row- TYPE='"+tableType+"', NAME='"+tableName+"'. name='"+name+"', type='"+type+"'");
 				
+				name = getNameTranslateDbToCm(name);
+				type = getNameTranslateDbToCm(type, true); // type can be a graph name...
+
 				addOfflineCm(name, type);
 			}
 //			ResultSetTableModel tab = new ResultSetTableModel(rs);
@@ -1150,6 +1158,70 @@ implements Runnable
 	}
 
 
+	/** Do name translation if Performance Counters has been saved with AseTune with SourceControlRevision */
+	private static final int NEED_NAME_TRANSLATION_BEFORE_SRC_VERSION = 280;
+
+	/**
+	 * Used to translate a DBName table into a CMName table
+	 * <p>
+	 * This is only done if we are reading a older database.
+	 */
+	private String getNameTranslateDbToCm(String name, boolean isGraph)
+	{
+		if (_monVersionInfo == null)
+			return name;
+		if (_monVersionInfo._sourceRev >= NEED_NAME_TRANSLATION_BEFORE_SRC_VERSION)
+			return name;
+		if ("abs".equals(name) || "diff".equals(name) || "rate".equals(name))
+			return name;
+
+		String translatedName = null;
+		if (isGraph)
+			translatedName = BackwardNameCompatibility.getOldToNewGraph(name, name);
+		else
+			translatedName = BackwardNameCompatibility.getOldToNew(name, name);
+
+		if (_logger.isDebugEnabled())
+			_logger.debug(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
+System.out.println(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
+
+		return translatedName;
+	}
+	private String getNameTranslateDbToCm(String name)
+	{
+		return getNameTranslateDbToCm(name, false);
+	}
+	/**
+	 * Used to translate a CMName table into a DBName table
+	 * <p>
+	 * This is only done if we are reading a older database.
+	 */
+	private String getNameTranslateCmToDb(String name, boolean isGraph)
+	{
+		if (_monVersionInfo == null)
+			return name;
+		if (_monVersionInfo._sourceRev >= NEED_NAME_TRANSLATION_BEFORE_SRC_VERSION)
+			return name;
+		if ("abs".equals(name) || "diff".equals(name) || "rate".equals(name))
+			return name;
+
+		String translatedName = null;
+		if (isGraph)
+			translatedName = BackwardNameCompatibility.getNewToOldGraph(name, name);
+		else
+			translatedName = BackwardNameCompatibility.getNewToOld(name, name);
+
+		if (_logger.isDebugEnabled())
+			_logger.debug(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
+System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
+
+		return translatedName;
+	}
+	private String getNameTranslateCmToDb(String name)
+	{
+		return getNameTranslateCmToDb(name, false);
+	}
+	
 	private int loadSessionGraph(String cmName, String graphName, Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
 	{
 		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
@@ -1165,6 +1237,10 @@ implements Runnable
 			return 0;
 		}
 		tg.clearGraph();
+
+		// When doing dbAccess we need the database names
+		cmName    = getNameTranslateCmToDb(cmName);
+		graphName = getNameTranslateCmToDb(graphName, true);
 
 		//----------------------------------------
 		// TYPICAL look of a graph table
@@ -1286,6 +1362,9 @@ implements Runnable
 //		System.out.println("loadSession(sampleId='"+sampleId+"', startTime='"+startTime+"', endTime='"+endTime+"')");
 		long xStartTime = System.currentTimeMillis();
 
+		// Get what version of the tool that stored the information
+		_monVersionInfo = getMonVersionInfo(startTime);
+		
 		// Populate _offlineCmMap
 		getStoredCms(false);
 
@@ -1410,6 +1489,7 @@ implements Runnable
 		// Remove all the rows in the CM, so that new can be added
 		// if this is not done, all the old rows will still be visible when displaying it in the JTable
 		cm.clearForRead();
+System.out.println("loadSessionCm()|abs="+ocm.hasAbs+",diff="+ocm.hasDiff+",rate="+ocm.hasRate+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
 
 		if (ocm.hasAbs)  loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
 		if (ocm.hasDiff) loadSessionCm(cm, CountersModel.DATA_DIFF, sampleTs);
@@ -1426,7 +1506,7 @@ implements Runnable
 		if (cm       == null) throw new IllegalArgumentException("CountersModel can't be null");
 		if (sampleTs == null) throw new IllegalArgumentException("sampleTs can't be null");
 		
-		String cmName = cm.getName();
+		String cmName = getNameTranslateCmToDb(cm.getName());
 
 		String typeStr = null;
 		if      (type == CountersModel.DATA_ABS)  typeStr = "abs";
@@ -1691,6 +1771,9 @@ implements Runnable
 				int       guiRefreshTime    = hasSqlGuiRefreshTime ? rs.getInt(10) : -1;
 				int       lcRefreshTime     = hasSqlGuiRefreshTime ? rs.getInt(11) : -1;
 
+				// Map cmName from DB->Internal name if needed.
+				cmName = getNameTranslateDbToCm(cmName);
+				
 				CmIndicator cmInd = new CmIndicator(sessionStartTime, sessionSampleTime, cmName, type, graphCount, absRows, diffRows, rateRows, sqlRefreshTime, guiRefreshTime, lcRefreshTime);
 
 				// Add it to the indicators map
@@ -1724,6 +1807,7 @@ implements Runnable
 	public CountersModel getCmForSample(String name, Timestamp sampleTs)
 	{
 		CmIndicator cmInd = getIndicatorForCm(name);
+System.out.println("getCmForSample(name='"+name+"', sampleTs='"+sampleTs+"': cmInd="+cmInd);
 		if (cmInd == null)
 		{
 			if (_logger.isDebugEnabled())
@@ -1761,6 +1845,7 @@ implements Runnable
 		// Make a new object, which the data will be attached to
 		// current CM is reused, then the fireXXX will be done and TableModel.get* will fail.
 		cm = cm.copyForOfflineRead();
+System.out.println("loadSessionCm()|absRows="+cmInd._absRows+",diffRows="+cmInd._absRows+",rateRows="+cmInd._absRows+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
 
 		if (cmInd._absRows  > 0) loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
 		if (cmInd._diffRows > 0) loadSessionCm(cm, CountersModel.DATA_DIFF, sampleTs);
@@ -1922,6 +2007,9 @@ implements Runnable
 				int       absSamples  = rs.getInt      (3);
 				int       diffSamples = rs.getInt      (4);
 				int       rateSamples = rs.getInt      (5);
+
+				// Map cmName from DB->Internal name if needed.
+				cmName = getNameTranslateDbToCm(cmName);
 				
 				map.put(cmName, new CmNameSum(ssTime, cmName, absSamples, diffSamples, rateSamples));
 			}
@@ -1994,6 +2082,9 @@ implements Runnable
 				cmci._guiRefreshTime    = hasSqlGuiRefreshTime ? rs.getInt(10) : -1;
 				cmci._lcRefreshTime     = hasSqlGuiRefreshTime ? rs.getInt(11) : -1;
 
+				// Map cmName from DB->Internal name if needed.
+				cmci._cmName = getNameTranslateDbToCm(cmci._cmName);
+				
 				if (lastSampleTime != cmci._sessionSampleTime.getTime())
 				{
 					lastSampleTime = cmci._sessionSampleTime.getTime();

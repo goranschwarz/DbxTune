@@ -716,6 +716,30 @@ public class AseTune
 					frame.setVisible(true);
 				}
 			};
+			
+//			// Dummy profiler, lets use H2's built in profiler tool
+//	        Thread runProfiler = new Thread()
+//			{
+//				public void run()
+//				{
+//					Profiler profiler = new Profiler();
+//					profiler.interval = 1;
+//					profiler.startCollecting();
+//					
+//					while(true)
+//					{
+//						try { Thread.sleep(5000); }
+//						catch (InterruptedException e) {}
+//
+//						// application code
+//						System.out.println(profiler.getTop(3));
+//					}
+//				}
+//			};
+//			runProfiler.setName("AseTune-Profiler");
+//			runProfiler.setDaemon(true);
+//			runProfiler.start();
+			
 			SplashWindow.drawProgress("Invoking Swing Event Dispatcher Thread...");
 			SwingUtilities.invokeLater(runGui);
 
