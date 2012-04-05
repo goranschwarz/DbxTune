@@ -1296,7 +1296,7 @@ extends Properties
 	}
 
 	/** Hold the specified search order for the Combined Configuration */
-	private static String[] _searchOrder = new String[] {};
+	private static String[] _searchOrder = new String[] {USER_TEMP, USER_CONF, SYSTEM_CONF};
 	/**
 	 * Set the search order for the Combined Configuration
 	 * @param searchOrder

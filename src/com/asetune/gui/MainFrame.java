@@ -58,6 +58,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
@@ -83,6 +84,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.ProcessDetailFrame;
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
+import com.asetune.check.MailGroupDialog;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -415,6 +417,18 @@ public class MainFrame
 	public void setVisible(boolean visible)
 	{
 		_guiInitTime = System.currentTimeMillis();
+
+		// Join mailing list, show this after the window is visible
+		Runnable doLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				MailGroupDialog.showDialog(MainFrame.getInstance());
+			}
+		};
+		SwingUtilities.invokeLater(doLater);
+
 		super.setVisible(visible);
 	}
 	/*---------------------------------------------------
