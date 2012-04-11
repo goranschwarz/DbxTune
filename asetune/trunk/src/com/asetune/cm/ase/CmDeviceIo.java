@@ -161,9 +161,12 @@ extends CountersModel
 			cols1 += "InstanceID, ";
 		}
 
-		String TotalIOs = "TotalIOs = (Reads + Writes)";
+//		String TotalIOs = "TotalIOs = (Reads + Writes)";
+//		if (aseVersion > 15000) 
+//			TotalIOs = "TotalIOs = (convert(bigint,Reads) + convert(bigint,Writes))";
+		String TotalIOs = "(Reads + Writes)";
 		if (aseVersion > 15000) 
-			TotalIOs = "TotalIOs = convert(bigint,Reads) + convert(bigint,Writes)";
+			TotalIOs = "(convert(bigint,Reads) + convert(bigint,Writes))";
 
 		String DeviceType = "";
 		if (aseVersion >= 15020) 
@@ -177,10 +180,10 @@ extends CountersModel
 				"             END,\n";
 		}
 		
-		cols1 += "LogicalName, "+TotalIOs+", \n" +
+		cols1 += "LogicalName, TotalIOs = "+TotalIOs+", \n" +
 		         "Reads, \n" +
-		         "ReadsPct = CASE WHEN Reads + Writes > 0 \n" +
-		         "                THEN convert(numeric(10,1), (Reads + 0.0) / (Reads + Writes + 0.0) * 100.0 ) \n" +
+		         "ReadsPct = CASE WHEN "+TotalIOs+" > 0 \n" +
+		         "                THEN convert(numeric(10,1), (Reads + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
 		         "                ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "           END, \n" +
 		         "APFReads, \n" +
@@ -189,14 +192,14 @@ extends CountersModel
 		         "                   ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "              END, \n" +
 		         "Writes, \n" +
-		         "WritesPct = CASE WHEN Reads + Writes > 0 \n" +
-		         "                 THEN convert(numeric(10,1), (Writes + 0.0) / (Reads + Writes + 0.0) * 100.0 ) \n" +
+		         "WritesPct = CASE WHEN "+TotalIOs+" > 0 \n" +
+		         "                 THEN convert(numeric(10,1), (Writes + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
 		         "                 ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "            END, \n" +
 		         "DevSemaphoreRequests, DevSemaphoreWaits, IOTime, \n";
 		cols2 += "AvgServ_ms = CASE \n" +
-				 "               WHEN Reads+Writes>0 \n" +
-				 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), Reads+Writes)) \n" +
+				 "               WHEN "+TotalIOs+" > 0 \n" +
+				 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), "+TotalIOs+")) \n" +
 				 "               ELSE convert(numeric(10,1), null) \n" +
 				 "             END \n";
 		cols3 += ", "+DeviceType+" PhysicalName";

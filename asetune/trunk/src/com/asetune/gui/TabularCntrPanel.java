@@ -12,6 +12,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.Shape;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
@@ -71,6 +72,9 @@ import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
+import org.jdesktop.swingx.decorator.PainterHighlighter;
+import org.jdesktop.swingx.painter.AbstractPainter;
+import org.jdesktop.swingx.renderer.PainterAware;
 import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
@@ -3439,11 +3443,33 @@ implements
 		}
 	}
 
-	private static class HighlighterPctData extends AbstractHighlighter
+//	private static class HighlighterPctData extends AbstractHighlighter
+//	{
+//		public HighlighterPctData(HighlightPredicate predicate)
+//		{
+//			super(predicate);
+//		}
+//
+//		@Override
+//		protected Component doHighlight(Component comp, ComponentAdapter adapter)
+//		{
+//			Object value = adapter.getFilteredValueAt(adapter.row, adapter.convertColumnIndexToModel(adapter.column));
+//			if ( value instanceof Number )
+//			{
+//				comp.setForeground(Color.RED);
+//				if ( ((Number) value).doubleValue() != 0 )
+//				{
+//					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
+//				}
+//			}
+//			return comp;
+//		}
+//	}
+	private static class HighlighterPctData extends PainterHighlighter
 	{
 		public HighlighterPctData(HighlightPredicate predicate)
 		{
-			super(predicate);
+			super(predicate, new PctPainter());
 		}
 
 		@Override
@@ -3453,7 +3479,14 @@ implements
 			if ( value instanceof Number )
 			{
 				comp.setForeground(Color.RED);
-				if ( ((Number) value).doubleValue() != 0 )
+				double pctValue = ((Number) value).doubleValue();
+
+				// Set value for Percent "graph" in the cell
+				PctPainter painter = (PctPainter) getPainter();
+				painter.setPctValue(pctValue);
+				((PainterAware) comp).setPainter(painter);
+				
+				if ( pctValue != 0 )
 				{
 					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
 				}
@@ -3461,38 +3494,39 @@ implements
 			return comp;
 		}
 	}
-//	private static class HighlighterPctData extends PainterHighlighter
-//	{
-//		public HighlighterPctData(HighlightPredicate predicate)
-//		{
-//			super(predicate);
-//		}
-//
-//		@SuppressWarnings("rawtypes")
-//		@Override
-//		protected Component doHighlight(Component renderer, ComponentAdapter adapter) 
-//		{
-////			float end = getEndOfGradient((Number) adapter.getValue());
-//			RelativePainter painter = (RelativePainter) getPainter();
-////			painter.setXFraction(end);
-//			((PainterAware) renderer).setPainter(painter);
-//			return renderer;
-//		}
-////		@Override
-////		protected Component doHighlight(Component comp, ComponentAdapter adapter)
-////		{
-////			Object value = adapter.getFilteredValueAt(adapter.row, adapter.convertColumnIndexToModel(adapter.column));
-////			if ( value instanceof Number )
-////			{
-////				comp.setForeground(Color.RED);
-////				if ( ((Number) value).doubleValue() != 0 )
-////				{
-////					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
-////				}
-////			}
-////			return comp;
-////		}
-//	}
+
+	private static class PctPainter
+	extends AbstractPainter<Object>
+	{
+		double  _pctValue   = 0;
+		boolean _doPctGraph = Configuration.getCombinedConfiguration().getBooleanProperty("TabularCntrPanel.table.graph.percent", true);
+
+		public void setPctValue(double pctValue)
+		{
+			_pctValue = pctValue;
+		}
+
+		@Override
+	    protected void doPaint(Graphics2D g, Object component, int width, int height) 
+		{
+			if ( ! _doPctGraph )
+				return;
+
+			if ( _pctValue < 1.0 )
+				return;
+			
+			int drawWidth = (int) ((_pctValue / 100.0) * (width * 1.0));
+			
+			Shape oldClip = g.getClip();
+
+			if(component instanceof JComponent)
+				g.setColor(((JComponent)component).getForeground());
+	        
+			g.fillRect(0, height-3, drawWidth, 3);
+			
+			g.setClip(oldClip);
+		}
+	}
 
 	/*---------------------------------------------------
 	 ** END: Highlighter stuff for the JXTable

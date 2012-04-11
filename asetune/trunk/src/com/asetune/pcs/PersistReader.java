@@ -1183,7 +1183,7 @@ implements Runnable
 
 		if (_logger.isDebugEnabled())
 			_logger.debug(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
-System.out.println(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
+//System.out.println(" --> Translating name db->CM: '"+name+"' to '"+translatedName+"'.");
 
 		return translatedName;
 	}
@@ -1489,7 +1489,7 @@ System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedNam
 		// Remove all the rows in the CM, so that new can be added
 		// if this is not done, all the old rows will still be visible when displaying it in the JTable
 		cm.clearForRead();
-System.out.println("loadSessionCm()|abs="+ocm.hasAbs+",diff="+ocm.hasDiff+",rate="+ocm.hasRate+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
+//System.out.println("loadSessionCm()|abs="+ocm.hasAbs+",diff="+ocm.hasDiff+",rate="+ocm.hasRate+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
 
 		if (ocm.hasAbs)  loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
 		if (ocm.hasDiff) loadSessionCm(cm, CountersModel.DATA_DIFF, sampleTs);
@@ -1807,7 +1807,7 @@ System.out.println("loadSessionCm()|abs="+ocm.hasAbs+",diff="+ocm.hasDiff+",rate
 	public CountersModel getCmForSample(String name, Timestamp sampleTs)
 	{
 		CmIndicator cmInd = getIndicatorForCm(name);
-System.out.println("getCmForSample(name='"+name+"', sampleTs='"+sampleTs+"': cmInd="+cmInd);
+//System.out.println("getCmForSample(name='"+name+"', sampleTs='"+sampleTs+"': cmInd="+cmInd);
 		if (cmInd == null)
 		{
 			if (_logger.isDebugEnabled())
@@ -1845,7 +1845,7 @@ System.out.println("getCmForSample(name='"+name+"', sampleTs='"+sampleTs+"': cmI
 		// Make a new object, which the data will be attached to
 		// current CM is reused, then the fireXXX will be done and TableModel.get* will fail.
 		cm = cm.copyForOfflineRead();
-System.out.println("loadSessionCm()|absRows="+cmInd._absRows+",diffRows="+cmInd._absRows+",rateRows="+cmInd._absRows+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
+//System.out.println("loadSessionCm()|absRows="+cmInd._absRows+",diffRows="+cmInd._absRows+",rateRows="+cmInd._absRows+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
 
 		if (cmInd._absRows  > 0) loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);
 		if (cmInd._diffRows > 0) loadSessionCm(cm, CountersModel.DATA_DIFF, sampleTs);
