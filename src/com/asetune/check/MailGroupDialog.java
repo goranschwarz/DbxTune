@@ -45,7 +45,7 @@ public class MailGroupDialog
 	
 	protected static final String ASETUNE_MAIL_GROUP_URL = "http://groups.google.com/group/asetune/subscribe";
 
-	private JButton    _ok_but             = new JButton("OK");
+	private JButton    _close_but          = new JButton("Close");
 	private JCheckBox  _doNotShow_chk      = new JCheckBox("Show this message again.");
 
 	// Used to launch WEB BROWSER
@@ -121,7 +121,7 @@ public class MailGroupDialog
 	
 	public void actionPerformed(ActionEvent e)
 	{
-		if ( _ok_but.equals(e.getSource()) )
+		if ( _close_but.equals(e.getSource()) )
 		{
 			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
@@ -170,12 +170,12 @@ public class MailGroupDialog
 
 		panel.add(initCheckPanel(),    "height 100%, wrap 15");
 		panel.add(_doNotShow_chk,      "gapleft 15, growx, pushx");
-		panel.add(_ok_but,             "tag ok, gapright 15, bottom, right, pushx, wrap 15");
+		panel.add(_close_but,          "tag ok, gapright 15, bottom, right, pushx, wrap 15");
 
 		setContentPane(panel);
 
 		// ADD ACTIONS TO COMPONENTS
-		_ok_but        .addActionListener(this);
+		_close_but.addActionListener(this);
 	}
 
 	protected JPanel initCheckPanel() 
