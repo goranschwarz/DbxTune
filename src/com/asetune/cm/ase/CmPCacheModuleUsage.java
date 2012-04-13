@@ -7,6 +7,8 @@ import java.util.List;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.TrendGraphDataPoint;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmPCacheModuleUsagePanel;
 import com.asetune.gui.MainFrame;
@@ -47,6 +49,11 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -73,10 +80,9 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 
-		if (getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			setQueryTimeout(DEFAULT_QUERY_TIMEOUT);
-		
 		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
 	}
 
 

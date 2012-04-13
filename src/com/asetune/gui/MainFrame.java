@@ -86,6 +86,11 @@ import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.MailGroupDialog;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmBlocking;
+import com.asetune.cm.ase.CmOpenDatabases;
+import com.asetune.cm.ase.CmPCacheModuleUsage;
+import com.asetune.cm.ase.CmSummary;
+import com.asetune.cm.ase.CmSysLoad;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
@@ -614,7 +619,10 @@ public class MainFrame
 		_tcpSettingsConf_mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, ActionEvent.ALT_MASK));
 		_aseConfMon_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, ActionEvent.ALT_MASK));
 
+		// Refresh: alt+r, F5
 		_refreshNow_but.setMnemonic(KeyEvent.VK_R);
+		KeyStroke refreshNow = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F5, 0);
+		contentPane.registerKeyboardAction(this, ACTION_REFRESH_NOW, refreshNow, JComponent.WHEN_IN_FOCUSED_WINDOW);
 
 //		FIXME: Add some Ctrl+>, Ctrl+<  and Ctrl+Shift+<>  to navigate the offline/inmem JSlider, this will make navigation easier
 //		FIXME: look at setFocus on JSlide after a Offline dataset has been loded....
@@ -631,7 +639,7 @@ public class MainFrame
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT_RIGHT, rightRightSample, JComponent.WHEN_IN_FOCUSED_WINDOW);
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT_NEXT,   leftNextSample,   JComponent.WHEN_IN_FOCUSED_WINDOW);
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT_NEXT,  rightNextSample,  JComponent.WHEN_IN_FOCUSED_WINDOW);
-		
+
 		//--------------------------
 		// TOOLBAR
 		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
@@ -1397,7 +1405,8 @@ public class MainFrame
 		{
 			_logger.debug("called: ACTION_GOTO_BLOCKED_TAB");
 
-			String toTabName = GetCounters.CM_DESC__BLOCKING; // "Blocking"
+//			String toTabName = GetCounters.CM_DESC__BLOCKING; // "Blocking"
+			String toTabName = CmBlocking.SHORT_NAME; // "Blocking"
 			JTabbedPane tabPane = getTabbedPane();
 			if (tabPane != null)
 				tabPane.setSelectedIndex(tabPane.indexOfTab(toTabName));
@@ -1407,7 +1416,8 @@ public class MainFrame
 		{
 			_logger.debug("called: ACTION_GOTO_DATABASE_TAB");
 
-			String toTabName = GetCounters.CM_DESC__OPEN_DATABASES; // "Databases"
+//			String toTabName = GetCounters.CM_DESC__OPEN_DATABASES; // "Databases"
+			String toTabName = CmOpenDatabases.SHORT_NAME; // "Databases"
 			JTabbedPane tabPane = getTabbedPane();
 			if (tabPane != null)
 				tabPane.setSelectedIndex(tabPane.indexOfTab(toTabName));
@@ -2026,32 +2036,33 @@ public class MainFrame
 				if ( setMinimalGraphConfig )
 				{
 					// GRAPHS in SUMMARY
-					CountersModel cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+//					CountersModel cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+					CountersModel cm = GetCounters.getInstance().getCmByName(CmSummary.CM_NAME);
 					if (cm != null)
 					{
-						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU,             true);
-						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION,         true);
-						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE, true);
-						cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET,       true);
+						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_AA_CPU,             true);
+						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_CONNECTION,         true);
+						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_AA_DISK_READ_WRITE, true);
+						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_AA_NW_PACKET,       true);
 
 						if (aseVersion >= 15033 && hasMonRole)
-							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION,    true);
+							cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_TRANSACTION,    true);
 					}
 
 					// GRAPHS in SYSLOAD
 					if (aseVersion >= 15500 && hasMonRole)
 					{
-						cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SYS_LOAD);
+						cm = GetCounters.getInstance().getCmByName(CmSysLoad.CM_NAME);
 						if (cm != null)
-							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH, true);
+							cm.setTrendGraphEnable(CmSysLoad.GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, true);
 					}
 
 					// GRAPHS in PROC_CACHE_MODULE_USAGE
 					if (aseVersion >= 15010 && hasMonRole)
 					{
-						cm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__PROC_CACHE_MODULE_USAGE);
+						cm = GetCounters.getInstance().getCmByName(CmPCacheModuleUsage.CM_NAME);
 						if (cm != null)
-							cm.setTrendGraphEnable(GetCounters.CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE, true);
+							cm.setTrendGraphEnable(CmPCacheModuleUsage.GRAPH_NAME_MODULE_USAGE, true);
 					}
 				} // end: setMinimalGraphConfig
 			}

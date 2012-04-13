@@ -13,6 +13,8 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.RemarkDictionary;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.ase.gui.CmObjectActivityPanel;
@@ -69,6 +71,11 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.MEDIUM; }
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -95,10 +102,9 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
-		if (getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			setQueryTimeout(DEFAULT_QUERY_TIMEOUT);
-
 		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
 	}
 
 
@@ -238,9 +244,9 @@ extends CountersModel
 
 		if (aseVersion >= 15020)
 		{
-			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
-			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
-			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: CMobjectActivity.TabRowCount=false\n";
+			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+getName()+".TabRowCount=false\n";
+			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+getName()+".TabRowCount=false\n";
+			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+getName()+".TabRowCount=false\n";
 			DBName       = "A.DBName, \n";
 //			ObjectName   = "A.ObjectName, \n";
 			ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
@@ -258,9 +264,9 @@ extends CountersModel
 			}
 			if (conf.getBooleanProperty(getName()+".TabRowCount", true) == false)
 			{
-				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
-				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
-				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: CMobjectActivity.TabRowCount=true\n";
+				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
+				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
+				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
 				_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}

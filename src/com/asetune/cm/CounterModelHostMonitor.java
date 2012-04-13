@@ -355,6 +355,10 @@ extends CountersModel
 	@Override public boolean isPersistCountersRateEnabled() { return false; }
 	@Override public boolean isPersistCountersRateEditable(){ return false; }
 
+	@Override public boolean getDefaultIsPersistCountersEnabled()     { return false; }
+	@Override public boolean getDefaultIsPersistCountersAbsEnabled()  { return true; }
+	@Override public boolean getDefaultIsPersistCountersDiffEnabled() { return false; }
+	@Override public boolean getDefaultIsPersistCountersRateEnabled() { return false; }
 	
 	@Override public synchronized Timestamp getTimestamp() { return _thisSamplingTime; }
 

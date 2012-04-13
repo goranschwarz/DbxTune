@@ -11,6 +11,8 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CmSybMessageHandler;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmStmntCacheDetailsPanel;
 import com.asetune.gui.MainFrame;
@@ -55,6 +57,11 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -81,10 +88,9 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
-		if (getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			setQueryTimeout(DEFAULT_QUERY_TIMEOUT);
-
 		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
 	}
 
 
@@ -274,7 +280,7 @@ extends CountersModel
 		if ( ! sampleSqlText_chk )
 		{
 			hasSqlText = "convert(bit,0)";
-			 doSqltext = "convert(text, 'CMstmntCacheDetails.sample.sqlText=false')";
+			 doSqltext = "convert(text, '"+getName()+".sample.sqlText=false')";
 		}
 		sql = sql.replace("RUNTIME_REPLACE::HAS_SQL_TEXT", hasSqlText);
 		sql = sql.replace("RUNTIME_REPLACE::DO_SQL_TEXT",   doSqltext);
@@ -292,7 +298,7 @@ extends CountersModel
 			if ( ! sampleXmlPlan_chk )
 			{
 				hasXmlPlan = "convert(bit,0)";
-				 doXmlPlan = "convert(text, 'CMstmntCacheDetails.sample.xmlPlan=false')";
+				 doXmlPlan = "convert(text, '"+getName()+".sample.xmlPlan=false')";
 			}
 			sql = sql.replace("RUNTIME_REPLACE::HAS_XML_PLAN", hasXmlPlan);
 			sql = sql.replace("RUNTIME_REPLACE::DO_XML_PLAN",   doXmlPlan);
@@ -305,7 +311,7 @@ extends CountersModel
 		if ( ! sampleShowplan_chk )
 		{
 			hasShowplan = "convert(bit,0)";
-			 doShowplan = "convert(text, 'CMstmntCacheDetails.sample.showplan=false')";
+			 doShowplan = "convert(text, '"+getName()+".sample.showplan=false')";
 		}
 		sql = sql.replace("RUNTIME_REPLACE::HAS_SHOWPLAN", hasShowplan);
 		sql = sql.replace("RUNTIME_REPLACE::DO_SHOWPLAN",   doShowplan);

@@ -165,6 +165,11 @@ public class AseTune
 		//-------------------------------
 		if (cmd.hasOption('l'))
 		{
+			// Create a dummy Counter Controller...
+			GetCountersNoOp counters = new GetCountersNoOp();
+			CounterController.setInstance(counters);
+			counters.init();
+
 			Map<String,String> shortToLongCmMap = CounterSetTemplates.getShortToLongMap();
 
 			System.out.println();
@@ -185,6 +190,9 @@ public class AseTune
 			printTemplate("medium");
 			printTemplate("large");
 			printTemplate("all");
+
+			// drop the dummy controller
+			CounterController.setInstance(null);
 
 			throw new NormalExitException("Done after -l switch.");
 		}

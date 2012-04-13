@@ -28,6 +28,7 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CounterModelHostMonitor;
+import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelUserDefined;
 import com.asetune.cm.ase.CmActiveObjects;
@@ -382,177 +383,177 @@ implements ICounterController
 	////////////////////////////////////////////////////////////////////////////////
 	// NOTE: if you add a CM, also add it to class: CounterSetTemplates
 	////////////////////////////////////////////////////////////////////////////////
-	public static final String CM_NAME__SUMMARY                 = "CMsummary";//SummaryPanel.CM_NAME;
-	public static final String CM_DESC__SUMMARY                 = "Summary";
-
-	public static final String CM_NAME__OBJECT_ACTIVITY         = "CMobjectActivity";
-	public static final String CM_DESC__OBJECT_ACTIVITY         = "Objects";
-
-	public static final String CM_NAME__PROCESS_ACTIVITY        = "CMprocessActivity";
-	public static final String CM_DESC__PROCESS_ACTIVITY        = "Processes";
-
-	public static final String CM_NAME__PROCESS_WAIT            = "CMspidWait";
-	public static final String CM_DESC__PROCESS_WAIT            = "SPID Wait";
-
-	public static final String CM_NAME__OPEN_DATABASES          = "CMopenDatabases";
-	public static final String CM_DESC__OPEN_DATABASES          = "Databases";
-
-	public static final String CM_NAME__TEMPDB_ACTIVITY         = "CMtempdbActivity";
-	public static final String CM_DESC__TEMPDB_ACTIVITY         = "Temp Db";
-
-	public static final String CM_NAME__SYS_WAIT                = "CMsysWait";
-	public static final String CM_DESC__SYS_WAIT                = "Waits";
-
-	public static final String CM_NAME__ENGINE                  = "CMengine";
-	public static final String CM_DESC__ENGINE                  = "Engines";
-
-	public static final String CM_NAME__SYS_LOAD                = "CMsysLoad";
-	public static final String CM_DESC__SYS_LOAD                = "System Load";
-
-	public static final String CM_NAME__DATA_CACHE              = "CMdataCache";
-	public static final String CM_DESC__DATA_CACHE              = "Caches";
-
-	public static final String CM_NAME__CACHE_POOL              = "CMcachePool";
-	public static final String CM_DESC__CACHE_POOL              = "Pools";
-
-	public static final String CM_NAME__DEVICE_IO               = "CMdeviceIo";
-	public static final String CM_DESC__DEVICE_IO               = "Devices";
-
-	public static final String CM_NAME__IO_QUEUE_SUM            = "CMioQueueSum";
-	public static final String CM_DESC__IO_QUEUE_SUM            = "IO Sum";
-
-	public static final String CM_NAME__IO_QUEUE                = "CMioQueue";
-	public static final String CM_DESC__IO_QUEUE                = "IO Queue";
-
-	public static final String CM_NAME__SPINLOCK_SUM            = "CMspinlockSum";
-	public static final String CM_DESC__SPINLOCK_SUM            = "Spinlock Sum";
-
-	public static final String CM_NAME__SYSMON                  = "CMsysmon";
-	public static final String CM_DESC__SYSMON                  = "Sysmon Raw";
-
-	public static final String CM_NAME__RA_SENDERS              = "CMraSenders";
-	public static final String CM_DESC__RA_SENDERS              = "Rep Senders";
-
-	public static final String CM_NAME__RA_LOGACTIVITY          = "CMraLogAct";
-	public static final String CM_DESC__RA_LOGACTIVITY          = "Log Activity";
-
-	public static final String CM_NAME__RA_SCANNERS             = "CMraScanners";
-	public static final String CM_DESC__RA_SCANNERS             = "Log Scanners";
-
-	public static final String CM_NAME__RA_SCANNERS_TIME        = "CMraScannersTime";
-	public static final String CM_DESC__RA_SCANNERS_TIME        = "Log Scanners Time";
-
-	public static final String CM_NAME__RA_SQL_ACTIVITY         = "CMraSqlActivity";
-	public static final String CM_DESC__RA_SQL_ACTIVITY         = "RA SQL Activity";
-
-	public static final String CM_NAME__RA_SQL_MISSES           = "CMraSqlMisses";
-	public static final String CM_DESC__RA_SQL_MISSES           = "RA SQL Misses";
-
-	public static final String CM_NAME__RA_SYSMON               = "CMraSysmon";
-	public static final String CM_DESC__RA_SYSMON               = "RepAgent Sysmon";
-
-	public static final String CM_NAME__CACHED_PROC             = "CMcachedProcs";
-	public static final String CM_DESC__CACHED_PROC             = "Cached Procedures";
-
-	public static final String CM_NAME__PROC_CACHE_LOAD         = "CMprocCacheLoad";
-	public static final String CM_DESC__PROC_CACHE_LOAD         = "Procedure Cache Load";
-
-	public static final String CM_NAME__PROC_CALL_STACK         = "CMprocCallStack";
-	public static final String CM_DESC__PROC_CALL_STACK         = "Procedure Call Stack";
-
-	public static final String CM_NAME__CACHED_OBJECTS          = "CMcachedObjects";
-	public static final String CM_DESC__CACHED_OBJECTS          = "Cached Objects";
-
-	public static final String CM_NAME__ERRORLOG                = "CMerrolog";
-	public static final String CM_DESC__ERRORLOG                = "Errorlog";
-
-	public static final String CM_NAME__DEADLOCK                = "CMdeadlock";
-	public static final String CM_DESC__DEADLOCK                = "Deadlock";
-
-	public static final String CM_NAME__LOCK_TIMEOUT            = "CMlockTimeout";
-	public static final String CM_DESC__LOCK_TIMEOUT            = "Lock Timeout";
-
-	public static final String CM_NAME__PROC_CACHE_MODULE_USAGE = "CMpCacheModuleUsage";
-	public static final String CM_DESC__PROC_CACHE_MODULE_USAGE = "Proc Cache Module Usage";
-
-	public static final String CM_NAME__PROC_CACHE_MEMORY_USAGE = "CMpCacheMemoryUsage";
-	public static final String CM_DESC__PROC_CACHE_MEMORY_USAGE = "Proc Cache Memory Usage";
-
-	public static final String CM_NAME__STATEMENT_CACHE         = "CMstatementCache";
-	public static final String CM_DESC__STATEMENT_CACHE         = "Statement Cache";
-
-	public static final String CM_NAME__STATEMENT_CACHE_DETAILS = "CMstmntCacheDetails";
-	public static final String CM_DESC__STATEMENT_CACHE_DETAILS = "Statement Cache Details";
-
-	public static final String CM_NAME__ACTIVE_OBJECTS          = "CMactiveObjects";
-	public static final String CM_DESC__ACTIVE_OBJECTS          = "Active Objects";
-
-	public static final String CM_NAME__ACTIVE_STATEMENTS       = "CMactiveStatements";
-	public static final String CM_DESC__ACTIVE_STATEMENTS       = "Active Statements";
-
-	public static final String CM_NAME__BLOCKING                = "CMblocking";
-	public static final String CM_DESC__BLOCKING                = "Blocking";
-
-	public static final String CM_NAME__TABLE_COMPRESSION       = "CMtableCompression";
-	public static final String CM_DESC__TABLE_COMPRESSION       = "Table Compression";
-
-	public static final String CM_NAME__MISSING_STATISTICS      = "CMmissingStats";
-	public static final String CM_DESC__MISSING_STATISTICS      = "Missing Statistics";
-
-	public static final String CM_NAME__QP_METRICS              = "CMqpMetrics";
-	public static final String CM_DESC__QP_METRICS              = "QP Metrics";
-
-	public static final String CM_NAME__SP_MONITOR_CONFIG       = "CMspMonitorConfig";
-	public static final String CM_DESC__SP_MONITOR_CONFIG       = "sp_monitorconfig";
-
-	public static final String CM_NAME__OS_IOSTAT               = "CMosIostat";
-	public static final String CM_DESC__OS_IOSTAT               = "OS Disk Stat";
-
-	public static final String CM_NAME__OS_VMSTAT               = "CMosVmstat";
-	public static final String CM_DESC__OS_VMSTAT               = "OS CPU(vmstat)";
-
-	public static final String CM_NAME__OS_MPSTAT               = "CMosMpstat";
-	public static final String CM_DESC__OS_MPSTAT               = "OS CPU(mpstat)";
-	
-	public static final String CM_NAME__OS_UPTIME               = "CMosUptime";
-	public static final String CM_DESC__OS_UPTIME               = "OS Load Average";
+//	public static final String CM_NAME__SUMMARY                 = "CMsummary";//SummaryPanel.CM_NAME;
+//	public static final String CM_DESC__SUMMARY                 = "Summary";
+//
+//	public static final String CM_NAME__OBJECT_ACTIVITY         = "CMobjectActivity";
+//	public static final String CM_DESC__OBJECT_ACTIVITY         = "Objects";
+//
+//	public static final String CM_NAME__PROCESS_ACTIVITY        = "CMprocessActivity";
+//	public static final String CM_DESC__PROCESS_ACTIVITY        = "Processes";
+//
+//	public static final String CM_NAME__PROCESS_WAIT            = "CMspidWait";
+//	public static final String CM_DESC__PROCESS_WAIT            = "SPID Wait";
+//
+//	public static final String CM_NAME__OPEN_DATABASES          = "CMopenDatabases";
+//	public static final String CM_DESC__OPEN_DATABASES          = "Databases";
+//
+//	public static final String CM_NAME__TEMPDB_ACTIVITY         = "CMtempdbActivity";
+//	public static final String CM_DESC__TEMPDB_ACTIVITY         = "Temp Db";
+//
+//	public static final String CM_NAME__SYS_WAIT                = "CMsysWait";
+//	public static final String CM_DESC__SYS_WAIT                = "Waits";
+//
+//	public static final String CM_NAME__ENGINE                  = "CMengine";
+//	public static final String CM_DESC__ENGINE                  = "Engines";
+//
+//	public static final String CM_NAME__SYS_LOAD                = "CMsysLoad";
+//	public static final String CM_DESC__SYS_LOAD                = "System Load";
+//
+//	public static final String CM_NAME__DATA_CACHE              = "CMdataCache";
+//	public static final String CM_DESC__DATA_CACHE              = "Caches";
+//
+//	public static final String CM_NAME__CACHE_POOL              = "CMcachePool";
+//	public static final String CM_DESC__CACHE_POOL              = "Pools";
+//
+//	public static final String CM_NAME__DEVICE_IO               = "CMdeviceIo";
+//	public static final String CM_DESC__DEVICE_IO               = "Devices";
+//
+//	public static final String CM_NAME__IO_QUEUE_SUM            = "CMioQueueSum";
+//	public static final String CM_DESC__IO_QUEUE_SUM            = "IO Sum";
+//
+//	public static final String CM_NAME__IO_QUEUE                = "CMioQueue";
+//	public static final String CM_DESC__IO_QUEUE                = "IO Queue";
+//
+//	public static final String CM_NAME__SPINLOCK_SUM            = "CMspinlockSum";
+//	public static final String CM_DESC__SPINLOCK_SUM            = "Spinlock Sum";
+//
+//	public static final String CM_NAME__SYSMON                  = "CMsysmon";
+//	public static final String CM_DESC__SYSMON                  = "Sysmon Raw";
+//
+//	public static final String CM_NAME__RA_SENDERS              = "CMraSenders";
+//	public static final String CM_DESC__RA_SENDERS              = "Rep Senders";
+//
+//	public static final String CM_NAME__RA_LOGACTIVITY          = "CMraLogAct";
+//	public static final String CM_DESC__RA_LOGACTIVITY          = "Log Activity";
+//
+//	public static final String CM_NAME__RA_SCANNERS             = "CMraScanners";
+//	public static final String CM_DESC__RA_SCANNERS             = "Log Scanners";
+//
+//	public static final String CM_NAME__RA_SCANNERS_TIME        = "CMraScannersTime";
+//	public static final String CM_DESC__RA_SCANNERS_TIME        = "Log Scanners Time";
+//
+//	public static final String CM_NAME__RA_SQL_ACTIVITY         = "CMraSqlActivity";
+//	public static final String CM_DESC__RA_SQL_ACTIVITY         = "RA SQL Activity";
+//
+//	public static final String CM_NAME__RA_SQL_MISSES           = "CMraSqlMisses";
+//	public static final String CM_DESC__RA_SQL_MISSES           = "RA SQL Misses";
+//
+//	public static final String CM_NAME__RA_SYSMON               = "CMraSysmon";
+//	public static final String CM_DESC__RA_SYSMON               = "RepAgent Sysmon";
+//
+//	public static final String CM_NAME__CACHED_PROC             = "CMcachedProcs";
+//	public static final String CM_DESC__CACHED_PROC             = "Cached Procedures";
+//
+//	public static final String CM_NAME__PROC_CACHE_LOAD         = "CMprocCacheLoad";
+//	public static final String CM_DESC__PROC_CACHE_LOAD         = "Procedure Cache Load";
+//
+//	public static final String CM_NAME__PROC_CALL_STACK         = "CMprocCallStack";
+//	public static final String CM_DESC__PROC_CALL_STACK         = "Procedure Call Stack";
+//
+//	public static final String CM_NAME__CACHED_OBJECTS          = "CMcachedObjects";
+//	public static final String CM_DESC__CACHED_OBJECTS          = "Cached Objects";
+//
+//	public static final String CM_NAME__ERRORLOG                = "CMerrolog";
+//	public static final String CM_DESC__ERRORLOG                = "Errorlog";
+//
+//	public static final String CM_NAME__DEADLOCK                = "CMdeadlock";
+//	public static final String CM_DESC__DEADLOCK                = "Deadlock";
+//
+//	public static final String CM_NAME__LOCK_TIMEOUT            = "CMlockTimeout";
+//	public static final String CM_DESC__LOCK_TIMEOUT            = "Lock Timeout";
+//
+//	public static final String CM_NAME__PROC_CACHE_MODULE_USAGE = "CMpCacheModuleUsage";
+//	public static final String CM_DESC__PROC_CACHE_MODULE_USAGE = "Proc Cache Module Usage";
+//
+//	public static final String CM_NAME__PROC_CACHE_MEMORY_USAGE = "CMpCacheMemoryUsage";
+//	public static final String CM_DESC__PROC_CACHE_MEMORY_USAGE = "Proc Cache Memory Usage";
+//
+//	public static final String CM_NAME__STATEMENT_CACHE         = "CMstatementCache";
+//	public static final String CM_DESC__STATEMENT_CACHE         = "Statement Cache";
+//
+//	public static final String CM_NAME__STATEMENT_CACHE_DETAILS = "CMstmntCacheDetails";
+//	public static final String CM_DESC__STATEMENT_CACHE_DETAILS = "Statement Cache Details";
+//
+//	public static final String CM_NAME__ACTIVE_OBJECTS          = "CMactiveObjects";
+//	public static final String CM_DESC__ACTIVE_OBJECTS          = "Active Objects";
+//
+//	public static final String CM_NAME__ACTIVE_STATEMENTS       = "CMactiveStatements";
+//	public static final String CM_DESC__ACTIVE_STATEMENTS       = "Active Statements";
+//
+//	public static final String CM_NAME__BLOCKING                = "CMblocking";
+//	public static final String CM_DESC__BLOCKING                = "Blocking";
+//
+//	public static final String CM_NAME__TABLE_COMPRESSION       = "CMtableCompression";
+//	public static final String CM_DESC__TABLE_COMPRESSION       = "Table Compression";
+//
+//	public static final String CM_NAME__MISSING_STATISTICS      = "CMmissingStats";
+//	public static final String CM_DESC__MISSING_STATISTICS      = "Missing Statistics";
+//
+//	public static final String CM_NAME__QP_METRICS              = "CMqpMetrics";
+//	public static final String CM_DESC__QP_METRICS              = "QP Metrics";
+//
+//	public static final String CM_NAME__SP_MONITOR_CONFIG       = "CMspMonitorConfig";
+//	public static final String CM_DESC__SP_MONITOR_CONFIG       = "sp_monitorconfig";
+//
+//	public static final String CM_NAME__OS_IOSTAT               = "CMosIostat";
+//	public static final String CM_DESC__OS_IOSTAT               = "OS Disk Stat";
+//
+//	public static final String CM_NAME__OS_VMSTAT               = "CMosVmstat";
+//	public static final String CM_DESC__OS_VMSTAT               = "OS CPU(vmstat)";
+//
+//	public static final String CM_NAME__OS_MPSTAT               = "CMosMpstat";
+//	public static final String CM_DESC__OS_MPSTAT               = "OS CPU(mpstat)";
+//	
+//	public static final String CM_NAME__OS_UPTIME               = "CMosUptime";
+//	public static final String CM_DESC__OS_UPTIME               = "OS Load Average";
 
 	/** This is a input to the SplashScreen */
 	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 44;
 
 	
 	// GRAPHS
-	public static final String CM_GRAPH_NAME__SUMMARY__AA_CPU                    = "aaCpuGraph";
-	public static final String CM_GRAPH_NAME__SUMMARY__TRANSACTION               = "TransGraph";
-	public static final String CM_GRAPH_NAME__SUMMARY__CONNECTION                = "ConnectionsGraph";
-	public static final String CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE        = "aaReadWriteGraph";
-	public static final String CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET              = "aaPacketGraph";
-
-	public static final String CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK         = "ChkptHkGraph";
-
-	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";
-	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT       = "DbLogSizeLeftGraph";
-	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph";
-
-	public static final String CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT = "TempDbLogSemapContGraph";
-	
-	public static final String CM_GRAPH_NAME__ENGINE__CPU_SUM                    = "cpuSum";
-	public static final String CM_GRAPH_NAME__ENGINE__CPU_ENG                    = "cpuEng";
-	
-	public static final String CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH      = "AvgRunQLengthGraph";
-	public static final String CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH   = "EngineRunQLengthGraph";
-
-	public static final String CM_GRAPH_NAME__DATA_CACHE__ACTIVITY               = "CacheGraph";
-	
-	public static final String CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS          = "diskIo";
-
-	public static final String CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME      = "devSvcTime";
-
-	public static final String CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC   = "ProcCacheGraph";
-
-	public static final String CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE = "ProcCacheModuleUsageGraph";
-	
-	public static final String CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC   = "StatementCacheGraph";
+//	public static final String CM_GRAPH_NAME__SUMMARY__AA_CPU                    = "aaCpuGraph";
+//	public static final String CM_GRAPH_NAME__SUMMARY__TRANSACTION               = "TransGraph";
+//	public static final String CM_GRAPH_NAME__SUMMARY__CONNECTION                = "ConnectionsGraph";
+//	public static final String CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE        = "aaReadWriteGraph";
+//	public static final String CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET              = "aaPacketGraph";
+//
+//	public static final String CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK         = "ChkptHkGraph";
+//
+//	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";
+//	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT       = "DbLogSizeLeftGraph";
+//	public static final String CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph";
+//
+//	public static final String CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT = "TempDbLogSemapContGraph";
+//	
+//	public static final String CM_GRAPH_NAME__ENGINE__CPU_SUM                    = "cpuSum";
+//	public static final String CM_GRAPH_NAME__ENGINE__CPU_ENG                    = "cpuEng";
+//	
+//	public static final String CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH      = "AvgRunQLengthGraph";
+//	public static final String CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH   = "EngineRunQLengthGraph";
+//
+//	public static final String CM_GRAPH_NAME__DATA_CACHE__ACTIVITY               = "CacheGraph";
+//	
+//	public static final String CM_GRAPH_NAME__IO_QUEUE_SUM__DISK_IO_OPS          = "diskIo";
+//
+//	public static final String CM_GRAPH_NAME__IO_QUEUE__DEVICE_SERVICE_TIME      = "devSvcTime";
+//
+//	public static final String CM_GRAPH_NAME__PROC_CACHE_LOAD__REQUEST_PER_SEC   = "ProcCacheGraph";
+//
+//	public static final String CM_GRAPH_NAME__PROC_CACHE_MODULE_USAGE__ABS_USAGE = "ProcCacheModuleUsageGraph";
+//	
+//	public static final String CM_GRAPH_NAME__STATEMENT_CACHE__REQUEST_PER_SEC   = "StatementCacheGraph";
 
 
 	private CountersModel _summaryCm     = null;
@@ -1026,7 +1027,7 @@ implements ICounterController
 		CmTempdbActivity   .create(counterController, guiController);
 		CmSysWaits         .create(counterController, guiController);
 		CmEngines          .create(counterController, guiController);
-		CmThreads       .create(counterController, guiController);
+		CmThreads          .create(counterController, guiController);
 		CmSysLoad          .create(counterController, guiController);
 		CmDataCaches       .create(counterController, guiController);
 		CmCachePools       .create(counterController, guiController);
@@ -1061,7 +1062,7 @@ implements ICounterController
 		CmMissingStats     .create(counterController, guiController);
 		CmQpMetrics        .create(counterController, guiController);
 		CmSpMonitorConfig  .create(counterController, guiController);
-		CmWorkQueues    .create(counterController, guiController);
+		CmWorkQueues       .create(counterController, guiController);
 
 		// OS HOST Monitoring
 		CmOsIostat         .create(counterController, guiController);
@@ -14942,7 +14943,8 @@ implements ICounterController
 
 		for (String name : conf.getUniqueSubKeys(prefix, false))
 		{
-			if (getInstance().getCmByName(name) != null)
+//			if (getInstance().getCmByName(name) != null)
+			if (CounterController.getInstance().getCmByName(name) != null)
 			{
 				_logger.info("Already loaded the UDC named '"+name+"', skipping this and continue with next one.");
 				continue;
@@ -15097,6 +15099,9 @@ implements ICounterController
 			// User defined graphs, if any
 			//
 			addUdcGraph(cm, udcName, startKey, conf);
+
+			// Register at the template 
+			CounterSetTemplates.register(cm);
 
 			_CMList.add(cm);
 		}
@@ -15436,6 +15441,9 @@ implements ICounterController
 
 			// Add a graph
 			addUdcGraph(cm, name, startKey, conf);
+
+			// Register at the template 
+			CounterSetTemplates.register(cm);
 
 			_CMList.add(cm);
 		}

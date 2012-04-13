@@ -72,7 +72,7 @@ extends TabularCntrPanel
 		sampleRowCount_chk.setToolTipText("<html>" +
 				"Sample Table Row Count using ASE functions <code>row_count()</code> and <code>data_pages()</code>.<br>" +
 				"<b>Note 1</b>: Only in ASE 15.0.2 or higher.<br>" +
-				"<b>Note 2</b>: You can also set the property 'CMobjectActivity.TabRowCount=true|false' in the configuration file.<br>" +
+				"<b>Note 2</b>: You can also set the property 'CmObjectActivity.TabRowCount=true|false' in the configuration file.<br>" +
 				"<b>Note 3</b>: To check if this is enabled or not, use the Properties dialog in this tab pane, right click + properties...<br>" +
 				"</html>");
 		panel.add(sampleRowCount_chk, "wrap");
