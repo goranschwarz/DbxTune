@@ -343,7 +343,86 @@ implements Iterable<String>
 		return sb.substring(0, sb.length()-2);
 	}
 	
-	
+	public String toString(int keyLength, int subValueLength)
+	{
+		if (_keys.size() == 0)
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		for (Entry entry : _keys.values())
+		{
+			sb.append(entry.toString(keyLength, subValueLength)).append("; \n");
+		}
+
+		// Take away last '; \n'
+		return sb.substring(0, sb.length()-3);
+	}
+
+	/**
+	 * Is this PPE equal to another PPE
+	 * <p>
+	 * This equal checks the individual properties, so the add order doesn't matter.<br>
+	 * <ul>
+	 *   <li>Check if object is the same</li>
+	 *   <li>Check if size differs</li>
+	 *   <li>Check all key in this object exists in compareObject</li>
+	 *   <li>Check all sub properties exists and has same values</li>
+	 * </ul>
+	 */
+	public boolean equals(Object anObject) 
+	{
+		if (this == anObject) 
+		{
+			return true;
+		}
+
+		// Check the details in PPE
+		if ( anObject instanceof PropPropEntry )
+		{
+			PropPropEntry ppe = (PropPropEntry) anObject;
+			
+			// If size differ, THEN: not equal
+			if ( this._keys.size() != ppe._keys.size() )
+				return false;
+
+			// LOOP keys from this->compareObject
+			for (String key : _keys.keySet())
+			{
+				Entry thisEntry = _keys.get(key);
+				Entry compEntry = ppe._keys.get(key);
+				
+				// Key can't be found in compareObject, THEN: not equal
+				if (compEntry == null)
+					return false;
+
+				// If sub entry size differ, THEN: not equal
+				if (thisEntry.size() != compEntry.size())
+					return false;
+				
+				// check all sub entries this->compareObject
+				for (String subKey : thisEntry.keySet())
+				{
+					String thisSubValue = thisEntry.get(subKey);
+					String compSubValue = compEntry.get(subKey);
+
+					// Key can't be found, THEN: not equal
+					if (compSubValue == null)
+						return false;
+					
+					// value is NOT the same
+					if ( ! thisSubValue.equals(compSubValue) )
+						return false;
+				}
+				
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	// SUBCLASS // SUBCLASS // SUBCLASS // SUBCLASS // SUBCLASS // SUBCLASS //
@@ -514,6 +593,28 @@ implements Iterable<String>
 				String val = entry.getValue();
 
 				sb.append(key).append("=").append(val).append(",");
+			}
+			sb.deleteCharAt(sb.length()-1);
+
+			if (_propName != null)
+				sb.append("}");
+
+			return sb.toString();
+		}
+
+		public String toString(int keyLength, int subValueLength)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			if (_propName != null)
+				sb.append(StringUtil.left(_propName, keyLength, true)).append("={");
+
+			for (Map.Entry<String,String> entry : this.entrySet()) 
+			{
+				String key = entry.getKey();
+				String val = entry.getValue();
+
+				sb.append(key).append("=").append(StringUtil.left(val, subValueLength, true)).append(",");
 			}
 			sb.deleteCharAt(sb.length()-1);
 

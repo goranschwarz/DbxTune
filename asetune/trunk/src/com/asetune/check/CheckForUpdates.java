@@ -36,6 +36,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
@@ -819,7 +820,8 @@ public class CheckForUpdates
 			srvSortOrderName = mtd.aseSortName;
 
 			// Get role list from the Summary CM
-			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+//			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+			CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
 			if (summaryCm != null && summaryCm.isRuntimeInitialized())
 				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
 
@@ -1716,9 +1718,9 @@ public class CheckForUpdates
 			if (msg.startsWith("When trying to initialize Counters Model")) 
 				return;
 			
-			if (msg.startsWith("SamplingCnt(CMrepAgent).getCnt : 99000 ERROR: Found NO database that was marked for replication"))
+			if (msg.startsWith("SamplingCnt(CmRaSysmon).getCnt : 99000 ERROR: Found NO database that was marked for replication"))
 				return;
-			if (msg.startsWith("Date problems for table 'CMstmntCacheDetails"))
+			if (msg.startsWith("Date problems for table 'CmStmntCacheDetails"))
 				return;
 			
 		}

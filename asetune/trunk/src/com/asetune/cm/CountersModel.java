@@ -36,7 +36,6 @@ import org.apache.log4j.Logger;
 
 import com.asetune.AseTune;
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -44,6 +43,8 @@ import com.asetune.MonWaitEventIdDictionary;
 import com.asetune.RemarkDictionary;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
+import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.ase.CmProcessActivity;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -125,8 +126,8 @@ implements Cloneable, ITableTooltip
 	private List<String>       _pkCols            = null;
 //	private List<String>       _pkColsOrigin      = null;
 
-	public  static final int   DEFAULT_sqlQueryTimeout = 10;
 	private int                _sqlQueryTimeout   = DEFAULT_sqlQueryTimeout;
+	public  static final int   DEFAULT_sqlQueryTimeout = 10;
 
 	private String[]           _monTablesInQuery     = null;
 	
@@ -138,7 +139,8 @@ implements Cloneable, ITableTooltip
 	private List<StoredProcCheck> _dependsOnStoredProc  = null; // containes: StoredProcCheck objects
 	
 	/** If we should refresh this CM in a different manner than the default refresh rate. 0=useDefault, >0=number of seconds between samples */
-	private int                _postponeTime         = 0;
+	private int                _postponeTime         = DEFAULT_postponeTime;
+	public  static final int   DEFAULT_postponeTime  = 0;
 
 	/** every time the CM is refreshed set this to System.currentTimeMillis() */
 	private long               _lastLocalRefreshTime = 0;
@@ -452,6 +454,10 @@ implements Cloneable, ITableTooltip
 		if (_monTablesInQuery == null) _monTablesInQuery = emptyArray;
 		if (_dependsOnRole    == null) _dependsOnRole    = emptyArray;
 		if (_dependsOnConfig  == null) _dependsOnConfig  = emptyArray;
+
+		// Set some default values
+		_postponeTime    = getDefaultPostponeTime();
+		_sqlQueryTimeout = getDefaultQueryTimeout();
 
 		// Load saved properties
 		loadProps();
@@ -1492,7 +1498,8 @@ implements Cloneable, ITableTooltip
 					if (MainFrame.isOfflineConnected())
 					{
 						// FIXME: _counterController is NOT set for UDC Counters (especially when initialized from OfflineStorage)
-						CountersModel cm = getCounterController().getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+//						CountersModel cm = getCounterController().getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+						CountersModel cm = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
 						TabularCntrPanel tcp = cm.getTabPanel();
 						if (tcp != null)
 						{
@@ -1505,7 +1512,8 @@ implements Cloneable, ITableTooltip
 								CounterTableModel ctmRate = cm.getCounterDataRate();
 								if (ctmRate == null)
 								{
-									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+//									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
 								}
 								else
 								{
@@ -1550,7 +1558,8 @@ implements Cloneable, ITableTooltip
 										}
 									}
 								}
-								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+//								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
 							}
 						}
 					} // end: offline
@@ -4545,4 +4554,19 @@ implements Cloneable, ITableTooltip
 			_needSrvVersion      = needSrvVersion;
 		}
 	}
+
+	public int     getDefaultQueryTimeout()                             { return DEFAULT_sqlQueryTimeout; }
+	public int     getDefaultPostponeTime()                             { return DEFAULT_postponeTime; }
+	public boolean getDefaultIsDataPollingPaused()                      { return false; }
+	public boolean getDefaultIsBackgroundDataPollingEnabled()           { return false; }
+	public boolean getDefaultIsNegativeDiffCountersToZero()             { return true; }
+
+	public boolean getDefaultIsPersistCountersEnabled()                 { return false; }
+	public boolean getDefaultIsPersistCountersAbsEnabled()              { return true; }
+	public boolean getDefaultIsPersistCountersDiffEnabled()             { return true; }
+	public boolean getDefaultIsPersistCountersRateEnabled()             { return true; }
+
+	/** Get what template level this CM should be part of. the level can be <code>SMALL, MEDIUM, LARGE, ALL or OFF</code> */
+	public Type    getTemplateLevel()                                   { return Type.ALL; }
+
 }

@@ -9,6 +9,8 @@ import javax.naming.NameNotFoundException;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
@@ -64,6 +66,11 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 300;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -96,12 +103,11 @@ extends CountersModel
 			VersionInfo.SP_ASETUNE_RA_STATS_CRDATE, VersionInfo.class, 
 			"sp_asetune_ra_stats.sql", AseConnectionUtils.SA_ROLE, NEED_SRV_VERSION);
 
-		if (getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			setQueryTimeout(DEFAULT_QUERY_TIMEOUT);
-
 		addDependsOnCm(CmSpinlockSum.CM_NAME); // CMspinlockSum must have been executed before this cm
 
 		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
 	}
 
 

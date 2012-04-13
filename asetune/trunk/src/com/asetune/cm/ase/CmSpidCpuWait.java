@@ -13,6 +13,8 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.ase.gui.CmSpidCpuWaitPanel;
@@ -65,6 +67,11 @@ extends CountersModel
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
 
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.ALL; }
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -91,15 +98,14 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
-		if (getQueryTimeout() == CountersModel.DEFAULT_sqlQueryTimeout)
-			setQueryTimeout(DEFAULT_QUERY_TIMEOUT);
-
 		// The flowing columns is part of difference calculation
 		// But Disregarded in the filter "Do NOT show unchanged counter rows"
 		// this means that even if they HAVE a value, the will be filtered OUT from the JTable
 		setDiffDissColumns( new String[] {"SpidWaitTime", "EventIdWaitTime"} );
 
 		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
 	}
 
 

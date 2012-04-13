@@ -50,6 +50,7 @@ import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.GetCountersGui;
 import com.asetune.cm.CounterSetTemplates;
@@ -449,7 +450,8 @@ implements ActionListener, TableModelListener
 		}
 
 		// If current settings has changed since we entered the dialog, enable the 'Apply' button
-		boolean hasChanged = ! ppeNow.toString().equals(_initialPpe.toString());
+//		boolean hasChanged = ! ppeNow.toString().equals(_initialPpe.toString());
+		boolean hasChanged = ! ppeNow.equals(_initialPpe);
 		_apply.setEnabled(hasChanged);
 	}
 	
@@ -460,14 +462,20 @@ implements ActionListener, TableModelListener
 	private String currentSelectionIsRefectedInTemplate()
 	{
 		PropPropEntry ppeNow = getPpeFromTable();
+//System.out.println("===========================================================");
+//System.out.println("===========================================================");
+//System.out.println("===========================================================");
+//System.out.println("getPpeFromTable()\n"+ppeNow.toString(25, 6));
 
 		// Check if current settings is in one of the templates,
 		for (Map.Entry<String,PropPropEntry> entry : _templatePpeMap.entrySet()) 
 		{
 			String        tname = entry.getKey();
 			PropPropEntry ppe   = entry.getValue();
+//System.out.println("_templatePpeMap.name='"+tname+"'\n"+ppe.toString(25, 6));
 
-			if ( ppeNow.toString().equals(ppe.toString()) )
+//			if ( ppeNow.toString().equals(ppe.toString()) )
+			if ( ppeNow.equals(ppe) )
 				return tname;
 		}
 		return null;
@@ -504,15 +512,15 @@ implements ActionListener, TableModelListener
 			if (_logger.isDebugEnabled())
 			{
 				String debugStr = "doApply() name="+StringUtil.left("'"+tabName+"'", 30) +
-					" queryTimeout="+(tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
-					" postpone="    +(tm.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
-					" paused="      +(tm.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
-					" bg="          +(tm.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
-					" rnc20="       +(tm.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
-					" pcs="         +(tm.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
-					" pcsAbs="      +(tm.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
-					" pcsDiff="     +(tm.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
-					" pcsRate="     +(tm.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
+					" "+CounterSetTemplates.PROPKEY_queryTimeout+"="+(tm.isCellChanged(r, TAB_POS_QUERY_TIMEOUT) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_postpone    +"="+(tm.isCellChanged(r, TAB_POS_POSTPONE     ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_paused      +"="+(tm.isCellChanged(r, TAB_POS_PAUSED       ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_bg          +"="+(tm.isCellChanged(r, TAB_POS_BG           ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_resetNC20   +"="+(tm.isCellChanged(r, TAB_POS_RNC20        ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_storePcs    +"="+(tm.isCellChanged(r, TAB_POS_STORE_PCS    ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_pcsAbs      +"="+(tm.isCellChanged(r, TAB_POS_STORE_ABS    ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_pcsDiff     +"="+(tm.isCellChanged(r, TAB_POS_STORE_DIFF   ) ? "X":" ") +
+					" "+CounterSetTemplates.PROPKEY_pcsRate     +"="+(tm.isCellChanged(r, TAB_POS_STORE_RATE   ) ? "X":" ");
 				_logger.debug(debugStr);
 			}
 
@@ -738,18 +746,19 @@ implements ActionListener, TableModelListener
 		for (String name : ppe)
 		{
 //System.out.println("PPE: for name '"+name+"'.");
+			// FIXME: maybe use cm.getDefaultXXX() to be able to load "incomplete/old" template files.
+			//        also write the corrected/completed PPE to disk...
 			try
 			{
-				int     queryTimeout = ppe.getIntMandatoryProperty(    name, "queryTimeout");
-				int     postpone     = ppe.getIntMandatoryProperty(    name, "postpone");
-				boolean paused       = ppe.getBooleanMandatoryProperty(name, "paused");
-				boolean bg           = ppe.getBooleanMandatoryProperty(name, "bg");
-				boolean resetNC20    = ppe.getBooleanMandatoryProperty(name, "resetNC20");
-				boolean storePcs     = ppe.getBooleanMandatoryProperty(name, "storePcs");
-				boolean pcsAbs       = ppe.getBooleanMandatoryProperty(name, "pcsAbs");
-				boolean pcsDiff      = ppe.getBooleanMandatoryProperty(name, "pcsDiff");
-				boolean pcsRate      = ppe.getBooleanMandatoryProperty(name, "pcsRate");
-	
+				int     queryTimeout = ppe.getIntMandatoryProperty(    name, CounterSetTemplates.PROPKEY_queryTimeout);
+				int     postpone     = ppe.getIntMandatoryProperty(    name, CounterSetTemplates.PROPKEY_postpone);
+				boolean paused       = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_paused);
+				boolean bg           = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_bg);
+				boolean resetNC20    = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_resetNC20);
+				boolean storePcs     = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_storePcs);
+				boolean pcsAbs       = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsAbs);
+				boolean pcsDiff      = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsDiff);
+				boolean pcsRate      = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsRate);
 				TableModel tm = _table.getModel();
 				for (int r=0; r<tm.getRowCount(); r++)
 				{
@@ -789,19 +798,19 @@ implements ActionListener, TableModelListener
 			String tabName = tm.getValueAt(r, TAB_POS_TAB_NAME).toString();
 
 			// Do not generate UDC User Defined Counters
-			CountersModel cm = GetCounters.getInstance().getCmByDisplayName(tabName);
-			if ( cm != null && ! cm.isSystemCm() )
-				continue;
+//			CountersModel cm = GetCounters.getInstance().getCmByDisplayName(tabName);
+//			if ( cm != null && ! cm.isSystemCm() )
+//				continue;
 
-			ppe.put(tabName, "queryTimeout", tm.getValueAt(r, TAB_POS_QUERY_TIMEOUT).toString());
-			ppe.put(tabName, "postpone",     tm.getValueAt(r, TAB_POS_POSTPONE)     .toString());
-			ppe.put(tabName, "paused",       tm.getValueAt(r, TAB_POS_PAUSED)       .toString());
-			ppe.put(tabName, "bg",           tm.getValueAt(r, TAB_POS_BG)           .toString());
-			ppe.put(tabName, "resetNC20",    tm.getValueAt(r, TAB_POS_RNC20)        .toString());
-			ppe.put(tabName, "storePcs",     tm.getValueAt(r, TAB_POS_STORE_PCS)    .toString());
-			ppe.put(tabName, "pcsAbs",       tm.getValueAt(r, TAB_POS_STORE_ABS)    .toString());
-			ppe.put(tabName, "pcsDiff",      tm.getValueAt(r, TAB_POS_STORE_DIFF)   .toString());
-			ppe.put(tabName, "pcsRate",      tm.getValueAt(r, TAB_POS_STORE_RATE)   .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_queryTimeout, tm.getValueAt(r, TAB_POS_QUERY_TIMEOUT).toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_postpone,     tm.getValueAt(r, TAB_POS_POSTPONE)     .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_paused,       tm.getValueAt(r, TAB_POS_PAUSED)       .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_bg,           tm.getValueAt(r, TAB_POS_BG)           .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_resetNC20,    tm.getValueAt(r, TAB_POS_RNC20)        .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_storePcs,     tm.getValueAt(r, TAB_POS_STORE_PCS)    .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_pcsAbs,       tm.getValueAt(r, TAB_POS_STORE_ABS)    .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_pcsDiff,      tm.getValueAt(r, TAB_POS_STORE_DIFF)   .toString());
+			ppe.put(tabName, CounterSetTemplates.PROPKEY_pcsRate,      tm.getValueAt(r, TAB_POS_STORE_RATE)   .toString());
 		}
 		return ppe;
 	}
@@ -1574,6 +1583,7 @@ implements ActionListener, TableModelListener
 
 		// Create and Start the "collector" thread
 		GetCounters getCnt = new GetCountersGui();
+		CounterController.setInstance(getCnt);
 		try
 		{
 			getCnt.init();

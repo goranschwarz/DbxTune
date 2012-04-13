@@ -40,8 +40,8 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.table.TableColumnExt;
 
-import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -178,17 +178,17 @@ implements ActionListener, TableModelListener
 			"The above values can be manipulated in this dialog.<br>" +
 			"Or by manipulaiting the below properties in the file '<code>"+Configuration.getInstance(Configuration.USER_CONF).getFilename()+"</code>'." +
 			"<ul>" +
-			"    <li>DB Keep List can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsInGraphs+"=db1ToKeep, db2ToKeep...</code></li>" +
-			"    <li>DB Skip List can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_skipDbsInGraphs+"=db1ToSkip, db2ToSkip...</code></li>" +
-			"    <li>DB Size Limit can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_skipDbsWithSizeLtInGraphs+"=#mb</code></li>" +
-			"    <li>DB Tranlog Usage Percent Limit can be changed with the property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs+"=#pct</code></li>" +
+			"    <li>DB Keep List can be changed with the property <code>"+CmOpenDatabases.CM_NAME+"."+PROPERTY_keepDbsInGraphs+"=db1ToKeep, db2ToKeep...</code></li>" +
+			"    <li>DB Skip List can be changed with the property <code>"+CmOpenDatabases.CM_NAME+"."+PROPERTY_skipDbsInGraphs+"=db1ToSkip, db2ToSkip...</code></li>" +
+			"    <li>DB Size Limit can be changed with the property <code>"+CmOpenDatabases.CM_NAME+"."+PROPERTY_skipDbsWithSizeLtInGraphs+"=#mb</code></li>" +
+			"    <li>DB Tranlog Usage Percent Limit can be changed with the property <code>"+CmOpenDatabases.CM_NAME+"."+PROPERTY_keepDbsWithPctUsageGtInGraphs+"=#pct</code></li>" +
 			"</ul>" +
 			"The default keep list is: <code>"+DEFAULT_keepDbsInGraphs+"</code><br>" +
 			"The default skip list is: <code>"+DEFAULT_skipDbsInGraphs+"</code><br>" +
 			"The default size limit is: <code>"+DEFAULT_skipDbsWithSizeLtInGraphs+"</code><br>" +
 			"The default PercentUsage limit is: <code>"+DEFAULT_keepDbsWithPctUsageGtInGraphs+"</code><br>" +
 			"<br>" +
-			"Note: If you <b>always</b> want a database present in the graphs, add database to property <code>"+GetCounters.CM_NAME__OPEN_DATABASES+"."+PROPERTY_keepDbsInGraphs+"=db1, db2...</code><br>" +
+			"Note: If you <b>always</b> want a database present in the graphs, add database to property <code>"+CmOpenDatabases.CM_NAME+"."+PROPERTY_keepDbsInGraphs+"=db1, db2...</code><br>" +
 			"</html>";
 		panel.setToolTipText(tooltip);
 
