@@ -26,6 +26,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistContainer;
+import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -54,6 +55,9 @@ public class GetCountersNoGui
 
 	/** if above 0, then shutdown the service after X hours */
 	private int        _shutdownAfterXHours = 0;
+
+	/** if != null, then delay the start until this time HHMM */
+	private String     _deferedStartTime = null;
 
 	/** If no connection can be made to the ASE server, sleep time before retry */
 	private int        _sleepOnFailedConnectTime = 60;
@@ -121,6 +125,14 @@ public class GetCountersNoGui
 
 		// PROPERTY: shutdownAfterXHours
 		_shutdownAfterXHours = _storeProps.getIntProperty(offlinePrefix + "shutdownAfterXHours", _shutdownAfterXHours);
+
+		// PROPERTY: shutdownAfterXHours
+		_deferedStartTime = _storeProps.getProperty(CounterController.PROPKEY_startRecordingAtTime);
+		try {
+			PersistWriterBase.getRecordingStartTime(_deferedStartTime);
+		} catch (Exception e) {
+			throw new Exception("Deferred start time '"+CounterController.PROPKEY_startRecordingAtTime+"' is faulty configured, Caught: "+e.getMessage());
+		}
 
 		// PROPERTY: sleepOnFailedConnectTime
 		_sleepOnFailedConnectTime = _storeProps.getIntProperty(offlinePrefix + "sleepOnFailedConnectTime", _sleepOnFailedConnectTime);
@@ -248,6 +260,7 @@ public class GetCountersNoGui
 		String configStr = 
 			"sleepTime='"+_sleepTime+"', " +
 			"shutdownAfterXHours='"+_shutdownAfterXHours+"', " +
+			"startRecordingAtTime='"+_deferedStartTime+"', " +
 			"sleepOnFailedConnectTime='"+_sleepOnFailedConnectTime+"', " +
 			"_aseUsername='"+_aseUsername+"', " +
 			"_asePassword='*hidden*', " +
@@ -396,6 +409,7 @@ public class GetCountersNoGui
 	 * @return
 	 */
 	private List<String> buildActiveCmList(String cmOptions)
+	throws Exception
 	{
 		List<String> activeCmList = new ArrayList<String>();
 
@@ -406,22 +420,32 @@ public class GetCountersNoGui
 		if      (cmOptions.equalsIgnoreCase("small"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
 		else if (cmOptions.equalsIgnoreCase("medium")) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
 		else if (cmOptions.equalsIgnoreCase("large"))  ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
-		else if (cmOptions.equalsIgnoreCase("all"))
-		{
-			ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
-			for (CountersModel cm : _CMList)
-			{
-				if (cm == null)
-					continue;
+		else if (cmOptions.equalsIgnoreCase("all,"))   ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
+//		else if (cmOptions.equalsIgnoreCase("all"))
+//		{
+//			ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
+//			for (CountersModel cm : _CMList)
+//			{
+//				if (cm == null)
+//					continue;
+//
+//				if ( ! cm.isSystemCm() )
+//				{
+//					ppe.put(cm.getDisplayName(), "storePcs", "true");
+//					ppe.put(cm.getDisplayName(), "postpone", cm.getPostponeTime()+"");
+//				}
+//			}
+//		}
 
-				if ( ! cm.isSystemCm() )
-				{
-					ppe.put(cm.getDisplayName(), "storePcs", "true");
-					ppe.put(cm.getDisplayName(), "postpone", cm.getPostponeTime()+"");
-				}
-			}
-		}
+		// template AND add/remove individual CM's from the template
+		PropPropEntry ppe2 = null;
+		if      (cmOptions.startsWith("small,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
+		else if (cmOptions.startsWith("medium,")) ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
+		else if (cmOptions.startsWith("large,"))  ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
+		else if (cmOptions.startsWith("all,"))    ppe2 = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
 
+		
+		//----------------------------------------
 		// Some sort of TEMPLATE was found
 		if (ppe != null)
 		{
@@ -436,10 +460,79 @@ public class GetCountersNoGui
 					else
 						activeCmList.add(name+":"+postpone);
 				}
-					
 			}
 			_logger.info("Found --noGui '"+cmOptions+"': enabling cm's named "+activeCmList);
 		}
+		//----------------------------------------
+		// Some sort of TEMPLATE was found WITH add/remove individual CM's from the template
+		else if (ppe2 != null)
+		{
+			// First get what CM's to be ADDED/REMOVED from the template
+			ArrayList<String> addCmList    = new ArrayList<String>();
+			ArrayList<String> removeCmList = new ArrayList<String>();
+			String templateName = "unknown";
+			String[] sa = cmOptions.split(",");
+			for (String str : sa)
+			{
+				str = str.trim();
+				if (str.equals("small") || str.equals("medium") || str.equals("large") || str.equals("all"))
+				{
+					templateName = str;
+					continue;
+				}
+
+				String modifier = str.substring(0,1);
+				String cmName   = str.substring(1);
+
+				if (CounterSetTemplates.getShortName(cmName) == null && CounterSetTemplates.getLongName(cmName) == null)
+				{
+					throw new Exception("Unknown name '"+cmName+"', This wasn't found in the template '"+templateName+"' or any other template.");
+				}
+
+				if ("+".equals(modifier))
+				{
+					addCmList.add(cmName);
+					_logger.info("Adding sampling of CM '"+cmName+"', to the template '"+templateName+"' for this session.");
+				}
+				else if ("-".equals(modifier))
+				{
+					if (CounterSetTemplates.getShortName(cmName) != null) removeCmList.add(CounterSetTemplates.getShortName(cmName));
+					if (CounterSetTemplates.getLongName (cmName) != null) removeCmList.add(CounterSetTemplates.getLongName (cmName));
+					_logger.info("Removing sampling of CM '"+cmName+"', from the template '"+templateName+"' for this session.");
+				}
+				else
+				{
+					throw new Exception("Unknown option '"+str+"', when add/remove CM's in template '"+templateName+"'. First char in modifier must be '+' or '-' to add/remove the CM from the template.");
+//					_logger.warn("Unknown option '"+str+"', when add/remove CM's in template '"+templateName+"'. First char in modifier must be '+' or '-' to add/remove the CM from the template. This will be discarded.");
+				}
+			}
+
+			// Then add all CM's in template to activeCmList
+			for (String name : ppe2.keySet())
+			{
+				// But not in the remove list
+				if (removeCmList.contains(name))
+					continue;
+
+				boolean storePcs = ppe2.getBooleanProperty(name, "storePcs", false);
+				int     postpone = ppe2.getIntProperty    (name, "postpone", 0);
+				if (storePcs)
+				{
+					if (postpone <= 0)
+						activeCmList.add(name);
+					else
+						activeCmList.add(name+":"+postpone);
+				}
+			}
+
+			// Finally add the ones in the ADD List
+			for (String str : addCmList)
+				activeCmList.add(str);
+
+			_logger.info("Found --noGui '"+cmOptions+"': enabling cm's named "+activeCmList);
+		}
+		//----------------------------------------
+		// No template just a list of CM's
 		else
 		{
 			// option can look like: cm1,cm2,cm3:postponeTime,cm4,cm5
@@ -471,6 +564,13 @@ public class GetCountersNoGui
 		_thread.setName("GetCountersNoGui");
 		
 		_running = true;
+		
+		// WAIT for a DEFERRED start
+		if (_deferedStartTime != null)
+		{
+			try { PersistWriterBase.waitForRecordingStartTime(_deferedStartTime, null); }
+			catch(InterruptedException ignore) {}
+		}
 
 		// If you want to start a new session in the Persistent Storage, just set this to true...
 		// This could for instance be used when you connect to a new ASE Server
@@ -609,6 +709,11 @@ public class GetCountersNoGui
 					mtd.initialize(getMonConnection(), false);
 					GetCounters.initExtraMonTablesDictionary();
 				}
+//				System.out.println("aseServerName() = "+mtd.aseServerName);
+//				System.out.println("aseVersionNum() = "+mtd.aseVersionNum);
+//				System.out.println("aseVersionStr() = "+mtd.aseVersionStr);
+//				System.out.println("aseSortId() = "+mtd.aseSortId);
+//				System.out.println("aseSortName() = "+mtd.aseSortName);
 				
 				// initialize ASE Config Dictionary
 				AseConfig aseCfg = AseConfig.getInstance();

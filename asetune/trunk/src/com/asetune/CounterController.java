@@ -6,6 +6,8 @@ import com.asetune.gui.ISummaryPanel;
 public class CounterController 
 //implements ICounterController
 {
+	public static final String PROPKEY_startRecordingAtTime = "offline.startRecordingAtTime";
+
 	private static ICounterController _instance = null;
 
 	/** 

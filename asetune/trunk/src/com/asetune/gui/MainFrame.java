@@ -1509,24 +1509,12 @@ public class MainFrame
 
 		if (ACTION_SAMPLING_PAUSE.equals(actionCmd))
 		{
-			_isSamplingPaused = true;
-			_samplePause_but  .setVisible( ! _isSamplingPaused );
-			_samplePauseTb_but.setVisible( ! _isSamplingPaused );
-			_samplePlay_but   .setVisible(   _isSamplingPaused );
-			_samplePlayTb_but .setVisible(   _isSamplingPaused );
-
-			GetCounters.getInstance().doInterruptSleep();
+			setPauseSampling(true);
 		}
 
 		if (ACTION_SAMPLING_PLAY.equals(actionCmd))
 		{
-			_isSamplingPaused = false;
-			_samplePause_but  .setVisible( ! _isSamplingPaused );
-			_samplePauseTb_but.setVisible( ! _isSamplingPaused );
-			_samplePlay_but   .setVisible(   _isSamplingPaused );
-			_samplePlayTb_but .setVisible(   _isSamplingPaused );
-
-			GetCounters.getInstance().doInterruptSleep();
+			setPauseSampling(false);
 		}
 
 		if (ACTION_TAB_SELECTOR.equals(actionCmd))
@@ -2505,6 +2493,23 @@ public class MainFrame
 				
 			_ddlViewer.setVisible(true);
 		}
+	}
+
+	public boolean isPauseSampling()
+	{
+		return _isSamplingPaused;
+	}
+
+	public void setPauseSampling(boolean pause)
+	{
+		_isSamplingPaused = pause;
+		
+		_samplePause_but  .setVisible( ! _isSamplingPaused );
+		_samplePauseTb_but.setVisible( ! _isSamplingPaused );
+		_samplePlay_but   .setVisible(   _isSamplingPaused );
+		_samplePlayTb_but .setVisible(   _isSamplingPaused );
+
+		GetCounters.getInstance().doInterruptSleep();
 	}
 
 	// Overridden so we can exit when window is closed

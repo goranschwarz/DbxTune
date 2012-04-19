@@ -31,29 +31,26 @@
 <A HREF="http://www.asemon.se/usage_report.php?summary_asever=true" >Summary Report, ASE Version Count</A>     <BR>
 <A HREF="http://www.asemon.se/usage_report.php?summary_user=true"   >Summary Report, on User</A>               <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?conn=first"          >Connection Info Report (first 500)</A>    <BR>
-<A HREF="http://www.asemon.se/usage_report.php?conn=all"            >Connection Info Report, ALL</A>           <BR>
-<A HREF="http://www.asemon.se/usage_report.php?mda=all"             >MDA Info Report, ALL</A>                  <BR>
+<A HREF="http://www.asemon.se/usage_report.php?conn=first"          >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.asemon.se/usage_report.php?conn=all">ALL</A> <BR>
+<BR>
+<A HREF="http://www.asemon.se/usage_report.php?mda=all"             >MDA Table/Column Info, for various ASE Versions</A> <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"            >User Defined Counters Info Report</A>     <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=first"         >Counter Usage Info Report (first 500)</A> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=all"           >Counter Usage Info Report, ALL</A>        <BR>
+<A HREF="http://www.asemon.se/usage_report.php?usage=first"         >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>            <BR>
-<!--<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumTimeout">Error Info Report, Summary Timeouts</A>   <BR>-->
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">   Error Info Report, Summary Saved</A>      <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report (first 500)</A>         <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=all"       >Error Info Report, ALL</A>                <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (first 300)</A>               <BR>
 <BR>
 <h2>Admin:</h2>
-DB Cleanup: 
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=cleanup">cleanup</A>, 
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=dbmaint">dbmaint</A>, 
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=check"  >check</A>, 
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=help"   >help</A>
+DB Cleanup:
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=cleanup"      >cleanup</A>,
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=dbmaint"      >dbmaint</A>,
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=check"        >check</A>,
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=help"         >help</A>,
+<A HREF="http://www.asemon.se/db_cleanup.php?doAction=reCreateProcs">recreate stored procs</A>
 <i>(only for admin, <b>so please do not use</b>)</i>
 
 <?php
@@ -77,6 +74,10 @@ DB Cleanup:
 	$del_deleteLogId        = $_GET['deleteLogId'];
 	$save_saveLogId         = $_GET['saveLogId'];
 
+	$mda_deleteVersion      = $_GET['mda_deleteVersion'];
+	$mda_lowVersion         = $_GET['mda_lowVersion'];
+	$mda_highVersion        = $_GET['mda_highVersion'];
+
 	// sub command
 	$rpt_onDomain           = $_GET['onDomain'];
 	$rpt_onUser             = $_GET['onUser'];
@@ -99,8 +100,9 @@ DB Cleanup:
 
 
 
-	function htmlResultset($result, $headName)
+	function htmlResultset($result, $headName, $colNameForNewLine='')
 	{
+		$colIdForNewLine = -1;
 		$fields_num = mysql_num_fields($result);
 
 		// printing some info about what this is
@@ -114,13 +116,34 @@ DB Cleanup:
 		{
 			$field = mysql_fetch_field($result);
 			echo "<td nowrap>{$field->name}</td>";
+			if ($colNameForNewLine != "")
+			{
+				if ($colNameForNewLine == "{$field->name}")
+					$colIdForNewLine = $i;
+			}
 		}
 		echo "</tr>\n";
+
+		$atRow = -1;
 
 		// printing table rows
 		while($row = mysql_fetch_row($result))
 		{
+			$atRow++;
 			echo "<tr>";
+
+			// Make a new line, if a repeatable column changes content (make a separator)
+			if ($colIdForNewLine >= 0)
+			{
+				$colValue = $row[$colIdForNewLine];
+
+				if ($atRow >= 1)
+				{
+					if ($lastColValForNewLine != $colValue)
+						echo "<tr> <td><br></td> </tr>";
+				}
+				$lastColValForNewLine = $colValue;
+			}
 
 			// $row is array... foreach( .. ) puts every element
 			// of $row to $cell variable
@@ -156,6 +179,12 @@ DB Cleanup:
 
 				else if ( $colname == "callerIpAddress" )
 					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
+
+				else if ( $colname == "srvVersion" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "deleteSrvVersion" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">$cell</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
@@ -275,21 +304,21 @@ DB Cleanup:
 
 		// sending query
 		$result = mysql_query("
-			SELECT checkId, 
-				serverAddTime, 
-				sessionType, 
-				sessionStartTime, 
+			SELECT checkId,
+				serverAddTime,
+				sessionType,
+				sessionStartTime,
 				sessionEndTime,
 				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
-				userName, 
-				connectId, 
-				cmName, 
-				addSequence, 
-				refreshCount, 
-				sumRowCount, 
+				userName,
+				connectId,
+				cmName,
+				addSequence,
+				refreshCount,
+				sumRowCount,
 				(sumRowCount / refreshCount) AS avgSumRowCount
-			FROM asemon_counter_usage_info 
-			WHERE checkId = " . $rpt_onId . " 
+			FROM asemon_counter_usage_info
+			WHERE checkId = " . $rpt_onId . "
 			ORDER BY connectId, sessionStartTime, addSequence
 			");
 		if (!$result) {
@@ -329,66 +358,11 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $rpt_summary_count == "true" )
 	{
-	echo "<H2>Statistics per MONTH</H2>";
+																			echo "<H2>Statistics per DAY</H2>";
 
-	echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
-	echo "<TR>";
-	echo "	<TD VALIGN=\"top\">";
-		//------------------------------------------
-		// Summary Report, Start Count, per month
-		//------------------------------------------
-		$sql = "
-			SELECT
-				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
-				count(*)             as usageCount
-			FROM asemon_usage
-			GROUP BY
-				DATE_FORMAT(serverAddTime, '%Y %b')
-			ORDER BY
-				DATE_FORMAT(serverAddTime, '%Y-%m') desc
-			";
-
-		// sending query
-		$result = mysql_query($sql);
-		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
-		}
-		htmlResultset($result, "START Count");
-	echo "	</TD>";
-
-	echo "	<TD VALIGN=\"top\">";
-		//------------------------------------------
-		// Summary Report, CONNECT Count, per month
-		//------------------------------------------
-		$sql = "
-			SELECT
-				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
-				count(*)             as ConnectCount
-			FROM asemon_connect_info
-			GROUP BY
-				DATE_FORMAT(serverAddTime, '%Y %b')
-			ORDER BY
-				DATE_FORMAT(serverAddTime, '%Y-%m') desc
-			";
-
-		// sending query
-		$result = mysql_query($sql);
-		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
-		}
-		htmlResultset($result, "ASE CONNECT Count");
-	echo "	</TD>";
-	echo "</TR>";
-	echo "</TABLE>";
-
-
-	echo "<H2>Statistics per DAY</H2>";
-
-	echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
-	echo "<TR>";
-	echo "	<TD VALIGN=\"top\">";
+																			echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
+																			echo "<TR>";
+																			echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
 		// Summary Report, Start Count, per day
 		//------------------------------------------
@@ -411,9 +385,9 @@ DB Cleanup:
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "START Count");
-	echo "	</TD>";
+																			echo "	</TD>";
 
-	echo "	<TD VALIGN=\"top\">";
+																			echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
 		// Summary Report, Connect Count, per day
 		//------------------------------------------
@@ -436,9 +410,64 @@ DB Cleanup:
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "ASE CONNECT Count");
-	echo "	</TD>";
-	echo "</TR>";
-	echo "</TABLE>";
+																			echo "	</TD>";
+																			echo "</TR>";
+																			echo "</TABLE>";
+
+
+																			echo "<H2>Statistics per MONTH</H2>";
+
+																			echo "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 >";
+																			echo "<TR>";
+																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Start Count, per month
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+				count(*)             as usageCount
+			FROM asemon_usage
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y %b')
+			ORDER BY
+				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "START Count");
+																			echo "	</TD>";
+
+																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, CONNECT Count, per month
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+				count(*)             as ConnectCount
+			FROM asemon_connect_info
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y %b')
+			ORDER BY
+				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "ASE CONNECT Count");
+																			echo "	</TD>";
+																			echo "</TR>";
+																			echo "</TABLE>";
 
 
 		//------------------------------------------
@@ -785,12 +814,38 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $rpt_mda != "" )
 	{
+		if ( is_numeric($mda_deleteVersion) )
+		{
+			echo "<h4>Cleaning up table 'asemon_mda_info' for aseVersion: $del_deleteVersion </h4>\n";
+
+			//---------
+			$sql = "DELETE FROM asemon_mda_info WHERE srvVersion = $mda_deleteVersion";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysql_query($sql) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+		}
+
 		//-----------------------------
 		$label = "ASE Version MDA Info Summary";
 		$sql = "
-			SELECT srvVersion, isClusterEnabled, count(*) as tables, sum(ColumnID) as cols, sum(Length) as params
-			FROM asemon_mda_info
-			WHERE type = 'T'
+			SELECT srvVersion, isClusterEnabled, serverAddTime, userName,
+				count(*)                  AS totalRows,
+				'>>> TABLE >>>'           AS sep1,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'T' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountTables,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'T' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedTables,
+				'>>> COLUMNS >>>'         AS sep2,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'C' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountCols,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'C' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedCols,
+				'>>> SYSTABS >>>'         AS sep3,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
+				'>>> PARAMS >>>'          AS sep4,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'P' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'P' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
+				srvVersion                AS deleteSrvVersion
+			FROM asemon_mda_info o
 			GROUP BY srvVersion, isClusterEnabled
 			ORDER BY srvVersion, isClusterEnabled
 		";
@@ -802,89 +857,273 @@ DB Cleanup:
 		}
 		htmlResultset($result, $label);
 
+		//------------------------------------------
+		// build a form, for Version DIFF
+		//------------------------------------------
+		echo '
+			<b>Show new tables/columns for two differect ASE Versons</b>
+			<form action="usage_report.php" method="get">
+				<input type="text" size=4 name="mda" readonly="mda" value="diff" />
+				Low Version:   <input type="text" size=5 maxlength=5 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
+				High Version:  <input type="text" size=5 maxlength=5 name="mda_highVersion" value="' . $mda_highVersion . '" />
+				<input type="submit" />
+			</form>
 
-	//	//-----------------------------
-	//	$label = "ASE Version MDA Info Summary XXX";
-	//	$sql = "
-	//		SELECT srvVersion, isClusterEnabled, count(distinct TableName) as tables, count(*) as cols
-	//		FROM asemon_mda_info
-	//		WHERE type = 'C'
-	//		GROUP BY srvVersion, isClusterEnabled
-	//		ORDER BY srvVersion, isClusterEnabled
-	//	";
-	//
-	//	// sending query
-	//	$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-	//	if (!$result) {
-	//		die("Query to show fields from table failed");
-	//	}
-	//	htmlResultset($result, $label);
+			<b>Get a full report of what tables and columns has been introduced in what release</b><br>
+			<b>Note: Not yet implemented</b>
+			<form action="usage_report.php" method="get">
+				<input type="text" size=4 name="mda" readonly="mda" value="full" />
+				<input type="submit" />
+			</form>
+		';
 
+		//------------------------------------------
+		// Full MDA Version history REPORT
+		//------------------------------------------
+		if ( $rpt_mda == "full" )
+		{
+			echo "<h1>Full MDA Version history REPORT, has NOT YET BEEN IMPLEMENTED.</h1>";
+
+			//-----------------------------
+			$label = "Full MDA Version history REPORT";
+			$sql = "call full_mda_version_report";
+
+//			// Change the params to you own here...
+//			$mysql = new mysqli("localhost", "asemon_se", "UuWb3ETM", "asemon_se");
+//
+//			if (mysqli_connect_errno())
+//			{
+//				die(printf('MySQL Server connection failed: %s', mysqli_connect_error()));
+//			}
+//
+//			/* execute multi query */
+//			if ($mysqli->multi_query($sql))
+//			{
+//				do
+//				{
+//					/* store first result set */
+//					if ($result = $mysqli->store_result())
+//					{
+//						while ($row = $result->fetch_row())
+//						{
+//							printf("%s\n", $row[0]);
+//						}
+//						$result->free();
+//					}
+//					/* print divider */
+//					if ($mysqli->more_results())
+//					{
+//						printf("-----------------\n");
+//					}
+//				} while ($mysqli->next_result());
+//			}
+//			$mysql->close();
+
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label);
+		}
+
+		//------------------------------------------
+		// MDA DIFF REPORT
+		//------------------------------------------
+		if ( $rpt_mda == "diff" )
+		{
+			//-----------------------------
+			$label = "MDA TABLE DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new tables in HIGH Version will be visible)";
+			$sql = "
+				SELECT h.srvVersion,
+					h.isClusterEnabled,
+					h.TableName,
+					h.TableID,
+					h.ColumnID      as NumOfCols,
+					h.Length        as NumOfParameters,
+					h.Description,
+					l.srvVersion
+				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName  = l.TableName
+				                                                       AND l.srvVersion = $mda_lowVersion
+				                                                       AND l.type       = 'T')
+				WHERE h.srvVersion = $mda_highVersion
+				  AND h.type       = 'T'
+				HAVING l.srvVersion IS NULL
+				ORDER BY h.TableID
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label);
+
+			//-----------------------------
+			$label = "MDA COLUMN DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new columns in HIGH Version will be visible)";
+			$sql = "
+				SELECT h.srvVersion,
+					h.isClusterEnabled,
+					h.TableName,
+					h.TableID,
+					h.ColumnName,
+					h.ColumnID,
+					h.TypeName,
+					h.Length,
+					h.Indicators,
+					h.Description,
+					l.srvVersion
+				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName  = l.TableName
+				                                                       AND h.ColumnName = l.ColumnName
+				                                                       AND l.srvVersion = $mda_lowVersion
+				                                                       AND l.type       = 'C')
+				WHERE h.srvVersion = $mda_highVersion
+				  AND h.type       = 'C'
+				HAVING l.srvVersion IS NULL
+				ORDER BY h.TableID, h.ColumnID
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label, "TableName");
+		}
 
 		//-----------------------------
-		$label = "ASE Version MDA TABLE Info ";
-		$sql = "
-			SELECT srvVersion, isClusterEnabled, TableName, rowId, TableID, ColumnID as cols, Length as params, Description
-			FROM asemon_mda_info
-			WHERE type = 'T'
-			ORDER BY srvVersion, isClusterEnabled, TableName
-		";
-
-		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-		if (!$result) {
-			die("Query to show fields from table failed");
-		}
-		htmlResultset($result, $label);
-
-
+		// Info for a specific VERSION
 		//-----------------------------
-		$label = "MDA Info Report (TABLE)";
-		$sql = "
-			SELECT *
-			FROM asemon_mda_info
-			WHERE type = 'T'
-			ORDER BY srvVersion, isClusterEnabled, rowId
-		";
+		if ( is_numeric($rpt_mda) )
+		{
+			$srvVersion = $rpt_mda;
 
-		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-		if (!$result) {
-			die("Query to show fields from table failed");
+			//-----------------------------
+			$label = "monTableColumns -- sysobject/syscolumns SANITY CHECK if name MATCHES (if 0 rows it's OK)";
+			// alias 'm' = monTableColuns info
+			// alias 's' = syscolumns info
+			$sql = "
+				SELECT
+					'NAME MISSMATCH: Column does NOT exist in syscolumns' as NameMissMatch,
+					m.srvVersion,
+					m.isClusterEnabled,
+					m.TableName,
+					m.TableID,
+					m.ColumnName,
+					m.ColumnID,
+					m.TypeName,
+					m.Length,
+					m.Indicators,
+					m.Description,
+					s.srvVersion
+				FROM asemon_mda_info m LEFT JOIN asemon_mda_info s ON (    m.TableName  = s.TableName
+				                                                       AND m.ColumnName = s.ColumnName
+				                                                       AND m.srvVersion = s.srvVersion
+				                                                       AND s.type       = 'S'
+
+				                                                       )
+				WHERE m.srvVersion = $srvVersion
+				  AND m.type       = 'C'
+				HAVING s.srvVersion IS NULL
+				ORDER BY m.TableID, m.ColumnID
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label, "TableName");
+
+
+			//-----------------------------
+			$label = "ASE Version MDA TABLE Info (ordered by TableName)";
+			$sql = "
+				SELECT srvVersion, isClusterEnabled, TableName, rowId, TableID, ColumnID as cols, Length as params, Description
+				FROM asemon_mda_info
+				WHERE type = 'T'
+				  AND srvVersion = $srvVersion
+				ORDER BY srvVersion, isClusterEnabled, TableName
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label);
+
+
+			//-----------------------------
+			$label = "MDA Info Report (TABLE)";
+			$sql = "
+				SELECT *
+				FROM asemon_mda_info
+				WHERE type = 'T'
+				  AND srvVersion = $srvVersion
+				ORDER BY srvVersion, isClusterEnabled, rowId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label);
+
+			//-----------------------------
+			$label = "MDA Info Report (TABLE-COLUMNS)";
+			$sql = "
+				SELECT *
+				FROM asemon_mda_info
+				WHERE type = 'C'
+				  AND srvVersion = $srvVersion
+				ORDER BY srvVersion, isClusterEnabled, rowId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label, "TableName");
+
+			//-----------------------------
+			$label = "MDA Info Report (TABLE-PARAMS)";
+			$sql = "
+				SELECT *
+				FROM asemon_mda_info
+				WHERE type = 'P'
+				  AND srvVersion = $srvVersion
+				ORDER BY srvVersion, isClusterEnabled, rowId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label, "TableName");
+
+			//-----------------------------
+			$label = "MDA Info Report (SYSOBJECT/SYSCOLUMNS)";
+			$sql = "
+				SELECT *
+				FROM asemon_mda_info
+				WHERE type = 'S'
+				  AND srvVersion = $srvVersion
+				ORDER BY srvVersion, isClusterEnabled, rowId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, $label, "TableName");
 		}
-		htmlResultset($result, $label);
 
-		//-----------------------------
-		$label = "MDA Info Report (TABLE-COLUMNS)";
-		$sql = "
-			SELECT *
-			FROM asemon_mda_info
-			WHERE type = 'C'
-			ORDER BY srvVersion, isClusterEnabled, rowId
-		";
-
-		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-		if (!$result) {
-			die("Query to show fields from table failed");
-		}
-		htmlResultset($result, $label);
-
-		//-----------------------------
-		$label = "MDA Info Report (TABLE-PARAMS)";
-		$sql = "
-			SELECT *
-			FROM asemon_mda_info
-			WHERE type = 'P'
-			ORDER BY srvVersion, isClusterEnabled, rowId
-		";
-
-		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
-		if (!$result) {
-			die("Query to show fields from table failed");
-		}
-		htmlResultset($result, $label);
 	}
 
 
@@ -925,7 +1164,7 @@ DB Cleanup:
 				sessionEndTime,
 				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
 				userName,
-				connectId, 
+				connectId,
 				addSequence,
 				cmName,
 				refreshCount,
@@ -1103,7 +1342,7 @@ DB Cleanup:
 		if ( is_numeric($rpt_errorInfo) )
 		{
 			$sql = "
-				SELECT 'NEW' as type, 
+				SELECT 'NEW' as type,
 					checkId,
 					checkId as deleteLogId,
 					checkId as saveLogId,
@@ -1133,7 +1372,7 @@ DB Cleanup:
 			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
 
 			$sql = "
-				SELECT 'TIMEOUT' as type, 
+				SELECT 'TIMEOUT' as type,
 					checkId,
 					checkId as deleteLogId,
 					checkId as saveLogId,
@@ -1163,7 +1402,7 @@ DB Cleanup:
 			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
 
 			$sql = "
-				SELECT 'SAVED' as type, 
+				SELECT 'SAVED' as type,
 					checkId,
 					checkId as deleteLogId,
 					sendCounter,

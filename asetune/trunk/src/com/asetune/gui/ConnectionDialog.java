@@ -19,6 +19,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,10 +40,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
@@ -67,8 +72,10 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.hostmon.SshConnection;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
@@ -162,6 +169,14 @@ public class ConnectionDialog
 //	private JCheckBox          _aseOptionUsedForNoGui_chk    = new JCheckBox("Use connection info above for no-gui mode", false);
 	private JCheckBox          _aseHostMonitor_chk           = new JCheckBox("Monitor the OS Host for IO and CPU...", false);
 	private JCheckBox          _aseOptionStore_chk           = new JCheckBox("Save counter data in a Persistent Counter Storage...", false);
+	private JCheckBox          _aseDeferredConnect_chk       = new JCheckBox("Make the connection later", false);
+	private JLabel             _aseDeferredConnectHour_lbl   = new JLabel("Start Hour");
+	private SpinnerNumberModel _aseDeferredConnectHour_spm   = new SpinnerNumberModel(0, 0, 23, 1); // value, min, max, step
+	private JSpinner           _aseDeferredConnectHour_sp    = new JSpinner(_aseDeferredConnectHour_spm);
+	private JLabel             _aseDeferredConnectMinute_lbl = new JLabel("Minute");
+	private SpinnerNumberModel _aseDeferredConnectMinute_spm = new SpinnerNumberModel(0, 0, 59, 1); // value, min, max, step
+	private JSpinner           _aseDeferredConnectMinute_sp  = new JSpinner(_aseDeferredConnectMinute_spm);
+	private JLabel             _aseDeferredConnectTime_lbl   = new JLabel();
 
 	//---- OS HOST panel
 	private ImageIcon          _hostmonLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
@@ -439,6 +454,9 @@ public class ConnectionDialog
 
 		loadProps();
 
+		// enable/disable DEFERRED fields...
+		aseDeferredConnectChkAction();
+
 		setContentPane(panel);
 	}
 
@@ -611,14 +629,27 @@ public class ConnectionDialog
 		_aseOptionStore_chk          .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
 		_aseHostMonitor_chk          .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
 
+		_aseDeferredConnect_chk      .setToolTipText("If you want to connect at a specific time, and start to collect data");
+		_aseDeferredConnectHour_sp   .setToolTipText("What Hour do you want to connect");
+		_aseDeferredConnectMinute_sp .setToolTipText("What Minute do you want to connect");
+
 //		panel.add(_aseOptionSavePwd_chk,         "");
 		panel.add(_aseOptionConnOnStart_chk,     "");
 		panel.add(_aseOptionReConnOnFailure_chk, "");
+		panel.add(_aseDeferredConnect_chk,       "split");
+		panel.add(_aseDeferredConnectHour_lbl,   "");
+		panel.add(_aseDeferredConnectHour_sp,    "");
+		panel.add(_aseDeferredConnectMinute_lbl, "");
+		panel.add(_aseDeferredConnectMinute_sp,  "");
+		panel.add(_aseDeferredConnectTime_lbl,   "wrap");
 //		panel.add(_aseOptionUsedForNoGui_chk,    "");
-		panel.add(_aseHostMonitor_chk,         "");
+		panel.add(_aseHostMonitor_chk,           "");
+
+		if (_showHostmonTab || _showPcsTab)
+			panel.add(new JSeparator(),          "gap 5 5 5 5, pushx, growx"); // gap left [right] [top] [bottom]
 
 		if (_showHostmonTab)
-			panel.add(_aseHostMonitor_chk,     "");
+			panel.add(_aseHostMonitor_chk,       "");
 
 		if (_showPcsTab)
 			panel.add(_aseOptionStore_chk,       "");
@@ -626,6 +657,10 @@ public class ConnectionDialog
 		_aseOptionConnOnStart_chk.addActionListener(this);
 		_aseOptionStore_chk      .addActionListener(this);
 		_aseHostMonitor_chk      .addActionListener(this);
+
+		_aseDeferredConnect_chk     .addActionListener(this);
+		_aseDeferredConnectHour_sp  .addChangeListener(this);
+		_aseDeferredConnectMinute_sp.addChangeListener(this);
 
 		return panel;
 	}
@@ -1882,8 +1917,7 @@ public class ConnectionDialog
 				try
 				{
 					_logger.info("Starting a H2 TCP server.");
-					String[] args = new String[] { "-tcpAllowOthers" };
-					org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer(args);
+					org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
 					h2ServerTcp.start();
 		
 		//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
@@ -1891,22 +1925,35 @@ public class ConnectionDialog
 		
 					if (true)
 					{
-						_logger.info("Starting a H2 WEB server.");
-						String[] argsWeb = new String[] { "-trace" };
-						org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer(argsWeb);
-						h2ServerWeb.start();
-		
-						_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+						try
+						{
+							_logger.info("Starting a H2 WEB server.");
+							//String[] argsWeb = new String[] { "-trace" };
+							org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
+							h2ServerWeb.start();
+
+							_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+						}
+						catch (Exception e)
+						{
+							_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+						}
 					}
 
 					if (true)
 					{
-						_logger.info("Starting a H2 Postgres server.");
-						String[] argsPostgres = new String[] { "" };
-						org.h2.tools.Server h2ServerPostgres = org.h2.tools.Server.createPgServer(argsPostgres);
-						h2ServerPostgres.start();
-		
-						_logger.info("H2 WEB server, url='"+h2ServerPostgres.getURL()+"', service='"+h2ServerPostgres.getService()+"'.");
+						try
+						{
+							_logger.info("Starting a H2 Postgres server.");
+							org.h2.tools.Server h2ServerPostgres = org.h2.tools.Server.createPgServer("-pgAllowOthers");
+							h2ServerPostgres.start();
+			
+							_logger.info("H2 Postgres server, url='"+h2ServerPostgres.getURL()+"', service='"+h2ServerPostgres.getService()+"'.");
+						}
+						catch (Exception e)
+						{
+							_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+						}
 					}
 				}
 				catch (SQLException e) 
@@ -2396,6 +2443,12 @@ public class ConnectionDialog
 			toggleHostmonTab();
 		}
 
+		// --- ASE: CHECKBOX: HOSTMON monitoring ---
+		if (_aseDeferredConnect_chk.equals(source))
+		{
+			aseDeferredConnectChkAction();
+		}
+
 		// --- PCS: COMBOBOX: JDBC DRIVER ---
 		if (_pcsJdbcDriver_cbx.equals(source))
 		{
@@ -2605,6 +2658,51 @@ public class ConnectionDialog
 			// ASE & PCS CONNECT
 			else
 			{
+				// Should we WAIT to make the connection.
+				if (_aseDeferredConnect_chk.isSelected())
+				{
+					final String hhmm = aseDeferredConnectChkAction();
+					if (hhmm != null)
+					{
+						Date startTime = null;
+						try { startTime = PersistWriterBase.getRecordingStartTime(hhmm); }
+						catch(Exception ignore) { }
+
+						if (startTime != null)
+						{
+							// Create a Waitfor Dialog
+							final WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for connect, at "+startTime);
+
+							// Create the Executor object
+							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor()
+							{
+								public Object doWork()
+								{
+									try { PersistWriterBase.waitForRecordingStartTime(hhmm, wait); }
+									catch (InterruptedException ignore) {}
+
+									return null;
+								}
+
+								/** Should the cancel button be visible or not. */
+								public boolean canDoCancel()
+								{
+									return true;
+								}
+							};
+							  
+							// or if you didn't return anything from the doWork() method
+							wait.execAndWait(doWork);
+							
+							// Stay in the Connection Dialog if cancel was pressed
+							if (wait.wasCanceled())
+							{
+								return;
+							}
+						}
+					}
+				} // end: wait for connect
+
 				// PCS CONNECT
 				if (_aseOptionStore_chk.isSelected())
 				{
@@ -2760,6 +2858,38 @@ public class ConnectionDialog
 		validateContents();
 	}
 	
+	private String aseDeferredConnectChkAction()
+	{
+		boolean enable = _aseDeferredConnect_chk.isSelected();
+		_aseDeferredConnectHour_lbl  .setEnabled(enable);
+		_aseDeferredConnectHour_sp   .setEnabled(enable);
+		_aseDeferredConnectMinute_lbl.setEnabled(enable);
+		_aseDeferredConnectMinute_sp .setEnabled(enable);
+		_aseDeferredConnectTime_lbl  .setEnabled(enable);
+
+		String hhmm = null;
+		if ( enable )
+		{
+			String hh = "00" + _aseDeferredConnectHour_sp  .getValue();
+			String mm = "00" + _aseDeferredConnectMinute_sp.getValue();
+			
+			hh = hh.substring(hh.length()-2);
+			mm = mm.substring(mm.length()-2);
+			hhmm = hh + mm;
+			Date startTime;
+			try { startTime = PersistWriterBase.getRecordingStartTime(hhmm); }
+			catch(Exception ignore) {startTime = new Date(); }
+			String startTimeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(startTime);
+
+			_aseDeferredConnectTime_lbl.setText(", Start Time: " + startTimeStr);
+		}
+		else
+		{
+			_aseDeferredConnectTime_lbl.setText("");
+		}
+		return hhmm;
+	}
+
 	// Typed characters in the fields are visible first when the key has been released: keyReleased()
 	public void keyPressed (KeyEvent keyevent)
 	{
@@ -2802,9 +2932,15 @@ public class ConnectionDialog
 		validateContents();
 	}
 
-	// TAB change
+	// TAB change or Spinner changes
 	public void stateChanged(ChangeEvent e)
 	{
+		if (_aseDeferredConnectHour_sp.equals(e.getSource()) || _aseDeferredConnectMinute_sp.equals(e.getSource()))
+		{
+			aseDeferredConnectChkAction();
+			return;
+		}
+
 		// Set the oshostname if it's blank
 		// use the same hostname os the ASE
 		if (_aseHostMonitor_chk.isSelected())
@@ -2944,6 +3080,9 @@ public class ConnectionDialog
 
 		conf.setProperty("conn.persistCounterStorage", _aseOptionStore_chk.isSelected() );
 		conf.setProperty("conn.hostMonitoring",        _aseHostMonitor_chk.isSelected() );
+		conf.setProperty("conn.deferred",              _aseDeferredConnect_chk.isSelected() );
+		conf.setProperty("conn.deferred.hour",         _aseDeferredConnectHour_sp  .getValue().toString() );
+		conf.setProperty("conn.deferred.minute",       _aseDeferredConnectMinute_sp.getValue().toString() );
 
 		//----------------------------------
 		// TAB: OS Host
@@ -3110,6 +3249,11 @@ public class ConnectionDialog
 		bol = conf.getBooleanProperty("conn.hostMonitoring", false);
 		_aseHostMonitor_chk.setSelected(bol);
 
+// Do not restore Deferred Connect, lets always start at FALSE / NOT CHECKED 
+//		_aseDeferredConnect_chk     .setSelected( conf.getBooleanProperty("conn.deferred",        false ));
+		_aseDeferredConnectHour_sp  .setValue(    conf.getIntProperty(    "conn.deferred.hour",   0 ));
+		_aseDeferredConnectMinute_sp.setValue(    conf.getIntProperty(    "conn.deferred.minute", 0 ));
+
 		//----------------------------------
 		// TAB: OS Host
 		//----------------------------------
@@ -3197,7 +3341,7 @@ public class ConnectionDialog
 		// TAB: Offline
 		//----------------------------------
 		int width  = conf.getIntProperty("conn.dialog.window.width",  570);
-		int height = conf.getIntProperty("conn.dialog.window.height", 645);
+		int height = conf.getIntProperty("conn.dialog.window.height", 675);
 		int x      = conf.getIntProperty("conn.dialog.window.pos.x",  -1);
 		int y      = conf.getIntProperty("conn.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)

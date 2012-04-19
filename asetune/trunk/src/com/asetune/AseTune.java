@@ -27,6 +27,7 @@ import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
+import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
@@ -160,6 +161,7 @@ public class AseTune
 			Configuration.USER_CONF,    // second
 			Configuration.SYSTEM_CONF); // Third
 
+		
 		//-------------------------------
 		// LIST CM
 		//-------------------------------
@@ -326,6 +328,19 @@ public class AseTune
 				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
 			}
 
+			// -e, --enable: Offline: enable/start the recording at a specific time
+			if (cmd.hasOption('e'))
+			{
+				String recordingStartTime = cmd.getOptionValue('e');
+				try {
+					PersistWriterBase.getRecordingStartTime(recordingStartTime);
+				} catch (Exception e) {
+					throw new Exception("Switch '-e|--enable' "+e.getMessage());
+				}
+				storeConfigProps.setProperty(CounterController.PROPKEY_startRecordingAtTime, recordingStartTime);
+			}
+
+
 			// -D --dbtype: Offline: Type of database storage H2 or ASE or ASA
 			// values for -D is handled within the -d section
 			if (cmd.hasOption('D'))
@@ -360,6 +375,9 @@ public class AseTune
 					String jdbcUrl    = "jdbc:h2:file:"+opt;
 					String jdbcUser   = "sa";
 					String jdbcPasswd = "";
+
+					if ("default".equalsIgnoreCase(opt))
+						jdbcUrl = "jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}";
 
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,           jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,              jdbcUrl);
@@ -634,7 +652,7 @@ public class AseTune
 			getCnt.start();
 
 			//---------------------------------
-			// Go and check for updates aswell.
+			// Go and check for updates as well.
 			//---------------------------------
 			_logger.info("Checking for new release...");
 			CheckForUpdates.noBlockCheck(null, false, false);
@@ -892,21 +910,25 @@ public class AseTune
 		pw.println("                                      which can be generated with the wizard.");
 		pw.println("                            cmNames = <small|medium|large|all>.");
 		pw.println("                                      or a comma separated list on CMNames.");
+		pw.println("                            You can also combine a template and add/remove cm's.");
+		pw.println("                            Example: -n medium,-CmDeviceIo,+CmSpinlockSum");
 		pw.println("  -r,--reconfigure          If the monitored ASE is not properly configured,");
 		pw.println("                            then try to configure it using predefined values.");
 		pw.println("  -l,--listcm               List cm's that can be used in '-n' switch.");
 		pw.println("  -i,--interval <seconds>   sample Interval, time between samples.");
+		pw.println("  -e,--enable   <HHMM>      enable/start the recording at Hour(00-23) Minute(00-59)");
 		pw.println("  -f,--finish   <hours>     shutdown/stop the no-gui service after # hours.");
 		pw.println("  -D,--dbtype <H2|ASE|ASE>  type of database to use as offline store.");
 		pw.println("  -d,--dbname <connSpec>    Connection specification to store offline data.");
 		pw.println("                            Depends on -D, see below for more info.");
 		pw.println("");
 		pw.println("If you specify '-D and -d':");
-		pw.println("  -D H2  -d h2dbfile");
+		pw.println("  -D H2  -d h2dbfile|default");
 		pw.println("  -D ASE -d hostname:port:dbname:user:passwd");
 		pw.println("  -D ASA -d hostname:port:dbname:user:passwd");
 		pw.println("  Default connection specifications for different dbtypes:");
-		pw.println("     H2:  'h2dbfile' file is mandatory");
+		pw.println("     H2:  'h2dbfile' file is mandatory.");
+		pw.println("          Use: -d default, will set h2dbfile to '${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}'");
 		pw.println("     ASE: 'hostname:port:dbname:user:passwd' is all mandatory.");
 		pw.println("     ASA: port=2638, dbname='', user='DBA', passwd='SQL'");
 		pw.println("  If only '-d' is given, the default value for '-D' is 'H2'.");
@@ -947,6 +969,7 @@ public class AseTune
 		options.addOption( "D", "dbtype",      true, "Offline: {H2|ASE|ASA} database type default is H2." );
 		options.addOption( "d", "dbname",      true, "Offline: dbname/file to store offline samples." );
 		options.addOption( "f", "finish",      true, "Offline: Shutdown the NO-GUI service after # hours" );
+		options.addOption( "e", "enable",      true, "Offline: enable/start the recording at Hour Minute" );
 
 //		options.addOption(OptionBuilder.withLongOpt("define").withDescription("define a system property").hasArg(true).withArgName("name=value").create('D'));
 //		options.addOption(OptionBuilder.hasArg(false).withDescription("usage information").withLongOpt("help").create('h'));
