@@ -95,6 +95,7 @@ public class PersistWriterJdbc
 
 	private org.h2.tools.Server _h2ServerTcp = null;
 	private org.h2.tools.Server _h2ServerWeb = null;
+	private org.h2.tools.Server _h2ServerPg  = null;
 
 	private boolean _h2NewDbOnDateChange = false;
 	private String  _h2LastDateChange    = null;
@@ -152,8 +153,7 @@ public class PersistWriterJdbc
 		if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
 		{
 			_logger.info("Starting a H2 TCP server.");
-			String[] args = new String[] { "-tcpAllowOthers" };
-			_h2ServerTcp = org.h2.tools.Server.createTcpServer(args);
+			_h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
 			_h2ServerTcp.start();
 
 //			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
@@ -161,13 +161,34 @@ public class PersistWriterJdbc
 
 			if (true)
 			{
-				_logger.info("Starting a H2 WEB server.");
-				//String[] argsWeb = new String[] { "-trace" };
-				String[] argsWeb = new String[] { "" };
-				_h2ServerWeb = org.h2.tools.Server.createWebServer(argsWeb);
-				_h2ServerWeb.start();
+				try
+				{
+					_logger.info("Starting a H2 WEB server.");
+					_h2ServerWeb = org.h2.tools.Server.createWebServer();
+					_h2ServerWeb.start();
 
-				_logger.info("H2 WEB server, url='"+_h2ServerWeb.getURL()+"', service='"+_h2ServerWeb.getService()+"'.");
+					_logger.info("H2 WEB server, url='"+_h2ServerWeb.getURL()+"', service='"+_h2ServerWeb.getService()+"'.");
+				}
+				catch (Exception e)
+				{
+					_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+				}
+			}
+
+			if (true)
+			{
+				try
+				{
+					_logger.info("Starting a H2 Postgres server.");
+					_h2ServerPg = org.h2.tools.Server.createPgServer("-pgAllowOthers");
+					_h2ServerPg.start();
+	
+					_logger.info("H2 Postgres server, url='"+_h2ServerPg.getURL()+"', service='"+_h2ServerPg.getService()+"'.");
+				}
+				catch (Exception e)
+				{
+					_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+				}
 			}
 		}
 	}
@@ -249,6 +270,12 @@ public class PersistWriterJdbc
 		{
 			_logger.info("Stopping H2 WEB Service.");
 			_h2ServerWeb.stop();
+		}
+
+		if (_h2ServerPg != null)
+		{
+			_logger.info("Stopping H2 Postgres Service.");
+			_h2ServerPg.stop();
 		}
 	}
 

@@ -192,6 +192,25 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>Enhancement: no-gui mode.</b><br>
+	<ul>
+		<li>-e HHMM: to enable/start the recording at a specific time later on the same day.</li>
+		<li>-d default: used the template database name '${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}'</li>
+		<li>-n small|medium|large|all templates, can now be "altered" using "templateName,+CmName,-CmName" to add/remove CM's from any of the predefined templates</li>
+	</ul><br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: to connection dialog, deferred connect</b><br>
+	connect at a specific time later on the same day<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: to Dialog: Configure ASE for Monitoring...</b><br>
+	If you change a parameter the dependent CM's will be re-initialized, so you don't have to re-connect after a Monitor config change.<br>
+	</LI>
+
+	<LI>
 	<b>Bug fix: Disable Monitoring on disconnect or exit.</b><br>
 	In the "ASE Monitor Configuration" panel you can choose to "disable monitoring", "prompt" on exit.<br>
 	This has been extended to "on exit or disconnect", so new when this option has been enabled,

@@ -86,6 +86,32 @@
 		printf("<br>\n");
 	}
 
+	function printFile($filename)
+	{
+		echo "<br> File Content: $filename <br>\n";
+
+		$lines = file($filename);
+		foreach ($lines as $line_num => $line)
+			print "<code><font color=blue>Line #{$line_num}</font> : " . $line . "<br /></code>\n";
+	}
+
+	function installProc($procname)
+	{
+		$filename = $procname . ".sql";
+
+		$fh = fopen($filename, 'r');
+		$sql = fread($fh, filesize($filename));
+		fclose($fh);
+
+		// drop
+		doCleanup("DROP PROCEDURE IF EXISTS $procname");
+
+		mysql_query($sql) or die("ERROR: " . mysql_error() . "<br>" . printFile($filename) );
+//		printf("Records affected: %d<br>\n", mysql_affected_rows());
+		printf("<br>\n");
+		printf("SUCCESS loading file: $filename<br>\n");
+	}
+
 
 	//------------------------------------------
 	// Now connect to the database
@@ -158,6 +184,10 @@
 		//doCleanup("ALTER TABLE asemon_mda_info DROP PRIMARY KEY");
 		//doCleanup("ALTER TABLE asemon_mda_info ADD PRIMARY KEY (type, srvVersion, isClusterEnabled, TableName, ColumnName)");
 
+		//doCleanup("UPDATE asemon_mda_info SET userName = '-save-' WHERE userName in ('gorans', '-fixed-', '-gorans-save-') ");
+
+		doCleanup("ALTER TABLE asemon_usage ADD clientExpireDate varchar(10) AFTER clientAsemonVersion");
+
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
 //");
@@ -173,6 +203,12 @@
 		describe("asemon_error_info");
 		describe("asemon_error_info2");
 		describe("asemon_error_info_save");
+
+		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
+	}
+	else if ( $doAction == "reCreateProcs" )
+	{
+		installProc("full_mda_version_report");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

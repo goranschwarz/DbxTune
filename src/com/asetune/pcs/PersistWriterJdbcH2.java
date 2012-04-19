@@ -96,8 +96,7 @@ extends PersistWriterJdbc
 		if ( _startH2NetworkServer )
 		{
 			_logger.info("Starting a H2 TCP server.");
-			String[] args = new String[] { "-tcpAllowOthers" };
-			org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer(args);
+			org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
 			h2ServerTcp.start();
 
 //			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
@@ -106,8 +105,7 @@ extends PersistWriterJdbc
 			if (true)
 			{
 				_logger.info("Starting a H2 WEB server.");
-				String[] argsWeb = new String[] { "-trace" };
-				org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer(argsWeb);
+				org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
 				h2ServerWeb.start();
 
 				_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");

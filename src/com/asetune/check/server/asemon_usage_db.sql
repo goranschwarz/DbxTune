@@ -28,20 +28,18 @@ CREATE TABLE asemon_usage
         clientSourceDate        timestamp,
         clientSourceVersion     int,
         clientAsemonVersion     varchar(20),
+		clientExpireDate        varchar(10),
 
         clientHostName          varchar(40),
         clientHostAddress       varchar(20),
         clientCanonicalHostName varchar(40),
+        callerIpAddress         varchar(20),
 
         user_name               varchar(30),
         user_home               varchar(50),
         user_dir                varchar(50),
         propfile                varchar(100),
         gui                     varchar(10),
-        sun_desktop             varchar(15),
-        user_country            varchar(5),
-        user_language           varchar(5),
-        user_timezone           varchar(15),
 
         java_version            varchar(20),
         java_vm_version         varchar(15),
@@ -51,7 +49,12 @@ CREATE TABLE asemon_usage
         memory                  varchar(10),
         os_name                 varchar(20),
         os_version              varchar(20),
-        os_arch                 varchar(20)
+        os_arch                 varchar(20),
+
+        sun_desktop             varchar(15),
+        user_country            varchar(5),
+        user_language           varchar(5),
+        user_timezone           varchar(15)
 );
 
 CREATE TABLE asemon_connect_info

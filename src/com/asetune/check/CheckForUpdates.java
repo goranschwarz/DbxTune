@@ -367,6 +367,7 @@ public class CheckForUpdates
 		urlParams.add("clientSourceDate",     Version.getSourceDate());
 		urlParams.add("clientSourceVersion",  Version.getSourceRev());
 		urlParams.add("clientAseTuneVersion", Version.getVersionStr());
+		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
 
 		try
 		{

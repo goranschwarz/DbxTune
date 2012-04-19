@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,9 +43,12 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.AseTune;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -1166,6 +1170,79 @@ public class AseConfigMonitoringDialog
 	}
 
 
+	private void reInitializeDependantPerformanceCounters(String aseConfig, boolean newValue) 
+//	throws SQLException
+	{
+		if ( ! StringUtil.isNullOrBlank(aseConfig) )
+		{
+			int newConfigVal = newValue ? 1 : 0;
+
+			List<CountersModel> cmList = GetCounters.getCmListDependsOnConfig(aseConfig, _conn, _aseVersionNum, _isClusterEnabled);
+			if (cmList.size() > 0)
+			{
+				// List for info message
+				List<String> cmNames = new ArrayList<String>();
+				for (CountersModel cm : cmList)
+					cmNames.add(cm.getName());
+
+				_logger.info("Re-Initializing Performance Counter(s) '"+StringUtil.toCommaStr(cmNames)+"', due to ASE Configuration changes. config='"+aseConfig+"', to='"+newConfigVal+"'.");
+
+				for (CountersModel cm : cmList)
+				{
+					if ( ! cm.isRuntimeInitialized() )
+						continue;
+
+					// set it to active state, it will be reset to false later "cm.init()"
+					cm.setActive(true, null);
+
+					//------------------------------------------------------
+					// Below is copied from: GetCounters.initCounters()
+					//------------------------------------------------------
+					
+					// set the version
+//					cm.setServerVersion(_aseVersionNum);
+//					cm.setClusterEnabled(_isClusterEnabled);
+					
+					// set the active roles, so it can be used in initSql()
+//					cm.setActiveRoles(_activeRoleList);
+
+					// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
+					//cm.setMonitorConfigs(monitorConfigMap);
+					// OR do this for ALL CM's after the loop.
+					Map<String,Integer> mcm = cm.getMonitorConfigMap();
+					if (mcm != null)
+						mcm.put(aseConfig, newConfigVal);
+
+					// Now when we are connected to a server, and properties are set in the CM, 
+					// mark it as runtime initialized (or late initialization)
+					// do NOT do this at the end of this method, because some of the above stuff
+					// will be used by the below method calls.
+//					cm.setRuntimeInitialized(true);
+
+					// Initializes SQL, use getServerVersion to check what we are connected to.
+					cm.initSql(_conn);
+
+					// Use this method if we need to check anything in the database.
+					// for example "deadlock pipe" may not be active...
+					// If server version is below 15.0.2 statement cache info should not be VISABLE
+//					cm.init(_conn);
+					try
+					{
+						cm.clear(); // clears the Counters and GUI parts
+						cm.init(_conn);
+					}
+					catch (Exception e)
+					{
+						String cmShortName = cm.getName();
+						String cmLongName  = cm.getDisplayName();
+
+						_logger.warn("Re-Initializing Performance Counter '"+cmLongName+"' shortName='"+cmShortName+"', due to ASE Configuration changes. config='"+aseConfig+"', to='"+newConfigVal+"'.", e);
+					}
+				}
+			}
+		}
+		
+	}
 	private boolean checkAndSetAseConfig(Connection conn, String config, JComponent comp)
 	{
 		// Resetting the tool tip to it's original tool tip message
@@ -1194,6 +1271,12 @@ public class AseConfigMonitoringDialog
 				if ( aseCfgBool != guiCfgBool )
 				{
 					AseConnectionUtils.setAseConfigValue(conn, config, guiCfgBool);
+					
+					// Maube get the configured value...
+					//int newRunValue = AseConnectionUtils.getAseConfigRunValue(conn, config);
+
+					// reinitialize PerformanceCounters that depends on this configuration.
+					reInitializeDependantPerformanceCounters(config, guiCfgBool);
 				}
 			}
 			else if (comp instanceof JSpinner)
@@ -1275,6 +1358,59 @@ public class AseConfigMonitoringDialog
 
 		_configErrors = false;
 
+		
+		// If we are currenty in REFRESH, then do GUI wait for the sample to finish.
+		if (GetCounters.hasInstance() && GetCounters.getInstance().isRefreshing())
+		{
+			final WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Waiting for currect sample to finish");
+
+			// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
+			BgExecutor terminateConnectionTask = new BgExecutor()
+			{
+				@Override
+				public Object doWork()
+				{
+					// - Wait for current refresh period to end.
+					GetCounters getCnt = AseTune.getCounterCollector();
+					if (getCnt != null)
+					{
+						boolean pauseState = MainFrame.getInstance().isPauseSampling();
+						// just to be sure, pause it
+						MainFrame.getInstance().setPauseSampling(true);
+
+						long startTime = System.currentTimeMillis();
+						char[] progressChars = new char[] {'-', '\\', '|', '/'}; 
+						for (int i=0; ; i++)
+						{
+							// wait until the current refresh loop has finished
+							if (!getCnt.isRefreshing())
+								break;
+	
+							// don't sleep forever, lets wait 60 seconds.
+							int timeoutAfter = 60;
+							long sleptSoFar = System.currentTimeMillis() - startTime;
+							if (sleptSoFar > (timeoutAfter * 1000) )
+								break;
+	
+							char pc = progressChars[ i % 4 ];
+							_logger.info("Waiting for GetCounters to stop before I can: Clearing components... Waited for "+sleptSoFar+" ms so far. Giving up after "+timeoutAfter+" seconds");
+							wait.setState("Waiting for 'refresh' to end "+pc);
+	
+							try { Thread.sleep(500); }
+							catch (InterruptedException ignore) {}
+						}
+
+						// if initial state was "running", then un-pause it.
+						if ( ! pauseState);
+							MainFrame.getInstance().setPauseSampling(false);
+					}
+			
+					return null;
+				}
+			};
+			wait.execAndWait(terminateConnectionTask);
+		}
+		
 		// NOTE: Version checking is NOT needed here
 		//       checkAndSetAseConfig() only do stuff if: comp.isEnabled()
 		

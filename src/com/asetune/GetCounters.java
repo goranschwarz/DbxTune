@@ -742,6 +742,7 @@ implements ICounterController
 	{
 		reset(true);
 	}
+
 	/**
 	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
 	 * Most possible called from disconnect() or similar
@@ -15962,4 +15963,5 @@ implements ICounterController
 	//==================================================================
 	// END: statistical mehods
 	//==================================================================
+
 }

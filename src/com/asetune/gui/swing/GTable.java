@@ -48,7 +48,6 @@ import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
-import com.asetune.Version;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.focusabletip.FocusableTip;
@@ -1111,9 +1110,12 @@ extends JXTable
 			_textBr   = text.split("\n");
 		}
 
-		private String		_restartText	= "Note: Restart "+Version.getAppName()+" after you have enabled the configuration.";
+//		private String		_restartText	= "Note: Restart "+Version.getAppName()+" after you have enabled the configuration.";
+//		private String		_restartText 	= "Note: Reconnect to ASE Server after you have enabled the configuration.";
+		private String		_restartText1	= "Note: use Menu -> Tools -> Configure ASE for Monitoring: to reconfigure ASE.";
+		private String		_restartText2	= "    or: Reconnect to ASE after you have enabled the configuration using isql.";
 		private String[]	_textBr			= null; // Break Lines by '\n'
-		private String      _textSave       = null; // Save last text so we dont need to do repaint if no changes.
+		private String      _textSave       = null; // Save last text so we don't need to do repaint if no changes.
 		private Graphics2D	g				= null;
 		private Rectangle	r				= null;
 
@@ -1157,7 +1159,8 @@ extends JXTable
 			if ( spConfigureCount > 0 )
 			{
 				int yPosRestartText = yPos + (maxStrHeight * (_textBr.length + 1));
-				g.drawString(_restartText, xPos, yPosRestartText);
+				g.drawString(_restartText1, xPos, yPosRestartText);
+				g.drawString(_restartText2, xPos, yPosRestartText + 25);
 			}
 		}
 

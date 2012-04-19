@@ -36,6 +36,9 @@ public class MonTablesDictionary
 //	private HashMap<String,MonTableEntry> _monTables = null;
 	private HashMap<String,MonTableEntry> _monTables = new HashMap<String,MonTableEntry>();
 
+	/** has been initalized or not */
+	private boolean _initialized = false;
+
 	/** ASE @@servername string */
 	public String aseServerName = "";
 
@@ -178,7 +181,8 @@ public class MonTablesDictionary
 	
 	public boolean isInitialized()
 	{
-		return (_monTables != null ? true : false);
+		return _initialized;
+//		return (_monTables != null ? true : false);
 	}
 
 	/**
@@ -660,6 +664,9 @@ public class MonTablesDictionary
 				}
 			}
 		}
+		
+		// finally MARK it as initialized
+		_initialized = true;
 	}
 
 	/**

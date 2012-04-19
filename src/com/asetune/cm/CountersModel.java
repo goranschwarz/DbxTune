@@ -2043,6 +2043,12 @@ implements Cloneable, ITableTooltip
 	{
 		_monitorConfigsMap = monitorConfigs;
 	}
+	/** */
+	public Map<String,Integer> getMonitorConfigMap()
+	{
+		return _monitorConfigsMap;
+	}
+
 	/** Get the "in-memory" configuration for: sp_configure 'Monitoring'
 	 * @param The name of the config
 	 * @return -1 if the configName can't be found, else it's the "Run Value" from sp_configure.

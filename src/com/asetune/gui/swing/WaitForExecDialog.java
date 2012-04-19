@@ -5,6 +5,8 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.concurrent.ExecutionException;
@@ -70,6 +72,7 @@ implements PropertyChangeListener, ActionListener
 	private static final long serialVersionUID = 1L;
 
 	private BgExecutor      _execClass       = null;
+	private boolean         _normalExit      = false; // set to true when the SwingWorker ends
 
 	private JLabel          _label           = new JLabel("Waiting...", JLabel.CENTER);
 
@@ -77,6 +80,7 @@ implements PropertyChangeListener, ActionListener
 	private RSyntaxTextArea _extraText_txt   = null;
 	private RTextScrollPane _extraText_sroll = null;
 	private JButton         _cancel_but      = new JButton("Cancel");
+	private boolean         _cancelWasPressed= false;
 
 	public WaitForExecDialog(Window owner, String waitForLabel)
 	{
@@ -116,6 +120,18 @@ implements PropertyChangeListener, ActionListener
 		pack();
 		setSize( getSize().width + 50, getSize().height + 35);
 		setLocationRelativeTo(owner);
+
+		// When the "X" close window is pressed, call some method.
+		addWindowListener( new WindowAdapter()
+		{
+			public void windowClosing(WindowEvent e)
+			{
+				if (_execClass != null)
+				{
+					_execClass.windowClosing(_normalExit, e);
+				}
+			}
+		});
 	}
 	
 	@Override
@@ -125,6 +141,7 @@ implements PropertyChangeListener, ActionListener
 		
 		if (_cancel_but.equals(source))
 		{
+			_cancelWasPressed = true;
 			if (_execClass != null)
 				_execClass.cancel();
 		}
@@ -134,6 +151,33 @@ implements PropertyChangeListener, ActionListener
 	{
 		if ( ! StringUtil.isNullOrBlank(str) && _extraText_txt != null)
 			_extraText_txt.markAll(str, false, false, false);
+	}
+
+	/**
+	 * This will return TRUE, if the cancel button was pressed OR the "X" button was pressed.
+	 * @return
+	 */
+	public boolean wasCanceled()
+	{
+		return _cancelWasPressed || !_normalExit;
+	}
+
+	/**
+	 * This will return TRUE, if the cancel button was pressed.
+	 * @return
+	 */
+	public boolean wasCancelPressed()
+	{
+		return _cancelWasPressed;
+	}
+
+	/**
+	 * This will return FALSE, if the Wait window was closed with the "X" button.
+	 * @return
+	 */
+	public boolean isNormalExit()
+	{
+		return _normalExit;
 	}
 
 	public String getState()
@@ -190,6 +234,7 @@ implements PropertyChangeListener, ActionListener
 		// Close this window when the Swing worker has completed
 		if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
 		{
+			_normalExit = true;
 			setVisible(false);
 			dispose();
 		}
@@ -214,15 +259,17 @@ implements PropertyChangeListener, ActionListener
 		SwingWorker<Object, Object> doBgThread = new SwingWorker<Object, Object>()
 		{
 			@Override
-			protected Object doInBackground() throws Exception
+			protected Object doInBackground() 
+			throws Exception
 			{
 				try 
 				{
+					_execClass.setBgThread(Thread.currentThread());
 					return _execClass.doWork();
 				} 
 				catch (Throwable t) 
 				{
-					_logger.debug("WaitForEcecDialog: has problems when doing it's work.", t);
+					_logger.debug("WaitForExecDialog: has problems when doing it's work.", t);
 				}
 				return null;
 			}
@@ -257,6 +304,8 @@ implements PropertyChangeListener, ActionListener
 	 */
 	public abstract static class BgExecutor
 	{
+		private Thread _bgThread = null;
+
 		/**
 		 * Here is where the work will be done
 		 * @return
@@ -264,18 +313,49 @@ implements PropertyChangeListener, ActionListener
 		public abstract Object doWork();
 
 		/**
-		 * If the cancel button is pressed, this method will be called
-		 */
-		public void cancel()
-		{
-		}
-
-		/**
-		 * Should the cancel button be visible or not. 
+		 * Should the cancel button be visible or not. <br>
+		 * Override this to change functionality
 		 */
 		public boolean canDoCancel()
 		{
 			return false;
+		}
+
+		/**
+		 * Set the SwingWorkers thread
+		 */
+		public void setBgThread(Thread thread)
+		{
+			_bgThread = thread;
+		}
+
+		/**
+		 * Get the SwingWorkers thread
+		 */
+		public Thread getBgThread()
+		{
+			return _bgThread;
+		}
+
+		/**
+		 * If the cancel button is pressed, this method will be called
+		 */
+		public void cancel()
+		{
+			if (getBgThread() != null)
+				getBgThread().interrupt();
+		}
+
+		/**
+		 * called if someone pressed the "X" button on the window before the bgThread has ended.<br>
+		 * This will just call cancel() method if normalExit is FALSE.
+		 * 
+		 * @param normalExit This will be true if the SwingWorker thread has ended. and false if the "X" has been pressed.
+		 */
+		public void windowClosing(boolean normalExit, WindowEvent e)
+		{
+			if ( ! normalExit )
+				cancel();
 		}
 	}
 }

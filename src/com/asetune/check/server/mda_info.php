@@ -32,6 +32,22 @@
 		}
 		return array();
 	}
+	//----------------------------------------
+	// FUNCTION: toSqlNumber
+	//----------------------------------------
+	function toSqlNumber($input)
+	{
+		if ($input == "")
+			return "NULL";
+		return $input;
+	}
+	// FUNCTION: toSqlStr
+	function toSqlStr($input)
+	{
+		if ($input == "")
+			return "NULL";
+		return "'" . mysql_real_escape_string($input) . "'";
+	}
 
 
 	//------------------------------------------

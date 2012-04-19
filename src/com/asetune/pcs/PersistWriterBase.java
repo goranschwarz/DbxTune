@@ -9,7 +9,11 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,7 +22,9 @@ import org.apache.log4j.Logger;
 import com.asetune.AseConfig;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.TimeUtils;
 
 
 public abstract class PersistWriterBase
@@ -58,6 +64,7 @@ public abstract class PersistWriterBase
 	public static String DB_PROD_NAME_ASE = "Adaptive Server Enterprise";
 	public static String DB_PROD_NAME_ASA = "SQL Anywhere";
 	public static String DB_PROD_NAME_H2  = "H2";
+
 
 	/*---------------------------------------------------
 	** class members
@@ -1092,5 +1099,98 @@ public abstract class PersistWriterBase
 			}
 		}
 		return list;
+	}
+
+	/**
+	 * Get start time.
+	 * 
+	 * @param recordingStartTime
+	 * @throws Exception
+	 */
+	public static Date getRecordingStartTime(String recordingStartTime)
+	throws Exception
+	{
+		if (recordingStartTime == null)
+			return null;
+
+		if (recordingStartTime.length() != 4)
+			throw new Exception("Must be a number, between 0000 and 2359");
+
+		try 
+		{
+			int number = Integer.parseInt(recordingStartTime);
+			int hour   = Integer.parseInt(recordingStartTime.substring(0, 2));
+			int minute = Integer.parseInt(recordingStartTime.substring(2));
+			if (hour   > 23  ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 00 and 23.");
+			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 00 and 23.");
+			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 00 and 59.");
+			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 00 and 59.");
+			if (number > 2359) throw new NumberFormatException("Record time is to high. value='"+number+"'.");
+			if (number < 0   ) throw new NumberFormatException("Record time is to low. value='"+number+"'.");
+
+			Date now = new Date();
+			Calendar cal = new GregorianCalendar();
+			cal.setTime(now);
+			cal.set(Calendar.HOUR_OF_DAY, hour);
+			cal.set(Calendar.MINUTE,      minute);
+			cal.set(Calendar.SECOND,      0);
+			cal.set(Calendar.MILLISECOND, 0);
+			
+			// If the new date has already happened, then just add 1 day
+			if (cal.getTime().getTime() < System.currentTimeMillis())
+				cal.set(Calendar.DAY_OF_YEAR, cal.get(Calendar.DAY_OF_YEAR)+1);
+				
+			return cal.getTime();
+		}
+		catch (NumberFormatException e)
+		{
+			throw new Exception("Must be a number, between 0000 and 2359. Caught: "+e.getMessage(), e);
+		}
+	}
+	
+	public static void waitForRecordingStartTime(String startTime, WaitForExecDialog waitDialog)
+	throws InterruptedException
+	{
+		if (startTime == null)
+			return;
+
+		Date   waitUntilDate = null;
+		String waitUntilStr  = null;
+		try 
+		{
+			waitUntilDate = getRecordingStartTime(startTime);
+			waitUntilStr  = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(waitUntilDate);
+			_logger.info("Found the deferred start time '"+waitUntilStr+"'. I will have to wait...");
+		}
+		catch (Exception e) 
+		{
+			_logger.warn("Problems getting deferred start time. So I will skip waiting and continue the start. Caught: "+e.getMessage());
+			return;
+		}
+
+		int sleepTimeInSec = 60;
+		while(true)
+		{
+			long now = System.currentTimeMillis();
+
+			if (waitUntilDate.getTime() < now)
+			{
+				_logger.info("DONE waiting for the deferred start time '"+waitUntilStr+"'. Lets continuing the start sequence.");
+				break;
+			}
+
+			String waitTimeLeft = TimeUtils.msToTimeStr("%HH:%MM:%SS", waitUntilDate.getTime() - now);
+			if (waitDialog != null)
+			{
+				sleepTimeInSec = 1;
+				waitDialog.setState("Time left to Connect (Hours:Minutes:Seconds) "+waitTimeLeft);
+			}
+			else
+			{
+				sleepTimeInSec = 60;
+				_logger.info("Waiting for the start time '"+waitUntilStr+"' before continuing the start sequence ("+waitTimeLeft+").");
+			}
+			Thread.sleep(1000 * sleepTimeInSec); // may be interrupted
+		}
 	}
 }
