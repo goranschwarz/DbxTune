@@ -90,6 +90,7 @@ CREATE TABLE asemon_mda_info
         serverAddTime           timestamp,
         clientTime              timestamp,
         userName                varchar(30),
+        verified                char(1),
 
         srvVersion              int,
         isClusterEnabled        int,

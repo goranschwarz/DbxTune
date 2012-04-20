@@ -111,6 +111,7 @@ public class ConnectionDialog
 	private Connection               _offlineConn     = null;
 //	private PersistentCounterHandler _pcsWriter       = null;
 
+	private Date                     _disConnectTime  = null;
 
 	private static final int   TAB_POS_ASE      = 0;
 	private static final int   TAB_POS_HOSTMON  = 1;
@@ -163,20 +164,28 @@ public class ConnectionDialog
 	private JTextField         _aseConnUrl_txt     = new JTextField();
 
 
-	private JCheckBox          _aseOptionSavePwd_chk         = new JCheckBox("Save password", true);
-	private JCheckBox          _aseOptionConnOnStart_chk     = new JCheckBox("Connect to this server on startup", false);
-	private JCheckBox          _aseOptionReConnOnFailure_chk = new JCheckBox("Reconnect to server if connection is lost", true);
-//	private JCheckBox          _aseOptionUsedForNoGui_chk    = new JCheckBox("Use connection info above for no-gui mode", false);
-	private JCheckBox          _aseHostMonitor_chk           = new JCheckBox("Monitor the OS Host for IO and CPU...", false);
-	private JCheckBox          _aseOptionStore_chk           = new JCheckBox("Save counter data in a Persistent Counter Storage...", false);
-	private JCheckBox          _aseDeferredConnect_chk       = new JCheckBox("Make the connection later", false);
-	private JLabel             _aseDeferredConnectHour_lbl   = new JLabel("Start Hour");
-	private SpinnerNumberModel _aseDeferredConnectHour_spm   = new SpinnerNumberModel(0, 0, 23, 1); // value, min, max, step
-	private JSpinner           _aseDeferredConnectHour_sp    = new JSpinner(_aseDeferredConnectHour_spm);
-	private JLabel             _aseDeferredConnectMinute_lbl = new JLabel("Minute");
-	private SpinnerNumberModel _aseDeferredConnectMinute_spm = new SpinnerNumberModel(0, 0, 59, 1); // value, min, max, step
-	private JSpinner           _aseDeferredConnectMinute_sp  = new JSpinner(_aseDeferredConnectMinute_spm);
-	private JLabel             _aseDeferredConnectTime_lbl   = new JLabel();
+	private JCheckBox          _aseOptionSavePwd_chk            = new JCheckBox("Save password", true);
+	private JCheckBox          _aseOptionConnOnStart_chk        = new JCheckBox("Connect to this server on startup", false);
+	private JCheckBox          _aseOptionReConnOnFailure_chk    = new JCheckBox("Reconnect to server if connection is lost", true);
+//	private JCheckBox          _aseOptionUsedForNoGui_chk       = new JCheckBox("Use connection info above for no-gui mode", false);
+	private JCheckBox          _aseHostMonitor_chk              = new JCheckBox("Monitor the OS Host for IO and CPU...", false);
+	private JCheckBox          _aseOptionStore_chk              = new JCheckBox("Save counter data in a Persistent Counter Storage...", false);
+	private JCheckBox          _aseDeferredConnect_chk          = new JCheckBox("Make the connection later", false);
+	private JLabel             _aseDeferredConnectHour_lbl      = new JLabel("Start Hour");
+	private SpinnerNumberModel _aseDeferredConnectHour_spm      = new SpinnerNumberModel(0, 0, 23, 1); // value, min, max, step
+	private JSpinner           _aseDeferredConnectHour_sp       = new JSpinner(_aseDeferredConnectHour_spm);
+	private JLabel             _aseDeferredConnectMinute_lbl    = new JLabel(", Minute");
+	private SpinnerNumberModel _aseDeferredConnectMinute_spm    = new SpinnerNumberModel(0, 0, 59, 1); // value, min, max, step
+	private JSpinner           _aseDeferredConnectMinute_sp     = new JSpinner(_aseDeferredConnectMinute_spm);
+	private JLabel             _aseDeferredConnectTime_lbl      = new JLabel();
+	private JCheckBox          _aseDeferredDisConnect_chk       = new JCheckBox("Disconnect After Elapsed Time", false);
+	private JLabel             _aseDeferredDisConnectHour_lbl   = new JLabel("Hours");
+	private SpinnerNumberModel _aseDeferredDisConnectHour_spm   = new SpinnerNumberModel(0, 0, 999, 1); // value, min, max, step
+	private JSpinner           _aseDeferredDisConnectHour_sp    = new JSpinner(_aseDeferredDisConnectHour_spm);
+	private JLabel             _aseDeferredDisConnectMinute_lbl = new JLabel(", Minutes");
+	private SpinnerNumberModel _aseDeferredDisConnectMinute_spm = new SpinnerNumberModel(0, 0, 59, 1); // value, min, max, step
+	private JSpinner           _aseDeferredDisConnectMinute_sp  = new JSpinner(_aseDeferredDisConnectMinute_spm);
+	private JLabel             _aseDeferredDisConnectTime_lbl   = new JLabel();
 
 	//---- OS HOST panel
 	private ImageIcon          _hostmonLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
@@ -341,6 +350,11 @@ public class ConnectionDialog
 //	public PersistentCounterHandler getPcsWriter()      { return _pcsWriter; }
 	public Connection               getOfflineConn()    { return _offlineConn; }
 
+	public Date getDisConnectTime()
+	{
+		return _disConnectTime;
+	}
+
 	public void setAseUsername(String username) { _aseUser_txt.setText(username); }
 	public void setAsePassword(String passwd)   { _asePasswd_txt.setText(passwd); }
 	public void setAseServer  (String server)
@@ -456,6 +470,7 @@ public class ConnectionDialog
 
 		// enable/disable DEFERRED fields...
 		aseDeferredConnectChkAction();
+		aseDeferredDisConnectChkAction();
 
 		setContentPane(panel);
 	}
@@ -629,21 +644,30 @@ public class ConnectionDialog
 		_aseOptionStore_chk          .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
 		_aseHostMonitor_chk          .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
 
-		_aseDeferredConnect_chk      .setToolTipText("If you want to connect at a specific time, and start to collect data");
-		_aseDeferredConnectHour_sp   .setToolTipText("What Hour do you want to connect");
-		_aseDeferredConnectMinute_sp .setToolTipText("What Minute do you want to connect");
+		_aseDeferredConnect_chk        .setToolTipText("If you want to connect at a specific time, and start to collect data");
+		_aseDeferredConnectHour_sp     .setToolTipText("What Hour do you want to connect");
+		_aseDeferredConnectMinute_sp   .setToolTipText("What Minute do you want to connect");
+		_aseDeferredDisConnect_chk     .setToolTipText("If you want to disconnect after a certain elapsed time frame");
+		_aseDeferredDisConnectHour_sp  .setToolTipText("After how many hours of sampling do you want to disconnect");
+		_aseDeferredDisConnectMinute_sp.setToolTipText("After how many minutes of sampling do you want to disconnect");
 
-//		panel.add(_aseOptionSavePwd_chk,         "");
-		panel.add(_aseOptionConnOnStart_chk,     "");
-		panel.add(_aseOptionReConnOnFailure_chk, "");
-		panel.add(_aseDeferredConnect_chk,       "split");
-		panel.add(_aseDeferredConnectHour_lbl,   "");
-		panel.add(_aseDeferredConnectHour_sp,    "");
-		panel.add(_aseDeferredConnectMinute_lbl, "");
-		panel.add(_aseDeferredConnectMinute_sp,  "");
-		panel.add(_aseDeferredConnectTime_lbl,   "wrap");
-//		panel.add(_aseOptionUsedForNoGui_chk,    "");
-		panel.add(_aseHostMonitor_chk,           "");
+//		panel.add(_aseOptionSavePwd_chk,            "");
+		panel.add(_aseOptionConnOnStart_chk,        "");
+		panel.add(_aseOptionReConnOnFailure_chk,    "");
+		panel.add(_aseDeferredConnect_chk,          "split");
+		panel.add(_aseDeferredConnectHour_lbl,      "");
+		panel.add(_aseDeferredConnectHour_sp,       "width 45:45");
+		panel.add(_aseDeferredConnectMinute_lbl,    "width 45:45");
+		panel.add(_aseDeferredConnectMinute_sp,     "");
+		panel.add(_aseDeferredConnectTime_lbl,      "wrap");
+		panel.add(_aseDeferredDisConnect_chk,       "split");
+		panel.add(_aseDeferredDisConnectHour_lbl,   "");
+		panel.add(_aseDeferredDisConnectHour_sp,    "width 45:45");
+		panel.add(_aseDeferredDisConnectMinute_lbl, "width 45:45");
+		panel.add(_aseDeferredDisConnectMinute_sp,  "");
+		panel.add(_aseDeferredDisConnectTime_lbl,   "wrap");
+//		panel.add(_aseOptionUsedForNoGui_chk,       "");
+		panel.add(_aseHostMonitor_chk,              "");
 
 		if (_showHostmonTab || _showPcsTab)
 			panel.add(new JSeparator(),          "gap 5 5 5 5, pushx, growx"); // gap left [right] [top] [bottom]
@@ -658,9 +682,12 @@ public class ConnectionDialog
 		_aseOptionStore_chk      .addActionListener(this);
 		_aseHostMonitor_chk      .addActionListener(this);
 
-		_aseDeferredConnect_chk     .addActionListener(this);
-		_aseDeferredConnectHour_sp  .addChangeListener(this);
-		_aseDeferredConnectMinute_sp.addChangeListener(this);
+		_aseDeferredConnect_chk        .addActionListener(this);
+		_aseDeferredConnectHour_sp     .addChangeListener(this);
+		_aseDeferredConnectMinute_sp   .addChangeListener(this);
+		_aseDeferredDisConnect_chk     .addActionListener(this);
+		_aseDeferredDisConnectHour_sp  .addChangeListener(this);
+		_aseDeferredDisConnectMinute_sp.addChangeListener(this);
 
 		return panel;
 	}
@@ -2443,10 +2470,16 @@ public class ConnectionDialog
 			toggleHostmonTab();
 		}
 
-		// --- ASE: CHECKBOX: HOSTMON monitoring ---
+		// --- ASE: CHECKBOX: Deferred Connect ---
 		if (_aseDeferredConnect_chk.equals(source))
 		{
 			aseDeferredConnectChkAction();
+		}
+
+		// --- ASE: CHECKBOX: Deferred DisConnect ---
+		if (_aseDeferredDisConnect_chk.equals(source))
+		{
+			aseDeferredDisConnectChkAction();
 		}
 
 		// --- PCS: COMBOBOX: JDBC DRIVER ---
@@ -2671,7 +2704,7 @@ public class ConnectionDialog
 						if (startTime != null)
 						{
 							// Create a Waitfor Dialog
-							final WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for connect, at "+startTime);
+							final WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at "+startTime);
 
 							// Create the Executor object
 							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor()
@@ -2809,6 +2842,18 @@ public class ConnectionDialog
 //						_logger.info("Re-connected to the same ASE Version as priviously. Version is '"+currentVersion+"'.");
 //				}
 
+				// Set the desired disconnect time.
+				_disConnectTime = null;
+				try 
+				{ 
+					Date stopTime  = PersistWriterBase.getRecordingStopTime(null, aseDeferredDisConnectChkAction()); 
+					_disConnectTime = stopTime;
+				}
+				catch(Exception ex) 
+				{
+					_logger.warn("Could not determen stop/disconnect time, stop time will NOT be set.");
+				}
+
 				// SET CONNECTION TYP and "CLOSE" the dialog
 				_connectionType = ASE_CONN;
 				setVisible(false);
@@ -2870,22 +2915,62 @@ public class ConnectionDialog
 		String hhmm = null;
 		if ( enable )
 		{
-			String hh = "00" + _aseDeferredConnectHour_sp  .getValue();
-			String mm = "00" + _aseDeferredConnectMinute_sp.getValue();
+			String hh = "" + _aseDeferredConnectHour_sp  .getValue();
+			String mm = "" + _aseDeferredConnectMinute_sp.getValue();
 			
-			hh = hh.substring(hh.length()-2);
-			mm = mm.substring(mm.length()-2);
-			hhmm = hh + mm;
+			hhmm = hh + ":" + mm;
 			Date startTime;
-			try { startTime = PersistWriterBase.getRecordingStartTime(hhmm); }
-			catch(Exception ignore) {startTime = new Date(); }
+			try 
+			{ 
+				startTime = PersistWriterBase.getRecordingStartTime(hhmm); 
+			}
+			catch(Exception ignore) 
+			{
+				startTime = new Date(); 
+			}
 			String startTimeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(startTime);
 
-			_aseDeferredConnectTime_lbl.setText(", Start Time: " + startTimeStr);
+			_aseDeferredConnectTime_lbl.setText("  Start Time: " + startTimeStr);
 		}
 		else
 		{
 			_aseDeferredConnectTime_lbl.setText("");
+		}
+		return hhmm;
+	}
+	private String aseDeferredDisConnectChkAction()
+	{
+		boolean enable = _aseDeferredDisConnect_chk.isSelected();
+		_aseDeferredDisConnectHour_lbl  .setEnabled(enable);
+		_aseDeferredDisConnectHour_sp   .setEnabled(enable);
+		_aseDeferredDisConnectMinute_lbl.setEnabled(enable);
+		_aseDeferredDisConnectMinute_sp .setEnabled(enable);
+		_aseDeferredDisConnectTime_lbl  .setEnabled(enable);
+
+		String hhmm = null;
+		if ( enable )
+		{
+			String hh = "" + _aseDeferredDisConnectHour_sp  .getValue();
+			String mm = "" + _aseDeferredDisConnectMinute_sp.getValue();
+			
+			hhmm = hh + ":" + mm;
+			Date stopTime;
+			try 
+			{ 
+				Date startTime = PersistWriterBase.getRecordingStartTime(aseDeferredConnectChkAction());
+				stopTime = PersistWriterBase.getRecordingStopTime(startTime, hhmm); 
+			}
+			catch(Exception ignore) 
+			{
+				stopTime = new Date(); 
+			}
+			String startTimeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(stopTime);
+
+			_aseDeferredDisConnectTime_lbl.setText("   Stop Time: " + startTimeStr);
+		}
+		else
+		{
+			_aseDeferredDisConnectTime_lbl.setText("");
 		}
 		return hhmm;
 	}
@@ -2935,9 +3020,14 @@ public class ConnectionDialog
 	// TAB change or Spinner changes
 	public void stateChanged(ChangeEvent e)
 	{
-		if (_aseDeferredConnectHour_sp.equals(e.getSource()) || _aseDeferredConnectMinute_sp.equals(e.getSource()))
+		if (   _aseDeferredConnectHour_sp     .equals(e.getSource())    
+		    || _aseDeferredConnectMinute_sp   .equals(e.getSource())
+		    || _aseDeferredDisConnectHour_sp  .equals(e.getSource()) 
+		    || _aseDeferredDisConnectMinute_sp.equals(e.getSource())
+		   )
 		{
 			aseDeferredConnectChkAction();
+			aseDeferredDisConnectChkAction();
 			return;
 		}
 
@@ -3078,11 +3168,14 @@ public class ConnectionDialog
 		conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP,   _aseOptionConnOnStart_chk.isSelected() );
 		conf.setProperty(CONF_OPTION_RECONNECT_ON_FAILURE, _aseOptionReConnOnFailure_chk.isSelected());
 
-		conf.setProperty("conn.persistCounterStorage", _aseOptionStore_chk.isSelected() );
-		conf.setProperty("conn.hostMonitoring",        _aseHostMonitor_chk.isSelected() );
-		conf.setProperty("conn.deferred",              _aseDeferredConnect_chk.isSelected() );
-		conf.setProperty("conn.deferred.hour",         _aseDeferredConnectHour_sp  .getValue().toString() );
-		conf.setProperty("conn.deferred.minute",       _aseDeferredConnectMinute_sp.getValue().toString() );
+		conf.setProperty("conn.persistCounterStorage",      _aseOptionStore_chk.isSelected() );
+		conf.setProperty("conn.hostMonitoring",             _aseHostMonitor_chk.isSelected() );
+		conf.setProperty("conn.deferred.connect",           _aseDeferredConnect_chk.isSelected() );
+		conf.setProperty("conn.deferred.connect.hour",      _aseDeferredConnectHour_sp  .getValue().toString() );
+		conf.setProperty("conn.deferred.connect.minute",    _aseDeferredConnectMinute_sp.getValue().toString() );
+		conf.setProperty("conn.deferred.disconnect",        _aseDeferredDisConnect_chk.isSelected() );
+		conf.setProperty("conn.deferred.disconnect.hour",   _aseDeferredDisConnectHour_sp  .getValue().toString() );
+		conf.setProperty("conn.deferred.disconnect.minute", _aseDeferredDisConnectMinute_sp.getValue().toString() );
 
 		//----------------------------------
 		// TAB: OS Host
@@ -3250,9 +3343,13 @@ public class ConnectionDialog
 		_aseHostMonitor_chk.setSelected(bol);
 
 // Do not restore Deferred Connect, lets always start at FALSE / NOT CHECKED 
-//		_aseDeferredConnect_chk     .setSelected( conf.getBooleanProperty("conn.deferred",        false ));
-		_aseDeferredConnectHour_sp  .setValue(    conf.getIntProperty(    "conn.deferred.hour",   0 ));
-		_aseDeferredConnectMinute_sp.setValue(    conf.getIntProperty(    "conn.deferred.minute", 0 ));
+//		_aseDeferredConnect_chk     .setSelected( conf.getBooleanProperty("conn.deferred.connect",        false ));
+		_aseDeferredConnectHour_sp  .setValue(    conf.getIntProperty(    "conn.deferred.connect.hour",   0 ));
+		_aseDeferredConnectMinute_sp.setValue(    conf.getIntProperty(    "conn.deferred.connect.minute", 0 ));
+// Do not restore Deferred DisConnect, lets always start at FALSE / NOT CHECKED 
+//		_aseDeferredDisConnect_chk     .setSelected( conf.getBooleanProperty("conn.deferred.disconnect",        false ));
+		_aseDeferredDisConnectHour_sp  .setValue(    conf.getIntProperty(    "conn.deferred.disconnect.hour",   0 ));
+		_aseDeferredDisConnectMinute_sp.setValue(    conf.getIntProperty(    "conn.deferred.disconnect.minute", 0 ));
 
 		//----------------------------------
 		// TAB: OS Host
@@ -3341,7 +3438,7 @@ public class ConnectionDialog
 		// TAB: Offline
 		//----------------------------------
 		int width  = conf.getIntProperty("conn.dialog.window.width",  570);
-		int height = conf.getIntProperty("conn.dialog.window.height", 675);
+		int height = conf.getIntProperty("conn.dialog.window.height", 690);
 		int x      = conf.getIntProperty("conn.dialog.window.pos.x",  -1);
 		int y      = conf.getIntProperty("conn.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)

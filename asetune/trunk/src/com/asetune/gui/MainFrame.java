@@ -1957,7 +1957,8 @@ public class MainFrame
 			if (AseTune.hasDevVersionExpired())
 				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a ASE. only 'PCS - Read mode' is available.");
 
-			AseTune.getCounterCollector().setMonConnection( connDialog.getAseConn() );
+			AseTune.getCounterCollector().setMonConnection(     connDialog.getAseConn() );
+			AseTune.getCounterCollector().setMonDisConnectTime( connDialog.getDisConnectTime() );
 			AseTune.getCounterCollector().setHostMonConnection( connDialog.getSshConn() );
 
 //			if (_conn != null)
@@ -2112,6 +2113,14 @@ public class MainFrame
 		} // end: OFFLINE_CONN
 	}
 
+
+	/**
+	 * 
+	 */
+	public void action_disconnect()
+	{
+		action_disconnect(null, false);
+	}
 
 	/**
 	 * TODO: use the action_disconnectWithProgress() instead, but this needs more work before it's used...

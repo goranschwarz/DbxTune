@@ -1107,26 +1107,33 @@ public abstract class PersistWriterBase
 	 * @param recordingStartTime
 	 * @throws Exception
 	 */
-	public static Date getRecordingStartTime(String recordingStartTime)
+	public static Date getRecordingStartTime(String startTime)
 	throws Exception
 	{
-		if (recordingStartTime == null)
+		if (startTime == null)
 			return null;
 
-		if (recordingStartTime.length() != 4)
-			throw new Exception("Must be a number, between 0000 and 2359");
+		String hourStr   = "0";
+		String minuteStr = "0";
+
+		if (startTime.indexOf(":") >= 0)
+		{
+			String[] sa = startTime.split(":");
+			if (sa.length != 2)
+				throw new Exception("Must look like 'hours:minutes', example '5:15' for 5 hours and 15 minutes");
+
+			hourStr   = sa[0];
+			minuteStr = sa[1];
+		}
 
 		try 
 		{
-			int number = Integer.parseInt(recordingStartTime);
-			int hour   = Integer.parseInt(recordingStartTime.substring(0, 2));
-			int minute = Integer.parseInt(recordingStartTime.substring(2));
-			if (hour   > 23  ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 00 and 23.");
-			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 00 and 23.");
-			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 00 and 59.");
-			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 00 and 59.");
-			if (number > 2359) throw new NumberFormatException("Record time is to high. value='"+number+"'.");
-			if (number < 0   ) throw new NumberFormatException("Record time is to low. value='"+number+"'.");
+			int hour   = Integer.parseInt(hourStr);
+			int minute = Integer.parseInt(minuteStr);
+			if (hour   > 23  ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 0 and 23.");
+			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 0 and 23.");
+			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 0 and 59.");
+			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 0 and 59.");
 
 			Date now = new Date();
 			Calendar cal = new GregorianCalendar();
@@ -1144,10 +1151,70 @@ public abstract class PersistWriterBase
 		}
 		catch (NumberFormatException e)
 		{
-			throw new Exception("Must be a number, between 0000 and 2359. Caught: "+e.getMessage(), e);
+			throw new Exception("Hour and Minute Must be in numbers. Caught: "+e.getMessage(), e);
 		}
 	}
 	
+	/**
+	 * Get stop time.
+	 * 
+	 * @param recordingStartTime
+	 * @throws Exception
+	 */
+	public static Date getRecordingStopTime(Date startTime, String stopTime)
+	throws Exception
+	{
+		if (stopTime == null)
+			return null;
+
+		String hourStr   = "0";
+		String minuteStr = "0";
+
+		if (stopTime.indexOf(":") >= 0)
+		{
+			String[] sa = stopTime.split(":");
+			if (sa.length != 2)
+				throw new Exception("Must look like 'hours:minutes', example '5:15' for 5 hours and 15 minutes");
+
+			hourStr   = sa[0];
+			minuteStr = sa[1];
+		}
+
+		try 
+		{
+			int hour   = Integer.parseInt(hourStr);
+			int minute = Integer.parseInt(minuteStr);
+			if (hour   > 999 ) throw new NumberFormatException("Record time (Hour) is to high. hour='"+hour+"' must be between 0 and 999.");
+			if (hour   < 0   ) throw new NumberFormatException("Record time (Hour) is to low.  hour='"+hour+"' must be between 0 and 999.");
+			if (minute > 59  ) throw new NumberFormatException("Record time (Minute) is to high. hour='"+minute+"' must be between 00 and 59.");
+			if (minute < 0   ) throw new NumberFormatException("Record time (Minute) is to low.  hour='"+minute+"' must be between 00 and 59.");
+
+			Date now = new Date();
+			if (startTime != null)
+				now = startTime;
+
+			Calendar cal = new GregorianCalendar();
+			cal.setTime(now);
+			cal.set(Calendar.HOUR_OF_DAY, cal.get(Calendar.HOUR_OF_DAY) + hour);
+			cal.set(Calendar.MINUTE,      cal.get(Calendar.MINUTE)      + minute);
+			cal.set(Calendar.SECOND,      0);
+			cal.set(Calendar.MILLISECOND, 0);
+			
+			return cal.getTime();
+		}
+		catch (NumberFormatException e)
+		{
+			throw new Exception("Hour and Minute Must be in numbers. Caught: "+e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Wait until, the desired start time. Just do sleep()...
+	 * 
+	 * @param startTime startTime in the form Hour:Minute
+	 * @param waitDialog if GUI mode, pass a wait dialog (so we dont block the Swing Dispatch Thread)
+	 * @throws InterruptedException
+	 */
 	public static void waitForRecordingStartTime(String startTime, WaitForExecDialog waitDialog)
 	throws InterruptedException
 	{
@@ -1168,7 +1235,7 @@ public abstract class PersistWriterBase
 			return;
 		}
 
-		int sleepTimeInSec = 60;
+		int sleepTimeInSec; // determen later, based on GUI or NO-GUI
 		while(true)
 		{
 			long now = System.currentTimeMillis();

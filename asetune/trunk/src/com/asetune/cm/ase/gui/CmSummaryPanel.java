@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 
 import javax.swing.Icon;
 import javax.swing.JButton;
@@ -1150,6 +1151,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		{
 			setWatermarkText("Not Connected...");
 		}
+		else if ( AseTune.hasCounterCollector() && AseTune.getCounterCollector().getMonDisConnectTime() != null )
+		{
+			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(AseTune.getCounterCollector().getMonDisConnectTime());
+			setWatermarkText("Disconnect at: \n"+dateStr);
+		}
 		else
 		{
 			setWatermarkText(null);
@@ -1167,17 +1173,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		public Watermark(JComponent target, String text)
 		{
 			super(target);
-			if (text != null)
-				_text = text;
+			if (text == null)
+				text = "";
+			_textBr = text.split("\n");
 		}
 
-		private String		_text	= "";
+		private String[]    _textBr = null; // Break Lines by '\n'
 		private Graphics2D	g		= null;
 		private Rectangle	r		= null;
 	
 		public void paint(Graphics graphics)
 		{
-			if (_text == null || _text != null && _text.equals(""))
+			if (_textBr == null || _textBr != null && _textBr.length < 0)
 				return;
 	
 			r = getDecorationBounds();
@@ -1188,23 +1195,40 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();
-			int strWidth = fm.stringWidth(_text);
-			int xPos = (r.width - strWidth) / 2;
-			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2.0f));
+			int maxStrWidth  = 0;
+			int maxStrHeight = fm.getHeight();
+
+			// get max with for all of the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				int CurLineStrWidth  = fm.stringWidth(_textBr[i]);
+				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+			}
+			int sumTextHeight = maxStrHeight * _textBr.length;
+			int xPos = (r.width - maxStrWidth) / 2;
+			int yPos = (int) (r.height - ((r.height - sumTextHeight) / 2.0f));
+			
 
 			g.translate(xPos, yPos);
 			double theta = -Math.PI / 6;
 			g.rotate(theta);
 			g.translate(-xPos, -yPos);
 	
-			g.drawString(_text, xPos, yPos);
-//			System.out.println("paint('"+_text+"'): xPos='" + xPos + "', yPos='" + yPos + "', r=" + r + ", g=" + g);
+			// Print all the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				g.drawString(_textBr[i], xPos, (yPos+(maxStrHeight*i)) );
+			}
 		}
 	
 		public void setWatermarkText(String text)
 		{
-			_text = text;
-//			System.out.println("setWatermarkText: to '" + _text + "'.");
+			if (text == null)
+				text = "";
+
+			_textBr = text.split("\n");
+			_logger.debug("setWatermarkText: to '" + text + "'.");
+
 			repaint();
 		}
 	}

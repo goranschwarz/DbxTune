@@ -17,6 +17,7 @@ import net.miginfocom.swing.MigLayout;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.pcs.PersistWriterBase;
 
 
 //PAGE 4
@@ -94,10 +95,18 @@ implements ActionListener
 		// Check if _shutdownAfterXHours is integer
 		if (_shutdownAfterXHours.getText().trim().length() > 0)
 		{
-			try { Integer.parseInt( _shutdownAfterXHours.getText().trim() ); }
-			catch (NumberFormatException e)
+//			try { Integer.parseInt( _shutdownAfterXHours.getText().trim() ); }
+//			catch (NumberFormatException e)
+//			{
+//				return "'Shutdown after # hours' needs to be a number or empty.";
+//			}
+			try 
 			{
-				return "'Shutdown after # hours' needs to be a number or empty.";
+				PersistWriterBase.getRecordingStopTime(null, _shutdownAfterXHours.getText().trim());
+			} 
+			catch (Exception e) 
+			{
+				return "'Shutdown after # hours' needs to be in format hh[:mm] "+e.getMessage();
 			}
 		}
 		
@@ -107,7 +116,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		
-		return problem.length() == 0 ? null : "Following fields cant be empty: "+problem;
+		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
 	}
 
 	public void actionPerformed(ActionEvent ae)

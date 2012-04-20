@@ -325,6 +325,12 @@ public class AseTune
 			// -f, --finish: Offline: shutdown/stop the no-gui service after # hours.
 			if (cmd.hasOption('f'))
 			{
+				String recordingStopTime = cmd.getOptionValue('e');
+				try {
+					PersistWriterBase.getRecordingStopTime(null,recordingStopTime);
+				} catch (Exception e) {
+					throw new Exception("Switch '-f|--finish' "+e.getMessage());
+				}
 				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
 			}
 
@@ -916,8 +922,8 @@ public class AseTune
 		pw.println("                            then try to configure it using predefined values.");
 		pw.println("  -l,--listcm               List cm's that can be used in '-n' switch.");
 		pw.println("  -i,--interval <seconds>   sample Interval, time between samples.");
-		pw.println("  -e,--enable   <HHMM>      enable/start the recording at Hour(00-23) Minute(00-59)");
-		pw.println("  -f,--finish   <hours>     shutdown/stop the no-gui service after # hours.");
+		pw.println("  -e,--enable   <hh[:mm]>   enable/start the recording at Hour(00-23) Minute(00-59)");
+		pw.println("  -f,--finish   <hh[:mm]>   shutdown/stop the no-gui service after # hours.");
 		pw.println("  -D,--dbtype <H2|ASE|ASE>  type of database to use as offline store.");
 		pw.println("  -d,--dbname <connSpec>    Connection specification to store offline data.");
 		pw.println("                            Depends on -D, see below for more info.");

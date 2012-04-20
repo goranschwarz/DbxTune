@@ -129,7 +129,7 @@
 
 		doCleanup("delete from asemon_usage              where user_name = 'gorans' ");
 		doCleanup("delete from asemon_connect_info       where userName  = 'gorans' ");
-		doCleanup("delete from asemon_mda_info           where userName  = 'gorans' ");
+		doCleanup("delete from asemon_mda_info           where userName  = 'gorans' AND verified IS NULL");
 		doCleanup("delete from asemon_udc_info           where userName  = 'gorans' ");
 		doCleanup("delete from asemon_counter_usage_info where userName  = 'gorans' ");
 		doCleanup("delete from asemon_error_info         where userName  = 'gorans' ");
@@ -185,8 +185,11 @@
 		//doCleanup("ALTER TABLE asemon_mda_info ADD PRIMARY KEY (type, srvVersion, isClusterEnabled, TableName, ColumnName)");
 
 		//doCleanup("UPDATE asemon_mda_info SET userName = '-save-' WHERE userName in ('gorans', '-fixed-', '-gorans-save-') ");
+		//doCleanup("UPDATE asemon_mda_info SET userName = 'gorans' WHERE userName in ('-save-') ");
 
-		doCleanup("ALTER TABLE asemon_usage ADD clientExpireDate varchar(10) AFTER clientAsemonVersion");
+		// doCleanup("ALTER TABLE asemon_usage ADD clientExpireDate varchar(10) AFTER clientAsemonVersion");
+
+		// doCleanup("ALTER TABLE asemon_mda_info ADD verified char(1) AFTER userName");
 
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
