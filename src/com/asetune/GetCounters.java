@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -15716,6 +15717,13 @@ implements ICounterController
 	private long               _lastIsClosedCheck         = 0;
 	private long               _lastIsClosedRefreshTime   = 2000;
 
+	/** When did we do a connect last time */
+	private Date _lastMonConnectTime = null;
+
+	/** If controller want's to disconnect/stop collecting after a specific time */
+	private Date _stopMonConnectTime = null;
+
+
 	/**
 	 * Do we have a connection to the database?
 	 * @return true or false
@@ -15770,13 +15778,34 @@ implements ICounterController
 	}
 
 	/**
+	 * get last connect time (or actually when setMonConnection() was called last time).
+	 */
+	@Override
+	public Date getMonConnectionTime()
+	{
+		return _lastMonConnectTime;
+	}
+
+	@Override
+	public void setMonDisConnectTime(Date time)
+	{
+		_stopMonConnectTime = time;
+	}
+	@Override
+	public Date getMonDisConnectTime()
+	{
+		return _stopMonConnectTime;
+	}
+
+	/**
 	 * Set the <code>Connection</code> to use for monitoring.
 	 */
 	@Override
 	public void setMonConnection(Connection conn)
 	{
 		_conn = conn;
-//		MainFrame.setStatus(MainFrame.ST_CONNECT);
+		if (isMonConnected())
+			_lastMonConnectTime = new Date();
 	}
 
 	/**

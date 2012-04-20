@@ -75,6 +75,7 @@ DB Cleanup:
 	$save_saveLogId         = $_GET['saveLogId'];
 
 	$mda_deleteVersion      = $_GET['mda_deleteVersion'];
+	$mda_verifyVersion      = $_GET['mda_verifyVersion'];
 	$mda_lowVersion         = $_GET['mda_lowVersion'];
 	$mda_highVersion        = $_GET['mda_highVersion'];
 
@@ -185,6 +186,9 @@ DB Cleanup:
 
 				else if ( $colname == "deleteSrvVersion" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "verifySrvVersion" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">$cell</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
@@ -827,10 +831,24 @@ DB Cleanup:
 			printf("<br>\n");
 		}
 
+		if ( is_numeric($mda_verifyVersion) )
+		{
+			echo "<h4>Verifying aseVersion: $del_deleteVersion in table 'asemon_mda_info'</h4>\n";
+
+			//---------
+			$sql = "UPDATE asemon_mda_info SET verified = 'Y' WHERE srvVersion = $mda_verifyVersion";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysql_query($sql) or die("ERROR: " . mysql_error());
+			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			printf("<br>\n");
+		}
+
 		//-----------------------------
 		$label = "ASE Version MDA Info Summary";
 		$sql = "
-			SELECT srvVersion, isClusterEnabled, serverAddTime, userName,
+			SELECT srvVersion, isClusterEnabled, serverAddTime, userName, verified,
+				srvVersion                AS verifySrvVersion,
 				count(*)                  AS totalRows,
 				'>>> TABLE >>>'           AS sep1,
 				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'T' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountTables,

@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +30,8 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
+import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
 
 
 public class GetCountersGui
@@ -403,7 +407,38 @@ public class GetCountersGui
 					MainFrame.setStatus(MainFrame.ST_CONNECT);
 				}
 
-				
+				// Have we reached the STOP/DISCONNECT Time
+				if (GetCounters.getInstance().getMonDisConnectTime() != null)
+				{
+					long now      = System.currentTimeMillis();
+					Date stopTime = GetCounters.getInstance().getMonDisConnectTime();
+
+					if ( now > stopTime.getTime())
+					{
+						String startDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(GetCounters.getInstance().getMonConnectionTime());
+						String stopDateStr  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(stopTime);
+						String nowStr       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(now));
+
+						long collectionTime = now - GetCounters.getInstance().getMonConnectionTime().getTime();
+
+						_logger.info("Disconnect from ASE. Stop time was set to '"+stopDateStr+"'. It was started at '"+startDateStr+"'.");
+						MainFrame.getInstance().action_disconnect();
+
+						SwingUtils.showInfoMessage(MainFrame.getInstance(), "Disconnected", 
+								"<html>" +
+								"<h1>Intentional Disconnect from ASE.</h1>" +
+								"<br>" +
+								"Connection was started at: <b>"+startDateStr+"</b> <br>" +
+								"Stop/disconnect time was set to: <b>"+stopDateStr+"</b> <br>" +
+								"<br>" +
+								"Collection time was: "+TimeUtils.msToTimeStr("<b>%HH</b> Hours and <b>%MM</b> Minutes", collectionTime)+" <br>" +
+								"<br>" +
+								"Time is now: <b>"+nowStr+"</b> <br>" +
+								"</html>");
+						break;
+					}
+				}
+
 				//----------------------
 				// In some versions we need to check if the transaction log is full to some reasons
 				// If it is full it will be truncated.

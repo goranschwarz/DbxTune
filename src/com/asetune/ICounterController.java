@@ -1,6 +1,7 @@
 package com.asetune;
 
 import java.sql.Connection;
+import java.util.Date;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
@@ -45,6 +46,24 @@ public interface ICounterController
 	public void cleanupMonConnection();
 
 
+	/**
+	 * What time did we do the last connection
+	 * @return
+	 */
+	public Date getMonConnectionTime();
+
+	/**
+	 * Time when any counter controller would disconnect/stop collecting data
+	 * @param time 
+	 */
+	public void setMonDisConnectTime(Date time);
+
+	/**
+	 * Time when any counter controller would disconnect/stop collecting data
+	 * @return null if not set
+	 */
+	public Date getMonDisConnectTime();
+
 	/** 
 	 * Get <code>CountersModel</code> object for a CM that has the "short" name for example CMprocCallStack 
 	 * @return if the CM is not found a null will be return
@@ -70,4 +89,5 @@ public interface ICounterController
 	 * Get Name for the Summary
 	 */
 	public String getSummaryCmName();
+
 }

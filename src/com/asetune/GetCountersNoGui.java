@@ -54,7 +54,9 @@ public class GetCountersNoGui
 	private int        _sleepTime   = 60;
 
 	/** if above 0, then shutdown the service after X hours */
-	private int        _shutdownAfterXHours = 0;
+//	private int        _shutdownAfterXHours = 0;
+	private String     _shutdownAtTimeStr   = null;
+	private Date       _shutdownAtTime      = null;
 
 	/** if != null, then delay the start until this time HHMM */
 	private String     _deferedStartTime = null;
@@ -124,14 +126,20 @@ public class GetCountersNoGui
 		_sleepTime = _storeProps.getIntMandatoryProperty(offlinePrefix + "sampleTime");
 
 		// PROPERTY: shutdownAfterXHours
-		_shutdownAfterXHours = _storeProps.getIntProperty(offlinePrefix + "shutdownAfterXHours", _shutdownAfterXHours);
-
-		// PROPERTY: shutdownAfterXHours
 		_deferedStartTime = _storeProps.getProperty(CounterController.PROPKEY_startRecordingAtTime);
 		try {
 			PersistWriterBase.getRecordingStartTime(_deferedStartTime);
 		} catch (Exception e) {
 			throw new Exception("Deferred start time '"+CounterController.PROPKEY_startRecordingAtTime+"' is faulty configured, Caught: "+e.getMessage());
+		}
+
+		// PROPERTY: shutdownAfterXHours
+//		_shutdownAfterXHours = _storeProps.getIntProperty(offlinePrefix + "shutdownAfterXHours", _shutdownAfterXHours);
+		_shutdownAtTimeStr = _storeProps.getProperty(offlinePrefix + "shutdownAfterXHours");
+		if (_shutdownAtTimeStr != null)
+		{
+			Date startTime = PersistWriterBase.getRecordingStartTime(_deferedStartTime);
+			_shutdownAtTime = PersistWriterBase.getRecordingStopTime(startTime, _shutdownAtTimeStr);
 		}
 
 		// PROPERTY: sleepOnFailedConnectTime
@@ -259,7 +267,8 @@ public class GetCountersNoGui
 		
 		String configStr = 
 			"sleepTime='"+_sleepTime+"', " +
-			"shutdownAfterXHours='"+_shutdownAfterXHours+"', " +
+//			"shutdownAfterXHours='"+_shutdownAfterXHours+"', " +
+			"shutdownAfterXHours='"+_shutdownAtTimeStr+"', " +
 			"startRecordingAtTime='"+_deferedStartTime+"', " +
 			"sleepOnFailedConnectTime='"+_sleepOnFailedConnectTime+"', " +
 			"_aseUsername='"+_aseUsername+"', " +
@@ -937,16 +946,28 @@ public class GetCountersNoGui
 			//-----------------------------
 			// Time to exit ??
 			//-----------------------------
-			if (_shutdownAfterXHours > 0)
+//			if (_shutdownAfterXHours > 0)
+//			{
+//				long runningForXHours = (System.currentTimeMillis() - threadStartTime) / 1000 / 60 / 60;
+//				//long runningForXHours = (System.currentTimeMillis() - threadStartTime) / 1000 / 60; // use this for minutes instead... debugging
+//
+//				if ( runningForXHours >= _shutdownAfterXHours)
+//				{
+//					String startDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(threadStartTime));
+//
+//					_logger.info("Shutting down the 'no-gui' service after "+runningForXHours+" hours of service. It was started at '"+startDateStr+"'.");
+//					break;
+//				}
+//			}
+			if (_shutdownAtTime != null)
 			{
-				long runningForXHours = (System.currentTimeMillis() - threadStartTime) / 1000 / 60 / 60;
-				//long runningForXHours = (System.currentTimeMillis() - threadStartTime) / 1000 / 60; // use this for minutes instead... debugging
+				long now = System.currentTimeMillis();
 
-				if ( runningForXHours >= _shutdownAfterXHours)
+				if ( now > _shutdownAtTime.getTime())
 				{
 					String startDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(threadStartTime));
 
-					_logger.info("Shutting down the 'no-gui' service after "+runningForXHours+" hours of service. It was started at '"+startDateStr+"'.");
+					_logger.info("Shutting down the 'no-gui' service. Stop time was set to '"+_shutdownAtTime+"'. It was started at '"+startDateStr+"'.");
 					break;
 				}
 			}

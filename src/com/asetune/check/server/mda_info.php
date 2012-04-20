@@ -101,6 +101,7 @@
 			serverAddTime,
 			clientTime,
 			userName,
+			verified,
 
 			srvVersion,
 			isClusterEnabled,
@@ -124,6 +125,7 @@
 			NOW(),
 			'$clientTime',
 			'$userName',
+			NULL,
 
 			$srvVersion,
 			$isClusterEnabled,

@@ -16,7 +16,7 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-xx-xx</H2>
+<H2>2012-04-20</H2>
 <UL>
 	<LI>
 	<b>New layout of Performance Counters</b><br>
@@ -194,7 +194,7 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Enhancement: no-gui mode.</b><br>
 	<ul>
-		<li>-e HHMM: to enable/start the recording at a specific time later on the same day.</li>
+		<li>-e hh[:mm] to enable/start the recording at a specific time later on the same day.</li>
 		<li>-d default: used the template database name '${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}'</li>
 		<li>-n small|medium|large|all templates, can now be "altered" using "templateName,+CmName,-CmName" to add/remove CM's from any of the predefined templates</li>
 	</ul><br>
@@ -202,7 +202,11 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>Enhancement: to connection dialog, deferred connect</b><br>
-	connect at a specific time later on the same day<br>
+	<ul>
+		<li>connect at a specific time later on the same day</li>
+		<li>Set a stop/disconnect time</li>
+	</ul>
+	The above parameters is good if you want to record a night session/batch job that is executed in a specific time frame<br>
 	</LI>
 
 	<LI>
