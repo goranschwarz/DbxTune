@@ -86,6 +86,9 @@ class Batch
 	}
 	public void appendShowplanText(String line, boolean chopLastNewLine)
 	{
+		if (line == null)
+			return;
+
 		StringBuffer sb = null;
 
 		// Get rid of last newline

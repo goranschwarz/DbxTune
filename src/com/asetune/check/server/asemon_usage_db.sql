@@ -71,7 +71,7 @@ CREATE TABLE asemon_connect_info
 		srvName                 varchar(30),
 		srvIpPort               varchar(60),
 		srvUser                 varchar(30),
-		srvUserRoles            varchar(160),
+		srvUserRoles            varchar(300),
 		srvVersionStr           varchar(150),
 		srvSortOrderId          varchar(5),
 		srvSortOrderName        varchar(30),

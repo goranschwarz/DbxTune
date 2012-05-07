@@ -3296,6 +3296,29 @@ implements Cloneable, ITableTooltip
 			_diffData  = null;
 			_rateData  = null;
 
+			// Msg 10353: You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
+			// Msg 12052: Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+			// so lets reinitialize CM, to check again for next sample
+			int    errorCode = e.getErrorCode();
+			String errorMsg  = e.getMessage();
+			if (errorCode == 10353 || errorCode == 12052)
+			{
+				// Maybe downgrade this to a INFO message in a later release...
+				_logger.warn("Trying to Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After receiving MsgNumber '"+errorCode+"', with Description '"+errorMsg+"'.");
+
+				initSql(conn);
+
+				try
+				{
+					//cm.clear(); // clears the Counters and GUI parts
+					init(conn);
+				}
+				catch (Exception ex2)
+				{
+					_logger.warn("Problems Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After MsgNumber '"+errorCode+"', with Description '"+errorMsg+"', Caught: "+ex2, ex2);
+				}
+			}
+
 			return -1;
 		}
 		finally

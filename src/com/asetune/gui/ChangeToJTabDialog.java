@@ -20,6 +20,7 @@ import javax.swing.UIManager;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -45,7 +46,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 
 	private String				_message						= null;
 	private String				_toTabName						= null;
-	private JTabbedPane			_tabPane						= null;
+	private GTabbedPane			_tabPane						= null;
 
 	private JLabel				_message_lbl					= new JLabel("");
 
@@ -65,7 +66,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 
 	// private JButton _apply = new JButton("Apply");
 
-	public ChangeToJTabDialog(Frame owner, String message, JTabbedPane tabPane, String toTabName)
+	public ChangeToJTabDialog(Frame owner, String message, GTabbedPane tabPane, String toTabName)
 	{
 		super(owner, message, false);
 
@@ -229,7 +230,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 			setFocus();
 
 		// No need to continue, we are already in the correct tab
-		String currentSelectedTab = _tabPane.getTitleAt(_tabPane.getSelectedIndex());
+//		String currentSelectedTab = _tabPane.getTitleAt(_tabPane.getSelectedIndex());
+		String currentSelectedTab = _tabPane.getSelectedTitle(true);
 		if ( _toTabName.equals(currentSelectedTab) )
 		{
 			return;
@@ -248,7 +250,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				return;
 
 			if ( _action_change_rb.isSelected() )
-				_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+//				_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+				_tabPane.setSelectedTitle(_toTabName);
 
 			return;
 		}
@@ -266,7 +269,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 					return;
 
 				if ( _action_change_rb.isSelected() )
-					_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+//					_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+					_tabPane.setSelectedTitle(_toTabName);
 
 				return;
 			}
@@ -340,7 +344,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 	{
 		// _apply.setEnabled(false);
 		if ( _action_change_rb.isSelected() )
-			_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+//			_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
+			_tabPane.setSelectedTitle(_toTabName);
 
 		saveProps();
 	}
@@ -408,7 +413,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 			ChangeToJTabDialog	_toTab2	= null;
 			ChangeToJTabDialog	_toTab3	= null;
 			ChangeToJTabDialog	_toTab4	= null;
-			JTabbedPane			_tab	= null;
+			GTabbedPane			_tab	= null;
 
 			{
 				setLayout(new BorderLayout());
@@ -466,7 +471,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 
 				add(butPan, BorderLayout.NORTH);
 
-				_tab = new JTabbedPane();
+				_tab = new GTabbedPane();
 				_tab.addTab("tab1", new JLabel("tab-1"));
 				_tab.addTab("tab2", new JLabel("tab-2"));
 				_tab.addTab("tab3", new JLabel("tab-3"));

@@ -44,10 +44,10 @@ public class AseUrlHelper
 		_options    = options;
 	}
 
-//	private AseUrlHelper(String url)
+//	public AseUrlHelper(String url)
 //	throws ParseException
 //	{
-//		parseUrlStr(url);
+//		parseUrl(url);
 //	}
 
 	/**
@@ -192,29 +192,31 @@ public class AseUrlHelper
 	 */
 	public String getUrl()
 	{
-		StringBuilder url = new StringBuilder();
+		return AseUrlHelper.buildUrlString(_hostPort, _dbname, _options);
 
-		// add the start
-		url.append(_urlStart);
-
-		// add host1:port1[,host2:port2]
-		if (_hostPort != null && _hostPort.size() > 0)
-		{
-			url.append(StringUtil.toCommaStrMultiMap(_hostPort, ":", ","));
-		}
-
-		// add dbname
-		if (_dbname != null && ! _dbname.trim().equals(""))
-			url.append("/").append(_dbname);
-
-		// add options
-		if (_options != null && _options.size() > 0)
-		{
-			url.append("?");
-			url.append(StringUtil.toCommaStr(_options, "=", "&"));
-		}
-
-		return url.toString();
+//		StringBuilder url = new StringBuilder();
+//
+//		// add the start
+//		url.append(_urlStart);
+//
+//		// add host1:port1[,host2:port2]
+//		if (_hostPort != null && _hostPort.size() > 0)
+//		{
+//			url.append(StringUtil.toCommaStrMultiMap(_hostPort, ":", ","));
+//		}
+//
+//		// add dbname
+//		if (_dbname != null && ! _dbname.trim().equals(""))
+//			url.append("/").append(_dbname);
+//
+//		// add options
+//		if (_options != null && _options.size() > 0)
+//		{
+//			url.append("?");
+//			url.append(StringUtil.toCommaStr(_options, "=", "&"));
+//		}
+//
+//		return url.toString();
 	}
 
 	/**
@@ -436,5 +438,23 @@ public class AseUrlHelper
 		if (_logger.isDebugEnabled())
 			_logger.debug("AseUrlHelper.returns='"+url+"'.");
 		return url;
+	}
+
+	/**
+	 * Get URL Options
+	 * @return
+	 */
+	public Map<String, String> getUrlOptionsMap()
+	{
+		return _options;
+	}
+
+	/**
+	 * Set URL Options
+	 * @return
+	 */
+	public void setUrlOptionsMap(Map<String, String> urlOptionsMap)
+	{
+		_options = urlOptionsMap;
 	}
 }

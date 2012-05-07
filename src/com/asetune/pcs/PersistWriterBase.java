@@ -467,14 +467,15 @@ public abstract class PersistWriterBase
 			}
 			else if (type == SESSION_PARAMS)
 			{
-				int len = SESSION_PARAMS_VAL_MAXLEN;
+//				int len = SESSION_PARAMS_VAL_MAXLEN;
 
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(qic+"SessionStartTime"+qic,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Type"            +qic,40)+" "+fill(getDatatype("varchar", 20,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"ParamName"       +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("varchar", len, -1,-1),20)+" "+getNullable(true)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("varchar", len, -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"ParamName"+qic+")\n");
 				sbSql.append(") \n");

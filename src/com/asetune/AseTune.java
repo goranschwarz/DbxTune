@@ -33,6 +33,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Debug;
+import com.asetune.utils.Encrypter;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
 import com.asetune.utils.Memory;
@@ -675,6 +676,14 @@ public class AseTune
 				_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");
 				EventDispatchThreadHangMonitor.initMonitoring();
 			}
+
+			// Do a dummy encryption, this will hopefully speedup, so that the connection dialog wont hang for a long time during initialization
+			SplashWindow.drawProgress("Initializing: encryption package.");
+			long initStartTime=System.currentTimeMillis();
+			Encrypter propEncrypter = new Encrypter("someDummyStringToInitialize");
+			String encrypedValue = propEncrypter.encrypt("TheDummyValueToEncrypt... this is just a dummy string...");
+			propEncrypter.decrypt(encrypedValue); // Don't care about the result...
+			_logger.info("Initializing 'encrypt/decrypt' package took: " + (System.currentTimeMillis() - initStartTime) + " ms.");
 
 			// Construct a starter that will be passed to the Swing Event Dispatcher Thread
 	        Runnable runGui = new Runnable()

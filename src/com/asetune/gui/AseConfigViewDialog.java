@@ -43,6 +43,7 @@ implements ActionListener
 	private AseConfigTextPanel     _aseConfigCachePanel              = new AseConfigTextPanel(ConfigType.AseCacheConfig);
 	private AseConfigTextPanel     _aseConfigThreadPoolPanel         = new AseConfigTextPanel(ConfigType.AseThreadPool);
 	private AseConfigTextPanel     _aseConfigHelpDbPanel             = new AseConfigTextPanel(ConfigType.AseHelpDb);
+	private AseConfigTextPanel     _aseConfigTempdbPanel             = new AseConfigTextPanel(ConfigType.AseTempdb);
 	private AseConfigTextPanel     _aseConfigHelpDevicePanel         = new AseConfigTextPanel(ConfigType.AseHelpDevice);
 	private AseConfigTextPanel     _aseConfigDeviceFsSpaceUsagePanel = new AseConfigTextPanel(ConfigType.AseDeviceFsSpaceUsage);
 	private AseConfigTextPanel     _aseConfigHelpServerPanel         = new AseConfigTextPanel(ConfigType.AseHelpServer);
@@ -51,6 +52,7 @@ implements ActionListener
 	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel         = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
 	private AseConfigTextPanel     _aseConfigMonitorCfgPanel         = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
 	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(ConfigType.AseLicenseInfo);
+	private AseConfigTextPanel     _aseConfigClusterInfoPanel        = new AseConfigTextPanel(ConfigType.AseClusterInfo);
 	
 	private AseConfigViewDialog(Frame owner)
 	{
@@ -131,6 +133,7 @@ implements ActionListener
 		_tabPane.add("Cache Config",     _aseConfigCachePanel);
 		_tabPane.add("Thread Pools",     _aseConfigThreadPoolPanel);
 		_tabPane.add("sp_helpdb",        _aseConfigHelpDbPanel);
+		_tabPane.add("tempdb",           _aseConfigTempdbPanel);
 		_tabPane.add("sp_helpdevice",    _aseConfigHelpDevicePanel);
 		_tabPane.add("Device FS Usage",  _aseConfigDeviceFsSpaceUsagePanel);
 		_tabPane.add("sp_helpserver",    _aseConfigHelpServerPanel);
@@ -139,6 +142,7 @@ implements ActionListener
 		_tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
 		_tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
 		_tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
+		_tabPane.add("Cluster Info",     _aseConfigClusterInfoPanel);
 
 		panel.add(_tabPane,              "grow, height 100%, width 100%");
 		panel.add(createOkCancelPanel(), "grow, push, bottom");
@@ -257,7 +261,7 @@ implements ActionListener
 
   	private void loadProps()
   	{
-		int     width     = 950;  // initial window with   if not opened before
+		int     width     = 1160;  // initial window with   if not opened before
 		int     height    = 700;  // initial window height if not opened before
 		int     x         = -1;
 		int     y         = -1;

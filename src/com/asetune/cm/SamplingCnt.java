@@ -384,10 +384,17 @@ extends CounterTableModel
 			SQLWarning w = st.getWarnings();
 			while (w != null)
 			{
-				String sqlState = w.getSQLState();
+				int    errorCode = w.getErrorCode();
+				String sqlState  = w.getSQLState();
+
 				if (sqlState != null && sqlState.equals("010P4")) 
 				{
 					// skip/disregard: 010P4: An output parameter was received and ignored.
+				}
+				else if (errorCode == 6002) 
+				{
+					// skip/disregard: 6002: A SHUTDOWN command is already in progress. Please log off.
+					// This will be handled at the start on next refresh...
 				}
 				else
 				{
@@ -412,7 +419,7 @@ extends CounterTableModel
 		catch (SQLException ex)
 		{
 			_logger.warn("SamplingCnt("+_name+").getWarnings : " + ex);
-			ex.printStackTrace();
+//			ex.printStackTrace();
 		}
 		if (hasWarning)
 		{

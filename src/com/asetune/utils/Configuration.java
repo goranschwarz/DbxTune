@@ -727,7 +727,7 @@ extends Properties
 		}
 		catch(IOException e)
 		{
-			_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. Cought: "+e);
+			_logger.error("Problems when executing the OS Command '"+osCmdStr+"'. Caught: "+e);
 			return e.toString();
 		}
 
