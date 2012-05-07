@@ -1043,8 +1043,8 @@ implements ICounterController
 		CmRaLogActivity    .create(counterController, guiController);
 		CmRaScanners       .create(counterController, guiController);
 		CmRaScannersTime   .create(counterController, guiController);
-		CmRaSqlActivity    .create(counterController, guiController);
-		CmRaSqlMisses      .create(counterController, guiController);
+//		CmRaSqlActivity    .create(counterController, guiController);
+//		CmRaSqlMisses      .create(counterController, guiController);
 		CmRaSysmon         .create(counterController, guiController);
 		CmCachedProcs      .create(counterController, guiController);
 		CmProcCacheLoad    .create(counterController, guiController);

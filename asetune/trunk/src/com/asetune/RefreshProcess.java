@@ -438,8 +438,9 @@ public class RefreshProcess extends Thread
 					"select  S.SPID, S.KPID, S.BatchID, S.LineNumber, \n"
 					+ "  dbname=db_name(S.DBID), procname=isnull(object_name(S.ProcedureID,S.DBID),''), \n"
 					+ "  P.Command, S.CpuTime, S.WaitTime, \n"
-					+ "  ExecTimeInMs=datediff(ms, S.StartTime, getdate()), S.MemUsageKB, \n"
-					+ "  S.PhysicalReads, S.LogicalReads, \n"
+//					+ "  ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n"
+					+ "  ExecTimeInMs = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n"  // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+					+ "  S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n"
 					+ extraCols
 					+ "  P.Application, P.Login, \n"
 					+ "  P.WaitEventID, WaitEventDesc = '', \n"
@@ -797,7 +798,8 @@ public class RefreshProcess extends Thread
 					"select SPID, KPID, BatchID, LineNumber, \n" +
 					"       dbname=db_name(DBID), \n" +
 					"       procname=isnull(object_name(ProcedureID,DBID),''), \n" +
-					"       Elapsed_ms=datediff(ms,StartTime, EndTime), \n" +
+//					"       Elapsed_ms=datediff(ms,StartTime, EndTime), \n" +
+					"       Elapsed_ms = CASE WHEN datediff(day, StartTime, EndTime) > 20 THEN -1 ELSE  datediff(ms, StartTime, EndTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 					"       CpuTime, WaitTime, MemUsageKB, PhysicalReads, LogicalReads, \n" +
 					extraCols +
 					"       PagesModified, PacketsSent, \n" +

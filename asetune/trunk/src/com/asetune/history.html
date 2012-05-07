@@ -16,6 +16,69 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2012-xx-x</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Connection Dialog</b><br>
+	In some cases the OK button for making a new connection was not visible.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Create 'User Defined Counter' wizard.</b><br>
+	The SQL statement was in some cases missing at the last page.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Move to tab. (blocking locks, full transaction log)</b><br>
+	When 'blocking locks' or 'full transaction log' happened, a pop up with the option to move 
+	to that Performance Counter Tab should be visible.<br>
+	This did not work after redoing the "tab grouping" in version 3.0.0 (2012-04-20)<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: various fixes</b><br>
+	<ul>
+	   <li>Early initialization of the encryption package, makes the connection dialog open faster.</li>
+	   <li>Capture SQL tool, could overflow on datediff when calculating execution times.</li>
+	   <li>Re-initialize Performance Counters on errors 10353 and 12052 (config was changed)</li>
+	   <li>when ASE is in 'SHUTDOWN mode', skip writing some warning messages...</li>
+	   <li>Tab 'SPID Activity' had some issues when highlighting SPID's</li>
+	   <li>GTable had null pointer exceptions in some cases when saving currently selected row</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: In 'ASE Configuration' view</b><br>
+	<ul>
+	   <li>A new tab which shows information from sp_tempdb.</li>
+	   <li>A new tab which shows information from sp_cluster 'logical'. <i>Only if ASE CE</i> </li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Removed: Performance Counters, in Group 'RepAgent'</b><br>
+	<ul>
+	   <li>RA SQL Activity   - This wasn't working from a MDA point of view.</li>
+	   <li>RA SQL Misses     - This wasn't working from a MDA point of view.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changed: Persistent Counter Storage, when using ASE as the PCS</b><br>
+	If ASE is used as the Persistent Counter Storage when recording a session, AseTune is now using DYNAMIC_PREPARE
+	and caching/reusing the prepared statements when writing data to the database.<br>
+	The 'set delayed_commit on' is also issued.<br> 
+	This makes it a bit faster when using ASE as the Persistent Counter Storage<br>
+	Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight 
+	and not 100% ACID, it flushes the data to disk at a later stage, which makes it a <b>much</b> 
+	faster choice when recording a session. And also the H2 database is probably located on your local PC
+	so we don't store information on the same server as we are monitoring.
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2012-04-20</H2>
 <UL>
 	<LI>

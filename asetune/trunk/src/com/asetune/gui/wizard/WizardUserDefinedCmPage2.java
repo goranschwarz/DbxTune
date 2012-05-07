@@ -329,7 +329,7 @@ implements ActionListener
 		}
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public WizardPanelNavResult allowNext(String stepName, Map settings, Wizard wizard)
 	{
@@ -367,6 +367,25 @@ implements ActionListener
 		{
 			_needVersion_txt.setText("0");
 		}
+
+		// the automatic com.setName() did not work on RSyntaxTextArea, so we need to do this manually
+		// First remove them from the dataMap, then put new ones in there
+		String sqlInitKey  = _sqlInit_txt .getName();
+		String sqlExecKey  = _sql_txt     .getName();
+		String sqlCloseKey = _sqlClose_txt.getName();
+
+		String sqlInitVal  = _sqlInit_txt .getText().trim();
+		String sqlExecVal  = _sql_txt     .getText().trim();
+		String sqlCloseVal = _sqlClose_txt.getText().trim();
+
+		Map<String, String> dataMap = getWizardDataMap();
+		dataMap.remove(sqlInitKey);
+		dataMap.remove(sqlExecKey);
+		dataMap.remove(sqlCloseKey);
+
+		if (sqlInitVal.length()  > 0) dataMap.put(sqlInitKey,  sqlInitVal);
+		if (sqlExecVal.length()  > 0) dataMap.put(sqlExecKey,  sqlExecVal);
+		if (sqlCloseVal.length() > 0) dataMap.put(sqlCloseKey, sqlCloseVal);
 		
 		return WizardPanelNavResult.PROCEED;
 	}

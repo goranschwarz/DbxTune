@@ -30,7 +30,7 @@ import com.asetune.utils.SwingUtils;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo};
+	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo, AseClusterInfo};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -83,6 +83,10 @@ public abstract class AseConfigText
 			aseConfigText = new AseConfigText.HelpDb();
 			break;
 
+		case AseTempdb:
+			aseConfigText = new AseConfigText.Tempdb();
+			break;
+
 		case AseHelpDevice:
 			aseConfigText = new AseConfigText.HelpDevice();
 			break;
@@ -113,6 +117,10 @@ public abstract class AseConfigText
 
 		case AseLicenseInfo:
 			aseConfigText = new AseConfigText.LicenceInfo();
+			break;
+
+		case AseClusterInfo:
+			aseConfigText = new AseConfigText.ClusterInfo();
 			break;
 
 		default:
@@ -235,6 +243,15 @@ public abstract class AseConfigText
 	}
 
 	/**
+	 * If server needs to be Cluster Edition to get this information.
+	 * @return true or false
+	 */
+	public boolean needCluster()
+	{
+		return false; 
+	}
+
+	/**
 	 * We need any of the roles to access information.
 	 * @return List<String> of role(s) we must be apart of to get config. null = do not need any role.
 	 */
@@ -257,14 +274,23 @@ public abstract class AseConfigText
 		if ( ! _offline )
 		{
 			int          aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+			boolean      isCluster  = AseConnectionUtils.isClusterEnabled(conn);
 
 			int          needVersion = needVersion();
+			boolean      needCluster = needCluster();
 			List<String> needRole    = needRole();
 
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && aseVersion < needVersion)
 			{
 				_configStr = "This info is only available if the Server Version is above " + AseConnectionUtils.versionIntToStr(needVersion);
+				return;
+			}
+
+			// Check if we can get the configuration, due to cluster.
+			if (needCluster && ! isCluster)
+			{
+				_configStr = "This info is only available if the Server is Cluster Enabled.";
 				return;
 			}
 
@@ -489,6 +515,12 @@ public abstract class AseConfigText
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdb"; }
 	}
 
+	public static class Tempdb extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseTempdb; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_tempdb 'show'"; }
+	}
+
 	public static class HelpDevice extends AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
@@ -654,6 +686,14 @@ public abstract class AseConfigText
 		@Override public    int        needVersion()                       { return 15000; }
 	}
 	
+	public static class ClusterInfo extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
+		@Override public    int        needVersion()                       { return 15020; }
+		@Override public    boolean    needCluster()                       { return true; }
+	}
+	
 	
 	/*---------------------------------------------------
 	**---------------------------------------------------
@@ -695,6 +735,10 @@ public abstract class AseConfigText
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseHelpdb).getConfig()=\n"+c.getConfig());
 
+			c = AseConfigText.getInstance(ConfigType.AseTempdb);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseTempdb).getConfig()=\n"+c.getConfig());
+
 			c = AseConfigText.getInstance(ConfigType.AseHelpDevice);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseHelpdevice).getConfig()=\n"+c.getConfig());
@@ -726,6 +770,10 @@ public abstract class AseConfigText
 			c = AseConfigText.getInstance(ConfigType.AseLicenseInfo);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseLicenseInfo).getConfig()=\n"+c.getConfig());
+
+			c = AseConfigText.getInstance(ConfigType.AseClusterInfo);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseClusterInfo).getConfig()=\n"+c.getConfig());
 		}
 		catch (Exception e)
 		{

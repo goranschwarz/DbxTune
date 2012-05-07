@@ -454,7 +454,6 @@ public class ConnectionDialog
 			}
 		}
 
-
 		panel.add(_tab,                  "height 100%, grow, push, wrap");
 		panel.add(createOkCancelPanel(), "bottom, right");
 
@@ -2777,19 +2776,19 @@ public class ConnectionDialog
 					}
 					else
 					{
-						TableModel tm = _pcsSessionTable.getModel();
-						for(int r=0; r<tm.getRowCount(); r++)
-						{
-							String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
-							Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
-							Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
-							boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
-							boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
-							boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
-							boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
-							
-							System.out.println("OK: name="+StringUtil.left(rowName,25)+", timeout="+pcsTimeout+", postpone="+pcsPostpone+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+".");
-						}
+//						TableModel tm = _pcsSessionTable.getModel();
+//						for(int r=0; r<tm.getRowCount(); r++)
+//						{
+//							String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
+//							Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
+//							Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
+//							boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
+//							boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
+//							boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
+//							boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
+//							
+//							//System.out.println("OK: name="+StringUtil.left(rowName,25)+", timeout="+pcsTimeout+", postpone="+pcsPostpone+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+".");
+//						}
 					}
 				} // end: PCS CONNECT
 
@@ -3434,15 +3433,21 @@ public class ConnectionDialog
 			_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
 			return;
 		}
+		int DEFAULT_windowWidth  = 570;
+		int DEFAULT_windowHeight = 690;
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("conn.dialog.window.width",  570);
-		int height = conf.getIntProperty("conn.dialog.window.height", 690);
+		int width  = conf.getIntProperty("conn.dialog.window.width",  DEFAULT_windowWidth);
+		int height = conf.getIntProperty("conn.dialog.window.height", DEFAULT_windowHeight);
 		int x      = conf.getIntProperty("conn.dialog.window.pos.x",  -1);
 		int y      = conf.getIntProperty("conn.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)
 		{
+			// OK Button will be hard to see in some cases, so try to set to minimal size
+			if (width  < DEFAULT_windowWidth)  width  = DEFAULT_windowWidth;
+			if (height < DEFAULT_windowHeight) height = DEFAULT_windowHeight;
+
 			this.setSize(width, height);
 		}
 		if (x != -1 && y != -1)

@@ -39,7 +39,9 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.sql.PreparedStatementCache;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
@@ -68,6 +70,8 @@ public class PersistWriterJdbc
 	public static final String PROP_jdbcPassword         = "PersistWriterJdbc.jdbcPasswd";
 	public static final String PROP_startH2NetworkServer = "PersistWriterJdbc.startH2NetworkServer";
 
+	public static final String PROP_cachePreparedStatements = "PersistWriterJdbc.cachePreparedStatements";
+
 	public static final String PROP_jdbcKeepConnOpen     = "PersistWriterJdbc.jdbcKeepConnOpen";
 	public static final String PROP_h2NewDbOnDateChange  = "PersistWriterJdbc.h2NewDbOnDateChange";
 	public static final String PROP_h2DateParseFormat    = "PersistWriterJdbc.h2DateParseFormat";
@@ -90,7 +94,8 @@ public class PersistWriterJdbc
 	private   boolean _startH2NetworkServer = false;
 
 	protected String _name       = "PersistWriterJdbc";
-	
+
+	private boolean _cachePreparedStatements = false;
 	protected boolean _jdbcDriverInfoHasBeenWritten = false;
 
 	private org.h2.tools.Server _h2ServerTcp = null;
@@ -324,6 +329,8 @@ public class PersistWriterJdbc
 		if (_jdbcPasswd.equalsIgnoreCase("null"))
 			_jdbcPasswd="";
 
+		_cachePreparedStatements = props.getBooleanProperty(PROP_cachePreparedStatements, _cachePreparedStatements);
+
 		_keepConnOpen         = props.getBooleanProperty(PROP_jdbcKeepConnOpen,     _keepConnOpen);
 		_h2NewDbOnDateChange  = props.getBooleanProperty(PROP_h2NewDbOnDateChange,  _h2NewDbOnDateChange);
 		_h2DbDateParseFormat  = props.getPropertyRaw(    PROP_h2DateParseFormat,    _h2DbDateParseFormat);
@@ -343,16 +350,29 @@ public class PersistWriterJdbc
 		_logger.info ("                  "+propPrefix+"h2NewDbOnDateChange  = " + _h2NewDbOnDateChange);
 		_logger.info ("                  "+propPrefix+"h2DateParseFormat    = " + _h2DbDateParseFormat);
 		_logger.info ("                  "+propPrefix+"startH2NetworkServer = " + _startH2NetworkServer);
+		_logger.info ("                  "+propPrefix+"cachePreparedStatements = " + _cachePreparedStatements);
 
-		_configStr = 
-			"jdbcDriver="            + _jdbcDriver +
-			",jdbcUrl="              + _jdbcUrl +
-			",jdbcUser="             + _jdbcUser +
-			",jdbcKeepConnOpen="     + _keepConnOpen +
-			",h2NewDbOnDateChange="  + _h2NewDbOnDateChange +
-			",h2DateParseFormat="    + _h2DbDateParseFormat +
-			",startH2NetworkServer=" + _startH2NetworkServer +
-			"";
+		if ("org.h2.Driver".equals(_jdbcDriver))
+		{
+			_configStr = 
+				"jdbcDriver="            + _jdbcDriver +
+				",jdbcUrl="              + _jdbcUrl +
+				",jdbcUser="             + _jdbcUser +
+				",jdbcKeepConnOpen="     + _keepConnOpen +
+				",h2NewDbOnDateChange="  + _h2NewDbOnDateChange +
+				",h2DateParseFormat="    + _h2DbDateParseFormat +
+				",startH2NetworkServer=" + _startH2NetworkServer +
+				"";
+		}
+		else
+		{
+			_configStr = 
+				"jdbcDriver="            + _jdbcDriver +
+				",jdbcUrl="              + _jdbcUrl +
+				",jdbcUser="             + _jdbcUser +
+				",jdbcKeepConnOpen="     + _keepConnOpen +
+				"";
+		}
 }
 
 	@Override
@@ -760,6 +780,61 @@ public class PersistWriterJdbc
 			// or fix the actual values to be more correct when creating graph data etc.
 			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
 			{
+				// for Better/other Performance: lets reconnect, using an alternate URL
+				// DYNAMIC_PREPARE=true  or  ENABLE_BULK_LOAD=true
+				Configuration conf = Configuration.getCombinedConfiguration();
+				boolean aseDynamicPrepare = conf.getBooleanProperty(PROP_BASE+"ase.option.DYNAMIC_PREPARE",  true);
+				boolean aseEnableBulkLoad = conf.getBooleanProperty(PROP_BASE+"ase.option.ENABLE_BULK_LOAD", false);
+
+//				// use BULK_LOAD over DYNAMIC_PREPARE
+//				if (aseEnableBulkLoad)
+//					aseDynamicPrepare = false;
+
+				if (aseDynamicPrepare || aseEnableBulkLoad)
+				{
+					AseUrlHelper urlHelper = AseUrlHelper.parseUrl(localJdbcUrl);
+					Map<String, String> urlMap = urlHelper.getUrlOptionsMap();
+					if (urlMap == null)
+						urlMap = new LinkedHashMap<String, String>();
+
+					boolean change = false;
+
+					// DYNAMIC_PREPARE
+					if ( aseDynamicPrepare && ! urlMap.containsKey("DYNAMIC_PREPARE") )
+					{
+						change = true;
+						_logger.info("ASE URL add option: DYNAMIC_PREPARE=true");
+						_logger.info("Setting '"+PROP_cachePreparedStatements+"' to 'true' when DYNAMIC_PREPARE is enabled. This means most SQL PreparedStatements (and the server side lightweight stored procedure) in the Writer is reused. And the statements are not closed when pstmnt.close() is called.");
+						
+						_cachePreparedStatements = true;
+						urlMap.put("DYNAMIC_PREPARE", "true");
+					}
+
+//					// ENABLE_BULK_LOAD
+//					if ( aseEnableBulkLoad && ! urlMap.containsKey("ENABLE_BULK_LOAD") )
+//					{
+//						change = true;
+//						_logger.info("ASE URL add option: ENABLE_BULK_LOAD=true");
+//						urlMap.put("ENABLE_BULK_LOAD", "true");
+//					}
+
+					if (change)
+					{
+						urlHelper.setUrlOptionsMap(urlMap);
+						localJdbcUrl = urlHelper.getUrl();
+						
+						_logger.info("Closing ASE connection, Now that I know It's ASE, I want to add specific URL options for load performance.");
+						close(true); // Force a close
+
+						_logger.info("Added some options to the ASE URL. New URL is '"+localJdbcUrl+"'.");
+
+						// do the connect again.
+						_logger.info("Re-connecting to ASE after fixing the URL options. New URL is '"+localJdbcUrl+"'.");
+						_conn = DriverManager.getConnection(localJdbcUrl, _jdbcUser, _jdbcPasswd);
+					}
+				}
+				
+				// now, set various OPTIONS, using SQL statements
 				_logger.debug("Connected to ASE, do some specific settings 'set arithabort numeric_truncation off'.");
 				dbExecSetting("set arithabort numeric_truncation off ");
 				
@@ -773,6 +848,12 @@ public class PersistWriterJdbc
 					
 					throw new Exception(msg);
 					//return null;
+				}
+
+				if (aseVersion >= 15000)
+				{
+					_logger.debug("Connected to ASE (above 15.0), do some specific settings 'set delayed_commit on'.");
+					dbExecSetting("set delayed_commit on ");
 				}
 
 				int asePageSize = AseConnectionUtils.getAsePageSize(_conn);
@@ -974,14 +1055,15 @@ public class PersistWriterJdbc
 //
 //		dbExec(sbSql.toString());
 
-		if (val != null && val.length() >= SESSION_PARAMS_VAL_MAXLEN)
-			val = val.substring(0, SESSION_PARAMS_VAL_MAXLEN - 1);
+//		if (val != null && val.length() >= SESSION_PARAMS_VAL_MAXLEN)
+//			val = val.substring(0, SESSION_PARAMS_VAL_MAXLEN - 1);
 
 		try
 		{
 			// Get the SQL statement
 			String sql = getTableInsertStr(SESSION_PARAMS, null, true);
-			PreparedStatement pst = _conn.prepareStatement( sql );
+//			PreparedStatement pst = _conn.prepareStatement( sql );
+			PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(_conn, sql) : _conn.prepareStatement(sql);
 	
 			// Set values
 			pst.setString(1, sessionsStartTime.toString());
@@ -1855,7 +1937,9 @@ public class PersistWriterJdbc
 		try
 		{
 			String sql = getTableInsertStr(whatData, cm, true);
-			PreparedStatement pstmt = _conn.prepareStatement(sql);
+//			PreparedStatement pstmt = _conn.prepareStatement(sql);
+//			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(_conn, sql);
+			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(_conn, sql) : _conn.prepareStatement(sql);
 
 			// Loop all rows, and ADD them to the Prepared Statement
 			for (int r=0; r<rowsCount; r++)
@@ -2384,7 +2468,9 @@ public class PersistWriterJdbc
 			_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
 
 			String sql = getTableInsertStr(DDL_STORAGE, null, true);
-			PreparedStatement pstmt = _conn.prepareStatement(sql);
+//			PreparedStatement pstmt = _conn.prepareStatement(sql);
+//			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(_conn, sql);
+			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(_conn, sql) : _conn.prepareStatement(sql);
 
 			// TODO: check MetaData for length of 'dependList' column
 			String dependList = StringUtil.toCommaStr(ddlDetails.getDependList());

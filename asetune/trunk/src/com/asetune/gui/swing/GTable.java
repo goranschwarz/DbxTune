@@ -867,7 +867,9 @@ extends JXTable
 			if (tm instanceof CountersModel)
 			{
 				CountersModel cm = (CountersModel)tm;
-				_lastSelectedModelPk = cm.getCounterData().getPkValue(_lastSelectedModelRow);
+				CounterTableModel ctm = cm.getCounterData();
+				if (ctm != null)
+					_lastSelectedModelPk = ctm.getPkValue(_lastSelectedModelRow);
 			}
 		}
     }

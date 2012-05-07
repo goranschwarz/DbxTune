@@ -77,6 +77,9 @@ extends TabularCntrPanel
 				Object thisSpid    = adapter.getValueAt(thisModelRow, spidCol);
 				Object prevSpid    = adapter.getValueAt(prevModelRow, spidCol);
 
+				if (thisSpid == null) thisSpid = "dummy";
+				if (prevSpid == null) prevSpid = "dummy";
+
 				// Previous rows highlight will be a decision to keep or invert the highlight
 				boolean prevRowIsHighlighted = _rowIsHighlighted[adapter.row - 1];
 
