@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
+import com.asetune.AseTune;
 import com.asetune.MonTablesDictionary;
 import com.asetune.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.MonTablesDictionary.MonTableEntry;
@@ -39,12 +40,14 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.gui.MainFrame;
 import com.asetune.sql.PreparedStatementCache;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 
 public class PersistWriterJdbc
@@ -131,6 +134,109 @@ public class PersistWriterJdbc
 	** Methods
 	**---------------------------------------------------
 	*/
+	/**
+	 * Checks SQL Exceptions for specific errors when storing counters
+	 * @return true if a severe problem
+	 */
+	protected boolean isSevereProblem(SQLException e)
+	{
+		SQLException originException = e;
+
+		if (e == null)
+			return false;
+		boolean retCode    = false;
+		boolean doShutdown = false;
+		boolean dbIsFull   = false;
+
+		// Loop all nested SQLExceptions
+		int exLevel = 0;
+		while (e != null)
+		{
+			exLevel++;
+			int    error    = e.getErrorCode();
+			String msgStr   = e.getMessage();
+			String sqlState = e.getSQLState();
+	
+			_logger.debug("isSevereProblem(): execptionLevel='"+exLevel+"', sqlState='"+sqlState+"', error='"+error+"', msgStr='"+msgStr+"'.");
+
+			// H2 Messages
+			if ( DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			{
+				// database is full: 
+				//   NO_DISK_SPACE_AVAILABLE = 90100
+				//   IO_EXCEPTION_2 = 90031
+				if (error == 90100 || error == 90031)
+				{
+					// Mark it for shutdown
+					doShutdown = true;
+					dbIsFull   = true;
+					retCode    = true;
+				}
+			}
+	
+			// ASE messages
+			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+			{
+				// 1105: Can't allocate space for object '%.*s' in database '%.*s' because '%.*s' segment is full/has no free extents. If you ran out of space in syslogs, dump the transaction log. Otherwise, use ALTER DATABASE to increase the size of the segment.
+				if (error == 1105 || (msgStr != null && msgStr.startsWith("Can't allocate space for object")) )
+				{
+					// Mark it for shutdown
+					doShutdown = true;
+					dbIsFull   = true;
+					retCode    = true;
+				}
+			}
+
+			e = e.getNextException();
+		}
+
+		_logger.debug("isSevereProblem(): doShutdown='"+doShutdown+"', dbIsFull='"+dbIsFull+"', retCode='"+retCode+"', _shutdownWithNoWait='"+_shutdownWithNoWait+"'.");
+
+		// Actions
+		if (doShutdown)
+		{
+			if ( ! _shutdownWithNoWait)
+			{
+				String extraMessage = "";
+				if (dbIsFull)
+					extraMessage = " (Database seems to be out of space) ";
+
+				_logger.warn(getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Marking the writes for SHUTDOWN.");
+				_shutdownWithNoWait = true;
+
+				// Then STOP the service
+				// NOTE: This needs it's own Thread, otherwise it's the PersistCounterHandler thread
+				//       that will issue the shutdown, meaning store() will be "put on hold"
+				//       until this method call is done, and continue from that point. 
+				Runnable shutdownPcs = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						_logger.info("Issuing STOP on the Persistent Counter Storage Handler");
+						PersistentCounterHandler.getInstance().stop(true, 0);
+						PersistentCounterHandler.setInstance(null);					
+					}
+				};
+				Thread shutdownThread = new Thread(shutdownPcs);
+				shutdownThread.setDaemon(true);
+				shutdownThread.setName("StopPcs");
+				shutdownThread.start();
+
+				if (AseTune.hasGUI())
+				{
+					String msg = getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Disconnected from monitored server.";
+					_logger.info(msg);
+
+					MainFrame.getInstance().action_disconnect();
+					SwingUtils.showErrorMessage("PersistWriterJdbc", msg, originException);
+				}
+			}
+		}
+		return retCode;
+	}
+
+
 	/**
 	 * Called from the {@link PersistentCounterHandler#consume} as the first thing it does.
 	 * 
@@ -837,7 +943,8 @@ public class PersistWriterJdbc
 				// now, set various OPTIONS, using SQL statements
 				_logger.debug("Connected to ASE, do some specific settings 'set arithabort numeric_truncation off'.");
 				dbExecSetting("set arithabort numeric_truncation off ");
-				
+
+				// only 15.0 or above is supported
 				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
 				if (aseVersion < 15000)
 				{
@@ -845,9 +952,31 @@ public class PersistWriterJdbc
 					_logger.error(msg);
 					_conn.close();
 					_conn = null;
+
+					Exception ex =  new Exception(msg);
+					{
+						MainFrame.getInstance().action_disconnect();
+						SwingUtils.showErrorMessage("PersistWriterJdbc", msg, ex);
+					}
+					throw ex;
+				}
+
+				// Get current dbname, if master, then do not allow...
+				String dbname = AseConnectionUtils.getCurrentDbname(_conn);
+				if ("master".equals(dbname))
+				{
+					String msg = "Current ASE Database is '"+dbname+"'. "+Version.getAppName()+" does NOT support storage off Performance Counters in the '"+dbname+"' database.";
+					_logger.error(msg);
+					_conn.close();
+					_conn = null;
 					
-					throw new Exception(msg);
-					//return null;
+					Exception ex =  new Exception(msg);
+					if (AseTune.hasGUI())
+					{
+						MainFrame.getInstance().action_disconnect();
+						SwingUtils.showErrorMessage("PersistWriterJdbc", msg, ex);
+					}
+					throw ex;
 				}
 
 				if (aseVersion >= 15000)
@@ -978,6 +1107,7 @@ public class PersistWriterJdbc
 		catch(SQLException e)
 		{
 			_logger.warn("Problems when executing DDL sql statement: "+sql);
+			isSevereProblem(e);
 			throw e;
 		}
 
@@ -1079,6 +1209,8 @@ public class PersistWriterJdbc
 		catch (SQLException e)
 		{
 			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='"+sessionsStartTime+"', type='"+type+"', key='"+key+"', val='"+val+"')", e);
+			if (isSevereProblem(e))
+				throw e;
 		}
 	}
 
@@ -1251,6 +1383,7 @@ public class PersistWriterJdbc
 		catch (SQLException e)
 		{
 			_logger.warn("Error when startSession() writing to Persistent Counter Store.", e);
+			isSevereProblem(e);
 		}
 		
 		// Close connection to db
@@ -1365,7 +1498,8 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
 		}
 		finally
 		{
@@ -1436,7 +1570,8 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
 		}
 		finally
 		{
@@ -1546,7 +1681,8 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
 		}
 		finally
 		{
@@ -1631,7 +1767,8 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2) {}
 
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
 		}
 		finally
 		{
@@ -1709,6 +1846,8 @@ public class PersistWriterJdbc
 		catch (SQLException e)
 		{
 			_logger.warn("SQLException, Error writing DDL to Persistent Counter DB.", e);
+			isSevereProblem(e);
+
 			throw new RuntimeException("SQLException, Error writing DDL to Persistent Counter DB. Caught: "+e);
 			//return false;
 		}
@@ -1820,7 +1959,8 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
 		}
 
 
@@ -1864,7 +2004,8 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			isSevereProblem(e);
 		}
 	}
 
@@ -2047,7 +2188,8 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'.", e);
+			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode(), e);
+			isSevereProblem(e);
 			return -1;
 		}
 	}
@@ -2233,6 +2375,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
+			isSevereProblem(e);
 			_logger.info("Problems writing Graph '"+tgdp.getName()+"' information to table '"+tabName+"', Problems when creating the table or checked if it existed. Caught: "+e);
 		}
 
@@ -2254,7 +2397,8 @@ public class PersistWriterJdbc
 			}
 			catch (SQLException e2)
 			{
-				_logger.warn("Error writing to Persistent Counter Store. SQL: "+sb.toString(), e2);
+				isSevereProblem(e2);
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", SQL: "+sb.toString(), e2);
 			}
 		}
 	}
@@ -2505,6 +2649,7 @@ public class PersistWriterJdbc
 		catch (SQLException e)
 		{
 			_logger.warn("Error writing DDL Information to Persistent Counter Store. for table dbname='"+ddlDetails.getDbname()+"', objectName='"+ddlDetails.getObjectName()+"'.", e);
+			isSevereProblem(e);
 //			return -1;
 		}
 	}

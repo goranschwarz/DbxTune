@@ -130,6 +130,7 @@ public class CheckForUpdates
 	protected String       _whatsNewUrl    = "";
 	protected boolean      _hasUpgrade;
 	protected boolean      _checkSucceed;
+	protected String       _responseString = "";
 
 	protected String       _feedbackUrl     = "";
 	protected String       _feedbackDateStr = "";
@@ -332,7 +333,15 @@ public class CheckForUpdates
 							CheckDialog.showDialog(owner, chk);
 					}
 
-					_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
+					if (chk.isResponseOfHtml())
+					{
+						if (owner != null)
+							CheckDialog.showDialog(owner, chk);
+					}
+					else
+					{
+						_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
+					}
 				}
 			}
 		};
@@ -566,6 +575,7 @@ public class CheckForUpdates
 				}
 			}
 			in.close();
+			_responseString = responseLines;
 
 			// if not empty, check that it starts with 'http://' otherwise add it to the start
 			if ( _downloadUrl != null && !_downloadUrl.trim().equals("") )
@@ -604,7 +614,7 @@ public class CheckForUpdates
 
 			if ( ! foundActionLine )
 			{
-				_logger.warn("When checking for new version, no 'ACTION:' response was found. The responce rows was '" + responseLines + "'.");
+				_logger.warn("When checking for new version, no 'ACTION:' response was found. The response rows was '" + responseLines + "'.");
 			}
 
 			_checkSucceed = true;
@@ -621,6 +631,26 @@ public class CheckForUpdates
 	public boolean checkSucceed()
 	{
 		return _checkSucceed;
+	}
+
+	/**
+	 * What did the server responded with
+	 */
+	public String getResponseString()
+	{
+		return _responseString;
+	}
+	public boolean isResponseOfHtml()
+	{
+		if (StringUtil.isNullOrBlank(_responseString))
+			return false;
+		
+		if (_responseString.indexOf("<html>") >= 0)
+			return true;
+		if (_responseString.indexOf("<HTML>") >= 0)
+			return true;
+
+		return false;
 	}
 
 	/**
@@ -918,6 +948,7 @@ public class CheckForUpdates
 				}
 			}
 			in.close();
+			_responseString = responseLines;
 
 //			_checkSucceed = true;
 		}
@@ -1125,6 +1156,7 @@ public class CheckForUpdates
 						}
 					}
 					in.close();
+					_responseString = responseLines;
 				}
 				catch (IOException ex)
 				{
@@ -1346,6 +1378,7 @@ public class CheckForUpdates
 				}
 			}
 			in.close();
+			_responseString = responseLines;
 
 //			_checkSucceed = true;
 		}
@@ -1656,6 +1689,7 @@ public class CheckForUpdates
 					}
 				}
 				in.close();
+				_responseString = responseLines;
 
 //				_checkSucceed = true;
 			}
@@ -1835,6 +1869,7 @@ public class CheckForUpdates
 				}
 			}
 			in.close();
+			_responseString = responseLines;
 		}
 		catch (IOException ex)
 		{

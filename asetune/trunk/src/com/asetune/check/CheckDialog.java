@@ -4,6 +4,7 @@
 package com.asetune.check;
 
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -11,6 +12,10 @@ import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -25,6 +30,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
@@ -38,6 +44,7 @@ import com.asetune.Version;
 import com.asetune.gui.AboutBox;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
@@ -56,7 +63,9 @@ public class CheckDialog
 	private JLabel     _proxyPort_lbl      = new JLabel("HTTP Proxy Port");
 	private JTextField _proxyPort_txt      = new JTextField();
 	private JCheckBox  _doNotShow_chk      = new JCheckBox("Do not show this again.");
-	private JCheckBox  _doNotShowFeedback_chk = new JCheckBox("Do not show this message again.");
+	private JCheckBox  _doNotShowFeedback_chk           = new JCheckBox("Do not show this message again.");
+	private JCheckBox  _doNotShowHtmlResponse_chk       = new JCheckBox("Do not show this message again.");
+	private JCheckBox  _launchBrowserOnHtmlResponse_chk = new JCheckBox("Launch Operating System Default HTML Browser with the response content");
 
 	private CheckForUpdates _cfu = null;
 
@@ -96,6 +105,7 @@ public class CheckDialog
 //		setSize(size);
 
 		setLocationRelativeTo(owner);
+		setFocus();
 	}
 
 	//---------------------
@@ -155,6 +165,16 @@ public class CheckDialog
 			}
 		}
 		
+		boolean doNotShowHtmlResponse = conf.getBooleanProperty("CheckDialog.doNotShowHtmlResponse", false);
+
+		if (cfu != null && cfu.isResponseOfHtml() && doNotShowHtmlResponse)
+		{
+			_logger.debug("CheckDialog.doNotShowHtmlResponse="+doNotShowHtmlResponse+", so NOT showing the window, simply returning.");
+			return;
+		}
+		
+		boolean launchBrowserOnHtmlResponse = conf.getBooleanProperty("CheckDialog.launchBrowserOnHtmlResponse", true);
+
 		
 		CheckDialog dialog = null;
 
@@ -168,6 +188,12 @@ public class CheckDialog
 		dialog._doNotShowFeedback_chk.setToolTipText("<html>Do not show <b>this</b> feedback question again.<br>Future feedbacks questions will still show up!</html>");
 		dialog._doNotShowFeedback_chk.setSelected(doNotShowFeedback);
 
+		dialog._doNotShowHtmlResponse_chk.setToolTipText("<html>Do not show <b>this</b> HTML Response message again.<br>Note: This option will be reset next time a successful 'Check For Update' has been made.</html>");
+		dialog._doNotShowHtmlResponse_chk.setSelected(doNotShowHtmlResponse);
+
+		dialog._launchBrowserOnHtmlResponse_chk.setToolTipText("<html>Launch the Operating System default HTML Browser to view the HTML content.</html>");
+		dialog._launchBrowserOnHtmlResponse_chk.setSelected(launchBrowserOnHtmlResponse);
+
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
@@ -178,6 +204,23 @@ public class CheckDialog
 	**---------------------------------------------------
 	*/
 	
+	/**
+	 * Set focus to a good field or button
+	 */
+	private void setFocus()
+	{
+		// The components needs to be visible for the requestFocus()
+		// to work, so lets the EventThreda do it for us after the windows is visible.
+		Runnable deferredAction = new Runnable()
+		{
+			public void run()
+			{
+				_ok_but.requestFocus();
+			}
+		};
+		SwingUtilities.invokeLater(deferredAction);
+	}
+
 	public void actionPerformed(ActionEvent e)
 	{
 		if ( _resetProxy_but.equals(e.getSource()) )
@@ -221,6 +264,20 @@ public class CheckDialog
 				conf.setProperty("CheckDialog.doNotShowFeedback", _doNotShowFeedback_chk.isSelected());
 				conf.setProperty("CheckDialog.lastFeebackDate", _cfu.getFeedbackTime());
 			}
+
+			conf.remove("CheckDialog.doNotShowHtmlResponse");
+			if (_cfu.isResponseOfHtml())
+			{
+				conf.setProperty("CheckDialog.doNotShowHtmlResponse",       _doNotShowHtmlResponse_chk.isSelected());
+				conf.setProperty("CheckDialog.launchBrowserOnHtmlResponse", _launchBrowserOnHtmlResponse_chk.isSelected());
+
+				boolean launchBrowserOnHtmlResponse = _launchBrowserOnHtmlResponse_chk.isSelected();
+				_logger.info("Launch OS Browser on HTML Response was set to '"+launchBrowserOnHtmlResponse+"'.");
+
+				if (launchBrowserOnHtmlResponse)
+					openHtmlResponseStringInOsBrowser();
+			}
+
 			conf.save();
 
 			dispose();
@@ -257,7 +314,55 @@ public class CheckDialog
 		}
 	}
 
-	
+	private void openHtmlResponseStringInOsBrowser()
+	{
+		String htmlResponseString = _cfu.getResponseString();
+		if (StringUtil.isNullOrBlank(htmlResponseString))
+			return;
+
+		try 
+		{
+			// Create temp file.
+			final File tempFile = File.createTempFile(Version.getAppName()+"_CheckForUpdate_", ".html");
+
+			_logger.info("Writing the HTML response into " + tempFile.toURI());
+
+			// Delete temp file when program exits.
+			tempFile.deleteOnExit();
+
+			// Write to temp file
+			BufferedWriter out = new BufferedWriter(new FileWriter(tempFile));
+			out.write(htmlResponseString);
+			out.close();
+			
+			if (Desktop.isDesktopSupported())
+			{
+				final Desktop desktop = Desktop.getDesktop();
+				if ( desktop.isSupported(Desktop.Action.BROWSE) )
+				{
+					Thread bg = new Thread()
+					{
+						@Override
+						public void run()
+						{
+							_logger.info("Opening OS browser to view content of: "+tempFile.toURI());
+							try { desktop.browse(tempFile.toURI()); }
+							catch (IOException ex) { ex.printStackTrace(); }
+						}
+					};
+					bg.setName("StartBrowserForHtmlResponseTempFile");
+					bg.setDaemon(true);
+					bg.start();
+				}
+			}
+		}
+		catch (IOException e) 
+		{
+			_logger.warn("There was problems creating temporary file for HTML Response", e);
+		}
+	}
+
+
 	/*---------------------------------------------------
 	** BEGIN: component initialization
 	**---------------------------------------------------
@@ -292,8 +397,9 @@ public class CheckDialog
 		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
 
 		String msg = "";
-		boolean showWhatsNew = false;
-		boolean showFeedback = false;
+		boolean showWhatsNew     = false;
+		boolean showFeedback     = false;
+		boolean showHtmlResponse = false;
 
 		if (_cfu.checkSucceed())
 		{
@@ -305,6 +411,13 @@ public class CheckDialog
 						"<A HREF=\""+_cfu.getDownloadUrl()+"\">"+_cfu.getDownloadUrl()+"</A>";
 
 				showWhatsNew = true;
+			}
+			if (_cfu.isResponseOfHtml())
+			{
+				msg = "<b>Received HTML response when checking for new Version.</b><br>" +
+						"The response might be a network login request or similar.<br>" +
+						"If the text below is empty, try look at the error log to check the response text.";
+				showHtmlResponse = true;
 			}
 			else
 			{
@@ -428,10 +541,40 @@ public class CheckDialog
 			}
 		}
 
+		if (showHtmlResponse)
+		{
+			String htmlResponseString = _cfu.getResponseString();
+			// <!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+//			htmlResponseString = htmlResponseString.replaceFirst("<!DOCTYPE((.|\n|\r)*?)\">", "");
+//			htmlResponseString = htmlResponseString.replaceFirst("<!doctype((.|\n|\r)*?)\">", "");
+
+			_logger.info(Version.getAppName()+" HTML Response String was '"+htmlResponseString+"'.");
+			JEditorPane htmlResponsePane   = new JEditorPane("text/html", htmlResponseString);
+			if (htmlResponsePane.getDocument().getLength() == 0)
+			{
+				_logger.info(Version.getAppName()+" HTML Response String did not work with the JEditorPane(\"text/html\", 'responseStr') so reverting back to JEditorPane(\"text/plain\", 'responseStr').");
+				htmlResponsePane = new JEditorPane("text/plain", htmlResponseString);
+			}
+			feedback.setEditable(false);
+			feedback.setOpaque(false);  
+			feedback.addHyperlinkListener(this);
+ 
+			JScrollPane scrollpane = new JScrollPane(htmlResponsePane);
+			scrollpane.setMinimumSize(new Dimension(200, 300));
+			scrollpane.setPreferredSize(new Dimension(500, 300));
+			panel.add(scrollpane,   "span, push, grow, wrap 10");
+		}
+
 		if ( _cfu.checkSucceed() )
 		{
 			if (_cfu.hasFeedback())
 				panel.add(_doNotShowFeedback_chk, "wrap");
+			
+			if (showHtmlResponse)
+			{
+				panel.add(_doNotShowHtmlResponse_chk,       "wrap");
+				panel.add(_launchBrowserOnHtmlResponse_chk, "wrap");
+			}
 		}
 		else
 		{

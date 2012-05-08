@@ -520,7 +520,7 @@ implements ICounterController
 //	public static final String CM_DESC__OS_UPTIME               = "OS Load Average";
 
 	/** This is a input to the SplashScreen */
-	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 44;
+	public static final int	   NUMBER_OF_PERFORMANCE_COUNTERS	= 44 + 30; // 30 extra for init time of XX seconds or so
 
 	
 	// GRAPHS
