@@ -28,10 +28,11 @@ implements ActionListener
     private static final long serialVersionUID = 1L;
 	private static final String WIZ_NAME = "sample-time";
 	private static final String WIZ_DESC = "Sample time";
-	private static final String WIZ_HELP = "How long should we sleep between samples.\nThis is specified in seconds.";
+//	private static final String WIZ_HELP = "How long should we sleep between samples.\nThis is specified in seconds.";
 
-	private JTextField _sampleTime          = new JTextField("60");
-	private JTextField _shutdownAfterXHours = new JTextField("");
+	private JTextField _sampleTime           = new JTextField("60");
+	private JTextField _startRecordingAtTime = new JTextField("");
+	private JTextField _shutdownAfterXHours  = new JTextField("");
 
 	public static String getDescription() { return WIZ_DESC; }
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
@@ -42,27 +43,47 @@ implements ActionListener
 		
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
-		_sampleTime.setName("sampleTime");
-		_shutdownAfterXHours.setName("shutdownAfterXHours");
+		_sampleTime          .setName("sampleTime");
+		_startRecordingAtTime.setName("startRecordingAtTime");
+		_shutdownAfterXHours .setName("shutdownAfterXHours");
 
-		// Add a helptext
-		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
+		// SLEEP TIME
+		String label = "<html>How long should we sleep between samples. Specified in seconds.</html>";
 
+		add( new MultiLineLabel(label), "span, wrap 10" );
 		add(new JLabel("Sample time"));
 		add(_sampleTime, "growx");
 		add(new JLabel("Seconds"), "wrap 40");
 
+		// START
+		label = "<html>Start recording at a specific time. Format is <code>HH[:MM]</code></html>";
 
-		String label = "<html>Shutdown or stop the no-gui process after X number after it has been started.</html>";
+		add( new MultiLineLabel(label), "span, wrap 10" );
+		add(new JLabel("Start the recording at"));
+		add(_startRecordingAtTime, "growx");
+		add(new JLabel("Hour[:Minute]"), "wrap 40");
+
+		// STOP
+		label = "<html>Shutdown or stop the no-gui process after X number after it has been started.</html>";
 
 		add( new MultiLineLabel(label), "span, wrap 10" );
 		add(new JLabel("Shutdown after # hours"));
 		add(_shutdownAfterXHours, "growx");
-		add(new JLabel("Hours"));
+		add(new JLabel("Hours"), "wrap");
 
+		// Command line switches
+		String cmdLineSwitched = 
+			"<html>" +
+			"The above options can be overridden or specified using the following command line switches" +
+			"<table>" +
+			"<tr><code>-i,--interval &lt;seconds&gt;</code><td></td>sample Interval, time between samples.</tr>" +
+			"<tr><code>-e,--enable &lt;hh[:mm]&gt;  </code><td></td>enable/start the recording at Hour(00-23) Minute(00-59)</tr>" +
+			"<tr><code>-f,--finish &lt;hh[:mm]&gt;  </code><td></td>shutdown/stop the no-gui service after # hours.</tr>" +
+			"</table>" +
+			"</html>";
+		add( new JLabel(""), "span, wrap 30" );
+		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
 
-		
-		
 		initData();
 	}
 
@@ -92,14 +113,22 @@ implements ActionListener
 			}
 		}
 		
+		// Check _startRecordingAtTime
+		if (_startRecordingAtTime.getText().trim().length() > 0)
+		{
+			try 
+			{
+				PersistWriterBase.getRecordingStartTime(_startRecordingAtTime.getText().trim());
+			} 
+			catch (Exception e) 
+			{
+				return "'Start the recording at' needs to be in format hh[:mm] "+e.getMessage();
+			}
+		}
+
 		// Check if _shutdownAfterXHours is integer
 		if (_shutdownAfterXHours.getText().trim().length() > 0)
 		{
-//			try { Integer.parseInt( _shutdownAfterXHours.getText().trim() ); }
-//			catch (NumberFormatException e)
-//			{
-//				return "'Shutdown after # hours' needs to be a number or empty.";
-//			}
 			try 
 			{
 				PersistWriterBase.getRecordingStopTime(null, _shutdownAfterXHours.getText().trim());

@@ -30,7 +30,7 @@ li   {margin-bottom: 6px}
 
 	<LI>
 	<b>Bug fix: Move to tab. (blocking locks, full transaction log)</b><br>
-	When 'blocking locks' or 'full transaction log' happened, a pop up with the option to move 
+	When 'blocking locks' or 'full transaction log' happened, a pop up with the option to move
 	to that Performance Counter Tab should be visible.<br>
 	This did not work after redoing the "tab grouping" in version 3.0.0 (2012-04-20)<br>
 	</LI>
@@ -64,24 +64,41 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>Changed: Wizard; Create 'Offline Session'.</b><br>
+	<ul>
+	</ul>
+		<li>Added a checkbox 'do not enter' ASE information, instead use command line switches.</li>
+		<li>Dropdown boxes on JDBC driver and URL for PCS or recording database</li>
+		<li>Added some help text and pointers to Command Line Switches</li>
+		<li>Also added some new fields, like 'Start the recording at'</li>
+	</LI>
+
+	<LI>
 	<b>Changed: Persistent Counter Storage, when using ASE as the PCS</b><br>
 	If ASE is used as the Persistent Counter Storage when recording a session, AseTune is now using DYNAMIC_PREPARE
 	and caching/reusing the prepared statements when writing data to the database.<br>
-	The 'set delayed_commit on' is also issued.<br> 
+	The 'set delayed_commit on' is also issued.<br>
 	This makes it a bit faster when using ASE as the Persistent Counter Storage<br>
-	Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight 
-	and not 100% ACID, it flushes the data to disk at a later stage, which makes it a <b>much</b> 
+	Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight
+	and not 100% ACID, it flushes the data to disk at a later stage, which makes it a <b>much</b>
 	faster choice when recording a session. And also the H2 database is probably located on your local PC
 	so we don't store information on the same server as we are monitoring.
 	</LI>
 
 	<LI>
 	<b>Changed: Persistent Counter Storage, database is full</b><br>
-	For ASE and H2: when hitting full database errors, the connection to the monitored server is closed and 
+	For ASE and H2: when hitting full database errors, the connection to the monitored server is closed and
 	the entries in the PCS queue is discarded.<br>
 	A GUI message is also displayed about this if you are in GUI mode.<br>
 	</LI>
 
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.3.167, Component: H2 database</li>
+	  <li>To version 2.0.3, Component: RSyntaxTextArea, AutoComplete</li>
+	</ul>
+	</LI>
 </UL>
 
 
@@ -246,7 +263,7 @@ li   {margin-bottom: 6px}
 	<b>New: for all Performance Counters, a "mini" graph in table cell</b><br>
 	On Percent counters, a new "mini" graph is visible at the bottom of the cell, which tries to write a small
 	bar graph of the percentage used.<br>
-	This can be disabled using the property 'TabularCntrPanel.table.graph.percent=false'<br> 
+	This can be disabled using the property 'TabularCntrPanel.table.graph.percent=false'<br>
 	</LI>
 
 	<LI>

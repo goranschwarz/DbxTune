@@ -2382,6 +2382,12 @@ public class ConnectionDialog
 				if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 					dir += "\\ini";
 			}
+			// if sybase cant be found, set starting directory to AseTune Save Directory
+			if (dir == null)
+			{
+				if (System.getProperty("ASETUNE_SAVE_DIR") != null)
+					dir = System.getProperty("ASETUNE_SAVE_DIR");
+			}
 
 			JFileChooser fc = new JFileChooser(dir);
 			int returnVal = fc.showOpenDialog(this);

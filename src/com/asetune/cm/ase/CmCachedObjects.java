@@ -10,6 +10,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmCachedObjectsPanel;
@@ -244,5 +245,41 @@ extends CountersModel
 	public int getMaxNumOfDdlsToPersist()
 	{
 		return 10;
+	}
+
+	/**
+	 * discard "DDL Save" when: Objects with IndexID > 0 and ObjectType == "system table"
+	 */
+	@Override
+	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	{
+		// If ObjectType is "system table", then do NOT send it for DDL Storage
+		int ObjectType_pos = absData.findColumn("ObjectType");
+		if (ObjectType_pos == -1)
+			return true;
+
+		Object ObjectType_obj = absData.getValueAt(row, ObjectType_pos);
+		if (ObjectType_obj instanceof String)
+		{
+			String ObjectType = (String) ObjectType_obj;
+			if ("system table".equals(ObjectType))
+				return false;
+		}
+
+		// If IndexID is above 0, then do NOT send it for DDL Storage
+		int IndexID_pos = absData.findColumn("IndexID");
+		if (IndexID_pos == -1)
+			return true;
+
+		Object IndexID_obj = absData.getValueAt(row, IndexID_pos);
+		if (IndexID_obj instanceof Number)
+		{
+			int IndexID = ((Number)IndexID_obj).intValue();
+			if (IndexID > 0)
+				return false;
+		}
+
+		// Lets send it for DDL Storage
+		return true;
 	}
 }

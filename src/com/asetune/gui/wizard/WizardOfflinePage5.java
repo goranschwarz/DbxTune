@@ -82,6 +82,19 @@ implements ActionListener
 		add(new JLabel("Password"));
 		add(_sshPassword, "growx, wrap");
 
+		// Command line switches
+		String cmdLineSwitched = 
+			"<html>" +
+			"The above options can be overridden or specified using the following command line switches" +
+			"<table>" +
+			"<tr><code>-u,--sshUser &lt;user&gt;    </code><td></td>SSH Username, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-p,--sshPasswd &lt;passwd&gt;</code><td></td>SSH Password, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-s,--sshServer &lt;host&gt;  </code><td></td>SSH Hostname, used by Host Monitoring subsystem</tr>" +
+			"</table>" +
+			"</html>";
+		add( new JLabel(""), "span, wrap 30" );
+		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
+
 		initData();
 	}
 

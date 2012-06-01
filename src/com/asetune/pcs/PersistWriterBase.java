@@ -1114,7 +1114,7 @@ public abstract class PersistWriterBase
 		if (startTime == null)
 			return null;
 
-		String hourStr   = "0";
+		String hourStr   = startTime;
 		String minuteStr = "0";
 
 		if (startTime.indexOf(":") >= 0)
@@ -1168,7 +1168,7 @@ public abstract class PersistWriterBase
 		if (stopTime == null)
 			return null;
 
-		String hourStr   = "0";
+		String hourStr   = stopTime;
 		String minuteStr = "0";
 
 		if (stopTime.indexOf(":") >= 0)
