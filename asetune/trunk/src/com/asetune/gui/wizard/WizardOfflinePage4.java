@@ -3,6 +3,7 @@
  */
 package com.asetune.gui.wizard;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -18,6 +19,7 @@ import javax.swing.JTable;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
@@ -43,13 +45,16 @@ implements ActionListener, TableModelListener
 	public static String getDescription() { return WIZ_DESC; }
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
-	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Local Option", "Value", "Data Type", "Description"};
-	private static final int TAB_POS_ICON         = 0;
-	private static final int TAB_POS_TAB_NAME     = 1;
-	private static final int TAB_POS_OPTION       = 2;
-	private static final int TAB_POS_OPTION_VALUE = 3;
-	private static final int TAB_POS_OPTION_DTYPE = 4;
-	private static final int TAB_POS_OPTION_DESC  = 5;
+	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Local Option", "Data Type", "Value", "StringValue", "Description"};
+	private static final int TAB_POS_ICON             = 0;
+	private static final int TAB_POS_TAB_NAME         = 1;
+	private static final int TAB_POS_OPTION           = 2;
+	private static final int TAB_POS_OPTION_DTYPE     = 3;
+	private static final int TAB_POS_OPTION_BOL_VALUE = 4;
+	private static final int TAB_POS_OPTION_STR_VALUE = 5;
+	private static final int TAB_POS_OPTION_DESC      = 6;
+
+//	private static final Color TAB_DISABLED_COL_BG = new Color(240, 240, 240);
 
 	private JXTable _optionsTable = new JXTable()
 	{
@@ -73,6 +78,28 @@ implements ActionListener, TableModelListener
 			}
 			return tip;
 		}
+
+		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+		public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
+		{
+			Component c = super.prepareRenderer(renderer, row, column);
+
+			int view_TAB_POS_OPTION_BOL_VALUE  = convertColumnIndexToView(TAB_POS_OPTION_BOL_VALUE);
+			int view_TAB_POS_OPTION_STR_VALUE  = convertColumnIndexToView(TAB_POS_OPTION_STR_VALUE);
+			
+			if (column == view_TAB_POS_OPTION_BOL_VALUE || column == view_TAB_POS_OPTION_STR_VALUE)
+			{
+				// if not editable, lets disable it
+				// calling isCellEditable instead of getModel().isCellEditable(row, column)
+				// does the viewRow->modelRow translation for us.
+				boolean isCellEditable = isCellEditable(row, column);
+
+				c.setEnabled( isCellEditable );
+//				if ( ! isCellEditable)
+//					c.setBackground(TAB_DISABLED_COL_BG);
+			}
+			return c;
+		}
 	};
 
 	public WizardOfflinePage4()
@@ -87,12 +114,13 @@ implements ActionListener, TableModelListener
 		// Create a TABLE
 		Vector<String> tabHead = new Vector<String>();
 		tabHead.setSize(TAB_HEADER.length);
-		tabHead.set(TAB_POS_ICON,         TAB_HEADER[TAB_POS_ICON]);
-		tabHead.set(TAB_POS_TAB_NAME,     TAB_HEADER[TAB_POS_TAB_NAME]);
-		tabHead.set(TAB_POS_OPTION,       TAB_HEADER[TAB_POS_OPTION]);
-		tabHead.set(TAB_POS_OPTION_VALUE, TAB_HEADER[TAB_POS_OPTION_VALUE]);
-		tabHead.set(TAB_POS_OPTION_DTYPE, TAB_HEADER[TAB_POS_OPTION_DTYPE]);
-		tabHead.set(TAB_POS_OPTION_DESC,  TAB_HEADER[TAB_POS_OPTION_DESC]);
+		tabHead.set(TAB_POS_ICON,             TAB_HEADER[TAB_POS_ICON]);
+		tabHead.set(TAB_POS_TAB_NAME,         TAB_HEADER[TAB_POS_TAB_NAME]);
+		tabHead.set(TAB_POS_OPTION,           TAB_HEADER[TAB_POS_OPTION]);
+		tabHead.set(TAB_POS_OPTION_DTYPE,     TAB_HEADER[TAB_POS_OPTION_DTYPE]);
+		tabHead.set(TAB_POS_OPTION_BOL_VALUE, TAB_HEADER[TAB_POS_OPTION_BOL_VALUE]);
+		tabHead.set(TAB_POS_OPTION_STR_VALUE, TAB_HEADER[TAB_POS_OPTION_STR_VALUE]);
+		tabHead.set(TAB_POS_OPTION_DESC,      TAB_HEADER[TAB_POS_OPTION_DESC]);
 
 		Vector<Vector<Object>> tabData = populateTable();
 
@@ -102,13 +130,20 @@ implements ActionListener, TableModelListener
 
 			public Class<?> getColumnClass(int column) 
 			{
-				if (column == TAB_POS_ICON)       return Icon.class;
+				if (column == TAB_POS_ICON)             return Icon.class;
+				if (column == TAB_POS_OPTION_BOL_VALUE) return Boolean.class;
 				return Object.class;
 			}
+
 			public boolean isCellEditable(int row, int col)
 			{
-				if (col == TAB_POS_OPTION_VALUE)
-					return true;
+				if (col == TAB_POS_OPTION_BOL_VALUE || col == TAB_POS_OPTION_STR_VALUE)
+				{
+					String datatype = getValueAt(row, TAB_POS_OPTION_DTYPE).toString();
+					boolean isBoolean = "Boolean".equals(datatype);
+					if (   isBoolean && col == TAB_POS_OPTION_BOL_VALUE) return true;
+					if ( ! isBoolean && col == TAB_POS_OPTION_STR_VALUE) return true;
+				}
 
 				return false;
 			}
@@ -153,12 +188,13 @@ implements ActionListener, TableModelListener
 							row = new Vector<Object>();
 							row.setSize(TAB_HEADER.length);
 
-							row.set(TAB_POS_ICON,         cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
-							row.set(TAB_POS_TAB_NAME,     cm.getDisplayName());
-							row.set(TAB_POS_OPTION,       key);
-							row.set(TAB_POS_OPTION_VALUE, val);
-							row.set(TAB_POS_OPTION_DTYPE, dataType);
-							row.set(TAB_POS_OPTION_DESC,  desc);
+							row.set(TAB_POS_ICON,             cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+							row.set(TAB_POS_TAB_NAME,         cm.getDisplayName());
+							row.set(TAB_POS_OPTION,           key);
+							row.set(TAB_POS_OPTION_DTYPE,     dataType);
+							row.set(TAB_POS_OPTION_BOL_VALUE, "Boolean".equals(dataType) ? new Boolean(val) : new Boolean(false));
+							row.set(TAB_POS_OPTION_STR_VALUE, val);
+							row.set(TAB_POS_OPTION_DESC,      desc);
 
 							tab.add(row);
 						}
@@ -173,44 +209,50 @@ implements ActionListener, TableModelListener
 	@Override
 	public void tableChanged(TableModelEvent e)
 	{
-		// This wasnt kicked off for a table change...
+		// This wasn't kicked off for a table change...
 		setProblem(validateContents(null,null));
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	protected String validateContents(Component comp, Object event)
 	{
-		TableModel tm = _optionsTable.getModel();
+		DefaultTableModel tm = (DefaultTableModel) _optionsTable.getModel();
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
-			String  option     = (String)  tm.getValueAt(r, TAB_POS_OPTION);
-			String  optionVal  = (String)  tm.getValueAt(r, TAB_POS_OPTION_VALUE);
-			String  optionType = (String)  tm.getValueAt(r, TAB_POS_OPTION_DTYPE);
+			String  option        = (String)  tm.getValueAt(r, TAB_POS_OPTION);
+			Boolean optionBolVal  = (Boolean) tm.getValueAt(r, TAB_POS_OPTION_BOL_VALUE);
+			String  optionStrVal  = (String)  tm.getValueAt(r, TAB_POS_OPTION_STR_VALUE);
+			String  optionType    = (String)  tm.getValueAt(r, TAB_POS_OPTION_DTYPE);
 
 			if (optionType.equals("Integer"))
 			{
 				try 
 				{
-					Integer.parseInt(optionVal); 
+					Integer.parseInt(optionStrVal); 
 				}
 				catch (NumberFormatException ignore) 
 				{
-					return "option '"+option+"', must be a number. Now it's '"+optionVal+"'.";
+					return "option '"+option+"', must be a number. Now it's '"+optionStrVal+"'.";
 				}
 			}
 			if (optionType.equals("Boolean"))
 			{
+			//	setValueAt(optionBolVal.toString(),  r, TAB_POS_OPTION_STR_VALUE);
+				((Vector)tm.getDataVector().get(r)).set(TAB_POS_OPTION_STR_VALUE, optionBolVal.toString());
+				optionStrVal  = (String)  tm.getValueAt(r, TAB_POS_OPTION_STR_VALUE);
+				
 				boolean ok = false;
-				if      (optionVal.equalsIgnoreCase("true"))  ok = true;
-				else if (optionVal.equalsIgnoreCase("false")) ok = true;
+				if      (optionStrVal.equalsIgnoreCase("true"))  ok = true;
+				else if (optionStrVal.equalsIgnoreCase("false")) ok = true;
 				else ok = false;
 				
 				if (!ok)
-					return "option '"+option+"', must be 'true' or 'false'. Now it's '"+optionVal+"'.";
+					return "option '"+option+"', must be 'true' or 'false'. Now it's '"+optionStrVal+"'.";
 			}
 
 			// Now write the info...
-			putWizardData( option, optionVal);
+			putWizardData( option, optionStrVal);
 		}
 		return null;
 	}

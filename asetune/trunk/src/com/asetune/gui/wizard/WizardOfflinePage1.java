@@ -12,19 +12,24 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Map;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.table.TableModel;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
+import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.AseTune;
 import com.asetune.Version;
@@ -44,6 +49,7 @@ implements ActionListener
 	private static final String WIZ_DESC = "ASE information";
 	private static final String WIZ_HELP = "Connection information about the ASE server to sample statistics from.";
 	
+	private JCheckBox  _cmdLine_chk = new JCheckBox("Use Command Line Switches for the below information", false);
 	private JComboBox  _aseName	    = new JComboBox();
 //	private JTextField _aseName     = new JTextField("");
 	private JTextField _aseHost     = new JTextField("");
@@ -68,8 +74,15 @@ implements ActionListener
 		_aseUsername.setName("aseUsername");
 		_asePassword.setName("asePassword");
 
+		_cmdLine_chk.setToolTipText("<html>" +
+				"Command Line Switches '-Uuser -Ppasswd -Ssrvname' will override information in this wizard.<br>" +
+				"This so you can generate one template file that is applicable for many servers.<br>" +
+				"</html>");
+
 		// Add a helptext
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
+
+		add(_cmdLine_chk, "skip, wrap");
 
 		add(new JLabel("ASE Name"));
 		add(_aseName, "growx, wrap");
@@ -92,7 +105,20 @@ implements ActionListener
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_CONN_TEST_ASE");
 		add(button, "span, align right");
-		
+
+		// Command line switches
+		String cmdLineSwitched = 
+			"<html>" +
+			"The above options can be overridden or specified using the following command line switches" +
+			"<table>" +
+			"<tr><code>-U,--user &lt;user&gt;    </code><td></td>Username when connecting to server.</tr>" +
+			"<tr><code>-P,--passwd &lt;passwd&gt;</code><td></td>Password when connecting to server. null=noPasswd</tr>" +
+			"<tr><code>-S,--server &lt;server&gt;</code><td></td>Server to connect to</tr>" +
+			"</table>" +
+			"</html>";
+		add( new JLabel(""), "span, wrap 30" );
+		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
+
 		initData();
 	}
 
@@ -100,8 +126,17 @@ implements ActionListener
 	{
 		try 
 		{
-			_interfacesDriver = new SyInterfacesDriver();
-			_interfacesDriver.open();
+			String interfacesFile = System.getProperty("interfaces.file");
+			if (interfacesFile != null)
+			{
+				_interfacesDriver = new SyInterfacesDriver(interfacesFile);
+				_interfacesDriver.open(interfacesFile);
+			}
+			else
+			{
+				_interfacesDriver = new SyInterfacesDriver();
+				_interfacesDriver.open();
+			}
 		}
 		catch(Exception ex)
 		{
@@ -147,6 +182,24 @@ implements ActionListener
 	@Override
 	protected String validateContents(Component comp, Object event)
 	{
+		if (_cmdLine_chk.isSelected())
+		{
+			_aseName    .setEnabled(false);
+			_aseHost    .setEnabled(false);
+			_asePort    .setEnabled(false);
+			_aseUsername.setEnabled(false);
+			_asePassword.setEnabled(false);
+			return null;
+		}
+		else
+		{
+			_aseName    .setEnabled(true);
+			_aseHost    .setEnabled(true);
+			_asePort    .setEnabled(true);
+			_aseUsername.setEnabled(true);
+			_asePassword.setEnabled(true);
+		}
+
 //		String name = null;
 //		if (comp != null)
 //			name = comp.getName();
@@ -186,7 +239,7 @@ implements ActionListener
 			problem = problem.substring(0, problem.length()-2);
 		}
 		
-		return problem.length() == 0 ? null : "Following fields cant be empty: "+problem;
+		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
 	}
 
 	public void actionPerformed(ActionEvent ae)
@@ -286,5 +339,44 @@ implements ActionListener
 			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
 		}
 		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void saveWizardData()
+	{
+		if (_cmdLine_chk.isSelected())
+		{
+			Map<String, Object> wizData = getWizardDataMap();
+			wizData.remove(_aseName    .getName());
+			wizData.remove(_aseHost    .getName());
+			wizData.remove(_asePort    .getName());
+			wizData.remove(_aseUsername.getName());
+			wizData.remove(_asePassword.getName());
+		}
+		else
+		{
+			Map<String, Object> wizData = getWizardDataMap();
+			wizData.put(_aseName    .getName(), _aseName    .getSelectedItem());
+			wizData.put(_aseHost    .getName(), _aseHost    .getText());
+			wizData.put(_asePort    .getName(), _asePort    .getText());
+			wizData.put(_aseUsername.getName(), _aseUsername.getText());
+			wizData.put(_asePassword.getName(), _asePassword.getText());
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowBack(String stepName, Map settings, Wizard wizard)
+    {
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
+    }
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowNext(String stepName, Map settings, Wizard wizard)
+	{
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
 	}
 }

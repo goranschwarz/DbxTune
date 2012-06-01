@@ -551,10 +551,10 @@ extends CountersModel
 			// A LOT of stuff can be included here...
 			if (Remark_pos >= 0 && UsedCount_pos >= 0 && IndexID_pos >= 0 )
 			{
-				int UsedCount    = ((Number)diffData.getValueAt(rowId, UsedCount_pos   )).intValue();;
-				int IndexID      = ((Number)diffData.getValueAt(rowId, IndexID_pos     )).intValue();;
-				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();;
-				int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();;
+				int UsedCount    = ((Number)diffData.getValueAt(rowId, UsedCount_pos   )).intValue();
+				int IndexID      = ((Number)diffData.getValueAt(rowId, IndexID_pos     )).intValue();
+				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();
+				int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();
 				
 				String remark = null;
 				if (IndexID == 0 && UsedCount > 0 && LogicalReads > 0)
@@ -562,6 +562,9 @@ extends CountersModel
 //					remark = RemarkDictionary.T_SCAN_OR_HTAB_INS;
 					remark = RemarkDictionary.TABLE_SCAN;
 
+					// Allow up to 10% variance of inserts and still consider it to be a "Table Scan"
+					// But if it's more than that 10% inserts, then consider it as a "Heap Table Insert"
+					// pctNear is just: 10% more or 10% less than the baseValue(UsedCount)
 					if ( MathUtils.pctNear(10, UsedCount, RowsInserted) )
 						remark = RemarkDictionary.HEAP_TAB_INS;
 				}

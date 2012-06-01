@@ -16,6 +16,7 @@ import java.util.Properties;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -33,6 +34,8 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.H2UrlHelper;
 
 
 
@@ -47,9 +50,12 @@ implements ActionListener
 	private static final String WIZ_DESC = "JDBC Connection information";
 	private static final String WIZ_HELP = "This is the JDBC Connectivity information to a datastore where the sampled data will be stored.\nIf desired tables are not created in the destination database, they will be created be the offline sampler.";
 
-	private JTextField _jdbcDriver   = new JTextField("org.h2.Driver");
+//	private JComboBox  _writer_cbx     = new JComboBox();
+	private JComboBox  _jdbcDriver_cbx = new JComboBox();
+	private JComboBox  _jdbcUrl_cbx    = new JComboBox();
+//	private JTextField _jdbcDriver   = new JTextField("org.h2.Driver");
 //	private JTextField _jdbcUrl      = new JTextField("jdbc:h2:pcdb_yyy");
-	private JTextField _jdbcUrl      = new JTextField("jdbc:h2:file:[<path>]<dbname>"); 
+//	private JTextField _jdbcUrl      = new JTextField("jdbc:h2:file:[<path>]<dbname>"); 
 	private JButton    _jdbcUrl_but  = new JButton("...");
 	private JTextField _jdbcUsername = new JTextField("sa");
 	private JTextField _jdbcPassword = new JPasswordField();
@@ -70,12 +76,15 @@ implements ActionListener
 		
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
-		_jdbcDriver  .setName("jdbcDriver");
-		_jdbcUrl     .setName("jdbcUrl");
-		_jdbcUsername.setName("jdbcUser");
-		_jdbcPassword.setName("jdbcPasswd");
+		_jdbcDriver_cbx.setName("jdbcDriver");
+		_jdbcUrl_cbx   .setName("jdbcUrl");
+		_jdbcUsername  .setName("jdbcUser");
+		_jdbcPassword  .setName("jdbcPasswd");
 //		_pcsH2Option_startH2NetworkServer_chk.setName("startH2NetworkServer");
 
+		_jdbcDriver_cbx.setEditable(true);
+		_jdbcUrl_cbx   .setEditable(true);
+		
 		// tool tip
 		_jdbcUrl_but .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
 		_pcsH2Option_startH2NetworkServer_chk.setToolTipText("Start the H2 database engine in 'server' mode, so we can connect to the server while the PCS is storing information...");
@@ -84,10 +93,10 @@ implements ActionListener
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
 		add(new JLabel("JDBC Driver"));
-		add(_jdbcDriver, "growx, wrap");
+		add(_jdbcDriver_cbx, "growx, wrap");
 
 		add(new JLabel("JDBC Url"));
-		add(_jdbcUrl,     "growx, split");
+		add(_jdbcUrl_cbx,     "growx, split");
 		add(_jdbcUrl_but, "wrap");
 
 		add(new JLabel("Username"));
@@ -102,6 +111,18 @@ implements ActionListener
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_CONN_TEST_JDBC");
 		add(button, "span, align right, wrap 20");
+
+		// Command line switches
+		String cmdLineSwitched = 
+			"<html>" +
+			"The above options can be overridden or specified using the following command line switches" +
+			"<table>" +
+			"<tr><code>-D,--dbtype  &lt;H2|ASE|ASA&gt;</code><td></td>type of database to use as offline store.</tr>" +
+			"<tr><code>-d,--dbname &lt;connSpec&gt;   </code><td></td>Connection specification to store offline data.<br> For details about 'connSpec' see --help </tr>" +
+			"</table>" +
+			"</html>";
+		add( new JLabel(""), "span, wrap 30" );
+		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
 
 		// Add comment at the bottom
 		String remember = "<html>" +
@@ -123,7 +144,7 @@ implements ActionListener
 		add(urlExample_txt, "pushx, growx, wrap" );
 
 		_jdbcUrl_but.addActionListener(this);
-		_jdbcDriver.addActionListener(this);
+		_jdbcDriver_cbx.addActionListener(this);
 
 		initData();
 	}
@@ -131,7 +152,23 @@ implements ActionListener
 	private void initData()
 	{
 		// Set initial text for jdbc driver && kick of the action...
-		_jdbcDriver.setText( _jdbcDriver.getText() );
+//		_jdbcDriver.setText( _jdbcDriver.getText() );
+
+//		_writer_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
+
+		_jdbcDriver_cbx.addItem("org.h2.Driver");
+		_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+
+		// http://www.h2database.com/html/features.html#database_url
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
+
+		// http://infocenter.sybase.com/help/topic/com.sybase.dc39001_0605/html/prjdbc/X39384.htm
+		_jdbcUrl_cbx   .addItem("jdbc:sybase:Tds:<host>:<port>");
+		_jdbcUrl_cbx   .addItem("jdbc:sybase:Tds:<host>:<port>[/<dbname>]");
 	}
 
 	protected String validateContents(Component comp, Object event)
@@ -142,9 +179,16 @@ implements ActionListener
 
 		//System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
 
+		String jdbcDriver = _jdbcDriver_cbx.getSelectedItem().toString();
+		if ("org.h2.Driver".equals(jdbcDriver))
+			_pcsH2Option_startH2NetworkServer_chk.setVisible(true);
+		else
+			_pcsH2Option_startH2NetworkServer_chk.setVisible(false);
+
+		
 		String problem = "";
-		if ( _jdbcDriver  .getText().trim().length() <= 0) problem += "Driver, ";
-		if ( _jdbcUrl     .getText().trim().length() <= 0) problem += "Url, ";
+		if ( _jdbcDriver_cbx  .getSelectedItem().toString().trim().length() <= 0) problem += "Driver, ";
+		if ( _jdbcUrl_cbx     .getSelectedItem().toString().trim().length() <= 0) problem += "Url, ";
 		if ( _jdbcUsername.getText().trim().length() <= 0) problem += "User, ";
 
 		if (problem.length() > 0  &&  problem.endsWith(", "))
@@ -155,12 +199,12 @@ implements ActionListener
 		if ( problem.length() > 0 )
 			return "Following fields cant be empty: "+problem;
 
-		if ( _jdbcDriver.getText().trim().equals("org.h2.Driver") )
+		if ( _jdbcDriver_cbx.getSelectedItem().toString().trim().equals("org.h2.Driver") )
 		{
-			if ( _jdbcUrl.getText().indexOf("<>") > 0)
+			if ( _jdbcUrl_cbx.getSelectedItem().toString().indexOf("<>") > 0)
 				problem = "Please replace the <dbname> with a real database name string.";
 
-			if ( _jdbcUrl.getText().indexOf("[<path>]") > 0)
+			if ( _jdbcUrl_cbx.getSelectedItem().toString().indexOf("[<path>]") > 0)
 				problem = "Please replace the [<path>] with a real pathname or delete it.";
 		}
 		if ( problem.length() > 0 )
@@ -181,8 +225,8 @@ implements ActionListener
 		if (name.equals("BUTTON_CONN_TEST_JDBC"))
 		{
 			testJdbcConnection("testConnect", 
-				_jdbcDriver.getText(), 
-				_jdbcUrl.getText(),
+				_jdbcDriver_cbx.getSelectedItem().toString(), 
+				_jdbcUrl_cbx.getSelectedItem().toString(),
 				_jdbcUsername.getText(), 
 				_jdbcPassword.getText());
 		}
@@ -190,50 +234,65 @@ implements ActionListener
 		// --- URL: BUTTON: "..." 
 		if (_jdbcUrl_but.equals(source))
 		{
-			JFileChooser fc = new JFileChooser();
-			if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-				fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+//			JFileChooser fc = new JFileChooser();
+//			if (System.getProperty("ASETUNE_SAVE_DIR") != null)
+//				fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+//			int returnVal = fc.showOpenDialog(this);
+//			if(returnVal == JFileChooser.APPROVE_OPTION) 
+//			{
+//				String url  = _jdbcUrl_cbx.getSelectedItem().toString();
+//				String path = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
+//
+//				// Take away db suffix. ".h2.db"
+//				if (path.matches(".*\\.h2\\.db.*"))
+//					path = path.replaceAll("\\.h2\\.db", "");
+//
+//				// Take away db suffix. ".data.db"
+//				if (path.matches(".*\\.data\\.db.*"))
+//					path = path.replaceAll("\\.data\\.db", "");
+//
+//				// Take away index suffix. ".index.db"
+//				if (path.matches(".*\\.index\\.db.*"))
+//					path = path.replaceAll("\\.index\\.db", "");
+//
+//				// Take away log suffix. ".99.log.db"
+//				if (path.matches(".*\\.[0-9]*\\.log\\.db.*"))
+//					path = path.replaceAll("\\.[0-9]*\\.log\\.db", "");
+//
+//				// fill in the template
+//				if ( url.matches(".*\\[<path>\\]<dbname>.*") )
+//					url = url.replaceFirst("\\[<path>\\]<dbname>", path);
+//				else
+//					url += path;
+//
+//				_jdbcUrl_cbx.setText(url);
+//			}
+			String currentUrl = _jdbcUrl_cbx.getEditor().getItem().toString();
+			H2UrlHelper h2help = new H2UrlHelper(currentUrl);
+
+			File baseDir = h2help.getDir(System.getProperty("ASETUNE_SAVE_DIR"));
+			JFileChooser fc = new JFileChooser(baseDir);
+
 			int returnVal = fc.showOpenDialog(this);
 			if(returnVal == JFileChooser.APPROVE_OPTION) 
 			{
-				String url  = _jdbcUrl.getText();
-				String path = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
+				String newFile = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
+				String newUrl  = h2help.getNewUrl(newFile);
 
-				// Take away db suffix. ".h2.db"
-				if (path.matches(".*\\.h2\\.db.*"))
-					path = path.replaceAll("\\.h2\\.db", "");
-
-				// Take away db suffix. ".data.db"
-				if (path.matches(".*\\.data\\.db.*"))
-					path = path.replaceAll("\\.data\\.db", "");
-
-				// Take away index suffix. ".index.db"
-				if (path.matches(".*\\.index\\.db.*"))
-					path = path.replaceAll("\\.index\\.db", "");
-
-				// Take away log suffix. ".99.log.db"
-				if (path.matches(".*\\.[0-9]*\\.log\\.db.*"))
-					path = path.replaceAll("\\.[0-9]*\\.log\\.db", "");
-
-				// fill in the template
-				if ( url.matches(".*\\[<path>\\]<dbname>.*") )
-					url = url.replaceFirst("\\[<path>\\]<dbname>", path);
-				else
-					url += path;
-
-				_jdbcUrl.setText(url);
+				_jdbcUrl_cbx.getEditor().setItem(newUrl);
+			//	checkForH2LocalDrive(null);
 			}
 		}
 		
-		// --- TEXT FILED: "JDBC Driver" 
-		if (_jdbcDriver.equals(source))
-		{
-			String jdbcDriver = _jdbcDriver.getText();
-			if ("org.h2.Driver".equals(jdbcDriver))
-				_pcsH2Option_startH2NetworkServer_chk.setVisible(true);
-			else
-				_pcsH2Option_startH2NetworkServer_chk.setVisible(false);
-		}
+//		// --- TEXT FILED: "JDBC Driver" 
+//		if (_jdbcDriver.equals(source))
+//		{
+//			String jdbcDriver = _jdbcDriver.getText();
+//			if ("org.h2.Driver".equals(jdbcDriver))
+//				_pcsH2Option_startH2NetworkServer_chk.setVisible(true);
+//			else
+//				_pcsH2Option_startH2NetworkServer_chk.setVisible(false);
+//		}
 	}
 
 	private boolean testJdbcConnection(String appname, String driver, String url, String user, String passwd)

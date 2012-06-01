@@ -166,20 +166,21 @@ public class WizardOffline
 		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcPassword,         true, true);
 		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_startH2NetworkServer, true, false);
 
-		fixProp(settings, "conn.",    "aseHost",     true, false);
-		fixProp(settings, "conn.",    "aseName",     true, false);
-		fixProp(settings, "conn.",    "asePassword", true, true);
-		fixProp(settings, "conn.",    "asePort",     true, false);
-		fixProp(settings, "conn.",    "aseUsername", true, false);
+		fixProp(settings, "conn.",    "aseHost",     false, false);
+		fixProp(settings, "conn.",    "aseName",     false, false);
+		fixProp(settings, "conn.",    "asePassword", false, true);
+		fixProp(settings, "conn.",    "asePort",     false, false);
+		fixProp(settings, "conn.",    "aseUsername", false, false);
 
 		fixProp(settings, "conn.",    "sshHostname", false, false);
 		fixProp(settings, "conn.",    "sshPort",     false, false);
 		fixProp(settings, "conn.",    "sshUsername", false, false);
 		fixProp(settings, "conn.",    "sshPassword", false, true);
 
-		fixProp(settings, "offline.", "sampleTime",          true,  false);
-		fixProp(settings, "offline.", "shutdownAfterXHours", false, false);
-		fixProp(settings, "offline.", "storeFile",           true,  false);
+		fixProp(settings, "offline.", "sampleTime",           true,  false);
+		fixProp(settings, "offline.", "startRecordingAtTime", false, false);
+		fixProp(settings, "offline.", "shutdownAfterXHours",  false, false);
+		fixProp(settings, "offline.", "storeFile",            true,  false); // not really used, but lets keep it for now...
 
 
 		//Add the PCS Writer, or add it as a wizard property?
@@ -194,7 +195,7 @@ public class WizardOffline
 		for (Iterator<String> iterator = settings.keySet().iterator(); iterator.hasNext();)
 		{
 			String key = iterator.next();
-			String val = settings.get(key).toString();
+			String val = settings.get(key) + "";
 			
 			if(key.startsWith("to-be-discarded.")) // these entries will be discarded
 			{
@@ -409,8 +410,8 @@ public class WizardOffline
 				public void actionPerformed(ActionEvent e)
 				{
 					JFileChooser fc = new JFileChooser(_filename);
-//					if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-//						fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+					if (System.getProperty("ASETUNE_SAVE_DIR") != null)
+						fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
 
 					int returnVal = fc.showOpenDialog(null);
 					if (returnVal == JFileChooser.APPROVE_OPTION) 

@@ -3580,22 +3580,32 @@ implements Cloneable, ITableTooltip
 			return;
 
 		// Save first X rows from the Absolute values
-		int rows = Math.min(maxNumOfDdlsToPersist, absData.getRowCount());
-		for (int r=0; r<rows; r++)
+//		int rows = Math.min(maxNumOfDdlsToPersist, absData.getRowCount());
+		int rowsToSend = maxNumOfDdlsToPersist;
+		int sentRows = 0;
+		for (int r=0; r<absData.getRowCount(); r++)
 		{
 			Object DBName_obj     = absData.getValueAt(r, DBName_pos);
 			Object ObjectName_obj = absData.getValueAt(r, ObjectName_pos);
 
 			if (DBName_obj instanceof String && ObjectName_obj instanceof String)
-				pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".abs, row="+r);
+			{
+				if (sendDdlDetailsRequestForSpecificRow((String)DBName_obj, (String)ObjectName_obj, r, absData, diffData, rateData))
+				{
+					pch.addDdl((String)DBName_obj, (String)ObjectName_obj, getName()+".abs, row="+r);
+					sentRows++;
+					if (sentRows >= rowsToSend)
+						break;
+				}
+			}
 		}
 
 		// From here on we need diffData to continue
 		if (diffData == null)
 			return;
 
-		// No need to continue iff all rows has already been added :)
-		rows = Math.min(maxNumOfDdlsToPersist, diffData.getRowCount());
+		// No need to continue iff al rows has already been added :)
+		int rows = Math.min(maxNumOfDdlsToPersist, diffData.getRowCount());
 		if (rows == diffData.getRowCount())
 			return;
 
@@ -3697,7 +3707,27 @@ implements Cloneable, ITableTooltip
 //			}
 //		}
 			
-	} // end: sendDdlDetailsRequest
+	} // end: method
+
+	/**
+	 * Override this to discard records from the save set
+	 * 
+	 * @param dBName
+	 * @param objectName
+	 * @param row
+	 * @param absData
+	 * @param diffData
+	 * @param rateData
+	 * 
+	 * @return true if the row is to be sent to the DDL storage 
+	 */
+	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	{
+		return true;
+	}
+
+
+
 
 	/** 
 	 * Get number of rows to save/request ddl information for 
