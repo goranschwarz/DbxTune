@@ -584,12 +584,45 @@ public class MonTablesDictionary
 			}
 			catch (SQLException ex)
 			{
-				_logger.warn("MonTablesDictionary:initialize, problems executing: "+SQL_SP_VERSION+ ". Exception: "+ex.getMessage());
-				if (_hasGui)
-					SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-				return;
+				// Msg 2812, Level 16, State 5:
+				// Server 'GORAN_12503_DS', Line 1:
+				// Stored procedure 'sp_version' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
+				if (ex.getErrorCode() == 2818)
+				{
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"'. " +
+							"The stored procedure 'sp_version' was introduced in ASE 12.5.3, which I can't find in the connected ASE, this implies that 'installmaster' has not been applied after upgrade. " +
+							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+					_logger.error(msg);
+	
+					String msgHtml = 
+						"<html>" +
+						"ASE 'installmaster' script may be of a faulty version. <br>" +
+						"<br>" +
+						"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"'.<br>" +
+						"The stored procedure 'sp_version' was introduced in ASE 12.5.3, which I can't find in the connected ASE, <br>" +
+						"this implies that 'installmaster' has not been applied after upgrade.<br>" +
+						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
+						"<br>" +
+						"Do the following on the machine that hosts the ASE:<br>" +
+						"<font size=\"4\">" +
+						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+						"</font>" +
+						"<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
+						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
+						"</html>";
+					if (_hasGui)
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
+				}
+				else
+				{
+					_logger.warn("MonTablesDictionary:initialize, problems executing: "+SQL_SP_VERSION+ ". Exception: "+ex.getMessage());
+					if (_hasGui)
+						SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+					return;
+				}
 			}
-		}
+		} // end: if (aseVersionNum >= 12530)
 
 		_logger.info("ASE 'montables'     for sp_version shows: Status='"+montablesStatus    +"', VersionNum='"+montablesVersionNum    +"', VersionStr='"+montablesVersionStr+"'.");
 		_logger.info("ASE 'installmaster' for sp_version shows: Status='"+installmasterStatus+"', VersionNum='"+installmasterVersionNum+"', VersionStr='"+installmasterVersionStr+"'.");
