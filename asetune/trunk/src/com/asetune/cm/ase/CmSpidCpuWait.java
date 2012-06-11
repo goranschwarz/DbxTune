@@ -223,16 +223,19 @@ extends CountersModel
 	@Override
 	public String getSqlInitForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		String monWaitInfoWhere = "";
+		if (aseVersion >= 15700)
+			monWaitInfoWhere = "where Language = ''en_US''";
+
 		String sql =
 			"/*------ Create permanent tables for monWaitEventInfo & monWaitClassInfo in tempdb. -------*/ \n" +
 			"/*------ hopefully this is less expensive than doing the join via CIS -------*/ \n" +
 			"if ((select object_id('tempdb.guest.monWaitEventInfo')) is null) \n" +
-			"   exec('select * into tempdb.guest.monWaitEventInfo from master..monWaitEventInfo') \n" +
+			"   exec('select * into tempdb.guest.monWaitEventInfo from master..monWaitEventInfo "+monWaitInfoWhere+"') \n" +
 			"\n" +
 			"if ((select object_id('tempdb.guest.monWaitClassInfo')) is null) \n" +
-			"   exec('select * into tempdb.guest.monWaitClassInfo from master..monWaitClassInfo') \n" +
+			"   exec('select * into tempdb.guest.monWaitClassInfo from master..monWaitClassInfo "+monWaitInfoWhere+"') \n" +
 			"";
-		
 	
 		return sql;
 	}

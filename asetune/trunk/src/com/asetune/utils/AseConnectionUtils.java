@@ -1285,12 +1285,51 @@ public class AseConnectionUtils
 	 */
 	public static boolean checkForMonitorOptions(Connection conn, String user, boolean gui, Component parent, String... needsConfig)
 	{
-		int    aseVersionNum = 0;
-		String aseVersionStr = "";
+		int    aseVersionNum  = 0;
+		String aseVersionStr  = "";
 		String atAtServername = "";
+		String aseLanguage    = "";
 		String sql = "";
 		try
 		{
+			// Set LANGUAGE to ENGLISH
+			// if default langauge isn't 'english', then ASE 15.7 and above will throw error, when accessing monTables, monTableColumns, monWaitClassInfo, monWaitEventInfo
+			//      Msg 12061, Level 16, State 1:
+			//      Server 'goran', Line 1:
+			//      Usen est une langue non prise en charge pour la localisation MDA !
+			try
+			{
+				sql = "select @@language";
+				Statement stmt = conn.createStatement();
+				ResultSet rs = stmt.executeQuery(sql);
+				while ( rs.next() )
+				{
+					aseLanguage = rs.getString(1);
+				}
+				rs.close();
+				
+				if ( ! "us_english".equals(aseLanguage))
+				{
+					_logger.info("Changing the connected ASE users default Language from '"+aseLanguage+"' to 'us_english'.");
+					sql = "set language us_english";
+					stmt = conn.createStatement();
+					stmt.executeUpdate(sql);
+	
+					sql = "select @@language";
+					stmt = conn.createStatement();
+					rs = stmt.executeQuery(sql);
+					while ( rs.next() )
+					{
+						aseLanguage = rs.getString(1);
+					}
+					rs.close();
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("checkForMonitorOptions, set or get @@language failed.", ex);
+			}
+
 			// Get the version of the ASE server
 			// select @@version_number (new since 15 I think, this means the local try block)
 			try
@@ -1352,7 +1391,7 @@ public class AseConnectionUtils
 			}
 			rs.close();
 
-			_logger.info("Just connected to an ASE Server named '"+atAtServername+"' with Version Number "+aseVersionNum+", and the Version String '"+aseVersionStr+"'.");
+			_logger.info("Just connected to an ASE Server named '"+atAtServername+"' with Version Number "+aseVersionNum+", and the Version String '"+aseVersionStr+"', using language '"+aseLanguage+"'.");
 
 			
 			// if user name is null or empty, then get current user
@@ -2631,6 +2670,17 @@ public class AseConnectionUtils
 		}
 		else
 		{
+			String monWaitClassInfoWhere = "";
+			String monWaitEventInfoWhere = "";
+			if (MonTablesDictionary.hasInstance())
+			{
+				if (MonTablesDictionary.getInstance().aseVersionNum >= 15700)
+				{
+					monWaitClassInfoWhere = " and CI.Language = 'en_US'";
+					monWaitEventInfoWhere = "      and WI.Language = 'en_US' \n";
+				}
+			}
+
 			sqlSb.append("declare @prevWaitEventId int, @nowWaitEventId int, @spid int \n");
 			sqlSb.append("select @spid = ").append(spid).append(" \n");
 			sqlSb.append("select @prevWaitEventId = ").append(waitEventID).append(" \n");
@@ -2655,14 +2705,16 @@ public class AseConnectionUtils
 			sqlSb.append("    declare @nowWaitDescription  varchar(60), @nowClassDescription  varchar(60) \n");
 			sqlSb.append("    \n");
 			sqlSb.append("    select @prevWaitDescription  = WI.Description,  \n");
-			sqlSb.append("           @prevClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
+			sqlSb.append("           @prevClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID").append(monWaitClassInfoWhere).append(") \n");
 			sqlSb.append("    from master..monWaitEventInfo WI \n");
 			sqlSb.append("    where WI.WaitEventID = @prevWaitEventId \n");
+			sqlSb.append(monWaitEventInfoWhere);
 			sqlSb.append("    \n");
 			sqlSb.append("    select @nowWaitDescription  = WI.Description,  \n");
-			sqlSb.append("           @nowClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID) \n");
+			sqlSb.append("           @nowClassDescription = (select CI.Description from master..monWaitClassInfo CI where WI.WaitClassID = CI.WaitClassID").append(monWaitClassInfoWhere).append(") \n");
 			sqlSb.append("    from master..monWaitEventInfo WI \n");
 			sqlSb.append("    where WI.WaitEventID = @nowWaitEventId \n");
+			sqlSb.append(monWaitEventInfoWhere);
 			sqlSb.append("    \n");
 			sqlSb.append("    print 'The WaitEventID was changed from %1! to %2!, so there is no reason to do DBCC stacktrace anymore.', @prevWaitEventId, @nowWaitEventId \n");
 			sqlSb.append("    print '-------------------------------------------------------------------------------------------------' \n");

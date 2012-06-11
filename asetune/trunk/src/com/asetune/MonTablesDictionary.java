@@ -210,7 +210,12 @@ public class MonTablesDictionary
 			Statement stmt = conn.createStatement();
 			sql = SQL_TABLES.replace(FROM_TAB_NAME, monTables);
 			if ( ! offline )
+			{
+				if (aseVersionNum >= 15700)
+					sql += " where Language = 'en_US' ";
+
 				sql = sql.replace("\"", "");
+			}
 
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
@@ -266,7 +271,12 @@ public class MonTablesDictionary
 				sql = SQL_COLUMNS.replace(FROM_TAB_NAME, monTableColumns);
 				sql = sql.replace(TAB_NAME, monTableEntry._tableName);
 				if ( ! offline )
+				{
+					if (aseVersionNum >= 15700)
+						sql += " and Language = 'en_US' ";
+
 					sql = sql.replace("\"", "");
+				}
 
 				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -390,6 +400,8 @@ public class MonTablesDictionary
 			try
 			{
 				sql = SQL_MON_WAIT_CLASS_INFO_1;
+				if (aseVersionNum >= 15700)
+					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
 				int max_waitClassId = 0; 
@@ -400,8 +412,11 @@ public class MonTablesDictionary
 				rs.close();
 	
 				_monWaitClassInfo = new MonWaitClassInfoEntry[max_waitClassId+1];
-	
-				rs = stmt.executeQuery(SQL_MON_WAIT_CLASS_INFO);
+
+				sql = SQL_MON_WAIT_CLASS_INFO;
+				if (aseVersionNum >= 15700)
+					sql += " where Language = 'en_US'";
+				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
 				{
 					MonWaitClassInfoEntry entry = new MonWaitClassInfoEntry();
@@ -429,6 +444,8 @@ public class MonTablesDictionary
 			try
 			{
 				sql = SQL_MON_WAIT_EVENT_INFO_1;
+				if (aseVersionNum >= 15700)
+					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
 				int max_waitEventId = 0; 
@@ -440,7 +457,10 @@ public class MonTablesDictionary
 	
 				_monWaitEventInfo = new MonWaitEventInfoEntry[max_waitEventId+1];
 	
-				rs = stmt.executeQuery(SQL_MON_WAIT_EVENT_INFO);
+				sql = SQL_MON_WAIT_EVENT_INFO;
+				if (aseVersionNum >= 15700)
+					sql += " where Language = 'en_US'";
+				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
 				{
 					MonWaitEventInfoEntry entry = new MonWaitEventInfoEntry();
@@ -608,7 +628,7 @@ public class MonTablesDictionary
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
-						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (_hasGui)
@@ -688,7 +708,7 @@ public class MonTablesDictionary
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
-						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency.<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (_hasGui)

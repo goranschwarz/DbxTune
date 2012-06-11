@@ -423,9 +423,13 @@ extends DefaultCompletionProvider
 					if (DB_PROD_NAME_ASE.equals(dbProductName) && _aseMonTableDesc == null)
 					{
 						wait.setState("Getting MDA Table information");
-						
+						int aseVersionNum = AseConnectionUtils.getAseVersionNumber(conn);
+
 						_aseMonTableDesc = new HashMap<String, String>();
-						String sql = "select TableName, Description from master.dbo.monTables";
+						String sql = "select TableName, Description from master.dbo.monTables ";
+						if (aseVersionNum >= 15700)
+							sql += " where Language = 'en_US' ";
+
 						try
 						{
 							Statement stmnt = conn.createStatement();
@@ -618,9 +622,13 @@ extends DefaultCompletionProvider
 						if (DB_PROD_NAME_ASE.equals(dbProductName) && "master".equals(ti._tabCat) && ti._tabName.startsWith("mon") )
 						{
 							wait.setState("Getting MDA Column Description");
+							int aseVersionNum = AseConnectionUtils.getAseVersionNumber(conn);
 							
 							//String sql = "select ColumnName, TypeName, Length, Description, Precision, Scale from master.dbo.monTableColumns where TableName = '"+ti._tabName+"'";
 							String sql = "select ColumnName, Description from master.dbo.monTableColumns where TableName = '"+ti._tabName+"'";
+							if (aseVersionNum >= 15700)
+								sql += " and Language = 'en_US' ";
+
 							try
 							{
 								Statement stmnt = conn.createStatement();
