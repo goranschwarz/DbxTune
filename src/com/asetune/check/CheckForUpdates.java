@@ -102,7 +102,7 @@ public class CheckForUpdates
 
 	private static boolean _sendConnectInfo      = true;
 	private static boolean _sendMdaInfo          = true;
-	private static int     _sendMdaInfoBatchSize = 25;
+	private static int     _sendMdaInfoBatchSize = 20;
 	private static boolean _sendUdcInfo          = true;
 	private static boolean _sendCounterUsageInfo = true;
 	private static boolean _sendLogInfoWarning   = false;
@@ -1055,23 +1055,27 @@ public class CheckForUpdates
 		{
 			// monTables
 			String sql_monTables_rowCount = 
-				"select count(*) from master.dbo.monTables";
+				"select count(*) from master.dbo.monTables \n" +
+				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTables = 
 				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
-			    "from master.dbo.monTables t \n";
+			    "from master.dbo.monTables t \n" +
+				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			// monTableColumns
 			String sql_monTableColumns_rowCount = 
-				"select count(*) from master.dbo.monTableColumns";
+				"select count(*) from master.dbo.monTableColumns \n" +
+				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTableColumns = 
 				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
-			    "from master.dbo.monTableColumns c \n";
+			    "from master.dbo.monTableColumns c " +
+				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
 			
 			// monTableParameters
 			String sql_monTableParameters_rowCount = 
-				"select count(*) from master.dbo.monTableParameters";
+				"select count(*) from master.dbo.monTableParameters \n";
 
 			String sql_monTableParameters = 
 				"select type='P', p.TableName, p.TableID, p.ParameterName, p.ParameterID, p.TypeName, p.Length, Indicators=-1, p.Description  \n" +

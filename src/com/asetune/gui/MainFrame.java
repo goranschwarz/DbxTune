@@ -3833,6 +3833,12 @@ public class MainFrame
 		// Make a default for some COLUMNS if they was not found in the USER DEFINED MAP
 		if (sql == null && "SPID".equalsIgnoreCase(colName))
 		{
+			String monWaitEventInfoWhere = "";
+			if (MonTablesDictionary.hasInstance())
+			{
+				if (MonTablesDictionary.getInstance().aseVersionNum >= 15700)
+					monWaitEventInfoWhere = " and W.Language = 'en_US'";
+			}
 			sql = 
 				"select " +
 				" MP.SPID, " +
@@ -3843,7 +3849,7 @@ public class MainFrame
 				" MP.SecondsWaiting, " +
 				" MP.SecondsConnected , " +
 				" MP.WaitEventID, " +
-				" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID), " +
+				" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
 				" MP.BlockingSPID, " +
 				" procname = (select object_name(sp.id,sp.dbid) from master..sysprocesses sp where sp.spid = MP.SPID), " +
 				" MP.BatchID, " +

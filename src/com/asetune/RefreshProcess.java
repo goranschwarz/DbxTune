@@ -2269,6 +2269,11 @@ public class RefreshProcess extends Thread
 					"from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C \n" + 
 					"where W.WaitEventID=I.WaitEventID \n" + 
 					"  and I.WaitClassID=C.WaitClassID \n";
+				if (srvVersion >= 15700)
+				{
+					sql += "  and C.Language = 'en_US' \n";
+					sql += "  and I.Language = 'en_US' \n";
+				}
 				return sql;
 			}
 
