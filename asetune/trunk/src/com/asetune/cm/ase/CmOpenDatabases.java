@@ -265,7 +265,7 @@ extends CountersModel
 		         "TransactionLogFull, " + SuspendedProcesses + "BackupInProgress, LastBackupFailed, BackupStartTime, ";
 		cols2 += "";
 		cols3 += QuiesceTag;
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 		}
 		if (aseVersion >= 15025)

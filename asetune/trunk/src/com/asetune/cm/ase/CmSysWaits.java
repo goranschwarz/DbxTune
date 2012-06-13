@@ -184,7 +184,7 @@ extends CountersModel
 		}
 
 		cols1 += "Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n";
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 		}
 		cols2 += ", WaitTimePerWait = CASE WHEN Waits > 0 \n" +

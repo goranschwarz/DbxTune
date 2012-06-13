@@ -341,7 +341,7 @@ extends CountersModel
 		if (aseVersion < 12520)
 			sqlInit += "DBCC traceon(8399) \n";
 
-		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion <= 15000) )
+		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion < 15000) )
 		{
 			sqlInit = "set switch on 3604 with no_info \n";
 		}

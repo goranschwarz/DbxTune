@@ -209,7 +209,7 @@ extends CountersModel
 				 "               ELSE convert(numeric(10,1), null) \n" +
 				 "             END \n";
 		cols3 += ", "+DeviceType+" PhysicalName";
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 		}
 
