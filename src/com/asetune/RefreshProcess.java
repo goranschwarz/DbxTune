@@ -422,7 +422,7 @@ public class RefreshProcess extends Thread
 				 * SPID        KPID        DBID        ProcedureID PlanID      BatchID     ContextID   LineNumber  CpuTime     WaitTime    MemUsageKB  PhysicalReads LogicalReads PagesModified PacketsSent PacketsReceived NetworkPacketSize PlansAltered RowsAffected StartTime                      
 				 */
 				String extraCols = "";
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion <= 15000) )
+				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
 				{
 					extraCols = "  S.RowsAffected, \n";
 				}
@@ -784,7 +784,7 @@ public class RefreshProcess extends Thread
 				//       in method: saveCapturedStatements
 
 				String extraCols = "";
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion <= 15000) )
+				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
 				{
 					extraCols = "       RowsAffected, ErrorStatus, \n";
 				}
@@ -1912,7 +1912,7 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    MemUsageKB         int             not null,\n");
 				tabWriter.write("    PhysicalReads      int             not null,\n");
 				tabWriter.write("    LogicalReads       int             not null,\n");
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion <= 15000) )
+				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
 				{
 				tabWriter.write("    RowsAffected       int             not null,\n");
 				tabWriter.write("    ErrorStatus        int             not null,\n");

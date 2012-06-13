@@ -238,7 +238,7 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null)";
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 			cols2 += "S.RowsAffected, " +
 			         "tempdb_name = db_name(tempdb_id(S.SPID)), \n" +
@@ -249,7 +249,7 @@ extends CountersModel
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "S.SPID != @@spid";
 //		if (aseVersion >= 12540 && aseVersion <= 15000)
-		if (aseVersion <= 15000)
+		if (aseVersion < 15000)
 		{
 			whereSpidNotMe = "S.SPID != convert(int,@@spid)";
 		}
@@ -306,7 +306,7 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null)";
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 			cols2 += "RowsAffected=-1, " +
 			         "tempdb_name = db_name(tempdb_id(P.SPID)), \n" +

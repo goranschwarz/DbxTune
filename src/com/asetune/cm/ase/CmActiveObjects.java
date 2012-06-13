@@ -197,7 +197,7 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "SPID != @@spid";
-		if (aseVersion <= 15000)
+		if (aseVersion < 15000)
 		{
 			whereSpidNotMe = "SPID != convert(int,@@spid)";
 		}

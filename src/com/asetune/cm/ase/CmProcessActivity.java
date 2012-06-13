@@ -223,7 +223,7 @@ extends CountersModel
 		{
 			cols2+="  A.WorkTables,  \n";
 		}
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion <= 15000) )
+		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 			cols2+="  tempdb_name = db_name(tempdb_id(SP.spid)), pssinfo_tempdb_pages = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
 		}

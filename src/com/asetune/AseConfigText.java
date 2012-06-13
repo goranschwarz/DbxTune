@@ -559,7 +559,7 @@ public abstract class AseConfigText
 		protected String getSqlCurrentConfig(int aseVersion) 
 		{
 			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion <= 15000) )
+			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
 				return "show switch"; 
 			else
 				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 
