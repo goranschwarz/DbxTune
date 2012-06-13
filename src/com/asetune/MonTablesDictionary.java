@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 
@@ -629,6 +630,7 @@ public class MonTablesDictionary
 						"</font>" +
 						"<br>" +
 						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+						"<br>" +
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (_hasGui)
@@ -694,26 +696,56 @@ public class MonTablesDictionary
 				if (aseVersionNum != installmasterVersionNum)
 				{
 					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
-					_logger.error(msg);
+					_logger.warn(msg);
 	
-					String msgHtml = 
-						"<html>" +
-						"ASE 'installmaster' script may be of a faulty version. <br>" +
-						"<br>" +
-						"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
-						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
-						"<br>" +
-						"Do the following on the machine that hosts the ASE:<br>" +
-						"<font size=\"4\">" +
-						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
-						"</font>" +
-						"<br>" +
-						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
-						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
-						"</html>";
 					if (_hasGui)
-						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
+					{
+						String msgHtml = 
+							"<html>" +
+							"ASE 'installmaster' script may be of a faulty version. <br>" +
+							"<br>" +
+							"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
+							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
+							"<br>" +
+							"Do the following on the machine that hosts the ASE:<br>" +
+							"<code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+							"<br>" +
+							"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+							"<br>" +
+							"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
+							"<br>" +
+							"<hr>" + // horizontal ruler
+							"<br>" +
+							"<center><b>Choose what Version you want to initialize the Performance Counters with</b></center><br>" +
+							"</html>";
+
+//						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
 						//JOptionPane.showMessageDialog(MainFrame.getInstance(), msgHtml, Version.getAppName()+" - connect check", JOptionPane.ERROR_MESSAGE);
+
+						Configuration config = Configuration.getInstance(Configuration.USER_TEMP);
+						if (config != null)
+						{
+							Object[] options = {
+									"ASE binary Version "        + AseConnectionUtils.versionIntToStr(aseVersionNum), 
+									"ASE installmaster Version " + AseConnectionUtils.versionIntToStr(installmasterVersionNum)
+									};
+							int answer = JOptionPane.showOptionDialog(MainFrame.getInstance(), 
+//								"ASE Binary and 'installmaster' is out of sync...\n" +
+//									"What Version of ASE would you like to initialize the Performance Counters with?", // message
+								msgHtml,
+								"Initialize Performance Counters Using ASE Version", // title
+								JOptionPane.YES_NO_OPTION,
+								JOptionPane.WARNING_MESSAGE,
+								null,     //do not use a custom Icon
+								options,  //the titles of buttons
+								options[0]); //default button title
+
+							boolean useMonTablesVersion = answer > 0;
+							_logger.warn("Setting option '"+GetCounters.PROPKEY_USE_MON_TABLES_VERSION+"' to '"+useMonTablesVersion+"'.");
+							config.setProperty(GetCounters.PROPKEY_USE_MON_TABLES_VERSION, useMonTablesVersion);
+							config.save();
+						}
+					}
 				}
 			}
 		}

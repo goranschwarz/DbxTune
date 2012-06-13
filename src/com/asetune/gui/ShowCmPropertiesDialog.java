@@ -297,10 +297,13 @@ extends JDialog implements ActionListener, ChangeListener
 		//------------ END: TOOLTIP
 		
 		
-		int aseVersion = 12503;
+		int     aseVersion  = 12503;
+		boolean isCeEnabled = false;
+
 		if (_cm.isRuntimeInitialized())
 		{
-			aseVersion = _cm.getServerVersion();
+			aseVersion  = _cm.getServerVersion();
+			isCeEnabled = _cm.isClusterEnabled();
 			_initialized_true_lbl .setVisible(true);
 			_initialized_false_lbl.setVisible(false);
 		}
@@ -414,7 +417,7 @@ extends JDialog implements ActionListener, ChangeListener
 		panel.add(sqlPanel,    "wrap");
 		panel.add(otherPanel,  "growx, pushx, wrap");
 		
-		loadFieldsUsingVersion(aseVersion);
+		loadFieldsUsingVersion(aseVersion, isCeEnabled);
 
 		return panel;
 	}
@@ -478,7 +481,9 @@ extends JDialog implements ActionListener, ChangeListener
 
 		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
 
-		loadFieldsUsingVersion(ver);
+		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
+
+		loadFieldsUsingVersion(ver, isCeEnabled);
 	}
 
 	private void parseVersionString(String versionStr)
@@ -500,11 +505,9 @@ extends JDialog implements ActionListener, ChangeListener
 		_testVersionInt_txt  .setText(Integer.toString(version));
 	}
 
-	private void loadFieldsUsingVersion(int aseVersion)
+	private void loadFieldsUsingVersion(int aseVersion, boolean isCeEnabled)
 	{
 		Connection conn = AseTune.getCounterCollector().getMonConnection();
-
-		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
 
 		String sqlInit  = _cm.getSqlInitForVersion (conn, aseVersion, isCeEnabled);
 		String sqlExec  = _cm.getSqlForVersion     (conn, aseVersion, isCeEnabled);
@@ -533,6 +536,8 @@ extends JDialog implements ActionListener, ChangeListener
 		String aseVersionStr = AseConnectionUtils.versionIntToStr(aseVersion);
 		_testVersionShort_txt.setText(aseVersionStr);
 		parseVersionString(aseVersionStr);
+
+		_testVersionIsCe_chk.setSelected(isCeEnabled);
 
 		_pkCols_txt          .setText(pkCols);
 		_diffCols_txt        .setText(diffCols);

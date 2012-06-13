@@ -141,8 +141,8 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		if (isClusterEnabled)
-			pkCols.add("InstanceID");
+//		if (isClusterEnabled)
+//			pkCols.add("InstanceID");
 
 		pkCols.add("IOType");
 
@@ -155,15 +155,18 @@ extends CountersModel
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
-		cols1 = "IOType, \n" +
-		        "IOs        = sum(convert(numeric(18,0), IOs)), \n" +
-		        "IOTime     = sum(convert(numeric(18,0), IOTime)), \n" +
-		        "AvgServ_ms = \n" +
-		        "CASE \n" +
-		        "  WHEN sum(convert(numeric(18,0), IOs)) > 0 \n" +
-		        "  THEN convert(numeric(18,1), sum(convert(numeric(18,0), IOTime))/sum(convert(numeric(18,0), IOs))) \n" +
-		        "  ELSE convert(numeric(18,1), null) \n" +
-		        "END";
+//		if (isClusterEnabled)
+//			cols1 += "InstanceID, ";
+
+		cols1 += "IOType, \n" +
+		         "IOs        = sum(convert(numeric(18,0), IOs)), \n" +
+		         "IOTime     = sum(convert(numeric(18,0), IOTime)), \n" +
+		         "AvgServ_ms = \n" +
+		         "CASE \n" +
+		         "  WHEN sum(convert(numeric(18,0), IOs)) > 0 \n" +
+		         "  THEN convert(numeric(18,1), sum(convert(numeric(18,0), IOTime))/sum(convert(numeric(18,0), IOs))) \n" +
+		         "  ELSE convert(numeric(18,1), null) \n" +
+		         "END";
 		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 		}
@@ -172,7 +175,9 @@ extends CountersModel
 			"select " + cols1 + cols2 + cols3 + "\n" +
 			"from master..monIOQueue \n" +
 			"group by IOType \n" +
-			"order by 1\n";
+			"order by IOType \n";
+//			"group by IOType" + (isClusterEnabled ? ", InstanceID" : "") + "\n" +
+//			"order by IOType" + (isClusterEnabled ? ", InstanceID" : "") + "\n";
 
 		return sql;
 	}

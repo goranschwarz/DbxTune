@@ -294,7 +294,7 @@ extends CountersModel
 				"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
 				"                          and (status & 4096 != 4096) \n" +
 				"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
-				"                          and name != 'model') \n" + 
+				"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n" + 
 
 				", pack_received      = @@pack_received \n" +
 				", pack_sent          = @@pack_sent \n" +
