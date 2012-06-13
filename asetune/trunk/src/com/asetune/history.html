@@ -50,6 +50,16 @@ li   {margin-bottom: 6px}
 	   <li>when ASE is in 'SHUTDOWN mode', skip writing some warning messages...</li>
 	   <li>Tab 'SPID Activity' had some issues when highlighting SPID's</li>
 	   <li>GTable had null pointer exceptions in some cases when saving currently selected row</li>
+	   <li>SQL Statements was in some cases faulty generated for ASE 15.0.0, regarding pssinfo</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: various bug fixes for ASE Cluster Edition</b><br>
+	<ul>
+	   <li>The Performance Counter Properties Dialog did not initialize with Cluster Edition checkbox to a valid state</li>
+	   <li>CmSummary now removes checking of tempdb's that are not on the local instanceid.</li>
+	   <li>CmIoQueueSum now summarizes disk io's for all instances.</li>
 	</ul>
 	</LI>
 
@@ -69,6 +79,8 @@ li   {margin-bottom: 6px}
 	</ul>
 	</LI>
 
+- if ASE Binary is of a later version than installmaster.
+  A question with what version Performance Counters should be initialized with is presented.
 	<LI>
 	<b>Changed: Wizard; Create 'Offline Session'.</b><br>
 	<ul>
@@ -96,6 +108,12 @@ li   {margin-bottom: 6px}
 	For ASE and H2: when hitting full database errors, the connection to the monitored server is closed and
 	the entries in the PCS queue is discarded.<br>
 	A GUI message is also displayed about this if you are in GUI mode.<br>
+	</LI>
+
+	<LI>
+	<b>Changed: Performance Counter initialization.</b><br>
+	if ASE Binary is of a later version than installmaster, we have a out-of-sync situation.<br>
+	A question with what version Performance Counters should be initialized with is presented.<br>
 	</LI>
 
 	<LI>

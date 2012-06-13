@@ -380,6 +380,8 @@ implements ICounterController
 		  "http://www.sybase.com/detail?id=1091630<br>" +
 		  "http://www.sybase.com/files/White_Papers/Managing-DBMS-Workloads-v1.0-WP.pdf<br>";
 
+
+	public static final String PROPKEY_USE_MON_TABLES_VERSION = "initCounters.useMonTablesVersion";
 	
 	////////////////////////////////////////////////////////////////////////////////
 	// NOTE: if you add a CM, also add it to class: CounterSetTemplates
@@ -846,6 +848,22 @@ implements ICounterController
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off
 		if (aseVersion >= 15031)
 			AseConnectionUtils.setCompatibilityMode(conn, false);
+
+		// Normally use ASE Version to initialize CM's
+		// But here is an option to use the installed Version of the monitor tables
+		// This can be used if you want to "override" ASE version if installmaster hasn't been executed, and you simply cant do that.
+		if (monTablesVersion < aseVersion && monTablesVersion > 0)
+		{
+			Configuration config = Configuration.getCombinedConfiguration();
+			if (config.getBooleanProperty(PROPKEY_USE_MON_TABLES_VERSION, false))
+			{
+				_logger.warn("Option '"+GetCounters.PROPKEY_USE_MON_TABLES_VERSION+"' is true. " +
+						"Using ASE MonTables Version '" + AseConnectionUtils.versionIntToStr(monTablesVersion) + "' " +
+						"instead of ASE Binary Version '" + AseConnectionUtils.versionIntToStr(aseVersion)+"' " +
+						"when initializing the Performance Counters.");
+				aseVersion = monTablesVersion;
+			}
+		}
 
 		// initialize all the CM's
 		Iterator<CountersModel> i = _CMList.iterator();
