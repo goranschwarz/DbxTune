@@ -57,17 +57,18 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 295;
-	$ASEMON_LATEST_VERSION_STR = "3.0.0";
-	$ASEMON_LATEST_VERSION_STR = "2012-04-20";
+	$ASEMON_LATEST_VERSION_SRC = 305;
+	$ASEMON_LATEST_VERSION_STR = "3.0.1";
+	$ASEMON_LATEST_VERSION_STR = "2012-06-19";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asetune.com/history.html";
-	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=25, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
+	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL              = "";
-	$PROBLEM_URL               = "2011-10-10:www.asemon.se/asetune_problem.html";
-	$PROBLEM_URL               = "";
+	$PROBLEM_URL               = "2012-06-01:www.asemon.se/asetune_problem.html";
+//	$PROBLEM_URL               = "";
 
+//	$FEEDBACK_URL              = $PROBLEM_URL;
 
 	//------------------------------------------
 	// if debug is sent, print some extra info on the outstream

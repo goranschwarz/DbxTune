@@ -57,6 +57,7 @@ DB Cleanup:
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	//------------------------------------------
+	$debug                  = $_GET['debug'];
 	$rpt_summary_count      = $_GET['summary_count'];
 	$rpt_summary_diffReset  = $_GET['diffReset'];
 	$rpt_summary_os         = $_GET['summary_os'];
@@ -331,29 +332,99 @@ DB Cleanup:
 		}
 		htmlResultset($result, "asemon_counter_usage_info on: $rpt_onId");
 
+		// NEW ERRORS
+		$sql = "
+			SELECT 'NEW' as type,
+				checkId,
+				checkId as deleteLogId,
+				checkId as saveLogId,
+				sendCounter,
+				serverAddTime,
+				clientTime,
+				userName,
+				srvVersion,
+				appVersion,
+				logLevel,
+				logThreadName,
+				logClassName,
+				logLocation,
+				logMessage,
+				checkId as deleteLogId2,
+				checkId as saveLogId2,
+				logStacktrace
+			FROM asemon_error_info
+			WHERE checkId = $rpt_onId
+			ORDER BY sendCounter
+		";
 		// sending query
-		$result = mysql_query("SELECT * FROM asemon_error_info WHERE checkId = " . $rpt_onId);
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
+			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_error_info on: $rpt_onId");
+		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
 
+		// TIMEOUT ERRORS
+		$sql = "
+			SELECT 'TIMEOUT' as type,
+				checkId,
+				checkId as deleteLogId,
+				checkId as saveLogId,
+				sendCounter,
+				serverAddTime,
+				clientTime,
+				userName,
+				srvVersion,
+				appVersion,
+				logLevel,
+				logThreadName,
+				logClassName,
+				logLocation,
+				logMessage,
+				checkId as deleteLogId2,
+				checkId as saveLogId2,
+				logStacktrace
+			FROM asemon_error_info2
+			WHERE checkId = $rpt_onId
+			ORDER BY sendCounter
+		";
 		// sending query
-		$result = mysql_query("SELECT * FROM asemon_error_info2 WHERE checkId = " . $rpt_onId);
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
+			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_error_info2 on: $rpt_onId");
+		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
 
+		// SAVED ERRORS
+		$sql = "
+			SELECT 'SAVED' as type,
+				checkId,
+				checkId as deleteLogId,
+				sendCounter,
+				serverAddTime,
+				clientTime,
+				userName,
+				srvVersion,
+				appVersion,
+				logLevel,
+				logThreadName,
+				logClassName,
+				logLocation,
+				logMessage,
+				checkId as deleteLogId2,
+				logStacktrace
+			FROM asemon_error_info_save
+			WHERE checkId = $rpt_onId
+			ORDER BY sendCounter
+		";
 		// sending query
-		$result = mysql_query("SELECT * FROM asemon_error_info_save WHERE checkId = " . $rpt_onId);
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
+			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_error_info_save on: $rpt_onId");
+		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
+
+		//reset
+		$sql = "";
 	}
 
 
@@ -1140,6 +1211,25 @@ DB Cleanup:
 				die("Query to show fields from table failed");
 			}
 			htmlResultset($result, $label, "TableName");
+
+			//-----------------------------
+			if ( $debug != "" )
+			{
+				$label = "select * FROM asemon_mda_info WHERE srvVersion = $srvVersion";
+				$sql = "
+					SELECT *
+					FROM asemon_mda_info
+					WHERE srvVersion = $srvVersion
+					ORDER BY rowId
+				";
+
+				// sending query
+				$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+				if (!$result) {
+					die("Query to show fields from table failed");
+				}
+				htmlResultset($result, $label, "TableName");
+			}
 		}
 
 	}

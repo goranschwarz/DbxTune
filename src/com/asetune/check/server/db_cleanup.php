@@ -139,6 +139,10 @@
 		// doCleanup("delete from asemon_udc_info");
 		// doCleanup("update asemon_usage set clientAsemonVersion = '2.1.0.1.dev' where clientAsemonVersion = '2.1.1.dev'");
 
+		// doCleanup("delete from asemon_error_info         where appVersion  like '2.%' ");
+		// doCleanup("delete from asemon_error_info2        where appVersion  like '2.%' ");
+
+
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
 	else if ( $doAction == "dbmaint" )
@@ -190,6 +194,8 @@
 		// doCleanup("ALTER TABLE asemon_usage ADD clientExpireDate varchar(10) AFTER clientAsemonVersion");
 
 		// doCleanup("ALTER TABLE asemon_mda_info ADD verified char(1) AFTER userName");
+
+		// doCleanup("ALTER TABLE asemon_connect_info CHANGE srvUserRoles srvUserRoles varchar(300)");
 
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
