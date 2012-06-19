@@ -726,8 +726,8 @@ public class MonTablesDictionary
 						if (config != null)
 						{
 							Object[] options = {
-									"ASE binary Version "        + AseConnectionUtils.versionIntToStr(aseVersionNum), 
-									"ASE installmaster Version " + AseConnectionUtils.versionIntToStr(installmasterVersionNum)
+									"ASE binary Version "                  + AseConnectionUtils.versionIntToStr(aseVersionNum), 
+									"ASE montables/installmaster Version " + AseConnectionUtils.versionIntToStr(installmasterVersionNum)
 									};
 							int answer = JOptionPane.showOptionDialog(MainFrame.getInstance(), 
 //								"ASE Binary and 'installmaster' is out of sync...\n" +
