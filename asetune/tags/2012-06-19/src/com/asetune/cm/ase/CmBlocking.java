@@ -1,0 +1,147 @@
+package com.asetune.cm.ase;
+
+import java.sql.Connection;
+import java.util.List;
+
+import com.asetune.ICounterController;
+import com.asetune.IGuiController;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.gui.CmBlockingPanel;
+import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
+
+/**
+ * @author Goran Schwarz (goran_schwarz@hotmail.com)
+ */
+public class CmBlocking
+extends CountersModel
+{
+//	private static Logger        _logger          = Logger.getLogger(CmBlocking.class);
+	private static final long    serialVersionUID = 1L;
+
+	public static final String   CM_NAME          = CmBlocking.class.getSimpleName();
+	public static final String   SHORT_NAME       = "Blocking";
+	public static final String   HTML_DESC        = 
+		"<html>" +
+		"Are there any SPIDS blocked/blocking for more than 'Lock wait threshold' in the system" +
+		"<br><br>" +
+		"Background colors:" +
+		"<ul>" +
+		"    <li>PINK   - SPID is Blocked by some other SPID that holds a Lock on a database object Table, Page or Row. This is the Lock Victim.</li>" +
+		"    <li>RED    - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
+		"</ul>" +
+	"</html>";
+
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
+	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+
+	public static final int      NEED_SRV_VERSION = 15002;
+	public static final int      NEED_CE_VERSION  = 0;
+
+	public static final String[] MON_TABLES       = new String[] {"monLocks"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
+	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "wait event timing=1"};
+
+	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] DIFF_COLUMNS     = new String[] {};
+
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
+	public static final boolean  IS_SYSTEM_CM                   = true;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
+
+	/**
+	 * FACTORY  method to create the object
+	 */
+	public static CountersModel create(ICounterController counterController, IGuiController guiController)
+	{
+		if (guiController != null && guiController.hasGUI())
+			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+
+		return new CmBlocking(counterController, guiController);
+	}
+
+	public CmBlocking(ICounterController counterController, IGuiController guiController)
+	{
+		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
+				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
+				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
+
+		setDisplayName(SHORT_NAME);
+		setDescription(HTML_DESC);
+
+		setIconFile(GUI_ICON_FILE);
+
+		setCounterController(counterController);
+		setGuiController(guiController);
+		
+		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
+	}
+
+
+	//------------------------------------------------------------
+	// Implementation
+	//------------------------------------------------------------
+	
+	private void addTrendGraphs()
+	{
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmBlockingPanel(this);
+	}
+
+	@Override
+	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		return NEED_CONFIG;
+	}
+
+	@Override
+	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		// no need to have PK, since we are NOT using "diff" counters
+		return null;
+	}
+
+	@Override
+	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		String cols1, cols2, cols3;
+		cols1 = cols2 = cols3 = "";
+
+		cols1 = "*";
+		cols2 = ", ObjectName = isnull(object_name(ObjectID, DBID), 'ObjId='+convert(varchar(30),ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
+		cols3 = "";
+		
+		String whereArgs = "where BlockedState = 'Blocked' or BlockedState = 'Blocking' or BlockedBy > 0 ";
+
+		String sql = 
+			"select " + cols1 + cols2 + cols3 + "\n" +
+			"from master..monLocks\n" +
+			whereArgs + "\n";
+
+		return sql;
+	}
+
+	/** 
+	 * Get number of rows to save/request ddl information for 
+	 */
+	@Override
+	public int getMaxNumOfDdlsToPersist()
+	{
+		return Integer.MAX_VALUE; // Basically ALL Rows
+	}
+}
