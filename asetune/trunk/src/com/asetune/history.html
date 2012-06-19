@@ -16,7 +16,7 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-xx-x</H2>
+<H2>2012-06-19</H2>
 <UL>
 	<LI>
 	<b>Bug fix: Connection Dialog</b><br>
@@ -79,25 +79,25 @@ li   {margin-bottom: 6px}
 	</ul>
 	</LI>
 
-- if ASE Binary is of a later version than installmaster.
-  A question with what version Performance Counters should be initialized with is presented.
 	<LI>
 	<b>Changed: Wizard; Create 'Offline Session'.</b><br>
 	<ul>
-	</ul>
 		<li>Added a checkbox 'do not enter' ASE information, instead use command line switches.</li>
 		<li>Dropdown boxes on JDBC driver and URL for PCS or recording database</li>
 		<li>Added some help text and pointers to Command Line Switches</li>
 		<li>Also added some new fields, like 'Start the recording at'</li>
+	</ul>
 	</LI>
 
 	<LI>
 	<b>Changed: Persistent Counter Storage, when using ASE as the PCS</b><br>
-	If ASE is used as the Persistent Counter Storage when recording a session, AseTune is now using DYNAMIC_PREPARE
-	and caching/reusing the prepared statements when writing data to the database.<br>
-	The 'set delayed_commit on' is also issued.<br>
+	If ASE is used as the Persistent Counter Storage when recording a session
+	<ul>
+		<li>AseTune is now using DYNAMIC_PREPARE and caching/reusing the prepared statements when writing data to the database.</li>
+		<li>The 'set delayed_commit on' is also issued.</li>
+	</ul>
 	This makes it a bit faster when using ASE as the Persistent Counter Storage<br>
-	Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight
+	<b>Note:</b> Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight
 	and not 100% ACID, it flushes the data to disk at a later stage, which makes it a <b>much</b>
 	faster choice when recording a session. And also the H2 database is probably located on your local PC
 	so we don't store information on the same server as we are monitoring.

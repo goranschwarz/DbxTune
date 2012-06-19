@@ -1743,7 +1743,11 @@ public class AseConnectionUtils
 									SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
 
 									if (tmpChk.isSelected())
+									{
+										_logger.warn("Continuing with a minimal environment. Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
 										return true;
+									}
+									_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
 									return false;
 								}
 							}
@@ -1751,12 +1755,17 @@ public class AseConnectionUtils
 							{
 								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, tmpPanel);
 								if (tmpChk.isSelected())
+								{
+									_logger.warn("Continuing with a minimal environment. Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
 									return true;
+								}
+								_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is still not enabled");
 								return false;
 							}
 						}
 						else
 						{
+							_logger.warn("Login will be aborted due to: Config options '"+StringUtil.toCommaStr(needsConfig)+"' is not enabled");
 							return false;
 						}
 					}
