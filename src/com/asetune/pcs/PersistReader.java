@@ -1213,7 +1213,7 @@ implements Runnable
 
 		if (_logger.isDebugEnabled())
 			_logger.debug(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
-System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
+//System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedName+"'.");
 
 		return translatedName;
 	}
@@ -1363,7 +1363,7 @@ System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedNam
 		long xStartTime = System.currentTimeMillis();
 
 		// Get what version of the tool that stored the information
-		_monVersionInfo = getMonVersionInfo(startTime);
+		_monVersionInfo = getMonVersionInfo(sampleId);
 		
 		// Populate _offlineCmMap
 		getStoredCms(false);
@@ -2142,8 +2142,10 @@ System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedNam
 
 			MonVersionInfo monVersionInfo = new MonVersionInfo();
 			ResultSet rs = pstmnt.executeQuery();
+			boolean foundRows = false;
 			while (rs.next())
 			{
+				foundRows = true;
 				monVersionInfo._sessionStartTime = rs.getTimestamp(1);
 				monVersionInfo._productString    = rs.getString   (2);
 				monVersionInfo._versionString    = rs.getString   (3);
@@ -2153,7 +2155,13 @@ System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedNam
 			}
 			rs.close();
 			pstmnt.close();
-			
+
+			if ( ! foundRows )
+			{
+				_logger.warn("No row was found when loading 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql);
+				return null;
+			}
+				
 			return monVersionInfo;
 		}
 		catch (SQLException e)
@@ -2177,6 +2185,11 @@ System.out.println(" <-- Translating name CM->db: '"+name+"' to '"+translatedNam
 		public String    _buildString      = null;
 		public String    _sourceDate       = null;
 		public int       _sourceRev        = 0;
+		
+		public String toString()
+		{
+			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+")";
+		}
 	}
 
 	/** a reflection of one row in: MonSessionSampleDetailes */

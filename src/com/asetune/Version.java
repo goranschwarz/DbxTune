@@ -16,7 +16,7 @@ public class Version
 	public static final String BUILD_STRING       = "2012-06-19/build 110";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
-	public static final String  DEV_VERSION_EXPIRE_STR  = "2013-02-30";  // "YYYY-MM-DD"
+	public static final String  DEV_VERSION_EXPIRE_STR  = "2013-02-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
 	public static final String SOURCE_DATE_STRING = "$Date$";
