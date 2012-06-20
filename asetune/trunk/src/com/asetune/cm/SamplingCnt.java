@@ -344,6 +344,9 @@ extends CounterTableModel
 	}
 	public int getRowNumberForPkValue(String pkStr)
 	{
+		if (_keysToRowid == null)
+			return -1;
+
 		Integer i = _keysToRowid.get(pkStr);
 		if (i == null)
 		{
