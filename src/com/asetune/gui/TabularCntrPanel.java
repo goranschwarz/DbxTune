@@ -79,6 +79,7 @@ import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
+import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.DockUndockManagement;
 import com.asetune.gui.swing.EmptyTableModel;
@@ -3609,11 +3610,31 @@ implements
 			}
 			else if ( !_cm.hasAbsData() )
 			{
-				setWatermarkText("Waiting for first data sample...");
+				if (_cm.getDependsOnCm() != null)
+				{
+					String waterText = "Waiting for first data sample...\n" +
+						"Waiting for Dependant CM: ";
+					for (String dcmStr : _cm.getDependsOnCm())
+						waterText += CounterSetTemplates.getLongName(dcmStr) + " (" + dcmStr + ")\n";
+					waterText += "\nTip: Check Option 'Enable background data pooling' for above CM's.";
+					setWatermarkText(waterText);
+				}
+				else
+					setWatermarkText("Waiting for first data sample...");
 			}
 			else if ( _cm.isDiffCalcEnabled() && !_cm.hasDiffData() )
 			{
-				setWatermarkText("Waiting for second sample, before DIFF and RATE can be calculated...");
+				if (_cm.getDependsOnCm() != null)
+				{
+					String waterText = "Waiting for second sample, before DIFF and RATE can be calculated...\n" +
+						"Waiting for Dependant CM: ";
+					for (String dcmStr : _cm.getDependsOnCm())
+						waterText += CounterSetTemplates.getLongName(dcmStr) + " (" + dcmStr + ")\n";
+					waterText += "\nTip: Check Option 'Enable background data pooling' for above CM's.";
+					setWatermarkText(waterText);
+				}
+				else
+					setWatermarkText("Waiting for second sample, before DIFF and RATE can be calculated...");
 			}
 			else if ( _dataTable.getColumnCount() == 0 )
 			{
@@ -3781,6 +3802,22 @@ implements
 				{
 					readInMemHistSample();
 				}
+			}
+		}
+
+		// Set SplitPane location, if this hasn't been done before.
+		JPanel  panel = getExtendedInfoPanel();
+		if (panel != null)
+		{
+			JSplitPane mainSplitPane = getMainSplitPane();
+
+			// If the panel is so small, make it bigger 
+			int dividerLocation = 0;
+			if (mainSplitPane != null)
+			{
+				dividerLocation = getMainSplitPane().getDividerLocation();
+				if (dividerLocation == 0)
+					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 			}
 		}
 	}
