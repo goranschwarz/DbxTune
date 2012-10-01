@@ -970,15 +970,31 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			double CPUSystem = cpuSystem.doubleValue();
 			double CPUIdle   = cpuIdle  .doubleValue();
 
-			BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-			BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			// rare cases: java.lang.NumberFormatException: Infinite or NaN
+			// at first calculation below:
+			// BigDecimal calcCPUTime = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			// Just added more debuging information.
+			try
+			{
+				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-			_cpuTime_txt          .setText(calcCPUTime      .toString());
-			_cpuUser_txt          .setText(calcUserCPUTime  .toString());
-			_cpuSystem_txt        .setText(calcSystemCPUTime.toString());
-			_cpuIdle_txt          .setText(calcIdleCPUTime  .toString());
+				_cpuTime_txt          .setText(calcCPUTime      .toString());
+				_cpuUser_txt          .setText(calcUserCPUTime  .toString());
+				_cpuSystem_txt        .setText(calcSystemCPUTime.toString());
+				_cpuIdle_txt          .setText(calcIdleCPUTime  .toString());
+			}
+			catch (NumberFormatException e)
+			{
+				_cpuTime_txt          .setText("");
+				_cpuUser_txt          .setText("");
+				_cpuSystem_txt        .setText("");
+				_cpuIdle_txt          .setText("");
+				
+				_logger.warn("Problems calculating CPU usage timings in cm '"+cm.getName()+"'. CPUTime="+CPUTime+", CPUUser="+CPUUser+", CPUSystem="+cpuSystem+", CPUIdle="+cpuIdle+". Setting fields to blank. Caught: "+e);
+			}
 		}
 		
 		// Check LOCK WAITS and, do notification

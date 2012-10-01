@@ -373,7 +373,7 @@ extends CountersModel
 			else if (colName.equals("spins"))        spinsId        = colId;
 			else if (colName.equals("contention"))   contentionId   = colId;
 			else if (colName.equals("spinsPerWait")) spinsPerWaitId = colId;
-			else if (colName.equals("name"))         pos_name       = colId;
+			else if (colName.equals("spinName"))     pos_name       = colId;
 			else if (colName.equals("description"))  pos_desc       = colId;
 		}
 

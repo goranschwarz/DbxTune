@@ -50,7 +50,8 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {"ReadsPct", "APFReadsPct", "WritesPct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"TotalIOs", "Reads", "APFReads", "Writes", "DevSemaphoreRequests", "DevSemaphoreWaits", "IOTime"};
+		"TotalIOs", "Reads", "APFReads", "Writes", "DevSemaphoreRequests", "DevSemaphoreWaits", "IOTime", 
+		"ReadTime", "WriteTime"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -138,6 +139,23 @@ extends CountersModel
 			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
 			                                                   "<b>Formula</b>: IOTime / (Reads + Writes) <br>" +
 			                                                   "<b>Note</b>: If there is few I/O's this value might be a bit off, this due to 'click ticks' is 100 ms by default.<br>" +
+			                                                   "<b>Note</b>: However in ASE 15.7.0 ESD#2 and beyond the time resolution seems to be better (measured at 1 ms level).<br>" +
+			                                              "</html>");
+			mtd.addColumn("monDeviceIO",  "ReadServiceTimeMs", "<html>" +
+			                                                   "Service time on the disk for <b>Read</b> operations.<br>" +
+			                                                   "This is basically the average time it took to make a <b>read</b> IO on this device.<br>" +
+			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
+			                                                   "<b>Formula</b>: ReadTime / Reads <br>" +
+			                                                   "<b>Note</b>: If there is few I/O's this value might be a bit off, this due to 'click ticks' is 100 ms by default.<br>" +
+			                                                   "<b>Note</b>: However in ASE 15.7.0 ESD#2 and beyond the time resolution seems to be better (measured at 1 ms level).<br>" +
+			                                              "</html>");
+			mtd.addColumn("monDeviceIO",  "WriteServiceTimeMs", "<html>" +
+			                                                   "Service time on the disk for <b>Write</b> operations.<br>" +
+			                                                   "This is basically the average time it took to make a <b>write</b> IO on this device.<br>" +
+			                                                   "Warning: ASE isn't timing each IO individually, Instead it uses the 'click ticks' to do it... This might change in the future.<br>" +
+			                                                   "<b>Formula</b>: WriteTime / Writes <br>" +
+			                                                   "<b>Note</b>: If there is few I/O's this value might be a bit off, this due to 'click ticks' is 100 ms by default.<br>" +
+			                                                   "<b>Note</b>: However in ASE 15.7.0 ESD#2 and beyond the time resolution seems to be better (measured at 1 ms level).<br>" +
 			                                              "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
@@ -186,6 +204,27 @@ extends CountersModel
 				"             END,\n";
 		}
 		
+		// ASE 15.7.0 ESD#2
+		String ReadTime           = ""; // Total time spent reading from the device (ms)
+		String WriteTime          = ""; // Total time spent writing to the device (ms)
+		String ReadServiceTimeMs  = ""; // CALCULATED
+		String WriteServiceTimeMs = ""; // CALCULATED
+		String nl_15702           = ""; // NL for this section
+		if (aseVersion >= 15702)
+		{
+			ReadTime           = "ReadTime, ";  // DO DIFF CALC
+			WriteTime          = "WriteTime, "; // DO DIFF CALC
+			ReadServiceTimeMs  = "ReadServiceTimeMs  = CASE WHEN Reads > 0 \n" +
+			                     "                          THEN convert(numeric(10,1), (ReadTime + 0.0) / (Reads + 0.0) ) \n" +
+			                     "                          ELSE convert(numeric(10,1), null) \n" +
+			                     "                     END, \n";
+			WriteServiceTimeMs = "WriteServiceTimeMs = CASE WHEN Writes > 0 \n" +
+			                     "                          THEN convert(numeric(10,1), (WriteTime + 0.0) / (Writes + 0.0) ) \n" +
+			                     "                          ELSE convert(numeric(10,1), null) \n" +
+			                     "                     END, \n";
+			nl_15702  = "\n";
+		}
+		
 		cols1 += "LogicalName, TotalIOs = "+TotalIOs+", \n" +
 		         "Reads, \n" +
 		         "ReadsPct = CASE WHEN "+TotalIOs+" > 0 \n" +
@@ -202,13 +241,15 @@ extends CountersModel
 		         "                 THEN convert(numeric(10,1), (Writes + 0.0) / ("+TotalIOs+" + 0.0) * 100.0 ) \n" +
 		         "                 ELSE convert(numeric(10,1), 0.0 ) \n" +
 		         "            END, \n" +
-		         "DevSemaphoreRequests, DevSemaphoreWaits, IOTime, \n";
+		         "DevSemaphoreRequests, DevSemaphoreWaits, IOTime, " + ReadTime + WriteTime + "\n";
 		cols2 += "AvgServ_ms = CASE \n" +
 				 "               WHEN "+TotalIOs+" > 0 \n" +
 				 "               THEN convert(numeric(10,1), IOTime / convert(numeric(10,0), "+TotalIOs+")) \n" +
 				 "               ELSE convert(numeric(10,1), null) \n" +
-				 "             END \n";
-		cols3 += ", "+DeviceType+" PhysicalName";
+				 "             END, \n" +
+				 ReadServiceTimeMs +
+				 WriteServiceTimeMs;
+		cols3 += DeviceType+" PhysicalName";
 		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 		{
 		}
@@ -231,6 +272,9 @@ extends CountersModel
 
 		int Reads,      APFReads,      Writes,      IOTime;
 		int ReadsId=-1, APFReadsId=-1, WritesId=-1, IOTimeId=-1;
+		
+		int ReadTime     = -1, WriteTime     = -1;
+		int pos_ReadTime = -1, pos_WriteTime = -1, pos_ReadServiceTimeMs = -1, pos_WriteServiceTimeMs = -1;
 
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -248,6 +292,11 @@ extends CountersModel
 			else if (colName.equals("APFReadsPct")) APFReadsPctId = colId;
 			else if (colName.equals("WritesPct"))   WritesPctId   = colId;
 			else if (colName.equals("AvgServ_ms"))  AvgServ_msId  = colId;
+
+			else if (colName.equals("ReadTime"))           pos_ReadTime           = colId;
+			else if (colName.equals("WriteTime"))          pos_WriteTime          = colId;
+			else if (colName.equals("ReadServiceTimeMs"))  pos_ReadServiceTimeMs  = colId;
+			else if (colName.equals("WriteServiceTimeMs")) pos_WriteServiceTimeMs = colId;
 		}
 
 		// Loop on all diffData rows
@@ -257,6 +306,8 @@ extends CountersModel
 			APFReads = ((Number) diffData.getValueAt(rowId, APFReadsId)).intValue();
 			Writes   = ((Number) diffData.getValueAt(rowId, WritesId))  .intValue();
 			IOTime   = ((Number) diffData.getValueAt(rowId, IOTimeId))  .intValue();
+			if (pos_ReadTime  >= 0) ReadTime  = ((Number) diffData.getValueAt(rowId, pos_ReadTime)).intValue();
+			if (pos_WriteTime >= 0) WriteTime = ((Number) diffData.getValueAt(rowId, pos_WriteTime)).intValue();
 
 			//--------------------
 			//---- AvgServ_ms
@@ -271,6 +322,36 @@ extends CountersModel
 			}
 			else
 				diffData.setValueAt(new BigDecimal(0), rowId, AvgServ_msId);
+
+			//--------------------
+			//---- ReadServiceTimeMs
+			if (pos_ReadTime >= 0 && pos_ReadServiceTimeMs >= 0)
+			{
+				if (Reads != 0)
+				{
+					double calc = (ReadTime + 0.0) / Reads;
+	
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+					diffData.setValueAt(newVal, rowId, pos_ReadServiceTimeMs);
+				}
+				else
+					diffData.setValueAt(new BigDecimal(0), rowId, pos_ReadServiceTimeMs);
+			}
+
+			//--------------------
+			//---- WriteServiceTimeMs
+			if (pos_WriteTime >= 0 && pos_WriteServiceTimeMs >= 0)
+			{
+				if (Writes != 0)
+				{
+					double calc = (WriteTime + 0.0) / Writes;
+	
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);;
+					diffData.setValueAt(newVal, rowId, pos_WriteServiceTimeMs);
+				}
+				else
+					diffData.setValueAt(new BigDecimal(0), rowId, pos_WriteServiceTimeMs);
+			}
 
 			//--------------------
 			//---- ReadsPct

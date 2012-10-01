@@ -66,6 +66,7 @@ import com.asetune.cm.ase.CmRaSysmon;
 import com.asetune.cm.ase.CmSpMonitorConfig;
 import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.cm.ase.CmSpidWait;
+import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.cm.ase.CmSpinlockSum;
 import com.asetune.cm.ase.CmStatementCache;
 import com.asetune.cm.ase.CmStmntCacheDetails;
@@ -1055,6 +1056,7 @@ implements ICounterController
 		CmIoQueueSum       .create(counterController, guiController);
 		CmIoQueue          .create(counterController, guiController);
 		CmIoControllers    .create(counterController, guiController);
+		CmSpinlockActivity .create(counterController, guiController);
 		CmSpinlockSum      .create(counterController, guiController);
 		CmSysmon           .create(counterController, guiController);
 		CmRaSenders        .create(counterController, guiController);

@@ -50,7 +50,9 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"UseCountDiff", "NumRecompilesPlanFlushes", "NumRecompilesSchemaChanges"};
+		"UseCountDiff", "NumRecompilesPlanFlushes", "NumRecompilesSchemaChanges", 
+		"LockWaits", "LockWaitTime", "SortCount", "SortSpilledCount", "TotalSortTime", 
+		"ParallelDegreeReduced", "ParallelPlanRanSerial", "WorkerThreadDeficit"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -174,6 +176,43 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		// ASE 15.7.0 ESD#2
+		String AvgScanRows            = ""; // Average scanned rows read per execution
+		String MaxScanRows            = ""; // Maximum scanned rows read per execution
+		String AvgQualifyingReadRows  = ""; // Average qualifying data rows for read DML per execution
+		String MaxQualifyingReadRows  = ""; // Maximum qualifying data rows for read DML per execution
+		String AvgQualifyingWriteRows = ""; // Average qualifying data rows for write DML per execution
+		String MaxQualifyingWriteRows = ""; // Maximum qualifying data rows for write DML per execution
+		String LockWaits              = ""; // Total number of lock waits
+		String LockWaitTime	          = ""; // Total lock-wait time (ms)
+		String SortCount              = ""; // Total number of sort operations
+		String SortSpilledCount       = ""; // Total number of sort operations spilling to disk
+		String TotalSortTime          = ""; // Total sort time (ms)
+		String MaxSortTime            = ""; // Maximum sort time (ms)
+		String ParallelDegreeReduced  = ""; // The number of times the degree of parallelism in the plan was reduced but it still executed as a parallel query (parallel plans only)
+		String ParallelPlanRanSerial  = ""; // The number of times a parallel query plan was adjusted so that it executed without parallelism (parallel plans only)
+		String WorkerThreadDeficit    = ""; // The total thread deficit for all executions of a parallel plan (parallel plans only)
+		String nl_15702               = ""; // NL for this section
+		if (aseVersion >= 15702)
+		{
+			AvgScanRows			   = "AvgScanRows, ";             // no Diff
+			MaxScanRows            = "MaxScanRows, ";             // no Diff
+			AvgQualifyingReadRows  = "AvgQualifyingReadRows, ";   // no Diff
+			MaxQualifyingReadRows  = "MaxQualifyingReadRows, ";   // no Diff
+			AvgQualifyingWriteRows = "AvgQualifyingWriteRows, ";  // no Diff
+			MaxQualifyingWriteRows = "MaxQualifyingWriteRows, ";  // no Diff
+			LockWaits              = "LockWaits, ";               // DIFF COUNTER
+			LockWaitTime           = "LockWaitTime, ";            // DIFF COUNTER
+			SortCount              = "SortCount, ";               // DIFF COUNTER
+			SortSpilledCount       = "SortSpilledCount, ";        // DIFF COUNTER
+			TotalSortTime          = "TotalSortTime, ";           // DIFF COUNTER
+			MaxSortTime            = "MaxSortTime, ";             // no diff
+			ParallelDegreeReduced  = "ParallelDegreeReduced, ";   // DIFF COUNTER
+			ParallelPlanRanSerial  = "ParallelPlanRanSerial, ";   // DIFF COUNTER
+			WorkerThreadDeficit    = "WorkerThreadDeficit, ";     // DIFF COUNTER
+			nl_15702           = "\n";
+		}
+
 		// NOTE: The function 'show_plan(-1,SSQLID,-1,-1)'
 		//       returns a Ase Message (MsgNum=0) within the ResultSet
 		//       those messages are placed in the column named 'msgAsColValue'
@@ -196,6 +235,8 @@ extends CountersModel
 			(aseVersion >= 15700 ? " HasXmlPlan    = RUNTIME_REPLACE::HAS_XML_PLAN, \n" : "") +
 			" UseCount, \n" +                   // The number of times this statement was used.
 			" UseCountDiff = UseCount, \n" +    // The number of times this statement was used.
+			LockWaits + LockWaitTime + nl_15702 +
+			SortCount + SortSpilledCount + TotalSortTime + MaxSortTime + nl_15702 + 
 			" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
 			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, \n" + // Elapsed time value.
 			" MaxLIO,         MinLIO,         AvgLIO, \n" +         // Logical IO
@@ -208,10 +249,14 @@ extends CountersModel
 			" MaxPlanSizeKB, \n" +              // The size of a plan associated with this statement when it is in use.
 			" CurrentUsageCount, \n" +          // The number of concurrent uses of this statement.
 			" MaxUsageCount, \n" +              // The maximum number of times for which this statement was simultaneously used.
+			AvgScanRows + MaxScanRows + nl_15702 +
+			AvgQualifyingReadRows + MaxQualifyingReadRows + nl_15702 +
+			AvgQualifyingWriteRows + MaxQualifyingWriteRows + nl_15702 + 
 			" NumRecompilesSchemaChanges, \n" + // The number of times this statement was recompiled due to schema changes.
 			" NumRecompilesPlanFlushes, \n" +   // The number of times this statement was recompiled because no usable plan was found.
 			" HasAutoParams       = convert(bit,HasAutoParams), \n" + // Does this statement have any parameterized literals.
 			" ParallelDegree, \n" +               // The parallel-degree session setting.
+			ParallelDegreeReduced + ParallelPlanRanSerial + WorkerThreadDeficit + nl_15702 + 
 			" QuotedIdentifier    = convert(bit,QuotedIdentifier), \n" + // The quoted identifier session setting.
 			(aseVersion < 15026 ? " TableCount, \n" : "") + // describeme
 			" TransactionIsolationLevel, \n" +  // The transaction isolation level session setting.

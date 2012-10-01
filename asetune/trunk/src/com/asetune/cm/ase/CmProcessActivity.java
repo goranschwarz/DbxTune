@@ -61,7 +61,15 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "object lockwait timing=1", "wait event timing=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {"BatchIdDiff", "cpu", "physical_io", "CPUTime", "WaitTime", "LogicalReads", "PhysicalReads", "PagesRead", "PhysicalWrites", "PagesWritten", "TableAccesses","IndexAccesses", "TempDbObjects", "ULCBytesWritten", "ULCFlushes", "ULCFlushFull", "Transactions", "Commits", "Rollbacks", "PacketsSent", "PacketsReceived", "BytesSent", "BytesReceived", "WorkTables", "pssinfo_tempdb_pages"};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+		"BatchIdDiff", "cpu", "physical_io", "CPUTime", "WaitTime", 
+		"LogicalReads", "PhysicalReads", "PagesRead", "PhysicalWrites", "PagesWritten", 
+		"TableAccesses","IndexAccesses", "TempDbObjects", 
+		"ULCBytesWritten", "ULCFlushes", "ULCFlushFull", 
+		"Transactions", "Commits", "Rollbacks", 
+		"PacketsSent", "PacketsReceived", "BytesSent", "BytesReceived", 
+		"WorkTables", "pssinfo_tempdb_pages",
+		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -205,6 +213,21 @@ extends CountersModel
 			"\n";
 
 		
+		// ASE 15.7.0 ESD#2
+		String IOSize1Page        = ""; // Number of 1 page physical reads performed by the process
+		String IOSize2Pages       = ""; // Number of 2 pages physical reads performed for the process
+		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the process
+		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
+		String nl_15702           = ""; // NL for this section
+		if (aseVersion >= 15702)
+		{
+			IOSize1Page        = "A.IOSize1Page, ";
+			IOSize2Pages       = "A.IOSize2Pages, ";
+			IOSize4Pages       = "A.IOSize4Pages, ";
+			IOSize8Pages       = "A.IOSize8Pages, ";
+			nl_15702           = "\n";
+		}
+
 		cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
 			+ "  SP.status, MP.WaitEventID, \n"
 			+ "  WaitClassDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
@@ -217,7 +240,8 @@ extends CountersModel
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
 			+ "  SP.tran_name, SP.cpu, SP.physical_io, \n"
 			+ "  A.CPUTime, A.WaitTime, A.LogicalReads, \n"
-			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n";
+			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
+			+ IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
 		if (aseVersion >= 12520)
 		{

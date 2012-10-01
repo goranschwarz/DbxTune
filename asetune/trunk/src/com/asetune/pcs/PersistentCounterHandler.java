@@ -318,6 +318,7 @@ implements Runnable
 		if (objectName.startsWith("ObjId:"))            return;
 		if (objectName.startsWith("Obj="))              return;
 		if (objectName.startsWith("*") && !objectName.startsWith("*ss")) return; // Prepared statements from ct_dynamic and Java PrepStatement??
+		if (objectName.startsWith("*") && !objectName.startsWith("*sq")) return; // Prepared statements from ct_dynamic and Java PrepStatement??
 
 		// ---------------------------------
 		// Format of the Dynamic SQL statement is:
@@ -397,7 +398,7 @@ implements Runnable
 		// Statement Cache object
 		boolean isStatementCache = false;
 		String  ssqlid = null;
-		if (objectName.startsWith("*ss"))
+		if (objectName.startsWith("*ss") || objectName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
 		{
 			isStatementCache = true;
 			dbname           = STATEMENT_CACHE_NAME;

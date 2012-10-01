@@ -53,7 +53,7 @@ extends CountersModel
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedObject"};
 	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
-	public static final String[] NEED_CONFIG      = new String[] {};
+	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"TableCachedPct", "CacheUsagePct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {"CachedKBDiff", "TotalSizeKBDiff"};

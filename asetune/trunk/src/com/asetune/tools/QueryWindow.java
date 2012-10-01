@@ -842,8 +842,69 @@ public class QueryWindow
 				_connType = ConnectionDialog.ASE_CONN;
 				
 				setDbNames();
-				_aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
 
+				// Get ASE Version
+//				_aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
+				try
+				{
+					int intVersionNum = 0;
+					String aseVersionStr = "";
+
+					Statement stmt = _conn.createStatement();
+					ResultSet rs = stmt.executeQuery("select @@version");
+					while ( rs.next() )
+					{
+						aseVersionStr = rs.getString(1);
+					}
+					rs.close();
+					stmt.close();
+			
+					if (intVersionNum == 0)
+					{
+						intVersionNum = AseConnectionUtils.aseVersionStringToNumber(aseVersionStr);
+						_aseVersion = intVersionNum;
+					}
+				}
+				catch (SQLException ex)
+				{
+				}
+
+				// Lets try REPSERVER version
+				if (_aseVersion == 0)
+				{
+					try
+					{
+						int intVersionNum = 0;
+						String srvVersionStr = "";
+
+						Statement stmt = _conn.createStatement();
+						ResultSet rs = stmt.executeQuery("admin version");
+						while ( rs.next() )
+						{
+							srvVersionStr = rs.getString(1);
+						}
+						rs.close();
+						stmt.close();
+				
+					//	srvVersionStr = srvVersionStr.replace("Replication Server", "Adaptive Server Enterprise");
+						intVersionNum = AseConnectionUtils.aseVersionStringToNumber(srvVersionStr);
+						_aseVersion = intVersionNum;
+
+						_logger.info("Connected to Replication Server version '"+intVersionNum+"', with Version string: "+srvVersionStr);
+
+//						installRepServerSubsystem(); // set menu system, _query content, _query AutoCompletion to be RepServer sensitive
+//						String helper = "admin who_is_down";
+//						_query.setText(helper);
+//						_query.setSelectionStart(0);
+//						_query.setSelectionEnd(helper.length());
+
+//						_connType = ConnectionDialog.REP_CONN;
+					}
+					catch (SQLException ex)
+					{
+					}
+				}
+	
 				_setOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
 
 				setComponentVisibility();

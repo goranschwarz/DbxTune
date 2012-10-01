@@ -528,6 +528,8 @@ public class AseTune
 			System.setProperty("http.proxyPort", httpProxyPort);
 
 		_logger.debug("Using proxy settings: http.proxyHost='"+httpProxyHost+"', http.proxyPort='"+httpProxyPort+"'.");
+		if (httpProxyHost != null)
+			_logger.info("Using Java Properties for HTTP Proxy settings: http.proxyHost='"+httpProxyHost+"', http.proxyPort='"+httpProxyPort+"'.");
 
 		SplashWindow.drawProgress("Initializing..");
 

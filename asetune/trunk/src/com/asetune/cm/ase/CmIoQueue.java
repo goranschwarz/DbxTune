@@ -162,8 +162,8 @@ extends CountersModel
 		cols1 += "LogicalName, IOType, IOs, IOTime, \n" +
                  "AvgServ_ms = \n" +
                  "CASE \n" +
-                 "  WHEN IOs > 0 THEN convert(numeric(10,1), IOTime/convert(numeric(10,0),IOs)) \n" +
-                 "  ELSE              convert(numeric(10,1), null) \n" +
+                 "  WHEN IOs > 0 THEN convert(numeric(18,1), IOTime/convert(numeric(18,0),IOs)) \n" +
+                 "  ELSE              convert(numeric(18,1), null) \n" +
                  "END";
 
 		String sql = 

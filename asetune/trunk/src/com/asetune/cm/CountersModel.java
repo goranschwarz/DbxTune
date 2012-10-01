@@ -2315,6 +2315,33 @@ implements Cloneable, ITableTooltip
 	{
 		_sqlInit = sql;
 	}
+	public boolean doSqlInit()
+	{
+		return doSqlInit(getCounterController().getMonConnection());
+	}
+	public boolean doSqlInit(Connection conn)
+	{
+		if (conn == null)
+			throw new IllegalArgumentException("The passed conn is null.");
+
+		String sql = getSqlInit();
+		if (sql != null && !sql.trim().equals(""))
+		{
+			try
+			{
+				Statement stmt = conn.createStatement();
+				stmt.execute(sql);
+				stmt.close();
+			}
+			catch (SQLException e)
+			{
+				_logger.warn("Problem when executing the 'init' SQL statement.", e);
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	/** */
 	public String getSqlClose()
 	{
@@ -3237,26 +3264,30 @@ implements Cloneable, ITableTooltip
 
 		// If the CounterModel need to be initialized by executing any 
 		// specific SQL statement the firts time around
-		String sqlInit = getSqlInit();
-		if (sqlInit != null && !sqlInit.trim().equals(""))
+		if ( ! _sqlInitDone )
 		{
-			if ( ! _sqlInitDone )
-			{
-				try
-				{
-
-					Statement stmt = conn.createStatement();
-					stmt.execute(sqlInit);
-					stmt.close();
-
-					_sqlInitDone = true;
-				}
-				catch (SQLException e)
-				{
-					_logger.warn("Problem when executing the 'init' SQL statement: "+sqlInit, e);
-				}
-			}
+			_sqlInitDone = doSqlInit();
 		}
+//		String sqlInit = getSqlInit();
+//		if (sqlInit != null && !sqlInit.trim().equals(""))
+//		{
+//			if ( ! _sqlInitDone )
+//			{
+//				try
+//				{
+////					Statement stmt = conn.createStatement();
+////					stmt.execute(sqlInit);
+////					stmt.close();
+//					doSqlInit(conn, sqlInit);
+//
+//					_sqlInitDone = true;
+//				}
+//				catch (SQLException e)
+//				{
+//					_logger.warn("Problem when executing the 'init' SQL statement: "+sqlInit, e);
+//				}
+//			}
+//		}
 
 		if (getSql() == null)
 		{
@@ -3296,12 +3327,14 @@ implements Cloneable, ITableTooltip
 			_diffData  = null;
 			_rateData  = null;
 
-			// Msg 10353: You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
-			// Msg 12052: Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+			// Msg 10353:               You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
+			// Msg 12052:               Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+			// Msg 12036: ASE 12.5.0.3: Collection of monitoring data for table '%.*s' requires that the '%s' configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+			//     12036: ASE 15.7.0.0: Incomplete configuration on instance ID %d. Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
 			// so lets reinitialize CM, to check again for next sample
 			int    errorCode = e.getErrorCode();
 			String errorMsg  = e.getMessage();
-			if (errorCode == 10353 || errorCode == 12052)
+			if (errorCode == 10353 || errorCode == 12052 || errorCode == 12036)
 			{
 				// Maybe downgrade this to a INFO message in a later release...
 				_logger.warn("Trying to Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After receiving MsgNumber '"+errorCode+"', with Description '"+errorMsg+"'.");

@@ -21,15 +21,15 @@
     <cp>.\lib\jconn3.jar</cp>
     <cp>.\lib\jconn4.jar</cp>
     <cp>.\lib\dsparser.jar</cp>
-    <cp>.\lib\log4j-1.2.16.jar</cp>
+    <cp>.\lib\log4j-1.2.17.jar</cp>
     <cp>.\lib\h2.jar</cp>
     <cp>.\lib\wizard.jar</cp>
     <cp>.\lib\miglayout-3.6.jar</cp>
-    <cp>.\lib\swingx-core-1.6.2.jar</cp>
+    <cp>.\lib\swingx-all-1.6.4.jar</cp>
     <cp>.\lib\jchart2d-3.2.0.jar</cp>
     <cp>.\lib\planviewer.jar</cp>
     <cp>.\lib\commons-cli-1.2.jar</cp>
-    <cp>.\lib\proxy-vole_20100914.jar</cp>
+    <cp>.\lib\proxy-vole_20120920.jar</cp>
     <cp>.\lib\ganymed-ssh2-build251beta1.jar</cp>
   </classPath>
   <jre>

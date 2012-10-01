@@ -29,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 
@@ -427,6 +428,79 @@ extends CounterTableModel
 		if (hasWarning)
 		{
 			throw new SQLException("SQL Warning in("+_name+") Messages: "+sb);
+		}
+	}
+
+	/** Backward compatibility if the rs.getXXX(col) is not working as expected */
+	private static boolean _resultsSet_getObject = Configuration.getCombinedConfiguration().getBooleanProperty("SamplingCnt.ResultsSet.getObject", false);
+	/**
+	 * Get datavalue for a specific column in the ResultSet<br>
+	 * This is done to try to workaround problem that the JDBC driver in some cases seems to 
+	 * return the wrong Java Object when using rs.getObject(col)<br>
+	 * <pre>
+	 * I guess it's the case when:
+	 * java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.Short
+	 * at java.lang.Short.compareTo(Unknown Source)
+	 * at org.jdesktop.swingx.sort.DefaultSortController$ComparableComparator.compare(DefaultSortController.java:294)
+	 * at javax.swing.DefaultRowSorter.compare(Unknown Source)
+	 * at javax.swing.DefaultRowSorter.access$100(Unknown Source)
+	 * at java.swing.DefaultRowSorter$Row.compareTo(Unknown Source)
+	 * at javax.swing.DefaultRowSorter$Row.compareTo(Unknown Source)
+	 * at java.util.Arrays.mergeSort(Unknown Source)
+	 * at ...
+	 * </pre>
+	 */
+	private Object getDataValue(ResultSet rs, int col) 
+	throws SQLException
+	{
+		// Backward compatibility if the rs.getXXX(col) is not working as expected  
+		if (_resultsSet_getObject)
+		{
+			return rs.getObject(col);
+		}
+
+		if (_colSqlType == null)
+		{
+			_logger.error("colSqlType are null, this should not happen, returning Object via 'rs.getObject(col)'.");
+			return rs.getObject(col);
+		}
+
+		// Return the "object" via getXXX method for "known" datatypes
+		int objSqlType = _colSqlType.get(col - 1);
+		switch (objSqlType)
+		{
+		case java.sql.Types.BIT:          return rs.getBoolean(col);
+		case java.sql.Types.TINYINT:      return rs.getByte(col);
+		case java.sql.Types.SMALLINT:     return rs.getShort(col);
+		case java.sql.Types.INTEGER:      return rs.getInt(col);
+		case java.sql.Types.BIGINT:       return rs.getLong(col);
+		case java.sql.Types.FLOAT:        return rs.getFloat(col);
+		case java.sql.Types.REAL:         return rs.getFloat(col);
+		case java.sql.Types.DOUBLE:       return rs.getDouble(col);
+		case java.sql.Types.NUMERIC:      return rs.getBigDecimal(col);
+		case java.sql.Types.DECIMAL:      return rs.getBigDecimal(col);
+		case java.sql.Types.CHAR:         return rs.getString(col);
+		case java.sql.Types.VARCHAR:      return rs.getString(col);
+		case java.sql.Types.LONGVARCHAR:  return rs.getString(col);
+		case java.sql.Types.DATE:         return rs.getDate(col);
+		case java.sql.Types.TIME:         return rs.getTime(col);
+		case java.sql.Types.TIMESTAMP:    return rs.getTimestamp(col);
+//		case java.sql.Types.BINARY:       return new byte[0];
+//		case java.sql.Types.VARBINARY:    return new byte[0];
+//		case java.sql.Types.LONGVARBINARY:return new byte[0];
+//		case java.sql.Types.NULL:         return null;
+//		case java.sql.Types.OTHER:        return null;
+//		case java.sql.Types.JAVA_OBJECT:  return new Object();
+//		case java.sql.Types.DISTINCT:     return "-DISTINCT-";
+//		case java.sql.Types.STRUCT:       return "-STRUCT-";
+//		case java.sql.Types.ARRAY:        return "-ARRAY-";
+//		case java.sql.Types.BLOB:         return "";
+//		case java.sql.Types.CLOB:         return "";
+//		case java.sql.Types.REF:          return "-REF-";
+//		case java.sql.Types.DATALINK:     return "-DATALINK-";
+		case java.sql.Types.BOOLEAN:      return rs.getBoolean(col);
+		default:
+			return rs.getObject(col);
 		}
 	}
 
@@ -913,7 +987,7 @@ extends CounterTableModel
 			// Get one row
 			for (int i = 1; i <= colCount; i++)
 			{
-				val = rs.getObject(i);
+				val = getDataValue(rs, i);
 				if (rsRowNum == 0 && _logger.isTraceEnabled() )
 					_logger.trace("READ_RESULTSET(rsnum "+rsNum+", row 0): col=" + i + ", colName=" + (_colNames.get(i - 1) + "                                   ").substring(0, 25) + ", ObjectType=" + (val == null ? "NULL-VALUE" : val.getClass().getName()));
 

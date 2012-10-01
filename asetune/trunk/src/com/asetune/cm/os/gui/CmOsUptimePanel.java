@@ -148,7 +148,12 @@ extends TabularCntrPanel
 			}
 			else
 			{
-				setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
+				setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.\n" +
+						"\n" +
+						"Enabled it when you connect to the ASE by:\n" +
+						"- selecting the checkbox 'Monitor the OS Host for ...'\n" +
+						"In the Options panel at the bottom.");
+
 				_hostmonThreadNotInit_lbl  .setVisible( true );
 				_hostmonThreadIsRunning_lbl.setVisible( false );
 //				_hostmonThreadIsStopped_lbl.setVisible( false );

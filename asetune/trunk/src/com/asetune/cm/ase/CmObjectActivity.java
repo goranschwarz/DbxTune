@@ -64,7 +64,9 @@ extends CountersModel
 		"PhysicalLocksDeadlocks", "PhysicalLocksWaited", "PhysicalLocksPageTransfer", 
 		"TransferReqWaited", "TotalServiceRequests", "PhysicalLocksDowngraded", "PagesTransferred", 
 		"ClusterPageWrites", "SharedLockWaitTime", "ExclusiveLockWaitTime", "UpdateLockWaitTime", 
-		"HkgcRequestsDcomp", "HkgcOverflowsDcomp"};
+		"HkgcRequestsDcomp", "HkgcOverflowsDcomp", 
+		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages", 
+		"PRSSelectCount", "PRSRewriteCount"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -293,6 +295,30 @@ extends CountersModel
 			nl_15701           = "\n"; // NL for this section
 		}
 		
+		// ASE 15.7.0 ESD#2
+		String IOSize1Page        = ""; // Number of 1 page physical reads performed for the object
+		String IOSize2Pages       = ""; // Number of 2 pages physical reads performed for the object
+		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the object
+		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the object
+		String PRSSelectCount     = ""; // Number of times PRS (Precomputed Result Set) was selected for query rewriting plan during compilation
+		String LastPRSSelectDate  = ""; // Last date the PRS (Precomputed Result Set) was selected for query rewriting plan during compilation
+		String PRSRewriteCount    = ""; // Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
+		String LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
+		String nl_15702           = ""; // NL for this section
+		if (aseVersion >= 15702)
+		{
+			IOSize1Page        = "IOSize1Page, ";        // DO DIFF CALC
+			IOSize2Pages       = "IOSize2Pages, ";       // DO DIFF CALC
+			IOSize4Pages       = "IOSize4Pages, ";       // DO DIFF CALC
+			IOSize8Pages       = "IOSize8Pages, ";       // DO DIFF CALC
+			PRSSelectCount     = "PRSSelectCount, ";     // DO DIFF CALC
+			LastPRSSelectDate  = "LastPRSSelectDate, ";
+			PRSRewriteCount    = "PRSRewriteCount, ";    // DO DIFF CALC
+			LastPRSRewriteDate = "LastPRSRewriteDate, ";
+			nl_15702           = "\n";
+		}
+
+
 
 		if (isClusterEnabled)
 		{
@@ -313,6 +339,7 @@ extends CountersModel
 		         "              END, \n" +
 		         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + ase15700_nl +
 		         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
+		         IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 		         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 		         TabRowCount +
 		         NumUsedPages +
@@ -331,6 +358,10 @@ extends CountersModel
 		if (aseVersion >= 15701)
 		{
 			cols2 += HkgcRequestsDcomp + HkgcPendingDcomp + HkgcOverflowsDcomp + nl_15701;
+		}
+		if (aseVersion >= 15702)
+		{
+			cols2 += PRSSelectCount + LastPRSSelectDate + PRSRewriteCount + LastPRSRewriteDate + nl_15702;
 		}
 
 

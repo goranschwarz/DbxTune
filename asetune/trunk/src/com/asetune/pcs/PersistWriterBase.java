@@ -369,7 +369,14 @@ public abstract class PersistWriterBase
 				length = -1;
 				prec   = rsmd.getPrecision(col);
 				scale  = rsmd.getScale(col);
-				
+			}
+
+			// Most databases doesn't have unsigned datatypes, so lets leave "unsigned int" as "int"
+			if ( type.startsWith("unsigned ") )
+			{
+				String newType = type.substring("unsigned ".length());
+				_logger.info("Found the uncommon data type '"+type+"', instead the data type '"+newType+"' will be used.");
+				type = newType;
 			}
 		}
 		return getDatatype(type, length, prec, scale);
@@ -477,7 +484,7 @@ public abstract class PersistWriterBase
 //				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("varchar", len, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"ParamValue"      +qic,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"ParamName"+qic+")\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+", "+qic+"Type"+qic+", "+qic+"ParamName"+qic+")\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_SAMPLES)
