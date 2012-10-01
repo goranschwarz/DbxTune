@@ -102,6 +102,7 @@ public class AseConfigMonitoringDialog
 	private JCheckBox          _enableMonitoring_chk             = new JCheckBox("Enable monitoring");
 	private JCheckBox          _perObjectStatisticsActive_chk    = new JCheckBox("Per object statistics active");
 	private JCheckBox          _statementStatisticsActive_chk    = new JCheckBox("Statement statistics active");
+	private JCheckBox          _enableSpinlockMonitoring_chk     = new JCheckBox("Enable Spinlock Monitoring");
 	private JCheckBox          _statementCacheMonitoring_chk     = new JCheckBox("Statement Cache Monitoring");
 	private JCheckBox          _captureCompressionStatistics_chk = new JCheckBox("Capture Compression Statistics");
 	private JCheckBox          _objectLockwaitTiming_chk         = new JCheckBox("Object lockwait timing");
@@ -319,6 +320,7 @@ public class AseConfigMonitoringDialog
 		_enableMonitoring_chk            .putClientProperty(ASE_CONFIG, "enable monitoring"             );
 		_perObjectStatisticsActive_chk   .putClientProperty(ASE_CONFIG, "per object statistics active"  );
 		_statementStatisticsActive_chk   .putClientProperty(ASE_CONFIG, "statement statistics active"   );
+		_enableSpinlockMonitoring_chk    .putClientProperty(ASE_CONFIG, "enable spinlock monitoring"    );
 		_statementCacheMonitoring_chk    .putClientProperty(ASE_CONFIG, "enable stmt cache monitoring"  );
 		_captureCompressionStatistics_chk.putClientProperty(ASE_CONFIG, "capture compression statistics");
 		_objectLockwaitTiming_chk        .putClientProperty(ASE_CONFIG, "object lockwait timing"        );
@@ -358,6 +360,7 @@ public class AseConfigMonitoringDialog
 		_enableMonitoring_chk            .setToolTipText(_tts.add(_enableMonitoring_chk,             "enable monitoring specifies whether the Adaptive Server will collect information for the Monitoring and Diagnostic System."));
 		_perObjectStatisticsActive_chk   .setToolTipText(_tts.add(_perObjectStatisticsActive_chk,    "per object statistics active determines whether the Adaptive Server will collect monitoring information on a per object basis."));
 		_statementStatisticsActive_chk   .setToolTipText(_tts.add(_statementStatisticsActive_chk,    "statement statistics active indicates whether ASE will collect ad-hoc statement monitoring information."));
+		_enableSpinlockMonitoring_chk    .setToolTipText(_tts.add(_enableSpinlockMonitoring_chk,     "<html>Use 'enable spinlock monitoring' to monitor <i>spinlock contention</i>.<br> Or contention on locks that protects ASE shared internal structures, that is accessed from different engines.<br><b>Note:</b> This is available in ASE 15.7.0 ESD#2 and above.</html>"));
 		_statementCacheMonitoring_chk    .setToolTipText(_tts.add(_statementCacheMonitoring_chk,     "<html>Use 'enable stmt cache monitoring' to configure Adaptive Server to collect the monitoring information on the statement cache.<br><b>Note:</b> This is available in ASE 12.5.2 and above.</html>"));
 		_captureCompressionStatistics_chk.setToolTipText(_tts.add(_captureCompressionStatistics_chk, "<html>Use 'capture compression statistics' to configure Adaptive Server to collect the monitoring information on the data compression.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
 		_objectLockwaitTiming_chk        .setToolTipText(_tts.add(_objectLockwaitTiming_chk,         "object lockwait timing specifies whether the Adaptive Server will collect timing data on lock requests."));
@@ -396,6 +399,7 @@ public class AseConfigMonitoringDialog
 
 		panel.add(_perObjectStatisticsActive_chk,    "wrap");
 		panel.add(_statementStatisticsActive_chk,    "wrap");
+		panel.add(_enableSpinlockMonitoring_chk,     "wrap");
 		panel.add(_statementCacheMonitoring_chk,     "wrap");
 		panel.add(_captureCompressionStatistics_chk, "wrap");
 		panel.add(_objectLockwaitTiming_chk,         "wrap");
@@ -693,6 +697,11 @@ public class AseConfigMonitoringDialog
 					if (_aseVersionNum >= 15020)
 						comp.setEnabled(true);
 				}
+				else if ( comp.equals(_enableSpinlockMonitoring_chk) )
+				{
+					if (_aseVersionNum >= 15702)
+						comp.setEnabled(true);
+				}
 				else if ( comp.equals(_statementCacheMonitoring_chk) )
 				{
 					if (_aseVersionNum >= 15020)
@@ -839,6 +848,7 @@ public class AseConfigMonitoringDialog
 
 			_perObjectStatisticsActive_chk   .setSelected(false);
 			_statementStatisticsActive_chk   .setSelected(false);
+			_enableSpinlockMonitoring_chk    .setSelected(false);
 			_statementCacheMonitoring_chk    .setSelected(false);
 			_captureCompressionStatistics_chk.setSelected(false);
 			_objectLockwaitTiming_chk        .setSelected(false);
@@ -875,6 +885,7 @@ public class AseConfigMonitoringDialog
 
 			_perObjectStatisticsActive_chk   .setSelected(true);
 			_statementStatisticsActive_chk   .setSelected(false);
+			_enableSpinlockMonitoring_chk    .setSelected(false);
 			_statementCacheMonitoring_chk    .setSelected(false);
 			_captureCompressionStatistics_chk.setSelected(false);
 			_objectLockwaitTiming_chk        .setSelected(false);
@@ -911,6 +922,7 @@ public class AseConfigMonitoringDialog
 
 			_perObjectStatisticsActive_chk   .setSelected(true);
 			_statementStatisticsActive_chk   .setSelected(true);
+			_enableSpinlockMonitoring_chk    .setSelected(true);
 			_statementCacheMonitoring_chk    .setSelected(true);
 			_captureCompressionStatistics_chk.setSelected(false);
 			_objectLockwaitTiming_chk        .setSelected(true);
@@ -947,6 +959,7 @@ public class AseConfigMonitoringDialog
 
 			_perObjectStatisticsActive_chk   .setSelected(true);
 			_statementStatisticsActive_chk   .setSelected(true);
+			_enableSpinlockMonitoring_chk    .setSelected(true);
 			_statementCacheMonitoring_chk    .setSelected(true);
 			_captureCompressionStatistics_chk.setSelected(false);
 			_objectLockwaitTiming_chk        .setSelected(true);
@@ -983,6 +996,7 @@ public class AseConfigMonitoringDialog
 
 			_perObjectStatisticsActive_chk   .setSelected(true);
 			_statementStatisticsActive_chk   .setSelected(true);
+			_enableSpinlockMonitoring_chk    .setSelected(true);
 			_statementCacheMonitoring_chk    .setSelected(true);
 			_captureCompressionStatistics_chk.setSelected(true);
 			_objectLockwaitTiming_chk        .setSelected(true);
@@ -1076,6 +1090,7 @@ public class AseConfigMonitoringDialog
 				if      ( config.equals("enable monitoring") )              _enableMonitoring_chk            .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("per object statistics active") )   _perObjectStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("statement statistics active") )    _statementStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("enable spinlock monitoring") )     _enableSpinlockMonitoring_chk    .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("enable stmt cache monitoring") )   _statementCacheMonitoring_chk    .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("capture compression statistics") ) _captureCompressionStatistics_chk.setSelected( runVal == 1 ? true : false); // but this is for the moment not part of sp_configure 'Monitoring'
 				else if ( config.equals("object lockwait timing") )         _objectLockwaitTiming_chk        .setSelected( runVal == 1 ? true : false);
@@ -1417,6 +1432,7 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "enable monitoring",              _enableMonitoring_chk);
 		checkAndSetAseConfig(conn, "per object statistics active",   _perObjectStatisticsActive_chk);
 		checkAndSetAseConfig(conn, "statement statistics active",    _statementStatisticsActive_chk);
+		checkAndSetAseConfig(conn, "enable spinlock monitoring",     _enableSpinlockMonitoring_chk);
 		checkAndSetAseConfig(conn, "enable stmt cache monitoring",   _statementCacheMonitoring_chk);
 		checkAndSetAseConfig(conn, "capture compression statistics", _captureCompressionStatistics_chk);
 		checkAndSetAseConfig(conn, "object lockwait timing",         _objectLockwaitTiming_chk);

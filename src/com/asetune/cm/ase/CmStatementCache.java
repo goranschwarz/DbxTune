@@ -48,7 +48,7 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {"CacheHitPct", "OveralAvgReusePct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"NumStatementsDiff", "NumSearches", "HitCount", "NumInserts", "NumRemovals", 
+		"NumStatementsDiff", "NumSearches", "HitCount", "MissCount", "NumInserts", "NumRemovals", 
 		"NumRecompilesSchemaChanges", "NumRecompilesPlanFlushes"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -152,6 +152,9 @@ extends CountersModel
 			mtd.addColumn("monStatementCache",  "CacheHitPct", "<html>" +
 					"Percent of Statements that already was in the Statement Cache<br>" +
 					"<b>Formula</b>: diff.HitCount / diff.NumSearches * 100 <br></html>");
+			mtd.addColumn("monStatementCache",  "MissCount", "<html>" +
+					"Statements that was not fount in the Statement Cache<br>" +
+					"<b>Formula</b>: NumSearches - HitCount <br></html>");
 //			mtd.addColumn("monStatementCache",  "OveralAvgReusePct", "<html>" +
 //					"A good indication of overall average reuse for each statement. A 10:1 ratio obviously is much better than 2:1<br>" +
 //					"<b>Formula</b>: diff.HitCount / diff.NumStatements * 100 <br>" +
@@ -193,6 +196,7 @@ extends CountersModel
 //			"  OveralAvgReusePct = CASE WHEN NumStatements>0 THEN convert(numeric(10,1), ((HitCount+0.0)/(NumStatements+0.0))*100.0 ) ELSE convert(numeric(10,1), 0) END, \n" +
 			"  NumSearches, \n" +
 			"  HitCount, \n" +
+			"  MissCount = NumSearches - HitCount, \n" +
 			"  NumInserts, \n" +
 			"  NumRemovals, \n" +
 			"  NumRecompilesSchemaChanges, \n" +

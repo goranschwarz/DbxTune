@@ -32,7 +32,7 @@ extends CountersModel
 
 	public static final String[] MON_TABLES       = new String[] {"monSQLRepMisses"};
 	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
-	public static final String[] NEED_CONFIG      = new String[] {};
+	public static final String[] NEED_CONFIG      = new String[] {"enable rep agent threads"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {

@@ -60,7 +60,8 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"CPUTime", "SpidWaitTime", "EventIdWaitTime", "Waits", "LogicalReads", "PhysicalReads", "PhysicalWrites", 
-		"PagesRead", "PagesWritten", "TableAccesses", "IndexAccesses", "Transactions", "Commits", "Rollbacks"};
+		"PagesRead", "PagesWritten", "TableAccesses", "IndexAccesses", "Transactions", "Commits", "Rollbacks",
+		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -287,6 +288,21 @@ extends CountersModel
 		if (isClusterEnabled)
 			cols += "A.InstanceID, ";
 
+		// ASE 15.7.0 ESD#2
+		String IOSize1Page        = ""; // Number of 1 page physical reads performed by the process
+		String IOSize2Pages       = ""; // Number of 2 pages physical reads performed for the process
+		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the process
+		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
+		String nl_15702           = ""; // NL for this section
+		if (aseVersion >= 15702)
+		{
+			IOSize1Page        = "A.IOSize1Page, ";
+			IOSize2Pages       = "A.IOSize2Pages, ";
+			IOSize4Pages       = "A.IOSize4Pages, ";
+			IOSize8Pages       = "A.IOSize8Pages, ";
+			nl_15702           = "\n";
+		}
+
 		cols += 
 			"  A.SPID, A.KPID, "+UserName+"\n" +
 			"  sampleTimeInMs = convert(int,-1), \n" + // This value is replaced with a real value in class SamplingCnt
@@ -294,6 +310,7 @@ extends CountersModel
 			"  WaitTimePerWait = CASE WHEN W.Waits > 0 THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) ELSE convert(numeric(15,3), 0.0) END, \n" +
 			"  W.WaitEventID, Class=C.Description, Event=I.Description, \n" +
 			"  A.LogicalReads, A.PhysicalReads, A.PhysicalWrites, A.PagesRead, A.PagesWritten, \n" +
+			IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 			"  A.TableAccesses, A.IndexAccesses, A.Transactions, A.Commits, A.Rollbacks, A.LocksHeld, A.MemUsageKB, \n" +
 			(aseVersion >= 15700 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
 			"  HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +

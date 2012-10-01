@@ -25,6 +25,110 @@ li   {margin-bottom: 6px}
 	   <li>Offline mode, keyToRid was not initialized in some cases, which caused problems in getRowNumberForPkValue()</li>
 	   <li>Small layout issue with the Split pane for panels with Extended info panels, like local graphs etc</li>
 	   <li>Additional help text, and tip when a Performance Counter depends on other Performance Counters.</li>
+	   <li>A bunch of other small bug fixes</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: tab 'Spinlock Act' in the group 'Server'</b><br>
+	In ASE 15.7.0 ESD#2 a table monSpinlockActivity was introduced, where spinlock contention is visible<br>
+	This Performance Counter is a complement to 'Spinlock Sum', which uses table sysmonitors.<br>
+	</LI>
+
+	<LI>
+	<b>New: Graph 'Number of Concurrent Blocking Locks'</b><br>
+	Simply grab 'LockWaits' from the CmSummary and present it in a graph.<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Objects' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>IOSize1Page       </code> - Number of 1 page physical reads performed for the object</li>
+	   <li><code>IOSize2Pages      </code> - Number of 2 pages physical reads performed for the object</li>
+	   <li><code>IOSize4Pages      </code> - Number of 4 pages physical reads performed for the object</li>
+	   <li><code>IOSize8Pages      </code> - Number of 8 pages physical reads performed for the object</li>
+	   <li><code>PRSSelectCount    </code> - Number of times PRS (Precomputed Result Set) was selected for query rewriting plan during compilation</li>
+	   <li><code>LastPRSSelectDate </code> - Last date the PRS (Precomputed Result Set) was selected for query rewriting plan during compilation</li>
+	   <li><code>PRSRewriteCount   </code> - Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation</li>
+	   <li><code>LastPRSRewriteDate</code> - Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Devices' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>ReadTime          </code> - Total time spent reading from the device (ms)</li>
+	   <li><code>WriteTime         </code> - Total time spent writing to the device (ms)</li>
+	   <li><code>ReadServiceTimeMs </code> - Calculation, formula: ReadTime / Reads</li>
+	   <li><code>WriteServiceTimeMs</code> - Calculation, formula: WriteTime / Writes</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Processes' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>IOSize1Page </code> - Number of 1 page physical reads performed by the process</li>
+	   <li><code>IOSize2Pages</code> - Number of 2 pages physical reads performed for the process</li>
+	   <li><code>IOSize4Pages</code> - Number of 4 pages physical reads performed for the process</li>
+	   <li><code>IOSize8Pages</code> - Number of 8 pages physical reads performed for the process</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Databases' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>PRSUpdateCount </code> - Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table</li>
+	   <li><code>PRSSelectCount </code> - Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation</li>
+	   <li><code>PRSRewriteCount</code> - Number of times PRSes (Precomputed Result Set) were considered valid for query rewriting during compilation</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Statement Cache Details' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>AvgScanRows           </code> - Average scanned rows read per execution</li>
+	   <li><code>MaxScanRows           </code> - Maximum scanned rows read per execution</li>
+	   <li><code>AvgQualifyingReadRows </code> - Average qualifying data rows for read DML per execution</li>
+	   <li><code>MaxQualifyingReadRows </code> - Maximum qualifying data rows for read DML per execution</li>
+	   <li><code>AvgQualifyingWriteRows</code> - Average qualifying data rows for write DML per execution</li>
+	   <li><code>MaxQualifyingWriteRows</code> - Maximum qualifying data rows for write DML per execution</li>
+	   <li><code>LockWaits             </code> - Total number of lock waits</li>
+	   <li><code>LockWaitTime          </code> - Total lock-wait time (ms)</li>
+	   <li><code>SortCount             </code> - Total number of sort operations</li>
+	   <li><code>SortSpilledCount      </code> - Total number of sort operations spilling to disk</li>
+	   <li><code>TotalSortTime         </code> - Total sort time (ms)</li>
+	   <li><code>MaxSortTime           </code> - Maximum sort time (ms)</li>
+	   <li><code>ParallelDegreeReduced </code> - The number of times the degree of parallelism in the plan was reduced but it still executed as a parallel query (parallel plans only)</li>
+	   <li><code>ParallelPlanRanSerial </code> - The number of times a parallel query plan was adjusted so that it executed without parallelism (parallel plans only)</li>
+	   <li><code>WorkerThreadDeficit   </code> - The total thread deficit for all executions of a parallel plan (parallel plans only)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Recoding a session for a ASE 15.7.0 EDS#2</b><br>
+	Record a AseTune session on a ASE 15.7.0 ESD#2 was not working, which is now fixed.<br>
+	The problem was that lct_admin() was returning 'unsigned int' and in previous releases
+	it simply returned data type 'int'. If the storage engine (in this case H2) doesn't support
+	data type 'unsigned int' the recoding failed.<br>
+	Solution: I'm simply casting the 'unsigned int' to 'int'
+	</LI>
+
+	<LI>
+	<b>Bug fix: tool SQL Window</b><br>
+	Binary datatype is now displayed as 0x{value}.<br>
+	Can now connect to Replication Server<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.6.4, Component: Swing Labs, JXTable</li>
+	  <li>To version 1.2.17, Component: Log4J</li>
+	  <li>To version 1.0.14, Component: JFreeChart</li>
+	  <li>To version 2.0.4.1, Component: RSyntaxTextArea</li>
+	  <li>To version 2.0.4, Component: Autocomplete, part of RSyntaxTextArea</li>
+	  <li>To version 1.3.169, Component: H2 database</li>
+	  <li>To version 2012-09-20, Component: ProxyVole</li>
 	</ul>
 	</LI>
 

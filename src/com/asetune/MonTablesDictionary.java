@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.naming.NameNotFoundException;
@@ -968,6 +969,25 @@ public class MonTablesDictionary
 //		return (desc == null) ? "" : desc;
 	}
 
+	public String getSpinlockType(String spinName, List<String> aseCacheNames)
+	{
+		if (spinName == null)
+			return null;
+
+		String desc = null;
+
+		if      (spinName.startsWith("Dbtable->" )) desc = "DBTABLE";
+		else if (spinName.startsWith("Dbt->"     )) desc = "DBTABLE";
+		else if (spinName.startsWith("Dbtable."  )) desc = "DBTABLE";
+		else if (spinName.startsWith("Resource->")) desc = "RESOURCE";
+		else if (spinName.startsWith("Kernel->"  )) desc = "KERNEL";
+		else if (aseCacheNames != null && aseCacheNames.contains(spinName)) desc = "CACHE";
+		else                                        desc = "OTHER";
+
+		return desc;
+	}
+
+
 	/**
 	 * Get description for specific waitEventId
 	 * 
@@ -1139,5 +1159,4 @@ public class MonTablesDictionary
 	public void loadOfflineMonTablesDictionary(Connection conn)
 	{
 	}
-
 }

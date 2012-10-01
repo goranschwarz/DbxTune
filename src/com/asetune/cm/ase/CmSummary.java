@@ -106,22 +106,25 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";       // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
-	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";       // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION;
-	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph"; // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
-	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph"; // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
-	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";    // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
+	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
+	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION;
+	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
+	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
+	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
+	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 
 	private void addTrendGraphs()
 	{
-		String[] labels_aaCpu       = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-		String[] labels_transaction = new String[] { "Transactions" };
-		String[] labels_connection  = new String[] { "UserConnections", "distinctLogins", "@@connections" };
-		String[] labels_aaDiskRW    = new String[] { "@@total_read", "@@total_write" };
-		String[] labels_aaNwPacket  = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+		String[] labels_aaCpu         = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
+		String[] labels_transaction   = new String[] { "Transactions" };
+		String[] labels_blockingLocks = new String[] { "Blocking Locks" };
+		String[] labels_connection    = new String[] { "UserConnections", "distinctLogins", "@@connections" };
+		String[] labels_aaDiskRW      = new String[] { "@@total_read", "@@total_write" };
+		String[] labels_aaNwPacket    = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
 		
 		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu));
 		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
+		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
 		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
 		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
 		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
@@ -150,6 +153,16 @@ extends CountersModel
 				false, // visible at start
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
+					"Blocking Locks", 	                  // Menu CheckBox text
+					"Number of Concurrently Blocking Locks (from monState)", // Label 
+					labels_blockingLocks, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					-1);  // minimum height
+				addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
 				"Connections/Users in ASE", 	          // Menu CheckBox text
@@ -289,7 +302,9 @@ extends CountersModel
 				// 16 - Database is offline
 				// 32 - Database is offline until recovery completes
 				// model is used during create database... so skip this one to
-				", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) from master..sysdatabases readpast \n" +
+//				", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) \n" +
+				", fullTranslogCount  = (select convert(int, sum(lct_admin('logfull', dbid))) \n" +
+				"                        from master..sysdatabases readpast \n" +
 				"                        where (status & 32   != 32  ) and (status & 256  != 256 ) \n" +
 				"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
 				"                          and (status & 4096 != 4096) \n" +
@@ -433,6 +448,18 @@ extends CountersModel
 				tgdp.setDate(this.getTimestamp());
 				tgdp.setData(arr);
 			}
+		}
+
+		if (GRAPH_NAME_BLOCKING_LOCKS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble (0, "LockWaits");
+			_logger.debug("updateGraphData(BlockingLocksGraph): LockWait='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
 		}
 
 		if (GRAPH_NAME_CONNECTION.equals(tgdp.getName()))

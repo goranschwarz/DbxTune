@@ -57,6 +57,7 @@ import javax.swing.RowSorter;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.RowSorterEvent;
 import javax.swing.event.TableModelEvent;
@@ -1718,15 +1719,23 @@ implements
 			{
 				CountersModel cm = _cmDisplay;
 				if (cm == null)	cm = _cm;
-				if (cm == null)	return null;
+//				if (cm == null)	return null;
+				
+				String sqlRefreshTime = (cm == null) ? "Unavailable" : cm.getSqlRefreshTime() + " ms.";
+				String guiRefreshTime = (cm == null) ? "Unavailable" : cm.getGuiRefreshTime() + " ms.";
+				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
+
 				return "<html>" +
-						"SQL Refresh time: "+cm.getSqlRefreshTime()+" ms.<br>" +
-						"GUI Refresh Time: "+cm.getGuiRefreshTime()+" ms.<br>" +
-						"Local Calculation Time: "+cm.getLcRefreshTime()+" ms.<br>" +
+						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
+						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
+						"Local Calculation Time: "+lcRefreshTime+"<br>" +
 						"</html>";
 			}
 		};
-		panel.setToolTipText(""); // need to set the tooltip, otherwise it will grab parents tooltip.
+		// need to set/register the tooltip, otherwise it will grab parents tooltip.
+		//panel.setToolTipText("Refresh timings should be visible here."); 
+        ToolTipManager.sharedInstance().registerComponent(panel);
+
 		panel.setBorder(BorderFactory.createTitledBorder("Sample Information"));
 
 //		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "wrap 2, ins 0", "[growx] [growx]", ""));

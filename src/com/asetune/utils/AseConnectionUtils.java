@@ -2969,7 +2969,7 @@ public class AseConnectionUtils
 		// Statement Cache object
 		boolean isStatementCache = false;
 		String  ssqlid = null;
-		if (objectName.startsWith("*ss"))
+		if (objectName.startsWith("*ss") || objectName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
 		{
 			isStatementCache = true;
 			int sep = objectName.indexOf('_');

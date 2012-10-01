@@ -31,6 +31,8 @@ public class ResultSetTableModel
 {
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(ResultSetTableModel.class);
+	
+	private static String BINARY_PREFIX = "0x";
 
 	int	_numcols;
 
@@ -65,7 +67,7 @@ public class ResultSetTableModel
 		{
 			String columnLabel       = rsmd.getColumnLabel(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
-			String columnTypeName    = rsmd.getColumnTypeName(c);
+			String columnTypeName    = getColumnTypeName(rsmd, c);
 			int    columnType        = rsmd.getColumnType(c);
 			int    columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 
@@ -103,8 +105,15 @@ public class ResultSetTableModel
 				switch(type)
 				{
 				case Types.CLOB:
-						o = rs.getString(c);
-						break;
+					o = rs.getString(c);
+					break;
+
+				case Types.BINARY:
+				case Types.VARBINARY:
+				case Types.LONGVARBINARY:
+					o = BINARY_PREFIX + rs.getString(c);	
+					break;
+
 				default:
 						o = rs.getObject(c);
 						break;
@@ -126,6 +135,75 @@ public class ResultSetTableModel
 //		rs.close();
 	}
 
+	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
+	{
+		String columnTypeName;
+		// in RepServer, the getColumnTypeName() throws exception: JZ0SJ ... wants metadata 
+		try
+		{
+			columnTypeName = rsmd.getColumnTypeName(col);
+		}
+		catch (SQLException e)
+		{
+			// Can we "compose" the datatype from the JavaType and DisplaySize???
+			//columnTypeName = guessDataType(columnType, rsmd.getColumnDisplaySize(c));
+			columnTypeName = "unknown-datatype";
+
+			try
+			{
+				int columnType        = rsmd.getColumnType(col);
+				int columnDisplaySize = rsmd.getColumnDisplaySize(col);
+				int precision         = 0;
+				int scale             = 0;
+
+				if ( columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL )
+				{
+					precision = rsmd.getPrecision(col);
+					scale     = rsmd.getScale(col);
+				}
+				
+				switch (columnType)
+				{
+				case java.sql.Types.BIT:          return "bit";
+				case java.sql.Types.TINYINT:      return "tinyint";
+				case java.sql.Types.SMALLINT:     return "smallint";
+				case java.sql.Types.INTEGER:      return "int";
+				case java.sql.Types.BIGINT:       return "bigint";
+				case java.sql.Types.FLOAT:        return "float";
+				case java.sql.Types.REAL:         return "real";
+				case java.sql.Types.DOUBLE:       return "double";
+				case java.sql.Types.NUMERIC:      return "numeric("+precision+","+scale+")";
+				case java.sql.Types.DECIMAL:      return "decimal("+precision+","+scale+")";
+				case java.sql.Types.CHAR:         return "char("+columnDisplaySize+")";
+				case java.sql.Types.VARCHAR:      return "varchar("+columnDisplaySize+")";
+				case java.sql.Types.LONGVARCHAR:  return "text";
+				case java.sql.Types.DATE:         return "date";
+				case java.sql.Types.TIME:         return "time";
+				case java.sql.Types.TIMESTAMP:    return "datetime";
+				case java.sql.Types.BINARY:       return "binary("+columnDisplaySize+")";
+				case java.sql.Types.VARBINARY:    return "varbinary("+columnDisplaySize+")";
+				case java.sql.Types.LONGVARBINARY:return "image";
+				case java.sql.Types.NULL:         return "-null-";
+				case java.sql.Types.OTHER:        return "-other-";
+				case java.sql.Types.JAVA_OBJECT:  return "-java_object";
+//				case java.sql.Types.DISTINCT:     return "-DISTINCT-";
+//				case java.sql.Types.STRUCT:       return "-STRUCT-";
+//				case java.sql.Types.ARRAY:        return "-ARRAY-";
+				case java.sql.Types.BLOB:         return "image";
+				case java.sql.Types.CLOB:         return "text";
+//				case java.sql.Types.REF:          return "-REF-";
+//				case java.sql.Types.DATALINK:     return "-DATALINK-";
+				case java.sql.Types.BOOLEAN:      return "bit";
+				default:
+					columnTypeName = "unknown-datatype";
+				}
+			}
+			catch (SQLException e1)
+			{
+			}
+		}
+		return columnTypeName;
+	}
 	public List<SQLWarning> getSQLWarningList()
 	{
 		return _sqlWarnList;

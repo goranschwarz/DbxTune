@@ -2154,7 +2154,8 @@ public class CheckForUpdates
 		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
-		System.setProperty("java.net.useSystemProxies", "true");
+//		System.setProperty("java.net.useSystemProxies", "true");
+		CheckForUpdates.init();
 
 //		System.setProperty("http.proxyHost", "www-proxy.dummy.se");
 //		System.setProperty("http.proxyPort", "8080");

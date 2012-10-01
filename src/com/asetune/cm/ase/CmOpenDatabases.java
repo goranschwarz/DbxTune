@@ -61,7 +61,9 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct", "LogSizeUsedPct"};
-	public static final String[] DIFF_COLUMNS     = new String[] {"AppendLogRequests", "AppendLogWaits"};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+		"AppendLogRequests", "AppendLogWaits", 
+		"PRSUpdateCount", "PRSSelectCount", "PRSRewriteCount"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -241,6 +243,19 @@ extends CountersModel
 		{
 			ceDbRecoveryStatus = "CeDbRecoveryStatus = db_recovery_status(DBID), ";
 		}
+		
+		// 15.7 ESD#2
+		String PRSUpdateCount  = "";
+		String PRSSelectCount  = "";
+		String PRSRewriteCount = "";
+		String nl_15702        = "";
+		if (aseVersion >= 15702)
+		{
+			PRSUpdateCount  = "PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
+			PRSSelectCount  = "PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
+			PRSRewriteCount = "PRSRewriteCount, "; // Number of times PRSes (Precomputed Result Set) were considered valid for query rewriting during compilation
+			nl_15702        = " \n";
+		}
 
 		// If we implement the FreeLogSize, then we need to take away databases that are in recovery etc...
 		// Also calculate it into MB...
@@ -262,7 +277,9 @@ extends CountersModel
 		         "                      ELSE convert(numeric(10,2), 0.0) \n" +
 		         "                   END, \n" +
 		         DbSizeInMb + LogSizeInMb + LogSizeFreeInMb + LogSizeUsedPct + 
-		         "TransactionLogFull, " + SuspendedProcesses + "BackupInProgress, LastBackupFailed, BackupStartTime, ";
+		         "TransactionLogFull, " + SuspendedProcesses + 
+		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +
+		         "BackupInProgress, LastBackupFailed, BackupStartTime, ";
 		cols2 += "";
 		cols3 += QuiesceTag;
 		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
