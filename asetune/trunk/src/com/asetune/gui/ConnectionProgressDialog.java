@@ -11,6 +11,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -85,6 +86,9 @@ implements ActionListener, ConnectionProgressCallback
 	/** Connection made in background */
 	private Connection   _connection       = null;
 
+	/** If the connected Product Name must be a certain string, this is it */
+	private String       _desiredProductName = null;
+
 	/** SSH Connection made in background */
 	private SshConnection   _sshConnection = null;
 
@@ -128,7 +132,7 @@ implements ActionListener, ConnectionProgressCallback
 	private static final String EXTRA_TASK_INIT_COUNTER_COLLECTOR = "Init Counter Collector";
 	private boolean      _doExtraTasks     = true;
 
-	/** Timer used to move the progressbar every X ms */
+	/** Timer used to move the progress bar every X ms */
 	private Timer              _progressTimer             = null;
 
 	private Dimension          _rememberShowMode          = null;
@@ -146,21 +150,21 @@ implements ActionListener, ConnectionProgressCallback
 	private static String     _fixme_jdbcDriver = null;
 	private static String     _fixme_rawUrl     = null;
 	private static Properties _fixme_props      = null;
-	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn)
+	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
 	throws Exception
 	{
 		_fixme_jdbcDriver = driver;
 		_fixme_rawUrl     = rawUrl;
 		_fixme_props      = props;
-		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn);
+		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, desiredDbProductName);
 	}
-	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn)
+	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
 	throws Exception
 	{
 		ConnectionProgressDialog cpd = null;
 
-		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn);
-		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn);
+		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
+		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
 		else throw new IllegalAccessException("owner parameter can only be of the object types 'Dialog' or 'Frame'.");
 
 		// kick off connect.
@@ -184,17 +188,17 @@ implements ActionListener, ConnectionProgressCallback
 		return null;
 	}
 	
-	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn)
+	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn);
+		init(owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
 	}
-	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn)
+	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn);
+		init(owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
 	}
-	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn)
+	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
 	{
 		_urlStr = urlStr;
 		_doExtraTasks = doExtraTasks;
@@ -202,6 +206,9 @@ implements ActionListener, ConnectionProgressCallback
 		// the ssh connection object itself will newer be changed
 		// just the contents on the object will be, this is it will do a connect
 		_sshConnection = sshConn;
+
+		// If the connection NEEDS to be of a specific product name
+		_desiredProductName = desiredDbProductName;
 
 		//	AseConnectionUtils.checkForMonitorOptions(conn, _user_txt.getText(), true, this);
 		//	MonTablesDictionary.getInstance().initialize(conn);
@@ -795,8 +802,64 @@ implements ActionListener, ConnectionProgressCallback
 			_logger.warn("in-hostPort='"+taskName+"', was NOT found in tab.");
 	}
 
-	
-	
+	public void setDesiredProductName(String productName)
+	{
+		_desiredProductName = productName;
+	}
+	public String getDesiredProductName()
+	{
+		return _desiredProductName;
+	}
+
+	private boolean isDesiredProductName(Connection conn, boolean showGuiMessage, boolean throwException)
+	throws Exception
+	{
+		if (conn == null)
+			return false;
+
+		// If productName is not set, then there is nothing to check, then simply return TRUE
+		if (getDesiredProductName() == null)
+			return true;
+
+		// Get Product NAME and check if it's the Desired Product name
+		try
+		{
+			String dbProductStr = ConnectionDialog.getDatabaseProductName(conn);
+			String dbVersionStr = ConnectionDialog.getDatabaseProductVersion(conn);
+
+			_logger.debug("Just connected to Database Product '"+dbProductStr+"', with version string '"+dbVersionStr+"'.");
+
+			if ( ! getDesiredProductName().equals(dbProductStr) )
+			{
+				_logger.warn("Sorry you can only connect to Product named '"+getDesiredProductName()+"'. The connected product name was '"+dbProductStr+"', with the version string '"+dbVersionStr+"'.");
+
+				String htmlMsg = 
+					"<html>" +
+					"<h2>Sorry you can only connect to Database Product named '"+getDesiredProductName()+"'</h2>" +
+					"You just connected to a server with the below Product name and version<br>" +
+					"<ul>" +
+					"  <li>Product Name: "+dbProductStr+"</li>" +
+					"  <li>Version String: "+dbVersionStr+"</li>" +
+					"</ul>" +
+					"</html>";
+				SwingUtils.showWarnMessage("Unsupported Database Product", htmlMsg, null);
+				
+				if (throwException)
+					throw new Exception("Unsupported product name '"+dbProductStr+"'. It must be '"+getDesiredProductName()+"'.");
+
+				return false;
+			}
+			return true;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("Problems when trying to get Database Product and Version. Caught "+e, e);
+			if (throwException)
+				throw e;
+			return false; 
+		}
+	}
+
 	private void doBackgroundConnect()
 	{
 		_doConnectWorker = new SwingWorker()
@@ -848,7 +911,17 @@ implements ActionListener, ConnectionProgressCallback
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: RAW_URL: AseConnectionFactory.getConnection(fixme_jdbcDriver, _fixme_rawUrl, fixme_props, thisDialog)");
 						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
-						_connection = conn; 
+
+						// close the connection if it's not the expected Product Name
+						if (conn != null)
+						{
+							if( ! isDesiredProductName(conn, true, true) )
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
+							}
+						}
+						_connection = conn;
 					}
 					else
 					{
@@ -857,6 +930,16 @@ implements ActionListener, ConnectionProgressCallback
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: NORMAL: AseConnectionFactory.getConnection(thisDialog)");
 						Connection conn = AseConnectionFactory.getConnection(_thisDialog);
+
+						// close the connection if it's not the expected Product Name
+						if (conn != null)
+						{
+							if( ! isDesiredProductName(conn, true, true) )
+							{
+								try { conn.close(); } catch (SQLException ignore) {}
+								conn = null;
+							}
+						}
 
 						//-------------------------
 						// Extra tasks
@@ -1126,7 +1209,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			try
 			{
-				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null);
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null);
 				System.out.println("Connection returned. conn="+conn);
 			}
 			catch (Exception e)

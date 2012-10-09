@@ -2564,7 +2564,7 @@ public class RefreshProcess extends Thread
 
 
 			// Check if user has sa_role
-			ResultSet rs = stmt.executeQuery("sp_activeroles");
+			ResultSet rs = stmt.executeQuery("sp_activeroles 'expand_down'");
 			while (rs.next())
 			{
 				if (rs.getString(1).equals("sa_role"))

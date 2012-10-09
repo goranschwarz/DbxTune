@@ -16,6 +16,7 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
@@ -110,6 +111,9 @@ public class ConnectionDialog
 //	private Connection               _pcsConn         = null;
 	private Connection               _offlineConn     = null;
 //	private PersistentCounterHandler _pcsWriter       = null;
+
+	/** If the connected Product Name must be a certain string, this is it */
+	private String                   _desiredProductName = null;
 
 	private Date                     _disConnectTime  = null;
 
@@ -341,6 +345,145 @@ public class ConnectionDialog
 		getSavedWindowProps();
 
 		setFocus();
+	}
+
+	/**
+	 * If the Product Name of the server we connects to needs to be of a specific name
+	 * @param productName
+	 */
+	public void setDesiredProductName(String productName)
+	{
+		_desiredProductName = productName;
+	}
+
+	/**
+	 * Get the connected database product name, simply call jdbc.getMetaData().getDatabaseProductName();
+	 * @return null if not connected else: Retrieves the name of this database product.
+	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
+	 */
+	public String getDatabaseProductName() 
+	throws SQLException
+	{
+		return getDatabaseProductName(_aseConn);
+	}
+	public static String getDatabaseProductName(Connection conn) 
+	throws SQLException
+	{
+		if (conn == null)
+			return null;
+		try
+		{
+			String str = conn.getMetaData().getDatabaseProductName();
+			_logger.debug("getDatabaseProductName() returns: '"+str+"'.");
+			return str; 
+		}
+		catch (SQLException e)
+		{
+			// If NO metadata installed, check if it's a Sybase Replication Server.
+			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+			if ( "JZ0SJ".equals(e.getSQLState()) )
+			{
+				try
+				{
+					String str1 = "";
+					String str2 = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("admin rssd_name");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+						str2 = rs.getString(2);
+					}
+					rs.close();
+					stmt.close();
+
+					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+					return DB_PROD_NAME_SYBASE_RS;
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			_logger.debug("getDatabaseProductName() Caught: "+e, e);
+			throw e;
+		}
+	}
+	/**
+	 * Get the connected database version string, simply call jdbc.getMetaData().getDatabaseProductName();
+	 * @return null if not connected else: Retrieves the version number of this database product.
+	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
+	 */
+	public String getDatabaseProductVersion() 
+	throws SQLException
+	{
+		return getDatabaseProductVersion(_aseConn);
+	}
+	public static String getDatabaseProductVersion(Connection conn) 
+	throws SQLException
+	{
+		if (conn == null)
+			return null;
+		try
+		{
+			String str = conn.getMetaData().getDatabaseProductVersion();
+			_logger.debug("getDatabaseProductVersion() returns: '"+str+"'.");
+			return str; 
+		}
+		catch (SQLException e)
+		{
+			// If NO metadata installed, check if it's a Sybase Replication Server.
+			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+			if ( "JZ0SJ".equals(e.getSQLState()) )
+			{
+				try
+				{
+					String str = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("admin version");
+					while ( rs.next() )
+					{
+						str = rs.getString(1);
+					}
+					rs.close();
+					stmt.close();
+
+					_logger.info("Replication Server with Version string '"+str+"'.");
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+					return str;
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			_logger.debug("getDatabaseProductVersion() Caught: "+e, e);
+			throw e;
+		}
+	}
+	/** List some known DatabaseProductName that we can use here */
+	public static final String DB_PROD_NAME_SYBASE_ASE = "Adaptive Server Enterprise";
+	public static final String DB_PROD_NAME_SYBASE_ASA = "SQL Anywhere";
+	public static final String DB_PROD_NAME_SYBASE_RS  = "Replication Server";
+	public static final String DB_PROD_NAME_H2         = "H2";
+
+	/**
+	 * Check if current connected product name is equal to the input parameter
+	 * @param str Name of the product to test for
+	 * @return true if equal
+	 */
+	public boolean isDatabaseProduct(String str)
+	{
+		if (str == null)
+			return false;
+
+		try
+		{
+			String currentDbProductName = getDatabaseProductName();
+			return str.equals(currentDbProductName);
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("isDatabaseProduct() Caught: "+e, e);
+			return false;
+		}
 	}
 
 	public int                      getConnectionType() { return _connectionType; }
@@ -1695,7 +1838,7 @@ public class ConnectionDialog
 			try
 			{
 				_logger.info("Connecting to ASE using RAW-URL username='"+username+"', URL='"+rawUrl+"'.");
-				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), rawUrl, props, _checkAseCfg, _sshConn);
+				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), rawUrl, props, _checkAseCfg, _sshConn, _desiredProductName);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
 				return true;
 			}
@@ -1764,7 +1907,7 @@ public class ConnectionDialog
 			_logger.info("Connecting to ASE '"+AseConnectionFactory.getServer()+"'.  hostPortStr='"+AseConnectionFactory.getHostPortStr()+"', user='"+AseConnectionFactory.getUser()+"'.");
 
 			String urlStr = "jdbc:sybase:Tds:" + AseConnectionFactory.getHostPortStr();
-			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn);
+			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, _desiredProductName);
 //			_aseConn = AseConnectionFactory.getConnection();
 
 			return true;

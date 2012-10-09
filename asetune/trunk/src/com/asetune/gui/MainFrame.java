@@ -1942,6 +1942,7 @@ public class MainFrame
 		}
 		else // Show the dialog and wait for response
 		{
+			connDialog.setDesiredProductName(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE);
 			connDialog.setVisible(true);
 			connDialog.dispose();
 		}
