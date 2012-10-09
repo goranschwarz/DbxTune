@@ -1163,6 +1163,49 @@ public class AseConnectionUtils
 		return aseVersionNum;
 	}
 
+	/**
+	 * Executes 'admin version' in the Replication Server and parses the output into a integer
+	 * @param conn
+	 * @return a int with the version number in the form:
+	 * <ul>
+	 *   <li>12503 for (12.5.0 ESD#3)</li>
+	 *   <li>12549 for (12.5.4 ESD#9)</li>
+	 *   <li>15031 for (15.0.3 ESD#1)</li>
+	 *   <li>15500 for (15.5)</li>
+	 *   <li>15502 for (15.5 ESD#2)</li>
+	 * </ul>
+	 * If the ESD level is above 9 it will still return 9 (otherwise it would wrap...)
+	 */
+	public static int getRsVersionNumber(Connection conn)
+	{
+		int srvVersionNum = 0;
+
+		// version
+		try
+		{
+			String aseVersionStr = "";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("admin version");
+			while ( rs.next() )
+			{
+				aseVersionStr = rs.getString(1);
+			}
+			rs.close();
+	
+			if (srvVersionNum == 0)
+			{
+				srvVersionNum = aseVersionStringToNumber(aseVersionStr);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("AseConnectionUtils:getRsVersionNumber(), @@version", ex);
+		}
+		
+		return srvVersionNum;
+	}
+
 	public static boolean isClusterEnabled(Connection conn)
 	{
 		String clusterMode = null;
@@ -1411,7 +1454,7 @@ public class AseConnectionUtils
 			// Get various roles
 			_logger.debug("Verify mon_role");
 			stmt = conn.createStatement();
-			rs = stmt.executeQuery("sp_activeroles");
+			rs = stmt.executeQuery("sp_activeroles 'expand_down'");
 			boolean has_sa_role        = false;
 			boolean has_sso_role       = false;
 			boolean has_mon_role       = false;
@@ -1447,7 +1490,7 @@ public class AseConnectionUtils
 					_logger.info("Executed: "+sql);
 
 					// re-check if grant of mon_role succeeded
-					sql = "sp_activeroles";
+					sql = "sp_activeroles 'expand_down'";
 					rs = stmt.executeQuery(sql);
 					has_mon_role = false;
 					while (rs.next())
@@ -1555,7 +1598,7 @@ public class AseConnectionUtils
 					_logger.info("Executed: "+sql);
 
 					// re-check if grant of mon_role succeeded
-					sql = "sp_activeroles";
+					sql = "sp_activeroles 'expand_down'";
 					rs = stmt.executeQuery(sql);
 					has_sybase_ts_role = false;
 					while (rs.next())
