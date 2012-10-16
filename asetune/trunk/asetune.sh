@@ -45,7 +45,6 @@ export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/autocomplete.jar
 export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/jcommon-1.0.17.jar
 export CLASSPATH=$CLASSPATH:$ASETUNE_HOME/lib/jfreechart-1.0.14.jar
 
-
 export PATH=$JAVA_HOME/bin:$PATH
 cd $ASETUNE_HOME
 
@@ -69,6 +68,17 @@ then
 	echo "-----------------------------------------------------------------------"
 	
 	exit 1
+fi
+
+#------------------------------------------------------------------------
+#--- Add various command line switches depending on platform
+#------------------------------------------------------------------------
+OS=`uname`
+
+if [ "{$OS}" == "Darwin" ]
+then
+    OS=mac
+	export JVM_PARAMS=${JVM_PARAMS} -Xdock:name=AseTune -Xdock:icon=${ASETUNE_HOME}/lib/asetune_icon_32.gif -Dapple.laf.useScreenMenuBar=true -Dcom.apple.mrj.application.apple.menu.about.name=AseTune
 fi
 
 

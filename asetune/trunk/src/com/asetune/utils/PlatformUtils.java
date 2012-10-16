@@ -32,7 +32,7 @@ public class PlatformUtils
 //	public static Platform getCurrentPlattform() 
 	public static int getCurrentPlattform() 
 	{
-		String osName = System.getProperty("os.name");
+		String osName = System.getProperty("os.name", "unknown");
 		
 		if (osName.startsWith("Windows")) 
 		{
@@ -44,7 +44,7 @@ public class PlatformUtils
 			_logger.trace("Detected Linux platform '"+osName+"'.");
 			return Platform_LINUX;
 		} 
-		if (osName.startsWith("MacOS")) 
+		if (osName.startsWith("MacOS") || osName.startsWith("Mac OS X")) 
 		{
 			_logger.trace("Detected Mac OS platform '"+osName+"'.");
 			return Platform_MAC_OS;
@@ -85,14 +85,14 @@ public class PlatformUtils
 //	public static Desktop getCurrentDesktop() 
 	public static int getCurrentDesktop() 
 	{
-		String osName = System.getProperty("os.name");
+		String osName = System.getProperty("os.name", "unknown");
 		
 		if (osName.startsWith("Windows")) 
 		{
 			_logger.trace("Detected Windows desktop.");
 			return Desktop_WIN;
 		} 
-		if (osName.startsWith("MacOS")) 
+		if (osName.startsWith("MacOS") || osName.startsWith("Mac OS X")) 
 		{
 			_logger.trace("Detected Mac OS desktop.");
 			return Desktop_MAC_OS;
