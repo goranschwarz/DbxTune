@@ -75,13 +75,14 @@
 
 <!--		<launch4j configFile="./launch4j.xml" />-->
 
-		<copy file="asetune.bat"                                  toFile="${dist}/asetune.bat"/>
-		<copy file="perfdemo.bat"                                 toFile="${dist}/perfdemo.bat"/>
-		<copy file="asetune.sh"                                   toFile="${dist}/asetune.sh"/>
-		<copy file="asetune.properties"                           toFile="${dist}/asetune.properties"/>
-		<copy file="sqlw.bat"                                     toFile="${dist}/sqlw.bat"/>
-		<copy file="${src}/com/asetune/history.html"              toFile="${dist}/history.html"/>
-		<copy file="${src}/com/asetune/images/asetune_splash.jpg" toFile="${dist}/lib/asetune_splash.jpg"/>
+		<copy file="asetune.bat"                                   toFile="${dist}/asetune.bat"/>
+		<copy file="perfdemo.bat"                                  toFile="${dist}/perfdemo.bat"/>
+		<copy file="asetune.sh"                                    toFile="${dist}/asetune.sh"/>
+		<copy file="asetune.properties"                            toFile="${dist}/asetune.properties"/>
+		<copy file="sqlw.bat"                                      toFile="${dist}/sqlw.bat"/>
+		<copy file="${src}/com/asetune/history.html"               toFile="${dist}/history.html"/>
+		<copy file="${src}/com/asetune/images/asetune_splash.jpg"  toFile="${dist}/lib/asetune_splash.jpg"/>
+		<copy file="${src}/com/asetune/images/asetune_icon_32.gif" toFile="${dist}/lib/asetune_icon_32.gif"/>
 		<copy todir="${dist}/lib">
 			<fileset dir="lib">
 				<include name="*.jar"/>
