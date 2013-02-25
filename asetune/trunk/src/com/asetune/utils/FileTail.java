@@ -16,7 +16,7 @@ import org.apache.log4j.Logger;
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Session;
 
-import com.asetune.hostmon.SshConnection;
+import com.asetune.ssh.SshConnection;
 
 /**
  * Class that does "tail" on any file
@@ -63,6 +63,9 @@ public class FileTail
 	 */
 	private boolean _startAtBeginning = false;
 
+	/** if not start at the start of the file, go back this amount of lines when starting the tail */
+	private int _linesFromEnd = 10;
+
 	/** Is the tailer currently tailing? */
 	private boolean _running = false;
 
@@ -96,10 +99,19 @@ public class FileTail
 	 */
 	public FileTail(String filename, boolean startAtBeginning)
 	{
+		this(filename, startAtBeginning, 0);
+	}
+	public FileTail(String filename, int linesFromEnd)
+	{
+		this(filename, false, linesFromEnd);
+	}
+	private FileTail(String filename, boolean startAtBeginning, int linesFromEnd)
+	{
 		_filename         = filename;
 		_localFile        = new File(filename);
 
 		_startAtBeginning = startAtBeginning;
+		_linesFromEnd     = linesFromEnd;
 
 		_execMode = TailType.LOCAL;
 	}
@@ -112,9 +124,19 @@ public class FileTail
 	 */
 	public FileTail(SshConnection sshConn, String filename, boolean startAtBeginning)
 	{
+		this(sshConn, filename, startAtBeginning, 0);
+	}
+	public FileTail(SshConnection sshConn, String filename, int linesFromEnd)
+	{
+		this(sshConn, filename, false, linesFromEnd);
+	}
+	private FileTail(SshConnection sshConn, String filename, boolean startAtBeginning, int linesFromEnd)
+	{
 		_sshConn          = sshConn;
 		_filename         = filename;
+
 		_startAtBeginning = startAtBeginning;
+		_linesFromEnd     = linesFromEnd;
 
 		_execMode = TailType.SSH;
 	}
@@ -289,14 +311,17 @@ public class FileTail
 	/** Get commund used by the SSH connection */
 	private String getCommand()
 	{
-		String os = _sshConn.getOsName();
+		String os  = _sshConn.getOsName();
 		String opt = "-f";
+		int    num = _linesFromEnd;
+		if (_startAtBeginning)
+			num = 999;
 		if ( ! StringUtil.isNullOrBlank(os) )
 		{
-			if      (os.equals("Linux")) opt = "-n 999 -f";
-			else if (os.equals("SunOS")) opt = "-999f";
-			else if (os.equals("HP-UX")) opt = "-999f";
-			else if (os.equals("AIX"))   opt = "-999f";
+			if      (os.equals("Linux")) opt = "-n "+num+" -f";
+			else if (os.equals("SunOS")) opt = "-"+num+"f";
+			else if (os.equals("HP-UX")) opt = "-"+num+"f";
+			else if (os.equals("AIX"))   opt = "-"+num+"f";
 		}
 		return "tail " + opt + " " + _filename;
 	}
@@ -478,7 +503,13 @@ public class FileTail
 				if (_startAtBeginning)
 					filePointer = 0;
 				else
+				{
 					filePointer = _localFile.length();
+					// FIXME for a better estimates...
+					filePointer -= _linesFromEnd * 80; // lets say one row is 80 chars wide
+					if (filePointer < 0)
+						filePointer = 0;
+				}
 
 				try
 				{

@@ -184,6 +184,7 @@ implements ActionListener, TableModelListener
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				saveProps();
@@ -201,6 +202,7 @@ implements ActionListener, TableModelListener
 	** BEGIN: Action Listeners, and helper methods for it
 	**---------------------------------------------------
 	*/
+	@Override
 	public void actionPerformed(ActionEvent e)
     {
 		Object source = e.getSource();
@@ -228,6 +230,7 @@ implements ActionListener, TableModelListener
 //		}
     }
 
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 		//System.out.println("tableChanged(): TableModelEvent="+e);
@@ -317,7 +320,8 @@ implements ActionListener, TableModelListener
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
@@ -501,6 +505,7 @@ implements ActionListener, TableModelListener
 			{
                 private static final long serialVersionUID = 0L;
 
+				@Override
 				public String getToolTipText(MouseEvent e)
 				{
 					String tip = null;
@@ -527,10 +532,12 @@ implements ActionListener, TableModelListener
 			// to decide what column of the TableHeader we are currently located on.
 			tabHeader.addMouseMotionListener(new MouseMotionListener()
 			{
+				@Override
 				public void mouseMoved(MouseEvent e)
 				{
 					_lastTableHeaderColumn = getColumnModel().getColumnIndexAtX(e.getX());
 				}
+				@Override
 				public void mouseDragged(MouseEvent e) {/*ignore*/}
 			});
 

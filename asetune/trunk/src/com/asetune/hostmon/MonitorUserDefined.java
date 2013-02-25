@@ -4,6 +4,7 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MandatoryPropertyException;
 

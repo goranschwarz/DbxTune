@@ -1,5 +1,6 @@
 package com.asetune.utils;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -17,6 +18,7 @@ public class CollectionUtils
 		// Create the comparator
 		Comparator<K> valueComparator = new Comparator<K>()
 		{
+			@Override
 			public int compare(K k1, K k2)
 			{
 				V v1 = map.get(k1);
@@ -39,5 +41,31 @@ public class CollectionUtils
 		sortedByValues.putAll(map);
 
 		return sortedByValues;
+	}
+
+	/**
+	 * 
+	 * @param collection
+	 * @return
+	 */
+	public static boolean isNullOrEmpty(Collection<?> collection)
+	{
+		if (collection == null)
+			return true;
+
+		if (collection.size() == 0)
+			return true;
+
+		return false;
+	}
+	public static boolean isNullOrEmpty(Map<?,?> collection)
+	{
+		if (collection == null)
+			return true;
+
+		if (collection.size() == 0)
+			return true;
+
+		return false;
 	}
 }

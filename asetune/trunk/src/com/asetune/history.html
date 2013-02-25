@@ -16,21 +16,132 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-xx-xx</H2>
+<H2>2012-02-25</H2>
 <UL>
 	<LI>
-	<b>Bug fix: various fixes</b><br>
+	<b>Major enhancements to the tool SQL Window</b><br>
+	Most enhancements are for the stand alone version. (<code>sqlw.bat</code> or <code>sqlw.sh</code>)<br>
+	Try it out and <b>send me feedback and suggestions</b><br>
+	Enhancements:<br>
 	<ul>
-	   <li>Offline mode, OfflineSessionViewer, Show on day,hour,minute level did not work as intended.</li>
-	   <li>Offline mode, keyToRid was not initialized in some cases, which caused problems in getRowNumberForPkValue()</li>
-	   <li>Small layout issue with the Split pane for panels with Extended info panels, like local graphs etc</li>
-	   <li>Additional help text, and tip when a Performance Counter depends on other Performance Counters.</li>
-	   <li>If you connect to a server that is NOT ASE, then print some errors about it.</li>
-	   <li>'mon_role' granted to any "user defined role(s)" attached to the user, was not detected at login time.</li>
-	   <li>Mac users now has 'Mac menu bar' and the "doc icon". This behaviour can be changed in the asetune.sh</li>
-	   <li>Menu Shortcut keyboard character has been changed from "Alt" to "Platform dependant" (Windown: Ctrl, Mac: Cmd)</li>
-	   <li>A bunch of other small bug fixes</li>
+	   <li>Connect to "any" JDBC driver (the driver must be in the CLASSPATH, at least for the moment, work in progress for this)</li>
+	   <li>Save (SQL/RCL) text content to a file. Save As. Load a file. Last Used files... (see the File Menu)</li>
+	   <li>Can now connect to Replication Server</li>
+	   <li>Syntax highlighting for RCL - Replication Command Language</li>
+	   <li>Basic Code Completion for Replication Server Commands and Connection names</li>
+	   <li>View Current ASE Configuration has been added, if you are connected to ASE.</li>
+	   <li>View Current RepServer Configuration has been added, if you are connected to RS.</li>
+	   <li>RS: Resume/Suspend RepAgent/DSI dialog. (right click in the JTable and do 'resume')</li>
+	   <li>RS: View Stable Queue Content. (Menu-&gt;View-&gt;View Stable Queue Content) (right click in the JTable and do 'view Queue Content') <i>NOTE: this is't 100% complete yet, need more work done</i></li>
+	   <li>Row Count option (see row count for ins/upd/del) and not just the selects. stored procedures like 'sp_who' will add <b>many</b> row counts. use URL Option <code>IGNORE_DONE_IN_PROC=true</code> in the Connection Dialog to minimize additional row count entries from stored procs.</li>
+	   <li>ASE: check @@trancount and @@transtate after each executed SQL Statement. a WARNING "watermark" will be visible if you are in a transaction. (try it: simply execute <code>begin tran</code>, then <code>commit/rollback tran</code>. to reset status 'TRAN ABORT', execute <code>begin tran  commit tran</code>)</li>
+	   <li>Predefined SQL/RCL commands, clock the RCL/SQL Button on the Toolbar and kick it off.</li>
+	   <li>RS: Admin who_is_down button on the Toolbar.</li>
+	   <li>Watermark in the RCL/SQL text editor, that tells you if you are connected or not...</li>
+	   <li>Status bar at the bottom that tells you user/server you are connected to, also tooltip on the ASE/RS field (located at lower right corner) will show you @@servername, JDBC Product Name, @@version, ports the server listens at.</li>
+	   <li>
+	      Improved Code Completion for for ASE:
+	      <ul>
+	         <li>exec &lt;Ctrl-Space&gt; will show procedures only, if the procedure start with 'sp_' all system stored procedures will be displayed. You can also use '*' to do wildcard searches, for example 'exec sp_*rep_agent*' will show any procedure that has the name 'rep_agent' in it.</li>
+	         <li>use &lt;Ctrl-Space&gt; will show databases</li>
+	         <li>FIXME: add more stuff here...</li>
+	      </ul>
+	   </li>
 	</ul>
+	Bug fixes:<br>
+	<ul>
+	   <li>Binary datatype is now displayed as 0x{value}.</li>
+	   <li>A bunch more.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Java Memory usage by AseTune</b><br>
+	AseTune uses a lot of memory, first of all Swing consumes quite some memory,
+	  then all data in the Performance Counters does take memory,
+	  then that data is stored in the 'in-memory' history, so we can go back and view data that within the history limit (defaults to 10 minutes)<br>
+	When not yet connected, I think I have decreased the memory usage a bit (some unnecessary calls to Swing was removed).<br>
+	But when you are connected and sampling data, the only thing I can do is try to cleanup or give the Java Garbage Collector <i>hints</i> that it should go to work.<br>
+	<br>
+	The following strategies has been implemented...
+	<ul>
+	   <li>A memory monitor thread, that will check how much memory we have left every third second and take actions (see below).</li>
+	   <li>On every data sample, also check if we are reaching "near end of memory" and take actions (see below).</li>
+	   <li>If the Swing Event Dispatch Thread receives OutOfMemoryError a notification to the Memory Monitor is sent.</li>
+	   <li>By Default the In-Memory storage is disabled. Or actually set to a low value (1 minute).</li>
+	</ul>
+	<br>
+	The following Actions is available for AseTune.
+	<ul>
+	   <li>
+	      if <b>less than 130MB</b> left
+	      <ul>
+              <li>enable option 'Do Java Garbage Collect after counters has been refreshed'. <br><b>Note</b>: the GUI might be perceived as a bit slow/sluggish when it has to do all that extra extensive Java Memory Garbage Collections</li>
+              <li>show a pop up message that the above has been enabled.</li>
+              <li>This can be disabled again from Menu-&gt;View-&gt;Preference-&gt;Do Java Garbage Collect after counters has been refreshed</li>
+	      </ul>
+	   </li>
+	   <li>
+	      if <b>less than 30MB</b> left
+	      <ul>
+              <li>The 'in-memory' counter view is cleared</li>
+              <li>The 'in-memory' counter history is set to a low value (typically 0 or 1 minute)</li>
+              <li>Advice the Java Garbage Collector to clean up memory</li>
+              <li>show a pop up message that this has been done.</li>
+              <li>'in-memory' counter history, can be set back at the top of the summary, graphs panel. </li>
+	      </ul>
+	   </li>
+	</ul>
+	<p>
+	   The default threshold values can be changed in any of the properties files.<br>
+	   Low-on-memory: <code>asetune.memory.monitor.threshold.low_on_memory.mb=newValueInMB</code><br>
+	   Out-of-memory: <code>asetune.memory.monitor.threshold.out_of_memory.mb=newValueInMB</code><br>
+	</p>
+	<p>
+	   When <i>'Do Java Garbage Collect after counters has been refreshed'</i> is enabled a small GUI pops up to tell
+	   you what's it doing since it might be a time consuming task to do the Java Garbage Collection.<br>
+	</p>
+	<p>
+	   Please let me know if you still have memory issues.<br>
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script. 
+	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
+	</p>
+	Also new default values for Java memory:
+	<ul>
+	   <li>32 bit JVM's will use 1024 as max memory (JVM switches: -Xmx1024m -Xms64m)</li>
+	   <li>64 bit JVM's will use 2048 as max memory (JVM switches: -Xmx2048m -Xms64m)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Connection Dialog Changes (added SSH Tunnel option)</b><br>
+	Connecting to ASE can now be done over an SSH Tunnel, which is automatically setup from AseTune via any SSH Server.<br>
+	This is used to simplify connecting to any ASE that is located on a "shielded" network.<br>
+	An example could be if you sit on one network and want to connect a ASE that is on the development network,
+	  and the firewall wont let you connect to the ASE port on the development net. As long as you can connect
+	  to any host that has a SSH server on the development net, problem is solved by the SSH Port Forwarding
+	  functionality. (or wait for the network administrators to open the port, if it's allowed)<br>
+	Here is the "big picture" how it works
+	<ul>
+	  <li>Setting up a local listener port (for example 2955). </li>
+	  <li>The ASE Client (AseTune) connect to localhost:2955. </li>
+	  <li>The SSH connection tunnels/forwards the packets sent on localhost:2955 to an "intermediate" SSH Host (via port 22). </li>
+	  <li>The SSH Daemon then opens a connection to the Destination host:port (lets say asedevhost:5000) and forwards the data traffic. </li>
+	</ul>
+	This means: as long you can connect to the "intermediate" SSH Host you can connect to a ASE located on <i>the other side</i>.<br>
+	The above help text and a picture trying to explain it will be visible in the Connection-SSH Dialog.<br>
+	</LI>
+
+	<LI>
+	<b>New: View -&gt; View/Tail the ASE Errolog</b><br>
+	If you want to view/tail the ASE errorlog file directly (and not via the monErrorLog table)<br>
+	This is a simple tail on the log file. If the log files is <b>not</b> located on the same machine, which
+	you run AseTune on, a SSH (Secure Shell) connection is made to the remote machine to start the tail, the
+	output of the tail is then streamed back to the "log viewer" GUI which just presents the data.<br>
+	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
+	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
+	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
+	as you enter various commands.<br> 
 	</LI>
 
 	<LI>
@@ -40,8 +151,47 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>New: Graph 'Number of Concurrent Blocking Locks'</b><br>
-	Simply grab 'LockWaits' from the CmSummary and present it in a graph.<br>
+	<b>New: tab 'Memory Usage' in the group 'Server'</b><br>
+	In ASE 15.7.0 ESD#3 a table monMemoryUsage was introduced, where internal memory usage and allocations is visible<br>
+	</LI>
+
+	<LI>
+	<b>New: Graphs in the Summary Panel</b><br>
+	<ul>
+	   <li>'Number of Concurrent Blocking Locks'                                              - Grab 'LockWaits' from the CmSummary and present it in a graph.</li>
+	   <li>'Oldest Open Transaction in any Databases'                                         - Grab the new 'Oldest Open Tran' field from the Summary and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Read+Write), per Second and Device'                    - Read+Write Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Read), per Second and Device'                          - Read       Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Write), per Second and Device'                         - Write      Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Read+Write) in Milliseconds, per Device'                  - IO Service Time for Read+Write on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Read) in Milliseconds, per Device (15.7 esd#2 or later)'  - IO Service Time for Read       on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Write) in Milliseconds, per Device (15.7 esd#2 or later)' - IO Service Time for Write      on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Statement Cache Hit Rate, in Percent'                                             - From tab 'Statement Cache'.</li>
+	   <li>'CPU Thread BusyTicksPct Average per Pool Type (15.7 and later)'                   - Average BusyTicksPct per PoolType. from Threads 'tab'.</li>
+	   <li>'CPU Thread BusyTicksPct Usage per Thread (15.7 and later)'                        - BusyTicksPct per Thread.           from Threads 'tab'.</li>
+	   <li>'Host Monitor - CPU Graph'                                                         - From tab 'Host Monitoring' - 'OS CPU (vmstat)'.</li>
+	   <li>'Host Monitor - Load Average Graph'                                                - From tab 'Host Monitoring' - 'OS Load Average'.</li>
+	</ul>
+	In ASE 15.7 ESD#2, the granularity of IOTime is much better than in earlier releases where the resolution was 100ms<br>
+	So that is why the Graphs for 'Device IO Service Time' based on monDeviceIO (CmDeviceIo) was introduced.<br>
+	Also a bug or strange behavior was introduced in ASE 15.7 ESD#2 in table 'monIOQueue', column 'IOTime',
+	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
+	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
+	<p>
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br> 
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread. 
+	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
+	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
+	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
+	</p>
+	</LI>
+
+	<LI>
+	<b>New: Summary Panel, added one field 'Oldest Open Tran'.</b><br>
+	When there are databases that has Transactions that has been Opened for more than a second, a red icon in
+	the status bar shows up, telling you how old the oldest open transaction is in seconds.<br>
+	If you press the icon, you will jump to the 'Databases' tab.<br>
+	In Databases Tab, databases with 'Open Transactions' will be marked with a yellow background.
 	</LI>
 
 	<LI>
@@ -88,6 +238,18 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>New: Column in in tab 'Databases' for to see Old Open Transactions (from syslogshold)</b><br>
+	<ul>
+	   <li><code>OldestTranStartTime </code> - Start time of the oldest open transaction in this database.</li>
+	   <li><code>OldestTranInSeconds </code> - Number of seconds since the oldest open transaction in this database was started.</li>
+	   <li><code>OldestTranName      </code> - Name of the oldest open transaction in this database</li>
+	   <li><code>OldestTranSpid      </code> - SPID, which is resopnsible for the oldest open transaction in this database</li>
+	   <li><code>OldestTranProg      </code> - Application Name, which is resopnsible for the oldest open transaction in this database</li>
+	   <li><code>OldestTranPage      </code> - Page number in the transaction log, which holds the oldest open transaction in this database</li>
+	</ul>
+	</LI>
+
+	<LI>
 	<b>New: Column in in tab 'Statement Cache Details' for ASE 15.7.0 ESD#2</b><br>
 	<ul>
 	   <li><code>AvgScanRows           </code> - Average scanned rows read per execution</li>
@@ -109,6 +271,45 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
+	<b>New: Column in in tab 'Cached Procedures'</b><br>
+	<ul>
+	   <li><code>RequestCntDiff</code> - Same as RequestCnt, so show both the Abs values and Diff for RequestCnt in the diff/rate view.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Option in in tab 'Statement Cache Details'</b><br>
+	<ul>
+	   <li><code>sampleMetricsCountGtZero</code> - include or exclude <code>where MetricsCount > 0</code> In some ASE Versions we would want this, but in some not...</li>
+	</ul>
+	</LI>
+
+	<LI>
+
+	<b>ASE Config View Dialog</b><br>
+	<ul>
+	   <li>This is now a stand alone window</li>
+	   <li>It can be refreshed</li>
+	   <li>It's accessible  from the 'stand alone' SQL Window tool (sqlw.bat or sqlw.sh)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>In most text editors fields, looking at SQL or various text</b><br>
+	<ul>
+	   <li>Right Click Menu - Now has a 'find' entry</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
+	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
+	Also the field_name 'fglockspins' can optionally be discarded. 
+	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.) 
+	</LI>
+
+	<LI>
 	<b>Bug fix: Recoding a session for a ASE 15.7.0 EDS#2</b><br>
 	Record a AseTune session on a ASE 15.7.0 ESD#2 was not working, which is now fixed.<br>
 	The problem was that lct_admin() was returning 'unsigned int' and in previous releases
@@ -118,21 +319,36 @@ li   {margin-bottom: 6px}
 	</LI>
 
 	<LI>
-	<b>Bug fix: tool SQL Window</b><br>
-	Binary datatype is now displayed as 0x{value}.<br>
-	Can now connect to Replication Server<br>
+	<b>Bug fix: various fixes</b><br>
+	<ul>
+	   <li>Offline mode, OfflineSessionViewer, Show on day,hour,minute level did not work as intended.</li>
+	   <li>Offline mode, keyToRid was not initialized in some cases, which caused problems in getRowNumberForPkValue()</li>
+	   <li>Small layout issue with the Split pane for panels with Extended info panels, like local graphs etc</li>
+	   <li>Additional help text, and tip when a Performance Counter depends on other Performance Counters.</li>
+	   <li>If you connect to a server that is NOT ASE, then print some errors about it.</li>
+	   <li>'mon_role' granted to any "user defined role(s)" attached to the user, was not detected at login time.</li>
+	   <li>Mac users now has 'Mac menu bar' and the "doc icon". This behaviour can be changed in the asetune.sh</li>
+	   <li>Menu Shortcut keyboard character has been changed from "Alt" to "Platform dependant" (Windown: Ctrl, Mac: Cmd)</li>
+	   <li>The Graph display ordering was a bit faulty. new/unknown Graphs is now added to the end...</li>
+	   <li>Connection Dialog, ASE User name, must be filled in.</li>
+	   <li>Connection Dialog, could in some cases be too small, so the OK button wasnt visible.</li>
+	   <li>If saved main window location, seems to be out-of-screen, do not set the location. this might break virtual desktop or multiple screens</li>
+	   <li>ASE Application Tracing Tool, is now a bit more stable. Doing deferred updates to the trace window each 100ms (if new trace entries has arrived)</li>
+	   <li>Offline Wizard, various small fixes</li>
+	   <li>A bunch of other small bug fixes</li>
+	</ul>
 	</LI>
 
 	<LI>
 	<b>Upgraded some of the third party libraries/jars</b><br>
 	<ul>
-	  <li>To version 1.6.4, Component: Swing Labs, JXTable</li>
-	  <li>To version 1.2.17, Component: Log4J</li>
-	  <li>To version 1.0.14, Component: JFreeChart</li>
-	  <li>To version 2.0.4.1, Component: RSyntaxTextArea</li>
-	  <li>To version 2.0.4, Component: Autocomplete, part of RSyntaxTextArea</li>
-	  <li>To version 1.3.169, Component: H2 database</li>
-	  <li>To version 2012-09-20, Component: ProxyVole</li>
+	  <li>To version 1.6.4,      Component: Swing Labs, JXTable</li>
+	  <li>To version 1.2.17,     Component: Log4J</li>
+	  <li>To version 1.0.14,     Component: JFreeChart</li>
+	  <li>To version 2.0.5.1,    Component: RSyntaxTextArea</li>
+	  <li>To version 2.0.5.1,    Component: Autocomplete, part of RSyntaxTextArea</li>
+	  <li>To version 1.3.169,    Component: H2 database</li>
+	  <li>To version 2012-12-03, Component: ProxyVole</li>
 	</ul>
 	</LI>
 

@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.util.HashMap;
 
 import com.asetune.tools.QueryWindow;
+import com.asetune.tools.WindowType;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 
@@ -82,7 +83,7 @@ extends XmenuActionBase
 		
 		sql = modifySql(sql);
 
-		QueryWindow qf = new QueryWindow(conn, sql, isCloseConnOnExit(), QueryWindow.WindowType.JFRAME, getConfiguration());
+		QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
 		qf.openTheWindow();
 
 //				"print '11111111'\n" +

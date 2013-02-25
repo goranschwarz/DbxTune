@@ -47,6 +47,7 @@ extends Thread
 		public int    _spid;
 		public String _status;
 		
+		@Override
 		public String toString()
 		{
 			return "spid="+_spid+", status='"+_status+"'.";
@@ -59,6 +60,7 @@ extends Thread
 		public String _status;
 		public String _originAse;
 
+		@Override
 		public String toString()
 		{
 			return "spid="+_spid+", originRemoteSpid="+_originRemoteSpid+", status='"+_status+"', originAse='"+_originAse+"'.";
@@ -111,7 +113,7 @@ extends Thread
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			
-			ResultSetTableModel tm = new ResultSetTableModel(rs);
+			ResultSetTableModel tm = new ResultSetTableModel(rs, sql);
 			_logger.info("sql: "+sql+"\n"+tm.toTableString());
 	
 			rs.close();

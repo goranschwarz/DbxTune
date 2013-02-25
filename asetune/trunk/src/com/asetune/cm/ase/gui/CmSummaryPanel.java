@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 
+import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -27,6 +28,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
@@ -38,6 +40,8 @@ import com.asetune.AseTune;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmBlocking;
+import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.cm.ase.CmSummary;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
@@ -64,7 +68,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private CountersModel      _cm = null;
 
 	private ChangeToJTabDialog _focusToBlockingTab = null;
-	private ChangeToJTabDialog _focusToDatabasesTab = null;
+	private ChangeToJTabDialog _focusToDatabasesTab_fullLog = null;
+	private ChangeToJTabDialog _focusToDatabasesTab_oldestOpenTran = null;
 	private Watermark          _watermark;
 
 	private Icon             _icon = null;//SwingUtils.readImageIcon(Version.class, "images/summary_tab.png");
@@ -139,6 +144,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _transactionsRate_txt         = new JTextField();
 	private JLabel           _fullTranslog_lbl             = new JLabel();
 	private JTextField       _fullTranslog_txt             = new JTextField();
+	private JLabel           _oldestOpenTran_lbl           = new JLabel();
+	private JTextField       _oldestOpenTran_txt           = new JTextField();
 	
 	private JLabel           _bootcount_lbl                = new JLabel();
 	private JTextField       _bootcount_txt                = new JTextField();
@@ -183,6 +190,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //	private static CmSummaryPanel _instance = null;
 
 //	public static final String CM_NAME = "CMsummary";
+	@Override
 	public String getName()
 	{
 		return CmSummary.CM_NAME;
@@ -249,6 +257,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		}
 //	}
 
+	@Override
 	public Icon getIcon()
 	{
 		return _icon;
@@ -312,6 +321,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_clusterView_cbx.addActionListener(new ActionListener()
 		{
 			
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				String choice = (String) _clusterView_cbx.getSelectedItem();
@@ -433,7 +443,35 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 	private JPanel createServerInfoPanel() 
 	{
-		JPanel panel = SwingUtils.createPanel("Server Information", true);
+		JPanel panel = new JPanel()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getToolTipText()
+			{
+//				CountersModel cm = _cmDisplay; // where is offline data stored when we read from the offline db?
+				CountersModel cm = null;
+				if (cm == null)	cm = _cm;
+//				if (cm == null)	return null;
+				
+				String sqlRefreshTime = (cm == null) ? "Unavailable" : cm.getSqlRefreshTime() + " ms.";
+				String guiRefreshTime = (cm == null) ? "Unavailable" : cm.getGuiRefreshTime() + " ms.";
+				String lcRefreshTime  = (cm == null) ? "Unavailable" : cm.getLcRefreshTime() + " ms.";
+
+				return "<html>" +
+						"SQL Refresh time: "+sqlRefreshTime+"<br>" +
+						"GUI Refresh Time: "+guiRefreshTime+"<br>" +
+						"Local Calculation Time: "+lcRefreshTime+"<br>" +
+						"</html>";
+			}
+		};
+		// need to set/register the tooltip, otherwise it will grab parents tooltip.
+        ToolTipManager.sharedInstance().registerComponent(panel);
+
+		panel.setBorder(BorderFactory.createTitledBorder("Server Information"));
+
+//		JPanel panel = SwingUtils.createPanel("Server Information", true);
 		panel.setLayout(new MigLayout("", "[] [grow]", ""));
 
 		String tooltip = "";
@@ -567,6 +605,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setToolTipText(tooltip);
 		_fullTranslog_txt.setEditable(false);
 
+		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
+				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.</html>";
+		_oldestOpenTran_lbl.setText("Oldest Open Tran");
+		_oldestOpenTran_lbl.setToolTipText(tooltip);
+		_oldestOpenTran_txt.setToolTipText(tooltip);
+		_oldestOpenTran_txt.setEditable(false);
 
 		
 		
@@ -734,6 +778,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_fullTranslog_lbl,      "");
 		panel.add(_fullTranslog_txt,      "growx, wrap");
 		
+		panel.add(_oldestOpenTran_lbl,    "");
+		panel.add(_oldestOpenTran_txt,    "growx, wrap");
+		
 
 		
 		panel.add(_bootcount_lbl,         "gapy 20");
@@ -794,22 +841,26 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		return new TrendGraphDashboardPanel();
 	}
 
+	@Override
 	public TrendGraphDashboardPanel getGraphPanel()
 	{
 		return _graphPanel;
 	}
 	
 	
+	@Override
 	public void clearGraph()
 	{
 		_graphPanel.clearGraph();
 	}
 
+	@Override
 	public void addTrendGraph(TrendGraph tg)
 	{
 		_graphPanel.add(tg);
 	}
 
+	@Override
 	public void setLocalServerName(String name) 
 	{ 
 		_localServerName_txt.setText(name); 
@@ -822,6 +873,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	
 	
 	// implementing: TableModelListener
+	@Override
 	@SuppressWarnings("unused")
 	public void tableChanged(TableModelEvent e)
 	{
@@ -886,6 +938,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_clusterInfoPanel.setVisible(true);
 	}
 
+	@Override
 	public void setSummaryData(CountersModel cm)
 	{
 		setWatermark();
@@ -894,7 +947,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		String currClusterName = _clusterInstanceName_txt.getText();
 		if (clusterId != null && currClusterName.equals(""))
 		{
-			if (MonTablesDictionary.hasInstance() && MonTablesDictionary.getInstance().isClusterEnabled)
+			if (MonTablesDictionary.hasInstance() && MonTablesDictionary.getInstance().isClusterEnabled())
 			{
 				refreshClusterInfo();
 			}
@@ -938,6 +991,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_transactionsRate_txt .setText("");
 		}
 		_fullTranslog_txt     .setText(cm.getAbsString (0, "fullTranslogCount"));
+		_oldestOpenTran_txt   .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
 
 		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
 		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
@@ -997,7 +1051,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			}
 		}
 		
+		//----------------------------------------------
 		// Check LOCK WAITS and, do notification
+		//----------------------------------------------
 		int lockWaits = 0;
 		try { lockWaits = Integer.parseInt(_lockWaits_txt.getText()); }
 		catch (NumberFormatException ignore) {}
@@ -1015,7 +1071,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			MainFrame.getInstance().setBlockingLocks(false, 0);
 		// end: Check LOCK WAITS and, do notification
 
+		//----------------------------------------------
 		// Check FULL LOGS and, do notification
+		//----------------------------------------------
 		int fullLogs = 0;
 		try { fullLogs = Integer.parseInt(_fullTranslog_txt.getText()); }
 		catch (NumberFormatException ignore) {}
@@ -1025,15 +1083,51 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			MainFrame.getInstance().setFullTransactionLog(true, fullLogs);
 
 			String toTabName = "Databases";
-			if ( _focusToDatabasesTab == null )
-				_focusToDatabasesTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Full Database Transaction Logs in the ASE Server", MainFrame.getTabbedPane(), toTabName);
-			_focusToDatabasesTab.setVisible(true);
+			if ( _focusToDatabasesTab_fullLog == null )
+				_focusToDatabasesTab_fullLog = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Full Database Transaction Logs in the ASE Server", MainFrame.getTabbedPane(), toTabName);
+			_focusToDatabasesTab_fullLog.setVisible(true);
 		}
 		else
 			MainFrame.getInstance().setFullTransactionLog(false, 0);
 		// end: Check FULL LOGS and, do notification
+
+		//----------------------------------------------
+		// Check OLDEST OPEN TRANSACTION and, do notification
+		//----------------------------------------------
+		int oldestOpenTranInSec = 0;
+		try { oldestOpenTranInSec = Integer.parseInt(_oldestOpenTran_txt.getText()); }
+		catch (NumberFormatException ignore) {}
+		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTran_txt.getText()+"'.");
+		if (oldestOpenTranInSec > 0)
+		{
+			MainFrame.getInstance().setOldestOpenTran(true, oldestOpenTranInSec);
+
+			String toTabName = "Databases";
+			if ( _focusToDatabasesTab_oldestOpenTran == null )
+				_focusToDatabasesTab_oldestOpenTran = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Transaction in the ASE Server", MainFrame.getTabbedPane(), toTabName);
+			_focusToDatabasesTab_oldestOpenTran.setVisible(true);
+		}
+		else
+			MainFrame.getInstance().setOldestOpenTran(false, 0);
+		// end: Check OLDEST OPEN TRANSACTION and, do notification
 	}
 
+	@Override
+	public void resetGoToTabSettings(String tabName)
+	{
+		if (CmBlocking.SHORT_NAME.equals(tabName))
+		{
+			_focusToBlockingTab = null;
+		}
+
+		if (CmOpenDatabases.SHORT_NAME.equals(tabName))
+		{
+			_focusToDatabasesTab_fullLog        = null;
+			_focusToDatabasesTab_oldestOpenTran = null;
+		}
+	}
+	
+	@Override
 	public synchronized void clearSummaryData()
 	{
 		setWatermark();
@@ -1076,6 +1170,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_transactionsDiff_txt  .setText("");
 		_transactionsRate_txt  .setText("");
 		_fullTranslog_txt      .setText("");
+		_oldestOpenTran_txt    .setText("");
 		
 		_bootcount_txt         .setText("");
 		_recoveryState_txt     .setText("");
@@ -1100,6 +1195,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_totalErrorsDiff_txt   .setText("");
 	}
 
+	@Override
 	public void saveLayoutProps()
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -1141,6 +1237,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		}
 	}
 
+	@Override
 	public int getClusterView()
 	{
 		String choice = (String) _clusterView_cbx.getSelectedItem();
@@ -1153,6 +1250,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		return systemView;
 	}
 
+	@Override
 	public void setWatermark()
 	{
 		if ( MainFrame.isOfflineConnected() )
@@ -1178,6 +1276,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		}
 	}
 
+	@Override
 	public void setWatermarkText(String str)
 	{
 		_watermark.setWatermarkText(str);
@@ -1198,6 +1297,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		private Graphics2D	g		= null;
 		private Rectangle	r		= null;
 	
+		@Override
 		public void paint(Graphics graphics)
 		{
 			if (_textBr == null || _textBr != null && _textBr.length < 0)

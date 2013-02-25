@@ -164,6 +164,7 @@ public class ColumnHeaderPropsEntry
 		return parse(false, colName, propsStr);
 	}
 
+	@Override
 	public String toString()
 	{
 		return _colName

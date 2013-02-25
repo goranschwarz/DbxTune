@@ -3,6 +3,7 @@
  */
 package com.asetune.xmenu;
 
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
@@ -18,7 +19,7 @@ import javax.swing.table.TableModel;
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 
-import com.asetune.utils.ConnectionFactory;
+import com.asetune.utils.ConnectionProvider;
 
 
 public class TablePopupAction
@@ -35,12 +36,13 @@ implements ActionListener
 	private Properties         _allProps;
 	private XmenuAction        _xmenuObject;
 	private JTable             _table;
-	private ConnectionFactory  _connFactory;
+	private ConnectionProvider  _connFactory;
 	private boolean            _closeConnOnExit;
+	private Window             _owner;
 
 	public TablePopupAction(String menuName, String connName, String classname, List<Set<String>> params, 
 			String config, Properties menuProps, Properties allProps, 
-			JTable table, ConnectionFactory connFactory, boolean closeConnOnExit)
+			JTable table, ConnectionProvider connFactory, boolean closeConnOnExit, Window owner)
 	{
 		_menuName    = menuName;
 		_connName    = connName != null ? connName : classname;
@@ -52,6 +54,7 @@ implements ActionListener
 		_table       = table;
 		_connFactory = connFactory;
 		_closeConnOnExit = closeConnOnExit;
+		_owner       = owner;
 	}
 
 	@Override 
@@ -83,15 +86,17 @@ implements ActionListener
 			_xmenuObject.setConfig(_config);
 			_xmenuObject.setMenuProperties(_menuProps);
 			_xmenuObject.setAllProperties(_allProps);
+			_xmenuObject.setOwner(_owner);
 
-			if (_xmenuObject.getConnectionOnStart())
+			if (_xmenuObject.createConnectionOnStart())
 			{
-				_xmenuObject.setConnection( _connFactory.getConnection(_connName) );
+				_xmenuObject.setConnection( _connFactory.getNewConnection(_connName) );
 				_xmenuObject.setCloseConnOnExit( _closeConnOnExit );
 			}
 			else
 			{
-				_xmenuObject.setConnection(null);
+//				_xmenuObject.setConnection(null);
+				_xmenuObject.setConnection(_connFactory.getConnection());
 				_xmenuObject.setCloseConnOnExit(false);
 			}
 //			_xmenuObject.setConnection( MainFrame.getMonConnection() );
@@ -204,4 +209,8 @@ implements ActionListener
 		return paramValues;
 	}
 
+	public Window getOwner()
+	{
+		return _owner;
+	}
 }

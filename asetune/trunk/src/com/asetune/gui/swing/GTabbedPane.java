@@ -79,7 +79,7 @@ public class GTabbedPane
 	private JPopupMenu _tabMenu            = null;
 	private Vector     _extEntry           = new Vector();
 	private int        _lastMouseClickAtTabIndex = -1;
-	private GTabbedPane _thisGTabbedPane   = null;
+//	private GTabbedPane _thisGTabbedPane   = null;
 
 	/** when we have passed Constructor initialization this would be true */
 	private boolean _initialized = false;
@@ -116,7 +116,7 @@ public class GTabbedPane
 	}
 	private synchronized void init()
 	{
-		_thisGTabbedPane = this;
+//		_thisGTabbedPane = this;
 		addMouseListener(this);
 		
 		_tabMenu = createTabPopupMenu();
@@ -133,6 +133,7 @@ public class GTabbedPane
 	/** keep a set of listers, so we can add */
 	private Set<ChangeListener> _localChangeListeners = new LinkedHashSet<ChangeListener>();
 
+	@Override
 	public void addChangeListener(ChangeListener l) 
 	{
 //System.out.println("GTabbedPane("+getName()+").addChangeListener(): "+l);
@@ -154,6 +155,7 @@ public class GTabbedPane
 		}
 	}
 
+	@Override
 	public void removeChangeListener(ChangeListener l) 
 	{
 		super.removeChangeListener(l);
@@ -531,6 +533,7 @@ public class GTabbedPane
 		
 		xe._winOpenCloseButton.addActionListener( new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				JButton button = (JButton) e.getSource();
@@ -601,6 +604,7 @@ public class GTabbedPane
 		// Actions for DOCK/UNDOCK
 		ActionListener dockAl = new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				windowOpenClose(_lastMouseClickAtTabIndex);
@@ -612,6 +616,7 @@ public class GTabbedPane
 		// Actions ONTOP
 		ontop_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				TabExtendedEntry xe = getViewExtendedEntry(_lastMouseClickAtTabIndex);
@@ -626,6 +631,7 @@ public class GTabbedPane
 		// Actions SCROLL
 		tabScroll_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -634,6 +640,7 @@ public class GTabbedPane
 		// Actions WRAP
 		tabWrap_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				setTabLayoutPolicy(JTabbedPane.WRAP_TAB_LAYOUT);
@@ -643,15 +650,18 @@ public class GTabbedPane
 		// Actions OPEN_TAB_VIEW_DIALOG
 		tabViewDialog_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				GTabbedPaneViewDialog.showDialog(null, _thisGTabbedPane);
+//				GTabbedPaneViewDialog.showDialog(null, _thisGTabbedPane);
+				GTabbedPaneViewDialog.showDialog(null, GTabbedPane.this);
 			}
 		});
 
 		// Actions HIDE_THIS_TAB
 		hideThisTab_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				TabExtendedEntry xe = getViewExtendedEntry(_lastMouseClickAtTabIndex);
@@ -664,6 +674,7 @@ public class GTabbedPane
 		// Actions PROPS
 		props_mi.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				TabExtendedEntry xe = getViewExtendedEntry(_lastMouseClickAtTabIndex);
@@ -812,10 +823,13 @@ public class GTabbedPane
 
 					// windowDeactivated is called after windowClosing()...
 					//public void windowDeactivated(WindowEvent e) { saveWindowSize(true, e); }
+					@Override
 					public void windowActivated  (WindowEvent e) { saveWindowSize(true, e); }
+					@Override
 					public void windowOpened     (WindowEvent e) { saveWindowSize(true, e); }
 
 					// DOCK the window when it's closed.
+					@Override
 					public void windowClosing(WindowEvent e)
 					{
 						String name = e.getWindow().getName();
@@ -1286,6 +1300,37 @@ public class GTabbedPane
 		return ((TabExtendedEntry)_extEntry.get(modelIndex))._comp;
 	}
 
+	/**
+	 * Sets the foreground color of the component at <code>modelIndex</code>.
+	 * @param modelIndex
+	 * @param color
+	 */
+	public void setForegroundAtModel(int modelIndex, Color color)
+	{
+		TabExtendedEntry xe = getModelExtendedEntry(modelIndex);
+		if (xe == null)
+			return;
+		if ( ! xe._isVisible )
+			return;
+		
+		setForegroundAt(xe._tabIndex, color);
+	}
+	/**
+	 * Gets the foreground color of the component at <code>modelIndex</code>.
+	 * @param modelIndex
+	 * @return
+	 */
+	public Color getForegroundAtModel(int modelIndex)
+	{
+//		return getComponentAtModel(modelIndex).getForeground();
+		TabExtendedEntry xe = getModelExtendedEntry(modelIndex);
+		if (xe == null)
+			throw new RuntimeException("TabExtendedEntry was null for model index "+modelIndex);
+		if ( ! xe._isVisible )
+			return xe.getBackground();
+
+		return getForegroundAt(xe._tabIndex);
+	}
 	/** 
 	 * Returns the index of the component from the model, if not found -1 is returned. 
 	 */
@@ -2163,11 +2208,11 @@ public class GTabbedPane
 	** BEGIN: implementing: MouseListener
 	**---------------------------------------------------
 	*/
-	public void mouseEntered (MouseEvent e) {}
-	public void mouseExited  (MouseEvent e) {}
-	public void mousePressed (MouseEvent e) {}
-	public void mouseReleased(MouseEvent e) {}
-	public void mouseClicked (MouseEvent e)
+	@Override public void mouseEntered (MouseEvent e) {}
+	@Override public void mouseExited  (MouseEvent e) {}
+	@Override public void mousePressed (MouseEvent e) {}
+	@Override public void mouseReleased(MouseEvent e) {}
+	@Override public void mouseClicked (MouseEvent e)
 	{
 		String    tabName  = null;
 		Component tabComp  = null;
@@ -2244,6 +2289,7 @@ public class GTabbedPane
 							mi.putClientProperty("tabIndex", new Integer(i));
 							mi.addActionListener(new ActionListener()
 							{
+								@Override
 								public void actionPerformed(ActionEvent e)
 								{
 									Object o = e.getSource();
@@ -2286,6 +2332,7 @@ public class GTabbedPane
 							JMenuItem mi = new JCheckBoxMenuItem(xe._tabName, xe._icon, xe._isVisible);
 							mi.addActionListener(new ActionListener()
 							{
+								@Override
 								public void actionPerformed(ActionEvent e)
 								{
 									Object o = e.getSource();
@@ -2415,11 +2462,13 @@ public class GTabbedPane
 
 		private JButton    _winOpenCloseButton = null;
 
+		@Override
 		public String getText()
 		{
 			return "The content for the tab '"+_tabName+"' is undocked.";
 		}
 		
+		@Override
 		public String toString()
 		{
 			return "_tabIndex="+_tabIndex+", _modelIndex="+_modelIndex+", _rmBeforeTab="+_rmBeforeTab+", _isVisible="+_isVisible+", _isDocked="+_isDocked+", _tabName='"+_tabName+"', _icon='"+_icon+"', _comp="+_comp;

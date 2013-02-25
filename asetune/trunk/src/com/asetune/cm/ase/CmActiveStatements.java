@@ -54,7 +54,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessStatement", "monProcess"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "statement statistics active=1", "wait event timing=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -66,7 +66,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 20;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -207,7 +207,7 @@ extends CountersModel
 		}
 
 		String dbNameCol  = "dbname=db_name(S.DBID)";
-		if (aseVersion >= 15020) // just a guess what release this was intruduced
+		if (aseVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
 		{
 			dbNameCol  = "dbname=S.DBName";
 		}
@@ -275,7 +275,7 @@ extends CountersModel
 		}
 
 		dbNameCol  = "dbname=db_name(P.DBID)";
-		if (aseVersion >= 15020) // just a guess what release this was intruduced
+		if (aseVersion >= 15020) // just a guess what release this was introduced. 15020 is OK
 		{
 			dbNameCol  = "dbname=P.DBName";
 		}

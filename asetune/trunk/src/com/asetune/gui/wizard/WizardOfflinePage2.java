@@ -33,6 +33,7 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.H2UrlHelper;
@@ -68,6 +69,7 @@ implements ActionListener
 	//-----------------------------
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage2()
@@ -88,6 +90,11 @@ implements ActionListener
 		// tool tip
 		_jdbcUrl_but .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
 		_pcsH2Option_startH2NetworkServer_chk.setToolTipText("Start the H2 database engine in 'server' mode, so we can connect to the server while the PCS is storing information...");
+
+		_jdbcDriver_cbx.setToolTipText("JDBC drivername to be used by the Persistent Counter Storage to save Counter Data");
+		_jdbcUrl_cbx   .setToolTipText(ConnectionDialog.JDBC_URL_TOOLTIP);
+		_jdbcUsername  .setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the ASE username</html>");
+		_jdbcPassword  .setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the ASE server, you can most likely leave this to blank.</html>");
 
 		// Add a helptext
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
@@ -147,6 +154,8 @@ implements ActionListener
 		_jdbcDriver_cbx.addActionListener(this);
 
 		initData();
+
+		FocusableTipExtention.install(_jdbcUrl_cbx);
 	}
 
 	private void initData()
@@ -171,6 +180,7 @@ implements ActionListener
 		_jdbcUrl_cbx   .addItem("jdbc:sybase:Tds:<host>:<port>[/<dbname>]");
 	}
 
+	@Override
 	protected String validateContents(Component comp, Object event)
 	{
 //		String name = null;
@@ -213,6 +223,7 @@ implements ActionListener
 		return null;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent source = (JComponent) ae.getSource();

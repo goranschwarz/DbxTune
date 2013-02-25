@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -25,6 +26,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
@@ -459,6 +462,9 @@ implements Cloneable, ITableTooltip
 		_postponeTime    = getDefaultPostponeTime();
 		_sqlQueryTimeout = getDefaultQueryTimeout();
 
+		// register some default values before loading values.
+		registerDefaultValues();
+
 		// Load saved properties
 		loadProps();
 
@@ -624,12 +630,14 @@ implements Cloneable, ITableTooltip
 				System.out.println("TableModelListener["+i+"] = "+tml[i]);
 		}
 	}
+	@Override
 	public void addTableModelListener(TableModelListener l)
 	{
 //		System.out.println("+++addTableModelListener(l="+l+")");
 		super.addTableModelListener(l);
 //		printTableModelListener();
 	}
+	@Override
 	public void removeTableModelListener(TableModelListener l)
 	{
 //		System.out.println("---removeTableModelListener(l="+l+")");
@@ -643,6 +651,7 @@ implements Cloneable, ITableTooltip
 //		if (chosenData == null) return null;
 //		return chosenData.get(row, col);
 //	}
+	@Override
 	public Class<?> getColumnClass(int columnIndex)
 	{
 		if (!isDataInitialized())   return null;
@@ -652,6 +661,7 @@ implements Cloneable, ITableTooltip
 		return data.getColumnClass(columnIndex);
 	}
 
+	@Override
 	public int getColumnCount()
 	{
 		CounterTableModel data = getCounterData();
@@ -662,6 +672,7 @@ implements Cloneable, ITableTooltip
 		return c;
     }
 
+	@Override
 	public String getColumnName(int col)
 	{
 		CounterTableModel data = getCounterData();
@@ -672,6 +683,7 @@ implements Cloneable, ITableTooltip
 		return s;
 	}
 
+	@Override
 	public int getRowCount()
 	{
 		int c = 0;
@@ -682,6 +694,7 @@ implements Cloneable, ITableTooltip
 		return c;
     }
 
+	@Override
 	public Object getValueAt(int row, int col)
 	{
 		if (!isDataInitialized())   return null;
@@ -691,6 +704,7 @@ implements Cloneable, ITableTooltip
 		return data.getValueAt(row, col);
     }
 
+	@Override
 	public boolean isCellEditable(int rowIndex, int columnIndex)
 	{
 		return false;
@@ -700,6 +714,7 @@ implements Cloneable, ITableTooltip
 //	{
 //	}
 	
+	@Override
 	public int findColumn(String colName)
 	{
 		CounterTableModel data = getCounterData();
@@ -1731,6 +1746,21 @@ implements Cloneable, ITableTooltip
 
 		return tg.isGraphEnabled();
 	}
+
+	public void initTrendGraphForVersion(int serverVersion)
+	{
+		if (_trendGraphs.size() == 0)
+			return;
+
+		for (Iterator<String> it = _trendGraphs.keySet().iterator(); it.hasNext();)
+		{
+			String graphName = (String)it.next();
+			TrendGraph tg = getTrendGraph(graphName);
+			
+			tg.initializeGraphForVersion(serverVersion);
+		}
+	}
+
 	//-------------------------------------------
 	// END: TrendGraph
 	//-------------------------------------------
@@ -2439,7 +2469,7 @@ implements Cloneable, ITableTooltip
 				didNotHaveRoles = didNotHaveRoles.substring(0, didNotHaveRoles.length()-2);
 
 			_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Models ("+getName()+") The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
+			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
 
 			setActive(false, "This info is only available if you have '"+StringUtil.toCommaStr(dependsOnRole)+"' role(s) enabled.\nYou are missing the following role(s) '"+didNotHaveRoles+"'.");
 
@@ -2628,7 +2658,7 @@ implements Cloneable, ITableTooltip
 		else
 		{
 			_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersionStr()+", I need at least ASE Version "+getDependsOnVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I need at least ASE Version "+getDependsOnVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Server Version is above " + getDependsOnVersionStr());
 
@@ -2655,7 +2685,7 @@ implements Cloneable, ITableTooltip
 		else
 		{
 			_logger.debug(getName() + ": should be HIDDEN.");
-			_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Cluster Edition Version "+getServerVersionStr()+", I need at least ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
+			_logger.warn("When trying to initialize Counters Model '"+getName()+")', named '"+getDisplayName()+"' in ASE Cluster Edition Version "+getServerVersionStr()+", I need at least ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
 
@@ -2754,7 +2784,7 @@ implements Cloneable, ITableTooltip
 				setActive(false, msg);
 
 				_logger.debug(getName() + ": should be HIDDEN.");
-				_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 
 				TabularCntrPanel tcp = getTabPanel();
 				if (tcp != null)
@@ -3336,20 +3366,88 @@ implements Cloneable, ITableTooltip
 			String errorMsg  = e.getMessage();
 			if (errorCode == 10353 || errorCode == 12052 || errorCode == 12036)
 			{
-				// Maybe downgrade this to a INFO message in a later release...
-				_logger.warn("Trying to Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After receiving MsgNumber '"+errorCode+"', with Description '"+errorMsg+"'.");
-
-				initSql(conn);
-
-				try
+				// check if 'enable monitoring' is still ON
+				// If this is not ON anymore, do something drastic like 'stop minitoring' or shutdown
+				if ( ! AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring") )
 				{
-					//cm.clear(); // clears the Counters and GUI parts
-					init(conn);
+					_logger.warn("Monitoring has been disabled. someone has done (sp_configure 'enable monitoring', 0) from another session. I cant continue... Closing the database connection.");
+//					try { conn.close(); }
+//					catch (SQLException ignore) {}
+					CounterController.getInstance().closeMonConnection();
+					
+					// NOTE: can we do this in a better way?
+					// I dont like 'hasGUI()' switches...
+					if (AseTune.hasGUI())
+					{
+						String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+
+						// OK, this is non-modal, but the OK button doesn't work, fix this later, and use the X on the window instead
+						JOptionPane optionPane = new JOptionPane(
+								"<html>" +
+								  "<h2>Monitoring has been disabled.</h2>" +
+								  "Someone has done: <br>" +
+								  "<code>sp_configure 'enable monitoring', 0</code><br>" +
+								  "from another session<br>" +
+								  "<br>" +
+								  "I can't continue monitoring... <br>" +
+								  "Closing the database connection.<br>" +
+								  "Please reconnect to the server again.<br>" +
+								"</html>", 
+								JOptionPane.ERROR_MESSAGE);
+						JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Monitoring has been disabled @ "+dateStr);
+						dialog.setModal(false);
+						dialog.setVisible(true);
+
+						MainFrame.setStatus(MainFrame.ST_DISCONNECT);
+					}
 				}
-				catch (Exception ex2)
+				else
 				{
-					_logger.warn("Problems Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After MsgNumber '"+errorCode+"', with Description '"+errorMsg+"', Caught: "+ex2, ex2);
+					// Maybe downgrade this to a INFO message in a later release...
+					_logger.warn("Trying to Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After receiving MsgNumber '"+errorCode+"', with Description '"+errorMsg+"'.");
+	
+					initSql(conn);
+	
+					try
+					{
+						//cm.clear(); // clears the Counters and GUI parts
+						init(conn);
+					}
+					catch (Exception ex2)
+					{
+						_logger.warn("Problems Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After MsgNumber '"+errorCode+"', with Description '"+errorMsg+"', Caught: "+ex2, ex2);
+					}
 				}
+			}
+
+			// Look for Timeout exception
+			boolean isTimeoutException = false;
+			if ("JZ006".equals(e.getSQLState()))
+			{
+				String msg = e.toString();
+				if (msg != null)
+				{
+					// Below is a couple of timeout examples 
+					//--------------------------------------------------------
+					// JZ006: Caught IOException: java.io.IOException: JZ0T3: Read operation timed out.
+					// JZ006: Se ha detectado IOException: java.io.IOException: JZ0T3: Ha finalizado el tiempo de espera para la operaci?n de lectura.
+					// JZ006: IOException: java.io.IOException: JZ0T3: Lesevorgang dauerte zu lange (time out) wurde abgefangen.
+					// JZ006: IOException ??: java.io.IOException: JZ0T3: ?? ?? ??? ???????.
+					//
+					// JZ006: Caught IOException: java.net.SocketTimeoutException: Read timed out.
+					// JZ006: Se ha detectado IOException: java.net.SocketTimeoutException: Read timed out.
+					//--------------------------------------------------------
+
+					if (msg.indexOf("JZ0T3") > 0)
+						isTimeoutException = true;
+
+					if (msg.indexOf("SocketTimeoutException") > 0)
+						isTimeoutException = true;
+				}
+			}
+			if (isTimeoutException)
+			{
+				handleTimeoutException();
 			}
 
 			return -1;
@@ -3474,6 +3572,7 @@ implements Cloneable, ITableTooltip
 
 			Runnable doWork = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					// IMPORTANT: move datastructure.
@@ -3579,6 +3678,15 @@ implements Cloneable, ITableTooltip
 //		}
 		
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
+	}
+
+	/**
+	 * Called when a timeout has been found in the refreshGetData() method
+	 * <p>
+	 * This method should be overridden by a CounterMoitor object
+	 */
+	public void handleTimeoutException()
+	{
 	}
 
 	/**
@@ -4544,6 +4652,26 @@ implements Cloneable, ITableTooltip
 		}
 	}
 
+	protected void registerDefaultValues()
+	{
+		String base = this.getName() + ".";
+
+		Configuration.registerDefaultValue(base + PROP_queryTimeout,               getDefaultQueryTimeout());
+
+		Configuration.registerDefaultValue(base + PROP_currentDataSource,          getDefaultDataSource());
+
+		Configuration.registerDefaultValue(base + PROP_filterAllZeroDiffCounters,  getDefaultIsFilterAllZero());
+		Configuration.registerDefaultValue(base + PROP_sampleDataIsPaused,         getDefaultIsDataPollingPaused());
+		Configuration.registerDefaultValue(base + PROP_sampleDataInBackground,     getDefaultIsBackgroundDataPollingEnabled());
+		Configuration.registerDefaultValue(base + PROP_negativeDiffCountersToZero, getDefaultIsNegativeDiffCountersToZero());
+		Configuration.registerDefaultValue(base + PROP_persistCounters,            getDefaultIsPersistCountersEnabled());
+		Configuration.registerDefaultValue(base + PROP_persistCounters_abs,        getDefaultIsPersistCountersAbsEnabled());
+		Configuration.registerDefaultValue(base + PROP_persistCounters_diff,       getDefaultIsPersistCountersDiffEnabled());
+		Configuration.registerDefaultValue(base + PROP_persistCounters_rate,       getDefaultIsPersistCountersRateEnabled());
+
+		Configuration.registerDefaultValue(base + PROP_postponeTime,               getDefaultPostponeTime());
+	}
+
 	protected void loadProps()
 	{
 //		Configuration tempProps = Configuration.getInstance(Configuration.TEMP);
@@ -4611,6 +4739,7 @@ implements Cloneable, ITableTooltip
 	 */
 	private class RefreshTimerAction implements ActionListener
 	{
+		@Override
 		public void actionPerformed(ActionEvent actionevent)
 		{
 			if (tabPanel != null)
@@ -4649,6 +4778,7 @@ implements Cloneable, ITableTooltip
 
 	public int     getDefaultQueryTimeout()                             { return DEFAULT_sqlQueryTimeout; }
 	public int     getDefaultPostponeTime()                             { return DEFAULT_postponeTime; }
+	public boolean getDefaultIsFilterAllZero()                          { return false; }
 	public boolean getDefaultIsDataPollingPaused()                      { return false; }
 	public boolean getDefaultIsBackgroundDataPollingEnabled()           { return false; }
 	public boolean getDefaultIsNegativeDiffCountersToZero()             { return true; }

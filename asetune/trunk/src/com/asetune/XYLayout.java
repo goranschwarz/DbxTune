@@ -15,12 +15,12 @@ public class XYLayout
 
 	public XYLayout()
 	{
-		info = new Hashtable();
+		info = new Hashtable<Component, Object>();
 	}
 
 	public XYLayout(int width, int height)
 	{
-		info = new Hashtable();
+		info = new Hashtable<Component, Object>();
 		this.width = width;
 		this.height = height;
 	}
@@ -45,30 +45,36 @@ public class XYLayout
 		this.height = height;
 	}
 
+	@Override
 	public String toString()
 	{
 		return String.valueOf(String.valueOf(new StringBuffer("XYLayout[width=").append(width).append(",height=").append(height).append("]")));
 	}
 
+	@Override
 	public void addLayoutComponent(String s, Component component1)
 	{
 	}
 
+	@Override
 	public void removeLayoutComponent(Component component)
 	{
 		info.remove(component);
 	}
 
+	@Override
 	public Dimension preferredLayoutSize(Container target)
 	{
 		return getLayoutSize(target, true);
 	}
 
+	@Override
 	public Dimension minimumLayoutSize(Container target)
 	{
 		return getLayoutSize(target, false);
 	}
 
+	@Override
 	public void layoutContainer(Container target)
 	{
 		Insets insets = target.getInsets();
@@ -85,27 +91,32 @@ public class XYLayout
 
 	}
 
+	@Override
 	public void addLayoutComponent(Component component, Object constraints)
 	{
 		if (constraints instanceof XYConstraints)
 			info.put(component, constraints);
 	}
 
+	@Override
 	public Dimension maximumLayoutSize(Container target)
 	{
 		return new Dimension(0x7fffffff, 0x7fffffff);
 	}
 
+	@Override
 	public float getLayoutAlignmentX(Container target)
 	{
 		return 0.5F;
 	}
 
+	@Override
 	public float getLayoutAlignmentY(Container target)
 	{
 		return 0.5F;
 	}
 
+	@Override
 	public void invalidateLayout(Container container)
 	{
 	}
@@ -158,7 +169,7 @@ public class XYLayout
 	private static final long	serialVersionUID	= 200L;
 	int	                       width;
 	int	                       height;
-	Hashtable	               info;
+	Hashtable<Component, Object> info;
 	static final XYConstraints	defaultConstraints	= new XYConstraints();
 
 }

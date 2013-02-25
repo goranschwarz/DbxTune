@@ -9,6 +9,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.JButton;
@@ -23,7 +25,9 @@ import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
+import com.sybase.jdbc3.jdbc.SybConnection;
 
 /**
  * This needs a lot more work
@@ -81,12 +85,23 @@ implements PropertyChangeListener, ActionListener
 	private RTextScrollPane _extraText_sroll = null;
 	private JButton         _cancel_but      = new JButton("Cancel");
 	private boolean         _cancelWasPressed= false;
+	private Connection      _conn            = null;
+
+	/** if a JDBC Connection is passed, the cancel button is visible */
+	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel)
+	{
+		this(owner, null, waitForLabel, null);
+	}
 
 	public WaitForExecDialog(Window owner, String waitForLabel)
 	{
-		this(owner, waitForLabel, null);
+		this(owner, null, waitForLabel, null);
 	}
 	public WaitForExecDialog(Window owner, String waitForLabel, String extraString)
+	{
+		this(owner, null, waitForLabel, null);
+	}
+	public WaitForExecDialog(Window owner, Connection conn, String waitForLabel, String extraString)
 	{
 		super((Frame)null, "Waiting...", true);
 		setLayout(new MigLayout());
@@ -97,10 +112,14 @@ implements PropertyChangeListener, ActionListener
 
 		_cancel_but.setToolTipText("CANCEL current operation.");
 
+		_conn = conn;
+
 		if (extraString != null)
 		{
 			_extraText_txt   = new RSyntaxTextArea();
 			_extraText_sroll = null;new RTextScrollPane(_extraText_txt);
+
+			RSyntaxUtilitiesX.installRightClickMenuExtentions(_extraText_txt, _extraText_sroll, this);
 
 			_extraText_txt.setText(extraString);
 		//	_extraText_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
@@ -124,6 +143,7 @@ implements PropertyChangeListener, ActionListener
 		// When the "X" close window is pressed, call some method.
 		addWindowListener( new WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				if (_execClass != null)
@@ -143,7 +163,7 @@ implements PropertyChangeListener, ActionListener
 		{
 			_cancelWasPressed = true;
 			if (_execClass != null)
-				_execClass.cancel();
+				_execClass.cancel_private();
 		}
 	}
 
@@ -226,6 +246,7 @@ implements PropertyChangeListener, ActionListener
 	 * Called by SwingWorker on completion<br>
 	 * Note: need to register on the SwingWorker using: workerThread.addPropertyChangeListener( "this SqlProgressDialog" );
 	 */
+	@Override
 	public void propertyChange(PropertyChangeEvent event) 
 	{
 		if (_logger.isDebugEnabled())
@@ -253,6 +274,22 @@ implements PropertyChangeListener, ActionListener
 	 */
 	public Object execAndWait(final BgExecutor execClass)
 	{
+		return execAndWait(execClass, 0);
+	}
+	/**
+	 * Execute the input <code>Runnable</code> in background using <code>SwingWorker</code>
+	 * while the <code>Runnable</code> is executing this dialog will be visible.<br>
+	 * We will wait until the <code>Runnable</code> is finished.
+	 * <p>
+	 * So this is basically execute a long running process without blocking the Event Dispatch Thread
+	 * <p>
+	 * This means that the Swing Swing Event Dispatch Thread GUI is still scheduling other work
+	 * while we are waiting in the code for the Executable to end and this dialog will disappear.  
+	 * @param execClass
+	 * @param graceTime  if the executions takes less than X ms, then the GUI wont be showed.
+	 */
+	public Object execAndWait(final BgExecutor execClass, int graceTime)
+	{
 		_execClass = execClass;
 
 		// Execute in a Swing Thread
@@ -278,11 +315,34 @@ implements PropertyChangeListener, ActionListener
 		doBgThread.addPropertyChangeListener(this);
 		doBgThread.execute();
 
-		_cancel_but.setVisible(_execClass.canDoCancel());
+		boolean canDoCancel = _execClass.canDoCancel();
+		if (_conn != null && _conn instanceof SybConnection)
+			canDoCancel = true;
+		_cancel_but.setVisible(canDoCancel);
+
+		// Do not show Wait GUI at once, if it's a fast execution, we do not need to show...
+		if (graceTime > 0)
+		{
+			// Note: this can be done better with a timer, but it will do for now...
+			long startTime = System.currentTimeMillis();
+			while (System.currentTimeMillis() - startTime < graceTime )
+			{
+				// if the bg job is done, get out of here
+				if ( doBgThread.isDone() )
+					break;
+	
+				// Sleep for 10ms, get out of here if we are interrupted.
+				try { Thread.sleep(10); }
+				catch (InterruptedException ignore) { break; }
+			}
+		}
 
 		//the dialog will be visible until the SwingWorker is done
-		setVisible(true); 
-		
+		if ( ! doBgThread.isDone() )
+		{
+			setVisible(true);
+		}
+
 		try
 		{
 			return doBgThread.get();
@@ -304,13 +364,34 @@ implements PropertyChangeListener, ActionListener
 	 */
 	public abstract static class BgExecutor
 	{
-		private Thread _bgThread = null;
+		private Thread            _bgThread    = null;
+//		private boolean           _wasCanceled = false;
+		private WaitForExecDialog _waitDialog  = null;
+
+		/**
+		 * Constructor
+		 * @param waitDialog
+		 */
+		public BgExecutor(WaitForExecDialog waitDialog)
+		{
+			_waitDialog = waitDialog;
+			if (_waitDialog == null)
+				throw new RuntimeException("The waitDialog can't be null");
+		}
 
 		/**
 		 * Here is where the work will be done
 		 * @return
 		 */
 		public abstract Object doWork();
+
+		/**
+		 * Get the <code>WaitForExecDialog</code> object, so we can set states etc.
+		 */
+		public WaitForExecDialog getWaitDialog()
+		{
+			return _waitDialog;
+		}
 
 		/**
 		 * Should the cancel button be visible or not. <br>
@@ -321,6 +402,14 @@ implements PropertyChangeListener, ActionListener
 			return false;
 		}
 
+//		public void setCanceled(boolean b)
+//		{
+//			_wasCanceled = b;
+//		}
+//		public boolean isCanceled()
+//		{
+//			return _wasCanceled;
+//		}
 		/**
 		 * Set the SwingWorkers thread
 		 */
@@ -340,10 +429,30 @@ implements PropertyChangeListener, ActionListener
 		/**
 		 * If the cancel button is pressed, this method will be called
 		 */
-		public void cancel()
+		private void cancel_private()
 		{
+//			setCanceled(true);
+
+			cancel();
+
+			Connection conn = getWaitDialog()._conn;
+			if (conn != null && conn instanceof SybConnection)
+			{
+				try
+				{
+					((SybConnection)conn).cancel();
+				}
+				catch (SQLException e)
+				{
+					_logger.warn("cancel_private(): Problems doing cancel on SybConnection", e);
+				}
+			}
+
 			if (getBgThread() != null)
 				getBgThread().interrupt();
+		}
+		public void cancel()
+		{
 		}
 
 		/**
@@ -355,7 +464,7 @@ implements PropertyChangeListener, ActionListener
 		public void windowClosing(boolean normalExit, WindowEvent e)
 		{
 			if ( ! normalExit )
-				cancel();
+				cancel_private();
 		}
 	}
 }

@@ -26,7 +26,7 @@ extends XmenuActionBase
 	}
 
 	@Override 
-	public boolean getConnectionOnStart()
+	public boolean createConnectionOnStart()
 	{
 		return false;
 	}

@@ -85,6 +85,7 @@ extends TabularCntrPanel
 
 		_hostmonStart_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				CountersModel cm = getCm();
@@ -109,6 +110,7 @@ extends TabularCntrPanel
 
 		_hostmonStop_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				CountersModel cm = getCm();

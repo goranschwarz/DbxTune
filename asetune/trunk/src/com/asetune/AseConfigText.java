@@ -30,7 +30,7 @@ import com.asetune.utils.SwingUtils;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo, AseClusterInfo};
+	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo, AseClusterInfo/*, AseConfigFile*/};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -122,6 +122,10 @@ public abstract class AseConfigText
 		case AseClusterInfo:
 			aseConfigText = new AseConfigText.ClusterInfo();
 			break;
+
+//		case AseConfigFile:
+//			aseConfigText = new AseConfigText.ConfigFile();
+//			break;
 
 		default:
 			throw new RuntimeException("Unknown type was passed when create instance. "+type);
@@ -664,7 +668,7 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_version"; }
-		@Override public    int        needVersion()                       { return 12530; }
+		@Override public    int        needVersion()                       { return 12540; }
 	}
 
 	public static class ShmDumpConfig extends AseConfigText
@@ -693,6 +697,40 @@ public abstract class AseConfigText
 		@Override public    int        needVersion()                       { return 15020; }
 		@Override public    boolean    needCluster()                       { return true; }
 	}
+	
+//	public static class ConfigFile extends AseConfigText
+//	{
+//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
+//		@Override public    int        needVersion()                       { return 15000; }
+//		@Override public    List<String> needRole()
+//		{ 
+//			List<String> list = new ArrayList<String>();
+//			list.add(AseConnectionUtils.SA_ROLE); // Or SSO_ROLE
+//			return list;
+//		}
+////		@Override public    List<String> needConfig()
+////		{ 
+////			List<String> list = new ArrayList<String>();
+////			list.add("enable file access");
+////			return list;
+////		}
+//		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+//		{ 
+//			return 
+//			"--exec sp_configure 'enable file access', 1 \n" +
+//			"go \n" +
+//			"create existing table #localConfigFile (record varchar(256) null) \n" +
+//			"external file at 'C:\\sybase\\ase_1570x\\GORAN_1570_DS.cfg' \n" +
+//			"go" +
+//			"select isnull(record,'') from #localConfigFile \n" +
+//			"go \n" +
+//			"drop table #localConfigFile \n" +
+//			"go" +
+//			"--exec sp_configure 'enable file access', 0 \n" +
+//			"go \n" +
+//			""; 
+//		}
+//	}
 	
 	
 	/*---------------------------------------------------

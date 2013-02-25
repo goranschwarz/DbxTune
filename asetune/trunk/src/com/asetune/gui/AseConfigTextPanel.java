@@ -11,8 +11,8 @@ import javax.swing.JTextArea;
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
 import com.asetune.AseTune;
-import com.asetune.GetCounters;
 import com.asetune.pcs.PersistReader;
+import com.asetune.utils.ConnectionProvider;
 
 
 public class AseConfigTextPanel
@@ -24,9 +24,11 @@ extends JPanel
 	private JTextArea	_textConfig           = new JTextArea();
 	private JScrollPane _textConfigScroll     = new JScrollPane(_textConfig);
 
+	private ConnectionProvider     _connProvider    = null;
 
-	public AseConfigTextPanel(ConfigType type)
+	public AseConfigTextPanel(ConnectionProvider connProvider, ConfigType type)
 	{
+		_connProvider = connProvider;
 		_type = type;
 
 		setLayout( new BorderLayout() );
@@ -42,19 +44,29 @@ extends JPanel
 		boolean    isOffline = false;
 		Connection conn      = null;
 
-		if (GetCounters.getInstance().isMonConnected())
-		{
-			ts        = null;
-			isOffline = false;
-			conn      = GetCounters.getInstance().getMonConnection();
-		}
-		else
-		{
-			ts        = null; // NOTE: this will not work, get the value from somewhere
-			isOffline = true;
-			conn      = PersistReader.getInstance().getConnection();
-		}
+//		if (GetCounters.getInstance().isMonConnected())
+//		{
+//			ts        = null;
+//			isOffline = false;
+//			conn      = GetCounters.getInstance().getMonConnection();
+//		}
+//		else
+//		{
+//			ts        = null; // NOTE: this will not work, get the value from somewhere
+//			isOffline = true;
+//			conn      = PersistReader.getInstance().getConnection();
+//		}
+		conn = _connProvider.getConnection();
 
+		if (PersistReader.hasInstance())
+		{
+			if (PersistReader.getInstance().isConnected())
+			{
+				ts        = null; // NOTE: this will not work, get the value from somewhere
+				isOffline = true;
+			}
+		}
+		
 		AseConfigText aseConfigText = AseConfigText.getInstance(_type);
 //		aseConfigText.refresh(conn, ts);
 		aseConfigText.initialize(conn, hasGui, isOffline, ts);

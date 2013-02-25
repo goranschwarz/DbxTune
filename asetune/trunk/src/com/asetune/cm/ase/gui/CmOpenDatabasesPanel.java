@@ -39,6 +39,7 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.TextAnchor;
 
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmOpenDatabases;
@@ -67,6 +68,12 @@ extends TabularCntrPanel
 	private static final String  VALUE_plotOrientation_HORIZONTAL = "HORIZONTAL";
 	private static final String  DEFAULT_plotOrientation          = VALUE_plotOrientation_AUTO;
 
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,      DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_plotOrientation,    DEFAULT_plotOrientation);
+	}
+
 
 	public CmOpenDatabasesPanel(CountersModel cm)
 	{
@@ -87,6 +94,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.dumpdb");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Number backupInProg = (Number) adapter.getValue(adapter.getColumnIndex("BackupInProgress"));
@@ -94,10 +102,23 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.BLUE), null));
 
+		// YELLOW = OLDEST OPEN TRANSACTION above 0
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.oldestOpenTranInSeconds");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number oldestOpenTranInSec = (Number) adapter.getValue(adapter.getColumnIndex("OldestTranInSeconds"));
+				return oldestOpenTranInSec != null && oldestOpenTranInSec.doubleValue() > 0.0;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
+
 		// PINK = TRANSACTION LOG at 90%
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.almostFullTranslog");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Number almostLogFull = (Number) adapter.getValue(adapter.getColumnIndex("LogSizeUsedPct"));
@@ -109,6 +130,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.fullTranslog");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Number isLogFull = (Number) adapter.getValue(adapter.getColumnIndex("TransactionLogFull"));
@@ -351,13 +373,17 @@ extends TabularCntrPanel
 		// ACTION events
 		resetMoveToTab_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				ChangeToJTabDialog.resetSavedSettings(getPanelName());
+//				getCm().getGuiController().resetGoToTabSettings(getPanelName()); // TODO: maybe implement something like this
+				CounterController.getSummaryPanel().resetGoToTabSettings(getPanelName());
 			}
 		});
 		dblist_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				CountersModel cm = getDisplayCm();
@@ -371,6 +397,7 @@ extends TabularCntrPanel
 		});
 		graphType_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);

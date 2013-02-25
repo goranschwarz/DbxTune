@@ -16,6 +16,7 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.utils.StringUtil;
 
 
@@ -44,19 +45,32 @@ public class ResultSetTableModel
 	private ArrayList<ArrayList<Object>> _rows        = new ArrayList<ArrayList<Object>>();
 	private ArrayList<SQLWarning>        _sqlWarnList = new ArrayList<SQLWarning>();
 	private boolean                      _allowEdit   = true; 
+	private String                       _name        = null;
+	private PipeCommand                  _pipeCmd     = null;
+
 	/**
 	 * This constructor creates a TableModel from a ResultSet.  
 	 **/
-	public ResultSetTableModel(ResultSet rs) 
+	public ResultSetTableModel(ResultSet rs, String name) 
 	throws SQLException
 	{
-		this(rs, true);
+		this(rs, true, name);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
+	throws SQLException
+	{
+		this(rs, true, name, null);
+	}
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, PipeCommand pipeCommand) 
 	throws SQLException
 	{
 		_allowEdit = editable;
-		
+		_name      = name;
+		_pipeCmd   = pipeCommand;
+
+		if (_name != null)
+			_name = _name.replace('\n', ' '); // remove newlines in name
+
 		int maxDisplaySize = 32768;
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
@@ -73,8 +87,18 @@ public class ResultSetTableModel
 
 			if (columnDisplaySize > maxDisplaySize)
 			{
-				_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'");
-				columnDisplaySize = maxDisplaySize;
+				// ok me guessing it's a blob
+				// if we only have ONE column, lets hardcode the length to a small value
+				if (_numcols == 2 && (columnType == Types.LONGVARCHAR || columnType == Types.CLOB || columnType == Types.LONGVARBINARY || columnType == Types.BLOB))
+//				if (false)
+				{
+					columnDisplaySize = 80;
+				}
+				else
+				{
+					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+_name+"'");
+					columnDisplaySize = maxDisplaySize;
+				}
 			}
 
 			_cols       .add(columnLabel);
@@ -128,11 +152,58 @@ public class ResultSetTableModel
 //				else
 //					System.out.println("ResultSetTableModel: Row="+rowCount+", Col="+c+", ---NULL--");
 			}
-			_rows.add(row);
-			rowCount++;
+			// apply pipe filter
+			if (addRow(row))
+			{
+				_rows.add(row);
+				rowCount++;
+			}
+		}
+
+		// add 2 chars for BINARY types
+		for (int c=0; c<(_numcols-1); c++)
+		{
+			int type = _sqlTypeInt.get(c);
+
+			switch(type)
+			{
+			case Types.BINARY:
+			case Types.VARBINARY:
+			case Types.LONGVARBINARY:
+				int size = _displaySize.get(c);
+				_displaySize.set(c, new Integer(size + BINARY_PREFIX.length()));
+				break;
+			}
+
 		}
 //		rs.getStatement().close();
 //		rs.close();
+	}
+
+//	/** apply pipe cmd filter */
+//	private boolean addRow(ArrayList<Object> row)
+//	{
+//		return true;
+//	}
+	/** apply pipe cmd filter */
+	private boolean addRow(ArrayList<Object> row)
+	{
+		if (_pipeCmd == null)
+			return true;
+
+		String regexpStr = ".*" + _pipeCmd.getRegExp() + ".*";
+System.out.println("ResultSetTableModel: applying filter: java-regexp '"+regexpStr+"', on row: "+row);
+
+		// FIXME: THIS NEEDS A LOT MORE WORK
+		// _pipeStr needs to be "compiled" info a PipeFilter object and used in the below somehow
+		// Pattern.compile(regex).matcher(input).matches()
+		for (Object colObj : row)
+		{
+			if (colObj != null)
+				if ( colObj.toString().matches(regexpStr) )
+					return true;
+		}
+		return false;
 	}
 
 	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
@@ -209,16 +280,19 @@ public class ResultSetTableModel
 		return _sqlWarnList;
 	}
 
+	@Override
 	public int getColumnCount()
 	{
 		return _cols.size();
 	}
 
+	@Override
 	public int getRowCount()
 	{
 		return _rows.size();
 	}
 
+	@Override
 	public String getColumnName(int column)
 	{
 		return (String)_cols.get(column);
@@ -243,6 +317,7 @@ public class ResultSetTableModel
 //		}
 //		return String.class;
 //	}
+	@Override
 	public Class<?> getColumnClass(int colid)
 	{
 		if (getRowCount() == 0)
@@ -258,6 +333,7 @@ public class ResultSetTableModel
 	}
 
 
+	@Override
 	public Object getValueAt(int r, int c)
 	{
 		ArrayList<Object> row = _rows.get(r);
@@ -271,12 +347,14 @@ public class ResultSetTableModel
 	}
 
 	// Table can be editable, but only for copy+paste use...
+	@Override
 	public boolean isCellEditable(int row, int column)
 	{
 		return _allowEdit;
 	}
 
 	// Since its not editable, we don't need to implement these methods
+	@Override
 	public void setValueAt(Object value, int row, int column)
 	{
 	}

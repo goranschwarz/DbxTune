@@ -51,6 +51,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
@@ -62,7 +63,6 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
@@ -70,7 +70,9 @@ import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
-import com.asetune.hostmon.SshConnection;
+import com.asetune.ssh.SshConnection;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -279,12 +281,12 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 			public void windowClosing(WindowEvent e)
 			{
 				stopTrace();
-				distroy();
+				destroy();
 			}
 		});
 	}
 	/** call this when window is closing */
-	private void distroy()
+	private void destroy()
 	{
 		// Remove this from the out of memory listener
 		Memory.removeMemoryListener(this);
@@ -626,7 +628,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_traceOutTail_chk      .setToolTipText("Simply moved the current active line to be at the end, more or less a tail.");
 		_traceShowProcPanel_chk.setToolTipText("Should the Procedure Text panel be visible.");
 	
-		_traceOut_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_traceOut_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
 		panel.add(_traceOutSave_chk,       "split");
 		panel.add(_traceOutSave_txt,       "growx, pushx");
@@ -635,6 +637,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		panel.add(_traceShowProcPanel_chk, "wrap");
 
 		panel.add(_traceOut_scroll,   "grow, push, wrap");
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_traceOut_scroll, this);
 
 		// Add action listener
 		_traceOutSave_but      .addActionListener(this);
@@ -669,7 +673,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_procName_cbxmdl.addElement(DEFAULT_STORED_PROC);
 
 		// SQL Style in the text editor
-		_proc_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_proc_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
 		
 		panel.add(_procGet_chk,       "wrap");
@@ -680,6 +684,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		panel.add(_procName_cbx,      "growx, pushx, wrap");
 
 		panel.add(_proc_scroll,   "grow, push, wrap");
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_proc_scroll, this);
 
 		// Add action listener
 		_procSave_but.addActionListener(this);
@@ -704,9 +710,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		panel           .setToolTipText("Log of ASE Application Trace Commands");
 		_traceCmdLog_txt.setToolTipText("Log of ASE Application Trace Commands");
 		
-		_traceCmdLog_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_traceCmdLog_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
 		panel.add(_traceCmdLog_scroll, "grow, push, wrap");
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_traceCmdLog_scroll, this);
 
 		return panel;
 	}
@@ -1099,7 +1107,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
-			ResultSetTableModel rstm = new ResultSetTableModel(rs);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, sql);
 
 //			_traceCmdLog.addLog(sql + "\nRESULT SET:\n" + rstm.toTableString());
 			addTraceCmdLog(sql + "\nRESULT SET:\n" + rstm.toTableString());
@@ -1154,7 +1162,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_spidExistsInAse = false;
 
 		WaitForExecDialog aseWait = new WaitForExecDialog(this, "Connecting to ASE, for Application Tracing of SPID "+_spid);
-		BgExecutor aseWaitTask = new BgExecutor()
+		BgExecutor aseWaitTask = new BgExecutor(aseWait)
 		{
 			@Override
 			public Object doWork()
@@ -1286,7 +1294,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 			_sshConn = new SshConnection(host, port, user, passwd);
 			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
-			BgExecutor waitTask = new BgExecutor()
+			BgExecutor waitTask = new BgExecutor(wait)
 			{
 				@Override
 				public Object doWork()
@@ -1627,7 +1635,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".username",   _sshUsername_txt.getText() );
 
 		if (_sshPassword_chk.isSelected())
-			conf.setEncrypedProperty("aseAppTrace.ssh.conn."+_aseHostName+".password", _sshPassword_txt.getText());
+			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".password", _sshPassword_txt.getText(), true);
 		else
 			conf.remove("aseAppTrace.ssh.conn."+_aseHostName+".password");
 
@@ -1797,7 +1805,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		
 		int divLoc = conf.getIntProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  -1);
@@ -1893,6 +1902,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
 
 		// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead
+		String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+
 		JOptionPane optionPane = new JOptionPane(
 				"Sorry, out-of-memory. \n" +
 				"\n" +
@@ -1903,7 +1914,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				"Current max memory setting seems to be around "+maxConfigMemInMB+" MB.\n" +
 				"After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.", 
 				JOptionPane.INFORMATION_MESSAGE);
-		JDialog dialog = optionPane.createDialog(this, "out-of-memory");
+		JDialog dialog = optionPane.createDialog(this, "out-of-memory @ "+dateStr);
 		dialog.setModal(false);
 		dialog.setVisible(true);
 
@@ -1941,17 +1952,57 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	** BEGIN: implementing FileTail.TraceListener
 	**---------------------------------------------------
 	*/	
+//	@Override
+//	public void newTraceRow(String row)
+//	{
+//		_traceOut_txt.append(row);
+//		if ( ! row.endsWith("\n") )
+//			_traceOut_txt.append("\n");
+//		
+//		if (_traceOutTail_chk.isSelected())
+//		{
+//			_traceOut_txt.setCaretPosition( _traceOut_txt.getDocument().getLength() );
+//		}
+//
+//		if ( _procGet_chk.isSelected() && _procPanel.isVisible() )
+//		{
+//			// Sproc: sp_autoformat, Line: 864
+//			if (row.startsWith("Sproc: "))
+//			{
+//				String procName = "";
+//				int procLine    = -1;
+//	
+//				String[] sa = row.split(" ");
+//				if (sa.length >= 2)
+//				{
+//					procName = sa[1];
+//					procName = StringUtil.removeLastComma(procName);
+//				}
+//	
+//				if (sa.length >= 4)
+//					procLine = Integer.parseInt(sa[3]);
+//
+//				addProcTextLookup(null, procName);
+//
+//				if ( _traceOutTail_chk.isSelected() )
+//					setProcTextLocation(procName, procLine);
+//			}
+//		}
+//		
+//		if (row.startsWith("End of Batch"))
+//		{
+//			_traceOut_txt.append("######################################################################\n\n");
+//		}
+//
+//		// SAVE TO FILE
+//		appendTraceOutFile(row, false);
+//	}
 	@Override
 	public void newTraceRow(String row)
 	{
-		_traceOut_txt.append(row);
+		_traceBuffer.append(row);
 		if ( ! row.endsWith("\n") )
-			_traceOut_txt.append("\n");
-		
-		if (_traceOutTail_chk.isSelected())
-		{
-			_traceOut_txt.setCaretPosition( _traceOut_txt.getDocument().getLength() );
-		}
+			_traceBuffer.append("\n");
 
 		if ( _procGet_chk.isSelected() && _procPanel.isVisible() )
 		{
@@ -1971,21 +2022,78 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				if (sa.length >= 4)
 					procLine = Integer.parseInt(sa[3]);
 
+				// Read the proc from server (if not already cached)
+				// Note: this is done in background by another thread
 				addProcTextLookup(null, procName);
 
+				// position to the "current" line in the procedure.
+				// Note: this is done deferred, by the _traceBufferTimer
 				if ( _traceOutTail_chk.isSelected() )
-					setProcTextLocation(procName, procLine);
+				{
+					_lastTraceProcName = procName;
+					_lastTraceProcLine = procLine;
+					//setProcTextLocation(procName, procLine);
+				}
 			}
 		}
 		
 		if (row.startsWith("End of Batch"))
 		{
-			_traceOut_txt.append("######################################################################\n\n");
+			_traceBuffer.append("######################################################################\n\n");
 		}
+
+		if ( ! _traceBufferTimer.isRunning() )
+			_traceBufferTimer.start();
 
 		// SAVE TO FILE
 		appendTraceOutFile(row, false);
 	}
+
+	// BEGIN: Deferred processing of the entries
+	private String        _lastTraceProcName = null;
+	private int           _lastTraceProcLine = -1;
+	private StringBuilder _traceBuffer       = new StringBuilder();
+	private Timer         _traceBufferTimer  = new Timer(100, new ActionListener()
+	{
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			// Make a new buffer, and send the old buffer to be processed
+			StringBuilder sb = _traceBuffer;
+			_traceBuffer = new StringBuilder();
+
+			traceBufferApply(sb);
+
+			_traceBufferTimer.stop();
+		}
+	});
+	private void traceBufferApply(StringBuilder sb)
+	{
+		// Could happen when the window are closing... and the timer still fires...
+		if (_traceOut_txt == null || sb == null)
+			return;
+
+		try
+		{
+			_traceOut_txt.append(sb.toString());
+
+			if (_traceOutTail_chk.isSelected())
+			{
+				_traceOut_txt.setCaretPosition( _traceOut_txt.getDocument().getLength() );
+			}
+
+			if ( _lastTraceProcName != null && _lastTraceProcLine >= 0)
+				setProcTextLocation(_lastTraceProcName, _lastTraceProcLine);
+
+			_lastTraceProcName = null;
+			_lastTraceProcLine = -1;
+		}
+		catch(Throwable t)
+		{
+			_logger.error("Problems adding text to the trace-output window", t);
+		}
+	}
+	// END: Deferred processing of the entries
 
 	private StringBuilder _traceOutSaveBuffert = new StringBuilder(TRACE_OUT_BUFFERT_SIZE + 512);
 	private static final int TRACE_OUT_BUFFERT_SIZE = 10240; // 10K
@@ -2375,7 +2483,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		private void initDatatable()
 		{
 //			String sql = "select * from master..sysprocesses";
-			String sql = " select spid, dbname=db_name(dbid), username=suser_name(suid), status, cmd, blocked, time_blocked, hostname, hostprocess, program_name, proc_name=isnull(object_name(id,dbid),convert(varchar(20),id)), stmtnum, linenum, cpu, physical_io, memusage, tran_name, network_pktsz, clientname, clienthostname, clientapplname, loggedindatetime, ipaddr, nodeid \n" +
+			String sql = " select spid, dbname=db_name(dbid), username=suser_name(suid), status, cmd, blocked, time_blocked, hostname, hostprocess, program_name, proc_name=isnull(object_name(id,dbid),convert(varchar(20),id)), stmtnum, linenum, cpu, physical_io, memusage, tran_name, network_pktsz, clientname, clienthostname, clientapplname, loggedindatetime, ipaddr\n" +
 			             " from master..sysprocesses \n" +
 			             " where suid > 0 \n" +
 			             "   and spid != @@spid ";
@@ -2386,7 +2494,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
 
-				ResultSetTableModel rstm = new ResultSetTableModel(rs, false);
+				ResultSetTableModel rstm = new ResultSetTableModel(rs, false, sql);
 
 				rs.close();
 				stmt.close();
@@ -2403,29 +2511,13 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 				_datatable.addMouseListener(new MouseAdapter()
 				{
+					@Override
 					public void mouseClicked(MouseEvent e) 
 					{
 						if (e.getClickCount() == 2) 
 						{
-							JXTable t = (JXTable)e.getSource();
-							AbstractTableModel tm = (AbstractTableModel) t.getModel();
-
-						//	int col = t.getColumnSelectedColumn();
-							int col = tm.findColumn("spid");
-							int row = t.getSelectedRow();
-
-						//	if (col >= 0) col = t.convertColumnIndexToModel(col);
-							if (row >= 0) row = t.convertRowIndexToModel(row);
-
-							if (row >= 0 && col >= 0)
-							{
-								Object spid_obj = tm.getValueAt(row, col);
-								if (spid_obj instanceof Number)
-								{
-									_selectedSpid = ((Number)spid_obj).intValue();
-									setVisible(false); // CLOSE THE DIALOG
-								}
-							}
+							_selectedSpid = getSelectedSpid();
+							setVisible(false); // CLOSE THE DIALOG
 						}
 					}
 				});
@@ -2437,12 +2529,15 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				SwingUtils.showErrorMessage("ASE Problem", "Problems when doing: "+sql, e);
 			}
 		}
-
+		
 		private JPanel createBottomPanel()
 		{
 			JPanel p = SwingUtils.createPanel("xxx", false);
 			p.setLayout(new MigLayout());
+
+			JLabel tip_lbl = new JLabel("Select a SPID by double click, or press Close button");
 			
+			p.add(tip_lbl,    "");
 			p.add(_close_but, "pushx, tag ok");
 			
 			_close_but.addActionListener(this);
@@ -2457,13 +2552,36 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 			
 			if (_close_but.equals(source))
 			{
-				_selectedSpid = -1;
+				_selectedSpid = getSelectedSpid();
 				this.setVisible(false);
 			}
 		}
+
+		private int getSelectedSpid()
+		{
+			JXTable t = _datatable;
+			AbstractTableModel tm = (AbstractTableModel) t.getModel();
+
+		//	int col = t.getColumnSelectedColumn();
+			int col = tm.findColumn("spid");
+			int row = t.getSelectedRow();
+
+		//	if (col >= 0) col = t.convertColumnIndexToModel(col);
+			if (row >= 0) row = t.convertRowIndexToModel(row);
+
+			if (row >= 0 && col >= 0)
+			{
+				Object spid_obj = tm.getValueAt(row, col);
+				if (spid_obj instanceof Number)
+				{
+					return ((Number)spid_obj).intValue();
+				}
+			}
+			
+			return -1;
+		}
 	}
 
-	
 //	private class AseControlCommandLog
 //	extends Dialog
 //	implements ActionListener

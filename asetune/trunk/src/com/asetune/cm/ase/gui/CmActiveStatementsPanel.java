@@ -52,6 +52,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.multiSampled");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String multiSampled = adapter.getString(adapter.getColumnIndex("multiSampled"));
@@ -67,6 +68,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String blockingSpid = adapter.getString(adapter.getColumnIndex("BlockingSPID"));
@@ -82,6 +84,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String listOfBlockedSpids = adapter.getString(adapter.getColumnIndex("BlockingOtherSpids"));
@@ -135,6 +138,7 @@ extends TabularCntrPanel
 
 		l_sampleMonSqltext_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -146,6 +150,7 @@ extends TabularCntrPanel
 		});
 		l_sampleDbccSqltext_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -157,6 +162,7 @@ extends TabularCntrPanel
 		});
 		l_sampleProcCallStack_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -168,6 +174,7 @@ extends TabularCntrPanel
 		});
 		l_sampleShowplan_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -179,6 +186,7 @@ extends TabularCntrPanel
 		});
 		l_sampleDbccStacktrace_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere

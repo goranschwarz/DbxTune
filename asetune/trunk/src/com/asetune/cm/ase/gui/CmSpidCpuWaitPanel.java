@@ -11,7 +11,6 @@ import javax.swing.JPanel;
 import net.miginfocom.swing.MigLayout;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -21,6 +20,7 @@ import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -43,7 +43,7 @@ extends TabularCntrPanel
 		"This will stop MDA counter updates during the freeze period so that data from multiple tables will be 'in sync'.<br>" +
 		"The negative side effect of this is that some counter incrementation wont happen while executing the SQL Statement that fetches data.<br>" +
 		"<br>" +
-		"<b>Note:</b> This only works on ASE Version "+AseConnectionUtils.versionIntToStr(CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda)+" or higher." +
+		"<b>Note:</b> This only works on ASE Version "+AseConnectionUtils.versionIntToStr(CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda)+" or higher, and you need to have 'sa_role' as well." +
 		"</html>";
 	public static final String  TOOLTIP_sample_systemSpids      = "<html>Include system SPID's</html>";
 	public static final String  TOOLTIP_sample_extraWhereClause = 
@@ -96,6 +96,7 @@ extends TabularCntrPanel
 			boolean[] _rowIsHighlighted = new boolean[0];
 			int       _lastRowId        = 0;     // Used to sheet on table refresh
 
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				if (adapter.row == 0)
@@ -121,7 +122,7 @@ extends TabularCntrPanel
 				// Previous rows highlight will be a decision to keep or invert the highlight
 				boolean prevRowIsHighlighted = _rowIsHighlighted[adapter.row - 1];
 
-				if (thisSpid.equals(prevSpid))
+				if (thisSpid != null && thisSpid.equals(prevSpid))
 				{
 					// Use same highlight value as previous row
 					boolean isHighlighted = prevRowIsHighlighted;
@@ -199,7 +200,7 @@ extends TabularCntrPanel
 
 		_sampleExtraWhereClause_txt.setText(sampleExtraWhereClause);
 		_sampleExtraWhereClause_txt.setHighlightCurrentLine(false);
-		_sampleExtraWhereClause_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sampleExtraWhereClause_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
 //		panel.add(_sampleMonSqltext_chk,       "");                 // row 1 cell 1
 //		panel.add(_sampleProcCallStack_chk,    "wrap");             // row 1 cell 2
@@ -225,6 +226,7 @@ extends TabularCntrPanel
 		
 		_sampleMonSqltext_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -236,6 +238,7 @@ extends TabularCntrPanel
 		});
 		_sampleDbccSqltext_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -247,6 +250,7 @@ extends TabularCntrPanel
 		});
 		_sampleProcCallStack_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -258,6 +262,7 @@ extends TabularCntrPanel
 		});
 		_sampleShowplan_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -269,6 +274,7 @@ extends TabularCntrPanel
 		});
 		_sampleDbccStacktrace_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
@@ -360,8 +366,9 @@ extends TabularCntrPanel
 					}
 				}
 
-				// disable some options if we do not have ASE RELEASE 12.5.4
-				if ( cm.getServerVersion() >= CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda )
+				// disable some options if we do not have ASE RELEASE 12.5.4 and 'sa_role'
+				if ( cm.getServerVersion() >= CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda 
+				     && cm.isRoleActive(AseConnectionUtils.SA_ROLE) )
 				{
 					_sampleFreezeMda_chk.setEnabled(true);
 				}

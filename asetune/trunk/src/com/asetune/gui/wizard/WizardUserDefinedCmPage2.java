@@ -20,7 +20,6 @@ import javax.swing.JTextField;
 import net.miginfocom.swing.MigLayout;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
@@ -32,6 +31,9 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.tools.QueryWindow;
+import com.asetune.tools.WindowType;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.StringUtil;
 
@@ -99,6 +101,7 @@ implements ActionListener
 	private JCheckBox   _negDiffCntToZero_chk = new JCheckBox("If Difference Calculation renders a negative number, set to Zero", true);
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardUserDefinedCm.preferredSize; }
 
 	public WizardUserDefinedCmPage2()
@@ -130,9 +133,9 @@ implements ActionListener
 				"    But if the counters just wraps around the max boundary into a negative value, the diff calculation still works." +
 				"</ul></html>");
 
-		_sqlInit_txt .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
-		_sql_txt     .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
-		_sqlClose_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlInit_txt .setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		_sql_txt     .setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		_sqlClose_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
 		_sqlInit_txt .setHighlightCurrentLine(false);
 		_sql_txt     .setHighlightCurrentLine(false);
@@ -140,6 +143,8 @@ implements ActionListener
 
 		RTextScrollPane sqlScroll = new RTextScrollPane(_sql_txt);
 		sqlScroll.setLineNumbersEnabled(true);
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(sqlScroll, this);
 
 		add( new MultiLineLabel(WIZ_HELP1), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlInit_txt, "growx, pushx, wrap");
@@ -286,6 +291,7 @@ implements ActionListener
 		return null;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();
@@ -305,7 +311,7 @@ implements ActionListener
 			try 
 			{
 				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
-				QueryWindow qw = new QueryWindow(conn, sql, true, QueryWindow.WindowType.JDIALOG_MODAL, null);
+				QueryWindow qw = new QueryWindow(conn, sql, null, true, WindowType.JDIALOG_MODAL, null);
 //				qw.setModal(true);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.TOOLKIT_EXCLUDE);

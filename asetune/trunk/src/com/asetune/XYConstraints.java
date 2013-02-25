@@ -60,11 +60,13 @@ public class XYConstraints
 		this.height = height;
 	}
 
+	@Override
 	public int hashCode()
 	{
 		return x ^ y * 37 ^ width * 43 ^ height * 47;
 	}
 
+	@Override
 	public boolean equals(Object that)
 	{
 		if (that instanceof XYConstraints)
@@ -78,11 +80,13 @@ public class XYConstraints
 		}
 	}
 
+	@Override
 	public Object clone()
 	{
 		return new XYConstraints(x, y, width, height);
 	}
 
+	@Override
 	public String toString()
 	{
 		return String.valueOf(String.valueOf(new StringBuffer("XYConstraints[").append(x).append(",").append(y).append(",").append(width).append(",").append(height).append("]")));

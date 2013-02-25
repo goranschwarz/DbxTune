@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Session;
 
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 

@@ -79,6 +79,7 @@ import org.jdesktop.swingx.renderer.PainterAware;
 import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
+import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
@@ -93,7 +94,7 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistReader;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.ConnectionFactory;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -106,7 +107,7 @@ implements
 	DockUndockManagement, // from GTabbedPane
 	GTabbedPane.ShowProperties, 
 	GTabbedPane.SpecialTabPainter, 
-	ConnectionFactory, 
+	ConnectionProvider, 
 	TableModelListener, 
 	ClipboardOwner
 {
@@ -196,7 +197,8 @@ implements
 	private JCheckBox				_optionEnableBgPolling_chk			= new JCheckBox("Enable background data polling");
 	private JLabel					_optionHasActiveGraphs_lbl			= new JLabel("<html><b>has</b> active graphs</html>");
 	private JButton					_optionTrendGraphs_but				= new JButton();
-	private JCheckBox				_optionPersistCounters_chk			= new JCheckBox("Store Counter Data in a database");
+//	private JCheckBox				_optionPersistCounters_chk			= new JCheckBox("Store Counter Data in a database");
+	private JCheckBox				_optionPersistCounters_chk			= new JCheckBox("Record Counters in a database");
 	private JCheckBox				_optionPersistCountersAbs_chk		= new JCheckBox("Abs");
 	private JCheckBox				_optionPersistCountersDiff_chk		= new JCheckBox("Diff");
 	private JCheckBox				_optionPersistCountersRate_chk		= new JCheckBox("Rate");
@@ -261,7 +263,7 @@ implements
 								@Override
 								public void run()
 								{
-									tcp.updateExtendedInfoPanel();
+									tcp.updateExtendedInfoPanel_private();
 								}
 							};
 							SwingUtilities.invokeLater(doRun);
@@ -491,7 +493,7 @@ implements
 			
 			// wonder if the tableChanged() is kicked off or not...
 			// meaning do I need to call this one here?
-			updateExtendedInfoPanel();
+			updateExtendedInfoPanel_private();
 		}
 		setWatermark();
 	}
@@ -722,7 +724,7 @@ implements
 		}
 		
 		// Call other things that might need to be updated.
-		updateExtendedInfoPanel();
+		updateExtendedInfoPanel_private();
 	}
 
 	public void refreshFilterColumns(TableModel tm)
@@ -812,6 +814,7 @@ implements
 		// NOTE: this is a test, the packAll(), did not seem to do a correct work all the time, lets see if it's better now. 
 		Runnable doWork = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_lastColWithRefresh = System.currentTimeMillis();
@@ -978,11 +981,25 @@ implements
 	}
 
 	/*---------------------------------------------------
-	 ** BEGIN: implementing ConnectionFactory
+	 ** BEGIN: implementing ConnectionProvider
 	 **---------------------------------------------------
 	 */
 	@Override
-	public Connection getConnection(String connName)
+	public Connection getConnection()
+	{
+//		throw new RuntimeException("TabularCntrPanel has not implemented the method 'getConnection()'");
+		// FIXME: shouldn't this be done on XXX (the ICounterController from the CM or something similar)
+		if (GetCounters.getInstance().isMonConnected())
+		{
+			return GetCounters.getInstance().getMonConnection();
+		}
+		else
+		{
+			return PersistReader.getInstance().getConnection();
+		}
+	}
+	@Override
+	public Connection getNewConnection(String connName)
 	{
 		try
 		{
@@ -995,7 +1012,7 @@ implements
 		}
 	}
 	/*---------------------------------------------------
-	 ** END: implementing ConnectionFactory
+	 ** END: implementing ConnectionProvider
 	 **---------------------------------------------------
 	 */
 
@@ -1493,11 +1510,21 @@ implements
 
 		createCopyPasteMenu(popup);
 
-//		TablePopupFactory.createMenu(popup, TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getInstance(Configuration.CONF), _dataTable, this);
-//		TablePopupFactory.createMenu(popup, _displayName.replaceAll(" ", "") + "." + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getInstance(Configuration.CONF), _dataTable, this);
-		TablePopupFactory.createMenu(popup, TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
-		TablePopupFactory.createMenu(popup, _displayName.replaceAll(" ", "") + "." + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
+//		TablePopupFactory.createMenu(popup, TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
+//		TablePopupFactory.createMenu(popup, _displayName.replaceAll(" ", "") + "." + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
 
+		String propPrefix  = _displayName.replaceAll(" ", "") + ".";
+		String propPostfix = "ase.";
+		TablePopupFactory.createMenu(popup, 
+				TablePopupFactory.TABLE_PUPUP_MENU_PREFIX + propPostfix, 
+				Configuration.getCombinedConfiguration(), 
+				_dataTable, this, MainFrame.getInstance());
+
+		TablePopupFactory.createMenu(popup, 
+				propPrefix + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX + propPostfix, 
+				Configuration.getCombinedConfiguration(), 
+				_dataTable, this, MainFrame.getInstance());
+		
 		if ( popup.getComponentCount() == 0 )
 		{
 			_logger.warn("No PopupMenu has been assigned for the data table in the panel '" + _displayName + "'.");
@@ -1862,6 +1889,93 @@ implements
 	{
 	}
 
+	/** intenally used by updateExtendedInfoPanel_private() so that *many* calls to this method (withing 50ms) will be collapsed into a single call, the last one. */
+	private Timer _lastUpdateExtendedInfoPanelTimer = null;
+	/** 
+	 * internaly called to wrap calls to updateExtendedInfoPanel()
+	 * this method should be called from tabSelected(), so we can update graphs etc, when we enter/activate the tab
+	 */
+	private void updateExtendedInfoPanel_private()
+	{
+		// only if we are the ACTIVE tab or if the tab is undocked
+		// simply is it visible for the human eay in the GUI
+		if (isActiveOrUndocked())
+		{
+			// Create a new timer if one didnt exist
+			if (_lastUpdateExtendedInfoPanelTimer == null)
+			{
+				_lastUpdateExtendedInfoPanelTimer = new Timer(50, new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						_logger.debug("TCP: CALL: updateExtendedInfoPanel(): panelName='"+getPanelName()+"'.");
+
+						_lastUpdateExtendedInfoPanelTimer.stop();
+						updateExtendedInfoPanel();
+					}
+				});
+			}
+
+			// Start or restart the *timer*, so that last call to updateExtendedInfoPanel_private() is deferred 50ms
+			if (_lastUpdateExtendedInfoPanelTimer.isRunning())
+				_lastUpdateExtendedInfoPanelTimer.restart();
+			else
+				_lastUpdateExtendedInfoPanelTimer.start();
+		}
+	}
+//	/** internally used by updateExtendedInfoPanel_private() to delete unnececary calls, NOTE: it would be better to use a timer, which kicks of AFTER last call has been done. */
+//	private long _lastUpdateExtendedInfoPanelTime = 0;
+//	/** internaly called to wrap calls to updateExtendedInfoPanel() */
+//	private void updateExtendedInfoPanel_private()
+//	{
+//		boolean isActiveOrUndocked = isActiveOrUndocked();
+////		System.out.println("TCP: DO='"+isActiveOrUndocked+"': updateExtendedInfoPanel(): panelName='"+getPanelName()+"'.");
+//		if (System.currentTimeMillis() - _lastUpdateExtendedInfoPanelTime < 100)
+//		{
+////			System.out.println("TCP: ABORTED(less than 100ms since last call): updateExtendedInfoPanel(): panelName='"+getPanelName()+"'.");
+//			return;
+//		}
+//		// this method should be called from tabSelected(), so we can update graphs etc.
+//		if (isActiveOrUndocked)
+//			updateExtendedInfoPanel();
+//
+//		_lastUpdateExtendedInfoPanelTime = System.currentTimeMillis();
+//	}
+	public boolean isActiveOrUndocked()
+	{
+		// is active/visible
+		Component activeTab = MainFrame.getActiveTab();
+		if (this.equals(activeTab))
+			return true;
+
+		// is undocked
+		GTabbedPane gtp = MainFrame.getTabbedPane();
+		if (gtp.isTabUnDocked(getPanelName()))
+			return true;
+
+		return false;
+//		
+//		
+//		if ( equalsTabPanel(MainFrame.getActiveTab()) )
+//			refresh = true;
+//
+//		
+//		// Current TAB is un-docked (in it's own window)
+//		if (getTabPanel() != null)
+//		{
+//			JTabbedPane tp = MainFrame.getTabbedPane();
+//			if (tp instanceof GTabbedPane)
+//			{
+//				GTabbedPane gtp = (GTabbedPane) tp;
+//				if (gtp.isTabUnDocked(getDisplayName()))
+//					refresh = true;
+//			}
+//		}
+//
+//		return true;
+	}
+
 	/**
 	 * Create a panel that sit's "above" the JTable, this can include various information that 
 	 * extends the JTable with alternate graphical representation.
@@ -1994,6 +2108,7 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
+				// Should be SAME CODE AS focusLost()
 				filterAction(e, "VALUE");
 				saveFilterProps();
 			}
@@ -2003,6 +2118,7 @@ implements
 			@Override
 			public void focusLost(FocusEvent e)
 			{
+				// Should be SAME CODE AS actionPerformed()
 				filterAction(null, "VALUE");
 				saveFilterProps();
 			}
@@ -2043,7 +2159,7 @@ implements
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_ABS, true);
 
-				updateExtendedInfoPanel();
+				updateExtendedInfoPanel_private();
 			}
 		});
 
@@ -2059,7 +2175,7 @@ implements
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_DIFF, true);
 
-				updateExtendedInfoPanel();
+				updateExtendedInfoPanel_private();
 			}
 		});
 
@@ -2075,7 +2191,7 @@ implements
 				if ( cm != null )
 					cm.setDataSource(CountersModel.DATA_RATE, true);
 				
-				updateExtendedInfoPanel();
+				updateExtendedInfoPanel_private();
 			}
 		});
 
@@ -2094,6 +2210,23 @@ implements
 				}
 			}
 		});
+		_timePostpone_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				int postponeTime = parseHourMinuteTime(_timePostpone_txt.getText(), 0, true);
+				if ( postponeTime >= 0 )
+				{
+					CountersModel cm = _cm;
+					if ( cm != null )
+						cm.setPostponeTime(postponeTime, true);
+				}
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
+		});
+
 		_timeOfflineRewind_but.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2201,6 +2334,7 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
+				// Should be SAME CODE AS focusLost()
 				int queryTimeout = parseHourMinuteTime(_optionQueryTimeout_txt.getText(), -1, true);
 				if (queryTimeout < 0)
 					queryTimeout = CountersModel.DEFAULT_sqlQueryTimeout;
@@ -2211,6 +2345,25 @@ implements
 						cm.setQueryTimeout(queryTimeout, true);
 				}
 			}
+		});
+		_optionQueryTimeout_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				// Should be SAME CODE AS actionPerformed()
+				int queryTimeout = parseHourMinuteTime(_optionQueryTimeout_txt.getText(), -1, true);
+				if (queryTimeout < 0)
+					queryTimeout = CountersModel.DEFAULT_sqlQueryTimeout;
+				if ( queryTimeout >= 0 )
+				{
+					CountersModel cm = _cm;
+					if ( cm != null )
+						cm.setQueryTimeout(queryTimeout, true);
+				}
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
 		});
 
 		_optionPersistCounters_chk.addActionListener(new ActionListener()
@@ -2291,7 +2444,7 @@ implements
 				_tableRowFilterDiffCntIsZero.resetFilter();
 			}
 			setWatermark();
-			updateExtendedInfoPanel();
+			updateExtendedInfoPanel_private();
 
 			return;
 		}
@@ -2333,7 +2486,7 @@ implements
 			}
 		}
 		setWatermark();
-		updateExtendedInfoPanel();
+		updateExtendedInfoPanel_private();
 	}
 
 	/*---------------------------------------------------
@@ -3829,6 +3982,9 @@ implements
 					mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 			}
 		}
+		
+		// Update extended info Panel, when the tab is selected, so that graphs etc can be updated.
+		updateExtendedInfoPanel_private();
 	}
 
 	/*---------------------------------------------------
@@ -3952,7 +4108,7 @@ implements
 	private boolean		_offlineSampleHasBeenRead = false;
 
 	/** Timer used by the offline reader watermark during read from Persistent Storage */
-	private Timer		_offlineRefreshTimer = new Timer(200, new OfflineRefreshTimerAction());
+//	private Timer		_offlineRefreshTimer = new Timer(200, new OfflineRefreshTimerAction());
 
 	/**
 	 * Set a offline timestamp to be read from the Persistent Storage database<br>
@@ -4049,6 +4205,7 @@ implements
 			_dialog = dialog;
 		}
 	 
+		@Override
 		public void propertyChange(PropertyChangeEvent event) 
 		{
 			if ("state".equals(event.getPropertyName()) && SwingWorker.StateValue.DONE == event.getNewValue()) 
@@ -4112,22 +4269,22 @@ implements
 		}
 	}
 
-	/**
-	 * This timer is started just before we get offline data And it's stopped
-	 * when the execution is finnished If X ms has elipsed in the database...
-	 * show some info to any GUI that we are still in refresh...
-	 */
-	private class OfflineRefreshTimerAction implements ActionListener
-	{
-		@Override
-		public void actionPerformed(ActionEvent actionevent)
-		{
-			// maybe use property change listeners instead:
-			// firePropChanged("status", "refreshing");
-			setWatermarkText("Getting offline data...");
-//System.out.println(getName()+": Getting offline data...");
-		}
-	}
+//	/**
+//	 * This timer is started just before we get offline data And it's stopped
+//	 * when the execution is finnished If X ms has elipsed in the database...
+//	 * show some info to any GUI that we are still in refresh...
+//	 */
+//	private class OfflineRefreshTimerAction implements ActionListener
+//	{
+//		@Override
+//		public void actionPerformed(ActionEvent actionevent)
+//		{
+//			// maybe use property change listeners instead:
+//			// firePropChanged("status", "refreshing");
+//			setWatermarkText("Getting offline data...");
+////System.out.println(getName()+": Getting offline data...");
+//		}
+//	}
 
 	/** Simply click the rewind button, to position the slider at previous available data set */
 	public void OfflineRewind()

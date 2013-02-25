@@ -43,20 +43,36 @@ implements Runnable
 	*/
 	public static final String STATEMENT_CACHE_NAME = "statement_cache";
 
+	public static final String  PROPKEY_ddl_doDdlLookupAndStore             = "PersistentCounterHandler.ddl.doDdlLookupAndStore";
 	public static final boolean DEFAULT_ddl_doDdlLookupAndStore             = true;
+
+	public static final String  PROPKEY_ddl_warnDdlInputQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlInputQueueSizeThresh";
 	public static final int     DEFAULT_ddl_warnDdlInputQueueSizeThresh     = 100;
+
+	public static final String  PROPKEY_ddl_warnDdlStoreQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlStoreQueueSizeThresh";
 	public static final int     DEFAULT_ddl_warnDdlStoreQueueSizeThresh     = 100;
+
+	public static final String  PROPKEY_ddl_afterDdlLookupSleepTimeInMs     = "PersistentCounterHandler.ddl.afterDdlLookupSleepTimeInMs";
 	public static final int     DEFAULT_ddl_afterDdlLookupSleepTimeInMs     = 500;
+
+	public static final String  PROPKEY_ddl_addDependantObjectsToDdlInQueue = "PersistentCounterHandler.ddl.addDependantObjectsToDdlInQueue";
 	public static final boolean DEFAULT_ddl_addDependantObjectsToDdlInQueue = true;
 
-	public static final String PROP_ddl_doDdlLookupAndStore             = "PersistentCounterHandler.ddl.doDdlLookupAndStore";
-	public static final String PROP_ddl_warnDdlInputQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlInputQueueSizeThresh";
-	public static final String PROP_ddl_warnDdlStoreQueueSizeThresh     = "PersistentCounterHandler.ddl.warnDdlStoreQueueSizeThresh";
-	public static final String PROP_ddl_afterDdlLookupSleepTimeInMs     = "PersistentCounterHandler.ddl.afterDdlLookupSleepTimeInMs";
-	public static final String PROP_ddl_addDependantObjectsToDdlInQueue = "PersistentCounterHandler.ddl.addDependantObjectsToDdlInQueue";
+	public static final String  PROPKEY_warnQueueSizeThresh                 = "PersistentCounterHandler.warnQueueSizeThresh";
+	public static final int     DEFAULT_warnQueueSizeThresh                 = 2;
 
-	public static final String PROP_warnQueueSizeThresh                 = "PersistentCounterHandler.warnQueueSizeThresh";
-	public static final String PROP_WriterClass                         = "PersistentCounterHandler.WriterClass";
+	public static final String  PROPKEY_WriterClass                         = "PersistentCounterHandler.WriterClass";
+//	public static final String  DEFAULT_WriterClass                         = null; // no default
+
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
+		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlInputQueueSizeThresh,     DEFAULT_ddl_warnDdlInputQueueSizeThresh);
+		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
+		Configuration.registerDefaultValue(PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+		Configuration.registerDefaultValue(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
+		Configuration.registerDefaultValue(PROPKEY_warnQueueSizeThresh,                 DEFAULT_warnQueueSizeThresh);
+	}
 
 	/*---------------------------------------------------
 	** class members
@@ -99,7 +115,7 @@ implements Runnable
 
 	/** */
 	private BlockingQueue<PersistContainer> _containerQueue = new LinkedBlockingQueue<PersistContainer>();
-	private int _warnQueueSizeThresh = 2;
+	private int _warnQueueSizeThresh = DEFAULT_warnQueueSizeThresh;
 
 	/** */
 	private BlockingQueue<DdlQueueEntry> _ddlInputQueue = new LinkedBlockingQueue<DdlQueueEntry>();
@@ -157,29 +173,29 @@ implements Runnable
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
 
-		_warnQueueSizeThresh             = _props.getIntProperty    (PROP_warnQueueSizeThresh,                 _warnQueueSizeThresh);
+		_warnQueueSizeThresh             = _props.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 _warnQueueSizeThresh);
 
 		// DDL Lookup & Store Props
-		_warnDdlInputQueueSizeThresh     = _props.getIntProperty    (PROP_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
-		_warnDdlStoreQueueSizeThresh     = _props.getIntProperty    (PROP_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
+		_warnDdlInputQueueSizeThresh     = _props.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
+		_warnDdlStoreQueueSizeThresh     = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
 
-		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    (PROP_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
-		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROP_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
+		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
+		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
 		
-		_doDdlLookupAndStore             = _props.getBooleanProperty(PROP_ddl_doDdlLookupAndStore,             _doDdlLookupAndStore);
+		_doDdlLookupAndStore             = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             _doDdlLookupAndStore);
 		
 		// property: alarm.handleAlarmEventClass
 		// NOTE: this could be a comma ',' separated list
-		String writerClasses = _props.getProperty(PROP_WriterClass);
+		String writerClasses = _props.getProperty(PROPKEY_WriterClass);
 
 		_logger.info("Configuration for PersistentCounterHandler");
-		_logger.info("                  "+PROP_WriterClass+"                         = "+writerClasses);
-		_logger.info("                  "+PROP_warnQueueSizeThresh+"                 = "+_warnQueueSizeThresh);
-		_logger.info("                  "+PROP_ddl_doDdlLookupAndStore+"             = "+_doDdlLookupAndStore);
-		_logger.info("                  "+PROP_ddl_addDependantObjectsToDdlInQueue+" = "+_addDependantObjectsToDdlInQueue);
-		_logger.info("                  "+PROP_ddl_afterDdlLookupSleepTimeInMs+"     = "+_afterDdlLookupSleepTimeInMs);
-		_logger.info("                  "+PROP_ddl_warnDdlInputQueueSizeThresh+"     = "+_warnDdlInputQueueSizeThresh);
-		_logger.info("                  "+PROP_ddl_warnDdlStoreQueueSizeThresh+"     = "+_warnDdlStoreQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_WriterClass+"                         = "+writerClasses);
+		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                 = "+_warnQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"             = "+_doDdlLookupAndStore);
+		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+" = "+_addDependantObjectsToDdlInQueue);
+		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"     = "+_afterDdlLookupSleepTimeInMs);
+		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"     = "+_warnDdlInputQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_ddl_warnDdlStoreQueueSizeThresh+"     = "+_warnDdlStoreQueueSizeThresh);
 
 		if (_doDdlLookupAndStore)
 			_logger.info("The most active objects/statements/etc, "+Version.getAppName()+" will do DDL Lookup and Store information about them. To turn this off, set the property 'PersistentCounterHandler.doDdlLookupAndStore' to 'false' in configuration for the PersistentCounterHandler module.");
@@ -317,22 +333,45 @@ implements Runnable
 		if (objectName.startsWith("#"))                 return;
 		if (objectName.startsWith("ObjId:"))            return;
 		if (objectName.startsWith("Obj="))              return;
-		if (objectName.startsWith("*") && !objectName.startsWith("*ss")) return; // Prepared statements from ct_dynamic and Java PrepStatement??
-		if (objectName.startsWith("*") && !objectName.startsWith("*sq")) return; // Prepared statements from ct_dynamic and Java PrepStatement??
-
-		// ---------------------------------
-		// Format of the Dynamic SQL statement is:
-		// *12345612345678_ffffff
-		// *_SPID_StmntId#_??????
-		// ---------------------------------
-		// *      = just a prefix
-		// 1-6    = SPID in decimal format
-		// 7-15   = Statement ID, just a incremental counter
-		// _      = separator
-		// ffffff = Hexadecimal value for something, which I did not figure out
-		// ---------------------------------
-		// There is no way to say what SQL Statement that is behands the LW Procedure 
-		// ---------------------------------
+		// Discard entries '*??', but allow '*ss' and '*sq'
+		if (objectName.startsWith("*"))
+		{
+			if (objectName.startsWith("*ss"))
+			{
+				// ALLOW: Statement Cache entry 
+			}
+			else if (objectName.startsWith("*sq"))
+			{
+				// ALLOW: Prepared statements from ct_dynamic and/or 
+				//        Java PreparedStatement, if jConnect URL has DYNAMIC_PREPARE=true
+				//        *sq object was introduced in ASE Server is above 15.7.0 ESD#2
+				// ---------------------------------
+				// In earlier ASE Versions:
+				// Format of the Dynamic SQL statement (prior to ASE 15.7.0 ESD#2) is:
+				// *12345612345678_ffffff
+				// *_SPID_StmntId#_??????
+				// ---------------------------------
+				// *      = just a prefix
+				// 1-6    = SPID in decimal format
+				// 7-15   = Statement ID, just a incremental counter
+				// _      = separator
+				// ffffff = Hexadecimal value for something, which I did not figure out
+				// ---------------------------------
+				// There is no way to say what SQL Statement that is behands the LW Procedure 
+				// so just get out of here (return)
+				// ---------------------------------------------------------------------------
+				// Below is a SQL that can be used to track old Dynamic SQL statements
+				// select SPID=convert(int,substring(ObjectName,2,6)), StmntId=convert(int,substring(ObjectName,8,8)), MemUsageKB
+				// from master..monCachedProcedures
+				// where ObjectName like '*%'
+				//   and ObjectName not like '*ss%'
+			}
+ 			else
+ 			{
+ 				// Get out, do NOT allow this lookup... it's an unknown type staring with '*'
+				return; 
+ 			}
+		}
 
 		// check if DDL has NOT been saved in any writer class
 		boolean doLookup = false;
@@ -510,13 +549,38 @@ implements Runnable
 
 				sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
 
-				ss = new AseSqlScript(conn, 10);
-				try	{
-					entry.setExtraInfoText( ss.executeSqlStr(sql, true) );
-				} catch (SQLException e) {
-					entry.setExtraInfoText( e.toString() );
-				} finally {
-					ss.close();
+//				ss = new AseSqlScript(conn, 10);
+//				try	{
+//					entry.setExtraInfoText( ss.executeSqlStr(sql, true) );
+//				} catch (SQLException e) {
+//					entry.setExtraInfoText( e.toString() );
+//				} finally {
+//					ss.close();
+//				}
+				try
+				{
+					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout(10);
+					
+					ResultSet rs = stmnt.executeQuery(sql);
+
+					StringBuilder sb = new StringBuilder();
+					sb.append(sql).append("\n");
+					sb.append("------------------------------------------------------------------\n");
+					while (rs.next())
+					{
+						sb.append(rs.getString(1));
+					}
+					rs.close();
+					stmnt.close();
+
+					entry.setExtraInfoText( sb.toString().trim() );
+				}
+				catch(SQLException e)
+				{
+					String msg = "Problems getting text from Statement Cache about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+					_logger.warn(msg); 
+					entry.setExtraInfoText( msg );
 				}
 			}
 			_ddlStoreQueue.add(entry);
@@ -609,7 +673,35 @@ implements Runnable
 					//--------------------------------------------
 					// GET sp__optdiag
 					if (_aseVersion >= 15700)
+					{
 						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
+
+						try
+						{
+							Statement stmnt = conn.createStatement();
+							stmnt.setQueryTimeout(10);
+							
+							ResultSet rs = stmnt.executeQuery(sql);
+
+							StringBuilder sb = new StringBuilder();
+							sb.append(sql).append("\n");
+							sb.append("------------------------------------------------------------------\n");
+							while (rs.next())
+							{
+								sb.append(rs.getString(1));
+							}
+							rs.close();
+							stmnt.close();
+
+							entry.setOptdiagText( sb.toString().trim() );
+						}
+						catch(SQLException e)
+						{
+							String msg = "Problems getting sp_showoptstats, using sql '"+sql+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+							//_logger.warn(msg); 
+							entry.setOptdiagText( msg );
+						}
+					}
 					else
 					{
 						// do SP_OPTDIAG, but only on UNPARTITIONED tables
@@ -627,17 +719,17 @@ implements Runnable
 							"else \n" +
 							"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
 							"";
-					}
-	
-					ss = new AseSqlScript(conn, 10);
-					try	{ 
-						entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
-					} catch (SQLException e) { 
-						entry.setOptdiagText( e.toString() ); 
-					} finally {
-						ss.close();
-					}
-	
+
+						ss = new AseSqlScript(conn, 10);
+						try	{ 
+							entry.setOptdiagText( ss.executeSqlStr(sql, true) ); 
+						} catch (SQLException e) { 
+							entry.setOptdiagText( e.toString() ); 
+						} finally {
+							ss.close();
+						}
+				}
+		
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
 					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
@@ -957,6 +1049,7 @@ implements Runnable
 	private class DdlLookup
 	implements Runnable
 	{
+		@Override
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
@@ -1031,6 +1124,7 @@ implements Runnable
 	private class DdlStorageConsumer
 	implements Runnable
 	{
+		@Override
 		public void run()
 		{
 			String threadName = Thread.currentThread().getName();
@@ -1100,6 +1194,7 @@ implements Runnable
 	/**
 	 * Read from the Container "in" queue, and use all Writers to save DATA 
 	 */
+	@Override
 	public void run()
 	{
 		String threadName = _thread.getName();
@@ -1430,6 +1525,7 @@ implements Runnable
 			_dependLevel  = dependLevel;
 		}
 		
+		@Override
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();

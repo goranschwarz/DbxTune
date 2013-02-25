@@ -63,7 +63,7 @@ extends JXTable
 	private static final long	serialVersionUID			= 1L;
 	private int					_lastMousePressedAtModelCol	= -1;
 	private int					_lastMousePressedAtModelRow	= -1;
-	private GTable              _thisTable                  = null;
+//	private GTable              _thisTable                  = null;
 //	private boolean             _hasNewModel                = true;
 	private boolean             _tableStructureChangedFlag  = true;
 
@@ -144,11 +144,13 @@ extends JXTable
 			
 			if (newModel instanceof CountersModel)
 			{
-				String tabName = _thisTable.getName();
+//				String tabName = _thisTable.getName();
+				String tabName = GTable.this.getName();
 				if (StringUtil.isNullOrBlank(tabName))
 				{
 					CountersModel cm = (CountersModel) newModel;
-					_thisTable.setName(cm.getName());
+//					_thisTable.setName(cm.getName());
+					GTable.this.setName(cm.getName());
 				}
 			}
 			loadColumnLayout();
@@ -163,7 +165,7 @@ extends JXTable
 	{
 		// wait 1 seconds before column layout is saved, this simply means less config writes...
 		_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
-		_thisTable = this;
+//		_thisTable = this;
 
 		//
 		// Cell renderer changes to "Rate" Counters
@@ -187,6 +189,7 @@ extends JXTable
 					nf = NumberFormat.getInstance();
 				}
 			}
+			@Override
 			public String getString(Object value) 
 			{
 				if ( ! (value instanceof BigDecimal) ) 
@@ -259,7 +262,8 @@ extends JXTable
 //System.out.println("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
 					_logger.debug("columnAdded(): tabName='"+getName()+"', TIME TO LOAD COL ORDER.");
 					_tableStructureChangedFlag = false;
-					_thisTable.loadColumnLayout();
+//					_thisTable.loadColumnLayout();
+					GTable.this.loadColumnLayout();
 				}
 			}
 
@@ -278,12 +282,14 @@ extends JXTable
 		getColumnModel().addColumnModelListener(columnModelListener);
 
 		// Set special Render to print multiple columns sorts
-		_thisTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+//		_thisTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+		GTable.this.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
 
 		//--------------------------------------------------------------------
 		// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
 		//--------------------------------------------------------------------
-		_thisTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+//		_thisTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+		GTable.this.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
 	}
 
 //    /**
@@ -756,7 +762,8 @@ extends JXTable
 		    try
 			{
 				SwingUtilities.invokeAndWait(new Runnable() {
-				    public void run() {
+				    @Override
+					public void run() {
 				    	privateTableChanged(e);
 				    }
 				});
@@ -780,39 +787,48 @@ extends JXTable
 
 			super.tableChanged(e);
 
-			// restore current selected row by PK
-			// _currentSelectedModelPk is maintained in valueChanged(ListSelectionEvent e)
-			if (_lastSelectedModelPk != null)
+			// restoring current selected row by PK is sometimes a problem... 
+			// so catch it and log it with the CM Name this so it's easier to debug
+			try
 			{
-				TableModel tm = getModel();
-				if (tm instanceof CountersModel)
+				// restore current selected row by PK
+				// _currentSelectedModelPk is maintained in valueChanged(ListSelectionEvent e)
+				if (_lastSelectedModelPk != null)
 				{
-					CounterTableModel ctm = ((CountersModel)tm).getCounterData();
-					if (ctm != null)
+					TableModel tm = getModel();
+					if (tm instanceof CountersModel)
 					{
-						int modelPkRow = ctm.getRowNumberForPkValue(_lastSelectedModelPk);
-						if (modelPkRow >= 0)
+						CounterTableModel ctm = ((CountersModel)tm).getCounterData();
+						if (ctm != null)
 						{
-							int viewRow = convertRowIndexToView(modelPkRow);
-							if ( viewRow >= 0 )
-								getSelectionModel().setSelectionInterval(viewRow, viewRow);
+							int modelPkRow = ctm.getRowNumberForPkValue(_lastSelectedModelPk);
+							if (modelPkRow >= 0)
+							{
+								int viewRow = convertRowIndexToView(modelPkRow);
+								if ( viewRow >= 0  && viewRow < getRowCount() )
+									getSelectionModel().setSelectionInterval(viewRow, viewRow);
+							}
+						}
+					}
+				}
+				else
+				{
+					// try use previous selected row, which we remembered at the start 
+					if ( _lastSelectedModelRow >= 0 )
+					{
+						// If no rows in model, no need to restore selected row.
+						if (getRowCount() > 0 && _lastSelectedModelRow < getRowCount())
+						{
+							int viewRowNow = convertRowIndexToView(_lastSelectedModelRow);
+							if ( viewRowNow >= 0 && viewRowNow < getRowCount() )
+								getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
 						}
 					}
 				}
 			}
-			else
+			catch (Throwable t)
 			{
-				// try use previous selected row, which we remembered at the start 
-				if ( _lastSelectedModelRow >= 0 )
-				{
-					// If no rows in model, no need to restore selected row.
-					if (getRowCount() > 0 && _lastSelectedModelRow < getRowCount())
-					{
-						int viewRowNow = convertRowIndexToView(_lastSelectedModelRow);
-						if ( viewRowNow >= 0 )
-							getSelectionModel().setSelectionInterval(viewRowNow, viewRowNow);
-					}
-				}
+				_logger.warn("GTable='"+getName()+"', Problems when restoring selected row. Caught: "+t, t);
 			}
 			
 	
@@ -864,7 +880,7 @@ extends JXTable
 		if (_lastSelectedModelRow >= 0)
 		{
 			TableModel tm = getModel();
-			if (tm instanceof CountersModel)
+			if (tm != null && tm instanceof CountersModel)
 			{
 				CountersModel cm = (CountersModel)tm;
 				CounterTableModel ctm = cm.getCounterData();
@@ -1091,7 +1107,9 @@ extends JXTable
 
 	public void setWatermarkText(String str)
 	{
-		_logger.debug(getName() + ".setWatermarkText('" + str + "')");
+		if (_logger.isDebugEnabled())
+			_logger.debug(getName() + ".setWatermarkText('" + str + "')");
+
 		if (_watermark != null)
 			_watermark.setWatermarkText(str);
 	}

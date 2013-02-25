@@ -7,9 +7,11 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
+import java.sql.Connection;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
@@ -19,13 +21,18 @@ import net.miginfocom.swing.MigLayout;
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.Cache;
 import com.asetune.AseConfigText.ConfigType;
-import com.asetune.GetCounters;
+import com.asetune.Version;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.pcs.PersistReader;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
 
 public class AseConfigViewDialog
-extends JDialog
-implements ActionListener
+//extends JDialog
+extends JFrame
+implements ActionListener, ConnectionProvider
 {
 	private static final long serialVersionUID = 1L;
 //	private static Logger _logger = Logger.getLogger(AseConfigViewDialog.class);
@@ -34,75 +41,96 @@ implements ActionListener
 	private JButton                _ok              = new JButton("OK");
 	private JButton                _cancel          = new JButton("Cancel");
 
+	@SuppressWarnings("unused")
+	private Window                 _owner           = null;
+
 	private JButton                _refresh         = new JButton("Refresh");
 	private JLabel                 _freeMb          = new JLabel();
 	
-	private JTabbedPane            _tabPane                          = new JTabbedPane();
-	private AseConfigPanel         _aseConfigPanel                   = new AseConfigPanel();
-//	private AseCacheConfigPanel    _aseCacheConfigPanel              = new AseCacheConfigPanel();
-	private AseConfigTextPanel     _aseConfigCachePanel              = new AseConfigTextPanel(ConfigType.AseCacheConfig);
-	private AseConfigTextPanel     _aseConfigThreadPoolPanel         = new AseConfigTextPanel(ConfigType.AseThreadPool);
-	private AseConfigTextPanel     _aseConfigHelpDbPanel             = new AseConfigTextPanel(ConfigType.AseHelpDb);
-	private AseConfigTextPanel     _aseConfigTempdbPanel             = new AseConfigTextPanel(ConfigType.AseTempdb);
-	private AseConfigTextPanel     _aseConfigHelpDevicePanel         = new AseConfigTextPanel(ConfigType.AseHelpDevice);
-	private AseConfigTextPanel     _aseConfigDeviceFsSpaceUsagePanel = new AseConfigTextPanel(ConfigType.AseDeviceFsSpaceUsage);
-	private AseConfigTextPanel     _aseConfigHelpServerPanel         = new AseConfigTextPanel(ConfigType.AseHelpServer);
-	private AseConfigTextPanel     _aseConfigTraceflagsPanel         = new AseConfigTextPanel(ConfigType.AseTraceflags);
-	private AseConfigTextPanel     _aseConfigSpVersionPanel          = new AseConfigTextPanel(ConfigType.AseSpVersion);
-	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel         = new AseConfigTextPanel(ConfigType.AseShmDumpConfig);
-	private AseConfigTextPanel     _aseConfigMonitorCfgPanel         = new AseConfigTextPanel(ConfigType.AseMonitorConfig);
-	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(ConfigType.AseLicenseInfo);
-	private AseConfigTextPanel     _aseConfigClusterInfoPanel        = new AseConfigTextPanel(ConfigType.AseClusterInfo);
+	private ConnectionProvider     _connProvider    = null;
 	
-	private AseConfigViewDialog(Frame owner)
+	private JTabbedPane            _tabPane                          = new JTabbedPane();
+	private AseConfigPanel         _aseConfigPanel                   = new AseConfigPanel(this);
+//	private AseCacheConfigPanel    _aseCacheConfigPanel              = new AseCacheConfigPanel();
+	private AseConfigTextPanel     _aseConfigCachePanel              = new AseConfigTextPanel(this, ConfigType.AseCacheConfig);
+	private AseConfigTextPanel     _aseConfigThreadPoolPanel         = new AseConfigTextPanel(this, ConfigType.AseThreadPool);
+	private AseConfigTextPanel     _aseConfigHelpDbPanel             = new AseConfigTextPanel(this, ConfigType.AseHelpDb);
+	private AseConfigTextPanel     _aseConfigTempdbPanel             = new AseConfigTextPanel(this, ConfigType.AseTempdb);
+	private AseConfigTextPanel     _aseConfigHelpDevicePanel         = new AseConfigTextPanel(this, ConfigType.AseHelpDevice);
+	private AseConfigTextPanel     _aseConfigDeviceFsSpaceUsagePanel = new AseConfigTextPanel(this, ConfigType.AseDeviceFsSpaceUsage);
+	private AseConfigTextPanel     _aseConfigHelpServerPanel         = new AseConfigTextPanel(this, ConfigType.AseHelpServer);
+	private AseConfigTextPanel     _aseConfigTraceflagsPanel         = new AseConfigTextPanel(this, ConfigType.AseTraceflags);
+	private AseConfigTextPanel     _aseConfigSpVersionPanel          = new AseConfigTextPanel(this, ConfigType.AseSpVersion);
+	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel         = new AseConfigTextPanel(this, ConfigType.AseShmDumpConfig);
+	private AseConfigTextPanel     _aseConfigMonitorCfgPanel         = new AseConfigTextPanel(this, ConfigType.AseMonitorConfig);
+	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseLicenseInfo);
+	private AseConfigTextPanel     _aseConfigClusterInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseClusterInfo);
+	
+	private AseConfigViewDialog(Frame owner, ConnectionProvider connProvider)
 	{
-		super(owner, "ASE Configuration", true);
-		init(owner);
+//		super(owner, "ASE Configuration", true);
+		super("ASE Configuration");
+//		setModalityType(ModalityType.MODELESS);
+		init(owner, connProvider);
 	}
-	private AseConfigViewDialog(Dialog owner)
+	private AseConfigViewDialog(Dialog owner, ConnectionProvider connProvider)
 	{
-		super(owner, "ASE Configuration", true);
-		init(owner);
+//		super(owner, "ASE Configuration", true);
+		super("ASE Configuration");
+//		setModalityType(ModalityType.MODELESS);
+		init(owner, connProvider);
 	}
 
-	public static void showDialog(Frame owner)
+	public static void showDialog(Frame owner, ConnectionProvider connProvider)
 	{
-		AseConfigViewDialog dialog = new AseConfigViewDialog(owner);
+		AseConfigViewDialog dialog = new AseConfigViewDialog(owner, connProvider);
 		dialog.setVisible(true);
-		dialog.dispose();
+//		dialog.dispose();
 	}
-	public static void showDialog(Dialog owner)
+	public static void showDialog(Dialog owner, ConnectionProvider connProvider)
 	{
-		AseConfigViewDialog dialog = new AseConfigViewDialog(owner);
+		AseConfigViewDialog dialog = new AseConfigViewDialog(owner, connProvider);
 		dialog.setVisible(true);
-		dialog.dispose();
+//		dialog.dispose();
 	}
-	public static void showDialog(Component owner)
+	public static void showDialog(Component owner, ConnectionProvider connProvider)
 	{
 		AseConfigViewDialog dialog = null;
 		if (owner instanceof Frame)
-			dialog = new AseConfigViewDialog((Frame)owner);
+			dialog = new AseConfigViewDialog((Frame)owner, connProvider);
 		else if (owner instanceof Dialog)
-			dialog = new AseConfigViewDialog((Dialog)owner);
+			dialog = new AseConfigViewDialog((Dialog)owner, connProvider);
 		else
-			dialog = new AseConfigViewDialog((Dialog)null);
+			dialog = new AseConfigViewDialog((Dialog)null, connProvider);
 
 		dialog.setVisible(true);
-		dialog.dispose();
+//		dialog.dispose();
 	}
 
 	@Override
-	public void setVisible(boolean b)
+	public void setVisible(boolean visible)
 	{
-		super.setVisible(b);
+		super.setVisible(visible);
 
 		// Refresh only enabled if connected to ASE, not offline for the moment
-		_refresh.setEnabled(GetCounters.getInstance().isMonConnected());
+		if (visible)
+		{
+			boolean b = true;
+			if (PersistReader.hasInstance())
+				if (PersistReader.getInstance().isConnected())
+					b = false;
+
+			_refresh.setEnabled(b);
+		}
 	}
 	
-	private void init(Window owner)
+	private void init(Window owner, ConnectionProvider connProvider)
 	{
+		_owner = owner;
+
+		_connProvider = connProvider;
 		initComponents();
+
 //		pack();
 
 //		Dimension size = getPreferredSize();
@@ -119,6 +147,19 @@ implements ActionListener
 
 	protected void initComponents()
 	{
+		// Set the icon, if we "just" do setIconImage() on the JDialog
+		// it will not be the "correct" icon in the Alt-Tab list on Windows
+		// So we need to grab the owner, and set that since the icon is grabbed from the owner...
+		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png");
+		if (icon != null)
+		{
+			Object owner = getOwner();
+			if (owner != null && owner instanceof Frame)
+				((Frame)owner).setIconImage(icon.getImage());
+			else
+				setIconImage(icon.getImage());
+		}
+
 //		super(_owner);
 //		if (_owner != null)
 //			setIconImage(_owner.getIconImage());
@@ -149,6 +190,7 @@ implements ActionListener
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				saveProps();
@@ -220,19 +262,35 @@ implements ActionListener
 
 	private void doRefresh()
 	{
-		for (int t=0; t<_tabPane.getTabCount(); t++)
-		{
-			Component comp = _tabPane.getComponentAt(t);
+		WaitForExecDialog wait = new WaitForExecDialog(this, "Getting ASE Configuration");
 
-			if (comp instanceof AseConfigPanel)
+		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
+		BgExecutor bgExec = new BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
 			{
-				((AseConfigPanel)comp).refresh();
+				for (int t=0; t<_tabPane.getTabCount(); t++)
+				{
+					Component comp = _tabPane.getComponentAt(t);
+					String    name = _tabPane.getTitleAt(t);
+		
+					getWaitDialog().setState("Refreshing tab '"+name+"'.");
+					if (comp instanceof AseConfigPanel)
+					{
+						((AseConfigPanel)comp).refresh();
+					}
+					else if (comp instanceof AseConfigTextPanel)
+					{
+						((AseConfigTextPanel)comp).refresh();
+					}
+				}
+				getWaitDialog().setState("Done");
+
+				return null;
 			}
-			else if (comp instanceof AseConfigTextPanel)
-			{
-				((AseConfigTextPanel)comp).refresh();
-			}
-		}
+		};
+		wait.execAndWait(bgExec);
 	}
 
 	private void doApply()
@@ -286,7 +344,8 @@ implements ActionListener
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
@@ -297,4 +356,15 @@ implements ActionListener
 	** END: Property handling
 	**---------------------------------------------------
 	*/
+
+  	@Override
+	public Connection getConnection()
+	{
+		return _connProvider.getConnection();
+	}
+	@Override
+	public Connection getNewConnection(String appname)
+	{
+		return _connProvider.getNewConnection(appname);
+	}
 }

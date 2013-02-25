@@ -41,7 +41,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monEngine"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime"};
@@ -119,6 +119,7 @@ extends CountersModel
 					true, // is Percent Graph
 					this, 
 					true, // visible at start
+					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 					-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -129,6 +130,7 @@ extends CountersModel
 					true, // is Percent Graph
 					this, 
 					true, // visible at start
+					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 					-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
@@ -215,6 +217,10 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+		// FIXME: in ASE 15.7 threaded mode, the IOCPUTime seems to use the DiskController Thread for all engines...
+		//        This leads to a higher IO Usage than it *really* is...
+		//        One way to solve this would be to simply disregard IOCPUTime totally... but that would probably lead to strange results
+
 		int aseVersion = getServerVersion();
 		// NOTE: IOCPUTime was introduced in ASE 15.5
 
@@ -281,7 +287,7 @@ extends CountersModel
 				if (instanceId == null)
 					engNumArray[i] = "eng-" + engineNumber;
 				else
-					engNumArray[i] = "eng-" + instanceId + ":" + engineNumber;
+					engNumArray[i] = instanceId + ":" + "eng-" + engineNumber;
 				
 				// in Cluster Edition the labels will look like 'eng-{InstanceId}:{EngineNumber}'
 				// in ASE SMP Version the labels will look like 'eng-{EngineNumber}'

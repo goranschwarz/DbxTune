@@ -43,8 +43,8 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.AseConfig;
 import com.asetune.AseTune;
-import com.asetune.GetCounters;
 import com.asetune.pcs.PersistReader;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
 
 
@@ -69,8 +69,11 @@ implements ActionListener
 	private JCheckBox  _showOnlyNonDefaults_chk = new JCheckBox("Show Only Non Default Values", false);
 	private JButton    _copy_but                = new JButton("Copy");
 
-	public AseConfigPanel()
+	private ConnectionProvider     _connProvider    = null;
+
+	public AseConfigPanel(ConnectionProvider connProvider)
 	{
+		_connProvider = connProvider;
 		init();
 	}
 
@@ -82,17 +85,28 @@ implements ActionListener
 		boolean    isOffline = false;
 		Connection conn      = null;
 
-		if (GetCounters.getInstance().isMonConnected())
+//		if (GetCounters.getInstance().isMonConnected())
+//		{
+//			ts        = null;
+//			isOffline = false;
+//			conn      = GetCounters.getInstance().getMonConnection();
+//		}
+//		else
+//		{
+//			ts        = null; // NOTE: this will not work, get the value from somewhere
+//			isOffline = true;
+//			conn      = PersistReader.getInstance().getConnection();
+//		}
+
+		conn = _connProvider.getConnection();
+
+		if (PersistReader.hasInstance())
 		{
-			ts        = null;
-			isOffline = false;
-			conn      = GetCounters.getInstance().getMonConnection();
-		}
-		else
-		{
-			ts        = null; // NOTE: this will not work, get the value from somewhere
-			isOffline = true;
-			conn      = PersistReader.getInstance().getConnection();
+			if (PersistReader.getInstance().isConnected())
+			{
+				ts        = null; // NOTE: this will not work, get the value from somewhere
+				isOffline = true;
+			}
 		}
 
 		AseConfig aseConfig = AseConfig.getInstance();
@@ -114,6 +128,8 @@ implements ActionListener
 			JLabel notConnected = new JLabel("Not yet Initialized, please connect first.");
 			notConnected.setFont(new Font(Font.DIALOG, Font.BOLD, 16));
 			add(notConnected,  BorderLayout.NORTH);
+			
+			// FIXME: the createFilterPanel() createTablePanel() components will NOT be visible when doing "refresh"...
 			return;
 		}
 
@@ -172,6 +188,7 @@ implements ActionListener
 		// to work, so lets the EventThread do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_showOnlyNonDefaults_chk.setSelected(true);
@@ -233,6 +250,7 @@ implements ActionListener
 		// Mark the row as RED if PENDING CONFIGURATION
 		_table.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Object o_pending = adapter.getValue(adapter.getColumnIndex(AseConfig.PENDING));

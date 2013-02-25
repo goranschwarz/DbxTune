@@ -41,7 +41,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 15020;
 
 	public static final String[] MON_TABLES       = new String[] {"monTempdbActivity"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "object lockwait timing=1", "per object statistics active=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct"};
@@ -115,6 +115,7 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
@@ -190,6 +191,7 @@ extends CountersModel
 	/** 
 	 * Compute the AppendLogContPct for DIFF values
 	 */
+	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
 		int AppendLogRequests,        AppendLogWaits;

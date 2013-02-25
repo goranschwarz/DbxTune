@@ -112,6 +112,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
 	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
+	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
 
 	private void addTrendGraphs()
 	{
@@ -121,6 +122,7 @@ extends CountersModel
 		String[] labels_connection    = new String[] { "UserConnections", "distinctLogins", "@@connections" };
 		String[] labels_aaDiskRW      = new String[] { "@@total_read", "@@total_write" };
 		String[] labels_aaNwPacket    = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+		String[] labels_openTran      = new String[] { "Seconds" };
 		
 		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu));
 		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
@@ -128,6 +130,7 @@ extends CountersModel
 		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
 		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
 		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
+		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -138,10 +141,11 @@ extends CountersModel
 				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
 				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
 				labels_aaCpu, 
-				true, // is Percent Graph
+				true,  // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
@@ -151,18 +155,20 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				15033, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-					"Blocking Locks", 	                  // Menu CheckBox text
-					"Number of Concurrently Blocking Locks (from monState)", // Label 
-					labels_blockingLocks, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					-1);  // minimum height
-				addTrendGraph(tg.getName(), tg, true);
+				"Blocking Locks", 	                  // Menu CheckBox text
+				"Number of Concurrently Blocking Locks (from monState)", // Label 
+				labels_blockingLocks, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
 				"Connections/Users in ASE", 	          // Menu CheckBox text
@@ -171,7 +177,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
@@ -181,7 +188,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
@@ -191,7 +199,19 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+				"Oldest Open Transaction in any Databases, in Seconds", // Label 
+				labels_openTran, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
 	}
@@ -310,6 +330,12 @@ extends CountersModel
 				"                          and (status & 4096 != 4096) \n" +
 				"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
 				"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n" + 
+				", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+				"                                               THEN -1 \n" +
+				"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
+				"                                          END),0) \n" +
+				"                        from master..syslogshold h \n" +
+				"                        where h.name != '$replication_truncation_point' ) \n" +
 
 				", pack_received      = @@pack_received \n" +
 				", pack_sent          = @@pack_sent \n" +
@@ -385,6 +411,9 @@ extends CountersModel
 
 		if (GRAPH_NAME_AA_CPU.equals(tgdp.getName()))
 		{
+			// FIXME: in ASE 15.7 threaded mode, the @@cpu_io seems to use the DiskController Thread for all engines...
+			//        This leads to a higher IO Usage than it *really* is...
+			//        One way to solve this would be to simply use @@cpu_busy and disregard @@cpu_io totally
 			Double cpuUser        = getDiffValueAsDouble(0, "cpu_busy");
 			Double cpuSystem      = getDiffValueAsDouble(0, "cpu_io");
 			Double cpuIdle        = getDiffValueAsDouble(0, "cpu_idle");
@@ -497,6 +526,18 @@ extends CountersModel
 			arr[1] = this.getRateValueAsDouble (0, "pack_sent");
 			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
 			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+
+		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "oldestOpenTranInSec");
+			_logger.debug("updateGraphData("+GRAPH_NAME_OLDEST_TRAN_IN_SEC+"): oldestOpenTranInSec='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDate(this.getTimestamp());

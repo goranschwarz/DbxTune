@@ -240,7 +240,7 @@ public class AseTune
 		if ( _gui )
 		{
 			if (cmd.hasOption('U'))	appProps.setProperty("cmdLine.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.asePassword", cmd.getOptionValue('P'));
+			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.asePassword", cmd.getOptionValue('P'), true);
 			if (cmd.hasOption('S'))	appProps.setProperty("cmdLine.aseServer",   cmd.getOptionValue('S'));
 
 			// Check servername
@@ -260,7 +260,7 @@ public class AseTune
 			}
 
 			if (cmd.hasOption('u'))	storeConfigProps.setProperty("cmdLine.sshUsername", cmd.getOptionValue('u'));
-			if (cmd.hasOption('p'))	storeConfigProps.setProperty("cmdLine.sshPassword", cmd.getOptionValue('p'));
+			if (cmd.hasOption('p'))	storeConfigProps.setProperty("cmdLine.sshPassword", cmd.getOptionValue('p'), true);
 			if (cmd.hasOption('s'))
 			{
 				storeConfigProps.setProperty("cmdLine.sshHostname", cmd.getOptionValue('s'));
@@ -292,11 +292,11 @@ public class AseTune
 			}
 
 			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'));
+			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'), true);
 			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.aseName",     cmd.getOptionValue('S'));
 
 			if (cmd.hasOption('u'))	storeConfigProps.setProperty("conn.sshUsername", cmd.getOptionValue('u'));
-			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'));
+			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'), true);
 			if (cmd.hasOption('s'))
 			{
 				storeConfigProps.setProperty("conn.sshHostname", cmd.getOptionValue('s'));
@@ -389,10 +389,10 @@ public class AseTune
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,           jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,              jdbcUrl);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername,         jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword,         jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword,         jdbcPasswd, true);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_startH2NetworkServer, true);
 
-					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
 				}
@@ -426,9 +426,9 @@ public class AseTune
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd, true);
 
-					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
 				}
@@ -458,9 +458,9 @@ public class AseTune
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd, true);
 
-					storeConfigProps.setProperty(PersistentCounterHandler.PROP_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
 					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
 				}
@@ -690,6 +690,7 @@ public class AseTune
 			// Construct a starter that will be passed to the Swing Event Dispatcher Thread
 	        Runnable runGui = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					try
@@ -748,11 +749,15 @@ public class AseTune
 					CheckForUpdates.noBlockCheck(frame, false, true);
 
 					// Start OutOfMemory check/thread
+					// Listeners has to be attached, which is done for example in MainFrame
 					Memory.start();
 
 					// Enable the save properties again.
 					if (tmpConf != null)
+					{
 						tmpConf.setSaveEnable(true);
+						tmpConf.save();
+					}
 
 					// FINALLY SHOW THE WINDOW
 					SplashWindow.drawProgress("Loading Main Window...");

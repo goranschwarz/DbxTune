@@ -77,6 +77,17 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_generateAvgServ_ms = PROP_PREFIX + ".graph.generate.avgServMs";
 	private static final boolean DEFAULT_generateAvgServ_ms = false;
 
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,      DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,        DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,          DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,         DEFAULT_showLegend);
+		Configuration.registerDefaultValue(PROPKEY_generateIOs,        DEFAULT_generateIOs);
+		Configuration.registerDefaultValue(PROPKEY_generateIOTime,     DEFAULT_generateIOTime);
+		Configuration.registerDefaultValue(PROPKEY_generateAvgServ_ms, DEFAULT_generateAvgServ_ms);
+	}
+
 	public CmIoQueueSumPanel(CountersModel cm)
 	{
 		super(cm);
@@ -406,6 +417,7 @@ extends TabularCntrPanel
 
 		graphType_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -423,6 +435,7 @@ extends TabularCntrPanel
 
 		enableGraph_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
@@ -432,6 +445,7 @@ extends TabularCntrPanel
 		});
 		showLegend_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
@@ -440,6 +454,7 @@ extends TabularCntrPanel
 
 		enableIOs_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateIOs, ((JCheckBox)e.getSource()).isSelected());
@@ -447,6 +462,7 @@ extends TabularCntrPanel
 		});
 		enableIOTime_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateIOTime, ((JCheckBox)e.getSource()).isSelected());
@@ -454,6 +470,7 @@ extends TabularCntrPanel
 		});
 		enableAvgServ_ms_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateAvgServ_ms, ((JCheckBox)e.getSource()).isSelected());

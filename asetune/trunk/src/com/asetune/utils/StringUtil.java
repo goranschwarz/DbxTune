@@ -496,8 +496,28 @@ public class StringUtil
 	 */
 	public static String left(String str, int expandToSize, boolean allowGrow)
 	{
+		return left(str, expandToSize, true, "", "");
+	}
+	/**
+	 * Left justify a string and fill extra spaces to the right
+	 */
+	public static String left(String str, int expandToSize, boolean allowGrow, String quoteStr)
+	{
+		return left(str, expandToSize, true, quoteStr, quoteStr);
+	}
+	/**
+	 * Left justify a string and fill extra spaces to the right
+	 */
+	public static String left(String str, int expandToSize, boolean allowGrow, String quoteStrLeft, String quoteStrRight)
+	{
 		// max size 128K for a sting to justify, it's big, but it's a limit...
 		int maxSize = 128 * 1024;
+
+		// Add left and right quote
+		if ( ! isNullOrBlank(quoteStrLeft) )
+			str = quoteStrLeft + str;
+		if ( ! isNullOrBlank(quoteStrRight) )
+			str = str + quoteStrRight;
 
 		if ( allowGrow )
 		{

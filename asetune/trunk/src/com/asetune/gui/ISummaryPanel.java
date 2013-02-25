@@ -37,4 +37,6 @@ extends TableModelListener //, GTabbedPane.ShowProperties
 
 	public void saveLayoutProps();
 
+	public void resetGoToTabSettings(String tabName);
+
 }

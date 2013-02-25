@@ -120,6 +120,7 @@ implements SybMessageHandler
 		return _logPrefix;
 	}
 	
+	@Override
 	public SQLException messageHandler(SQLException sqle)
 	{
 		// Take care of some specific messages...

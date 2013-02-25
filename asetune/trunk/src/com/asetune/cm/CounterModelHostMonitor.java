@@ -21,7 +21,7 @@ import com.asetune.hostmon.MonitorUpTime;
 import com.asetune.hostmon.MonitorUserDefined;
 import com.asetune.hostmon.MonitorVmstat;
 import com.asetune.hostmon.OsTable;
-import com.asetune.hostmon.SshConnection;
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 
 
@@ -81,6 +81,7 @@ extends CountersModel
 	//----------------------------------------------------------------------------
 
 	/** called from GetCounters.initCounters() */
+	@Override
 	public void init(Connection conn)
 	throws Exception
 	{
@@ -444,6 +445,7 @@ extends CountersModel
 
 			Runnable doWork = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					// IMPORTANT: move datastructure.

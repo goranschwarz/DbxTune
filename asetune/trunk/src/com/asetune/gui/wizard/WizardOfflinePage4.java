@@ -9,7 +9,6 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.util.Map.Entry;
 import java.util.Vector;
 
 import javax.swing.Icon;
@@ -177,10 +176,14 @@ implements ActionListener, TableModelListener
 					Configuration conf = cm.getLocalConfiguration();
 					if (conf != null)
 					{
-						for (Entry<Object, Object> entry : conf.entrySet()) 
+//						for (Entry<Object, Object> entry : conf.entrySet()) 
+//						{
+//							String key      = (String)entry.getKey();
+//							String val      = (String)entry.getValue();
+						for (Object keyObj : conf.keySet()) 
 						{
-							String key      = (String)entry.getKey();
-							String val      = (String)entry.getValue();
+							String key      = keyObj + "";
+							String val      = conf.getProperty(key);
 							String desc     = cm.getLocalConfigurationDescription(key);
 							String dataType = cm.getLocalConfigurationDataType(key);
 

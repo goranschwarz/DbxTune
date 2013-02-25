@@ -62,11 +62,13 @@ extends PersistWriterJdbc
 	**---------------------------------------------------
 	*/
 
+	@Override
 	public String getName()
 	{
 		return _name;
 	}
 
+	@Override
 	public void init(Configuration props) throws Exception
 	{
 		String propPrefix = "PersistWriterJdbcH2.";

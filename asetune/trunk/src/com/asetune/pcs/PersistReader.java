@@ -40,12 +40,13 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 
 public class PersistReader
-implements Runnable
+implements Runnable, ConnectionProvider
 {
 	private static Logger _logger = Logger.getLogger(PersistReader.class);
 
@@ -152,13 +153,28 @@ implements Runnable
 		_conn = conn;
 	}
 
+	/*---------------------------------------------------
+	 ** BEGIN: implementing ConnectionProvider
+	 **---------------------------------------------------
+	 */
 	/**
 	 * Gets the <code>Connection</code> to the monitored server.
 	 */
+	@Override
 	public Connection getConnection()
 	{
 		return _conn;
 	}
+
+	@Override
+	public Connection getNewConnection(String connName)
+	{
+		throw new RuntimeException("PersistentReader has not implemented the method 'getNewConnection(String)'");
+	}
+	/*---------------------------------------------------
+	 ** END: implementing ConnectionProvider
+	 **---------------------------------------------------
+	 */
 	
 	/** Close the offline connection */
 	public void closeConnection()
@@ -502,6 +518,7 @@ implements Runnable
 		return _running;
 	}
 
+	@Override
 	public void run()
 	{
 		String threadName = _readThread.getName();
@@ -978,6 +995,7 @@ implements Runnable
 				graphList.add(type);
 			}
 		}
+		@Override
 		public String toString()
 		{
 			return "OfflineCm(name='"+name+"', hasAbs="+hasAbs+", hasDiff="+hasDiff+", hasRate="+hasRate+", graphList="+graphList+")";
@@ -1047,6 +1065,7 @@ implements Runnable
 
 	/**
 	 * Sort all available tables in the same order as the "tab" placement in the Main GUI
+	 * TODO: sort it in the order they appear in the Summary Graph list (since we can order the graphs now)
 	 */
 	private void sortOfflineCm()
 	{
@@ -1107,8 +1126,12 @@ implements Runnable
 									//TrendGraph val = entry.getValue();
 
 									// move it over to the new sorted List
-									sortedGraphList.add(key);
-									originGraphList.remove(key);
+									// But only if it exists in the originGraphList, otherwise we will add a graph that do not exist in the database
+									if (originGraphList.indexOf(key) > -1)
+									{
+										sortedGraphList.add(key);
+										originGraphList.remove(key);
+									}
 								}
 								// Check for errors, all entries should have been removed from the "work" map
 								if (originGraphList.size() > 0)
@@ -2186,6 +2209,7 @@ implements Runnable
 		public String    _sourceDate       = null;
 		public int       _sourceRev        = 0;
 		
+		@Override
 		public String toString()
 		{
 			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+")";
@@ -2321,6 +2345,7 @@ implements Runnable
 			_rateSamples       = rateSamples;
 		}
 		
+		@Override
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();
@@ -2364,6 +2389,7 @@ implements Runnable
 			_lcRefreshTime     = lcRefreshTime;
 		}
 		
+		@Override
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();

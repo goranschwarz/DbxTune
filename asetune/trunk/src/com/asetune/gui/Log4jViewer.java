@@ -6,9 +6,9 @@ package com.asetune.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -132,6 +132,7 @@ implements ActionListener, TableModelListener
 	
 	public Log4jViewer(JFrame owner)
 	{
+		super();
 		_owner     = owner;
 
 		_log4jTableModel = GuiLogAppender.getTableModel();
@@ -146,6 +147,7 @@ implements ActionListener, TableModelListener
 	*/
 
 	/** actions when the window becomes visible on the screen */
+	@Override
 	public void setVisible(boolean b)
 	{
 		_test_but.setVisible(false);
@@ -300,6 +302,7 @@ implements ActionListener, TableModelListener
 		{
 	        private static final long serialVersionUID = 0L;
 
+			@Override
 			public String getToolTipText(MouseEvent e) 
 			{
 				String tip = null;
@@ -376,6 +379,7 @@ implements ActionListener, TableModelListener
 	**---------------------------------------------------
 	*/
 	/** Called when the TableModel itself changes */
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 //		TableModel tm = (TableModel) e.getSource();
@@ -456,6 +460,7 @@ implements ActionListener, TableModelListener
 		
 		_maxLogRecords_sp.addChangeListener(new ChangeListener()
 		{
+			@Override
 			public void stateChanged(ChangeEvent ce)
 			{
 				int records = _maxLogRecords_spm.getNumber().intValue();
@@ -465,6 +470,7 @@ implements ActionListener, TableModelListener
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				saveProps();
@@ -472,6 +478,7 @@ implements ActionListener, TableModelListener
 		});
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
     {
 		Object source = e.getSource();
@@ -622,8 +629,9 @@ implements ActionListener, TableModelListener
 		_openOnErrors_chk.setSelected(openOnErrors);
 		
 		// Set initial size
-		int defWidth  = (3 * Toolkit.getDefaultToolkit().getScreenSize().width)  / 4;
-		int defHeight = (3 * Toolkit.getDefaultToolkit().getScreenSize().height) / 4;
+		Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+		int defWidth  = (3 * screenSize.width)  / 4;
+		int defHeight = (3 * screenSize.height) / 4;
 
 		width  = conf.getIntProperty(base + "window.width",  defWidth);
 		height = conf.getIntProperty(base + "window.height", defHeight);
@@ -636,7 +644,8 @@ implements ActionListener, TableModelListener
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
@@ -657,6 +666,7 @@ implements ActionListener, TableModelListener
 			_logLevelColId = logLevelColId;
 			_logLevelStr   = logLevelStr;
 		}
+		@Override
 		public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 		{
 			Object value = adapter.getFilteredValueAt(adapter.row, _logLevelColId);
@@ -699,6 +709,7 @@ implements ActionListener, TableModelListener
 			_color = color;
 		}
 
+		@Override
 		protected Component doHighlight(Component comp, ComponentAdapter adapter) 
 		{
 			comp.setForeground(_color);
@@ -726,6 +737,7 @@ implements ActionListener, TableModelListener
 	private class LogSorter
 	implements Comparator<Logger>
 	{
+		@Override
 		public int compare(Logger o1, Logger o2) 
 		{
 			return o1.getName().compareTo( o2.getName() );
@@ -779,6 +791,7 @@ implements ActionListener, TableModelListener
 			this.setVisible(true);
 		}
 
+		@Override
 		public void setVisible(boolean b)
 		{
 			if (b)
@@ -876,6 +889,7 @@ implements ActionListener, TableModelListener
 			}
 		}
 		
+		@Override
 		public void actionPerformed(ActionEvent e)
 		{
 			Object source = e.getSource();
@@ -915,6 +929,7 @@ implements ActionListener, TableModelListener
 		//
 		// implementing: TableModelListener, listen for changes and enable the "apply" button
 		//
+		@Override
 		public void tableChanged(TableModelEvent e)
 		{
 //			TableModel tm = (TableModel) e.getSource();
@@ -951,6 +966,7 @@ implements ActionListener, TableModelListener
 			_level          = level.toString();
 			_originalLevel  = level.toString();
 		}
+		@Override
 		public String toString()
 		{
 			return _level;
@@ -980,21 +996,25 @@ implements ActionListener, TableModelListener
 			fireTableDataChanged();
 		}
 
+		@Override
 		public String getColumnName(int col)
 		{
 			return _cols[col];
 		}
 	
+		@Override
 		public int getColumnCount()
 		{
 			return _cols.length;
 		}
 	
+		@Override
 		public int getRowCount()
 		{
 			return _rows.size();
 		}
 	
+		@Override
 		public Object getValueAt(int row, int col)
 		{
 			Log4jClass r = (Log4jClass) _rows.get(row);
@@ -1006,6 +1026,7 @@ implements ActionListener, TableModelListener
 			return null;
 		}
 
+		@Override
 		public void setValueAt(Object obj, int row, int col)
 		{
 			_logger.trace("row="+row+", col="+col+", obj='"+obj.getClass().getName()+"', obj.toString='"+obj+"'.");
@@ -1017,12 +1038,14 @@ implements ActionListener, TableModelListener
 			fireTableCellUpdated(row, 1);
 		}
 
+		@Override
 		public Class<?> getColumnClass(int col)
 		{
 			if (col == LEVEL_COL_POS) return Log4jClass.class;
 			return String.class;
 		}
 
+		@Override
 		public boolean isCellEditable(int row, int col)
 		{
 			return col == LEVEL_COL_POS;

@@ -6,6 +6,7 @@ import com.asetune.utils.Configuration;
 public class MonitorIoAix 
 extends MonitorIo
 {
+	@Override
 	public String getModuleName()
 	{
 		return "MonitorIoAix";

@@ -14,6 +14,7 @@ import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ChangeToJTabDialog;
@@ -48,6 +49,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String blockedState = adapter.getString(adapter.getColumnIndex("BlockedState"));
@@ -61,6 +63,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String blockedState = adapter.getString(adapter.getColumnIndex("BlockedState"));
@@ -86,9 +89,12 @@ extends TabularCntrPanel
 				"</html>");
 		resetMoveToTab_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				ChangeToJTabDialog.resetSavedSettings(getPanelName());
+//				getCm().getGuiController().resetGoToTabSettings(getPanelName()); // TODO: maybe implement something like this
+				CounterController.getSummaryPanel().resetGoToTabSettings(getPanelName());
 			}
 		});
 		

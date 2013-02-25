@@ -141,7 +141,7 @@ public class Logging
 			if (_props.getProperty("log4j.appender.console.layout") == null)
 				_props.setProperty("log4j.appender.console.layout", "org.apache.log4j.PatternLayout");
 			if (_props.getProperty("log4j.appender.console.layout.ConversionPattern") == null)
-				_props.setProperty("log4j.appender.console.layout.ConversionPattern", "%d - %-5p - %-25t - %-30c{1} - %m%n");
+				_props.setProperty("log4j.appender.console.layout.ConversionPattern", "%d - %-5p - %-30t - %-30c{1} - %m%n");
 
 			// logfile, add / or \ if it's not at the end.
 			logfile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : System.getProperty("user.home");
@@ -164,7 +164,7 @@ public class Logging
 			if (_props.getProperty("log4j.appender.logfile.layout") == null)
 				_props.setProperty("log4j.appender.logfile.layout", "org.apache.log4j.PatternLayout");
 			if (_props.getProperty("log4j.appender.logfile.layout.ConversionPattern") == null)
-				_props.setProperty("log4j.appender.logfile.layout.ConversionPattern", "%d - %-5p - %-25t - %-4L:%-30F - %m%n");
+				_props.setProperty("log4j.appender.logfile.layout.ConversionPattern", "%d - %-5p - %-30t - %-4L:%-30F - %m%n");
 
 			//if ( asetuneProps.getProperty("log4j.logger.asetune") == null)
 			//	 logProps.setProperty("log4j.logger.asetune", "INFO");

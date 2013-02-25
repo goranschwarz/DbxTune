@@ -24,10 +24,11 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
-import com.asetune.hostmon.SshConnection;
+import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -106,6 +107,7 @@ public class GetCountersNoGui
 		return false;
 	}
 
+	@Override
 	public void init()
 	throws Exception
 	{
@@ -566,6 +568,7 @@ public class GetCountersNoGui
 			_thread.interrupt();
 	}
 
+	@Override
 	public void run()
 	{
 		// Set the Thread name
@@ -787,7 +790,7 @@ public class GetCountersNoGui
 				String sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
 				// If version is above 15.0.2 and you have 'sa_role' 
 				// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-				if (MonTablesDictionary.getInstance().aseVersionNum >= 15020)
+				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
 				{
 					if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 						sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
@@ -863,7 +866,12 @@ public class GetCountersNoGui
 				// release we are connected to
 				if ( ! isInitialized() )
 				{
-					initCounters( getMonConnection(), false, mtd.aseVersionNum, mtd.isClusterEnabled, mtd.montablesVersionNum);
+					initCounters( 
+							getMonConnection(), 
+							false, 
+							mtd.getAseExecutableVersionNum(), 
+							mtd.isClusterEnabled(), 
+							mtd.getMdaVersion());
 				}
 
 				if (_CMList == null || (_CMList != null && _CMList.size() == 0))
@@ -970,6 +978,16 @@ public class GetCountersNoGui
 					_logger.info("Shutting down the 'no-gui' service. Stop time was set to '"+_shutdownAtTime+"'. It was started at '"+startDateStr+"'.");
 					break;
 				}
+			}
+
+			//-----------------------------
+			// Do Java Garbage Collection?
+			//-----------------------------
+			boolean doJavaGcAfterRefresh = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefresh, MainFrame.DEFAULT_doJavaGcAfterRefresh);
+			if (doJavaGcAfterRefresh)
+			{
+				setWaitEvent("Doing Java Garbage Collection.");
+				System.gc();
 			}
 
 			//-----------------------------

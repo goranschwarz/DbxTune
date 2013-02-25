@@ -13,7 +13,7 @@ public class SplashWindow
 	private static final String[] SPLASHES = { "splash.jpg", "splash2.jpg" };
 	private static int _textX = 10, _textWClear = 250;
 	private static int _barX  = 2,  _barWClear  = 250;
-	private static int _textH = 10, _barH = 9, _barW = 5;
+	private static int _textH = 10, _barH = 9, _barW = 3;
 	private static int _barRightMargin = 100;
 	private static int _textRightMargin = 0;
 	private static int _textYpos = 40;
@@ -225,14 +225,19 @@ public class SplashWindow
 		_splash.update();
 	}
 
+	// Test it using: C:\projects\asetune\classes>java -splash:../lib/asetune_splash.jpg -cp . com.asetune.gui.SplashWindow
 	public static void main(String args[]) throws Exception
 	{
-		SplashWindow.init();
+		SplashWindow.init(false, 200, 500);
+//		SplashWindow.init();
 		for (int i = 0; i < 100; i++)
 		{
 			SplashWindow.drawProgress("Progress step number " + i);
-			Thread.sleep(250);
+			Thread.sleep(700);
 
+			if ( i > 0 && i % 5 == 0 )
+				SplashWindow.drawProgress("extra drawProg after number " + 1);
+				
 			// change the splash image from time to time
 //			if ( i > 0 && i % 10 == 0 )
 //			{

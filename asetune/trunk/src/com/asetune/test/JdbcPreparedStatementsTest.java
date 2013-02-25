@@ -345,6 +345,11 @@ public class JdbcPreparedStatementsTest
 		System.out.println("                    ############## ---END---");
 	}
 
+/*
+c: 
+cd C:\projects\asetune
+java -cp classes;lib/jconn3.jar com.asetune.test.JdbcPreparedStatementsTest ston60238837a 15702 sa sybase
+ */
 	public static void main(String[] args)
 	{
 		System.out.println("Usage: hostname port user passwd");

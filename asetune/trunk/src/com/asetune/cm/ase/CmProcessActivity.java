@@ -118,6 +118,22 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	//------------------------------------------------------------
+	// Implementation
+	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                       = CM_NAME;
+
+	public static final String  PROPKEY_sample_systemThreads       = PROP_PREFIX + ".sample.systemThreads";
+	public static final boolean DEFAULT_sample_systemThreads       = true;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
+	}
+
 	private HashMap<Number,Object> _blockingSpids = new HashMap<Number,Object>(); // <(SPID)Integer> <null> indicator that the SPID is BLOCKING some other SPID
 
 	public static final String GRAPH_NAME_CHKPT_HK = "ChkptHkGraph"; //String x=GetCounters.CM_GRAPH_NAME__PROCESS_ACTIVITY__CHKPT_HK;
@@ -140,7 +156,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
 	}
@@ -175,6 +192,14 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_systemThreads  = conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
+
+		// Should we sample SYSTEM SPID's
+		String sql_sample_systemThreads = "--and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+		if ( ! sample_systemThreads )
+			sql_sample_systemThreads = "  and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
@@ -269,7 +294,7 @@ extends CountersModel
 			"where MP.KPID = SP.kpid \n" +
 			"  and MP.KPID = A.KPID \n" +
 			"  and MP.KPID = N.KPID \n" +
-			"  RUNTIME_REPLACE::SAMPLE_SYSTEM_THREADS \n"; // this is replaced in getSql()
+			sql_sample_systemThreads;
 
 		if (isClusterEnabled)
 			sql +=
@@ -290,7 +315,7 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		Configuration lc = new Configuration();
 
-		lc.setProperty(getName()+".sample.systemThreads",  conf.getBooleanProperty(getName()+".sample.systemThreads", true));
+		lc.setProperty(PROPKEY_sample_systemThreads,  conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads));
 
 		return lc;
 	}
@@ -299,31 +324,15 @@ extends CountersModel
 	@Override
 	public String getLocalConfigurationDescription(String propName)
 	{
-		if (propName.equals(getName()+".sample.systemThreads")) return "Sample System SPID's that executes in the ASE Server";
+//		if (propName.equals(PROPKEY_sample_systemThreads)) return "Sample System SPID's that executes in the ASE Server";
+		if (propName.equals(PROPKEY_sample_systemThreads)) return CmProcessActivityPanel.TOOLTIP_sample_systemThreads;
 		return "";
 	}
 	@Override
 	public String getLocalConfigurationDataType(String propName)
 	{
-		if (propName.equals(getName()+".sample.systemThreads")) return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_systemThreads)) return Boolean.class.getSimpleName();
 		return "";
-	}
-
-	@Override
-	public String getSql()
-	{
-		String sql = super.getSql();
-		
-		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean sampleSystemThreads_chk = (conf == null) ? true : conf.getBooleanProperty(getName()+".sample.systemThreads", true);
-
-		String sampleSystemThreadSql = "";
-		if ( sampleSystemThreads_chk == false )
-			sampleSystemThreadSql = "  and SP.suid > 0 ";
-
-		sql = sql.replace("RUNTIME_REPLACE::SAMPLE_SYSTEM_THREADS", sampleSystemThreadSql);
-		
-		return sql;
 	}
 
 	/** 

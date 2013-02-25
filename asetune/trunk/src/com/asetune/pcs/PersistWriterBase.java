@@ -1020,7 +1020,7 @@ public abstract class PersistWriterBase
 		for (int d=0; d<dataArr.length; d++)
 		{
 			sb.append("   ,"+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",60,-1,-1),20)+" "+getNullable(true)+"\n");
-			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+"\n");
+			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,16, 1),20)+" "+getNullable(true)+"\n");
 		}
 		sb.append(") \n");
 

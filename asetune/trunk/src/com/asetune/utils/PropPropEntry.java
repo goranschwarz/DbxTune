@@ -43,6 +43,7 @@ implements Iterable<String>
 
 	private LinkedHashMap<String, Entry> _keys = new LinkedHashMap<String, Entry>();
 
+	@Override
 	public Iterator<String> iterator()
 	{
 		return _keys.keySet().iterator();
@@ -321,6 +322,7 @@ implements Iterable<String>
 
 
 
+	@Override
 	public String toString()
 	{
 		if (_keys.size() == 0)
@@ -369,6 +371,7 @@ implements Iterable<String>
 	 *   <li>Check all sub properties exists and has same values</li>
 	 * </ul>
 	 */
+	@Override
 	public boolean equals(Object anObject) 
 	{
 		if (this == anObject) 
@@ -580,6 +583,7 @@ implements Iterable<String>
 			this(false, name, propsStr);
 		}
 		
+		@Override
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();

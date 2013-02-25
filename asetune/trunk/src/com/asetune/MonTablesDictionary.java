@@ -20,6 +20,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -41,41 +42,101 @@ public class MonTablesDictionary
 	/** has been initalized or not */
 	private boolean _initialized = false;
 
+	/** will be true after initializeVersionInfo() has been executed, to help CheckForUpdate.sendLogInfo() */
+	private boolean _hasEarlyVersionInfo = false;
+
 	/** ASE @@servername string */
-	public String aseServerName = "";
+	private String _aseServerName = "";
 
 	/** ASE @@version string */
-	public String aseVersionStr = "";
+	private String _aseVersionStr = "";
 
 	/** Calculate the @@version into a number. example: 12.5.4 -> 12540 */
-	public int    aseVersionNum = 0;
+	private int    _aseVersionNum = 0;
 
 	/** If the version string contained the string 'Cluster Edition', this member will be true. */
-	public boolean isClusterEnabled = false;
+	private boolean _isClusterEnabled = false;
 
 	/** ASE sp_version 'installmontables' string */
-	public String montablesVersionStr = "";
+	private String _montablesVersionStr = "";
 
 	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 12540 */
-	public int    montablesVersionNum = 0;
+	private int    _montablesVersionNum = 0;
 
 	/** sp_version 'installmontables' Status string */
-	public String montablesStatus = "";
+	private String _montablesStatus = "";
 
 	/** ASE sp_version 'installmaster' string */
-	public String installmasterVersionStr = "";
+	private String _installmasterVersionStr = "";
 
 	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 12540 */
-	public int    installmasterVersionNum = 0;
+	private int    _installmasterVersionNum = 0;
 
 	/** sp_version 'installmontables' Status string */
-	public String installmasterStatus = "";
+	private String _installmasterStatus = "";
+
+	/** If ASE Binary and monTable/installMaster version is out of sync, what MDA version layout should we use<br>
+	 * If this is true use the monTable/installMaster<br>
+	 * If this is false use the ASE Binary (which could lead to incorrect syntax etc, due to missing column names introduced in later ASE Binary versions, but installmaster has not been installed after upgrade)  
+	 */
+	private boolean _useMonTablesVersionWhenBinAndScriptIsOutOfSync = true;
 
 	/** ASE Sort Order ID */
-	public int     aseSortId   = -1;
+	private int     _aseSortId     = -1;
 	/** ASE Sort Order Name */
-	public String  aseSortName = "";
+	private String  _aseSortName   = "";
+	/** just a guess if this is a SAP system, if the user 'sapsa' exists as a login, if db 'saptools' exists */
+	private String  _sapSystemInfo = "";
 
+	/** 
+	 * The version we should use when creating SQL Statements for the MDA Tables
+	 * depends on Executable/installMaster/monTable 
+	 * and user questions '_useMonTablesVersionWhenBinAndScriptIsOutOfSync' 
+	 */
+	public int getMdaVersion()
+	{
+		if (_useMonTablesVersionWhenBinAndScriptIsOutOfSync)
+			return getAseMonTableVersionNum();
+		return getAseExecutableVersionNum();
+	}
+	public boolean isClusterEnabled()              { return _isClusterEnabled; }
+	public String  getAseServerName()              { return _aseServerName; }
+	
+	public String  getAseExecutableVersionStr()    { return _aseVersionStr; }
+	public int     getAseExecutableVersionNum()    { return _aseVersionNum; }
+	
+	public String  getAseInstallMasterVersionStr() { return _installmasterVersionStr; }
+	public int     getAseInstallMasterVersionNum() { return _installmasterVersionNum; }
+
+	public String  getAseMonTableVersionStr()      { return _montablesVersionStr; }
+	/** 
+	 * if version is above 15.0.x, then use installmaster as the monTable version, since installmaster 
+	 * installes the monTables and sp_version 'montables' doesn't include the ESD level
+	 * <p>
+	 * Also if we failed to execute sp_version, then use the binary version<br> 
+	 * sp_version only exists in ASE 12.5.4 or above (manuals says 12.5.3 esd#?), then use the binary version 
+	 */
+	public int     getAseMonTableVersionNum()      
+	{
+		int version = 0;
+
+		if (_aseVersionNum >= 15020)
+			version = _installmasterVersionNum;
+
+		version = _montablesVersionNum; 
+
+		// If _installmasterVersionNum or _montablesVersionNum is 0
+		// sp_version has not been executed properly, needs ASE 12.5.(4), or if the execution fails for some reason
+		if (version == 0)
+			version = _aseVersionNum;
+
+		return version;
+	}
+
+	public int     getAseSortId()                  { return _aseSortId; }
+	public String  getAseSortName()                { return _aseSortName; }
+	public String  getSapSystemInfo()              { return _sapSystemInfo; }
+	
 	public class MonTableEntry
 	{
 		public int       _tableID         = 0;    // Unique identifier for the table
@@ -110,6 +171,7 @@ public class MonTablesDictionary
 		int		_waitClassId    = 0;    // select * from monWaitClassInfo  WaitClassID Description
 		String  _description    = null;
 		
+		@Override
 		public String toString()
 		{
 			return "MonWaitClassInfoEntry _waitClassId="+_waitClassId+", _description='"+_description+"'.";
@@ -121,6 +183,7 @@ public class MonTablesDictionary
 		int		_waitClassId    = 0;
 		String  _description    = null;
 
+		@Override
 		public String toString()
 		{
 			return "MonWaitEventInfoEntry _waitEventId="+_waitEventId+", _waitClassId="+_waitClassId+", _description='"+_description+"'.";
@@ -144,14 +207,14 @@ public class MonTablesDictionary
 //	private static String SQL_COLUMNS               = "select TableID, ColumnID, TypeID, Precision, Scale, Length, Indicators, TableName, ColumnName, TypeName, Description from "+FROM_TAB_NAME+" where TableName = '"+TAB_NAME+"'";
 //	private static String SQL_TABLES                = "select * from "+FROM_TAB_NAME;
 //	private static String SQL_COLUMNS               = "select * from "+FROM_TAB_NAME+" where TableName = '"+TAB_NAME+"'";
-	private static String SQL_MON_WAIT_CLASS_INFO_1 = "select max(WaitClassID) from monWaitClassInfo";
-	private static String SQL_MON_WAIT_CLASS_INFO   = "select WaitClassID, Description from monWaitClassInfo";
-	private static String SQL_MON_WAIT_EVENT_INFO_1 = "select max(WaitEventID) from monWaitEventInfo";
-	private static String SQL_MON_WAIT_EVENT_INFO   = "select WaitEventID, WaitClassID, Description from monWaitEventInfo";
+	private static String SQL_MON_WAIT_CLASS_INFO_1 = "select max(WaitClassID) from master..monWaitClassInfo";
+	private static String SQL_MON_WAIT_CLASS_INFO   = "select WaitClassID, Description from master..monWaitClassInfo";
+	private static String SQL_MON_WAIT_EVENT_INFO_1 = "select max(WaitEventID) from master..monWaitEventInfo";
+	private static String SQL_MON_WAIT_EVENT_INFO   = "select WaitEventID, WaitClassID, Description from master..monWaitEventInfo";
 	private static String SQL_VERSION               = "select @@version";
 	private static String SQL_VERSION_NUM           = "select @@version_number";
 //	private static String SQL_SP_VERSION            = "sp_version 'installmontables'";
-	private static String SQL_SP_VERSION            = "sp_version";
+	private static String SQL_SP_VERSION            = "sybsystemprocs..sp_version";
 
 	
 	public static boolean hasInstance()
@@ -213,7 +276,7 @@ public class MonTablesDictionary
 			sql = SQL_TABLES.replace(FROM_TAB_NAME, monTables);
 			if ( ! offline )
 			{
-				if (aseVersionNum >= 15700)
+				if (_aseVersionNum >= 15700)
 					sql += " where Language = 'en_US' ";
 
 				sql = sql.replace("\"", "");
@@ -274,7 +337,7 @@ public class MonTablesDictionary
 				sql = sql.replace(TAB_NAME, monTableEntry._tableName);
 				if ( ! offline )
 				{
-					if (aseVersionNum >= 15700)
+					if (_aseVersionNum >= 15700)
 						sql += " and Language = 'en_US' ";
 
 					sql = sql.replace("\"", "");
@@ -324,7 +387,7 @@ public class MonTablesDictionary
 		String sql = null;
 
 		// @@servername
-		aseServerName = AseConnectionUtils.getAseServername(conn);
+		_aseServerName = AseConnectionUtils.getAseServername(conn);
 
 		// aseVersionStr = @@version
 		// aseVersionNum = @@version -> to an integer
@@ -336,15 +399,15 @@ public class MonTablesDictionary
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				_aseVersionStr = rs.getString(1);
 			}
 			rs.close();
 			stmt.close();
 
-			aseVersionNum = AseConnectionUtils.aseVersionStringToNumber(aseVersionStr);
+			_aseVersionNum = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
 
 			if (AseConnectionUtils.isClusterEnabled(conn))
-				isClusterEnabled = true;
+				_isClusterEnabled = true;
 		}
 		catch (SQLException ex)
 		{
@@ -369,8 +432,8 @@ public class MonTablesDictionary
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				aseSortId   = rs.getInt   (1);
-				aseSortName = rs.getString(2);
+				_aseSortId   = rs.getInt   (1);
+				_aseSortName = rs.getString(2);
 			}
 			rs.close();
 			stmt.close();
@@ -379,6 +442,12 @@ public class MonTablesDictionary
 		{
 			_logger.error("initializeVersionInfo, Sort order information", ex);
 		}
+
+		_hasEarlyVersionInfo = true;
+	}
+	public boolean hasEarlyVersionInfo()
+	{
+		return _hasEarlyVersionInfo;
 	}
 
 	public void initialize(Connection conn, boolean hasGui)
@@ -392,17 +461,19 @@ public class MonTablesDictionary
 
 		String sql = null;
 
+		//------------------------------------
 		// get values from monTables & monTableColumns
 		if (hasMonRole)
 			initializeMonTabColHelper(conn, false);
 
+		//------------------------------------
 		// monWaitClassInfo
 		if (hasMonRole)
 		{
 			try
 			{
 				sql = SQL_MON_WAIT_CLASS_INFO_1;
-				if (aseVersionNum >= 15700)
+				if (_aseVersionNum >= 15700)
 					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
@@ -416,7 +487,7 @@ public class MonTablesDictionary
 				_monWaitClassInfo = new MonWaitClassInfoEntry[max_waitClassId+1];
 
 				sql = SQL_MON_WAIT_CLASS_INFO;
-				if (aseVersionNum >= 15700)
+				if (_aseVersionNum >= 15700)
 					sql += " where Language = 'en_US'";
 				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -446,7 +517,7 @@ public class MonTablesDictionary
 			try
 			{
 				sql = SQL_MON_WAIT_EVENT_INFO_1;
-				if (aseVersionNum >= 15700)
+				if (_aseVersionNum >= 15700)
 					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
@@ -460,7 +531,7 @@ public class MonTablesDictionary
 				_monWaitEventInfo = new MonWaitEventInfoEntry[max_waitEventId+1];
 	
 				sql = SQL_MON_WAIT_EVENT_INFO;
-				if (aseVersionNum >= 15700)
+				if (_aseVersionNum >= 15700)
 					sql += " where Language = 'en_US'";
 				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -488,9 +559,11 @@ public class MonTablesDictionary
 			}
 		}
 
+		//------------------------------------
 		// @@servername
-		aseServerName = AseConnectionUtils.getAseServername(conn);
+		_aseServerName = AseConnectionUtils.getAseServername(conn);
 		
+		//------------------------------------
 		// @@version_number
 		try
 		{
@@ -498,7 +571,7 @@ public class MonTablesDictionary
 			ResultSet rs = stmt.executeQuery(SQL_VERSION_NUM);
 			while ( rs.next() )
 			{
-				aseVersionNum = rs.getInt(1);
+				_aseVersionNum = rs.getInt(1);
 			}
 			rs.close();
 		}
@@ -507,6 +580,7 @@ public class MonTablesDictionary
 			_logger.debug("MonTablesDictionary:initialize, @@version_number, probably an early ASE version", ex);
 		}
 
+		//------------------------------------
 		// version
 		try
 		{
@@ -515,18 +589,18 @@ public class MonTablesDictionary
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				_aseVersionStr = rs.getString(1);
 			}
 			rs.close();
 
-			int aseVersionNumFromVerStr = AseConnectionUtils.aseVersionStringToNumber(aseVersionStr);
-			aseVersionNum = Math.max(aseVersionNum, aseVersionNumFromVerStr);
+			int aseVersionNumFromVerStr = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
+			_aseVersionNum = Math.max(_aseVersionNum, aseVersionNumFromVerStr);
 
 			// Check if the ASE binary is Cluster Edition Enabled
 //			if (aseVersionStr.indexOf("Cluster Edition") >= 0)
 //				isClusterEdition = true;
 			if (AseConnectionUtils.isClusterEnabled(conn))
-				isClusterEnabled = true;
+				_isClusterEnabled = true;
 		}
 		catch (SQLException ex)
 		{
@@ -536,6 +610,7 @@ public class MonTablesDictionary
 			return;
 		}
 
+		//------------------------------------
 		// SORT order ID and NAME
 		try
 		{
@@ -551,8 +626,8 @@ public class MonTablesDictionary
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				aseSortId   = rs.getInt   (1);
-				aseSortName = rs.getString(2);
+				_aseSortId   = rs.getInt   (1);
+				_aseSortName = rs.getString(2);
 			}
 			rs.close();
 			stmt.close();
@@ -562,8 +637,54 @@ public class MonTablesDictionary
 			_logger.error("initializeVersionInfo, Sort order information", ex);
 		}
 
+		//------------------------------------
+		// Can this possible be a SAP System
+		try
+		{
+			_sapSystemInfo = "";
+
+			// CHECK for login 'sapsa'
+			// ----------------------
+			sql="select suid from master..syslogins where name = 'sapsa'";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				_sapSystemInfo += "USER:sapsa=true, ";
+
+				@SuppressWarnings("unused")
+				int suid = rs.getInt(1);
+			}
+			rs.close();
+			stmt.close();
+
+			// CHECK for db 'saptools'
+			// ----------------------
+			sql="select dbid from master..sysdatabases where name = 'saptools'";
+			
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				_sapSystemInfo += "DB:saptools=true, ";
+
+				@SuppressWarnings("unused")
+				int dbid = rs.getInt(1);
+			}
+			rs.close();
+			stmt.close();
+			
+			_sapSystemInfo = StringUtil.removeLastComma(_sapSystemInfo);
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("initializeVersionInfo, When Probing if this looks like a SAP system, Caught exception.", ex);
+		}
+
+		//------------------------------------
 		// sp_version
-		if (aseVersionNum >= 12530)
+		if (_aseVersionNum >= 12540)
 		{
 			try
 			{
@@ -578,27 +699,27 @@ public class MonTablesDictionary
 	
 					if (spVersion_scriptName.endsWith("montables")) // could be: installmontables or montables
 					{
-						montablesVersionStr = spVersion_versionStr;
-						montablesStatus     = spVersion_status;
+						_montablesVersionStr = spVersion_versionStr;
+						_montablesStatus     = spVersion_status;
 	
-						montablesVersionNum = AseConnectionUtils.aseVersionStringToNumber(montablesVersionStr);
+						_montablesVersionNum = AseConnectionUtils.aseVersionStringToNumber(_montablesVersionStr);
 		
-						if ( ! montablesStatus.equalsIgnoreCase("Complete") )
+						if ( ! _montablesStatus.equalsIgnoreCase("Complete") )
 						{
-							montablesStatus = "incomplete";
+							_montablesStatus = "incomplete";
 						}
 					}
 	
 					if (spVersion_scriptName.equals("installmaster"))
 					{
-						installmasterVersionStr = spVersion_versionStr;
-						installmasterStatus     = spVersion_status;
+						_installmasterVersionStr = spVersion_versionStr;
+						_installmasterStatus     = spVersion_status;
 	
-						installmasterVersionNum = AseConnectionUtils.aseVersionStringToNumber(installmasterVersionStr);
-		
-						if ( ! installmasterStatus.equalsIgnoreCase("Complete") )
+						_installmasterVersionNum = AseConnectionUtils.aseVersionStringToNumber(_installmasterVersionStr);
+
+						if ( ! _installmasterStatus.equalsIgnoreCase("Complete") )
 						{
-							installmasterStatus = "incomplete";
+							_installmasterStatus = "incomplete";
 						}
 					}
 				}
@@ -609,10 +730,10 @@ public class MonTablesDictionary
 				// Msg 2812, Level 16, State 5:
 				// Server 'GORAN_12503_DS', Line 1:
 				// Stored procedure 'sp_version' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
-				if (ex.getErrorCode() == 2818)
+				if (ex.getErrorCode() == 2812)
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"'. " +
-							"The stored procedure 'sp_version' was introduced in ASE 12.5.3, which I can't find in the connected ASE, this implies that 'installmaster' has not been applied after upgrade. " +
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+_aseVersionNum+"'. " +
+							"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, this implies that 'installmaster' has not been applied after upgrade. " +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.error(msg);
 	
@@ -620,10 +741,11 @@ public class MonTablesDictionary
 						"<html>" +
 						"ASE 'installmaster' script may be of a faulty version. <br>" +
 						"<br>" +
-						"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"'.<br>" +
-						"The stored procedure 'sp_version' was introduced in ASE 12.5.3, which I can't find in the connected ASE, <br>" +
-						"this implies that 'installmaster' has not been applied after upgrade.<br>" +
-						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
+						"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.<br>" +
+						"<br>" +
+						"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, <br>" +
+						"this implies that 'installmaster' has <b>not</b> been applied after upgrade.<br>" +
+						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status by executing: <code>sp_version</code>. <br>" +
 						"<br>" +
 						"Do the following on the machine that hosts the ASE:<br>" +
 						"<font size=\"4\">" +
@@ -635,26 +757,49 @@ public class MonTablesDictionary
 						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
 						"</html>";
 					if (_hasGui)
-						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - connect check", msgHtml, null);
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - MonTablesDictionary - Initialize", msgHtml, null);
 				}
 				else
 				{
 					_logger.warn("MonTablesDictionary:initialize, problems executing: "+SQL_SP_VERSION+ ". Exception: "+ex.getMessage());
+
+					String msgHtml = 
+						"<html>" +
+						"Problems when executing sp_version. <br>" +
+						"Msg: <code>"+ex.getErrorCode()+"</code><br>" +
+						"Text: <code>"+ex.getMessage()+"</code><br>" +
+						"<br>" +
+						"ASE 'installmaster' script may be of a faulty version. <br>" +
+						"Or the stored procedure 'sp_version' has been replaced with a customer specific one.<br>" +
+						"<br>" +
+						"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.<br>" +
+						"<br>" +
+						"To fix the issue Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' again and check it's status by executing: <code>sp_version</code>. <br>" +
+						"<br>" +
+						"Do the following on the machine that hosts the ASE:<br>" +
+						"<font size=\"4\">" +
+						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
+						"</font>" +
+						"<br>" +
+						"If this is <b>not</b> done, SQL Statements issued by "+Version.getAppName()+" may fail due to version inconsistency (wrong column names etc).<br>" +
+						"<br>" +
+						"Also the MDA tables(mon*) may deliver faulty or corrupt information, because the MDA proxy table definitions are not in sync with it's underlying data structures.<br>" +
+						"</html>";
 					if (_hasGui)
-						SwingUtils.showErrorMessage("MonTablesDictionary - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
+						SwingUtils.showErrorMessage(MainFrame.getInstance(), Version.getAppName()+" - MonTablesDictionary - Initialize", msgHtml, null);
 					return;
 				}
 			}
-		} // end: if (aseVersionNum >= 12530)
+		} // end: if (aseVersionNum >= 12540)
 
-		_logger.info("ASE 'montables'     for sp_version shows: Status='"+montablesStatus    +"', VersionNum='"+montablesVersionNum    +"', VersionStr='"+montablesVersionStr+"'.");
-		_logger.info("ASE 'installmaster' for sp_version shows: Status='"+installmasterStatus+"', VersionNum='"+installmasterVersionNum+"', VersionStr='"+installmasterVersionStr+"'.");
+		_logger.info("ASE 'montables'     for sp_version shows: Status='"+_montablesStatus    +"', VersionNum='"+_montablesVersionNum    +"', VersionStr='"+_montablesVersionStr+"'.");
+		_logger.info("ASE 'installmaster' for sp_version shows: Status='"+_installmasterStatus+"', VersionNum='"+_installmasterVersionNum+"', VersionStr='"+_installmasterVersionStr+"'.");
 
 		//-------- montables ------
 		// is installed monitor tables fully installed.
 		if (hasMonRole)
 		{
-			if (montablesStatus.equals("incomplete"))
+			if (_montablesStatus.equals("incomplete"))
 			{
 				String msg = "ASE Monitoring tables has not been completely installed. Please check it's status with: sp_version";
 				if (AseTune.hasGUI())
@@ -663,13 +808,14 @@ public class MonTablesDictionary
 			}
 		}
 
+		//------------------------------------
 		// is installed monitor tables version different than ASE version
-		if (montablesVersionNum > 0)
+		if (_montablesVersionNum > 0)
 		{
 			// strip off the ROLLUP VERSION  (divide by 10 takes away last digit)
-			if (aseVersionNum/10 != montablesVersionNum/10)
+			if (_aseVersionNum/10 != _montablesVersionNum/10)
 			{
-				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+aseVersionNum+"' while MonTables version is '"+montablesVersionNum+"'. Please check it's status with: sp_version";
+				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+_aseVersionNum+"' while MonTables version is '"+_montablesVersionNum+"'. Please check it's status with: sp_version";
 				if (_hasGui)
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
@@ -680,7 +826,7 @@ public class MonTablesDictionary
 		// is installmaster fully installed.
 		if (hasMonRole)
 		{
-			if (installmasterStatus.equals("incomplete"))
+			if (_installmasterStatus.equals("incomplete"))
 			{
 				String msg = "ASE 'installmaster' script has not been completely installed. Please check it's status with: sp_version";
 				if (_hasGui)
@@ -689,14 +835,15 @@ public class MonTablesDictionary
 			}
 		}
 
+		//------------------------------------
 		// is 'installmaster' version different than ASE version
 		if (hasMonRole)
 		{
-			if (installmasterVersionNum > 0)
+			if (_installmasterVersionNum > 0)
 			{
-				if (aseVersionNum != installmasterVersionNum)
+				if (_aseVersionNum != _installmasterVersionNum)
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+aseVersionNum+"' while 'installmaster' version is '"+installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+_aseVersionNum+"' while 'installmaster' version is '"+_installmasterVersionNum+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.warn(msg);
 	
 					if (_hasGui)
@@ -705,7 +852,7 @@ public class MonTablesDictionary
 							"<html>" +
 							"ASE 'installmaster' script may be of a faulty version. <br>" +
 							"<br>" +
-							"ASE Version is '"+AseConnectionUtils.versionIntToStr(aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(installmasterVersionNum)+"'. <br>" +
+							"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. <br>" +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
 							"<br>" +
 							"Do the following on the machine that hosts the ASE:<br>" +
@@ -727,8 +874,8 @@ public class MonTablesDictionary
 						if (config != null)
 						{
 							Object[] options = {
-									"ASE binary Version "                  + AseConnectionUtils.versionIntToStr(aseVersionNum), 
-									"ASE montables/installmaster Version " + AseConnectionUtils.versionIntToStr(installmasterVersionNum)
+									"ASE montables/installmaster Version " + AseConnectionUtils.versionIntToStr(_installmasterVersionNum),
+									"ASE binary Version "                  + AseConnectionUtils.versionIntToStr(_aseVersionNum)
 									};
 							int answer = JOptionPane.showOptionDialog(MainFrame.getInstance(), 
 //								"ASE Binary and 'installmaster' is out of sync...\n" +
@@ -741,10 +888,13 @@ public class MonTablesDictionary
 								options,  //the titles of buttons
 								options[0]); //default button title
 
-							boolean useMonTablesVersion = answer > 0;
-							_logger.warn("Setting option '"+GetCounters.PROPKEY_USE_MON_TABLES_VERSION+"' to '"+useMonTablesVersion+"'.");
-							config.setProperty(GetCounters.PROPKEY_USE_MON_TABLES_VERSION, useMonTablesVersion);
-							config.save();
+							boolean useMonTablesVersion = (answer == 0);
+							_useMonTablesVersionWhenBinAndScriptIsOutOfSync = useMonTablesVersion;
+
+							if (_useMonTablesVersionWhenBinAndScriptIsOutOfSync)
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. ASE Binary version was '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.");
+							else
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'. ASE installmaster version was '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'.");
 						}
 					}
 				}

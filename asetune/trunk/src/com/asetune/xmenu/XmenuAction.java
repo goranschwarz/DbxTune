@@ -3,6 +3,7 @@
  */
 package com.asetune.xmenu;
 
+import java.awt.Window;
 import java.sql.Connection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -21,6 +22,7 @@ public interface XmenuAction
 	public void setConfig(String name);
 	public void setConnection(Connection conn);
 	public void setCloseConnOnExit(boolean b);
+	public void setOwner(Window window);
 
 	public Properties                   getMenuProperties();
 	public Properties                   getAllProperties();
@@ -30,9 +32,10 @@ public interface XmenuAction
 	public String                       getParamValue(int param);
 	public String                       getMenuName();
 	public String                       getConfig();
+	public Window                       getOwner();
 
 	/** True if we should make a new connection on startup */
-	public boolean                      getConnectionOnStart();
+	public boolean                      createConnectionOnStart();
 
 	public Connection                   getConnection();
 	public boolean                      isCloseConnOnExit();

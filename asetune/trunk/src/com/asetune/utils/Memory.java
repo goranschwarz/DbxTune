@@ -15,8 +15,10 @@ public class Memory
 	//-----------------------------------------------------------------------
 	// BEGIN: Memory Handler functionality
 	//-----------------------------------------------------------------------
-	private static Thread _checkThread = null;
-	private static int    _memLimitInMb = 10;
+	private static Thread  _checkThread = null;
+	private static boolean _running = false;
+	private static int     _memLimitInMb = 10;
+	private static int     _sleepTimeInSec = 3;
 	private static ArrayList<MemoryListener> _memListeners = new ArrayList<Memory.MemoryListener>();
 
 	public interface MemoryListener
@@ -29,6 +31,20 @@ public class Memory
 	public void setMemoryLimit(int memoryLeftInMB)
 	{
 		_memLimitInMb = memoryLeftInMB;
+	}
+	public int getMemoryLimit()
+	{
+		return _memLimitInMb;
+	}
+
+	/** How often should we check for memory, default is every 3 seconds */ 
+	public void setSleepTime(int seconds)
+	{
+		_sleepTimeInSec = seconds;
+	}
+	public int getSleepTime()
+	{
+		return _sleepTimeInSec;
 	}
 
 	/** Add a listener to the memory checker */
@@ -65,7 +81,42 @@ public class Memory
 			ml.memoryConsumption(memoryLeftInMB);
 		}
 	}
-	
+
+	/**
+	 * If the thread is sleeping, simply interrupt it and let it go to work. 
+	 */
+	public static void evaluate()
+	{
+		if (_checkThread != null)
+		{
+			_logger.info("Received 'evaluate' notification, the memory monitor thread will 'now' evaluate the memory usage.");
+			_checkThread.interrupt();
+		}
+		else
+		{
+			_logger.warn("Memory monitor thread, has not been started.");
+		}
+	}
+
+	/**
+	 * isRunning
+	 */
+	public static boolean isRunning()
+	{
+		return (_checkThread != null && _running);
+	}
+
+	/**
+	 * Stop it
+	 */
+	public static void stop()
+	{
+		_running = false;
+		if (_checkThread != null)
+		{
+			_checkThread.interrupt();
+		}
+	}
 	/**
 	 * Start a memory check thread that will notify any listeners
 	 */
@@ -82,9 +133,9 @@ public class Memory
 			public void run()
 			{
 				_logger.info("Starting memory checker thread.");
-				try
+				while(_running)
 				{
-					while(true)
+					try
 					{
 						int mbLeftAtStart = getMemoryLeftInMB();
 						
@@ -104,21 +155,25 @@ public class Memory
 								fireOutOfMemory();
 						}
 						
-						Thread.sleep(5 * 1000);
+						Thread.sleep(_sleepTimeInSec * 1000);
 					}
-				}
-				catch (InterruptedException ignore)
-				{
-					_logger.info("Received 'interrupted', so I will stop the memory checker thread.");
-				}
-				catch (Throwable t)
-				{
-					_logger.info("Caught '"+t+"', so I will stop the memory checker thread.", t);
-				}
+					catch (InterruptedException ignore)
+					{
+						_logger.debug("Received 'interrupted', checking if we should continue to run.");
+					}
+					catch (Throwable t)
+					{
+						_logger.info("Caught '"+t+"', so I will stop the memory checker thread.", t);
+						_running = false;
+					}
+				} // end: while(_running)
+
 				_logger.info("Ending memory checker thread.");
 				_checkThread = null;
 			}
 		};
+
+		_running = true;
 		_checkThread.setName("MemoryCheckThread");
 		_checkThread.setDaemon(true);
 		_checkThread.start();

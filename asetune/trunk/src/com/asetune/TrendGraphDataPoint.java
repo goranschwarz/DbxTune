@@ -49,6 +49,7 @@ implements Cloneable
 		return true;
 	}
 
+	@Override
 	public Object clone()
 	{
 		// Make a memory copy of the object
@@ -57,6 +58,7 @@ implements Cloneable
 		{ throw new Error("This should never happen!"); }
 	}
 	
+	@Override
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder();

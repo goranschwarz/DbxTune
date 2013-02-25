@@ -714,13 +714,13 @@ public class PersistWriterJdbc
 					urlMap.put("AUTO_SERVER",  "TRUE");
 				}
 
-				// AutoServer mode
-				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
-				{
-					change = true;
-					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
-					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
-				}
+//				// DATABASE_EVENT_LISTENER mode
+//				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
+//				{
+//					change = true;
+//					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
+//					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
+//				}
 
 				if (change)
 				{

@@ -127,6 +127,7 @@ public class SwingShell
 
 			KeyAdapter kl = new KeyAdapter()
 			{
+				@Override
 				public void keyTyped(KeyEvent e)
 				{
 					if (e.getKeyChar() == '\n')
@@ -267,6 +268,7 @@ public class SwingShell
 				setContent(sb.toString());
 			}
 
+			@Override
 			public void run()
 			{
 				byte[] buff = new byte[8192];
@@ -306,6 +308,7 @@ public class SwingShell
 
 			logoffButton.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					/* Dispose the dialog, "setVisible(true)" method will return */
@@ -328,6 +331,7 @@ public class SwingShell
 
 			KeyAdapter kl = new KeyAdapter()
 			{
+				@Override
 				public void keyTyped(KeyEvent e)
 				{
 					int c = e.getKeyChar();
@@ -370,6 +374,7 @@ public class SwingShell
 	 */
 	class AdvancedVerifier implements ServerHostKeyVerifier
 	{
+		@Override
 		public boolean verifyServerHostKey(String hostname, int port, String serverHostKeyAlgorithm,
 				byte[] serverHostKey) throws Exception
 		{
@@ -461,6 +466,7 @@ public class SwingShell
 
 		/* the callback may be invoked several times, depending on how many questions-sets the server sends */
 
+		@Override
 		public String[] replyToChallenge(String name, String instruction, int numPrompts, String[] prompt,
 				boolean[] echo) throws IOException
 		{
@@ -520,6 +526,7 @@ public class SwingShell
 			this.username = username;
 		}
 
+		@Override
 		public void run()
 		{
 			Connection conn = new Connection(hostname);
@@ -693,6 +700,7 @@ public class SwingShell
 
 			Runnable r = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					loginFrame.dispose();
@@ -737,6 +745,7 @@ public class SwingShell
 
 		loginButton.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(java.awt.event.ActionEvent e)
 			{
 				loginPressed();
@@ -768,6 +777,7 @@ public class SwingShell
 	{
 		Runnable r = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				showGUI();

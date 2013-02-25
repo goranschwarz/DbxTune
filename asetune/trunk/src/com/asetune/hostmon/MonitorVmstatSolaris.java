@@ -51,12 +51,12 @@ extends MonitorVmstat
 		md.addIntColumn("faults_cs",  20, 19, true, "CPU context switches");
 
 		md.addIntColumn("cpu_us",     21, 20, true, "user time");
-		md.addIntColumn("cpu_sys",    22, 21, true, "system time");
+		md.addIntColumn("cpu_sy" ,    22, 21, true, "system time");
 		md.addIntColumn("cpu_id",     23, 22, true, "idle time");
 
 		// Set Percent columns
 		md.setPercentCol("cpu_us");
-		md.setPercentCol("cpu_sys");
+		md.setPercentCol("cpu_sy");
 		md.setPercentCol("cpu_id");
 		
 

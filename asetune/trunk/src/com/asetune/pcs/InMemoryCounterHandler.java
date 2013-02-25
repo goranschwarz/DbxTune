@@ -24,6 +24,11 @@ implements Runnable
 {
 	private static Logger _logger          = Logger.getLogger(InMemoryCounterHandler.class);
 
+	public  static final String PROPKEY_HISTORY_SIZE_IN_SECONDS      = "InMemoryCounterHandler.history";
+	public  static final int    DEFAULT_HISTORY_SIZE_IN_SECONDS      = 10 * 60;
+	
+	private static final String PROPKEY_QUEUE_SIZE_WARNING_THRESHOLD = "InMemoryCounterHandler.warnQueueSizeThresh";
+	private static final int    DEFAULT_QUEUE_SIZE_WARNING_THRESHOLD = 2;
 	
 	/*---------------------------------------------------
 	** Constants
@@ -47,7 +52,7 @@ implements Runnable
 	private Configuration _props;
 	
 	private int         _warnQueueSizeThresh = 2;
-	private int         _saveTimeInSec       = 10 * 60;
+	private int         _saveTimeInSec       = DEFAULT_HISTORY_SIZE_IN_SECONDS;
 	
 	/** A list of PersistContainer, New entries are added at "right" side. 
 	 * Then it follows the "graphs" and "slider" numbering... */
@@ -76,23 +81,23 @@ implements Runnable
 	throws Exception
 	{
 		_props = props; 
-		
+
 		_logger.info("Initializing the In-Memory Counter Handler functionality.");
 
-		_warnQueueSizeThresh = _props.getIntProperty("InMemoryCounterHandler.warnQueueSizeThresh", _warnQueueSizeThresh);
+		_warnQueueSizeThresh = _props.getIntProperty(PROPKEY_QUEUE_SIZE_WARNING_THRESHOLD, DEFAULT_QUEUE_SIZE_WARNING_THRESHOLD);
 
-//		int hist = Configuration.getInstance(Configuration.TEMP).getIntProperty("InMemoryCounterHandler.history", -1);
-		int hist = Configuration.getCombinedConfiguration().getIntProperty("InMemoryCounterHandler.history", -1);
+		int hist = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HISTORY_SIZE_IN_SECONDS, -1);
 		if (hist == -1)
 		{
-			_logger.info("Can't find property 'InMemoryCounterHandler.history', using default '"+_saveTimeInSec+"'.");
+			_logger.info("Can't find property '"+PROPKEY_HISTORY_SIZE_IN_SECONDS+"', using default '"+DEFAULT_HISTORY_SIZE_IN_SECONDS+"'.");
+			hist = DEFAULT_HISTORY_SIZE_IN_SECONDS;
 		}
 		else
 		{
 			setHistoryLengthInSeconds(hist);
 		}
 
-		_logger.info("Saving Counters in memory for '"+_saveTimeInSec+"' seconds, (Minutes:Seconds = "+TimeUtils.msToTimeStr("%MM:%SS", _saveTimeInSec*1000)+").");
+		_logger.info("In memory history will be '"+_saveTimeInSec+"' seconds, (Minutes:Seconds = "+TimeUtils.msToTimeStr("%MM:%SS", _saveTimeInSec*1000)+").");
 
 		_initialized = true;
 	}
@@ -154,11 +159,15 @@ implements Runnable
 
 	public void setHistoryLengthInSeconds(int seconds)
 	{
+//		if (hasInstance())
+//			getInstance()._saveTimeInSec = seconds;
 		_saveTimeInSec = seconds;
 
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-		conf.setProperty("InMemoryCounterHandler.history", seconds);
+		conf.setProperty(PROPKEY_HISTORY_SIZE_IN_SECONDS, seconds);
 		conf.save();
+		
+		_logger.info("Setting new save time for in memory history to '"+seconds+"' seconds, (Minutes:Seconds = "+TimeUtils.msToTimeStr("%MM:%SS", seconds*1000)+").");
 	}
 	public void setHistoryLengthInMinutes(int minutes)
 	{
@@ -331,7 +340,7 @@ implements Runnable
 			{
 				_logger.debug("The in-memory history list has "+_list.size()+" entries.");
 			}
-			
+
 			// notify listeners...
 			fireStateChanged();
 		}
@@ -341,6 +350,7 @@ implements Runnable
 		}
 	}
 	
+	@Override
 	public void run()
 	{
 		_logger.info("Starting a thread for the module '"+_thread.getName()+"'.");

@@ -71,7 +71,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 30;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -113,6 +113,25 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                          = CM_NAME;
+
+	public static final String  PROPKEY_sample_tabRowCount            = PROP_PREFIX + ".sample.TabRowCount";
+	public static final boolean DEFAULT_sample_tabRowCount            = true;
+
+	public static final String  PROPKEY_disable_tabRowCount_onTimeout = PROP_PREFIX + ".disable.TabRowCount.onTimeoutException";
+	public static final boolean DEFAULT_disable_tabRowCount_onTimeout = true;
+
+	public static final String  PROPKEY_sample_objectName             = PROP_PREFIX + ".sample.ObjectName";
+	public static final boolean DEFAULT_sample_objectName             = false;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+//		Configuration.registerDefaultValue(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter);
+//		Configuration.registerDefaultValue(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins);
+	}
 	
 	private void addTrendGraphs()
 	{
@@ -479,9 +498,63 @@ extends CountersModel
 		return sql;
 	}
 
+	/**
+	 * Called when a timeout has been found in the refreshGetData() method
+	 * <p>
+	 * This method should be overridden by a CounterMoitor object
+	 */
+	@Override
+	public void handleTimeoutException()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// FIRST try to reset timeout if it's below the default
+		if (getQueryTimeout() < getDefaultQueryTimeout())
+		{
+			if (conf.getBooleanProperty(getName()+".QueryTimeout.disable.onTimeoutException", true))
+			{
+				setQueryTimeout(getDefaultQueryTimeout(), true);
+				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
+				return;
+			}
+		}
+
+		// SECONDARY Disable the: TabRowCount, NumUsedPages, RowsPerPage
+		// It might be that what causing the timeout
+		if (conf.getBooleanProperty(getName()+".TabRowCount.disable.onTimeoutException", true))
+		{
+			if (conf.getBooleanProperty(getName()+".TabRowCount", true) == false)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (tempConf == null) 
+					return;
+				tempConf.setProperty(getName()+".TabRowCount", false);
+				tempConf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				setSql(null);
+	
+				String key=getName()+".TabRowCount";
+				_logger.warn("CM='"+getName()+"'. Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method handelTimeoutException(). This is done by setting "+key+"=false");
+				
+				if (getGuiController() != null && getGuiController().hasGUI())
+				{
+//					FIXME
+					// show GUI Dialog, which can undo the above setting
+					// and also disable this action in the future.
+					
+//					- Also change 'getName()+".TabRowCount"' to PROPKEY
+//					- Also how should 'sample.ObjectName' be handel
+				}
+			}
+		}
+	}
+
 	/** 
 	 * Compute the LockContPct for DIFF values
 	 */
+	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
 		int LockContPct_pos = -1;

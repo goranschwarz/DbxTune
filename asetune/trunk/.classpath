@@ -4,6 +4,11 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/dsparser.jar"/>
 	<classpathentry kind="lib" path="lib/jconn3.jar"/>
+	<classpathentry kind="lib" path="lib/jtds-1.2.7.jar" sourcepath="3pp/jtds-1.2.7-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="http://jtds.sourceforge.net/doc/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib/wizard.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/WizardAPI.zip!/"/>
@@ -25,16 +30,17 @@
 			<attribute name="javadoc_location" value="http://www.cleondris.ch/opensource/ssh2/javadoc/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/rsyntaxtextarea_2.0.4.1_Source.zip">
+	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/rsyntaxtextarea_2.0.5.1_Source.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.0.4_Source.zip">
+	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.0.5_Source.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/autocomplete"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/rstaui.jar" sourcepath="3pp/rstaui_2.0.5.1_Source.zip"/>
 	<classpathentry kind="lib" path="lib/jfreechart-1.0.14.jar" sourcepath="3pp/jfreechart-1.0.14.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://www.jfree.org/jfreechart/api/javadoc/"/>
@@ -70,9 +76,19 @@
 			<attribute name="javadoc_location" value="http://www.h2database.com/javadoc"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/proxy-vole_20120920.jar" sourcepath="3pp/proxy-vole_20120905_src.zip">
+	<classpathentry kind="lib" path="lib/proxy-vole_20121203.jar" sourcepath="3pp/proxy-vole_20121203_src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/gsp.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/C:/Documents and Settings/gorans/My Documents/Downloads/java/sqlParser/gsp_java_trial_1_4_3_7/dist/javadoc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/jsqlparser.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://jsqlparser.sourceforge.net/docs/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="classes"/>

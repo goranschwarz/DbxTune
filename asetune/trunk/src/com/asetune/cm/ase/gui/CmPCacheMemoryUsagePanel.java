@@ -79,6 +79,17 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_showEmptyGraphs = PROP_PREFIX + ".graph.show.empty";
 	private static final boolean DEFAULT_showEmptyGraphs = false;
 
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,     DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,       DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,      DEFAULT_showLegend);
+		Configuration.registerDefaultValue(PROPKEY_generateSummary, DEFAULT_generateSummary);
+		Configuration.registerDefaultValue(PROPKEY_generateModules, DEFAULT_generateModules);
+		Configuration.registerDefaultValue(PROPKEY_showEmptyGraphs, DEFAULT_showEmptyGraphs);
+	}
+
 	public CmPCacheMemoryUsagePanel(CountersModel cm)
 	{
 		super(cm);
@@ -408,6 +419,7 @@ extends TabularCntrPanel
 		// ACTION LISTENERS
 		enableGraph_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
@@ -418,6 +430,7 @@ extends TabularCntrPanel
 
 		graphType_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -435,6 +448,7 @@ extends TabularCntrPanel
 
 		showLegend_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
@@ -443,6 +457,7 @@ extends TabularCntrPanel
 
 		generateSummary_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateSummary, ((JCheckBox)e.getSource()).isSelected());
@@ -451,6 +466,7 @@ extends TabularCntrPanel
 
 		generateModules_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateModules, ((JCheckBox)e.getSource()).isSelected());
@@ -459,6 +475,7 @@ extends TabularCntrPanel
 
 		showEmptyGraphs_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_showEmptyGraphs, ((JCheckBox)e.getSource()).isSelected());

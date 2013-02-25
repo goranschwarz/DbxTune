@@ -55,7 +55,7 @@ public class PreparedStatementCache
 	public static void remove(Connection conn, PreparedStatementWrapper psw)
 	{
 		PreparedStatementCacheEntries psce = _psceMap.get(conn);
-		if (psce == null)
+		if (psce != null)
 			psce.remove(psw);
 	}
 	
@@ -147,10 +147,12 @@ public class PreparedStatementCache
 		}
 
 		private static boolean _forceClose = false;
+		@SuppressWarnings("unused")
 		public static void setForceClose(boolean forceClose)
 		{
 			_forceClose = forceClose;
 		}
+		@SuppressWarnings("unused")
 		public static boolean getForceClose()
 		{
 			return _forceClose;
@@ -735,6 +737,7 @@ public class PreparedStatementCache
 			_ps.setURL(parameterIndex, x);
 		}
 
+		@SuppressWarnings("deprecation")
 		@Override
 		public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException
 		{

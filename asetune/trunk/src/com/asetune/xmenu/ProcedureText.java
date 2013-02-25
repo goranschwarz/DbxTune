@@ -24,10 +24,12 @@ import javax.swing.JPopupMenu;
 import javax.swing.JTextArea;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.tools.QueryWindow;
+import com.asetune.tools.WindowType;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionUtils;
 
 
@@ -80,15 +82,18 @@ extends XmenuActionBase
 		final JFrame textFrame = new JFrame(procName);
 
 		//procText.setText(sql);
-		procText.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		procText.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		procText.setHighlightCurrentLine(true);
 		//procText.setLineWrap(true);
 		//procTextSroll.setLineNumbersEnabled(true);
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(procTextSroll, textFrame);
 
 		if (closeConn)
 		{
 			textFrame.addWindowListener(new WindowAdapter()
 			{
+				@Override
 				public void windowClosing(WindowEvent e)
 				{
 					if (_closeConnOnExit)
@@ -115,7 +120,7 @@ extends XmenuActionBase
 		textPanel.setLayout(new BorderLayout());
 //		procText.setBackground(Color.white);
 		procText.setEnabled(true);
-		procText.setEditable(false);
+//		procText.setEditable(false);
 
 //		String sqlStatement = "select c.text"
 //			+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
@@ -266,7 +271,7 @@ extends XmenuActionBase
 					}
 					String sql = "exec "+dbname+"..sp_help '"+tabname+"'";
 
-					QueryWindow qw = new QueryWindow(_conn, sql, false, QueryWindow.WindowType.JFRAME, null);
+					QueryWindow qw = new QueryWindow(_conn, sql, null, false, WindowType.JFRAME, null);
 					qw.openTheWindow();
 	            }
 			}

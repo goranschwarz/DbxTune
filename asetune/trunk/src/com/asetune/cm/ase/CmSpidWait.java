@@ -101,7 +101,19 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+	private static final String  PROP_PREFIX                       = CM_NAME;
+
+	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
+	public static final String  DEFAULT_sample_extraWhereClause   = "";
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+	}
+
 	private void addTrendGraphs()
 	{
 	}
@@ -173,6 +185,15 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String  sample_extraWhereClause   = conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+
+		// Do we have extra where clauses
+		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
+		if ( ! StringUtil.isNullOrBlank(sample_extraWhereClause) )
+			sql_sample_extraWhereClause = "  and " + sample_extraWhereClause + "\n";
+
+		
 		String cols = "";
 
 		String InstanceID = ""; // in cluster
@@ -197,7 +218,7 @@ extends CountersModel
 			"from master..monProcessWaits W, tempdb.guest.monWaitEventInfo I, tempdb.guest.monWaitClassInfo C \n" +
 			"where W.WaitEventID = I.WaitEventID \n" +
 			"  and I.WaitClassID = C.WaitClassID \n" +
-			"  and RUNTIME_REPLACE::EXTRA_WHERE_CLAUSE \n" +
+			sql_sample_extraWhereClause +
 			"order by " + (isClusterEnabled ? "W.SPID, W.WaitEventID, W.InstanceID" : "W.SPID, W.WaitEventID") + "\n" +
 			"";
 
@@ -211,7 +232,7 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		Configuration lc = new Configuration();
 
-		lc.setProperty(getName()+".sample.extraWhereClause",  conf.getProperty(getName()+".sample.extraWhereClause", ""));
+		lc.setProperty(PROPKEY_sample_extraWhereClause,  conf.getProperty(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
 
 		return lc;
 	}
@@ -220,34 +241,20 @@ extends CountersModel
 	@Override
 	public String getLocalConfigurationDescription(String propName)
 	{
-		if (propName.equals(getName()+".sample.extraWhereClause")) return "Add extra where clause to the query that fetches WaitTime for SPID's. Example: SPID in (select spid from master..sysprocesses where program_name = 'isql')";
+		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause;
 		return "";
 	}
 	@Override
 	public String getLocalConfigurationDataType(String propName)
 	{
-		if (propName.equals(getName()+".sample.extraWhereClause")) return String .class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
 		return "";
-	}
-
-	@Override
-	public String getSql()
-	{
-		String sql = super.getSql();
-
-		Configuration conf = Configuration.getCombinedConfiguration();
-		String extraWhereClause = (conf == null) ? "" : conf.getProperty(getName()+".sample.extraWhereClause", "");
-		if (StringUtil.isNullOrBlank(extraWhereClause))
-			extraWhereClause = "1=1";
-
-		sql = sql.replace("RUNTIME_REPLACE::EXTRA_WHERE_CLAUSE", extraWhereClause);
-		
-		return sql;
 	}
 
 	/** 
 	 * Compute the WaitTimePerWait for diff values
 	 */
+	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
 		int WaitTime,        Waits;

@@ -48,6 +48,7 @@ extends AbstractTableModel
 	}
 
 
+	@Override
 	public Class<?> getColumnClass(int col)
 	{
 		switch (col)
@@ -63,6 +64,7 @@ extends AbstractTableModel
 		}
 		return super.getColumnClass(col);
 	}
+	@Override
 	public String getColumnName(int col)
 	{
 		switch (col)
@@ -78,18 +80,22 @@ extends AbstractTableModel
 		}
 		return super.getColumnName(col);
 	}
+	@Override
 	public boolean isCellEditable(int rowIndex, int columnIndex)
 	{
 		return false;
 	}
+	@Override
 	public int getColumnCount()
 	{
 		return 8;
 	}
+	@Override
 	public int getRowCount()
 	{
 		return _records.size();
 	}
+	@Override
 	public Object getValueAt(int row, int col)
 	{
 		Log4jLogRecord r = _records.get(row);

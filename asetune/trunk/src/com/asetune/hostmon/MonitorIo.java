@@ -4,6 +4,8 @@ import java.util.Properties;
 
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.ssh.SshConnection;
+
 public abstract class MonitorIo
 extends HostMonitor
 {

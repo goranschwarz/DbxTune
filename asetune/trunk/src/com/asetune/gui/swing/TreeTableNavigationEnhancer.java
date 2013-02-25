@@ -24,9 +24,10 @@ implements KeyListener
 		this._action    = action;
 	}
 
-	public void keyTyped   (KeyEvent e) { }
-	public void keyReleased(KeyEvent e) { }
+	@Override public void keyTyped   (KeyEvent e) { }
+	@Override public void keyReleased(KeyEvent e) { }
 
+	@Override
 	public synchronized void keyPressed (KeyEvent e) 
 	{
 //		System.out.println("keyPressed():KeyEvent="+e);

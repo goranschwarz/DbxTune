@@ -41,6 +41,7 @@ import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -184,10 +185,10 @@ public class WizardOffline
 
 
 		//Add the PCS Writer, or add it as a wizard property?
-		String writerClass = conf.getProperty(PersistentCounterHandler.PROP_WriterClass);
+		String writerClass = conf.getProperty(PersistentCounterHandler.PROPKEY_WriterClass);
 		if(writerClass == null)
 			writerClass = "com.asetune.pcs.PersistWriterJdbc";
-		settings.put(PersistentCounterHandler.PROP_WriterClass, writerClass);
+		settings.put(PersistentCounterHandler.PROPKEY_WriterClass, writerClass);
 
 //		settings.put("CM.sysMon.test", "testtest");
 
@@ -244,6 +245,7 @@ public class WizardOffline
 		{
 			SwingUtilities.invokeLater(new Runnable() 
 			{
+				@Override
 				public void run() 
 				{
 					SimpleFileEditor sfe = new SimpleFileEditor(offlineProps.getFilename());
@@ -365,6 +367,7 @@ public class WizardOffline
 			_textArea.getActionMap().put("save", new AbstractAction("save")
 			{
 				private static final long	serialVersionUID	= 1L;
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					saveToFile(_filename);
@@ -375,8 +378,11 @@ public class WizardOffline
 			_textArea.setText(fileContent);
 			_textArea.setCaretPosition(0);
 			
-			panel.add(new RTextScrollPane(_textArea));
+			RTextScrollPane textArea_scroll = new RTextScrollPane(_textArea);
+			panel.add(textArea_scroll);
 		
+			RSyntaxUtilitiesX.installRightClickMenuExtentions(textArea_scroll, this);
+
 			setContentPane(panel);
 			setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 			pack();

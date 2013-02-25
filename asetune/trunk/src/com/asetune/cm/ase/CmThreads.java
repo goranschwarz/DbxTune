@@ -6,16 +6,25 @@
 //* not           * select * from monServiceTask		--Provides information on service task bindings	
 package com.asetune.cm.ase;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.swing.JCheckBoxMenuItem;
+
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -23,7 +32,7 @@ import com.asetune.gui.MainFrame;
 public class CmThreads
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmThreads.class);
+	private static Logger        _logger          = Logger.getLogger(CmThreads.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmThreads.class.getSimpleName();
@@ -40,10 +49,10 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monThread"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] {"IdleTicksPct", "SleepTicksPct", "BusyTicksPct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"TaskRuns", "TotalTicks", "IdleTicks", "SleepTicks", "BusyTicks", 
 		"UserTime", "SystemTime", 
@@ -97,11 +106,48 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+
+	public static final String   GRAPH_NAME_BUSY_AVG    = "busyAvg";
+	public static final String   GRAPH_NAME_BUSY_THREAD = "busyThread";
+
 	private void addTrendGraphs()
 	{
-	}
+//		String[] sumLabels    = new String[] { "BusyTicksPct", "SleepTicksPct" };
+		String[] sumLabels    = new String[] { "-runtime-replaced-" };
+		String[] threadLabels = new String[] { "-runtime-replaced-" };
 
+		addTrendGraphData(GRAPH_NAME_BUSY_AVG,    new TrendGraphDataPoint(GRAPH_NAME_BUSY_AVG,    sumLabels));
+		addTrendGraphData(GRAPH_NAME_BUSY_THREAD, new TrendGraphDataPoint(GRAPH_NAME_BUSY_THREAD, threadLabels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+			tg = new TrendGraph(GRAPH_NAME_BUSY_AVG,
+					"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
+					"CPU Thread BusyTicksPct Average per Pool Type (15.7 and later)", // Label 
+					sumLabels, 
+					true,  // is Percent Graph
+					this, 
+					true,  // visible at start
+					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_BUSY_THREAD,
+					"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
+					"CPU Thread BusyTicksPct Usage per Thread (15.7 and later)", // Label 
+					threadLabels, 
+					true,  // is Percent Graph
+					this, 
+					true,  // visible at start
+					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
+	}
+	
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
@@ -122,7 +168,197 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select * from master..monThread";
+//		String sql = "select * from master..monThread";
+//		String sql = 
+//			"select \n" +
+//			"     InstanceID, ThreadPoolID, ThreadPoolName, State, ThreadID, \n" +
+//			"     TaskRuns, TotalTicks, IdleTicks, SleepTicks, BusyTicks, \n" +
+//			"     IdleTicksPct  = convert(numeric(10,1), ((IdleTicks +0.0)/(TotalTicks+0.0)) * 100.0), \n" +
+//			"     SleepTicksPct = convert(numeric(10,1), ((SleepTicks+0.0)/(TotalTicks+0.0)) * 100.0), \n" +
+//			"     BusyTicksPct  = convert(numeric(10,1), ((BusyTicks +0.0)/(TotalTicks+0.0)) * 100.0), \n" +
+//			"     UserTime, SystemTime, \n" +
+//			"     KTID, OSThreadID, AltOSThreadID, ThreadAffinity, \n" +
+//			"     MinorFaults, MajorFaults, \n" +
+//			"     VoluntaryCtxtSwitches, NonVoluntaryCtxtSwitches \n" +
+//			"from master..monThread \n" +
+//			"";
+		String sql = 
+			"select \n" +
+			"     th.InstanceID, th.ThreadPoolID, th.ThreadPoolName, \n" +
+			"     ThreadType = CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'User Tasks') ELSE ta.Name END, \n" +
+			"     th.State, th.ThreadID, \n" +
+			"     th.TaskRuns, th.TotalTicks, th.IdleTicks, th.SleepTicks, th.BusyTicks, \n" +
+			"     IdleTicksPct  = convert(numeric(10,1), ((th.IdleTicks +0.0)/(th.TotalTicks+0.0)) * 100.0), \n" +
+			"     SleepTicksPct = convert(numeric(10,1), ((th.SleepTicks+0.0)/(th.TotalTicks+0.0)) * 100.0), \n" +
+			"     BusyTicksPct  = convert(numeric(10,1), ((th.BusyTicks +0.0)/(th.TotalTicks+0.0)) * 100.0), \n" +
+			"     th.UserTime, th.SystemTime, \n" +
+			"     th.KTID, th.OSThreadID, th.AltOSThreadID, th.ThreadAffinity, \n" +
+			"     th.MinorFaults, th.MajorFaults, \n" +
+			"     th.VoluntaryCtxtSwitches, th.NonVoluntaryCtxtSwitches, \n" +
+			"     ThreadPoolNameType = th.ThreadPoolName + ':' + CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'User Tasks') ELSE ta.Name END \n" +
+			"from master..monThread th, master..monTask ta \n" +
+			"where th.InstanceID = ta.InstanceID \n" +
+			"  and th.ThreadID   = ta.ThreadID \n" +
+			"  and th.KTID       = ta.KTID \n" +
+			"";
+			
 		return sql;
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (getServerVersion() < 15700)
+		{
+			// disable the graph checkbox...
+			TrendGraph tg = getTrendGraph(tgdp.getName());
+			if (tg != null)
+			{
+				JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+				if (menuItem.isSelected())
+					menuItem.doClick();
+			}
+		}
+
+		if (GRAPH_NAME_BUSY_AVG.equals(tgdp.getName()))
+		{
+			// Get distinct pool name types
+			ArrayList<String> poolNameTypes = new ArrayList<String>();
+			int pos_poolName = findColumn("ThreadPoolNameType");
+			for (int r=0; r< this.size(); r++)
+			{
+				String poolNameType = (String) getValueAt(r, pos_poolName);
+				if ( ! poolNameTypes.contains(poolNameType))
+					poolNameTypes.add(poolNameType);
+			}
+
+			// Write 1 "line (busy)" for every distinct poolName
+			Double[] dArray = new Double[poolNameTypes.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i=0; i< poolNameTypes.size(); i++)
+			{
+				// get Average BusyTicksPct per poolName
+				String poolName = poolNameTypes.get(i);
+				int[] pkRows = this.getAbsRowIdsWhere("ThreadPoolNameType", poolName);
+				Double BusyTicksPct  = this.getDiffValueAvg(pkRows, "BusyTicksPct");
+				//Double SleepTicksPct = this.getDiffValueAvg(pkRows, "SleepTicksPct");
+
+				lArray[i] = poolName;
+				dArray[i] = BusyTicksPct;
+			}
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		if (GRAPH_NAME_BUSY_THREAD.equals(tgdp.getName()))
+		{
+			boolean useShortNames = this.size() > 16;
+				
+			// Write 1 "line" for every row
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				String ThreadPoolNameType = this.getRateString  (i, "ThreadPoolNameType");
+				String ThreadID           = this.getRateString  (i, "ThreadID");
+				String InstanceID         = this.getRateString  (i, "InstanceID");
+
+				String labelName;
+				if      (ThreadPoolNameType.startsWith("syb_default_pool:"))               labelName = useShortNames ? "UT" : "UserTasks";
+				else if (ThreadPoolNameType.startsWith("syb_system_pool:DiskController" )) labelName = "DiskCtrl";
+				else if (ThreadPoolNameType.startsWith("syb_system_pool:NetController" ))  labelName = "NetCtrl";
+				else if (ThreadPoolNameType.startsWith("syb_system_pool:sybperf helper" )) labelName = "WinPerfmonHelper";
+				else if (ThreadPoolNameType.startsWith("syb_blocking_pool:"))              labelName = "BlockingPool";
+				else labelName = ThreadPoolNameType;
+				
+				if (isClusterEnabled())
+					labelName = InstanceID + ":" + labelName + "-" + ThreadID;
+				else
+					labelName =                    labelName + "-" + ThreadID;
+
+				lArray[i] = labelName;
+				dArray[i] = this.getRateValueAsDouble(i, "BusyTicksPct");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+	}
+
+	/** 
+	 * Compute the avgServ column, which is IOTime/(Reads+Writes)
+	 */
+	@Override
+	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	{
+		int     TotalTicks,        IdleTicks,           SleepTicks,           BusyTicks;
+		int pos_TotalTicks=-1, pos_IdleTicks=-1,    pos_SleepTicks=-1,    pos_BusyTicks=-1;
+		int                    pos_IdleTicksPct=-1, pos_SleepTicksPct=-1, pos_BusyTicksPct=-1;
+		
+		// Find column Id's
+		List<String> colNames = diffData.getColNames();
+		if (colNames == null)
+			return;
+		for (int colId = 0; colId < colNames.size(); colId++)
+		{
+			String colName = (String) colNames.get(colId);
+			if      (colName.equals("TotalTicks"))    pos_TotalTicks    = colId;
+			else if (colName.equals("IdleTicks"))     pos_IdleTicks     = colId;
+			else if (colName.equals("IdleTicksPct"))  pos_IdleTicksPct  = colId;
+			else if (colName.equals("SleepTicks"))    pos_SleepTicks    = colId;
+			else if (colName.equals("SleepTicksPct")) pos_SleepTicksPct = colId;
+			else if (colName.equals("BusyTicks"))     pos_BusyTicks     = colId;
+			else if (colName.equals("BusyTicksPct"))  pos_BusyTicksPct  = colId;
+		}
+
+		// Loop on all diffData rows
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+			TotalTicks = ((Number) diffData.getValueAt(rowId, pos_TotalTicks)).intValue();
+			IdleTicks  = ((Number) diffData.getValueAt(rowId, pos_IdleTicks)) .intValue();
+			SleepTicks = ((Number) diffData.getValueAt(rowId, pos_SleepTicks)).intValue();
+			BusyTicks  = ((Number) diffData.getValueAt(rowId, pos_BusyTicks)) .intValue();
+
+
+			//--------------------
+			//---- IdleTicksPct
+			if (TotalTicks > 0)
+			{
+				double calc = (IdleTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, pos_IdleTicksPct);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_IdleTicksPct);
+
+			//--------------------
+			//---- SleepTicksPct
+			if (TotalTicks > 0)
+			{
+				double calc = (SleepTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, pos_SleepTicksPct);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_SleepTicksPct);
+
+			//--------------------
+			//---- BusyTicksPct
+			if (TotalTicks > 0)
+			{
+				double calc = (BusyTicks + 0.0) / (TotalTicks + 0.0) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, pos_BusyTicksPct);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_BusyTicksPct);
+		}
 	}
 }

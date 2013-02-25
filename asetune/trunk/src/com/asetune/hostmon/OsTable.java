@@ -215,7 +215,7 @@ extends CounterTableModel
 	@Override
 	public void setValueAt(Object val, int row, int column)
 	{
-		// NOT implemened, this is a read-only storage
+		// NOT implemented, this is a read-only storage
 	}
 
 	@Override // CounterTableModel
@@ -236,6 +236,13 @@ extends CounterTableModel
 	public List<String> getColNames()
 	{
 		return _metaData.getColumnNames();
+	}
+	
+	@Override
+	public int findColumn(String columnName)
+	{
+		List<String> columns = _metaData.getColumnNames();
+		return columns.indexOf(columnName);
 	}
 	//---------------------------------------------------------
 	// END implementing - Table Model

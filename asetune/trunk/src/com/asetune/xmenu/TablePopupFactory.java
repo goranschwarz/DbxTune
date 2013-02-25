@@ -5,6 +5,7 @@ package com.asetune.xmenu;
 
 import java.awt.Component;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
@@ -20,9 +21,10 @@ import javax.swing.event.PopupMenuListener;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.ConnectionFactory;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -126,66 +128,29 @@ public class TablePopupFactory
 	/**
 	 * @param prefix Should contain a '.' at the end
 	 */
-	public static JPopupMenu createMenu(Configuration conf, JTable table, ConnectionFactory connFactory)
+	public static JPopupMenu createMenu(Configuration conf, JTable table, ConnectionProvider connFactory, Window owner)
 	{
-		return createMenu(null, TABLE_PUPUP_MENU_PREFIX, conf, table, connFactory);
+		return createMenu(null, TABLE_PUPUP_MENU_PREFIX, conf, table, connFactory, owner);
 	}
 
 	/**
 	 * @param prefix Should contain a '.' at the end
 	 */
-	public static JPopupMenu createMenu(String prefix, Configuration conf, JTable table, ConnectionFactory connFactory)
+	public static JPopupMenu createMenu(String prefix, Configuration conf, JTable table, ConnectionProvider connFactory, Window owner)
 	{
-		return createMenu(null, prefix, conf, table, connFactory);
+		return createMenu(null, prefix, conf, table, connFactory, owner);
 	}
 	/**
 	 * 
 	 * @param menu   if null a new JMenuPopup will be created otherwise it will be appended to it
 	 * @param prefix prefix of the property string. Should contain a '.' at the end
 	 * @param conf
+	 * @param owner 
 	 * @return
 	 */
-	public static JPopupMenu createMenu(JPopupMenu popup, String prefix, Configuration conf, JTable table, ConnectionFactory connFactory)
+	public static JPopupMenu createMenu(JPopupMenu popup, String prefix, Configuration conf, JTable table, ConnectionProvider connFactory, Window owner)
 	{
 		_logger.debug("createMenu(): prefix='"+prefix+"'.");
-
-//		Properties menuProp = new Properties();
-//
-//		menuProp.put("menu.1.name",      "Show Procedure Text ${DBName} ${procName} ${linenum}");
-//		menuProp.put("menu.1.classname", "com.asetune.xmenu.ProcedureText");
-//		menuProp.put("menu.1.param.1",   "DBName");
-//		menuProp.put("menu.1.param.2",   "procName");
-//		menuProp.put("menu.1.param.3",   "linenum");
-//
-//		menuProp.put("menu.2.name",      "Show Procedure call stack for ${SPID}");
-//		menuProp.put("menu.2.classname", "com.asetune.xmenu.ProcedureCallStack");
-//		menuProp.put("menu.2.param.1",   "SPID");
-//
-//		menuProp.put("menu.3.name",      "kill ${SPID}");
-//		menuProp.put("menu.3.classname", "com.asetune.xmenu.SQLWindow");
-//		menuProp.put("menu.3.config",    "kill ${SPID}");
-//		menuProp.put("menu.3.param.1",   "SPID");
-//
-//		menuProp.put("menu.4.name",      "showplan ${SPID}");
-//		menuProp.put("menu.4.classname", "com.asetune.xmenu.SQLWindow");
-//		menuProp.put("menu.4.config",    "exec sp_showplan ${SPID}, null, null, null");
-//		menuProp.put("menu.4.param.1",   "SPID");
-//
-//		menuProp.put("menu.5.name",      "dbcc sqltext(${SPID})");
-//		menuProp.put("menu.5.classname", "com.asetune.xmenu.SQLWindow");
-//		menuProp.put("menu.5.config",    "dbcc traceon(3604) dbcc sqltext(${SPID})");
-//		menuProp.put("menu.5.param.1",   "SPID");
-//
-//		menuProp.put("menu.6.name",      "select * from master..sysprocesses where spid = ${SPID}");
-//		menuProp.put("menu.6.classname", "com.asetune.xmenu.SQLWindow");
-//		menuProp.put("menu.6.config",    "select * from master..sysprocesses where spid = ${SPID}");
-//		menuProp.put("menu.6.param.1",   "SPID");
-//
-//		menuProp.put("menu.7.name",      "select * from ${DBName}..sysobjects where type = 'U'");
-//		menuProp.put("menu.7.classname", "com.asetune.xmenu.SQLWindow");
-//		menuProp.put("menu.7.config",    "select * from ${DBName}..sysobjects where type = 'U'");
-//		menuProp.put("menu.7.param.1",   "DBName");
-		
 
 		//Create the popup menu.
 		if (popup == null)
@@ -200,6 +165,9 @@ public class TablePopupFactory
 
 			// Read menu name
 			String menuItemName = conf.getPropertyRaw(prefixStr+".name");
+
+			// Read menu name
+			String menuItemIcon = conf.getPropertyRaw(prefixStr+".icon");
 
 			// Read classname
 			String classname = conf.getPropertyRaw(prefixStr+".classname");
@@ -260,10 +228,12 @@ public class TablePopupFactory
 			// Create the executor class
 			TablePopupAction action = new TablePopupAction(menuItemName, 
 					connName, classname, params, config, null, /*menuProp*/null, 
-					table, connFactory, true);
+					table, connFactory, true, owner);
 
 			JMenuItem menuItem = new JMenuItem(menuItemName);
 			menuItem.addActionListener(action);
+			if (menuItemIcon != null)
+				menuItem.setIcon(SwingUtils.readImageIcon(Version.class, menuItemIcon));
 
 			if ( firstAdd )
 			{

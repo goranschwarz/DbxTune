@@ -25,6 +25,7 @@ public class MultiLineLabel
 	 * If the text contains '\n' <code>newline</code> it will be translated into <code>html</code>
 	 * and the newline character will translated into <code><br></code>.
 	 */
+	@Override
 	public void setText(String text)
 	{
 		_internalHtmlTran = false;

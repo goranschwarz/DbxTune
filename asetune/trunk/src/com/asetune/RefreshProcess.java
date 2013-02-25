@@ -2517,7 +2517,8 @@ public class RefreshProcess extends Thread
 				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
 
 				// set the version
-				cm.setServerVersion(aseVersion);
+//				cm.setServerVersion(aseVersion);
+				cm.setServerVersion(monTablesVersion);
 				cm.setClusterEnabled(isClusterEnabled);
 				
 				// set the active roles, so it can be used in initSql()
@@ -2691,9 +2692,9 @@ public class RefreshProcess extends Thread
 			}
 		}
 
-		_aseVersion       = MonTablesDictionary.getInstance().aseVersionNum;
-		_isClusterEnabled = MonTablesDictionary.getInstance().isClusterEnabled;
-		_monTablesVersion = MonTablesDictionary.getInstance().montablesVersionNum;
+		_aseVersion       = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+		_isClusterEnabled = MonTablesDictionary.getInstance().isClusterEnabled();
+		_monTablesVersion = MonTablesDictionary.getInstance().getMdaVersion();
 
 		try
 		{
