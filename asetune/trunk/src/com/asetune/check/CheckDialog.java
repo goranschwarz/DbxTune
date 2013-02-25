@@ -415,7 +415,7 @@ public class CheckDialog
 
 				showWhatsNew = true;
 			}
-			if (_cfu.isResponseOfHtml())
+			else if (_cfu.isResponseOfHtml())
 			{
 				msg = "<b>Received HTML response when checking for new Version.</b><br>" +
 						"The response might be a network login request or similar.<br>" +
