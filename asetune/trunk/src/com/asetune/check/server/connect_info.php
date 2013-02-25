@@ -37,6 +37,7 @@
 	$srvVersionStr      = getUrlParam('srvVersionStr');
 	$srvSortOrderId     = getUrlParam('srvSortOrderId');
 	$srvSortOrderName   = getUrlParam('srvSortOrderName');
+	$srvSapSystemInfo   = getUrlParam('srvSapSystemInfo');
 
 	$usePcs             = getUrlParam('usePcs');
 	$pcsConfig          = getUrlParam('pcsConfig');
@@ -77,6 +78,7 @@
 		srvVersionStr,
 		srvSortOrderId,
 		srvSortOrderName,
+		srvSapSystemInfo,
 
 		usePcs,
 		pcsConfig
@@ -99,6 +101,7 @@
 		'$srvVersionStr',
 		'$srvSortOrderId',
 		'$srvSortOrderName',
+		'$srvSapSystemInfo',
 
 		'$usePcs',
 		'$pcsConfig'
@@ -118,7 +121,7 @@
 	// This is if ASE Version has NOT been saved previously
 	// SELECT count(*) from asemon_mda_info where srvVersion = $srvVersion and isClusterEnabled = $isClusterEnabled
 	$sql = "
-		IF EXISTS (SELECT 1 FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled) 
+		IF EXISTS (SELECT 1 FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled)
 		THEN
 			SELECT 1 as 'has_ase_version';
 		ELSE

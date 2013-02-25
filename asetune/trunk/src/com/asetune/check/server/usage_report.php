@@ -41,8 +41,10 @@
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"       >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"     >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=first"   >Timeout Info Report (first 500)</A>            -or- <A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=all">ALL</A> <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (first 300)</A>               <BR>
+<A HREF="http://www.asemon.se/usage_report.php?sap=true"            >SAP Systems Report (first 300)</A>        <BR>
 <BR>
 <h2>Admin:</h2>
 DB Cleanup:
@@ -70,7 +72,9 @@ DB Cleanup:
 	$rpt_udc                = $_GET['udc'];
 	$rpt_usage              = $_GET['usage'];
 	$rpt_errorInfo          = $_GET['errorInfo'];
+	$rpt_timeoutInfo        = $_GET['timeoutInfo'];
 	$rpt_full               = $_GET['full'];
+	$rpt_sap                = $_GET['sap'];
 
 	$del_deleteLogId        = $_GET['deleteLogId'];
 	$save_saveLogId         = $_GET['saveLogId'];
@@ -1605,50 +1609,125 @@ DB Cleanup:
 	}
 
 
+	//-------------------------------------------
+	// TIMEOUT INFO
+	//-------------------------------------------
+	if ( !empty($rpt_timeoutInfo) )
+	{
+		if ( $rpt_timeoutInfo == "first" )
+		{
+			$sql = "
+				SELECT checkId,
+					checkId as deleteLogId,
+					checkId as saveLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId,
+					logStacktrace
+				FROM asemon_error_info2
+				ORDER BY checkId desc, sendCounter
+				LIMIT 500
+			";
+		}
+
+		if ( $rpt_timeoutInfo == "all" )
+		{
+			$sql = "
+				SELECT checkId,
+					checkId as deleteLogId,
+					checkId as saveLogId,
+					sendCounter,
+					serverAddTime,
+					clientTime,
+					userName,
+					srvVersion,
+					appVersion,
+					logLevel,
+					logThreadName,
+					logClassName,
+					logLocation,
+					logMessage,
+					checkId as deleteLogId2,
+					checkId as saveLogId,
+					logStacktrace
+				FROM asemon_error_info2
+				ORDER BY checkId desc, sendCounter
+			";
+		}
+
+		if ( $sql != "" )
+		{
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+		}
+
+	}
+
 
 	//-------------------------------------------
 	// FULL REPORT
 	//-------------------------------------------
 	if ( $rpt_full == "true" )
 	{
+//		$sql = "
+//			SELECT
+//				rowid,
+//
+//				serverAddTime,
+//				clientCheckTime,
+//				TIME_FORMAT(TIMEDIFF(clientCheckTime, serverAddTime), '%H:%i') AS swedenTimeZoneDiff,
+//				serverSourceVersion,
+//
+//				clientSourceDate,
+//				clientSourceVersion,
+//				clientAsemonVersion,
+//
+//				user_country,
+//				user_language,
+//				user_timezone,
+//				sun_desktop,
+//
+//				clientHostName,
+//				clientHostAddress,
+//				clientCanonicalHostName,
+//				callerIpAddress,
+//
+//				user_name,
+//				user_home,
+//				user_dir,
+//				propfile,
+//				gui,
+//
+//				java_version,
+//				java_vm_version,
+//				java_vm_vendor,
+//				sun_arch_data_model,
+//				java_home,
+//				java_class_path,
+//				memory,
+//				os_name,
+//				os_version,
+//				os_arch
+//			FROM asemon_usage
+//			ORDER BY rowid desc
+//			LIMIT 300
+//		";
 		$sql = "
-			SELECT
-				rowid,
-
-				serverAddTime,
-				clientCheckTime,
-				TIME_FORMAT(TIMEDIFF(clientCheckTime, serverAddTime), '%H:%i') AS swedenTimeZoneDiff,
-				serverSourceVersion,
-
-				clientSourceDate,
-				clientSourceVersion,
-				clientAsemonVersion,
-
-				user_country,
-				user_language,
-				user_timezone,
-				sun_desktop,
-
-				clientHostName,
-				clientHostAddress,
-				clientCanonicalHostName,
-				callerIpAddress,
-
-				user_name,
-				user_home,
-				user_dir,
-				propfile,
-				gui,
-
-				java_version,
-				java_vm_version,
-				java_vm_vendor,
-				java_home,
-				java_class_path,
-				memory,
-				os_name,
-				os_version,
-				os_arch
+			SELECT *
 			FROM asemon_usage
 			ORDER BY rowid desc
 			LIMIT 300
@@ -1662,6 +1741,42 @@ DB Cleanup:
 		htmlResultset($result, "Full Report");
 	}
 
+
+	//-------------------------------------------
+	// FULL REPORT
+	//-------------------------------------------
+	if ( $rpt_sap == "true" )
+	{
+		$sql = "
+			SELECT *
+			FROM asemon_usage
+			WHERE user_name like 'sap%'
+			ORDER BY rowid desc
+			LIMIT 300
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, "SAP asemon_usage Report");
+
+		$sql = "
+			SELECT *
+			FROM asemon_connect_info
+			WHERE srvUser like 'sap%'
+			ORDER BY checkId desc
+			LIMIT 300
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, "SAP asemon_connect_info Report");
+	}
 
 	// Close connection to the database
 	mysql_close() or die(mysql_error());

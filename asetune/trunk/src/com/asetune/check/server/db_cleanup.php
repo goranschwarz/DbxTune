@@ -127,20 +127,75 @@
 		doCleanup("delete from asemon_usage where user_name = 'gorans'");
 		doCleanup("delete from asemon_usage where user_name = ''");
 
-		doCleanup("delete from asemon_usage              where user_name = 'gorans' ");
-		doCleanup("delete from asemon_connect_info       where userName  = 'gorans' ");
-		doCleanup("delete from asemon_mda_info           where userName  = 'gorans' AND verified IS NULL");
-		doCleanup("delete from asemon_udc_info           where userName  = 'gorans' ");
-		doCleanup("delete from asemon_counter_usage_info where userName  = 'gorans' ");
-		doCleanup("delete from asemon_error_info         where userName  = 'gorans' ");
-		doCleanup("delete from asemon_error_info2        where userName  = 'gorans' ");
+		doCleanup("delete from asemon_usage              where user_name in('gorans', 'i063783') ");
+		doCleanup("delete from asemon_connect_info       where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from asemon_mda_info           where userName  in('gorans', 'i063783') AND verified IS NULL");
+		doCleanup("delete from asemon_udc_info           where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from asemon_counter_usage_info where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from asemon_error_info         where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from asemon_error_info2        where userName  in('gorans', 'i063783') ");
 
 		// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup("delete from asemon_udc_info");
 		// doCleanup("update asemon_usage set clientAsemonVersion = '2.1.0.1.dev' where clientAsemonVersion = '2.1.1.dev'");
 
-		// doCleanup("delete from asemon_error_info         where appVersion  like '2.%' ");
-		// doCleanup("delete from asemon_error_info2        where appVersion  like '2.%' ");
+		//doCleanup("delete from asemon_error_info         where appVersion  like '2.%' ");
+		//doCleanup("delete from asemon_error_info2        where appVersion  like '2.%' ");
+
+		//doCleanup("delete from asemon_error_info         where logLocation  like 'com.asetune.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
+		//doCleanup("delete from asemon_error_info         where logStacktrace  like '%SQLException, Error writing DDL to Persistent Counter DB. Caught: org.h2.jdbc.JdbcSQLException: Unknown data type%' ");
+		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.ClassCastException: java.lang.% cannot be cast to java.lang.%' ");
+		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.NumberFormatException: Infinite or NaN%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problem when doing fireTableStructureChanged() or fireTableDataChanged()%' AND logStacktrace  like '%java.lang.ArrayIndexOutOfBoundsException: %' ");
+
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems in AWT/Swing Event Dispatch Thread, Caught: java.lang.ClassCastException%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'ASE ''installmaster'' script may be of a faulty version. ASE Version is%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Setting option ''initCounters.useMonTablesVersion'' to%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'ASE Configuration option ''enable monitoring'' is NOT enabled.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'You need ''mon_role'' to access monitoring tables%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(CmIoQueue).getCnt : 247 Arithmetic overflow during explicit conversion of NUMERIC%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 12052 Collection of monitoring data for table ''%'' requires that the ''%'' configuration option(s) be enabled.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems when connecting to a ASE Server.%JZ006: %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems when connecting to a ASE Server.%JZ00L: %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems in AWT/Swing Event Dispatch Thread, Caught: java.lang.OutOfMemoryError: Java heap space%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Login will be aborted due to: Config options ''enable monitoring'' is still not enabled%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems getting basic status info in ''Counter get loop'', reverting back to ''static values''. SQL %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(CmSummary).getCnt : 1204 ASE has run out of LOCKS. Re-run your command when there are fewer active users%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(% type=''system.properties'', key=''http.proxyPort'', val=%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(% type=''system.properties'', key=''http.proxyHost'', val=%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(CmEngines).getCnt : 207 Invalid column name ''HkgcOverflowsDcomp''.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 1204 ASE has run out of LOCKS. Re-run your command %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problems when executing DDL sql statement: create table %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problem when executing the ''init'' SQL statement: % Create permanent tables for monW%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 208 tempdb.guest.monWaitEventInfo not found. Specify owner.objectname%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Monitoring tables must be installed ( please apply ''$SYBASE/$SYBASE_ASE/scripts/installmontables'' %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 12036 Collection of monitoring data for table ''%'' requires that the ''%'' configuration %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Monitor% command not found%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 0 SQL Warning in(%) Messages: AseMsgNum=3621, com.sybase.%.jdbc.SybSQLWarning: Command has been aborted.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'This is NOT a valid offline database. No AseTune system table exists.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'sp_list_unused_indexes.sql: Msg=%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problem loading the script ''sp_list_unused_indexes.sql''.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Trying to Re-Initializing Performance Counter ''%'' shortName=''%'', After receiving MsgNumber ''%'', with Description %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'MonTablesDictionary:initialize, problems executing: sp_version. Exception: Stored procedure ''sp_version'' not found%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Duplicate key in ''CmIoQueue'', a row for the key%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like '%Connection is already closed%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'You may need ''sybase_ts_role'' to access some DBCC functionality or other commands used while monitoring.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Continuing with a minimal environment. Config options ''enable monitoring'' is still not enabled%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Option ''initCounters.useMonTablesVersion'' is %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like '%Cannot find an available index descriptor for an index. Increase the value of ''number of open indexes''. %' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Monitoring tables must be installed%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like '%Command has been aborted.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'checkAndSetAseConfig(): Problems when configuring%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'SamplingCnt(%).getCnt : 207 Invalid column name ''HkgcOverflowsDcomp''%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'The DDL Storage queue has % entries. The persistent writer might not keep in pace.%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'The persistent queue has % entries. The persistent writer might not keep in pace.%' ");
+
+//USED FOR TEMPLATE
+//doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
+//doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
+//doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
+
+
 
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
@@ -196,6 +251,12 @@
 		// doCleanup("ALTER TABLE asemon_mda_info ADD verified char(1) AFTER userName");
 
 		// doCleanup("ALTER TABLE asemon_connect_info CHANGE srvUserRoles srvUserRoles varchar(300)");
+
+		// doCleanup("ALTER TABLE asemon_usage ADD sun_arch_data_model varchar(10) AFTER java_vm_vendor");
+
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvIsSapSystem varchar(20)  AFTER srvSortOrderName");
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSapSystemInfo varchar(40)  AFTER srvSortOrderName");
+		//doCleanup("ALTER TABLE asemon_connect_info DROP COLUMN srvIsSapSystem");
 
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
