@@ -284,6 +284,7 @@ implements ActionListener, TableModelListener
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				saveProps();
@@ -301,6 +302,7 @@ implements ActionListener, TableModelListener
 	** BEGIN: Action Listeners, and helper methods for it
 	**---------------------------------------------------
 	*/
+	@Override
 	public void actionPerformed(ActionEvent e)
     {
 		Object source = e.getSource();
@@ -418,6 +420,7 @@ implements ActionListener, TableModelListener
 		}
     }
 
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 //		System.out.println("tableChanged(): TableModelEvent="+e);
@@ -548,6 +551,7 @@ implements ActionListener, TableModelListener
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				comp.requestFocus();
@@ -603,7 +607,8 @@ implements ActionListener, TableModelListener
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
@@ -982,6 +987,7 @@ implements ActionListener, TableModelListener
 			_cancel       .addActionListener(this);
 		}
 
+		@Override
 		public void actionPerformed(ActionEvent e)
 		{
 			Object source = e.getSource();
@@ -1006,7 +1012,8 @@ implements ActionListener, TableModelListener
 	**---------------------------------------------------
 	*/
 
-	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Group Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
+//	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Group Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Store PCS", "Abs", "Diff", "Rate"};
+	private static final String[] TAB_HEADER = {"Icon", "Tab Name", "Group Name", "Timeout", "Postpone", "Paused", "Background", "Reset NC20", "Record-PCS", "Abs", "Diff", "Rate"};
 	private static final int TAB_POS_ICON          = 0;
 	private static final int TAB_POS_TAB_NAME      = 1;
 	private static final int TAB_POS_GROUP_NAME    = 2;
@@ -1042,6 +1049,7 @@ implements ActionListener, TableModelListener
 		}
 
 		
+		@Override
 		public void setValueAt(Object value, int row, int column)
 		{
 			super.setValueAt(value, row, column);
@@ -1085,6 +1093,7 @@ implements ActionListener, TableModelListener
 			_changeIndicator.setSize(getRowCount());
 		}
 
+		@Override
 		public Class<?> getColumnClass(int column)
 		{
 			if (column == TAB_POS_ICON)          return Icon.class;
@@ -1094,6 +1103,7 @@ implements ActionListener, TableModelListener
 			return Object.class;
 		}
 
+		@Override
 		public boolean isCellEditable(int row, int col)
 		{
 			if (col == TAB_POS_BG || col > TAB_POS_STORE_PCS)
@@ -1178,12 +1188,14 @@ implements ActionListener, TableModelListener
 		}
 
 		/** TABLE HEADER tool tip. */
+		@Override
 		protected JTableHeader createDefaultTableHeader()
 		{
 			JTableHeader tabHeader = new JXTableHeader(getColumnModel())
 			{
                 private static final long serialVersionUID = 0L;
 
+				@Override
 				public String getToolTipText(MouseEvent e)
 				{
 					String tip = null;
@@ -1220,12 +1232,14 @@ implements ActionListener, TableModelListener
 			// to decide what column of the TableHeader we are currently located on.
 			tabHeader.addMouseMotionListener(new MouseMotionListener()
 			{
+				@Override
 				public void mouseMoved(MouseEvent e)
 				{
 					_lastTableHeaderColumn = getColumnModel().getColumnIndexAtX(e.getX());
 					if (_lastTableHeaderColumn >= 0)
 						_lastTableHeaderColumn = convertColumnIndexToModel(_lastTableHeaderColumn);
 				}
+				@Override
 				public void mouseDragged(MouseEvent e) {/*ignore*/}
 			});
 
@@ -1233,6 +1247,7 @@ implements ActionListener, TableModelListener
 		}
 
 		/** CELL tool tip */
+		@Override
 		public String getToolTipText(MouseEvent e)
 		{
 			String tip = null;
@@ -1278,6 +1293,7 @@ implements ActionListener, TableModelListener
 //			return c;
 //		}
 		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+		@Override
 		public Component prepareRenderer(TableCellRenderer renderer, int row, int col)
 		{
 			int view_TAB_POS_BG         = convertColumnIndexToView(TAB_POS_BG);
@@ -1457,6 +1473,7 @@ implements ActionListener, TableModelListener
 
 			show.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 //					doActionShow();
@@ -1490,6 +1507,7 @@ implements ActionListener, TableModelListener
 
 			mark.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					int col = getLastTableHeaderColumn();
@@ -1507,6 +1525,7 @@ implements ActionListener, TableModelListener
 
 			unmark.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					int col = getLastTableHeaderColumn();

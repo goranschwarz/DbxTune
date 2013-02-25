@@ -140,6 +140,21 @@ extends CountersModel
 	public static final String  PROPKEY_sample_systemSpids        = PROP_PREFIX + ".sample.systemSpids";
 	public static final boolean DEFAULT_sample_systemSpids        = true;
 
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_monSqlText,       DEFAULT_sample_monSqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_dbccSqlText,      DEFAULT_sample_dbccSqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_procCallStack,    DEFAULT_sample_procCallStack);
+		Configuration.registerDefaultValue(PROPKEY_sample_showplan,         DEFAULT_sample_showplan);
+		Configuration.registerDefaultValue(PROPKEY_sample_dbccStacktrace,   DEFAULT_sample_dbccStacktrace);
+		Configuration.registerDefaultValue(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda);
+		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+		Configuration.registerDefaultValue(PROPKEY_sample_systemSpids,      DEFAULT_sample_systemSpids);
+	}
+
 	private void addTrendGraphs()
 	{
 	}

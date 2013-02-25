@@ -17,6 +17,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmProcessActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -28,6 +29,8 @@ extends TabularCntrPanel
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmProcessActivity.CM_NAME;
+
+	public static final String  TOOLTIP_sample_systemThreads = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
 
 	public CmProcessActivityPanel(CountersModel cm)
 	{
@@ -48,6 +51,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String login = (String) adapter.getValue(adapter.getColumnIndex("Login"));
@@ -61,6 +65,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.running");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String status = (String) adapter.getValue(adapter.getColumnIndex("status"));
@@ -74,6 +79,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Number blockingSpid = (Number) adapter.getValue(adapter.getColumnIndex("BlockingSPID"));
@@ -87,6 +93,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocking");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			@SuppressWarnings("unchecked")
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
@@ -116,21 +123,25 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? true : conf.getBooleanProperty(getName()+".sample.systemThreads", true));
+		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads, CmProcessActivity.DEFAULT_sample_systemThreads));
 
-		sampleSystemThreads_chk.setName(getName()+".sample.systemThreads");
-		sampleSystemThreads_chk.setToolTipText("<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>");
+		sampleSystemThreads_chk.setName(CmProcessActivity.PROPKEY_sample_systemThreads);
+		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
 		panel.add(sampleSystemThreads_chk, "wrap");
 
 		sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(getName()+".sample.systemThreads", ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmProcessActivity.PROPKEY_sample_systemThreads, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
 			}
 		});
 		

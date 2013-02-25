@@ -34,6 +34,7 @@ extends TabularCntrPanel
 		// PROCEDURE ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -52,6 +53,7 @@ extends TabularCntrPanel
 		// TRIGGER ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -70,6 +72,7 @@ extends TabularCntrPanel
 		// VIEW ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -88,6 +91,7 @@ extends TabularCntrPanel
 		// DEFAULT VALUE icon
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -106,6 +110,7 @@ extends TabularCntrPanel
 		// RULE icon
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");

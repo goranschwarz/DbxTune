@@ -61,9 +61,31 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 
 
 rem ------------------------------------------------------------------------
-rem --- set JVM parameters   and   DEBUG stuff
+rem --- set JVM MEMORY parameters
 rem ------------------------------------------------------------------------
-set JVM_PARAMS=-Xmx1024m 
+echo NOTE: Set/Change JVM Memory parameters by setting Environment variable: ASETUNE_JVM_MEMORY_PARAMS 
+
+set JVM_MEMORY_PARAMS_32=-Xmx1024m -Xms64m
+set JVM_MEMORY_PARAMS_64=-Xmx2048m -Xms64m
+
+IF DEFINED ASETUNE_JVM_MEMORY_PARAMS set JVM_MEMORY_PARAMS_32=%ASETUNE_JVM_MEMORY_PARAMS%
+IF DEFINED ASETUNE_JVM_MEMORY_PARAMS set JVM_MEMORY_PARAMS_64=%ASETUNE_JVM_MEMORY_PARAMS%
+
+
+rem ------------------------------------------------------------------------
+rem --- set JVM GARBAGE COLLECTION parameters
+rem ------------------------------------------------------------------------
+set JVM_GC_PARAMS_32=
+set JVM_GC_PARAMS_64=
+
+IF DEFINED ASETUNE_JVM_GC_PARAMS set JVM_GC_PARAMS_32=%ASETUNE_JVM_GC_PARAMS%
+IF DEFINED ASETUNE_JVM_GC_PARAMS set JVM_GC_PARAMS_64=%ASETUNE_JVM_GC_PARAMS%
+
+
+rem ------------------------------------------------------------------------
+rem --- set OTHER JVM parameters   and   DEBUG stuff
+rem ------------------------------------------------------------------------
+rem --- set JVM_PARAMS=%JVM_PARAMS% -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Xrunhprof:cpu=samples,depth=16
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.domain.com -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dcom.sun.management.jmxremote
@@ -96,6 +118,7 @@ set classpath=%ASETUNE_HOME%\classes
 set classpath=%classpath%;%ASETUNE_HOME%\lib\asetune.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jconn4.jar
+set classpath=%classpath%;%ASETUNE_HOME%\lib\jtds-1.2.7.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\log4j-1.2.17.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\h2-1.3.169.jar
@@ -106,10 +129,11 @@ set classpath=%classpath%;%ASETUNE_HOME%\lib\swingx-all-1.6.4.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\commons-cli-1.2.jar
-set classpath=%classpath%;%ASETUNE_HOME%\lib\proxy-vole_20120920.jar
+set classpath=%classpath%;%ASETUNE_HOME%\lib\proxy-vole_20121203.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\rsyntaxtextarea.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\autocomplete.jar
+set classpath=%classpath%;%ASETUNE_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jcommon-1.0.17.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jfreechart-1.0.14.jar
 
@@ -133,12 +157,31 @@ IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 
 rem ------------------------------------------------------------------------
+rem --- SET memory parameters, if 64 bit java: add more memory
+rem ------------------------------------------------------------------------
+java com.asetune.utils.JavaBitness
+set JavaBitness=%ERRORLEVEL%
+rem ---echo Java Bitness: %JavaBitness%
+
+set JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS_32%
+set JVM_GC_PARAMS=%JVM_GC_PARAMS_32%
+if %JavaBitness% == 64 (
+	set JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS_64%
+	set JVM_GC_PARAMS=%JVM_GC_PARAMS_64%
+	echo NOTE: Java is a 64 bit, AseTune will be allowed to use more memory
+)
+echo JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS%
+echo JVM_GC_PARAMS=%JVM_GC_PARAMS%
+
+
+
+rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
 rem ------------------------------------------------------------------------
 cd %ASETUNE_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASETUNE_HOME="%ASETUNE_HOME%" -DASETUNE_SAVE_DIR="%ASETUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
+java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DASETUNE_HOME="%ASETUNE_HOME%" -DASETUNE_SAVE_DIR="%ASETUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_asetune

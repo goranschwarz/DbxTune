@@ -124,6 +124,7 @@ public class ParameterDialog
 		}
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -150,6 +151,7 @@ public class ParameterDialog
 
 	private ActionListener     _actionListener  = new ActionListener()
 	{
+		@Override
 		public void actionPerformed(ActionEvent actionevent)
 		{
 			checkForChanges();
@@ -158,9 +160,9 @@ public class ParameterDialog
 	private KeyListener        _keyListener  = new KeyListener()
 	{
 		 // Changes in the fields are visible first when the key has been released.
-		public void keyPressed (KeyEvent keyevent) {}
-		public void keyTyped   (KeyEvent keyevent) {}
-		public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
+		@Override public void keyPressed (KeyEvent keyevent) {}
+		@Override public void keyTyped   (KeyEvent keyevent) {}
+		@Override public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
 	};
 
 	private void checkForChanges()

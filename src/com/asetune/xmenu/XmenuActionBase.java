@@ -3,6 +3,7 @@
  */
 package com.asetune.xmenu;
 
+import java.awt.Window;
 import java.sql.Connection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -26,6 +27,7 @@ implements XmenuAction
 	String                       _config          = null;
 	Connection                   _conn            = null;
 	boolean                      _closeConnOnExit = true;
+	Window                       _owner           = null;
 
 	/**
 	 * 
@@ -43,6 +45,7 @@ implements XmenuAction
 	@Override public void setMenuName(String name)                            { _menuName = name; }
 	@Override public void setConnection(Connection conn)                      { _conn = conn; }
 	@Override public void setCloseConnOnExit(boolean b)                       { _closeConnOnExit = b; }
+	@Override public void setOwner(Window window)                             { _owner = window; }
 
 	@Override public Properties                   getMenuProperties()         { return _menuProps; }
 	@Override public Properties                   getAllProperties()          { return _allProps; }
@@ -53,11 +56,15 @@ implements XmenuAction
 	@Override public String                       getMenuName()               { return _menuName; }
 	@Override public Connection                   getConnection()             { return _conn; }
 	@Override public boolean                      isCloseConnOnExit()         { return _closeConnOnExit; }
+	@Override public Window                       getOwner()                  { return _owner; }
 
 	@Override 
-	public boolean getConnectionOnStart()
+	public boolean createConnectionOnStart()
 	{
-		return AseTune.getCounterCollector().isMonConnected();
+		// FIXME: this isn't very generic
+		if (AseTune.hasCounterCollector())
+			return AseTune.getCounterCollector().isMonConnected();
+		return false;
 	}
 
 	@Override 
@@ -92,5 +99,6 @@ implements XmenuAction
 			return defaultValue;
 	}
 
+	@Override
 	public abstract void doWork();
 }

@@ -79,6 +79,7 @@ extends TabularCntrPanel
 
 		drop_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				String sql = "sp_asetune_qp_metrics 'drop'";
@@ -104,6 +105,7 @@ extends TabularCntrPanel
 
 		filter_txt.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				String filterStr = filter_txt.getText().trim();
@@ -121,6 +123,7 @@ extends TabularCntrPanel
 
 		aseCfg_but.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				AseConfigMonitoringDialog.showDialog(MainFrame.getInstance(), getCm().getCounterController().getMonConnection(), -1);

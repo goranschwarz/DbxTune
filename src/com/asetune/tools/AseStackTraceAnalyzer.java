@@ -50,6 +50,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -951,7 +952,8 @@ public class AseStackTraceAnalyzer
 
 				str.setFile(_tracefile_txt.getText());
 
-				WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor()
+				WaitForExecDialog waitfor = new WaitForExecDialog(this, "Reading/parsing the \"sybmon\" StackTrace file.");
+				WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(waitfor)
 				{
 					@Override
 					public Object doWork()
@@ -975,7 +977,6 @@ public class AseStackTraceAnalyzer
 						return null;
 					}
 				};
-				WaitForExecDialog waitfor = new WaitForExecDialog(this, "Reading/parsing the \"sybmon\" StackTrace file.");
 				waitfor.execAndWait(doWork);
 
 				setStackTraceReader(str);
@@ -1047,6 +1048,8 @@ public class AseStackTraceAnalyzer
 			dialog.add(top,            BorderLayout.NORTH);
 			dialog.add(example_scroll, BorderLayout.CENTER);
 			dialog.add(bottom,         BorderLayout.SOUTH);
+
+			RSyntaxUtilitiesX.installRightClickMenuExtentions(example_scroll, this);
 
 			// Add action to close
 			close.addActionListener(new ActionListener()
@@ -1167,7 +1170,8 @@ public class AseStackTraceAnalyzer
 			}
 			if (x != -1 && y != -1)
 			{
-				this.setLocation(x, y);
+				if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+					this.setLocation(x, y);
 			}
 		}
 		/*---------------------------------------------------

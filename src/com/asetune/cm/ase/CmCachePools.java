@@ -41,7 +41,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachePool"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"CacheUtilization", "CacheEfficiency"};

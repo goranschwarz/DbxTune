@@ -444,6 +444,7 @@ _xxx_sampleCmCounterInfoMap = sessionInfo._sampleCmCounterInfoMap;
 // FIXME: fix this, why having a _xxx_variable, this can't be good... use the above structure in some way...
 private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 	
+	@Override
 	public Object getChild(Object parent, int index) 
 	{
 		_logger.debug("getChildCount(parent='"+parent+"', index='"+index+"')");
@@ -459,6 +460,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 		return null;
 	}
 
+	@Override
 	public int getChildCount(Object parent) 
 	{
 		_logger.debug("getChildCount(parent='"+parent+"')");
@@ -474,6 +476,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 		return 0;
 	}
 
+	@Override
 	public int getColumnCount() 
 	{
 		return 5 + (_showCmCounterInfoColumns ? _cmLongNameSumCols.size() : 0);
@@ -492,6 +495,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 //		default: return super.getColumnName(column);
 //		}
 //	}
+	@Override
 	public String getColumnName(int column) 
 	{
 		_logger.debug("getColumnName(column='"+column+"')");
@@ -509,6 +513,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 		}
 	}
 
+	@Override
 	public Class<?> getColumnClass(int column) 
 	{
 		_logger.debug("getColumnClass(column='"+column+"')");
@@ -523,6 +528,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 		}
 	}
 
+	@Override
 	public Object getValueAt(Object node, int column) 
 	{
 		_logger.debug("getValueAt(node='"+node+"', column='"+column+"')");
@@ -601,6 +607,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 //public int getIndexOfChild(Object parent, Object child);
 //public boolean isLeaf(Object node);
 
+	@Override
 	public int getIndexOfChild(Object parent, Object child) 
 	{
 		_logger.debug("getIndexOfChild(parent='"+parent+"', child='"+child+"'.)");
@@ -625,6 +632,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 		return -1;
 	}
 
+	@Override
 	public Object getRoot() 
 	{
 		_logger.debug("getRoot()");
@@ -643,6 +651,7 @@ private Map<Timestamp, SampleCmCounterInfo> _xxx_sampleCmCounterInfoMap = null;
 //
 //		return true;
 //	}
+	@Override
 	public boolean isLeaf(Object node) 
 	{
 		_logger.debug("isLeaf(node='"+node+"')");
@@ -894,6 +903,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 			return "Problems: index="+index+", _children.size()="+_children.size();
 		}
 
+		@Override
 		public String toString()
 		{
 			return("SessionLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
@@ -924,16 +934,19 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 //			_logger.debug("new DayLevel(startTime='"+_startTime+"', lastSampleTime='"+_endTime+"', numOfSamples='"+_numOfSamples+"')");
 //		}
 
+		@Override
 		public String toString()
 		{
 			return("DayLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
 		}
 
+		@Override
 		public String getDisplayString()
 		{
 			return "Day " + _atDay * _dayLevelCount;
 		}
 
+		@Override
 		public void setPeriodStartTime()
 		{
 			Calendar cal = GregorianCalendar.getInstance();
@@ -953,6 +966,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 			_periodEndTime = new Timestamp(cal.getTimeInMillis() + ((1000*60*60*24)*_dayLevelCount));
 		}
 		
+		@Override
 		public boolean isWithinPeriod(Timestamp ts)
 		{
 			long days = (ts.getTime() - _periodStartTime.getTime()) / 1000 / 60 / 60 / 24;
@@ -973,11 +987,13 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 //			_logger.debug("new HourLevel(startTime='"+_startTime+"', lastSampleTime='"+_endTime+"', numOfSamples='"+_numOfSamples+"')");
 //		}
 
+		@Override
 		public String toString()
 		{
 			return("HourLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
 		}
 
+		@Override
 		public String getDisplayString()
 		{
 			if (_hourLevelCount == 1)
@@ -986,6 +1002,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 				return "Hour " + _atHour * _hourLevelCount + " - " + (_atHour +  1) * _hourLevelCount;
 		}
 
+		@Override
 		public void setPeriodStartTime()
 		{
 			Calendar cal = GregorianCalendar.getInstance();
@@ -1004,6 +1021,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 			_periodEndTime = new Timestamp(cal.getTimeInMillis() + ((1000*60*60)*_hourLevelCount));
 		}
 
+		@Override
 		public boolean isWithinPeriod(Timestamp ts)
 		{
 			long hours = (ts.getTime() - _periodStartTime.getTime()) / 1000 / 60 / 60;
@@ -1025,11 +1043,13 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 //			_logger.debug("new MinuteLevel(startTime='"+_startTime+"', lastSampleTime='"+_endTime+"', numOfSamples='"+_numOfSamples+"')");
 //		}
 
+		@Override
 		public String toString()
 		{
 			return("MinuteLevel(startTime='"+_startTime+"', endTime='"+_endTime+"', periodStartTime='"+_periodStartTime+"', periodEndTime='"+_periodEndTime+"', numOfSamples='"+_numOfSamples+"'");
 		}
 
+		@Override
 		public String getDisplayString()
 		{
 			if (_hourLevelCount == 1)
@@ -1038,6 +1058,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 				return _atHour + ", Minute " + _atMinute * _minuteLevelCount + " - " + (_atMinute +  1) * _minuteLevelCount;
 		}
 
+		@Override
 		public void setPeriodStartTime()
 		{
 			Calendar cal = GregorianCalendar.getInstance();
@@ -1056,6 +1077,7 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 			_periodEndTime = new Timestamp(cal.getTimeInMillis() + ((1000*60)*_minuteLevelCount));
 		}
 
+		@Override
 		public boolean isWithinPeriod(Timestamp ts)
 		{
 			long minutes = (ts.getTime() - _periodStartTime.getTime()) / 1000 / 60;

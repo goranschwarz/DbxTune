@@ -19,7 +19,7 @@ extends SQLWindow
 	protected Configuration getConfiguration()
 	{
 		Configuration conf = new Configuration();
-		conf.setProperty(QueryWindow.PROPERTY_asPlainText, true);
+		conf.setProperty(QueryWindow.PROPKEY_asPlainText, true);
 		return conf;
 	}
 

@@ -6,11 +6,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
+import javax.swing.JCheckBoxMenuItem;
 
 import com.asetune.GetCounters;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
+import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -18,6 +20,7 @@ import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.ase.gui.CmDeviceIoPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -45,7 +48,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monDeviceIO"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"ReadsPct", "APFReadsPct", "WritesPct"};
@@ -98,9 +101,106 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+	public static final String GRAPH_NAME_RW_SERVICE_TIME = "SvcTimeRW";
+	public static final String GRAPH_NAME_R_SERVICE_TIME  = "SvcTimeR";
+	public static final String GRAPH_NAME_W_SERVICE_TIME  = "SvcTimeW";
+
+	public static final String GRAPH_NAME_RW_DISK_IO      = "IoRW";
+	public static final String GRAPH_NAME_R_DISK_IO       = "IoR";
+	public static final String GRAPH_NAME_W_DISK_IO       = "IoW";
+
 	private void addTrendGraphs()
 	{
+		String[] labels = new String[] { "-added-at-runtime-" };
+		
+		addTrendGraphData(GRAPH_NAME_RW_DISK_IO,      new TrendGraphDataPoint(GRAPH_NAME_RW_DISK_IO,      labels));
+		addTrendGraphData(GRAPH_NAME_R_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_R_DISK_IO,       labels));
+		addTrendGraphData(GRAPH_NAME_W_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_W_DISK_IO,       labels));
+
+		addTrendGraphData(GRAPH_NAME_RW_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_RW_SERVICE_TIME, labels));
+		addTrendGraphData(GRAPH_NAME_R_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_R_SERVICE_TIME,  labels));
+		addTrendGraphData(GRAPH_NAME_W_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_W_SERVICE_TIME,  labels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_RW_DISK_IO,
+				"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
+				"Number of Disk Operations (Read+Write), per Second and Device", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_R_DISK_IO,
+				"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
+				"Number of Disk Operations (Read), per Second and Device", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_W_DISK_IO,
+				"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
+				"Number of Disk Operations (Write), per Second and Device", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
+				"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
+				"Device IO Service Time (Read+Write) in Milliseconds, per Device", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_R_SERVICE_TIME,
+				"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
+				"Device IO Service Time (Read) in Milliseconds, per Device (15.7 esd#2 or later)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_W_SERVICE_TIME,
+				"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
+				"Device IO Service Time (Write) in Milliseconds, per Device (15.7 esd#2 or later)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
 	}
 
 	@Override
@@ -209,7 +309,7 @@ extends CountersModel
 		String WriteTime          = ""; // Total time spent writing to the device (ms)
 		String ReadServiceTimeMs  = ""; // CALCULATED
 		String WriteServiceTimeMs = ""; // CALCULATED
-		String nl_15702           = ""; // NL for this section
+//		String nl_15702           = ""; // NL for this section
 		if (aseVersion >= 15702)
 		{
 			ReadTime           = "ReadTime, ";  // DO DIFF CALC
@@ -222,7 +322,7 @@ extends CountersModel
 			                     "                          THEN convert(numeric(10,1), (WriteTime + 0.0) / (Writes + 0.0) ) \n" +
 			                     "                          ELSE convert(numeric(10,1), null) \n" +
 			                     "                     END, \n";
-			nl_15702  = "\n";
+//			nl_15702  = "\n";
 		}
 		
 		cols1 += "LogicalName, TotalIOs = "+TotalIOs+", \n" +
@@ -260,6 +360,155 @@ extends CountersModel
 			"order by LogicalName" + (isClusterEnabled ? ", InstanceID" : "") + "\n";
 
 		return sql;
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		int aseVersion = getServerVersion();
+
+		// ---- DISK IO's PER SECOND GRAPHS
+		if (GRAPH_NAME_RW_DISK_IO.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "TotalIOs");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		if (GRAPH_NAME_R_DISK_IO.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "Reads");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		if (GRAPH_NAME_W_DISK_IO.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "Writes");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		
+		// ---- SERVICE TIME GRAPHS
+		if (GRAPH_NAME_RW_SERVICE_TIME.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "AvgServ_ms");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		if (GRAPH_NAME_R_SERVICE_TIME.equals(tgdp.getName()))
+		{
+			int tranPos = -1;
+			if (getCounterDataAbs() != null)
+				tranPos = getCounterDataAbs().findColumn("ReadServiceTimeMs");
+	
+			// Only available in 15.7.0 esd#2 and above 
+			if ( aseVersion < 15702 || tranPos == -1 )
+			{
+				// disable the transactions graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_R_SERVICE_TIME);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				// Write 1 "line" for every device
+				Double[] dArray = new Double[this.size()];
+				String[] lArray = new String[dArray.length];
+				for (int i = 0; i < dArray.length; i++)
+				{
+					lArray[i] = this.getRateString       (i, "LogicalName");
+					dArray[i] = this.getRateValueAsDouble(i, "ReadServiceTimeMs");
+				}
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setLabel(lArray);
+				tgdp.setData(dArray);
+			}
+		}
+
+		if (GRAPH_NAME_W_SERVICE_TIME.equals(tgdp.getName()))
+		{
+			int tranPos = -1;
+			if (getCounterDataAbs() != null)
+				tranPos = getCounterDataAbs().findColumn("WriteServiceTimeMs");
+	
+			// Only available in 15.7.0 esd#2 and above 
+			if ( aseVersion < 15702 || tranPos == -1 )
+			{
+				// disable the transactions graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_W_SERVICE_TIME);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				// Write 1 "line" for every device
+				Double[] dArray = new Double[this.size()];
+				String[] lArray = new String[dArray.length];
+				for (int i = 0; i < dArray.length; i++)
+				{
+					lArray[i] = this.getRateString       (i, "LogicalName");
+					dArray[i] = this.getRateValueAsDouble(i, "WriteServiceTimeMs");
+				}
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setLabel(lArray);
+				tgdp.setData(dArray);
+			}
+		}
 	}
 
 	/** 

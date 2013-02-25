@@ -6,15 +6,24 @@ package com.asetune.utils;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.text.ParseException;
@@ -34,10 +43,13 @@ import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
@@ -90,6 +102,60 @@ public class SwingUtils
 	}
 
 	/**
+	 * Should this top menu be visible or not.<br>
+	 * If it doesn't have any visible entries, it's hidden.
+	 * @param menu
+	 */
+	public static void hideMenuIfNoneIsVisible(JMenu menu)
+	{
+		if (menu == null)
+			return;
+		
+		boolean hasVisibleItems = false;
+		for(int i=0; i<menu.getItemCount(); i++)
+		{
+			JMenuItem mi = menu.getItem(i);
+			if (mi.isVisible())
+			{
+				hasVisibleItems = true;
+				break;
+			}
+		}
+		menu.setVisible(hasVisibleItems);
+	}
+	
+	/**
+	 * Get the String residing on the clipboard.	
+	 *
+	 * @return any text found on the Clipboard; if none found, return null
+	 */
+	public static String getClipboardContents() 
+	{
+		String result = null;
+		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+		//odd: the Object param of getContents is not currently used
+		Transferable contents = clipboard.getContents(null);
+		boolean hasTransferableText = (contents != null) &&	contents.isDataFlavorSupported(DataFlavor.stringFlavor);
+		if ( hasTransferableText ) 
+		{
+			try 
+			{
+				result = (String)contents.getTransferData(DataFlavor.stringFlavor);
+			}
+			catch (UnsupportedFlavorException ex)
+			{
+				//highly unlikely since we are using a standard DataFlavor
+				_logger.error("getClipboardContents(): "+ex, ex);
+			}
+			catch (IOException ex) 
+			{
+				_logger.error("getClipboardContents(): "+ex, ex);
+			}
+		}
+		return result;
+	}
+
+	/**
 	 * 
 	 * @param owner     parent GUI component
 	 * @param title     window title
@@ -133,8 +199,33 @@ public class SwingUtils
 	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
 	 * @param userPanel If you want to add some extra components in a special panel below the error message
 	 */
-	private static void showMessageExt(final Level errorLevel, Component owner, String title, String msg, JCheckBox chkbox, JPanel userPanel)
+	private static void showMessageExt(final Level errorLevel, final Component owner, final String title, final String msg, final JCheckBox chkbox, final JPanel userPanel)
 	{
+		// If not Event Queue Thread, execute it with that
+		if ( ! isEventQueueThread() )
+		{
+			Runnable doRun = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					showMessageExt(errorLevel, owner, title, msg, chkbox, userPanel);
+				}
+			};
+			try
+			{
+				SwingUtilities.invokeAndWait(doRun);
+			}
+			catch (Exception e)
+			{
+				_logger.error("Problems doing 'showMessageExt'.", e);
+			}
+			return;
+		}
+
+		//-------------------------------------------------
+		// Method *really* start here...
+		//-------------------------------------------------
 		final JDialog dialog;
 		if      (owner instanceof Dialog) dialog = new JDialog( (Dialog) owner );
 		else if (owner instanceof Frame)  dialog = new JDialog( (Frame)  owner );
@@ -304,10 +395,43 @@ public class SwingUtils
 		}
 	}
 
+	/**
+	 * If window seems to be outside of the screen
+	 * <p>
+	 * The usage is: when reading a saved screen location, which seams to be "out of scope"<br>
+	 * I'm not sure how this will work on virtual screens or multiple screens
+	 * @returns true if the location is out-of-screen
+	 */
+	public static boolean isOutOfScreen(int winPosX, int winPosY)
+	{
+		return isOutOfScreen(winPosX, winPosY, 0, 0);
+	}
+	/**
+	 * If window seems to be outside of the screen
+	 * <p>
+	 * The usage is: when reading a saved screen location, which seams to be "out of scope"<br>
+	 * I'm not sure how this will work on virtual screens or multiple screens
+	 * @returns true if the location is out-of-screen
+	 */
+	public static boolean isOutOfScreen(int winPosX, int winPosY, int winWidth, int winHeight)
+	{
+//		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+
+		if (    ((winPosX + winWidth)  < 0) || winPosX > screenSize.width 
+			 || ((winPosY + winHeight) < 0) || winPosY > screenSize.height 
+		   )
+		{
+			return true;
+		}
+		return false;
+	}
+
 	public static void centerWindow(Component frame)
 	{
 		//Center the window
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 		Dimension frameSize = frame.getSize();
 		if (frameSize.height > screenSize.height)
 		{
@@ -334,6 +458,22 @@ public class SwingUtils
 			child.setLocation(p);
 		}
 		else
+			centerWindow(child);
+//		child.setLocationRelativeTo(parent);
+//		child.setLocationByPlatform(true);
+	}
+
+	public static void setLocationCenterParentWindow(Component parent, Component child)
+	{
+		// FIXME not proper implemented
+//		if (parent != null)
+//		{
+//			Point p = parent.getLocationOnScreen();
+//			p.x += x;
+//			p.y += y;
+//			child.setLocation(p);
+//		}
+//		else
 			centerWindow(child);
 //		child.setLocationRelativeTo(parent);
 //		child.setLocationByPlatform(true);
@@ -1047,9 +1187,10 @@ public class SwingUtils
 	 */
 	public static Dimension getSizeWithingScreenLimit(int width, int height, int marginPixels)
 	{
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 		int screenWidth  = screenSize.width  - (marginPixels * 3); // *3 = right and left margin + some extra
-		int screenHeight = screenSize.height - (marginPixels * 2); // *2 = right and left margin
+		int screenHeight = screenSize.height - (marginPixels * 2); // *2 = top and bottom margin
 		return new Dimension(Math.min(width, screenWidth), Math.min(height, screenHeight));
 	}
 
@@ -1067,6 +1208,71 @@ public class SwingUtils
 		comp.setSize(size);
 	}
 
+	/** for documentation see {@link #setWindowMinSize(Window, Container)} */
+	public static void setWindowMinSize(JDialog dialog)
+	{
+		setWindowMinSize(dialog, dialog.getContentPane());
+	}
+	/** for documentation see {@link #setWindowMinSize(Window, Container)} */
+	public static void setWindowMinSize(JFrame frame)
+	{
+		setWindowMinSize(frame, frame.getContentPane());
+	}
+	/** for documentation see {@link #setWindowMinSize(Window, Container)} */
+	public static void setWindowMinSize(JWindow window)
+	{
+		setWindowMinSize(window, window.getContentPane());
+	}
+	/**
+	 * Respect the allowed contents minimum size.<br>
+	 * This can be used to set the minimum size if setSize() has been done which is to small to fit the content.<br>
+	 * While we still wanted to restore the previous saved size of a dialog.
+	 * <p>
+	 * Typically used when restoring sizes from a old application version, but the new application version has 
+	 * extended the minimum size (added some fields), then buttons might not be visible due to that they 
+	 * are displayed "outside" of the visible window... 
+	 * 
+	 * @param win
+	 * @param contentPane
+	 */
+	public static void setWindowMinSize(final Window win, final Container contentPane)
+	{
+		// Do this later, so all components is resized to it's proper values
+		SwingUtilities.invokeLater(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				// Get Window Decoration sizes (windows head and bottom)
+			    Insets ins = win.getInsets();
+
+			    int thisWinHeight    = win.getHeight();
+				int thisWinWidth     = win.getWidth();
+				int calcWinMinHeight = ins.top + ins.bottom + contentPane.getMinimumSize().height;
+				int calcWinMinWidth  = ins.left + ins.right + contentPane.getMinimumSize().width;
+//				int calcWinMinHeight = ins.top  + ins.bottom + contentPane.getPreferredSize().height;
+//				int calcWinMinWidth  = ins.left + ins.right  + contentPane.getMinimumSize()  .width;
+
+				if (_logger.isDebugEnabled())
+				{
+					_logger.debug("setWindowMinSize(): actWinHeight="+thisWinHeight+", calcWinMinHeight="+calcWinMinHeight+".");
+					_logger.debug("setWindowMinSize(): actWinWidth ="+thisWinWidth +", calcWinMinWidth ="+calcWinMinWidth+".");
+				}
+
+				if (thisWinHeight < calcWinMinHeight)
+				{
+					_logger.info("setWindowMinSize(): Adjusting minimum window HEIGHT from '"+thisWinHeight+"' to minimum '"+calcWinMinHeight+"'.");
+					win.setSize(win.getWidth(), calcWinMinHeight);
+				}
+				if (thisWinWidth < calcWinMinWidth)
+				{
+					_logger.info("setWindowMinSize(): Adjusting minimum window WIDTH from '"+thisWinWidth+"' to minimum '"+calcWinMinWidth+"'.");
+					win.setSize(calcWinMinWidth, win.getHeight());
+				}
+			}
+		});
+	}
+
 	/**
 	 * Enable/disable all components on a JPanel
 	 * @param panel
@@ -1077,7 +1283,11 @@ public class SwingUtils
 		panel.setEnabled(enable);
 		for (int i = 0; i < panel.getComponentCount(); i++)
 		{
-			panel.getComponent(i).setEnabled(enable);
+			Component comp = panel.getComponent(i);
+			comp.setEnabled(enable);
+			
+			if (comp instanceof JPanel)
+				setEnabled((JPanel)comp, enable);
 		}
 	}
 	public static void setEnabled(JPanel panel, boolean enable, Component... disregard)
@@ -1099,6 +1309,9 @@ public class SwingUtils
 
 			if (doAction)
 				comp.setEnabled(enable);
+
+			if (comp instanceof JPanel)
+				setEnabled((JPanel)comp, enable, disregard);
 		}
 	}
 

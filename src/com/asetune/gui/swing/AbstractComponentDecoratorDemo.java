@@ -63,6 +63,7 @@ public class AbstractComponentDecoratorDemo {
 			super(f);
 		}
 		/** Position the decoration at the right edge of the text field. */
+		@Override
 		public Rectangle getDecorationBounds() {
 			Rectangle r = super.getDecorationBounds();
 			r.x = getComponent().getWidth() - SIZE - 1;
@@ -72,6 +73,7 @@ public class AbstractComponentDecoratorDemo {
 			r.y = (getComponent().getHeight() - SIZE) / 2;
 			return r;
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Rectangle r = getDecorationBounds();
 			Graphics2D g = (Graphics2D)graphics;
@@ -95,6 +97,7 @@ public class AbstractComponentDecoratorDemo {
 		public Dimmer(JComponent target) {
 			super(target);
 		}
+		@Override
 		public void paint(Graphics g) {
 			g = g.create();
 			((Graphics2D)g).setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .75f));
@@ -132,6 +135,7 @@ public class AbstractComponentDecoratorDemo {
 		public Dimension getPreferredSize() {
 			return getComponent().getPreferredSize();
 		}
+		@Override
 		public Rectangle getDecorationBounds() {
 			Rectangle r = new Rectangle(super.getDecorationBounds());
 			Rectangle visible = getComponent().getVisibleRect();
@@ -140,6 +144,7 @@ public class AbstractComponentDecoratorDemo {
 				r.x = visible.x;
 			return r;
 		}
+		@Override
 		public void paint(Graphics g) {
 			Rectangle r = getDecorationBounds();
 			for (int i=0;i < SIZE;i+= LINE) {
@@ -149,13 +154,17 @@ public class AbstractComponentDecoratorDemo {
 		}
 	}
 
+	@SuppressWarnings("serial")
 	static class Lines extends JComponent implements Scrollable {
+		@Override
 		public Dimension getPreferredScrollableViewportSize() {
 			return new Dimension(100, LINE*3);
 		}
+		@Override
 		public Dimension getPreferredSize() {
 			return new Dimension(SIZE, SIZE);
 		}
+		@Override
 		public void paintComponent(Graphics g) {
 			for (int i=0;i < SIZE;i+=LINE) {
 				g.drawLine(0, i, SIZE-1, i);
@@ -164,15 +173,19 @@ public class AbstractComponentDecoratorDemo {
 				}
 			}
 		}
+		@Override
 		public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
 			return 1;
 		}
+		@Override
 		public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
 			return LINE/3;
 		}
+		@Override
 		public boolean getScrollableTracksViewportWidth() {
 			return false;
 		}
+		@Override
 		public boolean getScrollableTracksViewportHeight() {
 			return false;
 		}
@@ -183,12 +196,14 @@ public class AbstractComponentDecoratorDemo {
 		public Background(JComponent target) {
 			super(target, -1);
 			timer.schedule(new TimerTask() {
+				@Override
 				public void run() {
 					angle += 2*Math.PI/90;
 					repaint();
 				}
 			}, 0, 50);
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Rectangle r = getDecorationBounds();
 			Graphics2D g = (Graphics2D)graphics;
@@ -213,6 +228,7 @@ public class AbstractComponentDecoratorDemo {
 			where = new Point(t.getWidth()/2, t.getHeight()/2);
 			this.size = size;
 			timer.schedule(new TimerTask() {
+				@Override
 				public void run() {
 					if (where.x + size >= getComponent().getWidth())
 						dx = -delta;
@@ -228,6 +244,7 @@ public class AbstractComponentDecoratorDemo {
 				}
 			}, 0, 20);
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Graphics2D g = (Graphics2D)graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
@@ -255,12 +272,14 @@ public class AbstractComponentDecoratorDemo {
 			target.addMouseMotionListener(this);
 			// Make the ants march
 			timer.schedule(new TimerTask() {
+				@Override
 				public void run() {
 					phase += 1.0f;
 					repaint();
 				}
 			}, 0, 50);
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Graphics2D g = (Graphics2D)graphics;
 			//g.setColor(UIManager.getColor("Table.selectionBackground"));
@@ -271,17 +290,23 @@ public class AbstractComponentDecoratorDemo {
 										new float[]{4.0f}, phase));
 			g.drawRect(r.x, r.y, r.width, r.height);
 		}
+		@Override
 		public void mouseClicked(MouseEvent e) { }
+		@Override
 		public void mousePressed(MouseEvent e) {
 			setDecorationBounds(new Rectangle(e.getX()-LINE_WIDTH/2,
 											  e.getY()-LINE_WIDTH/2, 0, 0));
 			origin.setLocation(e.getX(), e.getY());
 		}
+		@Override
 		public void mouseReleased(MouseEvent e) {
 			setDecorationBounds(new Rectangle(0, 0, 0, 0));
 		}
+		@Override
 		public void mouseEntered(MouseEvent e) { }
+		@Override
 		public void mouseExited(MouseEvent e) { }
+		@Override
 		public void mouseDragged(MouseEvent e) {
 			int width = Math.abs(origin.x - e.getX());
 			int height = Math.abs(origin.y - e.getY());
@@ -289,6 +314,7 @@ public class AbstractComponentDecoratorDemo {
 			int y = Math.min(e.getY(), origin.y);
 			setDecorationBounds(new Rectangle(x, y, width, height));
 		}
+		@Override
 		public void mouseMoved(MouseEvent e) { }
 	}
 
@@ -296,6 +322,7 @@ public class AbstractComponentDecoratorDemo {
 		public DraftWatermark(JComponent target) {
 			super(target);
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Rectangle r = getDecorationBounds();
 			Graphics2D g = (Graphics2D)graphics;
@@ -316,6 +343,7 @@ public class AbstractComponentDecoratorDemo {
 		public GradientBackground(JComponent c) {
 			super(c, -1);
 		}
+		@Override
 		public void paint(Graphics graphics) {
 			Graphics2D g = (Graphics2D)graphics;
 			JComponent jc = getComponent();
@@ -335,6 +363,7 @@ public class AbstractComponentDecoratorDemo {
 			public FocusBorder(JComponent c) {
 				super(c);
 			}
+			@Override
 			protected Rectangle getDecorationBounds() {
 				Rectangle b = super.getDecorationBounds();
 				b.x -= WIDTH;
@@ -343,6 +372,7 @@ public class AbstractComponentDecoratorDemo {
 				b.height += WIDTH*2;
 				return b;
 			}
+			@Override
 			public void paint(Graphics g) {
 				Rectangle r = getDecorationBounds();
 				g = g.create();
@@ -356,6 +386,7 @@ public class AbstractComponentDecoratorDemo {
 		public FocusHandler() {
 			KeyboardFocusManager mgr = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 			mgr.addPropertyChangeListener("permanentFocusOwner", new PropertyChangeListener() {
+				@Override
 				public void propertyChange(PropertyChangeEvent e) {
 					if (border != null) {
 						border.dispose();
@@ -368,6 +399,7 @@ public class AbstractComponentDecoratorDemo {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private static JPanel createDecoratedPanel(int margin) {
 		JPanel p = new JPanel(new BorderLayout());
 		p.setBorder(BorderFactory.createEmptyBorder(margin,margin,margin,margin));
@@ -380,8 +412,10 @@ public class AbstractComponentDecoratorDemo {
 		JPanel box = new JPanel(new GridLayout(0, 1));
 		p.add(box, BorderLayout.SOUTH);
 
+		@SuppressWarnings("serial")
 		JComponent lines = new Lines() {
 			Labeler labeler = new Labeler(this);
+			@Override
 			public void setBounds(Rectangle bounds) {
 				super.setBounds(bounds);
 				// Update labeler immediately to avoid unnecessary repaints

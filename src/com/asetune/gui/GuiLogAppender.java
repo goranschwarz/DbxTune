@@ -57,6 +57,7 @@ public class GuiLogAppender
 		}
 	}
 	
+	@Override
 	protected void append(LoggingEvent event)
 	{
 		String category = event.getLoggerName();
@@ -99,10 +100,12 @@ public class GuiLogAppender
 			CheckForUpdates.sendLogInfoNoBlock(record);
 	}
 
+	@Override
 	public void close()
 	{
 	}
 
+	@Override
 	public boolean requiresLayout()
 	{
 		return false;

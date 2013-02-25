@@ -94,6 +94,7 @@ set classpath=%SQLW_HOME%\classes
 set classpath=%classpath%;%SQLW_HOME%\lib\asetune.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.2.7.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.3.169.jar
@@ -104,14 +105,18 @@ set classpath=%classpath%;%SQLW_HOME%\lib\swingx-all-1.6.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.2.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\proxy-vole_20120920.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\proxy-vole_20121203.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rsyntaxtextarea.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\autocomplete.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jcommon-1.0.17.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jfreechart-1.0.14.jar
 
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\gsp.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser.jar
 
 rem --- echo %CLASSPATH%
 

@@ -119,6 +119,7 @@ public class MailGroupDialog
 	**---------------------------------------------------
 	*/
 	
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		if ( _close_but.equals(e.getSource()) )
@@ -135,6 +136,7 @@ public class MailGroupDialog
 		}
 	}
 
+	@Override
 	@SuppressWarnings("unused")
 	public void hyperlinkUpdate(HyperlinkEvent hle) 
 	{  

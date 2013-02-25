@@ -23,8 +23,8 @@ extends XmenuActionBase
 		String spidStr  = getParamValue(0);
 		int    spid     = Integer.parseInt(spidStr);
 
-		String srvVerStr = MonTablesDictionary.getInstance().aseVersionStr;
-		String srvName   = MonTablesDictionary.getInstance().aseServerName;
+		String srvVerStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
+		String srvName   = MonTablesDictionary.getInstance().getAseServerName();
 
 		AseAppTraceDialog apptrace = new AseAppTraceDialog(spid, srvName, srvVerStr);
 		apptrace.setVisible(true);

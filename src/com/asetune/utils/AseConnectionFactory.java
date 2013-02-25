@@ -36,17 +36,20 @@ public class AseConnectionFactory
 {
 	private static Logger _logger = Logger.getLogger(AseConnectionFactory.class);
 
-	private static String              _driver      = "com.sybase.jdbc3.jdbc.SybDriver";
-	private static String              _urlTemplate = "jdbc:sybase:Tds:HOST:PORT";
-//	private static String              _host        = "";
-//	private static int                 _port        = -1;
-	private static Map<String, List<String>> _hostPortMap = null;
-	private static String              _server      = "";
-	private static String              _username    = "";
-	private static String              _password    = "";
-	private static String              _appname     = "";
-	private static String              _hostname    = "";
-	private static Properties          _props       = new Properties();
+	public static final String PROPERTY_LOGINTIMEOUT = "AseConnectionFactory.loginTimeout";
+	
+	private static String              _driver              = "com.sybase.jdbc3.jdbc.SybDriver";
+	private static String              _urlTemplate         = "jdbc:sybase:Tds:HOST:PORT";
+	private static String              _urlTemplateHostPort = "HOST:PORT";
+//	private static String              _host                = "";
+//	private static int                 _port                = -1;
+	private static Map<String, List<String>> _hostPortMap   = null;
+	private static String              _server              = "";
+	private static String              _username            = "";
+	private static String              _password            = "";
+	private static String              _appname             = "";
+	private static String              _hostname            = "";
+	private static Properties          _props               = new Properties();
 
 	private static SyInterfacesDriver _interfacesDriver = null;
 
@@ -61,19 +64,32 @@ public class AseConnectionFactory
 		String jdbcDriver      = "com.sybase.jdbc3.jdbc.SybDriver";
 		String jdbcUrlTemplate = "jdbc:sybase:Tds:HOST:PORT";
 
-//		Configuration conf = Configuration.getInstance(Configuration.CONF);
+		// for jTDS, the below can be used. See http://jtds.sourceforge.net/
+//		String jdbcDriver      = "net.sourceforge.jtds.jdbc.Driver";  // http://jtds.sourceforge.net/faq.html
+//		String jdbcUrlTemplate = "jdbc:jtds:sybase://HOST:PORT";
+		// jdbc:jtds:<server_type>://<server>[:<port>][/<database>][;<property>=<value>[;...]]
+		// <server_type> is one of either 'sqlserver' or 'sybase' (their meaning is quite obvious)
+		// <port> is the port the database server is listening to (default is 1433 for SQL Server and 7100 for Sybase) and 
+		// <database> is the database name -- JDBC term: catalog -- (if not specified, the user's default database is used). 
+		// The set of properties supported by jTDS is:
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
 		{
-			_driver      = conf.getProperty("jdbcDriver",      jdbcDriver);
-			_urlTemplate = conf.getProperty("jdbcUrlTemplate", jdbcUrlTemplate);
-		}
-		else
-		{
-			_driver      = System.getProperty("jdbcDriver",      jdbcDriver);
-			_urlTemplate = System.getProperty("jdbcUrlTemplate", jdbcUrlTemplate);
+			_driver      = conf.getProperty("jdbcDriver");
+			_urlTemplate = conf.getProperty("jdbcUrlTemplate");
 		}
 
+		// Try the SYSTEM
+		if (_driver      == null) _driver      = System.getProperty("jdbcDriver");
+		if (_urlTemplate == null) _urlTemplate = System.getProperty("jdbcUrlTemplate");
+
+		// Fall back on static values
+		if (_driver      == null) _driver      = jdbcDriver;
+		if (_urlTemplate == null) _urlTemplate = jdbcUrlTemplate;
+
+		_logger.info("Using JDBC Driver '"+_driver+"'. This can be changed using property 'jdbcDriver=driver'. In the config file or system properties");
+		_logger.info("Using URL Template '"+_urlTemplate+"'. This can be changed using property 'jdbcUrlTemplate=template'. In the config file or system properties");
 		
 		// Get SYBASE ENV and check if the interfaces file exist
 //		String envSybase = System.getProperty("SYBASE");
@@ -100,68 +116,13 @@ public class AseConnectionFactory
 				_logger.info("The SYBASE environment variable was found, but the interfaces file '"+interfacesFile+"' didn't exists.");
 		}
 
+		// Create a local/dummy interfaces if the SYBASE can't be found.
 		if ( ! interfacesFileExist )
 		{
-			String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : "";
-			if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
-				interfacesFile = tmpSybaseEnvLocation + "\\sql.ini";
-			else
-				interfacesFile = tmpSybaseEnvLocation + "/interfaces";
-
-			if (envSybase == null)
-			{
-				_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
-				System.setProperty("sybase.home", tmpSybaseEnvLocation);
-			}
-
-			_logger.info("I will try to use the interfaces file '"+interfacesFile+"'.");
-
-			// Check if the interfaces file exists.
-			File ifile = new File(interfacesFile);
-			interfacesFileExist = ifile.exists();
-			if ( ! interfacesFileExist )
-				_logger.info("The interfaces file '"+interfacesFile+"' didn't exists.");
+			interfacesFile = createPrivateInterfacesFile(null);
 		}
 
-		// Create a dummy interfaces if we can't find one.
-		if ( ! interfacesFileExist )
-		{
-			_logger.info("Creating a dummy interfaces file named '"+interfacesFile+"'.");
-			try
-			{
-				BufferedWriter out = new BufferedWriter(new FileWriter(interfacesFile));
-				if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
-				{
-					String nl = System.getProperty("line.separator");
-					out.write(";; ----------------------------------------------- " + nl);
-					out.write(";; Server - DUMMY_ASE " + nl);
-					out.write(";; This entry was added by '"+Version.getAppName()+"' " + nl);
-					out.write(";; ----------------------------------------------- " + nl);
-					out.write("[DUMMY_ASE]" + nl);
-					out.write("query=TCP, localhost, 5000" + nl);
-					out.write(nl);
-				}
-				else
-				{
-					String nl = System.getProperty("line.separator");
-					out.write("# ----------------------------------------------- " + nl);
-					out.write("# Server - DUMMY_ASE " + nl);
-					out.write("# This entry was added by '"+Version.getAppName()+"' " + nl);
-					out.write("# ----------------------------------------------- " + nl);
-					out.write("DUMMY_ASE" + nl);
-					out.write("\tquery tcp ether localhost 5000" + nl);
-					out.write(nl);
-				}
-				out.close();
-			}
-			catch (IOException e)
-			{
-				interfacesFile = null;
-				_logger.error("Problems when creating the interfaces file named '"+interfacesFile+"', continuing anyway. Caught: "+e);
-			}
-		}
-
-		// Try to open the assigned interfaces file.
+		// Try to open the interfaces file.
 		try 
 		{
 			if (interfacesFile != null)
@@ -175,21 +136,120 @@ public class AseConnectionFactory
 				_interfacesDriver = new SyInterfacesDriver();
 				_interfacesDriver.open();
 			}
-
 		}
 		catch(Exception ex)
 		{
 			_logger.warn("Problems reading SYBASE Name/Directory Service file '"+interfacesFile+"'.");
 			_logger.warn("SyInterfacesDriver Problem: "+ex);
+
+			// Problems open the interfaces file
+			// FALLBACK to create/use the private interfaces file.
+			String privateInterfacesFile = getPrivateInterfacesFile();
+			try
+			{
+				_logger.info("Trying to open the local "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
+				createPrivateInterfacesFile(privateInterfacesFile);
+
+				System.setProperty("interfaces.file", privateInterfacesFile);
+				_interfacesDriver = new SyInterfacesDriver(privateInterfacesFile);
+				_interfacesDriver.open(privateInterfacesFile);
+			}
+			catch(Exception ex2)
+			{
+				_logger.warn("Even Problems reading LOCAL "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
+				_logger.warn("LOCAL FILE SyInterfacesDriver Problem: "+ex);
+			}
 		}
 
-		if (_interfacesDriver != null)
+		if (_interfacesDriver == null)
+		{
+			_logger.warn("SYBASE or Local "+Version.getAppName()+" Name/Directory Service could NOT be initialized, creating an EMPTY place holder.");
+
+			// Set a NON initialized SyDriver just to avoid NullPointerExceptions.
+			_interfacesDriver = new SyInterfacesDriver();
+		}
+		else
 		{
 			_logger.info("Using '"+_interfacesDriver.getBundle()+"' file for ASE server name lookup.");
 		}
 	}
-	
-	
+
+	/** get name of a local/private interfaces file */
+	private static String getPrivateInterfacesFile()
+	{
+		String file = null;
+		String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : "";
+
+		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+			file = tmpSybaseEnvLocation + "\\sql.ini";
+		else
+			file = tmpSybaseEnvLocation + "/interfaces";
+
+		// Note: this might get printed several times
+		if (System.getenv("SYBASE") == null)
+		{
+			_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
+			System.setProperty("sybase.home", tmpSybaseEnvLocation);
+		}
+
+		return file;
+	}
+
+	/** check/create the local/private interfaces file */
+	private static String createPrivateInterfacesFile(String file)
+	{
+		// set a local filename if one wasn't passed
+		if (file == null)
+		{
+			file = getPrivateInterfacesFile();
+			_logger.info("I will try to use the interfaces file '"+file+"'.");
+		}
+		
+		// Check if the interfaces file exists.
+		File ifile = new File(file);
+		boolean fileExists = ifile.exists();
+		if ( fileExists )
+		{
+			_logger.info("The interfaces file '"+file+"' already exists, lets try to use it.");
+			return file;
+		}
+
+
+		_logger.info("Creating a dummy interfaces file named '"+file+"'.");
+		try
+		{
+			BufferedWriter out = new BufferedWriter(new FileWriter(file));
+			if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+			{
+				String nl = System.getProperty("line.separator");
+				out.write(";; ----------------------------------------------- " + nl);
+				out.write(";; Server - DUMMY_ASE " + nl);
+				out.write(";; This entry was added by '"+Version.getAppName()+"' " + nl);
+				out.write(";; ----------------------------------------------- " + nl);
+				out.write("[DUMMY_ASE]" + nl);
+				out.write("query=TCP, localhost, 5000" + nl);
+				out.write(nl);
+			}
+			else
+			{
+				String nl = System.getProperty("line.separator");
+				out.write("# ----------------------------------------------- " + nl);
+				out.write("# Server - DUMMY_ASE " + nl);
+				out.write("# This entry was added by '"+Version.getAppName()+"' " + nl);
+				out.write("# ----------------------------------------------- " + nl);
+				out.write("DUMMY_ASE" + nl);
+				out.write("\tquery tcp ether localhost 5000" + nl);
+				out.write(nl);
+			}
+			out.close();
+		}
+		catch (IOException e)
+		{
+			_logger.error("Problems when creating the interfaces file named '"+file+"', continuing anyway. Caught: "+e);
+			file = null;
+		}
+		return file;
+	}
 	
 
 
@@ -277,19 +337,21 @@ public class AseConnectionFactory
 		_hostname = hostname;
 	}
 	
-	public static Properties          getProperties()  { return _props; }
+	public static Properties          getProperties()              { return _props; }
 	public static Object              getProperty(String propname) { return _props.getProperty(propname); }
-	public static String              getDriver()      { return _driver; }
-	public static String              getUrlTemplate() { return _urlTemplate; }
-	public static String              getUrl()         { return _urlTemplate; }
-	public static String              getUser()        { return _username; }
-	public static String              getPassword()    { return _password; }
-//	public static String              getHost()        { return _host; }
-//	public static int                 getPort()        { return _port; }
-	public static Map<String, List<String>> getHostPortMap() { return _hostPortMap; }
-	public static String              getServer()      { return _server; }
-	public static String              getAppName()     { return _appname; }
-	public static String              getHostName()    { return _hostname; }
+	public static String              getDriver()                  { return _driver; }
+	public static String              getUrlTemplate()             { return _urlTemplate; }
+	public static String              getUrlTemplateBase()         { return _urlTemplate.replace(_urlTemplateHostPort, ""); }
+	public static String              getUrlTemplateHostPort()     { return _urlTemplateHostPort; }
+	public static String              getUrl()                     { return _urlTemplate; }
+	public static String              getUser()                    { return _username; }
+	public static String              getPassword()                { return _password; }
+//	public static String              getHost()                    { return _host; }
+//	public static int                 getPort()                    { return _port; }
+	public static Map<String, List<String>> getHostPortMap()       { return _hostPortMap; }
+	public static String              getServer()                  { return _server; }
+	public static String              getAppName()                 { return _appname; }
+	public static String              getHostName()                { return _hostname; }
 
 
 	//---------------------------------------
@@ -1090,6 +1152,14 @@ public class AseConnectionFactory
 	{
 		return getConnection(toHostPortStr(hosts,ports), dbname, username, password, appname, hostname, connProps, (ConnectionProgressCallback)null);
 	}
+	/** get a connection */
+	public static Connection getConnection(String srvname, String dbname, String username, String password, String appname)
+	throws ClassNotFoundException, SQLException
+	{
+		String hostPortStr = AseConnectionFactory.getIHostPortStr(srvname);
+		return getConnection(hostPortStr, dbname, username, password, appname, null, null, (ConnectionProgressCallback)null);
+	}
+	
 
 //	 * get a connection using all the input parameters (this does not use the static fields previously set) 
 	public static Connection getConnection(String hostPortStr, String dbname, String username, String password, String appname, String hostname, Properties connProps, ConnectionProgressCallback cpc) 
@@ -1221,12 +1291,12 @@ public class AseConnectionFactory
 		if (conf != null)
 		{
 			emulateMultipleQueryRowSupport = conf.getBooleanProperty("AseConnectionFactory.emulateMultipleQueryRowSupport", true);
-			loginTimeout                   = conf.getIntProperty("AseConnectionFactory.loginTimeout", loginTimeout);
+			loginTimeout                   = conf.getIntProperty(PROPERTY_LOGINTIMEOUT, loginTimeout);
 		}
 		else
 		{
 			emulateMultipleQueryRowSupport = System.getProperty("AseConnectionFactory.emulateMultipleQueryRowSupport", "true").trim().equalsIgnoreCase("true");
-			try { loginTimeout = Integer.parseInt(System.getProperty("AseConnectionFactory.loginTimeout", loginTimeout+"")); }
+			try { loginTimeout = Integer.parseInt(System.getProperty(PROPERTY_LOGINTIMEOUT, loginTimeout+"")); }
 			catch (NumberFormatException ignore) {}
 		}
 		
@@ -1264,6 +1334,7 @@ public class AseConnectionFactory
 			//-----------------------------------------------------
 			// Now use that driver to connect to the database
 			//-----------------------------------------------------
+			DriverManager.setLoginTimeout(loginTimeout);
 			conn = DriverManager.getConnection(url, props);
 		}
 		else // EMULATE MULTIPLE QUERY ROW (WITH gui progress if Progress object was passed)
@@ -1286,6 +1357,7 @@ public class AseConnectionFactory
 					//-----------------------------------------------------
 					// Now use that driver to connect to the database
 					//-----------------------------------------------------
+					DriverManager.setLoginTimeout(loginTimeout);
 					conn = DriverManager.getConnection(urlEntry, props);
 
 					if (_logger.isDebugEnabled())
@@ -1372,12 +1444,20 @@ public class AseConnectionFactory
 		{
 			if (conn.getAutoCommit() == false)
 			{
-				_logger.info("Autocommit was turned 'off'. I will turn this to 'on' for this connection.");
+				_logger.info("AutoCommit was turned 'off'. I will turn this to 'on' for this connection.");
 				conn.setAutoCommit(true);
 			}
 
-			// If this is not set to 'off', things like (print "any string") wont work
-			conn.createStatement().execute("set quoted_identifier off");
+			DatabaseMetaData dbmd = conn.getMetaData();
+			if (dbmd != null)
+			{
+				String productName = dbmd.getDatabaseProductName();
+				if ("Adaptive Server Enterprise".equals(productName))
+				{
+					// If this is not set to 'off', things like (print "any string") wont work
+					conn.createStatement().execute("set quoted_identifier off");
+				}
+			}
 		}
 		catch (SQLException sqle)
 		{
@@ -1461,7 +1541,7 @@ public class AseConnectionFactory
 		}
 
 	}
-	
+
 //	public Connection newConnection(Properties inProps, boolean logErrors)
 //	throws ManageException
 ////	throws NotConnectedException

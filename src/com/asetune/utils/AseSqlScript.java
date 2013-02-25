@@ -15,7 +15,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -40,7 +39,7 @@ implements SybMessageHandler
 	private SybMessageHandler               _saveMsgHandler     = null;
 	private boolean                         _saveAutoCommit     = false;
 	private String                          _dbnameBeforeScript = null;
-	private ArrayList<ResultSetTableModel>  _resultCompList     = null;
+//	private ArrayList<ResultSetTableModel>  _resultCompList     = null;
 	private String                          _msgPrefix          = "";
 	private int                             _queryTimeout       = 0;
 
@@ -77,6 +76,7 @@ implements SybMessageHandler
 	{
 		_queryTimeout = queryTimeout;
 	}
+
 	/** SQL Timeout in seconds, 0 = no timeout */
 	public int getQueryTimeout()
 	{
@@ -84,7 +84,7 @@ implements SybMessageHandler
 	}
 
 	/**
-	 * This just restores the Message Handler, and dbname to what it was priviously.<br>
+	 * This just restores the Message Handler, and dbname to what it was previously.<br>
 	 * This does NOT close the database connection.
 	 */
 	public void close()
@@ -232,7 +232,7 @@ implements SybMessageHandler
 						rs = stmnt.getResultSet();
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true);
+						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql);
 
 						// Write ResultSet Content as a "string table"
 						_logger.info(getMsgPrefix() + ": produced a ResultSet\n" + tm.toTableString());
@@ -430,7 +430,7 @@ implements SybMessageHandler
 						sb.append(getSqlWarningMsgs(stmnt, true));
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true);
+						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql);
 
 						// Write ResultSet Content as a "string table"
 						sb.append(tm.toTableString());
@@ -600,12 +600,17 @@ implements SybMessageHandler
 //		}
 //		return (outStr == null) ? null : outStr.trim();
 //	}
+	
 	public static String readCommand(BufferedReader br) 
 	throws IOException 
 	{
 		StringBuilder sb = new StringBuilder();
 		try 
 		{
+			// FIXME: add ability to support 'go 10', which executes this SQL statement 10 times
+			//        also: countSqlGoBatches() needs to be fixed
+			//        maybe add a class AseScriptReader, where readCommand() returns sql several times when go ## is present... 
+			// SOLVED: in new Class AswSqlScriptReader
 			String row = null;
 			for (row=br.readLine(); row!=null && !row.trim().equalsIgnoreCase("go"); row=br.readLine()) 
 			{
@@ -621,6 +626,7 @@ implements SybMessageHandler
 		}
 		return (sb == null) ? null : sb.toString();
 	}
+
 //	private String readCommand(BufferedReader br) 
 //	throws IOException 
 //	{
@@ -673,59 +679,63 @@ implements SybMessageHandler
 //		}
 //		return file;
 //	}
-	/**
-	* Message Handler method for a this SybConnection
-	* @param warn   SQLExeception object
-	* @return       SQLExeception object
-	*/
-	public SQLException messageHandlerXXX(SQLException sqle)
-	{
-		StringBuffer sb = new StringBuffer();
-		boolean discard = true;
 
-//		if (sqle instanceof SybSQLException) 
-		if (sqle instanceof EedInfo) 
-		{
-//			SybSQLException sybsqle = (SybSQLException) sqle;
-			EedInfo sybsqle = (EedInfo) sqle;
-			
-			if (sybsqle.getSeverity() > 10)
-				discard = false;
+//	/**
+//	* Message Handler method for a this SybConnection
+//	* @param warn   SQLExeception object
+//	* @return       SQLExeception object
+//	*/
+//	public SQLException messageHandlerXXX(SQLException sqle)
+//	{
+//		StringBuffer sb = new StringBuffer();
+//		boolean discard = true;
+//
+////		if (sqle instanceof SybSQLException) 
+//		if (sqle instanceof EedInfo) 
+//		{
+////			SybSQLException sybsqle = (SybSQLException) sqle;
+//			EedInfo sybsqle = (EedInfo) sqle;
+//			
+//			if (sybsqle.getSeverity() > 10)
+//				discard = false;
+//
+//			sb.append( "Srv=" );
+//			sb.append( sybsqle.getServerName() );
+//			sb.append( ", Msg=" );
+//			sb.append( sqle.getErrorCode() );
+//			sb.append( ", Severity=" );
+//			sb.append( sybsqle.getSeverity() );
+//			sb.append( ": " );
+//			sb.append( sqle.getMessage().replaceAll("\n", "") );
+//		}
+//		else
+//		{
+//			sb.append( "Msg=" );
+//			sb.append( sqle.getErrorCode() );
+//			sb.append( ": " );
+//			sb.append( sqle.getMessage().replaceAll("\n", "") );
+//		}
+//
+//		if (discard)
+//			_logger.info(getMsgPrefix() + sb.toString());
+//		else
+//			_logger.error(getMsgPrefix() + sb.toString());
+//
+//		if (discard)
+//			return null;
+//		return sqle;
+//	}
 
-			sb.append( "Srv=" );
-			sb.append( sybsqle.getServerName() );
-			sb.append( ", Msg=" );
-			sb.append( sqle.getErrorCode() );
-			sb.append( ", Severity=" );
-			sb.append( sybsqle.getSeverity() );
-			sb.append( ": " );
-			sb.append( sqle.getMessage().replaceAll("\n", "") );
-		}
-		else
-		{
-			sb.append( "Msg=" );
-			sb.append( sqle.getErrorCode() );
-			sb.append( ": " );
-			sb.append( sqle.getMessage().replaceAll("\n", "") );
-		}
-
-		if (discard)
-			_logger.info(getMsgPrefix() + sb.toString());
-		else
-			_logger.error(getMsgPrefix() + sb.toString());
-
-		if (discard)
-			return null;
-		return sqle;
-	}
-
-	@SuppressWarnings("unused")
+	@Override
 	public SQLException messageHandler(SQLException sqe)
 	{
 		boolean isInformational = false;
 		StringBuffer m = new StringBuffer(500);
 
+		@SuppressWarnings("unused")
 		String threadName = " ThreadName='"+Thread.currentThread().getName()+"'.";
+
+		@SuppressWarnings("unused")
 		String procName = "";
 
 		int msgNumber = sqe.getErrorCode();
@@ -808,210 +818,210 @@ implements SybMessageHandler
 	
 	
 	
-	/**
-	 * This method uses the supplied SQL query string, and the
-	 * ResultSetTableModelFactory object to create a TableModel that holds
-	 * the results of the database query.  It passes that TableModel to the
-	 * JTable component for display.
-	 **/
-	// from com.asetune.gui.QueryWindow
-	@SuppressWarnings("unused")
-	private void displayQueryResults(Connection conn, String sql)
-	{
-		try
-		{
-			// If we've called close(), then we can't call this method
-			if (conn == null)
-				throw new IllegalStateException("Connection already closed.");
-
-			SQLWarning sqlw  = null;
-			Statement  stmnt = conn.createStatement();			
-			ResultSet  rs    = null;
-			int rowsAffected = 0;
-
-			// a linked list where to "store" result sets or messages
-			// before "displaying" them
-			_resultCompList = new ArrayList<ResultSetTableModel>();
-
-			_logger.debug("Executing SQL statement: "+sql);
-			// Execute
-			boolean hasRs = stmnt.execute(sql);
-
-			// iterate through each result set
-			do
-			{
-				if(hasRs)
-				{
-					// Get next resultset to work with
-					rs = stmnt.getResultSet();
-
-					// Convert the ResultSet into a TableModel, which fits on a JTable
-					ResultSetTableModel tm = new ResultSetTableModel(rs, true);
-					_resultCompList.add(tm);
-
-					// Check for warnings
-					// If warnings found, add them to the LIST
-					for (sqlw = rs.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
-					{
-						_logger.trace("--In loop, sqlw: "+sqlw);
-						//compList.add(new JAseMessage(sqlw.getMessage()));
-					}
-
-					// Close it
-					rs.close();
-				}
-
-				// Treat update/row count(s)
-				rowsAffected = stmnt.getUpdateCount();
-				if (rowsAffected >= 0)
-				{
-//					rso.add(rowsAffected);
-				}
-
-				// Check if we have more resultsets
-				hasRs = stmnt.getMoreResults();
-
-				_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
-			}
-			while (hasRs || rowsAffected != -1);
-
-			// Check for warnings
-			for (sqlw = stmnt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
-			{
-				_logger.trace("====After read RS loop, sqlw: "+sqlw);
-				//compList.add(new JAseMessage(sqlw.getMessage()));
-			}
-
-			// Close the statement
-			stmnt.close();
-		}
-		catch (SQLException ex)
-		{
-		}
-		
-		// In some cases, some of the area in not repainted
-		// example: when no RS, but only messages has been displayed
-//		_resPanel.repaint();
-	}
+//	/**
+//	 * This method uses the supplied SQL query string, and the
+//	 * ResultSetTableModelFactory object to create a TableModel that holds
+//	 * the results of the database query.  It passes that TableModel to the
+//	 * JTable component for display.
+//	 **/
+//	// from com.asetune.gui.QueryWindow
+//	private void displayQueryResults(Connection conn, String sql)
+//	{
+//		try
+//		{
+//			// If we've called close(), then we can't call this method
+//			if (conn == null)
+//				throw new IllegalStateException("Connection already closed.");
+//
+//			SQLWarning sqlw  = null;
+//			Statement  stmnt = conn.createStatement();			
+//			ResultSet  rs    = null;
+//			int rowsAffected = 0;
+//
+//			// a linked list where to "store" result sets or messages
+//			// before "displaying" them
+//			_resultCompList = new ArrayList<ResultSetTableModel>();
+//
+//			_logger.debug("Executing SQL statement: "+sql);
+//			// Execute
+//			boolean hasRs = stmnt.execute(sql);
+//
+//			// iterate through each result set
+//			do
+//			{
+//				if(hasRs)
+//				{
+//					// Get next resultset to work with
+//					rs = stmnt.getResultSet();
+//
+//					// Convert the ResultSet into a TableModel, which fits on a JTable
+//					ResultSetTableModel tm = new ResultSetTableModel(rs, true);
+//					_resultCompList.add(tm);
+//
+//					// Check for warnings
+//					// If warnings found, add them to the LIST
+//					for (sqlw = rs.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+//					{
+//						_logger.trace("--In loop, sqlw: "+sqlw);
+//						//compList.add(new JAseMessage(sqlw.getMessage()));
+//					}
+//
+//					// Close it
+//					rs.close();
+//				}
+//
+//				// Treat update/row count(s)
+//				rowsAffected = stmnt.getUpdateCount();
+//				if (rowsAffected >= 0)
+//				{
+////					rso.add(rowsAffected);
+//				}
+//
+//				// Check if we have more resultsets
+//				hasRs = stmnt.getMoreResults();
+//
+//				_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+//			}
+//			while (hasRs || rowsAffected != -1);
+//
+//			// Check for warnings
+//			for (sqlw = stmnt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+//			{
+//				_logger.trace("====After read RS loop, sqlw: "+sqlw);
+//				//compList.add(new JAseMessage(sqlw.getMessage()));
+//			}
+//
+//			// Close the statement
+//			stmnt.close();
+//		}
+//		catch (SQLException ex)
+//		{
+//		}
+//		
+//		// In some cases, some of the area in not repainted
+//		// example: when no RS, but only messages has been displayed
+////		_resPanel.repaint();
+//	}
 	
-	public boolean executeGoString(String dbname, int timeout, String msgHandlerPrefix, String goStr)
-	{
-		String cmd = "";
+//	public boolean executeGoString(String dbname, int timeout, String msgHandlerPrefix, String goStr)
+//	{
+//		String cmd = "";
+//
+//		SybMessageHandler oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
+//		try
+//		{
+//			// Check that we have a connection
+//			if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
+//			{
+//				_logger.error("Connection is already closed. Can't execute the SQL script.");
+//			}
+//				
+//			if ( dbname != null && !dbname.equals("") )
+//			{
+//				AseConnectionUtils.useDbname(_conn, dbname);
+//			}
+//
+//			((SybConnection)_conn).setSybMessageHandler(new AseMessageHandlerPrintToLog(msgHandlerPrefix));
+//
+//			// EXECUTE
+//			Statement stmt = _conn.createStatement();
+//			
+//			if (timeout > 0)
+//				stmt.setQueryTimeout( timeout );
+//
+//			BufferedReader br = new BufferedReader( new StringReader(goStr) );
+//			for(String s1=readCommand(br); s1!=null; s1=readCommand(br))
+//			{
+//				// This can't be part of the for loop, then it just stops if empty row
+//				if ( StringUtil.isNullOrBlank(s1) )
+//					continue;
+//
+//				cmd = s1;
+//
+//				_logger.debug("EXECUTING: "+cmd);
+//				stmt.executeUpdate(cmd);
+//			}
+//			br.close();
+//			
+//			stmt.close();
+//		}
+//		catch (IOException e)
+//		{
+//			String msg = "Problems when executing '"+cmd+"' in DB '"+AseConnectionUtils.getCurrentDbname(_conn)+"'.";
+//			_logger.error(msg);
+//			return false;
+//		}
+//		catch (SQLException sqle)
+//		{
+//			// Check for timeouts etc
+//			//checkForProblems(sqle, cmd);
+//
+//			String msg = "Problems when executing '"+cmd+"' in DB '"+AseConnectionUtils.getCurrentDbname(_conn)+"'.";
+//			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
+//			return false;
+//		}
+//		finally
+//		{
+//			((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
+//		}
+//		return true;
+//	}
 
-		SybMessageHandler oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
-		try
-		{
-			// Check that we have a connection
-			if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
-			{
-				_logger.error("Connection is already closed. Can't execute the SQL script.");
-			}
-				
-			if ( dbname != null && !dbname.equals("") )
-			{
-				AseConnectionUtils.useDbname(_conn, dbname);
-			}
 
-			((SybConnection)_conn).setSybMessageHandler(new AseMessageHandlerPrintToLog(msgHandlerPrefix));
-
-			// EXECUTE
-			Statement stmt = _conn.createStatement();
-			
-			if (timeout > 0)
-				stmt.setQueryTimeout( timeout );
-
-			BufferedReader br = new BufferedReader( new StringReader(goStr) );
-			for(String s1=readCommand(br); s1!=null; s1=readCommand(br))
-			{
-				// This can't be part of the for loop, then it just stops if empty row
-				if ( StringUtil.isNullOrBlank(s1) )
-					continue;
-
-				cmd = s1;
-
-				_logger.debug("EXECUTING: "+cmd);
-				stmt.executeUpdate(cmd);
-			}
-			br.close();
-			
-			stmt.close();
-		}
-		catch (IOException e)
-		{
-			String msg = "Problems when executing '"+cmd+"' in DB '"+AseConnectionUtils.getCurrentDbname(_conn)+"'.";
-			_logger.error(msg);
-			return false;
-		}
-		catch (SQLException sqle)
-		{
-			// Check for timeouts etc
-			//checkForProblems(sqle, cmd);
-
-			String msg = "Problems when executing '"+cmd+"' in DB '"+AseConnectionUtils.getCurrentDbname(_conn)+"'.";
-			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
-			return false;
-		}
-		finally
-		{
-			((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
-		}
-		return true;
-	}
-
-
-	private class AseMessageHandlerPrintToLog
-	implements SybMessageHandler 
-	{
-		private String _prefix = ""; 
-
-		public AseMessageHandlerPrintToLog(String prefix)
-		{
-			if (prefix != null)
-				_prefix = prefix;
-		}
-		
-		public SQLException messageHandler(SQLException sqle) 
-		{
-			StringBuffer sb = new StringBuffer();
-			boolean discard = true;
-
-//			if (sqle instanceof SybSQLException) 
-			if (sqle instanceof EedInfo) 
-			{
-//				SybSQLException sybsqle = (SybSQLException) sqle;
-				EedInfo sybsqle = (EedInfo) sqle;
-				
-				if (sybsqle.getSeverity() > 10)
-					discard = false;
-
-				sb.append( "Srv=" );
-				sb.append( sybsqle.getServerName() );
-				sb.append( ", Msg=" );
-				sb.append( sqle.getErrorCode() );
-				sb.append( ", Severity=" );
-				sb.append( sybsqle.getSeverity() );
-				sb.append( ": " );
-				sb.append( sqle.getMessage().replaceAll("\n", "") );
-			}
-			else
-			{
-				sb.append( "Msg=" );
-				sb.append( sqle.getErrorCode() );
-				sb.append( ": " );
-				sb.append( sqle.getMessage().replaceAll("\n", "") );
-			}
-
-			if (discard)
-				_logger.info(_prefix + sb.toString());
-			else
-				_logger.error(_prefix + sb.toString());
-
-			if (discard)
-				return null;
-			return sqle;
-		}
-		
-	}
+//	private class AseMessageHandlerPrintToLog
+//	implements SybMessageHandler 
+//	{
+//		private String _prefix = ""; 
+//
+//		public AseMessageHandlerPrintToLog(String prefix)
+//		{
+//			if (prefix != null)
+//				_prefix = prefix;
+//		}
+//		
+//		@Override
+//		public SQLException messageHandler(SQLException sqle) 
+//		{
+//			StringBuffer sb = new StringBuffer();
+//			boolean discard = true;
+//
+////			if (sqle instanceof SybSQLException) 
+//			if (sqle instanceof EedInfo) 
+//			{
+////				SybSQLException sybsqle = (SybSQLException) sqle;
+//				EedInfo sybsqle = (EedInfo) sqle;
+//				
+//				if (sybsqle.getSeverity() > 10)
+//					discard = false;
+//
+//				sb.append( "Srv=" );
+//				sb.append( sybsqle.getServerName() );
+//				sb.append( ", Msg=" );
+//				sb.append( sqle.getErrorCode() );
+//				sb.append( ", Severity=" );
+//				sb.append( sybsqle.getSeverity() );
+//				sb.append( ": " );
+//				sb.append( sqle.getMessage().replaceAll("\n", "") );
+//			}
+//			else
+//			{
+//				sb.append( "Msg=" );
+//				sb.append( sqle.getErrorCode() );
+//				sb.append( ": " );
+//				sb.append( sqle.getMessage().replaceAll("\n", "") );
+//			}
+//
+//			if (discard)
+//				_logger.info(_prefix + sb.toString());
+//			else
+//				_logger.error(_prefix + sb.toString());
+//
+//			if (discard)
+//				return null;
+//			return sqle;
+//		}
+//		
+//	}
 	
 	
 	

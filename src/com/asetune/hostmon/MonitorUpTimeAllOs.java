@@ -1,5 +1,7 @@
 package com.asetune.hostmon;
 
+import com.asetune.ssh.SshConnection;
+
 
 public class MonitorUpTimeAllOs
 extends MonitorUpTime

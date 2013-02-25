@@ -25,7 +25,8 @@ public static void main(String[] args) {
       javax.swing.JFrame frame = new javax.swing.JFrame("Line Numbers (as Borders)...");
       frame.addWindowListener(
          new java.awt.event.WindowAdapter() {
-            public void windowClosing(java.awt.event.WindowEvent ev) {
+            @Override
+			public void windowClosing(java.awt.event.WindowEvent ev) {
                System.exit(0);
             }
          });
@@ -126,7 +127,8 @@ public static void main(String[] args) {
       setLineNumberJustification(justify);
    }
 
-   public Insets getBorderInsets(Component c) {
+   @Override
+public Insets getBorderInsets(Component c) {
       return getBorderInsets(c, new Insets(0, 0, 0, 0));
    }
 
@@ -139,7 +141,8 @@ public static void main(String[] args) {
     *@param  insets  Description of the Parameter
     *@return         The borderInsets value
     */
-   public Insets getBorderInsets(Component c, Insets insets) {
+   @Override
+public Insets getBorderInsets(Component c, Insets insets) {
       // if c is not a JTextArea...nothing is done...
       if (c instanceof JTextArea) {
          int width = lineNumberWidth((JTextArea) c);
@@ -195,7 +198,8 @@ public static void main(String[] args) {
    // NOTE: This method is called every time the cursor blinks...
    //       so...optimize (later and if possible) for speed...
    //
-   public void paintBorder(Component c, Graphics g, int x, int y,
+   @Override
+public void paintBorder(Component c, Graphics g, int x, int y,
          int width, int height) {
 
       java.awt.Rectangle clip = g.getClipBounds();

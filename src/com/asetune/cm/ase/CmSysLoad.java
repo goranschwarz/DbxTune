@@ -43,7 +43,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 15020;
 
 	public static final String[] MON_TABLES       = new String[] {"monSysLoad"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -118,7 +118,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
@@ -128,7 +129,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
 	}

@@ -68,6 +68,14 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_showLegend    = PROP_PREFIX + ".graph.show.legend";
 	private static final boolean DEFAULT_showLegend    = true;
 
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,     DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,       DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,      DEFAULT_showLegend);
+	}
+
 	public CmPCacheModuleUsagePanel(CountersModel cm)
 	{
 		super(cm);
@@ -375,6 +383,7 @@ extends TabularCntrPanel
 		// ACTION LISTENERS
 		enableGraph_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
@@ -385,6 +394,7 @@ extends TabularCntrPanel
 
 		graphType_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -402,6 +412,7 @@ extends TabularCntrPanel
 
 		showLegend_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());

@@ -21,7 +21,8 @@ public static void main(String[] args)
    {
       javax.swing.JFrame frame = new javax.swing.JFrame("Line Numbers...");
       frame.addWindowListener(new java.awt.event.WindowAdapter() {
-         public void windowClosing(java.awt.event.WindowEvent ev) {
+         @Override
+		public void windowClosing(java.awt.event.WindowEvent ev) {
             System.exit(0);
          }
       });
@@ -79,7 +80,8 @@ public static void main(String[] args)
       // "workaround": paint the background in this class...
    }
  
-   public Insets getInsets() {
+   @Override
+public Insets getInsets() {
       return getInsets(new Insets(0,0,0,0));
    }
  
@@ -88,7 +90,8 @@ public static void main(String[] args)
     * left. Should be modified to add space on the right, depending upon
     * Locale.
     */
-   public Insets getInsets(Insets insets) {
+   @Override
+public Insets getInsets(Insets insets) {
       insets = super.getInsets(insets);
       insets.left += lineNumberWidth();
       return insets;
@@ -122,7 +125,8 @@ public static void main(String[] args)
    // NOTE: This method is called every time the cursor blinks...
    //       so...optimize (later and if possible) for speed...
    //
-   public void paintComponent(Graphics g) {
+   @Override
+public void paintComponent(Graphics g) {
       Insets insets = getInsets();
  
       Rectangle clip = g.getClipBounds();

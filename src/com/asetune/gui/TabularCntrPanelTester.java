@@ -184,6 +184,7 @@ public class TabularCntrPanelTester extends JFrame
 		xxx.add(enableDisableTest_but);
 		traceTest_but.addActionListener(new ActionListener() 
 		{
+			@Override
 			public void actionPerformed(ActionEvent e) 
 			{
 				if (_tabs instanceof XXTabbedPane)
@@ -192,6 +193,7 @@ public class TabularCntrPanelTester extends JFrame
 		});
 		enableDisableTest_but.addActionListener(new ActionListener() 
 		{
+			@Override
 			public void actionPerformed(ActionEvent e) 
 			{
 //				_tabs.setEnabledAt(4, !_tabs.isEnabledAt(4));
@@ -286,10 +288,12 @@ public class TabularCntrPanelTester extends JFrame
 //			return dc.getMinimumSize(c);
 //		}
 
+		@Override
 		public Rectangle getTabBounds(JTabbedPane pane, int i) {
 			return dc.getTabBounds(pane, i);
 		}
 
+		@Override
 		public int getTabRunCount(JTabbedPane pane) {
 			return dc.getTabRunCount(pane);
 		}
@@ -298,13 +302,16 @@ public class TabularCntrPanelTester extends JFrame
 //			dc.installUI(c);
 //		}
 
+		@Override
 		public void paint(Graphics g, JComponent c) {
 			dc.paint(g, c);
 		}
-	    public void update(Graphics g, JComponent c) {
+	    @Override
+		public void update(Graphics g, JComponent c) {
 			dc.update(g, c);
         }
 
+		@Override
 		public int tabForCoordinate(JTabbedPane pane, int x, int y) {
 			return dc.tabForCoordinate(pane, x, y);
 		}
@@ -410,6 +417,7 @@ public class TabularCntrPanelTester extends JFrame
 		//Schedule a job for the event-dispatching thread:
 		//creating and showing this application's GUI.
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+			@Override
 			public void run() {
 				try 
 				{

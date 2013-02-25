@@ -13,6 +13,7 @@ import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sp_sysmon.SpSysmon;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.SwingUtils;
 
 public class CmSysmonPanel
@@ -105,6 +106,9 @@ extends TabularCntrPanel
 
 		RSyntaxTextArea textArea = new RSyntaxTextArea();
 		RTextScrollPane textScroll = new RTextScrollPane(textArea, true);
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(textScroll, this);
+
 		textArea.setText("empty sp_sysmon");
 //		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 //		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);

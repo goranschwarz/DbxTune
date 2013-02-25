@@ -47,7 +47,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monIOQueue"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -113,12 +113,13 @@ extends CountersModel
 			// GRAPH
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_DISK_IO_OPS,
-				"Disk IO", 	                               // Menu CheckBox text
-				"Number of Disk IO Operations per Second", // Label 
+				"Disk IO Operations, per Type",                     // Menu CheckBox text
+				"Number of Disk IO Operations per Second and Type", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
-				true, // visible at start
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}

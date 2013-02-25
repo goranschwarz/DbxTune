@@ -13,7 +13,11 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.ase.gui.CmSpinlockSumPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -91,16 +95,33 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                       = CM_NAME;
+
+	public static final String  PROPKEY_sample_resetAfter          = PROP_PREFIX + ".sample.reset.after";
+	public static final boolean DEFAULT_sample_resetAfter          = false;
+
+	public static final String  PROPKEY_sample_fglockspins          = PROP_PREFIX + ".sample.fglockspins";
+	public static final boolean DEFAULT_sample_fglockspins          = false;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter);
+		Configuration.registerDefaultValue(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins);
+	}
+
 	
 	private void addTrendGraphs()
 	{
 	}
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmSpinlockSumPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmSpinlockSumPanel(this);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
@@ -139,6 +160,9 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_resetAfter = conf.getBooleanProperty(PROPKEY_sample_resetAfter, DEFAULT_sample_resetAfter);
+
 		// sum(int) may cause: "Arithmetic overflow occurred"
 		// max int is: 2147483647, so if we sum several rows we may overflow the integer
 		// so on pre 15.0 use numeric instead, over 15.0 use bigint
@@ -216,17 +240,33 @@ extends CountersModel
 		if (isClusterEnabled) 
 			instanceid = ", instanceid";
 
+
+		// If ASE-CE, we might want to exclude some fields, for example 'fglockspins' has more than 100.000 records...
+		String restrictTmpSysmonitorsWhere = "";
+		if (isClusterEnabled)
+		{
+			String disregardFields = "";
+			if (conf.getBooleanProperty(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins) == false)
+				disregardFields += "'fglockspins', ";
+			
+			if ( ! disregardFields.equals(""))
+			{
+				disregardFields = StringUtil.removeLastComma(disregardFields);
+				restrictTmpSysmonitorsWhere = " and field_name not in("+disregardFields+")";
+			}
+		}
+	
 		String sqlCreateTmpSysmonitors = 
-			"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-			"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' \n" +
-			"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' \n" +
-			"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' \n";
+			"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' "+restrictTmpSysmonitorsWhere+" \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' "+restrictTmpSysmonitorsWhere+" \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' "+restrictTmpSysmonitorsWhere+" \n";
 		if (aseVersion >= 15700)
 			sqlCreateTmpSysmonitors =
-				"/*------ Copy 'spinlock_' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-				"select field_name, field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' \n" +
-				"select             field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' \n" +
-				"select             field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' \n";
+				"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
+				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' "+restrictTmpSysmonitorsWhere+" \n" +
+				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' "+restrictTmpSysmonitorsWhere+" \n" +
+				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' "+restrictTmpSysmonitorsWhere+" \n";
 
 		String sqlDropTmpTabPWS   = 
 			"\n" +
@@ -234,12 +274,22 @@ extends CountersModel
 			"drop table #sysmonitorsW \n" +
 			"drop table #sysmonitorsS \n";
 		
+		String sqlResetCountersAfterSample = "";
+		if (sample_resetAfter)
+		{
+			sqlResetCountersAfterSample = 
+				" \n" +
+				"/*------ RESET THE in-memory monitor counters (just for spinlocks) -------*/ \n" +
+				"DBCC monitor('clear', 'spinlock_s', 'on') \n";
+		}
+
 		String sqlSampleSpins =
-			"/*------ SAMPLE THE monitors to master..sysmonitors -------*/ \n" +
+			"/*------ SAMPLE THE in-memory monitor counters into table master..sysmonitors -------*/ \n" +
 			"DBCC monitor('sample', 'all',        'on') \n" +
 			"DBCC monitor('sample', 'spinlock_s', 'on') \n" +
 			"\n" +
 			sqlCreateTmpSysmonitors +
+			sqlResetCountersAfterSample +
 			" \n" +
 			sqlUpdateTmpTabCache +
 			" \n" +
@@ -266,8 +316,10 @@ extends CountersModel
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = convert(varchar(100), '') \n" +
 			"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S \n" +
-			"WHERE P.field_id = W.field_id \n" +
-			"  AND P.field_id = S.field_id \n";
+			"WHERE P.field_id   = W.field_id   \n" +
+			"  AND P.field_name = W.field_name \n" +
+			"  AND P.field_id   = S.field_id   \n" +
+			"  AND P.field_name = S.field_name \n";
 		if (isClusterEnabled) 
 		{
 			sqlSampleSpins +=
@@ -304,8 +356,10 @@ extends CountersModel
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = N.spin_desc \n" +
 			"FROM #sysmonitorsP P, #sysmonitorsW W, #sysmonitorsS S, #spin_names N \n" +
-			"WHERE P.field_id = W.field_id \n" +
-			"  AND P.field_id = S.field_id \n" +
+			"WHERE P.field_id   = W.field_id   \n" +
+			"  AND P.field_name = W.field_name \n" +
+			"  AND P.field_id   = S.field_id   \n" +
+			"  AND P.field_name = S.field_name \n" +
 		    "  AND P.field_name = N.spin_name \n";
 		if (isClusterEnabled) 
 		{
@@ -350,6 +404,48 @@ extends CountersModel
 		           "DBCC monitor('select', 'spinlock_s', 'on') \n";
 
 		return sqlInit;
+	}
+	@Override
+	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) 
+	{
+		String sqlClose = 
+			"--DBCC monitor('select', 'all',        'off') \n" +
+			"--DBCC monitor('select', 'spinlock_s', 'off') \n";
+		return sqlClose;
+	};
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public Configuration getLocalConfiguration()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration lc = new Configuration();
+
+		lc.setProperty(PROPKEY_sample_resetAfter,  conf.getBooleanProperty(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter));
+		
+		if (isClusterEnabled())
+		{
+		lc.setProperty(PROPKEY_sample_fglockspins, conf.getBooleanProperty(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins));
+		}
+		
+		return lc;
+	}
+
+	@Override
+	public String getLocalConfigurationDescription(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_resetAfter))  return CmSpinlockSumPanel.TOOLTIP_sample_resetAfter;
+		if (propName.equals(PROPKEY_sample_fglockspins)) return CmSpinlockSumPanel.TOOLTIP_sample_fglockspins;
+	
+		return "";
+	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_resetAfter))  return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_fglockspins)) return Boolean.class.getSimpleName();
+
+		return "";
 	}
 
 	@Override

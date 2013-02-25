@@ -32,7 +32,10 @@ public class CountersModelAppend
 	private Timestamp _thisSamplingTime = null;
 	private Timestamp _prevSamplingTime = null;
 	private long      _interval         = 0;
+
+	@SuppressWarnings("unused")
 	private boolean   _newRows          = false;
+
 	private boolean   _initialized      = false;
 
 	public CountersModelAppend(
@@ -333,6 +336,7 @@ public class CountersModelAppend
 		{
 			Runnable doWork = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					beginGuiRefresh();

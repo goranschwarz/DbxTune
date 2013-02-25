@@ -10,6 +10,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -50,7 +52,9 @@ import com.asetune.AseConfigText;
 import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
-import com.asetune.hostmon.SshConnection;
+import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshTunnelInfo;
+import com.asetune.ssh.SshTunnelManager;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
@@ -79,7 +83,7 @@ implements ActionListener, ConnectionProgressCallback
 	private static final String HIDE_DETAILS_STR = "<< Details";
 	private static final String SHOW_DETAILS_STR = "Details >>";
 
-	private ConnectionProgressDialog _thisDialog      = this;
+//	private ConnectionProgressDialog _thisDialog      = this;
 	private SwingWorker              _doConnectWorker = null;
 
 	/** Connection made in background */
@@ -90,6 +94,9 @@ implements ActionListener, ConnectionProgressCallback
 
 	/** SSH Connection made in background */
 	private SshConnection   _sshConnection = null;
+
+	/** SSH Tunnel Information */
+	private SshTunnelInfo   _sshTunnelInfo = null;
 
 	/** if the connection has problems */
 	private Exception    _exception        = null;
@@ -124,6 +131,7 @@ implements ActionListener, ConnectionProgressCallback
 	private AseUrlHelper _urlHelper        = null;
 
 	private static final String TASK_SSH_CONNECT = "Host Monitor Connection, SSH";
+	private static final String TASK_SSH_TUNNEL  = "Creating SSH Tunnel";
 
 	private static final String EXTRA_TASK_CHECK_MONITOR_CONFIG   = "Check Monitor Configuration";
 	private static final String EXTRA_TASK_INIT_MONITOR_DICT      = "Init Monitor Dictionary";
@@ -149,21 +157,22 @@ implements ActionListener, ConnectionProgressCallback
 	private static String     _fixme_jdbcDriver = null;
 	private static String     _fixme_rawUrl     = null;
 	private static Properties _fixme_props      = null;
-	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
 	throws Exception
 	{
 		_fixme_jdbcDriver = driver;
 		_fixme_rawUrl     = rawUrl;
 		_fixme_props      = props;
-		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, desiredDbProductName);
+		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
 	}
-	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+//	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
 	throws Exception
 	{
 		ConnectionProgressDialog cpd = null;
 
-		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
-		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
+		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
+		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
 		else throw new IllegalAccessException("owner parameter can only be of the object types 'Dialog' or 'Frame'.");
 
 		// kick off connect.
@@ -187,24 +196,28 @@ implements ActionListener, ConnectionProgressCallback
 		return null;
 	}
 	
-	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
+		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
 	}
-	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, desiredDbProductName);
+		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
 	}
-	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
+	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
 	{
 		_urlStr = urlStr;
 		_doExtraTasks = doExtraTasks;
 
 		// the ssh connection object itself will newer be changed
-		// just the contents on the object will be, this is it will do a connect
+		// just the contents on the object will be, this is if: it will do a connect
 		_sshConnection = sshConn;
+
+		// This is just information about how to make a SSH Tunnel to the destination.
+		// if this isn't null, the "ASE" Connection will be done on this local port
+		_sshTunnelInfo = sshTunnelInfo;
 
 		// If the connection NEEDS to be of a specific product name
 		_desiredProductName = desiredDbProductName;
@@ -234,23 +247,60 @@ implements ActionListener, ConnectionProgressCallback
 			}
 
 			//-------------------------------------------
-			// Add HOST:PORT number(s) to the TASK list
+			// Add SSH connect to the TASK list
 			//-------------------------------------------
-			_urlHelper = AseUrlHelper.parseUrl(_urlStr);
-			addTask(_urlHelper.getHostPortArr());
+			if (_sshTunnelInfo != null)
+			{
+				// add SSH task
+				addTask(TASK_SSH_TUNNEL);
+
+				//-------------------------------------------
+				// Add the LOCAL HOST:PORT number to the TASK list
+				// This is instead of the below adding all host/ports to the REAL Destination host:port
+				//-------------------------------------------
+//				_urlHelper = AseUrlHelper.parseUrl(_urlStr, _sshTunnelInfo);
+////				addTask(_urlHelper.getHostPortArr()); 
+//				addTask(_urlHelper.getSshTunnelHostPort()); 
+
+//				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
+//				addTask(_urlHelper.getHostPortArr());
+				
+				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
+				int guessPort = SshTunnelManager.getInstance().guessPort(_urlHelper.getHostPortStr(), _sshTunnelInfo);
+				addTask(_sshTunnelInfo.getLocalHost()+":"+guessPort);
+			}
+			else
+			{
+				//-------------------------------------------
+				// Add HOST:PORT number(s) to the TASK list
+				//-------------------------------------------
+				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
+				addTask(_urlHelper.getHostPortArr());
+			}
 
 			//-------------------------------------------
 			// Add any Extra stuff to the task list
 			//-------------------------------------------
 			addTask(extraTasks);
 
+			String aseSshTunnelDesc = "";
+			if (_sshTunnelInfo != null)
+			{
+				aseSshTunnelDesc = "<br><br>" +
+					"Via SSH Tunnel: <br>" +
+					"Local Port '<b>" + _sshTunnelInfo.getLocalPort() + "</b>', <br>" +
+					"Dest Host  '<b>" + _sshTunnelInfo.getDestHost() + ":" + _sshTunnelInfo.getDestPort() + "</b>', <br>" +
+					"SSH Host   '<b>" + _sshTunnelInfo.getSshHost()  + ":" + _sshTunnelInfo.getSshPort()  + "</b>', " +
+					"SSH User   '<b>" + _sshTunnelInfo.getSshUsername()   + "</b>'. " +
+					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + _sshTunnelInfo.getSshPassword() + "</b>' " : "");
+			}
 			String server = _urlHelper.getServerName();
 			if (server != null)
-				_server_lbl.setText("<html>Connecting to Server: <b>"+server+"</b></html>");
+				_server_lbl.setText("<html>Connecting to Server: <b>"+server+"</b>"+aseSshTunnelDesc+"</html>");
 			else
 			{
 				_server_lbl.setText("<html><center>Server is not in the interfaces file<br>" +
-					"Instead, the host:port model will be used.</center></html>");
+					"Instead, the host:port model will be used.</center>"+aseSshTunnelDesc+"</html>");
 			}
 
 			// Calculate number of "ticks" it should be in the progress bar
@@ -274,13 +324,23 @@ implements ActionListener, ConnectionProgressCallback
 		// Set initial size
 		pack();
 	
-		Dimension size = getPreferredSize();
-		size.width  = 490;
-//		size.height = 280;
-		size.height = 320;
-	
-		setPreferredSize(size);
-		setSize(size);
+		// When the "X" close window is pressed, call some method.
+		addWindowListener( new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e)
+			{
+				action_stop();
+			}
+		});
+
+		//		Dimension size = getPreferredSize();
+//		size.width  = 490;
+////		size.height = 280;
+//		size.height = 320;
+//
+//		setPreferredSize(size);
+//		setSize(size);
 	
 		setLocationRelativeTo(owner);
 	
@@ -297,12 +357,16 @@ implements ActionListener, ConnectionProgressCallback
 //		JScrollPane scroll = new JScrollPane( init() );
 //		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-		panel.add(getProgressPanel(), "push, grow");
-		panel.add(getButtomPanel(),   "wrap 20");
+		JPanel progressPanel = getProgressPanel();
+		JPanel buttonPanel   = getButtonPanel();
+		JPanel taskPanel     = getTaskPanel();
 
-		panel.add(_separator,         "span 2, push, grow, wrap");
-		panel.add(getTaskPanel(),     "span 2, push, grow, wrap");
-		panel.add(_buttomStatus_lbl,  "span 2, bottom, push, grow, wrap");
+		panel.add(progressPanel,     "pushx, growx");
+		panel.add(buttonPanel,       "wrap 20");
+
+		panel.add(_separator,        "span 2, pushx, growx, wrap");
+		panel.add(taskPanel,         "span 2, push, grow, wrap");
+		panel.add(_buttomStatus_lbl, "span 2, bottom, pushx, growx, wrap");
 
 		setContentPane(panel);
 	}
@@ -322,7 +386,7 @@ implements ActionListener, ConnectionProgressCallback
 
 		return panel;
 	}
-	protected JPanel getButtomPanel() 
+	protected JPanel getButtonPanel() 
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout());
@@ -353,6 +417,11 @@ implements ActionListener, ConnectionProgressCallback
 		
 		panel.add(new JScrollPane(_task_tab), "push, grow");
 
+		int rows = _task_tab.getRowCount();
+		int height = 50 + (16 * rows) + 16 + 20; // 16 is height of 1 row, so 50(base size) + rows + 1_extra_row + 20=scrollbar
+		int width  = 490; // Just a lucky guess
+		panel.setPreferredSize( new Dimension(width, height) );
+
 		return panel;
 	}
 
@@ -363,6 +432,7 @@ implements ActionListener, ConnectionProgressCallback
 			private static final long	serialVersionUID	= 1L;
 
 			/** CELL tool tip */
+			@Override
 			public String getToolTipText(MouseEvent e)
 			{
 				String tip = null;
@@ -398,6 +468,7 @@ implements ActionListener, ConnectionProgressCallback
 
 		tab.addMouseListener(new MouseAdapter()
 		{
+			@Override
 			public void mouseClicked(MouseEvent e)
 			{
 				if (e.getClickCount() == 2)
@@ -410,7 +481,8 @@ implements ActionListener, ConnectionProgressCallback
 					{
 						Object o = tab.getModel().getValueAt(row, TAB_POS_INFO);
 						if (o instanceof Exception)
-							SwingUtils.showErrorMessage(_thisDialog, "Problems Connecting", "Problems when connecting to the data server.\n\n" + ((Exception)o).getMessage(), (Exception)o);
+//							SwingUtils.showErrorMessage(_thisDialog, "Problems Connecting", "Problems when connecting to the data server.\n\n" + ((Exception)o).getMessage(), (Exception)o);
+							SwingUtils.showErrorMessage(ConnectionProgressDialog.this, "Problems Connecting", "Problems when connecting to the data server.\n\n" + ((Exception)o).getMessage(), (Exception)o);
 					}
 				}
 			}
@@ -491,7 +563,18 @@ implements ActionListener, ConnectionProgressCallback
 				tce.setPreferredWidth( Math.max(wind.width - 25 - firstColWidth, lastColWidth) );
 		}
 	}
-	
+
+	/**
+	 * Called when "stop" button is pressed, or window is closed
+	 */
+	private void action_stop()
+	{
+		_logger.debug("button: STOP was pressed");
+		if (_doConnectWorker != null)
+			_doConnectWorker.interrupt();
+	}
+
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -505,9 +588,7 @@ implements ActionListener, ConnectionProgressCallback
 
 		if ( _stop_but.equals(source) )
 		{
-			_logger.debug("button: STOP was pressed");
-			if (_doConnectWorker != null)
-				_doConnectWorker.interrupt();
+			action_stop();
 		}
 
 		if ( _detailes_but.equals(source) )
@@ -544,6 +625,7 @@ implements ActionListener, ConnectionProgressCallback
 	/**
 	 * start the connect background thread when we show the window
 	 */
+	@Override
 	public void setVisible(boolean visible)
 	{
 		if (visible && _doConnectWorker == null)
@@ -575,10 +657,12 @@ implements ActionListener, ConnectionProgressCallback
 	}
 
 
+	@Override
 	public void setFinalStatus(int status)
 	{
 		setFinalStatus(status, null);
 	}
+	@Override
 	public void setFinalStatus(int status, Object infoObj)
 	{
 		// CHECK INPUT
@@ -643,6 +727,7 @@ implements ActionListener, ConnectionProgressCallback
 	 * @param hostPortStr
 	 * @param status
 	 */
+	@Override
 	public void setTaskStatus(String hostPortStr, int status)
 	{
 		setTaskStatus(hostPortStr, status, "");
@@ -653,6 +738,7 @@ implements ActionListener, ConnectionProgressCallback
 	 * @param hostPortStr
 	 * @param status
 	 */
+	@Override
 	public void setTaskStatus(String taskName, int status, Object infoObj)
 	{
 		// If not AST Event Queue Thread, call this method again, but from the Event Queue Thread
@@ -664,6 +750,7 @@ implements ActionListener, ConnectionProgressCallback
 			
 			SwingUtilities.invokeLater(new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					setTaskStatus(finalTaskName, finalStatus, finalInfoObj);
@@ -673,7 +760,8 @@ implements ActionListener, ConnectionProgressCallback
 		}
 		
 		// IF we forgot to strip of the string "jdbc:sybase:Tds:", then strip it off.
-		String urlStartTemplate = "jdbc:sybase:Tds:";
+//		String urlStartTemplate = "jdbc:sybase:Tds:";
+		String urlStartTemplate = AseConnectionFactory.getUrlTemplateBase();
 		if (taskName.startsWith(urlStartTemplate))
 			taskName = taskName.substring(urlStartTemplate.length());
 
@@ -863,6 +951,16 @@ implements ActionListener, ConnectionProgressCallback
 	{
 		_doConnectWorker = new SwingWorker()
 		{
+			@Override
+			public void interrupt()
+			{
+				_logger.info("Background connect, interrupt() was received, sorry, can't do anything here.");
+				// Can we do something here it STOP the connection?
+				// well I don't think so but anyway...
+				super.interrupt();
+			}
+
+			@Override
 			public Object construct()
 			{
 				Thread.currentThread().setName("ConnectionProgressDialog");
@@ -889,7 +987,8 @@ implements ActionListener, ConnectionProgressCallback
 							if (cause != null)
 								hostmonMsg += "<BR><b>Reason:</b> "+cause;
 
-							int answer = JOptionPane.showConfirmDialog(_thisDialog, 
+//							int answer = JOptionPane.showConfirmDialog(_thisDialog, 
+							int answer = JOptionPane.showConfirmDialog(ConnectionProgressDialog.this, 
 									"<html>Errors when trying to get a Host Monitoring Connection<BR>" +
 									"Do you want to <b>continue</b> the connection to the ASE Server, with the <b>Host Monitoring option disabled?</b>" +
 									"<BR><BR>" + hostmonMsg + "</html>",
@@ -901,6 +1000,44 @@ implements ActionListener, ConnectionProgressCallback
 						}
 					}
 
+					//-------------------------
+					// DO: TDS SSH Tunnel to Destination host, connect to SSH remote host
+					//-------------------------
+					if (_sshTunnelInfo != null)
+					{
+//						SshConnection sshConn = new SshConnection(
+//								_sshTunnelInfo.getSshHost(), 
+//								_sshTunnelInfo.getSshPort(), 
+//								_sshTunnelInfo.getSshUsername(), 
+//								_sshTunnelInfo.getSshPassword());
+						SshTunnelManager tm = SshTunnelManager.getInstance();
+
+						AseUrlHelper urlHelper = AseUrlHelper.parseUrl(_urlStr);
+						String hostPortStr = urlHelper.getHostPortStr();
+						try
+						{
+							setTaskStatus(TASK_SSH_TUNNEL, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+
+							// Start a tunnel, this will create a SSH Connection, or pick one from the cache
+							tm.setupTunnel(hostPortStr, _sshTunnelInfo);
+
+							// Set the host:port to be: localhost:port
+							AseConnectionFactory.setHostPort(_sshTunnelInfo.getLocalHost(), _sshTunnelInfo.getLocalPort()+"");
+
+							setTaskStatus(TASK_SSH_TUNNEL, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						}
+						catch (Exception ex) 
+						{
+							setTaskStatus(TASK_SSH_TUNNEL, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+
+							// Well if things failed, we need to release the Tunnel connection again
+							tm.releaseTunnel(hostPortStr);
+
+							throw ex;
+						}
+					}
+
+
 					_logger.debug("SwingWorker.construct(): fixme_jdbcDriver='"+_fixme_jdbcDriver+"', fixme_rawUrl='"+_fixme_rawUrl+"', fixme_props='"+_fixme_props+"'.");
 					
 					if (_fixme_jdbcDriver != null && _fixme_rawUrl != null)
@@ -909,7 +1046,8 @@ implements ActionListener, ConnectionProgressCallback
 						// DO: RAW: ASE connection
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: RAW_URL: AseConnectionFactory.getConnection(fixme_jdbcDriver, _fixme_rawUrl, fixme_props, thisDialog)");
-						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
+//						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
+						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, ConnectionProgressDialog.this);
 
 						// close the connection if it's not the expected Product Name
 						if (conn != null)
@@ -928,7 +1066,10 @@ implements ActionListener, ConnectionProgressCallback
 						// DO: ASE connection
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: NORMAL: AseConnectionFactory.getConnection(thisDialog)");
-						Connection conn = AseConnectionFactory.getConnection(_thisDialog);
+//						Connection conn = AseConnectionFactory.getConnection(_thisDialog);
+						Connection conn = AseConnectionFactory.getConnection(ConnectionProgressDialog.this);
+//conn.setClientInfo("TDS_SSH_TUNNEL_CONNECTION", "FIXME: ssh Connection goes here so we can close it, when closing ASE Connection");
+//conn.setClientInfo("TDS_SSH_TUNNEL_INFORMATION", "FIXME: sshTunnelInfo goes here");
 
 						// close the connection if it's not the expected Product Name
 						if (conn != null)
@@ -952,7 +1093,8 @@ implements ActionListener, ConnectionProgressCallback
 							//---- DO 'Check Monitor Configuration' (EXTRA_TASK_CHECK_MONITOR_CONFIG)
 							//-------------------------
 							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-							boolean monCheckOk = AseConnectionUtils.checkForMonitorOptions(conn, null, true, _thisDialog, "enable monitoring");
+//							boolean monCheckOk = AseConnectionUtils.checkForMonitorOptions(conn, null, true, _thisDialog, "enable monitoring");
+							boolean monCheckOk = AseConnectionUtils.checkForMonitorOptions(conn, null, true, ConnectionProgressDialog.this, "enable monitoring");
 							if (monCheckOk)
 								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 							else
@@ -1016,9 +1158,9 @@ implements ActionListener, ConnectionProgressCallback
 							GetCounters.getInstance().initCounters(
 								conn,
 								true,
-								MonTablesDictionary.getInstance().aseVersionNum,
-								MonTablesDictionary.getInstance().isClusterEnabled,
-								MonTablesDictionary.getInstance().montablesVersionNum);
+								MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
+								MonTablesDictionary.getInstance().isClusterEnabled(),
+								MonTablesDictionary.getInstance().getMdaVersion());
 							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 							
 						}
@@ -1045,6 +1187,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			// Called on the event dispatching thread (not on the worker thread) 
 			// after the construct method has returned
+			@Override
 			public void finished()
 			{
 				_hide_but.setEnabled(true);
@@ -1084,13 +1227,6 @@ implements ActionListener, ConnectionProgressCallback
 				{
 					setFinalStatus(ConnectionProgressCallback.FINAL_STATUS_FAILED, "The output from the worker thread was 'null'. This can't be right.");
 				}
-			}
-
-			public void interrupt()
-			{
-				// Can we do something here it STOP the connection?
-				// well I don't think so but anyway...
-				//super.interrupt();
 			}
 		};
 		
@@ -1171,6 +1307,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			_connect_but.addActionListener(this);
 		}
+		@Override
 		public void actionPerformed(ActionEvent e)
 		{
 			Object source = e.getSource();
@@ -1188,6 +1325,7 @@ implements ActionListener, ConnectionProgressCallback
 			}
 		}
 
+		@Override
 		public void setVisible(boolean visible)
 		{
 			if (visible)
@@ -1208,7 +1346,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			try
 			{
-				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null);
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null, null);
 				System.out.println("Connection returned. conn="+conn);
 			}
 			catch (Exception e)

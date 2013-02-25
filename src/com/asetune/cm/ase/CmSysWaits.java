@@ -44,7 +44,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monSysWaits", "monWaitEventInfo", "monWaitClassInfo"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "wait event timing=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
@@ -204,6 +204,7 @@ extends CountersModel
 	/** 
 	 * Compute the WaitTimePerWait for diff values
 	 */
+	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
 		int WaitTime,        Waits;

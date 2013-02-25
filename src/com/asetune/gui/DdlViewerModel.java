@@ -71,6 +71,7 @@ extends AbstractTreeTableModel
 		}
 	}
 
+	@Override
 	public Object getChild(Object parent, int index) 
 	{
 //System.out.println("getChildCount(parent='"+parent+"', index='"+index+"', parent.objType='"+(parent==null?"null":parent.getClass().getName())+"')");
@@ -96,6 +97,7 @@ extends AbstractTreeTableModel
 		return null;
 	}
 
+	@Override
 	public int getChildCount(Object parent) 
 	{
 		_logger.debug("getChildCount(parent='"+parent+"')");
@@ -120,11 +122,13 @@ extends AbstractTreeTableModel
 		return 0;
 	}
 
+	@Override
 	public int getColumnCount() 
 	{
 		return 7;
 	}
 
+	@Override
 	public String getColumnName(int column) 
 	{
 		_logger.debug("getColumnName(column='"+column+"')");
@@ -144,6 +148,7 @@ extends AbstractTreeTableModel
 		}
 	}
 
+	@Override
 	public Class<?> getColumnClass(int column) 
 	{
 		_logger.debug("getColumnClass(column='"+column+"')");
@@ -161,6 +166,7 @@ extends AbstractTreeTableModel
 		}
 	}
 
+	@Override
 	public Object getValueAt(Object node, int column) 
 	{
 		_logger.debug("getValueAt(node='"+node+"', column='"+column+"')");
@@ -226,6 +232,7 @@ extends AbstractTreeTableModel
 //public int getIndexOfChild(Object parent, Object child);
 //public boolean isLeaf(Object node);
 
+	@Override
 	public int getIndexOfChild(Object parent, Object child) 
 	{
 		_logger.debug("getIndexOfChild(parent='"+parent+"', child='"+child+"'.)");
@@ -236,12 +243,14 @@ extends AbstractTreeTableModel
 		return -1;
 	}
 
+	@Override
 	public Object getRoot() 
 	{
 		_logger.debug("getRoot()");
 		return _dblist;
 	}
 
+	@Override
 	public boolean isLeaf(Object node) 
 	{
 		_logger.debug("isLeaf(node='"+node+"')");
@@ -279,6 +288,7 @@ extends AbstractTreeTableModel
 		public void add(TypeEntry te)   { _typeList.add(te); }
 		public String getDisplayString(){ return _dbname; }
 //		public String toString()        { return getDisplayString(); }
+		@Override
 		public String toString()        { return "DbEntry("+_dbname+")"; }
 	}
 	protected static class TypeEntry
@@ -294,6 +304,7 @@ extends AbstractTreeTableModel
 		public String getTypeName()     { return DdlViewer.getTypeName(_type); }
 		public String getDisplayString(){ return getTypeName(); }
 //		public String toString()        { return getDisplayString(); }
+		@Override
 		public String toString()        { return "TypeEntry("+_type+")"; }
 	}
 	protected static class ObjectEntry
@@ -319,6 +330,7 @@ extends AbstractTreeTableModel
 
 		public String getDisplayString(){ return _name; }
 //		public String toString()        { return getDisplayString(); }
+		@Override
 		public String toString()        { return "ObjectEntry("+_dbname+":"+_type+":"+_name+")"; }
 	}
 }

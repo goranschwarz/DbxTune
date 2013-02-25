@@ -312,6 +312,7 @@ public final class JColorComboBox
 	 * @param font the font to use to render text
 	 * @see #setShowText
 	 */
+	@Override
 	public void setFont(Font font)
 	{
 		super.setFont(font);
@@ -371,6 +372,7 @@ public final class JColorComboBox
 	 *        list, this function has no effect
 	 * @see #setSelectedColor
 	 */
+	@Override
 	public void setSelectedItem(Object color)
 	{
 		System.out.println("JColorComboBox.setSelectedItem(Object): color.getClass='"+color.getClass().getName()+"', color.toString='"+color+"'.");
@@ -418,6 +420,7 @@ public final class JColorComboBox
 			this.name = name;
 		}
 
+		@Override
 		public String toString()
 		{
 			return name;
@@ -476,6 +479,7 @@ public final class JColorComboBox
 			textPanel.add(text);
 		}
 
+		@Override
 		public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus)
 		{
 			if (isSelected)
@@ -507,6 +511,7 @@ public final class JColorComboBox
 			return this;
 		}
 
+		@Override
 		public void paintComponent(Graphics g)
 		{
 			super.paintComponent(g);
@@ -514,6 +519,7 @@ public final class JColorComboBox
 			g.fillRect(2, disp, getWidth() - 4, thickness);
 		}
 
+		@Override
 		public Dimension getPreferredSize()
 		{
 			return new Dimension(width, height);

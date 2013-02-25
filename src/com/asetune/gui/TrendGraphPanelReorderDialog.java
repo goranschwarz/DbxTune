@@ -208,6 +208,7 @@ public class TrendGraphPanelReorderDialog
 		_apply.setEnabled(false);
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -381,12 +382,14 @@ public class TrendGraphPanelReorderDialog
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TabPos.Icon   .ordinal()) return Icon.class;
 				if (column == TabPos.Enabled.ordinal()) return Boolean.class;
 				return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int col)
 			{
 				if (col == TabPos.Enabled.ordinal())

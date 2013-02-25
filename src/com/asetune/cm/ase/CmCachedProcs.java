@@ -38,12 +38,12 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedProcedures"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "per object statistics active=1", "statement statistics active=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"RequestCnt", "TempdbRemapCnt", "ExecutionCount", "CPUTime", "ExecutionTime", 
+		"RequestCntDiff", "TempdbRemapCnt", "ExecutionCount", "CPUTime", "ExecutionTime", 
 		"PhysicalReads", "LogicalReads", "PhysicalWrites", "PagesWritten"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -159,7 +159,7 @@ extends CountersModel
 		{
 			orderBy = "order by RequestCnt desc \n";
 
-			RequestCnt         = "RequestCnt, ";
+			RequestCnt         = "RequestCnt, RequestCntDiff = RequestCnt, ";
 			TempdbRemapCnt     = "TempdbRemapCnt, ";
 			AvgTempdbRemapTime = "AvgTempdbRemapTime, ";
 			ase1550_nl         = "\n";
@@ -211,7 +211,7 @@ extends CountersModel
 		if (getServerVersion() < 15500)
 			return null;
 
-		String[] sa = {"RequestCnt"};
+		String[] sa = {"RequestCntDiff"};
 		return sa;
 	}
 }

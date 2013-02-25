@@ -7,8 +7,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Image;
-import java.awt.Toolkit;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -136,6 +136,7 @@ public class ProcessDetailFrame extends JFrame
 	{
         private static final long serialVersionUID = 5947221518946711279L;
 
+		@Override
 		public Component getTableCellRendererComponent(JTable table,
 		    Object value,boolean isSelected,boolean hasFocus,
 		    int row, int column)
@@ -167,6 +168,7 @@ public class ProcessDetailFrame extends JFrame
 	{
         private static final long serialVersionUID = 1L;
 
+		@Override
 		public TableCellRenderer getCellRenderer(int row, int column)
 		{
 			return currentStmtRenderer;
@@ -177,6 +179,7 @@ public class ProcessDetailFrame extends JFrame
 		 * Called when a row/cell is about to change.
 		 * getSelectedRow(), still shows what the *current* selection is
 		 */
+		@Override
 		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
 		{
 			_logger.debug("changeSelection(row="+row+", column="+column+", toggle="+toggle+", extend="+extend+"), getSelectedRow()="+getSelectedRow()+", getSelectedColumn()="+getSelectedColumn());
@@ -199,6 +202,7 @@ public class ProcessDetailFrame extends JFrame
 	{
         private static final long serialVersionUID = -1766679067814631283L;
 
+		@Override
 		public Component getTableCellRendererComponent(JTable table,
 		    Object value,boolean isSelected,boolean hasFocus,
 		    int row, int column)
@@ -228,6 +232,7 @@ public class ProcessDetailFrame extends JFrame
 	{
         private static final long serialVersionUID = 5214078163042572369L;
 
+		@Override
 		public TableCellRenderer getCellRenderer(int row, int column)
 		{
 			return capturedStmtRenderer;
@@ -238,6 +243,7 @@ public class ProcessDetailFrame extends JFrame
 		 * Called when a row/cell is about to change.
 		 * getSelectedRow(), still shows what the *current* selection is
 		 */
+		@Override
 		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
 		{
 			_logger.debug("changeSelection(row="+row+", column="+column+", toggle="+toggle+", extend="+extend+"), getSelectedRow()="+getSelectedRow()+", getSelectedColumn()="+getSelectedColumn());
@@ -409,7 +415,7 @@ public class ProcessDetailFrame extends JFrame
 	private JButton      clearButton             = new JButton();
 	private JButton      saveButton              = new JButton();
 
-	private Image        frameIcon;
+//	private Image        frameIcon;
 
 //	public ProcessDetailFrame(int k, int in_spid)
 	public ProcessDetailFrame(int KPID)
@@ -452,6 +458,7 @@ public class ProcessDetailFrame extends JFrame
 		this.setTitle("Process Detail");
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				this_windowClosing(e);
@@ -499,6 +506,7 @@ public class ProcessDetailFrame extends JFrame
 		capturedStatementsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		capturedStatementsTable.addMouseListener(new java.awt.event.MouseAdapter()
 		{
+			@Override
 			public void mouseClicked(MouseEvent e)
 			{
 				capturedStatementsTable_mouseClicked(e);
@@ -546,6 +554,7 @@ public class ProcessDetailFrame extends JFrame
 		batchPlanSplitPan.setBorder(null);
 		currentStatementTable.addMouseListener(new java.awt.event.MouseAdapter()
 		{
+			@Override
 			public void mouseClicked(MouseEvent e)
 			{
 				currentSstatementTable_mouseClicked(e);
@@ -906,6 +915,7 @@ public class ProcessDetailFrame extends JFrame
 		refreshIntLbl.setText("Refresh Interv. (s) :");
 		refreshIntFld.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				refreshIntFld_actionPerformed(e);
@@ -939,6 +949,7 @@ public class ProcessDetailFrame extends JFrame
 		refreshButton.setText("Refresh");
 		refreshButton.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				refreshButton_actionPerformed(e);
@@ -948,6 +959,7 @@ public class ProcessDetailFrame extends JFrame
 		clearButton.setToolTipText("Clear information in all Table below.");
 		clearButton.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				clear();
@@ -968,6 +980,7 @@ public class ProcessDetailFrame extends JFrame
 			"</html>");
 		saveButton.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				saveCapturedStatements();
@@ -1057,6 +1070,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		batchScrollPan.getViewport().add(batchTextArea, null);
 		batchShowEnableCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				if (refressProcess != null)
@@ -1066,6 +1080,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		});
 		sqlTextShowProcSrcCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				saveProps();
@@ -1080,6 +1095,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		planScrollPan.getViewport().add(planTextArea, null);
 		planShowEnableCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				if (refressProcess != null)
@@ -1132,6 +1148,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		_currentStmntSqlOrderBy_cbx.addItem("");
 		_currentStmntSqlOrderBy_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				action_currentStmntSqlOrderBy_cbx(e);
@@ -1188,6 +1205,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		comboBox_captureWhereSql.addItem("");
 		comboBox_captureWhereSql.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				comboBox_captureWhereSql_actionPerformed(e);
@@ -1196,6 +1214,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		buttom_captureWhereSql.setToolTipText("Remove the current restriction from the template.");
 		buttom_captureWhereSql.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				buttom_captureWhereSql_actionPerformed(e);
@@ -1204,6 +1223,7 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		discardPreOpenStmntsCheckbox.setToolTipText("If you want to discard or show events from monSysStatements that happened prior to the window was open.");
 		discardPreOpenStmntsCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				if (refressProcess != null)
@@ -1825,12 +1845,14 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
 			_logger.debug("Open ProcessDetailFrame in center of window.");
-			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+			Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+//			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 			Dimension frameSize = this.getPreferredSize();
 			if (frameSize.height > screenSize.height)
 			{

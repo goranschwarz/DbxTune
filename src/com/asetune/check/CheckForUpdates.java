@@ -295,6 +295,7 @@ public class CheckForUpdates
 	{
 		Runnable checkLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				CheckForUpdates chk = new CheckForUpdates();
@@ -404,6 +405,7 @@ public class CheckForUpdates
 		urlParams.add("java_version",       System.getProperty("java.version"));
 		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
 		urlParams.add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
+		urlParams.add("sun_arch_data_model",System.getProperty("sun.arch.data.model"));
 		urlParams.add("java_home",          System.getProperty("java.home"));
 		if (_useHttpPost)
 			urlParams.add("java_class_path",System.getProperty("java.class.path"));
@@ -759,6 +761,7 @@ public class CheckForUpdates
 
 		Runnable doLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				CheckForUpdates connInfo = new CheckForUpdates();
@@ -832,6 +835,7 @@ public class CheckForUpdates
 		String srvVersionStr    = "";
 		String srvSortOrderId   = "";
 		String srvSortOrderName = "";
+		String srvSapSystemInfo = "";
 
 		String usePcs           = "";
 		String pcsConfig        = "";
@@ -839,16 +843,17 @@ public class CheckForUpdates
 		
 		if (connType == ConnectionDialog.ASE_CONN)
 		{
-			srvVersion       = mtd.aseVersionNum + "";
-			isClusterEnabled = mtd.isClusterEnabled + "";
+			srvVersion       = mtd.getAseExecutableVersionNum() + "";
+			isClusterEnabled = mtd.isClusterEnabled() + "";
 
 			srvName          = AseConnectionFactory.getServer();
 			srvIpPort        = AseConnectionFactory.getHostPortStr();
 			srvUser          = AseConnectionFactory.getUser();
 			srvUserRoles     = "not_initialized";
-			srvVersionStr    = mtd.aseVersionStr;
-			srvSortOrderId   = mtd.aseSortId + "";
-			srvSortOrderName = mtd.aseSortName;
+			srvVersionStr    = mtd.getAseExecutableVersionStr();
+			srvSortOrderId   = mtd.getAseSortId() + "";
+			srvSortOrderName = mtd.getAseSortName();
+			srvSapSystemInfo = mtd.getSapSystemInfo();
 
 			// Get role list from the Summary CM
 //			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
@@ -880,6 +885,7 @@ public class CheckForUpdates
 			srvVersionStr    = "offline-read";
 			srvSortOrderId   = "offline-read";
 			srvSortOrderName = "offline-read";
+			srvSapSystemInfo = "offline-read";
 
 			usePcs           = "true";
 			pcsConfig        = "";
@@ -914,6 +920,7 @@ public class CheckForUpdates
 		urlParams.add("srvVersionStr",       srvVersionStr);
 		urlParams.add("srvSortOrderId",      srvSortOrderId);
 		urlParams.add("srvSortOrderName",    srvSortOrderName);
+		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
 
 		urlParams.add("usePcs",              usePcs);
 		urlParams.add("pcsConfig",           pcsConfig);
@@ -976,6 +983,7 @@ public class CheckForUpdates
 
 		Runnable doLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				CheckForUpdates connInfo = new CheckForUpdates();
@@ -1020,15 +1028,16 @@ public class CheckForUpdates
 			return;
 		}
 
-		if (mtd.aseVersionNum <= 0)
+		if (mtd.getAseExecutableVersionNum() <= 0)
 		{
 			_logger.debug("MonTablesDictionary aseVersionNum is zero, stopping here.");
 			return;
 		}
 
-		if (mtd.installmasterVersionNum > 0 && mtd.aseVersionNum != mtd.installmasterVersionNum)
+//		if (mtd.installmasterVersionNum > 0 && mtd.aseVersionNum != mtd.installmasterVersionNum)
+		if (mtd.getAseMonTableVersionNum() > 0 && mtd.getAseExecutableVersionNum() != mtd.getAseMonTableVersionNum())
 		{
-			_logger.info("MonTablesDictionary aseVersionNum("+mtd.aseVersionNum+") and installmasterVersionNum("+mtd.installmasterVersionNum+") is not in sync, so we don't want to send MDA info about this.");
+			_logger.info("MonTablesDictionary aseVersionNum("+mtd.getAseExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getAseMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
 			return;
 		}
 
@@ -1043,8 +1052,8 @@ public class CheckForUpdates
 		String checkId          = _checkId + "";
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
-		String srvVersion       = mtd.aseVersionNum + "";
-		String isClusterEnabled = mtd.isClusterEnabled + "";		
+		String srvVersion       = mtd.getAseExecutableVersionNum() + "";
+		String isClusterEnabled = mtd.isClusterEnabled() + "";		
 
 		// Keep the Query objects in a list, because the "MDA" info WILL have multiple sends.
 		List<QueryString> sendQueryList = new ArrayList<QueryString>();
@@ -1056,22 +1065,22 @@ public class CheckForUpdates
 			// monTables
 			String sql_monTables_rowCount = 
 				"select count(*) from master.dbo.monTables \n" +
-				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTables = 
 				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
 			    "from master.dbo.monTables t \n" +
-				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			// monTableColumns
 			String sql_monTableColumns_rowCount = 
 				"select count(*) from master.dbo.monTableColumns \n" +
-				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTableColumns = 
 				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
 			    "from master.dbo.monTableColumns c " +
-				(mtd.aseVersionNum >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
 			
 			// monTableParameters
 			String sql_monTableParameters_rowCount = 
@@ -1131,7 +1140,7 @@ public class CheckForUpdates
 
 		if (sendQueryList.size() > 0)
 		{
-			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.aseVersionNum+"'.");
+			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
 			long startTime = System.currentTimeMillis();
 			for (QueryString urlEntry : sendQueryList)
 			{
@@ -1276,6 +1285,7 @@ public class CheckForUpdates
 
 		Runnable doLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				CheckForUpdates chk = new CheckForUpdates();
@@ -1435,6 +1445,7 @@ public class CheckForUpdates
 
 		Runnable doLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 //				if ( ! _sendCounterUsage_done )
@@ -1668,7 +1679,7 @@ public class CheckForUpdates
 				int timeout = DEFAULT_TIMEOUT;
 				String threadName = Thread.currentThread().getName(); 
 				if ( ! "sendCounterUsageInfo".equals(threadName) )
-					timeout = 2000;
+					timeout = 5000;
 
 				// SEND OFF THE REQUEST
 				InputStream in;
@@ -1749,11 +1760,11 @@ public class CheckForUpdates
 		if (msg != null)
 		{
 			// Filter out following messages:
-			//_logger.warn("When trying to initialize Counters Models ("+getName()+") The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
+			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
 			//_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'"+reconfigOptionStr+"), so monitoring information about '"+getDisplayName()+"' will NOT be enabled.");
-			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersionStr()+", I need atleast ASE Version "+getDependsOnVersionStr()+" for that.");
-			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Cluster Edition Version "+getServerVersionStr()+", I need atleast ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
-			//_logger.warn("When trying to initialize Counters Models ("+getName()+") in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Version "+getServerVersionStr()+", I need atleast ASE Version "+getDependsOnVersionStr()+" for that.");
+			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Cluster Edition Version "+getServerVersionStr()+", I need atleast ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
+			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 			if (msg.startsWith("When trying to initialize Counters Model")) 
 				return;
 			
@@ -1775,6 +1786,7 @@ public class CheckForUpdates
 		// SEND This using a thread
 		Runnable doLater = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				CheckForUpdates errorInfo = new CheckForUpdates();
@@ -1819,7 +1831,10 @@ public class CheckForUpdates
 		if ( MonTablesDictionary.hasInstance() )
 		{
 			if ( MonTablesDictionary.getInstance().isInitialized() )
-				srvVersion = MonTablesDictionary.getInstance().aseVersionNum + "";
+				srvVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum() + "";
+
+			else if (MonTablesDictionary.getInstance().hasEarlyVersionInfo())
+				srvVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum() + "";
 		}
 
 		// COMPOSE: parameters to send to HTTP server
@@ -1934,16 +1949,32 @@ public class CheckForUpdates
 					String msg = MessageFormat.format(message, params);
 					msg = clazz.getName() + ": " + msg;
 
+					// Check input parameters, and keep last Throwable if any of that cind.
+					Throwable t = null;
+					String tMsg = "";
+					for (Object param : params)
+					{
+						if (param instanceof Throwable)
+						{
+							t = (Throwable)param;
+							tMsg = " Caught: " + t;
+						}
+					}
+					Configuration conf = Configuration.getCombinedConfiguration();
+					if ( ! conf.getBooleanProperty("proxyvole.debug.stacktaceOnLogMessages", false) )
+						t = null;
+						
+
 //					System.out.println("PROXY-VOLE.log(logLevel="+logLevel+"): "+msg);
-					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(msg);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(msg);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info(msg);
-//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn(msg);
-//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(msg);
+					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(msg + tMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(msg + tMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info( msg + tMsg, t);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn( msg + tMsg, t);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(msg + tMsg, t);
 					// downgrade WAR and ERROR to INFO, this so it wont open the log window
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info(msg);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info(msg);
-					else _logger.info("Unhandled loglevel("+logLevel+"): " + msg);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info( msg + tMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info( msg + tMsg, t);
+					else _logger.info("Unhandled loglevel("+logLevel+"): " + msg + tMsg, t);
 				}
 			});
 
@@ -2007,6 +2038,7 @@ public class CheckForUpdates
 			}
 		}
 
+		@Override
 		public void connectFailed(URI uri, SocketAddress sa, IOException ioe)
 		{
 			if (_proxyVole != null)
@@ -2126,6 +2158,7 @@ public class CheckForUpdates
 			return _query.toString();
 		}
 
+		@Override
 		public String toString()
 		{
 			return getQuery();

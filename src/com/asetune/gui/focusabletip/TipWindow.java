@@ -28,9 +28,9 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -100,6 +100,7 @@ class TipWindow extends JWindow implements ActionListener {
 		}
 		textArea.addMouseListener(tipListener);
 		textArea.addHyperlinkListener(new HyperlinkListener() {
+			@Override
 			public void hyperlinkUpdate(HyperlinkEvent e) {
 				if (e.getEventType()==HyperlinkEvent.EventType.ACTIVATED) {
 					TipWindow.this.ft.possiblyDisposeOfTipWindow();
@@ -116,6 +117,7 @@ class TipWindow extends JWindow implements ActionListener {
 		// InputMap/ActionMap combo doesn't work for JWindows (even when
 		// using the JWindow's JRootPane), so we'll resort to KeyListener
 		KeyAdapter ka = new KeyAdapter() {
+			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode()==KeyEvent.VK_ESCAPE) {
 					TipWindow.this.ft.possiblyDisposeOfTipWindow();
@@ -138,6 +140,7 @@ class TipWindow extends JWindow implements ActionListener {
 	}
 
 
+	@Override
 	public void actionPerformed(ActionEvent e) {
 
 		if (!getFocusableWindowState()) {
@@ -146,6 +149,7 @@ class TipWindow extends JWindow implements ActionListener {
 			textArea.removeMouseListener(tipListener);
 			pack();
 			addWindowFocusListener(new WindowAdapter() {
+				@Override
 				public void windowLostFocus(WindowEvent e) {
 					ft.possiblyDisposeOfTipWindow();
 				}
@@ -162,6 +166,7 @@ class TipWindow extends JWindow implements ActionListener {
 	/**
 	 * Disposes of this window.
 	 */
+	@Override
 	public void dispose() {
 		//System.out.println("[DEBUG]: Disposing...");
 		Container cp = getContentPane();
@@ -194,7 +199,8 @@ class TipWindow extends JWindow implements ActionListener {
 //			d.width = Math.min(d.width+25, 320);
 //			d.height = Math.min(d.height, 150);
 
-			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//			Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+			Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 
 			if (d.height > (screenSize.height - 80))
 				d.height = screenSize.height - 80;
@@ -229,6 +235,7 @@ class TipWindow extends JWindow implements ActionListener {
 			panel.add(sg, BorderLayout.LINE_END);
 			MouseInputAdapter adapter = new MouseInputAdapter() {
 				private Point lastPoint;
+				@Override
 				public void mouseDragged(MouseEvent e) {
 					Point p = e.getPoint();
 					SwingUtilities.convertPointToScreen(p, panel);
@@ -242,6 +249,7 @@ class TipWindow extends JWindow implements ActionListener {
 						lastPoint = p;
 					}
 				}
+				@Override
 				public void mousePressed(MouseEvent e) {
 					lastPoint = e.getPoint();
 					SwingUtilities.convertPointToScreen(lastPoint, panel);
@@ -317,10 +325,12 @@ class TipWindow extends JWindow implements ActionListener {
 		public TipListener() {
 		}
 
+		@Override
 		public void mousePressed(MouseEvent e) {
 			actionPerformed(null); // Manually create "real" window
 		}
 
+		@Override
 		public void mouseExited(MouseEvent e) {
 			// Since we registered this listener on the child components of
 			// the JWindow, not the JWindow iteself, we have to be careful.

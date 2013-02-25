@@ -150,9 +150,9 @@ implements ActionListener, TableModelListener
 	private KeyListener _keyListener = new KeyListener()
 	{
 		 // Changes in the fields are visible first when the key has been released.
-		public void keyPressed (KeyEvent keyevent) {}
-		public void keyTyped   (KeyEvent keyevent) {}
-		public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
+		@Override public void keyPressed (KeyEvent keyevent) {}
+		@Override public void keyTyped   (KeyEvent keyevent) {}
+		@Override public void keyReleased(KeyEvent keyevent) { checkForChanges(); }
 	};
 
 	protected void initComponents() 
@@ -335,6 +335,7 @@ implements ActionListener, TableModelListener
 		_apply.setEnabled(false);
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -747,6 +748,7 @@ implements ActionListener, TableModelListener
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if      (column == TabPos.VisibleInGraphs.ordinal()) return Boolean.class;
@@ -756,6 +758,7 @@ implements ActionListener, TableModelListener
 				else if (column == TabPos.LogSizeUsedPct .ordinal()) return Number.class;
 				else return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int col)
 			{
 				if (col == TabPos.KeepDb.ordinal()) return true;
@@ -774,6 +777,7 @@ implements ActionListener, TableModelListener
 			private static final long serialVersionUID = 1L;
 
 			/** Enable/Disable + add some color to non changeable columns */
+			@Override
 			public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
 			{
 				Component c = super.prepareRenderer(renderer, row, column);
@@ -784,12 +788,14 @@ implements ActionListener, TableModelListener
 			}
 
 			/** TABLE HEADER tool tip. */
+			@Override
 			protected JTableHeader createDefaultTableHeader()
 			{
 				JTableHeader tabHeader = new JXTableHeader(getColumnModel())
 				{
 	                private static final long serialVersionUID = 0L;
 
+					@Override
 					public String getToolTipText(MouseEvent e)
 					{
 						String tip = null;
@@ -814,6 +820,7 @@ implements ActionListener, TableModelListener
 		};
 		table.addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				return (Boolean) adapter.getValue(TabPos.VisibleInGraphs.ordinal());

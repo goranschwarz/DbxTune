@@ -23,6 +23,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -41,6 +43,23 @@ public class GetCountersGui
 	private static Logger _logger          = Logger.getLogger(GetCountersGui.class);
 	private boolean       _running = true;
 
+	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.low_on_memory.mb"; 
+	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = 130; 
+
+	public static final String PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.out_of_memory.mb";
+	public static final int    DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = 30; 
+
+	static
+	{
+		Configuration.registerDefaultValue(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
+		Configuration.registerDefaultValue(PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB);
+	}
+
+	public static final int MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = Configuration.getCombinedConfiguration().getIntProperty(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
+	public static final int MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = Configuration.getCombinedConfiguration().getIntProperty(PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB);
+//	public static final int MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = 130;
+//	public static final int MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = 30;
+
 	/** means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection */
 	private boolean _canDoReconnect = false; 
 
@@ -49,6 +68,7 @@ public class GetCountersGui
 		super.setInstance(this);
 	}
 
+	@Override
 	public void init()
 	throws Exception
 	{
@@ -124,6 +144,7 @@ public class GetCountersGui
 	/**
 	 * Set the <code>Connection</code> to use for monitoring.
 	 */
+	@Override
 	public void setMonConnection(Connection conn)
 	{
 		super.setMonConnection(conn);
@@ -181,6 +202,7 @@ public class GetCountersGui
 		_canDoReconnect = false;
 	}
 
+	@Override
 	public void run()
 	{
 		boolean	  firstLoopAfterConnect = true;
@@ -321,9 +343,16 @@ public class GetCountersGui
 
 			loopCounter++;
 
-			// When 10 MB of memory or less, write some info about that.
+			// When 130 MB of memory or less, enable Java Garbage Collect after each Sample
+			if (Memory.getMemoryLeftInMB() <= MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
+			{
+				ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_LOW_ON_MEMORY);
+				MainFrame.getInstance().actionPerformed(doGcEvent);
+			}
+
+			// When 30 MB of memory or less, write some info about that.
 			// and call some handler to act on low memory.
-			if (Memory.checkMemoryUsage(10))
+			if (Memory.checkMemoryUsage(MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB))
 			{
 				ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_OUT_OF_MEMORY);
 				MainFrame.getInstance().actionPerformed(doGcEvent);
@@ -334,9 +363,47 @@ public class GetCountersGui
 				// Sleep (if not first loop)
 				if ( ! firstLoopAfterConnect )
 				{
+					boolean doJavaGcAfterRefresh        = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefresh,        MainFrame.DEFAULT_doJavaGcAfterRefresh);
+					boolean doJavaGcAfterRefreshShowGui = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefreshShowGui, MainFrame.DEFAULT_doJavaGcAfterRefreshShowGui);
+
 					int sleepTime = MainFrame.getRefreshInterval();
 					for (int i=sleepTime; i>0; i--)
 					{
+						// Do Java Garbage Collection?
+						if (doJavaGcAfterRefresh && (i == sleepTime-1)) // sleep first second before try do GC
+						{
+							setWaitEvent("Doing Java Garbage Collection.");
+							MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Doing Java Garbage Collection.");
+							
+							if (doJavaGcAfterRefreshShowGui)
+							{
+								WaitForExecDialog execWait = new WaitForExecDialog(MainFrame.getInstance(), "Forcing Java Garbage Collection.");
+								execWait.setState("Note: This can be disabled from Menu->View->Preferences.");
+								BgExecutor doWork = new BgExecutor(execWait)
+								{
+									@Override
+									public Object doWork()
+									{
+										// just sleep 10ms, so the GUI will have a chance to become visible
+										try {Thread.sleep(10);}
+										catch(InterruptedException ignore) {}
+	
+										System.gc();
+										
+										return null;
+									}
+								};
+								execWait.execAndWait(doWork, 0);
+							}
+							else
+							{
+								System.gc();
+							}
+
+							setWaitEvent("next sample period...");
+							MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+i+" seconds, waiting for "+getWaitEvent());
+						}
+
 						if (MainFrame.getStatus(MainFrame.ST_STATUS_FIELD).startsWith("Sleeping for "))
 							MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+i+" seconds, waiting for "+getWaitEvent());
 
@@ -358,12 +425,9 @@ public class GetCountersGui
 						boolean ok = sleep(1000);
 						if (!ok)
 							break;
-//						try { Thread.sleep(1000); }
-//						catch (InterruptedException ignore)
-//						{
-//							// leave the sleep loop
-//							break;
-//						}
+
+						MainFrame.setStatus(MainFrame.ST_MEMORY);
+
 					} // end: sleep loop
 				}
 				firstLoopAfterConnect = false;
@@ -396,9 +460,9 @@ public class GetCountersGui
 					initCounters(
 						getMonConnection(),
 						true,
-						MonTablesDictionary.getInstance().aseVersionNum,
-						MonTablesDictionary.getInstance().isClusterEnabled,
-						MonTablesDictionary.getInstance().montablesVersionNum);
+						MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
+						MonTablesDictionary.getInstance().isClusterEnabled(),
+						MonTablesDictionary.getInstance().getMdaVersion());
 
 					// emulate a slow INIT time...
 					//try { Thread.sleep(7000); }
@@ -473,7 +537,7 @@ public class GetCountersGui
 					sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
 					// If version is above 15.0.2 and you have 'sa_role' 
 					// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-					if (MonTablesDictionary.getInstance().aseVersionNum >= 15020)
+					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
 					{
 						if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 							sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
@@ -678,6 +742,7 @@ public class GetCountersGui
 				}
 
 				setInRefresh(false);
+			
 				setWaitEvent("next sample period...");
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
 			}

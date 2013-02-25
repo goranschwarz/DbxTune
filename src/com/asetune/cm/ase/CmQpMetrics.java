@@ -216,17 +216,17 @@ extends CountersModel
 		int sequence_pos = cnt.findColumn("sequence");
 		int qtext_pos    = cnt.findColumn("qtext");
 		
-		String  DBName   = (String) thisRow.get(DBName_pos);
-		Integer id       = (Integer)thisRow.get(id_pos);
-		Integer sequence = (Integer)thisRow.get(sequence_pos);
-		String  qtext    = (String) thisRow.get(qtext_pos);
+		String DBName   = (String) thisRow.get(DBName_pos);
+		Number id       = (Number) thisRow.get(id_pos);
+		Number sequence = (Number) thisRow.get(sequence_pos);
+		String qtext    = (String) thisRow.get(qtext_pos);
 
 		if (sequence.intValue() > 0)
 		{
-			String  prev_DBName   = (String) prevRow.get(DBName_pos);
-			Integer prev_id       = (Integer)prevRow.get(id_pos);
-			Integer prev_sequence = (Integer)prevRow.get(sequence_pos);
-			String  prev_qtext    = (String) prevRow.get(qtext_pos);
+			String prev_DBName   = (String) prevRow.get(DBName_pos);
+			Number prev_id       = (Number) prevRow.get(id_pos);
+			Number prev_sequence = (Number) prevRow.get(sequence_pos);
+			String prev_qtext    = (String) prevRow.get(qtext_pos);
 
 			if (DBName.equals(prev_DBName) && id.equals(prev_id) && prev_sequence.intValue() == 0)
 			{

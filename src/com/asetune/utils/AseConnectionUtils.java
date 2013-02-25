@@ -668,6 +668,32 @@ public class AseConnectionUtils
 	}
 
 	/**
+	 * Get the currently used errolog on the server 
+	 * 
+	 * @param conn
+	 * @return the errolog 
+	 * @throws SQLException
+	 */
+	public static String getServerLogFileName(Connection conn)
+	throws SQLException
+	{
+		String cmd = "select @@errorlog";
+		String retStr = "";
+
+		Statement stmt = conn.createStatement();
+		
+		ResultSet rs = stmt.executeQuery(cmd);
+		while (rs.next())
+		{
+			retStr = rs.getString(1);
+		}
+		rs.close();
+		stmt.close();
+
+		return retStr;
+	}
+
+	/**
 	 * Get ASE SPID
 	 * @param conn
 	 * @return
@@ -731,6 +757,15 @@ public class AseConnectionUtils
 				{
 					String hostname = host.substring(0, host.indexOf("."));
 					String portnum  = host.substring(host.lastIndexOf(" "));
+					
+					// if hostname is a number, then it's probably an IP adress
+					// Then use the full IP
+					try 
+					{ 
+						hostname = host.substring(0, host.indexOf(" ")).trim();
+						Integer.parseInt(hostname);
+					}
+					catch(NumberFormatException ignore) {}
 					listenersStr += hostname + portnum;
 				}
 				else
@@ -806,7 +841,8 @@ public class AseConnectionUtils
 //	}
 	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
 	{
-		String exMsg = getMessageFromSQLException(sqlex, true);
+		String exMsg    = getMessageFromSQLException(sqlex, true);
+		String exMsgRet = getMessageFromSQLException(sqlex, false);
 
 		String extraInfo = ""; 
 
@@ -850,7 +886,7 @@ public class AseConnectionUtils
 
 		SwingUtils.showErrorMessage(owner, title, htmlStr, sqlex);
 		
-		return exMsg;
+		return exMsgRet;
 	}
 
 	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags) 
@@ -1471,7 +1507,7 @@ public class AseConnectionUtils
 			//---------------------------------
 			// check for MON_ROLE
 			//---------------------------------
-			final String propKey_showDialogOnNoRole_mon_role = "AseConnectionUtils.showDialogOnNoRole.mon_role";
+			final String PROPKEY_showDialogOnNoRole_mon_role = "AseConnectionUtils.showDialogOnNoRole.mon_role";
 
 			if ( ! has_mon_role )
 			{
@@ -1507,10 +1543,10 @@ public class AseConnectionUtils
 				// If mon_role was still unsuccessfull
 				if ( ! has_mon_role )
 				{
-					String msg = "You need 'mon_role' to access monitoring tables";
+					String msg = "You need 'mon_role' to access monitoring tables, the login attempt will be continued, but with limited access.";
 					_logger.warn(msg);
 
-					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey_showDialogOnNoRole_mon_role, true);
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showDialogOnNoRole_mon_role, true);
 					if (gui && showInfo)
 					{
 						String msgHtml = 
@@ -1555,7 +1591,7 @@ public class AseConnectionUtils
 								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 								if (conf == null)
 									return;
-								conf.setProperty(propKey_showDialogOnNoRole_mon_role, ((JCheckBox)e.getSource()).isSelected());
+								conf.setProperty(PROPKEY_showDialogOnNoRole_mon_role, ((JCheckBox)e.getSource()).isSelected());
 								conf.save();
 							}
 						});
@@ -1572,7 +1608,7 @@ public class AseConnectionUtils
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf != null)
 				{
-					conf.remove(propKey_showDialogOnNoRole_mon_role);
+					conf.remove(PROPKEY_showDialogOnNoRole_mon_role);
 					conf.save();
 				}
 			}
@@ -1580,7 +1616,7 @@ public class AseConnectionUtils
 			//---------------------------------
 			// check for SYBASE_TS_ROLE
 			//---------------------------------
-			final String propKey_showDialogOnNoRole_sybase_ts_role = "AseConnectionUtils.showDialogOnNoRole.sybase_ts_role";
+			final String PROPKEY_showDialogOnNoRole_sybase_ts_role = "AseConnectionUtils.showDialogOnNoRole.sybase_ts_role";
 
 			if ( ! has_sybase_ts_role )
 			{
@@ -1619,7 +1655,7 @@ public class AseConnectionUtils
 					String msg = "You may need 'sybase_ts_role' to access some DBCC functionality or other commands used while monitoring.";
 					_logger.warn(msg);
 
-					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(propKey_showDialogOnNoRole_sybase_ts_role, true);
+					boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showDialogOnNoRole_sybase_ts_role, true);
 					if (gui && showInfo)
 					{
 						String msgHtml = 
@@ -1650,7 +1686,7 @@ public class AseConnectionUtils
 								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 								if (conf == null)
 									return;
-								conf.setProperty(propKey_showDialogOnNoRole_sybase_ts_role, ((JCheckBox)e.getSource()).isSelected());
+								conf.setProperty(PROPKEY_showDialogOnNoRole_sybase_ts_role, ((JCheckBox)e.getSource()).isSelected());
 								conf.save();
 							}
 						});
@@ -1669,7 +1705,7 @@ public class AseConnectionUtils
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf != null)
 				{
-					conf.remove(propKey_showDialogOnNoRole_sybase_ts_role);
+					conf.remove(PROPKEY_showDialogOnNoRole_sybase_ts_role);
 					conf.save();
 				}
 			}
@@ -2019,6 +2055,23 @@ public class AseConnectionUtils
 		return val;
 	}
 
+	public static String getAseConfigRunValueStr(Connection conn, String config)
+	throws SQLException
+	{
+		String val = null;
+
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery("sp_configure '"+config+"'");
+		while (rs.next())
+		{
+			val = rs.getString(5);
+		}
+		rs.close();
+		stmt.close();
+		
+		return val;
+	}
+
 	public static int getAseConfigRunValueNoEx(Connection conn, String config)
 	{
 		int val = -1;
@@ -2045,6 +2098,20 @@ public class AseConnectionUtils
 			// ignore
 		}
 		return (val > 0);
+	}
+
+	public static String getAseConfigRunValueStrNoEx(Connection conn, String config)
+	{
+		String val = null;
+		try
+		{
+			val = getAseConfigRunValueStr(conn, config);
+		}
+		catch (SQLException ex)
+		{
+			// ignore
+		}
+		return val;
 	}
 
 	public static int getAseConfigConfigValue(Connection conn, String config)
@@ -2620,7 +2687,7 @@ public class AseConnectionUtils
 		String StatementNumber = "StatementNumber='', ";
 		if (MonTablesDictionary.hasInstance())
 		{
-			 aseVersion = MonTablesDictionary.getInstance().aseVersionNum;
+			 aseVersion = MonTablesDictionary.getInstance().getMdaVersion();
 			
 			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
 			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
@@ -2726,7 +2793,7 @@ public class AseConnectionUtils
 			String monWaitEventInfoWhere = "";
 			if (MonTablesDictionary.hasInstance())
 			{
-				if (MonTablesDictionary.getInstance().aseVersionNum >= 15700)
+				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
 				{
 					monWaitClassInfoWhere = " and CI.Language = 'en_US'";
 					monWaitEventInfoWhere = "      and WI.Language = 'en_US' \n";
@@ -3022,7 +3089,7 @@ public class AseConnectionUtils
 
 		// Statement Cache objects
 		if (isStatementCache)
-		{			
+		{
 			if (aseVersion >= 15700)
 			{
 				//-----------------------------------------------------------
@@ -3073,20 +3140,45 @@ public class AseConnectionUtils
 
 				String sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
 
-				AseSqlScript ss = new AseSqlScript(conn, 10);
-				try	
+				try
 				{
-					returnText = ss.executeSqlStr(sql, true);
-				} 
-				catch (SQLException e) 
-				{
-					returnText = null;
-					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Caught: "+e); 
-				} 
-				finally 
-				{
-					ss.close();
+					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout(10);
+					
+					ResultSet rs = stmnt.executeQuery(sql);
+
+					StringBuilder sb = new StringBuilder();
+					sb.append(sql).append("\n");
+					sb.append("------------------------------------------------------------------\n");
+					while (rs.next())
+					{
+						sb.append(rs.getString(1));
+					}
+					rs.close();
+					stmnt.close();
+
+					returnText = sb.toString().trim();
 				}
+				catch(SQLException e)
+				{
+					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e); 
+					returnText = null;
+				}
+
+//				AseSqlScript ss = new AseSqlScript(conn, 10);
+//				try	
+//				{
+//					returnText = ss.executeSqlStr(sql, true);
+//				} 
+//				catch (SQLException e) 
+//				{
+//					returnText = null;
+//					_logger.warn("Problems getting text from Statement Cache about '"+objectName+"'. Caught: "+e); 
+//				} 
+//				finally 
+//				{
+//					ss.close();
+//				}
 			}
 			else
 			{
@@ -3188,5 +3280,145 @@ public class AseConnectionUtils
 		}
 		return col_pos;
 	}
+
+
+
+	/**
+	 * Get various state about a ASE Connection
+	 */
+	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn)
+	{
+		String sql = "select dbname=db_name(), spid=@@spid, transtate=@@transtate, trancount=@@trancount";
+
+		ConnectionStateInfo csi = new ConnectionStateInfo();
+
+		// Do the work
+		try
+		{
+			Statement stmnt = conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+
+			while(rs.next())
+			{
+				csi._dbname    = rs.getString(1);
+				csi._spid      = rs.getInt(2);
+				csi._tranState = rs.getInt(3);
+				csi._tranCount = rs.getInt(4);
+			}
+			rs.close();
+			stmnt.close();
+		}
+		catch (SQLException sqle)
+		{
+			_logger.error("Error in getAseConnectionStateInfo() problems executing sql='"+sql+"'.", sqle);
+		}
+
+		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
+		return csi;
+	}
+	/**
+	 * Class that reflects a call to getAseConnectionStateInfo()
+	 * @author gorans
+	 */
+	public static class ConnectionStateInfo
+	{
+		/** _current* below is only maintained if we are connected to ASE */
+		public String _dbname    = "";
+		public int    _spid      = -1;
+		public int    _tranState = -1;
+		public int    _tranCount = -1;
+
+		// Transaction SQL states for DONE flavors
+		//
+		// 0 Transaction in progress: an explicit or implicit transaction is in effect;
+		//   the previous statement executed successfully.
+		// 1 Transaction succeeded: the transaction completed and committed its changes.
+		// 2 Statement aborted: the previous statement was aborted; no effect on the transaction.
+		// 3 Transaction aborted: the transaction aborted and rolled back any changes.
+		public static final int TSQL_TRAN_IN_PROGRESS = 0;
+		public static final int TSQL_TRAN_SUCCEED = 1;
+		public static final int TSQL_STMT_ABORT = 2;
+		public static final int TSQL_TRAN_ABORT = 3;
+
+		public static final String[] TSQL_TRANSTATE_NAMES =
+		{
+//			"TSQL_TRAN_IN_PROGRESS",
+//			"TSQL_TRAN_SUCCEED",
+//			"TSQL_STMT_ABORT",
+//			"TSQL_TRAN_ABORT"
+			"TRAN_IN_PROGRESS",
+			"TRAN_SUCCEED",
+			"STMT_ABORT",
+			"TRAN_ABORT"
+		};
+
+		public static final String[] TSQL_TRANSTATE_DESCRIPTIONS =
+		{
+//			"TRAN_IN_PROGRESS = Transaction in progress. A transaction is in effect; \nThe previous statement executed successfully.",
+			"TRAN_IN_PROGRESS = Transaction in progress. \nThe previous statement executed successfully.",
+			"TRAN_SUCCEED = Last Transaction succeeded. \nThe transaction completed and committed its changes.",
+			"STMT_ABORT = Last Statement aborted. \nThe previous statement was aborted; \nNo effect on the transaction.",
+			"TRAN_ABORT = Last Transaction aborted. \nThe transaction aborted and rolled back any changes."
+		};
+		
+
+		public String getTranStateStr()
+		{
+			return tsqlTranStateToString(_tranState);
+		}
+
+		public String getTranStateDescription()
+		{
+			return tsqlTranStateToDescription(_tranState);
+		}
+
+		/**
+		 * Get the String name of the transactionState
+		 *
+		 * @param state
+		 * @return
+		 */
+		protected String tsqlTranStateToString(int state)
+		{
+			switch (state)
+			{
+				case TSQL_TRAN_IN_PROGRESS:
+					return TSQL_TRANSTATE_NAMES[state];
+
+				case TSQL_TRAN_SUCCEED:
+					return TSQL_TRANSTATE_NAMES[state];
+
+				case TSQL_STMT_ABORT:
+					return TSQL_TRANSTATE_NAMES[state];
+
+				case TSQL_TRAN_ABORT:
+					return TSQL_TRANSTATE_NAMES[state];
+
+				default:
+					return "TSQL_UNKNOWN_STATE("+state+")";
+			}
+		}
+		protected String tsqlTranStateToDescription(int state)
+		{
+			switch (state)
+			{
+				case TSQL_TRAN_IN_PROGRESS:
+					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+
+				case TSQL_TRAN_SUCCEED:
+					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+
+				case TSQL_STMT_ABORT:
+					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+
+				case TSQL_TRAN_ABORT:
+					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+
+				default:
+					return "TSQL_UNKNOWN_STATE("+state+")";
+			}
+		}
+	}
+
 }
 

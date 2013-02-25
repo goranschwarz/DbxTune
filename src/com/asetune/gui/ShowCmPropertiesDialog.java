@@ -24,10 +24,11 @@ import javax.swing.event.ChangeListener;
 import net.miginfocom.swing.MigLayout;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.asetune.AseTune;
 import com.asetune.cm.CountersModel;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.RTextUtility;
@@ -316,25 +317,30 @@ extends JDialog implements ActionListener, ChangeListener
 		_cmShortName_txt.setText(_cm.getName());
 		_cmLongName_txt .setText(_cm.getDisplayName());
 
-		_sqlInit.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlInit.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		_sqlInit.setHighlightCurrentLine(false);
 		//_sqlInit.setLineWrap(true);
 //		_sqlInitScroll.setLineNumbersEnabled(false);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlInit, null, this);
+
 		
-		_sqlExec.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlExec.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		_sqlExec.setHighlightCurrentLine(false);
 		//_sqlExec.setLineWrap(true);
 //		_sqlExecScroll.setLineNumbersEnabled(false);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlExec, null, this);
 		
-		_sqlWhere.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlWhere.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		_sqlWhere.setHighlightCurrentLine(false);
 		//_sqlWhere.setLineWrap(true);
 //		_sqlWhereScroll.setLineNumbersEnabled(false);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlWhere, null, this);
 		
-		_sqlClose.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_sqlClose.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		_sqlClose.setHighlightCurrentLine(false);
 		//_sqlClose.setLineWrap(true);
 //		_sqlCloseScroll.setLineNumbersEnabled(false);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlClose, null, this);
 		
 		
 		_pkColsHighlight_chk  .setSelected( Configuration.getCombinedConfiguration().getBooleanProperty("ShowCmPropertiesDialog.highlight.pkCols",   _pkColsHighlight_chk  .isSelected()) );

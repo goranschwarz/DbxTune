@@ -253,6 +253,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		{
 	        private static final long serialVersionUID = 0L;
 
+			@Override
 			public String getToolTipText(MouseEvent e) 
 			{
 				String tip = null;
@@ -350,6 +351,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		show.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				doActionShow();
@@ -358,6 +360,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		cfgView.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				doActionShowAseConfig();
@@ -366,6 +369,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		pcsDbInfo.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				doActionShowPcsDbInfo();
@@ -391,15 +395,18 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	** BEGIN: implementing: PersistReader.INotificationListener
 	**---------------------------------------------------
 	*/
+	@Override
 	public void setWatermark(String text)
 	{
 		setWatermarkText(text);
 	}
+	@Override
 	public void setStatusText(String status)
 	{
 		_status_lbl.setText(status);
 	}
 	/** Called by PersistReader when <code>loadSessionList()</code> has been executed. */
+	@Override
 	public void setSessionList(List<SessionInfo> sessionList)
 	{
 		refreshTable(sessionList);
@@ -500,6 +507,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_treeTable.requestFocus();
@@ -527,6 +535,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		this.addWindowListener(new java.awt.event.WindowAdapter()
 		{
+			@Override
 			public void windowClosing(WindowEvent e)
 			{
 				saveProps();
@@ -534,6 +543,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		});
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
     {
 		Object source = e.getSource();
@@ -659,7 +669,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 		}
 		
-		AseConfigViewDialog.showDialog(this);
+		AseConfigViewDialog.showDialog(this, reader);
 	}
 	
 	public void doActionShowPcsDbInfo()
@@ -800,7 +810,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		else
 		{
@@ -852,6 +863,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			sampleIcon  = SwingUtils.readImageIcon(Version.class, "images/sample_item.png");
 		}
 
+		@Override
 		public Component getTreeCellRendererComponent(JTree tree, Object value,	boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) 
 		{
 //			return super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
@@ -954,6 +966,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			
 			new CmSummaryFieldHighlighter(new HighlightPredicate() 
 			{
+				@Override
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter) 
 				{
 					return adapter.column > 4; // FIXME: 4 should NOT be hard coded...
@@ -1001,9 +1014,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			this._treeTable = treeTable;
 		}
 
-		public void keyTyped   (KeyEvent e) { }
-		public void keyReleased(KeyEvent e) { }
+		@Override public void keyTyped   (KeyEvent e) { }
+		@Override public void keyReleased(KeyEvent e) { }
 
+		@Override
 		public synchronized void keyPressed (KeyEvent e) 
 		{
 //			KeyEvent.VK_RIGHT;
@@ -1082,9 +1096,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			this._treeTable = treeTable;
 		}
 
-		public void keyTyped   (KeyEvent e) { }
-		public void keyReleased(KeyEvent e) { }
+		@Override public void keyTyped   (KeyEvent e) { }
+		@Override public void keyReleased(KeyEvent e) { }
 
+		@Override
 		public synchronized void keyPressed (KeyEvent e) 
 		{
 //			System.out.println("keyPressed():KeyEvent="+e);
@@ -1198,6 +1213,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		private Graphics2D  g       = null;
 		private Rectangle   r       = null;
 	
+		@Override
 		public void paint(Graphics graphics)
 		{
 			if (_textBr == null || _textBr != null && _textBr.length < 0)

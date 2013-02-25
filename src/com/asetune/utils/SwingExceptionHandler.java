@@ -14,5 +14,12 @@ public class SwingExceptionHandler
 	public void handle(Throwable ex)
 	{
 		_logger.warn("Problems in AWT/Swing Event Dispatch Thread, Caught: "+ex.toString(), ex);
+		
+		// Maybe do some more if we are out of memory.
+		if (ex instanceof OutOfMemoryError)
+		{
+			_logger.info("Send notification to memory monitor to evaluate memory usage, so that any listeners can take appropriate actions.");
+			Memory.evaluate();
+		}
 	}
 }

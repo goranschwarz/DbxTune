@@ -81,6 +81,18 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_generateWrite   = PROP_PREFIX + ".graph.generate.io.write";
 	private static final boolean DEFAULT_generateWrite   = false;
 
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,     DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,       DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,      DEFAULT_showLegend);
+		Configuration.registerDefaultValue(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo);
+		Configuration.registerDefaultValue(PROPKEY_generateRead,    DEFAULT_generateRead);
+		Configuration.registerDefaultValue(PROPKEY_generateApfRead, DEFAULT_generateApfRead);
+		Configuration.registerDefaultValue(PROPKEY_generateWrite,   DEFAULT_generateWrite);
+	}
+
 	public CmDeviceIoPanel(CountersModel cm)
 	{
 		super(cm);
@@ -436,6 +448,7 @@ extends TabularCntrPanel
 
 		graphType_cbx.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -453,6 +466,7 @@ extends TabularCntrPanel
 
 		enableGraph_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_enableGraph, ((JCheckBox)e.getSource()).isSelected());
@@ -462,6 +476,7 @@ extends TabularCntrPanel
 		});
 		showLegend_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_showLegend, ((JCheckBox)e.getSource()).isSelected());
@@ -470,6 +485,7 @@ extends TabularCntrPanel
 
 		generateTotalIo_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateTotalIo, ((JCheckBox)e.getSource()).isSelected());
@@ -477,6 +493,7 @@ extends TabularCntrPanel
 		});
 		generateRead_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateRead, ((JCheckBox)e.getSource()).isSelected());
@@ -484,6 +501,7 @@ extends TabularCntrPanel
 		});
 		generateApfRead_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateApfRead, ((JCheckBox)e.getSource()).isSelected());
@@ -491,6 +509,7 @@ extends TabularCntrPanel
 		});
 		generateWrite_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_generateWrite, ((JCheckBox)e.getSource()).isSelected());

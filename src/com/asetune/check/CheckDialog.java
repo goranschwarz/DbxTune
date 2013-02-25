@@ -213,6 +213,7 @@ public class CheckDialog
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_ok_but.requestFocus();
@@ -221,6 +222,7 @@ public class CheckDialog
 		SwingUtilities.invokeLater(deferredAction);
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		if ( _resetProxy_but.equals(e.getSource()) )
@@ -284,6 +286,7 @@ public class CheckDialog
 		}
 	}
 
+	@Override
 	@SuppressWarnings("unused")
 	public void hyperlinkUpdate(HyperlinkEvent hle) 
 	{  

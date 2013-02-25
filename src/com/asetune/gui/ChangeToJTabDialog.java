@@ -194,6 +194,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_ok.requestFocus();
@@ -207,6 +208,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 	 **---------------------------------------------------
 	 */
 
+	@Override
 	public void setVisible(boolean visible)
 	{
 		if ( visible == false )
@@ -349,6 +351,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		saveProps();
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -423,6 +426,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				but = new JButton("to-Tab-1");
 				but.addActionListener(new ActionListener()
 				{
+					@Override
 					public void actionPerformed(ActionEvent e)
 					{
 						if ( _toTab1 == null )
@@ -435,6 +439,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				but = new JButton("to-Tab-2");
 				but.addActionListener(new ActionListener()
 				{
+					@Override
 					public void actionPerformed(ActionEvent e)
 					{
 						if ( _toTab2 == null )
@@ -447,6 +452,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				but = new JButton("to-Tab-3");
 				but.addActionListener(new ActionListener()
 				{
+					@Override
 					public void actionPerformed(ActionEvent e)
 					{
 						if ( _toTab3 == null )
@@ -459,6 +465,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				but = new JButton("to-Tab-4");
 				but.addActionListener(new ActionListener()
 				{
+					@Override
 					public void actionPerformed(ActionEvent e)
 					{
 						if ( _toTab4 == null )

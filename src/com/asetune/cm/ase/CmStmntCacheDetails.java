@@ -99,7 +99,36 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+	private static final String  PROP_PREFIX                         = CM_NAME;
+
+	public static final String  PROPKEY_sample_sqlText               = PROP_PREFIX + ".sample.sqlText";
+	public static final boolean DEFAULT_sample_sqlText               = false;
+
+	public static final String  PROPKEY_sample_showplan              = PROP_PREFIX + ".sample.showplan";
+	public static final boolean DEFAULT_sample_showplan              = false;
+
+	public static final String  PROPKEY_sample_xmlPlan               = PROP_PREFIX + ".sample.xmlPlan";
+	public static final boolean DEFAULT_sample_xmlPlan               = false;
+
+	public static final String  PROPKEY_sample_xmlPlan_levelOfDetail = PROP_PREFIX + ".sample.xmlPlan.levelOfDetail";
+	public static final int     DEFAULT_sample_xmlPlan_levelOfDetail = 0;
+
+	public static final String  PROPKEY_sample_metricsCountGtZero    = PROP_PREFIX + ".sample.metricsCountGtZero";
+	public static final boolean DEFAULT_sample_metricsCountGtZero    = true;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText);
+		Configuration.registerDefaultValue(PROPKEY_sample_showplan,              DEFAULT_sample_showplan);
+		Configuration.registerDefaultValue(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan);
+		Configuration.registerDefaultValue(PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail);
+		Configuration.registerDefaultValue(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero);
+	}
+
+
 	private void addTrendGraphs()
 	{
 	}
@@ -176,6 +205,64 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sampleSqlText            = (conf == null) ? DEFAULT_sample_sqlText                 : conf.getBooleanProperty(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText);
+		boolean sampleShowplan           = (conf == null) ? DEFAULT_sample_showplan                : conf.getBooleanProperty(PROPKEY_sample_showplan,              DEFAULT_sample_showplan);
+		boolean sampleXmlPlan            = (conf == null) ? DEFAULT_sample_xmlPlan                 : conf.getBooleanProperty(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan);
+		int     xmlPlan_levelOfDetail    = (conf == null) ? DEFAULT_sample_xmlPlan_levelOfDetail   : conf.getIntProperty(    PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail);
+		boolean sampleMetricsCountGtZero = (conf == null) ? DEFAULT_sample_metricsCountGtZero      : conf.getBooleanProperty(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero);
+
+		String comment = "";
+		
+		//----- SQL TEXT
+		comment = "Property: "+PROPKEY_sample_sqlText+" is "+sampleSqlText+".";
+		String sql_hasSqlText  = " HasSqltext    = convert(bit,0), -- "+comment+" \n";
+		String sql_doSqltext   = " sqltext       = convert(text, '"+comment+"'), \n";
+		if ( sampleSqlText )
+		{
+			sql_hasSqlText     = " HasSqltext    = convert(bit,1), \n";
+			sql_doSqltext      = " sqltext       = convert(text, show_cached_text(SSQLID)), \n";
+		}
+
+		//----- SHOWPLAN
+		comment = "Property: "+PROPKEY_sample_showplan+" is "+sampleShowplan+".";
+		String sql_hasShowplan = " HasShowplan   = convert(bit,0), -- "+comment+" \n";
+		String sql_doShowplan  = " msgAsColValue = convert(text, '"+comment+"'), \n";
+		if ( sampleShowplan )
+		{
+			sql_hasShowplan    = " HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n";
+			sql_doShowplan     = " msgAsColValue = convert(text, ''), \n";
+			// msgAsColValue: is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
+		}
+
+		//----- XML PLAN
+		comment = "Property: "+PROPKEY_sample_xmlPlan+" is "+sampleXmlPlan+".";
+		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
+		String sql_doXmlPlan   = " xmlPlan       = convert(text, '"+comment+"'), \n";
+		if (aseVersion >= 15700)
+		{
+			if ( sampleXmlPlan )
+			{
+				sql_hasXmlPlan = " HasXmlPlan    = convert(bit,1), \n";
+				sql_doXmlPlan  = " xmlPlan       = show_cached_plan_in_xml(SSQLID, 0, "+xmlPlan_levelOfDetail+"), \n";
+			}
+		}
+		else
+		{
+			comment = "XML Plan is only available from ASE 15.7.0 or above.";
+			sql_hasXmlPlan     = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
+			sql_doXmlPlan      = " xmlPlan       = convert(text, '"+comment+"'), \n";
+		}
+		
+		//----- SHOWPLAN
+		comment = "Property: "+PROPKEY_sample_metricsCountGtZero+" is "+sampleMetricsCountGtZero+".";
+		String sql_metricsCountGtZero = "  and MetricsCount > 0 -- "+comment+" \n";
+		if ( ! sampleMetricsCountGtZero )
+		{
+			sql_metricsCountGtZero = "  -- and MetricsCount > 0 -- "+comment+" \n";
+		}
+
+
 		// ASE 15.7.0 ESD#2
 		String AvgScanRows            = ""; // Average scanned rows read per execution
 		String MaxScanRows            = ""; // Maximum scanned rows read per execution
@@ -217,8 +304,7 @@ extends CountersModel
 		//       returns a Ase Message (MsgNum=0) within the ResultSet
 		//       those messages are placed in the column named 'msgAsColValue'
 		//       see SamplingCnt.readResultset() for more details
-		String sql = 
-			"SELECT \n" +
+		String cols = 
 			(isClusterEnabled ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
 			" DBID, \n" +                       // The database ID from which the statement was cached.
 			(aseVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
@@ -230,9 +316,9 @@ extends CountersModel
 //			" HasSqltext    = convert(bit,1), \n" +
 			(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
 			(aseVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
-			                       " HasSqltext    = RUNTIME_REPLACE::HAS_SQL_TEXT, \n" +
-			                       " HasShowplan   = RUNTIME_REPLACE::HAS_SHOWPLAN, \n" +
-			(aseVersion >= 15700 ? " HasXmlPlan    = RUNTIME_REPLACE::HAS_XML_PLAN, \n" : "") +
+			sql_hasSqlText +
+			sql_hasShowplan + 
+			sql_hasXmlPlan +
 			" UseCount, \n" +                   // The number of times this statement was used.
 			" UseCountDiff = UseCount, \n" +    // The number of times this statement was used.
 			LockWaits + LockWaitTime + nl_15702 +
@@ -264,12 +350,19 @@ extends CountersModel
 			" SAAuthorization     = convert(bit,SAAuthorization), \n" +     // The SA authorization session setting.
 			" SystemCatalogUpdate = convert(bit,SystemCatalogUpdate), \n" + // The system catalog update session setting.
 			" StatementSize, \n" +              // The size of the statement's text in bytes.
-//			" sqltext       = convert(text, show_cached_text(SSQLID)), \n" +
-			                       " sqltext       = RUNTIME_REPLACE::DO_SQL_TEXT, \n" +
-			(aseVersion >= 15700 ? " xmlPlan       = RUNTIME_REPLACE::DO_XML_PLAN, \n" : "") +
-			                       " msgAsColValue = RUNTIME_REPLACE::DO_SHOWPLAN \n" + // this is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
+			sql_doSqltext + 
+			sql_doXmlPlan +
+			sql_doShowplan;
+		
+		// Remove last comma if any
+		cols = StringUtil.removeLastComma(cols);
+			
+		String sql = 
+			"SELECT \n" +
+			cols + "\n" +
 			"FROM master..monCachedStatement \n" +
-			"WHERE MetricsCount > 0 \n";
+			"WHERE 1 = 1 \n" +
+			sql_metricsCountGtZero;
 
 		return sql;
 	}
@@ -281,10 +374,11 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		Configuration lc = new Configuration();
 
-		lc.setProperty(getName()+".sample.sqlText",  conf.getBooleanProperty(getName()+".sample.sqlText",   false));
-		lc.setProperty(getName()+".sample.xmlPlan",  conf.getBooleanProperty(getName()+".sample.xmlPlan",   false));
-		lc.setProperty(getName()+".sample.showplan", conf.getBooleanProperty(getName()+".sample.showplan",  false));
-
+		lc.setProperty(PROPKEY_sample_sqlText,               conf.getBooleanProperty(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText));
+		lc.setProperty(PROPKEY_sample_showplan,              conf.getBooleanProperty(PROPKEY_sample_showplan,              DEFAULT_sample_showplan));
+		lc.setProperty(PROPKEY_sample_xmlPlan,               conf.getBooleanProperty(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan));
+		lc.setProperty(PROPKEY_sample_xmlPlan_levelOfDetail, conf.getIntProperty(    PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail));
+		lc.setProperty(PROPKEY_sample_metricsCountGtZero,    conf.getBooleanProperty(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero));
 		return lc;
 	}
 
@@ -292,77 +386,22 @@ extends CountersModel
 	@Override
 	public String getLocalConfigurationDescription(String propName)
 	{
-		if (propName.equals(getName()+".sample.sqlText"))  return "Get SQL Text (using: show_cached_text(SSQLID)) assosiated with the Cached Statement.";
-		if (propName.equals(getName()+".sample.xmlPlan"))  return "Get Showplan assosiated with the Cached Statement.";
-		if (propName.equals(getName()+".sample.showplan")) return "Get XML Plan (using: show_cached_plan_in_xml(SSQLID, 0)) assosiated with the Cached Statement, Note only in 15.7 and above.";
+		if (propName.equals(PROPKEY_sample_sqlText))               return CmStmntCacheDetailsPanel.TOOLTIP_sample_sqlText;
+		if (propName.equals(PROPKEY_sample_showplan))              return CmStmntCacheDetailsPanel.TOOLTIP_sample_showplan;
+		if (propName.equals(PROPKEY_sample_xmlPlan))               return CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan;
+		if (propName.equals(PROPKEY_sample_xmlPlan_levelOfDetail)) return CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan_levelOfDetail;
+		if (propName.equals(PROPKEY_sample_metricsCountGtZero))    return CmStmntCacheDetailsPanel.TOOLTIP_sample_metricsCountGtZero;
 		return "";
 	}
 	@Override
 	public String getLocalConfigurationDataType(String propName)
 	{
-		if (propName.equals(getName()+".sample.sqlText"))  return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.xmlPlan"))  return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.showplan")) return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_sqlText))               return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_showplan))              return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_xmlPlan))               return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_xmlPlan_levelOfDetail)) return Integer.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_metricsCountGtZero))    return Boolean.class.getSimpleName();
 		return "";
-	}
-
-	@Override
-	public String getSql()
-	{
-		String sql = super.getSql();
-		
-		final String DEFAULT_xmlPlan_levelOfDetail = "0";
-		
-		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean sampleSqlText_chk    = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.sqlText",  false);
-		boolean sampleXmlPlan_chk    = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.xmlPlan",  false);
-		boolean sampleShowplan_chk   = (conf == null) ? false : conf.getBooleanProperty(getName()+".sample.showplan", false);
-		String xmlPlan_levelOfDetail = (conf == null) ? "0"   : conf.getProperty(       getName()+".sample.xmlPlan.levelOfDetail", DEFAULT_xmlPlan_levelOfDetail);
-
-		//----- SQL TEXT
-		String hasSqlText = "convert(bit,1)";
-		String  doSqltext = "convert(text, show_cached_text(SSQLID))";
-		if ( ! sampleSqlText_chk )
-		{
-			hasSqlText = "convert(bit,0)";
-			 doSqltext = "convert(text, '"+getName()+".sample.sqlText=false')";
-		}
-		sql = sql.replace("RUNTIME_REPLACE::HAS_SQL_TEXT", hasSqlText);
-		sql = sql.replace("RUNTIME_REPLACE::DO_SQL_TEXT",   doSqltext);
-
-		
-		//----- XML PLAN
-		if (getServerVersion() >= 15700)
-		{
-			// Check if the xmlPlan_levelOfDetail is an Integer, if not set it to a default value...
-			try { Integer.parseInt(xmlPlan_levelOfDetail); }
-			catch (NumberFormatException e) { xmlPlan_levelOfDetail = DEFAULT_xmlPlan_levelOfDetail; }
-
-			String hasXmlPlan = "convert(bit,1)";
-			String  doXmlPlan = "show_cached_plan_in_xml(SSQLID, 0, "+xmlPlan_levelOfDetail+")";
-			if ( ! sampleXmlPlan_chk )
-			{
-				hasXmlPlan = "convert(bit,0)";
-				 doXmlPlan = "convert(text, '"+getName()+".sample.xmlPlan=false')";
-			}
-			sql = sql.replace("RUNTIME_REPLACE::HAS_XML_PLAN", hasXmlPlan);
-			sql = sql.replace("RUNTIME_REPLACE::DO_XML_PLAN",   doXmlPlan);
-		}
-
-		
-		//----- SHOWPLAN
-		String hasShowplan = "CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END";
-		String  doShowplan = "convert(text, '')";
-		if ( ! sampleShowplan_chk )
-		{
-			hasShowplan = "convert(bit,0)";
-			 doShowplan = "convert(text, '"+getName()+".sample.showplan=false')";
-		}
-		sql = sql.replace("RUNTIME_REPLACE::HAS_SHOWPLAN", hasShowplan);
-		sql = sql.replace("RUNTIME_REPLACE::DO_SHOWPLAN",   doShowplan);
-
-		
-		return sql;
 	}
 
 	@Override

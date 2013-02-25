@@ -71,6 +71,7 @@ import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -99,6 +100,7 @@ implements ActionListener, MouseListener
 	private ChartPanel         _chartPanel;
 	private String             _graphName;
 	private String             _labelName;
+	private String             _menuItemText          = null;
 	private String[]           _seriesNames	          = null;
 	private String[]           _dataColNames          = {};
 	private String[]           _dataMethods           = {};
@@ -112,6 +114,7 @@ implements ActionListener, MouseListener
 	private int                _panelMinHeight        = PANEL_MIN_HEIGHT_NOT_USED;
 	private CountersModel      _cm                    = null;
 	private boolean            _initialVisible        = true;
+	private int                _validFromVersion      = 0; // 0 = all versions; > 0 = only in specific version
 	SimpleDateFormat           _sdf                   = new SimpleDateFormat("H:mm:ss.SSS");
 
 	// The name of the graph, jachrt2d not good enough.
@@ -139,17 +142,20 @@ implements ActionListener, MouseListener
 	 * @param seriesNames a Array of name series, this is the text displayed at the bottom of the graph 
 	 * @param pct         If this a percent graph (max 100 values in here)
 	 * @param cm          The CounterModel that this graph is using 
-	 * @param initialVisible If the graph should be visible in the summary at "initial" startup, when properties has been saved for the graph, the initial visible state will be reflected from that. 
+	 * @param initialVisibleVersion If the graph should be visible in the summary at "initial" startup, when properties has been saved for the graph, the initial visible state will be reflected from that. visible at start 0=false, 1=always_true, 15702=true_if_ase_is_15702_or_over
 	 * @param panelMinHeight Initial minimum height of the chart panel, when properties has been saved for the graph, the initial minimum height will be reflected from that.
 	 */
-	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int panelMinHeight)
+//	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int panelMinHeight)
+	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
 	{
-		_graphName      = name;
-		_labelName      = label;
-		_seriesNames    = seriesNames;
-		_cm             = cm;
-		_initialVisible = initialVisible;
-		_panelMinHeight = panelMinHeight;
+		_graphName            = name;
+		_labelName            = label;
+		_menuItemText         = chkboxText;
+		_seriesNames          = seriesNames;
+		_cm                   = cm;
+		_initialVisible       = initialVisible;
+		_validFromVersion     = validFromVersion; 
+		_panelMinHeight       = panelMinHeight;
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
@@ -198,6 +204,13 @@ implements ActionListener, MouseListener
 //			_chkboxMenuItem = new JCheckBoxMenuItem(chkboxText, _initialVisible);
 			_chkboxMenuItem = new JCheckBoxMenuItem(extenedCheckboxText, true);
 			_chkboxMenuItem.addActionListener( this );
+
+			// MacOS doesn't seems to handle JCheckBoxMenuItem with HTML tags in the MenuBar
+			if (PlatformUtils.Platform_MAC_OS == PlatformUtils.getCurrentPlattform())
+			{
+				extenedCheckboxText = chkboxText+" @ "+cm.getDisplayName();
+				_chkboxMenuItem.setText(extenedCheckboxText);
+			}
 		}
 
 		if (_pctGraph)
@@ -257,8 +270,9 @@ implements ActionListener, MouseListener
 			}
 			else // DOUBLE click
 			{
-				  ITracePoint2D tp = _chart.translateMousePosition(e);
-				  MainFrame.getInstance().setTimeLinePoint((long)tp.getX());
+				@SuppressWarnings("deprecation")
+				ITracePoint2D tp = _chart.translateMousePosition(e);
+				MainFrame.getInstance().setTimeLinePoint((long)tp.getX());
 			} // end: double-click
 		} // end: left-click
 	}
@@ -279,6 +293,9 @@ implements ActionListener, MouseListener
 		_watermark.setWatermarkText(_labelName);
 	}
 	
+	/** Get the original text associated with the JMenuItemCheckbox */
+	public String getMenuItemText() { return _menuItemText; }
+
 	private Color nextColor()
 	{ 
 		if( (_colorPtr % TrendGraphColors._colors.length)==0 ) 
@@ -813,6 +830,7 @@ implements ActionListener, MouseListener
 			// Cleanup the dummy trace now that we have real data to show.
 			Runnable eventQueueExec = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					if(_dummySeries != null)
@@ -1096,7 +1114,7 @@ implements ActionListener, MouseListener
 	
 						JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
 //						mi.setText("<html> <b>"+tg.getLabel()+"</b> - <i>"+cm.getDisplayName()+"</i> </html>");
-						mi.setText("<html> "+tg.getLabel()+" - <b>"+cm.getDisplayName()+"</b> </html>");
+						mi.setText("<html> "+tg.getMenuItemText()+" - <b>"+cm.getDisplayName()+"</b> </html>");
 
 						mi.setSelected(tg.isGraphEnabled());
 						mi.addActionListener(new ActionListener()
@@ -1287,6 +1305,7 @@ implements ActionListener, MouseListener
 		_cm = cm;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object s = e.getSource();
@@ -1333,7 +1352,42 @@ implements ActionListener, MouseListener
 			_panelMinHeight = tempProps.getIntProperty("Graph."+graphName+".minHeight",  _panelMinHeight);
 		}
 	}
-	
+
+	/**
+	 * Called from GetCounters.initCounters(...) to set visibility for Graphs depending on what version we connect to
+	 * @param serverVersion
+	 */
+	public void initializeGraphForVersion(int serverVersion)
+	{
+		// FIXME: this isn't good enough
+//		boolean graphVisible = true;
+//
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//		boolean savedGraphVisibility = conf.getBooleanProperty("MainFrame.menu."+this.getName()+".checkbox",  _initialVisible);
+//
+//		// Valid for all versions, do nothing.
+//		if (_validFromVersion == 0)
+//		{
+//			graphVisible = true;
+//			if ( ! savedGraphVisibility )
+//				graphVisible = false;
+//		}
+//		// connected server is less that validFromVersion
+//		else if (serverVersion <= _validFromVersion)
+//		{
+//			graphVisible = false;
+//		}
+//		// validFromVersion is OK, so lets check the saved version.
+//		else
+//		{
+//			if ( ! savedGraphVisibility )
+//				graphVisible = false;
+//		}
+//		
+//		// Now set components
+//		_chkboxMenuItem.setSelected(graphVisible);
+//		_panel.setVisible(graphVisible);
+	}
 
 	
 	
@@ -1361,6 +1415,7 @@ implements ActionListener, MouseListener
 		private Graphics2D	g		= null;
 		private Rectangle	r		= null;
 	
+		@Override
 		public void paint(Graphics graphics)
 		{
 			if (_text == null || _text != null && _text.equals(""))
@@ -1423,6 +1478,7 @@ implements ActionListener, MouseListener
 		}
 
 		/** @see info.monitorenter.gui.chart.ITracePainter#endPaintIteration(java.awt.Graphics) */
+		@Override
 		public void endPaintIteration(final Graphics g2d) 
 		{
 			if (g2d != null) 
@@ -1432,11 +1488,13 @@ implements ActionListener, MouseListener
 			this.m_pointPainter.endPaintIteration(g2d);
 		}
 		/** @see info.monitorenter.gui.chart.traces.painters.ATracePainter#startPaintIteration(java.awt.Graphics) */
+		@Override
 		public void startPaintIteration(final Graphics g2d) 
 		{
 			this.m_pointPainter.startPaintIteration(g2d);
 		}
 		/** @see info.monitorenter.gui.chart.traces.painters.ATracePainter#paintPoint(int, int, int, int, java.awt.Graphics, info.monitorenter.gui.chart.TracePoint2D) */
+		@Override
 		public void paintPoint(final int absoluteX, final int absoluteY, final int nextX, final int nextY, final Graphics g, final ITracePoint2D original) 
 		{
 			super.paintPoint(absoluteX, absoluteY, nextX, nextY, g, original);
@@ -1459,6 +1517,7 @@ implements ActionListener, MouseListener
 		}
 
 		/** @see info.monitorenter.gui.chart.IPointPainter#paintPoint(int, int, int, int, java.awt.Graphics, info.monitorenter.gui.chart.TracePoint2D) */
+		@Override
 		public void paintPoint(final int absoluteX, final int absoluteY, final int nextX, final int nextY, final Graphics g, final ITracePoint2D original) 
 		{
 			if (original instanceof MyTracePoint2D)

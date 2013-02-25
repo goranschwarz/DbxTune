@@ -26,7 +26,8 @@ public class IsqlApp
     static final String TAG_SEPARATOR = ":";
     static final String DEFAULT_USER = "sa";
     static final String DEFAULT_PASSWORD = "";
-    static final String DEFAULT_SERVER = "jdbc:sybase:Tds:127.0.0.1:5000";
+//    static final String DEFAULT_SERVER = "jdbc:sybase:Tds:127.0.0.1:5000";
+    static final String DEFAULT_SERVER = "jdbc:sybase:Tds:127.0.0.1:15700";
 
     static Connection _con = null;
     static Statement _stmt = null;

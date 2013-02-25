@@ -13,8 +13,10 @@ import java.io.IOException;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -28,8 +30,12 @@ import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
 
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.PlatformUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class InterfaceFileEditor
@@ -51,6 +57,8 @@ implements ActionListener, DocumentListener
 	private String _filename = null;
 	private String _winTitle = "Interface File Editor";
 
+	private String _currentSrv = "";
+
 	private boolean _changed = false;
 	private int     _originTextHasCode = 0;
 
@@ -66,11 +74,12 @@ implements ActionListener, DocumentListener
 		init();
 	}
 
-	public InterfaceFileEditor(Window owner, String ifile)
+	public InterfaceFileEditor(Window owner, String ifile, String currentServer)
 	{
 		super(owner);
 		init();
 		setFilename(ifile);
+		_currentSrv = currentServer;
 	}
 
 	private void init()
@@ -88,10 +97,12 @@ implements ActionListener, DocumentListener
 		_textArea.setColumns(60);
 		_textArea.getDocument().addDocumentListener(this);
 
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_textScroll, this);
+
 		panel.add(_textScroll, "push, grow, wrap");
 		panel.add(_ok,         "split, tag ok");
 		panel.add(_cancel,     "tag cancel");
-		
+
 		// Setup Auto-Completion for SQL
 		CompletionProvider acProvider = createCompletionProvider();
 		AutoCompletion ac = new AutoCompletion(acProvider);
@@ -107,6 +118,7 @@ implements ActionListener, DocumentListener
 		_textArea.getActionMap().put("save", new AbstractAction("save")
 		{
 			private static final long	serialVersionUID	= 1L;
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				save();
@@ -144,15 +156,17 @@ implements ActionListener, DocumentListener
 		// require the input text to be the same thing as the replacement text.
 		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 		{
-			provider.addCompletion(new ShorthandCompletion(provider, "1", "[SRVNAME]\nquery=TCP, hostname, portnum\n",     "Full Server entry"));
-			provider.addCompletion(new ShorthandCompletion(provider, "2", "query=TCP, hostname, portnum\n",                "query row"));
-			provider.addCompletion(new ShorthandCompletion(provider, "3", "master=TCP, hostname, portnum\n",               "master row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "1", "[SRVNAME]\nquery=TCP, hostname, portnum\n",                                          "Full Server entry, with query row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "2", "[SRVNAME]\nquery=TCP, hostname, portnum\nmaster=TCP, hostname, portnum\n",           "Full Server entry, with query and master row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "3", "query=TCP, hostname, portnum\n",                                                     "query row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "4", "master=TCP, hostname, portnum\n",                                                    "master row"));
 		}
 		else
 		{
-			provider.addCompletion(new ShorthandCompletion(provider, "1", "SRVNAME\n\tquery tcp ether hostname portnum\n", "Full Server entry"));
-			provider.addCompletion(new ShorthandCompletion(provider, "2", "\tquery tcp ether hostname portnum\n",          "query row"));
-			provider.addCompletion(new ShorthandCompletion(provider, "3", "\tmaster tcp ether hostname portnum\n",         "master row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "1", "SRVNAME\n\tquery tcp ether hostname portnum\n",                                      "Full Server entry, with query row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "2", "SRVNAME\n\tquery tcp ether hostname portnum\n\tmaster tcp ether hostname portnum\n", "Full Server entry, with query and master row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "3", "\tquery tcp ether hostname portnum\n",                                               "query row"));
+			provider.addCompletion(new ShorthandCompletion(provider, "4", "\tmaster tcp ether hostname portnum\n",                                              "master row"));
 		}
 
 		return provider;
@@ -161,6 +175,7 @@ implements ActionListener, DocumentListener
 	/**
 	 * implements ActionListener
 	 */
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		//Object source    = e.getSource();
@@ -187,16 +202,19 @@ implements ActionListener, DocumentListener
 	/**
 	 * implements ActionListener
 	 */
+	@Override
 	public void insertUpdate(DocumentEvent e)
 	{
 		checkChangedStatus();
 	}
 
+	@Override
 	public void removeUpdate(DocumentEvent e)
 	{
 		checkChangedStatus();
 	}
 
+	@Override
 	public void changedUpdate(DocumentEvent e)
 	{
 		checkChangedStatus();
@@ -278,6 +296,7 @@ implements ActionListener, DocumentListener
 			_textArea.read(reader, "");  // Use TextComponent read
 
 			resetChangedStatus(true);
+			markCurrentServer();
 		}
 		catch (IOException ioex) 
 		{
@@ -287,5 +306,44 @@ implements ActionListener, DocumentListener
 		setVisible(true);
 
 		return _retStatus;
+	}
+	
+	public void markCurrentServer()
+	{
+		if ( ! StringUtil.isNullOrBlank(_currentSrv) )
+		{
+			String searchFor = _currentSrv;
+			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Desktop_WIN)
+				searchFor = "[" + _currentSrv + "]";
+
+			// Mark server
+			_textArea.markAll( searchFor, true, true, false);
+			
+			// Position at start of the editor
+			_textArea.setCaretPosition(0);
+
+			// Create an object defining our search parameters.
+			SearchContext context = new SearchContext();
+
+			context.setSearchFor(searchFor);
+			context.setMatchCase(true);
+			context.setRegularExpression(false);
+			context.setSearchForward(true);
+			context.setWholeWord(true);
+
+			boolean found = SearchEngine.find(_textArea, context);
+			if ( !found )
+			{
+				Runnable doLater = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						JOptionPane.showMessageDialog(null, "Server '"+_currentSrv+"' not found.");
+					}
+				};
+				SwingUtilities.invokeLater(doLater);
+			}
+		}
 	}
 }

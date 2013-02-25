@@ -18,6 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -26,7 +27,7 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
-import com.asetune.gui.swing.GButton;
+import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -44,18 +45,27 @@ extends JPanel
 	private final String SOURCEFORGE_URL   = "http://sourceforge.net/projects/asetune/"; 
 	private final String DONATE_URL        = "http://www.asetune.com/donate.html"; 
 
-	private JLabel             _maxChartHistoryInMinutes_lbl = new JLabel();
-	private SpinnerNumberModel _maxChartHistoryInMinutes_spm = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
-	private JSpinner           _maxChartHistoryInMinutes_sp  = new JSpinner(_maxChartHistoryInMinutes_spm);
+	private final static String  PROPKEY_inMemoryHistoryEnabled     = "in-memory.history.enabled"; 
+	private final static boolean DEFAULT_inMemoryHistoryEnabled     = false; 
 
-	private JLabel             _maxInMemHistoryInMinutes_lbl = new JLabel();
-	private SpinnerNumberModel _maxInMemHistoryInMinutes_spm = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
-	private JSpinner           _maxInMemHistoryInMinutes_sp  = new JSpinner(_maxInMemHistoryInMinutes_spm);
-	private JCheckBox          _maxInMemHistoryInMinutes_chk = new JCheckBox("Same as Graph History", true);
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_inMemoryHistoryEnabled, DEFAULT_inMemoryHistoryEnabled);
+	}
 
-	private JButton            _donate_but                   = new GButton();
-	private JButton            _sourceforge_but              = new GButton();
-	private JButton            _facebook_but                 = new GButton();
+	private JLabel             _maxChartHistoryInMinutes_lbl  = new JLabel("Trends Graph History in Minutes");
+	private SpinnerNumberModel _maxChartHistoryInMinutes_spm  = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
+	private JSpinner           _maxChartHistoryInMinutes_sp   = new JSpinner(_maxChartHistoryInMinutes_spm);
+
+	private JCheckBox          _maxInMemHistoryEnabled_chk    = new JCheckBox("Enable In-Memory History", DEFAULT_inMemoryHistoryEnabled);
+	private JLabel             _maxInMemHistoryInMinutes_lbl  = new JLabel("In Minutes");
+	private SpinnerNumberModel _maxInMemHistoryInMinutes_spm  = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
+	private JSpinner           _maxInMemHistoryInMinutes_sp   = new JSpinner(_maxInMemHistoryInMinutes_spm);
+	private JCheckBox          _maxInMemHistoryInMinutes_chk  = new JCheckBox("Same as Graph History", true);
+
+	private JButton            _donate_but                    = new JButton();
+	private JButton            _sourceforge_but               = new JButton();
+	private JButton            _facebook_but                  = new JButton();
 	
 	private List<String>       _savedGraphNameOrder = new ArrayList<String>();
 
@@ -77,20 +87,44 @@ extends JPanel
 		initComponents();
 		loadProps();
 		initComponentActions();
+		
+		setComponentVisibility();
+	}
+
+	private void setComponentVisibility()
+	{
+		boolean toVisible = _maxInMemHistoryEnabled_chk.isSelected();
+		_maxInMemHistoryInMinutes_lbl.setVisible(toVisible);
+		_maxInMemHistoryInMinutes_sp .setVisible(toVisible);
+		_maxInMemHistoryInMinutes_chk.setVisible(toVisible);
 	}
 
 	private void initComponents() 
 	{
 		setLayout(new MigLayout("insets 0 0 0 0", "", ""));
 
-		_maxChartHistoryInMinutes_lbl.setText("Trends Graph History in Minutes");
 		_maxChartHistoryInMinutes_lbl.setToolTipText("How many minutes should be represented in the graphs.");
 		_maxChartHistoryInMinutes_sp .setToolTipText("How many minutes should be represented in the graphs.");
+		
+		_maxInMemHistoryEnabled_chk.setToolTipText(
+				"<html>" +
+				  "Is the 'in-memory' counter history enabled or disabled.<br>" +
+				  "<br>" +
+				  "To view in-memory history, click the <i>Magnifying/DB Button</i> on the <i>toolbar</i>.<br>" +
+				  "Then navigate in the history using the <i>'slider'</i> in the <i>toolbar</i>, right next to the <i>Magnifying/DB Button</i><br>" +
+				  "Or simply <i>double-click</i> on any of the Trend Graphs to navigate in the 'timeline'.<br>" +
+				  "<br>" +
+				  "<b>Note:</b> Think about memory consumption here. <br>" +
+				  "<b>All</b> sampled performance counters are stored in memory for X number of minutes." +
+				"</html>");
 
-		_maxInMemHistoryInMinutes_lbl.setText("In-Memory History in Minutes");
-		_maxInMemHistoryInMinutes_lbl.setToolTipText("<html>How many minutes should be available in the in-memory history.<br>To view in-memory history, click the magnifying/db button on the tool bar.</html>");
-		_maxInMemHistoryInMinutes_sp .setToolTipText("<html>How many minutes should be available in the in-memory history.<br>To view in-memory history, click the magnifying/db button on the tool bar.</html>");
+		_maxInMemHistoryInMinutes_lbl.setToolTipText("How many minutes should be available in the in-memory history.");
+		_maxInMemHistoryInMinutes_sp .setToolTipText("How many minutes should be available in the in-memory history.");
 		_maxInMemHistoryInMinutes_chk.setToolTipText("Use same value for 'In-Memory History' as for 'Trends Graph History'.");
+
+		// CheckBox on the right side
+		_maxInMemHistoryEnabled_chk  .setHorizontalTextPosition(SwingConstants.LEFT);
+		_maxInMemHistoryInMinutes_chk.setHorizontalTextPosition(SwingConstants.LEFT);
 
 		_donate_but.setName("DONATE"); // just for trace
 		_donate_but.setToolTipText("<html>Goto "+Version.getAppName()+" home page where you can read more about how you can support the project.<br><br>"+DONATE_URL+"<html>");
@@ -121,12 +155,14 @@ extends JPanel
 		// Create a separate Panel for the things to position at the top...
 		JPanel topPanel = new JPanel(new MigLayout("insets 0 0 0 0", "", ""));
 
-		topPanel.add(_maxChartHistoryInMinutes_lbl, "split 5, center, gaptop 10");
+		topPanel.add(_maxChartHistoryInMinutes_lbl, "split 7, center, gaptop 10");
 		topPanel.add(_maxChartHistoryInMinutes_sp,  "");
 
-		topPanel.add(_maxInMemHistoryInMinutes_lbl, "gap 10");
-		topPanel.add(_maxInMemHistoryInMinutes_sp,  "gap 5");
-		topPanel.add(_maxInMemHistoryInMinutes_chk, "pushx");
+		topPanel.add(_maxInMemHistoryEnabled_chk,   "gap 10");
+		topPanel.add(_maxInMemHistoryInMinutes_chk, "gap 10,  hidemode 2");
+		topPanel.add(_maxInMemHistoryInMinutes_lbl, "gap 5,   hidemode 2");
+		topPanel.add(_maxInMemHistoryInMinutes_sp,  "gap 5,   hidemode 2");
+		topPanel.add(new JLabel(""),                "pushx"); // Dummy to fill up space
 
 		topPanel.add(_donate_but,      "hidemode 3"); _donate_but.setVisible(false);
 		topPanel.add(_sourceforge_but, "hidemode 2");
@@ -134,6 +170,10 @@ extends JPanel
 
 		add(topPanel, "pushx, growx, wrap");
 
+		// Install some focusable tooltip
+		FocusableTipExtention.install(_donate_but);
+		FocusableTipExtention.install(_sourceforge_but);
+		FocusableTipExtention.install(_facebook_but);
 		
 		String tooltip = "";
 		setToolTipText(tooltip);
@@ -144,6 +184,7 @@ extends JPanel
 		// HISTORY
 		_maxChartHistoryInMinutes_spm.addChangeListener(new ChangeListener()
 		{
+			@Override
 			public void stateChanged(ChangeEvent ce)
 			{
 				int minutes = _maxChartHistoryInMinutes_spm.getNumber().intValue();
@@ -154,9 +195,32 @@ extends JPanel
 			}
 		});
 		
+		// IN-MEMORY-HISTORY: ENABLE|DISABLE
+		_maxInMemHistoryEnabled_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+
+				setInMemHistoryEnable( _maxInMemHistoryEnabled_chk.isSelected() );
+
+				saveProps();
+			}
+		});
+//		_maxInMemHistoryEnabled_chk.addChangeListener(new ChangeListener()
+//		{
+//			@Override
+//			public void stateChanged(ChangeEvent ce)
+//			{
+//				setInMemHistoryEnable( _maxInMemHistoryEnabled_chk.isSelected() );
+//
+//				saveProps();
+//			}
+//		});
 		// IN-MEMORY-HISTORY
 		_maxInMemHistoryInMinutes_spm.addChangeListener(new ChangeListener()
 		{
+			@Override
 			public void stateChanged(ChangeEvent ce)
 			{
 				int minutes = _maxInMemHistoryInMinutes_spm.getNumber().intValue();
@@ -169,6 +233,7 @@ extends JPanel
 		// IN-MEMORY-HISTORY - IN-SYNC
 		_maxInMemHistoryInMinutes_chk.addChangeListener(new ChangeListener()
 		{
+			@Override
 			public void stateChanged(ChangeEvent ce)
 			{
 				// enable/disable the Spinner
@@ -272,23 +337,17 @@ extends JPanel
 
 
 	/**
-	 * this should relly be implemented better...<br>
+	 * this should rely be implemented better...<br>
 	 * Current implementation is not enable/disable, it's just disable=setToOneMinute, enable=setToDefault
 	 * 
 	 * @param enable
 	 */
 	public void setInMemHistoryEnable(boolean enable)
 	{
-		if ( ! enable )
+		if ( enable )
 		{
-			// in-sync_chkbox=false, spinner=enabled
-			_maxInMemHistoryInMinutes_chk.setSelected(false);
-			_maxInMemHistoryInMinutes_sp.setEnabled(true);
+			_maxInMemHistoryEnabled_chk.setSelected(true);
 
-			setInMemMaxHistoryTimeInMinutes(1);
-		}
-		else
-		{
 			// in-sync_chkbox=true, spinner=disabled
 			_maxInMemHistoryInMinutes_chk.setSelected(true);
 			_maxInMemHistoryInMinutes_sp.setEnabled(false);
@@ -297,6 +356,17 @@ extends JPanel
 			int minutes = _maxChartHistoryInMinutes_spm.getNumber().intValue();
 			setInMemMaxHistoryTimeInMinutes(minutes);
 		}
+		else
+		{
+			_maxInMemHistoryEnabled_chk.setSelected(false);
+
+			// in-sync_chkbox=false, spinner=enabled
+			_maxInMemHistoryInMinutes_chk.setSelected(false);
+			_maxInMemHistoryInMinutes_sp.setEnabled(true);
+
+			setInMemMaxHistoryTimeInMinutes(1);
+		}
+		setComponentVisibility();
 		saveProps();
 	}
 
@@ -308,9 +378,19 @@ extends JPanel
 		_maxInMemHistoryInMinutes_spm.setValue( new Integer(minutes) );
 
 		// set the Handler
-		InMemoryCounterHandler imch = InMemoryCounterHandler.getInstance();
-		if (imch != null)
-			imch.setHistoryLengthInMinutes(minutes);
+		// During startup the in-memory handler might not yet have an instance...
+		// so if not, save the property directly
+		if (InMemoryCounterHandler.hasInstance())
+			InMemoryCounterHandler.getInstance().setHistoryLengthInMinutes(minutes);
+		else
+		{
+			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf != null)
+			{
+				conf.setProperty(InMemoryCounterHandler.PROPKEY_HISTORY_SIZE_IN_SECONDS, minutes*60);
+				conf.save();
+			}
+		}
 	}
 
 	
@@ -361,6 +441,9 @@ extends JPanel
 		String str = _maxChartHistoryInMinutes_spm.getNumber().toString();
 		conf.setProperty("graph.history", str);
 
+		// In memory history: enabled | disabled
+		conf.setProperty(PROPKEY_inMemoryHistoryEnabled, _maxInMemHistoryEnabled_chk.isSelected());
+
 		// In memory history
 		str = _maxInMemHistoryInMinutes_spm.getNumber().toString();
 		conf.setProperty("in-memory.history", str);
@@ -384,6 +467,7 @@ extends JPanel
 		_maxInMemHistoryInMinutes_chk.setSelected(inMemHistSync);
 		_maxInMemHistoryInMinutes_sp.setEnabled( ! inMemHistSync );
 
+		// In memory history
 		int inMemHist = conf.getIntProperty("in-memory.history", -1);
 		if (inMemHist != -1)
 		{
@@ -397,6 +481,11 @@ extends JPanel
 			setChartMaxHistoryTimeInMinutes( hist );
 		}
 
+		// In memory history: enabled | disabled
+		boolean inMemHistoryEnabled = conf.getBooleanProperty(PROPKEY_inMemoryHistoryEnabled, DEFAULT_inMemoryHistoryEnabled);
+		setInMemHistoryEnable( inMemHistoryEnabled );
+
+		
 		// Graph Order
 		String str = conf.getProperty("graph.order", "");
 		_savedGraphNameOrder = StringUtil.parseCommaStrToList(str);
@@ -422,6 +511,9 @@ extends JPanel
 	 */
 	public void setGraphOrder(Collection<String> newGraphOrder, boolean printWarnings)
 	{
+		// Used to keep graphs that is NOT in the 'newGraphOrder' list
+		LinkedHashMap<String, TrendGraph> savedCurrentOrder  = new LinkedHashMap<String, TrendGraph>(_graphCurrentOrderMap);
+
 		// remove all Graphs from the Panels Layout Manager
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
 			remove(tg.getPanel());
@@ -430,6 +522,9 @@ extends JPanel
 
 		for (String graphName : newGraphOrder)
 		{
+			// remove it from the save list, since it's "handled" included in the new layout
+			savedCurrentOrder.remove(graphName);
+
 			TrendGraph tg = _graphOriginOrderMap.get(graphName);
 			if (tg == null)
 			{
@@ -461,6 +556,16 @@ extends JPanel
 				if ( ! inPanel )
 					add(graphPanel, GRAPH_LAYOUT_PROP);
 			}
+		}
+		
+		// All graphs, that was NOT in the newGraphOrder list, just add them 
+		for (String graphName : savedCurrentOrder.keySet())
+		{
+			TrendGraph tg = _graphOriginOrderMap.get(graphName);
+			JPanel graphPanel = tg.getPanel();
+
+			_graphCurrentOrderMap.put(tg.getName(), tg);
+			add(graphPanel, GRAPH_LAYOUT_PROP);
 		}
 	}
 	public void setGraphOrder(LinkedHashMap<String, Boolean> newGraphOrderMap)

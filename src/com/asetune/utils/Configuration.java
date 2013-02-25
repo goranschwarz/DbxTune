@@ -31,27 +31,6 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 
-
-
-
-
-//Deleted file:
-//----------------------------------------
-// file: IAseTunePropsWriter.java
-//----------------------------------------
-//package asetune;
-//
-///**
-// * Iterface that implemets a "writer" for a subsection of a property file.
-// *
-// * @author gorans
-// */
-//public interface IAseTunePropsWriter
-//{
-//	public StringBuffer propsWriter();
-//}
-//----------------------------------------
-
 public class Configuration
 extends Properties
 {
@@ -535,15 +514,28 @@ extends Properties
 	}
 
 	/** Get a String value for property, trim() has been called on it, if the property can't be found null will be returned */
+	@Override
 	public String getProperty(String propName)
 	{
 		String val = super.getProperty(propName);
-		if (val != null)
+		if (val == null)
+		{
+			// If the propName wasn't found in the properties.
+			// Get the Registered Application Default 
+			val = getRegisteredDefaultValue(propName);
+		}
+		else
+		{
 			val = val.trim();
+			
+			// get/extract USE_DEFAULT values
+			val = getUseDefaultValue(propName, val);
+		}
 		return parseProperty( propName, val );
 	}
 
 	/** Get a String value for property */
+	@Override
 	public String getProperty(String propName, String defaultValue)
 	{
 		String val = getProperty(propName);
@@ -567,7 +559,12 @@ extends Properties
 	{
 		String val = super.getProperty(propName);
 		if (val != null)
+		{
 			val = val.trim();
+			
+			// get/extract USE_DEFAULT values
+			val = getUseDefaultValue(propName, val);
+		}
 		return val;
 	}
 
@@ -578,6 +575,14 @@ extends Properties
 		return val != null ? val : defaultValue;
 	}
 
+	/** just for testing: Used to get RAW property values */
+	private String getPropertyRaw_test(String propName)
+	{
+		String val = super.getProperty(propName);
+		if (val != null)
+			val = val.trim();
+		return val;
+	}
 
 	/** 
 	 * Encrypt a property value, most possibly a password.
@@ -595,14 +600,60 @@ extends Properties
 		return ENCRYPTED_PREFIX + encryptedStr;
 	}
 
-	public Object setEncrypedProperty(String propName, String str)
-	{
-		return super.setProperty( propName, encryptPropertyValue(propName, str) );
-	}
+//	public Object setEncrypedProperty(String propName, String str)
+//	{
+//		return super.setProperty( propName, encryptPropertyValue(propName, str) );
+//	}
 
+//	@Override
+//	public Object setProperty(String propName, String str)
+//	{
+//		return super.setProperty( propName, str );
+//	}
+	@Override
 	public Object setProperty(String propName, String str)
 	{
-		return super.setProperty( propName, str );
+		return setProperty(propName, str, false);
+	}
+
+	public Object setProperty(String propName, String str, boolean encryptPropertyValue)
+	{
+		if (str != null && encryptPropertyValue)
+		{
+			str = encryptPropertyValue(propName, str);			
+		}
+		// If we have a registered default value for this property
+		// and the passed value is same as the Application Default value 
+		// add 'USE_DEFAULT:' as a prefix to the value
+		//
+		// When reading the property using getProperty(...) we now have the ability to change
+		// a saved property value and change it to the application current default values (if it changes in later releases)
+		// SO: Even if the saved property value and the appDefault is not the same.
+		// We will still use the latest application default value...
+		//
+		// Saving the stored value 'USE_DEFAULT:*value*' is just a precaution, meaning:
+		// If the we delete aRregistered Application Default from the application
+		// we could still use the stored *value* in the saved property file.
+		//
+		String regDefVal = getRegisteredDefaultValue(propName);
+		if (regDefVal != null)
+		{
+			if (regDefVal.equals(str))
+				str = USE_DEFAULT + str;
+		}
+
+		// set the property in super object
+		Object prev = super.setProperty( propName, str );
+		
+		// If the previously stored value, is having 'USE_DEFAULT:' as a prefix
+		// simply remove it and return the *actual* value it previously had.
+		if (prev != null && prev instanceof String)
+		{
+			String prevStr = (String) prev;
+			if (prevStr.startsWith(USE_DEFAULT))
+				prev = prevStr.substring(USE_DEFAULT.length());
+		}
+		return prev;
 	}
 
 	public int setProperty(String propName, int t)
@@ -622,7 +673,126 @@ extends Properties
 		Object prev = setProperty( propName, Boolean.toString(b) );
 		return prev==null ? false : Boolean.parseBoolean( (String)prev );
 	}
-	
+
+//			public static final String USE_DEFAULT = "USE_DEFAULT:";
+//			//-----------------------
+//			// with application defaults, example: propname = USE_DEFAULT:value
+//			//-----------------------
+//			public Object setProperty(String propName, String str, String appDefault)
+//			{
+//				if (str.equals(appDefault))
+//					str = USE_DEFAULT + str;
+//				return super.setProperty( propName, str );
+//			}
+//		
+//			public int setProperty(String propName, int t, int appDefault)
+//			{
+//				String str = Integer.toString(t);
+//				if (t == appDefault)
+//					str = USE_DEFAULT + t;
+//				Object prev = setProperty( propName, str );
+//				if (prev != null && prev instanceof String)
+//					if (((String) prev).startsWith(USE_DEFAULT))
+//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//				return prev==null ? -1 : Integer.parseInt( (String)prev );
+//			}
+//		
+//			public long setProperty(String propName, long l, long appDefault)
+//			{
+//				String str = Long.toString(l);
+//				if (l == appDefault)
+//					str = USE_DEFAULT + l;
+//				Object prev = setProperty( propName, str );
+//				if (prev != null && prev instanceof String)
+//					if (((String) prev).startsWith(USE_DEFAULT))
+//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//				return prev==null ? -1 : Long.parseLong( (String)prev );
+//			}
+//		
+//			public boolean setProperty(String propName, boolean b, boolean appDefault)
+//			{
+//				String str = Boolean.toString(b);
+//				if (b == appDefault)
+//					str = USE_DEFAULT + b;
+//				Object prev = setProperty( propName, str );
+//				if (prev != null && prev instanceof String)
+//					if (((String) prev).startsWith(USE_DEFAULT))
+//						prev = ((String) prev).substring(USE_DEFAULT.length());
+//				return prev==null ? false : Boolean.parseBoolean( (String)prev );
+//			}
+
+	/** prefix for DEFAULT vales */
+	private static final String USE_DEFAULT = "USE_DEFAULT:";
+	/** What are the default vales for: each registered property name */
+
+	private static HashMap<String, String> _registeredDefault = new HashMap<String, String>(); 
+
+	public static void registerDefaultValue(String propName, String defaultValue)
+	{
+		_registeredDefault.put(propName, defaultValue);
+	}
+
+	public static void registerDefaultValue(String propName, int defaultValue)
+	{
+		registerDefaultValue(propName, Integer.toString(defaultValue));
+	}
+
+	public static void registerDefaultValue(String propName, long defaultValue)
+	{
+		registerDefaultValue(propName, Long.toString(defaultValue));
+	}
+
+	public static void registerDefaultValue(String propName, boolean defaultValue)
+	{
+		registerDefaultValue(propName, Boolean.toString(defaultValue));
+	}
+
+	public static boolean hasRegisteredDefaultValue(String propName)
+	{
+		return _registeredDefault.containsKey(propName);
+	}
+
+	public static String getRegisteredDefaultValue(String propName)
+	{
+		return _registeredDefault.get(propName);
+	}
+
+	/**
+	 * If the input <code>value</code> has a <code>'USE_DEFAULT:'</code> prefix.<br>
+	 * Change the value to the Application Registered Default Value<br>
+	 * If the <code>value</code> has a <code>'USE_DEFAULT:'</code> prefix but not any registered default value
+	 * simply take away the <code>'USE_DEFAULT:'</code> prefix and return the value.<br>
+	 * 
+	 * @param propName name of the property to check for default values
+	 * @param value the value got from the Properties
+	 * @return see above.
+	 */
+	public static String getUseDefaultValue(String propName, String value)
+	{
+		// get registered default value
+		String regDefVal = getRegisteredDefaultValue(propName);
+		
+		// if the passed value string is not null and start with a USE_DEFAULT string
+		if (value != null && value.startsWith(USE_DEFAULT))
+		{
+			// if a default value has been registered, use this valie
+			if (regDefVal != null)
+				return regDefVal;
+
+			// If no default value has been registered
+			// and the value string starts with USE_DEFAULT:
+			// extract the value after the keyword 'USE_DEFAULT:'
+			// This is used as a fallback strategy
+			value = value.substring(USE_DEFAULT.length()).trim();
+			
+//			// if value is empty: I think Properties.getProperty(...) returns "" if empty value
+//			if (value.length() == 0)
+//				return ""; 
+//				//return null;
+		}
+		return value;
+	}
+
 	
 	/**
 	 * Interrogate a property value to check if there are any extra actions
@@ -674,7 +844,7 @@ extends Properties
 
 			_logger.debug("The Environment variable '"+envName+"' will be substituted with the value of '"+envVal+"'.");
 
-			// NOW substityte the ENVVARIABLE with a real value...
+			// NOW substitute the ENVVARIABLE with a real value...
 			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
 		}
 
@@ -737,6 +907,7 @@ extends Properties
 
 
 	// Hopefully this is kicked of when the JVM dies aswell...
+	@Override
 	protected void finalize() throws Throwable
 	{
 	    super.finalize();
@@ -754,6 +925,7 @@ extends Properties
 	/////////////////////////////////////////////////////////////
 
 	/** code stolen from Properties */
+	@Override
 	public synchronized void store(OutputStream outputstream, String s)
 	throws IOException
 	{
@@ -1015,11 +1187,11 @@ extends Properties
 			throw new RuntimeException("save() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
 		}
 		
-		@Override
-		public Object setEncrypedProperty(String propName, String str)
-		{
-			throw new RuntimeException("setEncrypedProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
-		}
+//		@Override
+//		public Object setEncrypedProperty(String propName, String str)
+//		{
+//			throw new RuntimeException("setEncrypedProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+//		}
 
 		@Override
 		public Object setProperty(String propName, String str)
@@ -1044,6 +1216,30 @@ extends Properties
 		{
 			throw new RuntimeException("setProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
 		}
+
+//				@Override
+//				public Object setProperty(String propName, String str, String appDefault)
+//				{
+//					throw new RuntimeException("setProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+//				}
+//		
+//				@Override
+//				public int setProperty(String propName, int t, int appDefault)
+//				{
+//					throw new RuntimeException("setProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+//				}
+//		
+//				@Override
+//				public long setProperty(String propName, long l, long appDefault)
+//				{
+//					throw new RuntimeException("setProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+//				}
+//		
+//				@Override
+//				public boolean setProperty(String propName, boolean b, boolean appDefault)
+//				{
+//					throw new RuntimeException("setProperty() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
+//				}
 
 		@Override
 		public void setFilename(String filename)
@@ -1119,6 +1315,7 @@ extends Properties
 		 * @param prefix The property prefix to test against.
 		 * @return An List of keys that match the prefix. If no keys was found, return a empty List object
 		 */
+		@Override
 		public List<String> getKeys(String prefix)
 		{
 			List<String> matchingKeys = new ArrayList<String>();
@@ -1143,6 +1340,7 @@ extends Properties
 			Collections.sort(matchingKeys);
 			return matchingKeys;
 		}
+		@Override
 		public List<String> getKeys()
 		{
 			return getKeys(null);
@@ -1174,6 +1372,7 @@ extends Properties
 		 *        string + the next key value or just the key value itself.
 		 * @return An List of keys that match the prefix. If no keys was found, return a empty List object
 		 */
+		@Override
 		public List<String> getUniqueSubKeys(String prefix, boolean keepPrefix)
 		{
 			List<String> uniqueNames = new ArrayList<String>();
@@ -1476,5 +1675,149 @@ extends Properties
 		System.out.println();
 		System.out.println("getUniqueSubKeys('prop2.',true)  = '"+cfg.getUniqueSubKeys("prop2.",true)+"'.");
 		System.out.println("getUniqueSubKeys('prop2.',false) = '"+cfg.getUniqueSubKeys("prop2.",false)+"'.");
+
+		
+		
+		
+		// Register Application Default
+		System.out.println();
+		System.out.println("--- Registered Application Defaults --------");
+		Configuration.registerDefaultValue("xxx.str",       "str");
+		Configuration.registerDefaultValue("xxx.int",       Integer.MAX_VALUE);
+		Configuration.registerDefaultValue("xxx.long",      Long.MAX_VALUE);
+		Configuration.registerDefaultValue("xxx.boolean.1", Boolean.TRUE);
+		Configuration.registerDefaultValue("xxx.boolean.2", Boolean.TRUE);
+//		Configuration.registerDefaultValue("xxx.boolean.3", Boolean.TRUE); // NOT REGISTERED
+
+		System.out.println("RegisteredDefaultValue: xxx.str       = '" + Configuration.getRegisteredDefaultValue("xxx.str")       + "'.");
+		System.out.println("RegisteredDefaultValue: xxx.int       = '" + Configuration.getRegisteredDefaultValue("xxx.int")       + "'.");
+		System.out.println("RegisteredDefaultValue: xxx.long      = '" + Configuration.getRegisteredDefaultValue("xxx.long")      + "'.");
+		System.out.println("RegisteredDefaultValue: xxx.boolean.1 = '" + Configuration.getRegisteredDefaultValue("xxx.boolean.1") + "'.");
+		System.out.println("RegisteredDefaultValue: xxx.boolean.2 = '" + Configuration.getRegisteredDefaultValue("xxx.boolean.2") + "'.");
+		System.out.println("RegisteredDefaultValue: xxx.boolean.3 = '" + Configuration.getRegisteredDefaultValue("xxx.boolean.3") + "'  ------- NOT REGISTERED -------");
+
+
+		System.out.println("--- SOME DEFAULT VALUES --------");
+		tConf.setProperty("xxx.password",  "someSecretPassword", true); // encrypted
+		tConf.setProperty("xxx.str",       "str");
+		tConf.setProperty("xxx.int",       Integer.MAX_VALUE);
+		tConf.setProperty("xxx.long",      Long.MAX_VALUE);
+		tConf.setProperty("xxx.boolean.1", Boolean.TRUE);
+//		tConf.setProperty("xxx.boolean.2", Boolean.TRUE); // DO NOT SET THIS VALUE
+
+		System.out.println("xxx.password  = '" + tConf.getProperty("xxx.password")    + "'.");
+		System.out.println("xxx.str       = '" + tConf.getProperty("xxx.str")         + "'.");
+		System.out.println("xxx.int       = '" + tConf.getIntProperty("xxx.int")      + "'.");
+		System.out.println("xxx.long      = '" + tConf.getLongProperty("xxx.long")    + "'.");
+		System.out.println("xxx.boolean.1 = '" + tConf.getBooleanProperty("xxx.boolean.1", true) + "'.");
+		System.out.println("xxx.boolean.2 = '" + tConf.getBooleanProperty("xxx.boolean.2", false) + "'.");
+		System.out.println("xxx.boolean.3 = '" + tConf.getBooleanProperty("xxx.boolean.3", false) + "'.");
+
+		System.out.println("RAW: xxx.password  = '" + tConf.getPropertyRaw_test("xxx.password")  + "'.");
+		System.out.println("RAW: xxx.str       = '" + tConf.getPropertyRaw_test("xxx.str")       + "'.");
+		System.out.println("RAW: xxx.int       = '" + tConf.getPropertyRaw_test("xxx.int")       + "'.");
+		System.out.println("RAW: xxx.long      = '" + tConf.getPropertyRaw_test("xxx.long")      + "'.");
+		System.out.println("RAW: xxx.boolean.1 = '" + tConf.getPropertyRaw_test("xxx.boolean.1") + "'.");
+		System.out.println("RAW: xxx.boolean.2 = '" + tConf.getPropertyRaw_test("xxx.boolean.2") + "'.");
+		System.out.println("RAW: xxx.boolean.3 = '" + tConf.getPropertyRaw_test("xxx.boolean.3") + "'.");
+
+		testShouldHaveValue(tConf.getProperty("xxx.password"));
+		testShouldHaveValue(tConf.getProperty("xxx.str"));
+		testShouldHaveValue(tConf.getProperty("xxx.int"));
+		testShouldHaveValue(tConf.getProperty("xxx.long"));
+		testShouldHaveValue(tConf.getProperty("xxx.boolean.1"));
+		testShouldHaveValue(tConf.getProperty("xxx.boolean.2"));
+		testShouldBeNull   (tConf.getProperty("xxx.boolean.3"));
+
+		testShouldBeEqual("someSecretPassword", tConf.getProperty       ("xxx.password"));
+		testShouldBeEqual("str",                tConf.getProperty       ("xxx.str"));
+		testShouldBeEqual(Integer.MAX_VALUE,    tConf.getIntProperty    ("xxx.int"));
+		testShouldBeEqual(Long.MAX_VALUE,       tConf.getLongProperty   ("xxx.long"));
+		testShouldBeEqual(Boolean.TRUE,         tConf.getBooleanProperty("xxx.boolean.1", true));
+		testShouldBeEqual(Boolean.TRUE,         tConf.getBooleanProperty("xxx.boolean.2", false)); // in RepAppDef, not in Props, use RepAppDef(true)
+		testShouldBeEqual(Boolean.FALSE,        tConf.getBooleanProperty("xxx.boolean.3", false)); // Not in RepAppDef, use default value
+
+		testShouldNotBeEqual("someSecretPassword",       tConf.getPropertyRaw_test("xxx.password"));
+		testShouldBeEqual(USE_DEFAULT+"str",             tConf.getPropertyRaw_test("xxx.str"));
+		testShouldBeEqual(USE_DEFAULT+Integer.MAX_VALUE, tConf.getPropertyRaw_test("xxx.int"));
+		testShouldBeEqual(USE_DEFAULT+Long.MAX_VALUE,    tConf.getPropertyRaw_test("xxx.long"));
+		testShouldBeEqual(USE_DEFAULT+Boolean.TRUE,      tConf.getPropertyRaw_test("xxx.boolean.1"));
+		testShouldBeNull(                                tConf.getPropertyRaw_test("xxx.boolean.2"));
+		testShouldBeNull(                                tConf.getPropertyRaw_test("xxx.boolean.3"));
+
+		
+		System.out.println("--- SOME NON DEFAULT VALUES --------");
+		tConf.setProperty("xxx.password",  "testPasswd", true); // encrypted
+		tConf.setProperty("xxx.str",       "another str");
+		tConf.setProperty("xxx.int",       1);
+		tConf.setProperty("xxx.long",      1L);
+		tConf.setProperty("xxx.boolean.1", Boolean.FALSE);
+
+		System.out.println("xxx.password  = '" + tConf.getProperty       ("xxx.password")         + "'.");
+		System.out.println("xxx.str       = '" + tConf.getProperty       ("xxx.str")              + "'.");
+		System.out.println("xxx.int       = '" + tConf.getIntProperty    ("xxx.int")              + "'.");
+		System.out.println("xxx.long      = '" + tConf.getLongProperty   ("xxx.long")             + "'.");
+		System.out.println("xxx.boolean.1 = '" + tConf.getBooleanProperty("xxx.boolean.1", true)  + "'.");
+		System.out.println("xxx.boolean.2 = '" + tConf.getBooleanProperty("xxx.boolean.2", false) + "'.");
+		System.out.println("xxx.boolean.3 = '" + tConf.getBooleanProperty("xxx.boolean.3", false) + "'.");
+
+		System.out.println("RAW: xxx.password  = '" + tConf.getPropertyRaw_test("xxx.password")  + "'.");
+		System.out.println("RAW: xxx.str       = '" + tConf.getPropertyRaw_test("xxx.str")       + "'.");
+		System.out.println("RAW: xxx.int       = '" + tConf.getPropertyRaw_test("xxx.int")       + "'.");
+		System.out.println("RAW: xxx.long      = '" + tConf.getPropertyRaw_test("xxx.long")      + "'.");
+		System.out.println("RAW: xxx.boolean.1 = '" + tConf.getPropertyRaw_test("xxx.boolean.1") + "'.");
+		System.out.println("RAW: xxx.boolean.2 = '" + tConf.getPropertyRaw_test("xxx.boolean.2") + "'.");
+		System.out.println("RAW: xxx.boolean.3 = '" + tConf.getPropertyRaw_test("xxx.boolean.3") + "'.");
+
+		testShouldHaveValue(tConf.getProperty("xxx.password"));
+		testShouldHaveValue(tConf.getProperty("xxx.str"));
+		testShouldHaveValue(tConf.getProperty("xxx.int"));
+		testShouldHaveValue(tConf.getProperty("xxx.long"));
+		testShouldHaveValue(tConf.getProperty("xxx.boolean.1"));
+		testShouldHaveValue(tConf.getProperty("xxx.boolean.2"));
+		testShouldBeNull   (tConf.getProperty("xxx.boolean.3"));
+
+		testShouldBeEqual("testPasswd",      tConf.getProperty       ("xxx.password"));
+		testShouldBeEqual("another str",     tConf.getProperty       ("xxx.str"));
+		testShouldBeEqual(1,                 tConf.getIntProperty    ("xxx.int"));
+		testShouldBeEqual(1L,                tConf.getLongProperty   ("xxx.long"));
+		testShouldBeEqual(Boolean.FALSE,     tConf.getBooleanProperty("xxx.boolean.1", true));
+		testShouldBeEqual(Boolean.TRUE,      tConf.getBooleanProperty("xxx.boolean.2", false)); // in RepAppDef, not in Props, use RepAppDef(true)
+		testShouldBeEqual(Boolean.FALSE,     tConf.getBooleanProperty("xxx.boolean.3", false)); // Not in RepAppDef
+
+		testShouldNotBeEqual("testPasswd",                         tConf.getPropertyRaw_test("xxx.password"));
+		testShouldBeEqual("another str",                           tConf.getPropertyRaw_test("xxx.str"));
+		testShouldBeEqual(1,                 Integer.parseInt(     tConf.getPropertyRaw_test("xxx.int")));
+		testShouldBeEqual(1L,                Long   .parseLong(    tConf.getPropertyRaw_test("xxx.long")));
+		testShouldBeEqual(Boolean.FALSE,     Boolean.parseBoolean( tConf.getPropertyRaw_test("xxx.boolean.1")));
+		testShouldBeNull(                                          tConf.getPropertyRaw_test("xxx.boolean.2"));
+		testShouldBeNull(                                          tConf.getPropertyRaw_test("xxx.boolean.3"));
+	}
+
+	private static void testShouldBeNull(Object v1)
+	{
+		if (v1 != null) 
+			throw new RuntimeException("testShouldBeNull: Object SHOULD be NULL, it has value='"+v1+"'.");
+	}
+	private static void testShouldHaveValue(Object v1)
+	{
+		if (v1 == null) 
+			throw new RuntimeException("testShouldHaveValue: Object should HAVE value, it's null");
+	}
+	private static void testShouldBeEqual(Object v1, Object v2)
+	{
+		if (v1 == null && v2 == null)
+			return;
+		if (v1 == null && v2 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"'");
+		if (v2 == null && v1 != null) throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"'");
+		if (! v1.equals(v2))          throw new RuntimeException("testEqual: Values are NOT equal. v1='"+v1+"', v2='"+v2+"', v1='"+v1.getClass().getName()+"', v2='"+v2.getClass().getName()+"'.");
+	}
+	private static void testShouldNotBeEqual(Object v1, Object v2)
+	{
+		if (v1 == v2)
+			return;
+		if (v1 == null && v2 != null) return;
+		if (v2 == null && v1 != null) return;
+		if (v1.equals(v2))            throw new RuntimeException("testNotEqual: Values ARE equal. v1='"+v1+"', v2='"+v2+"', v1='"+v1.getClass().getName()+"', v2='"+v2.getClass().getName()+"'.");
 	}
 }

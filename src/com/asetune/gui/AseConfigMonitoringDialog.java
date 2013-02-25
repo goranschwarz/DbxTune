@@ -602,6 +602,7 @@ public class AseConfigMonitoringDialog
 	** BEGIN: override methods
 	**---------------------------------------------------
 	*/
+	@Override
 	public void setVisible(boolean visible)
 	{
 		_logger.debug("AseConfigMonitoringDialog.setVisible("+visible+")");
@@ -752,6 +753,7 @@ public class AseConfigMonitoringDialog
 	** BEGIN: implementing ActionListener, KeyListeners
 	**---------------------------------------------------
 	*/
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -818,6 +820,7 @@ public class AseConfigMonitoringDialog
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_ok.requestFocus();
@@ -1377,10 +1380,10 @@ public class AseConfigMonitoringDialog
 		// If we are currenty in REFRESH, then do GUI wait for the sample to finish.
 		if (GetCounters.hasInstance() && GetCounters.getInstance().isRefreshing())
 		{
-			final WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Waiting for currect sample to finish");
+			WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Waiting for currect sample to finish");
 
 			// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
-			BgExecutor terminateConnectionTask = new BgExecutor()
+			BgExecutor terminateConnectionTask = new BgExecutor(wait)
 			{
 				@Override
 				public Object doWork()
@@ -1409,7 +1412,7 @@ public class AseConfigMonitoringDialog
 	
 							char pc = progressChars[ i % 4 ];
 							_logger.info("Waiting for GetCounters to stop before I can: Clearing components... Waited for "+sleptSoFar+" ms so far. Giving up after "+timeoutAfter+" seconds");
-							wait.setState("Waiting for 'refresh' to end "+pc);
+							getWaitDialog().setState("Waiting for 'refresh' to end "+pc);
 	
 							try { Thread.sleep(500); }
 							catch (InterruptedException ignore) {}

@@ -43,7 +43,7 @@ extends CountersModel
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monDataCache"};
-	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
+	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {"CacheHitRate"};
@@ -116,7 +116,8 @@ extends CountersModel
 				labels, 
 				false, // is Percent Graph
 				this, 
-				true, // visible at start
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}

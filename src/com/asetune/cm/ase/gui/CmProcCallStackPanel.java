@@ -41,6 +41,7 @@ extends TabularCntrPanel
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.executing");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String maxContextID = adapter.getString(adapter.getColumnIndex("MaxContextID"));
@@ -56,6 +57,7 @@ extends TabularCntrPanel
 		// Procedure ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -74,6 +76,7 @@ extends TabularCntrPanel
 		// Trigger ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");
@@ -92,6 +95,7 @@ extends TabularCntrPanel
 		// View ICON
 		addHighlighter( new IconHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				int modelCol = adapter.getColumnIndex("ObjectType");

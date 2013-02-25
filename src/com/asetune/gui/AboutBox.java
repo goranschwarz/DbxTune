@@ -73,6 +73,7 @@ public class AboutBox
 		setVisible(true);
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		if ( _ok_but.equals(e.getSource()) )
@@ -88,6 +89,7 @@ public class AboutBox
 		}
 	}
 
+	@Override
 	@SuppressWarnings("unused")
 	public void hyperlinkUpdate(HyperlinkEvent hle)
 	{

@@ -123,7 +123,8 @@ extends CounterTableModel
 		_interval                   = sc._interval;
 		_negativeDiffCountersToZero = sc._negativeDiffCountersToZero;
 		_diffColNames               = sc._diffColNames;
-		_prevSample                 = sc._prevSample;     // should we really copy this one...
+//		_prevSample                 = sc._prevSample;     // should we really copy this one...
+		_prevSample                 = null;               // copy this causes memory leaks...
 
 		if (cloneRows)
 		{
@@ -154,16 +155,19 @@ extends CounterTableModel
 	* public void addTableModelListener(TableModelListener tablemodellistener);
 	* public void removeTableModelListener(TableModelListener tablemodellistener);
 	*/
+	@Override
 	public int getRowCount()
 	{
 		return (_rows == null) ? 0 : _rows.size();
 	}
 
+	@Override
 	public int getColumnCount()
 	{
 		return _colNames == null ? 0 : _colNames.size();
 	}
 
+	@Override
 	public String getColumnName(int colid)
 	{
 		if (_colNames == null || colid < 0 || colid >= getColumnCount())
@@ -171,6 +175,7 @@ extends CounterTableModel
 		return _colNames.get(colid);
 	}
 
+	@Override
 	public Class<?> getColumnClass(int colid)
 	{
 		if (getRowCount() == 0)
@@ -185,11 +190,13 @@ extends CounterTableModel
 //		return o!=null ? o.getClass() : Object.class;
 	}
 
+	@Override
 	public boolean isCellEditable(int i, int j)
 	{
 		return false;
     }
 
+	@Override
 	public Object getValueAt(int row, int col)
 	{
 		if (_rows == null || row < 0 || col < 0)
@@ -249,6 +256,7 @@ extends CounterTableModel
 	}
 
 	/** sets value in a cell, if the cell isn't there, "create" it... */
+	@Override
 	public void setValueAt(Object value, int row, int col)
 	{
 		if (_rows == null)
@@ -308,6 +316,7 @@ extends CounterTableModel
 		_colNames = new ArrayList<String>(cols);
 	}
 
+	@Override
 	public List<String> getColNames()
 	{
 		return _colNames;
@@ -336,6 +345,7 @@ extends CounterTableModel
 		return _colSqlTypeName.get(colId);
 	}
 
+	@Override
 	public String getPkValue(int row)
 	{
 		if (_rowidToKey != null && row >= 0 && row < _rowidToKey.size())
@@ -343,6 +353,7 @@ extends CounterTableModel
 
 		return null;
 	}
+	@Override
 	public int getRowNumberForPkValue(String pkStr)
 	{
 		if (_keysToRowid == null)
@@ -484,7 +495,28 @@ extends CounterTableModel
 		case java.sql.Types.LONGVARCHAR:  return rs.getString(col);
 		case java.sql.Types.DATE:         return rs.getDate(col);
 		case java.sql.Types.TIME:         return rs.getTime(col);
-		case java.sql.Types.TIMESTAMP:    return rs.getTimestamp(col);
+
+		// Reading Timestamp value could problematic from monStatementCacheDetails...
+		// So if it fails, write som trace information about this and, return a "default value"
+		case java.sql.Types.TIMESTAMP:
+		{
+			try 
+			{
+				return rs.getTimestamp(col);
+			}
+			catch (Throwable t)
+			{
+				String colName  = getColumnName(col);
+				String cmName   = getName();
+				Object rawValue = null;
+				// Check if we can read the raw value...
+				try {                  rawValue = rs.getObject(col); }
+				catch (Throwable t2) { rawValue = "Caught Exception reading RawValue using rs.getObject(col), My guess it's a corrupt Timestamp value."; }
+
+				_logger.warn("Problems reading column pos="+col+", name='"+colName+"', RawValue='"+rawValue+"'. in CM '"+cmName+"'. returning a 'default' value instead: return new Timestamp(0); Caught="+t); 
+				return new Timestamp(0);
+			}
+		}
 //		case java.sql.Types.BINARY:       return new byte[0];
 //		case java.sql.Types.VARBINARY:    return new byte[0];
 //		case java.sql.Types.LONGVARBINARY:return new byte[0];
@@ -787,6 +819,12 @@ extends CounterTableModel
 							if (_prevSample != null)
 							{
 								_interval = _samplingTime.getTime() - _prevSample._samplingTime.getTime();
+								
+								// if _prevSample is not used any further, reset this pointer here
+								// If this is NOT done we will have a memory leek...
+								// If _prevSample is used somewhere else, please reset this pointer later
+								//    and check memory consumption under 24 hours sampling...
+								_prevSample = null;
 							}
 						}
 						else
@@ -1047,14 +1085,14 @@ extends CounterTableModel
 
 					if (pkDuplicateAction != 0 && _diffColNames == null)
 					{
-						_logger.error("Duplicate key in '"+_name+"', pkDuplicateAction="+pkDuplicateAction+", BUT _diffColNames is null, this should never happen.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', pkDuplicateAction="+pkDuplicateAction+", BUT _diffColNames is null, this should never happen.");
 
 						// Read next row
 						continue;
 					}
 					if (pkDuplicateAction == 0)
 					{
-						_logger.error("Duplicate key in '"+_name+"', a row for the key '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 
 						// Read next row
 						continue;
@@ -1107,7 +1145,7 @@ extends CounterTableModel
 					// NOT IMPLEMENTED
 					if (pkDuplicateAction == 2)
 					{
-						_logger.error("Duplicate key in '"+_name+"', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
 
 						// Read next row
 						continue;
@@ -1237,7 +1275,7 @@ extends CounterTableModel
 				//if (allowRowMerge)
 				//	doRowMerge(curRow, row);
 
-				_logger.error("Duplicate key in '"+_name+"', a row for the key '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+				_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 				return false;
 				//throw new DuplicateKeyException(key, curRow, row);
 			}
@@ -1262,6 +1300,20 @@ extends CounterTableModel
 		return true;
 	}
 
+	private List<String> getPkCols(boolean[] pkColsArr)
+	{
+		List<String> pkList = new ArrayList<String>();
+		if (pkColsArr == null)
+			return pkList;
+
+		for (int c=0; c<pkColsArr.length; c++)
+		{
+			if (pkColsArr[c] && c<_colNames.size())
+				pkList.add(_colNames.get(c));
+		}
+		return pkList;
+	}
+	
 	public void remove(String key)
 	{
 		removeRow(key);

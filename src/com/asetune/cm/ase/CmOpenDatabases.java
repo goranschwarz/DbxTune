@@ -44,9 +44,10 @@ extends CountersModel
 		"<br><br>" +
 		"Table Background colors:" +
 		"<ul>" +
-		"    <li>BLUE - A Database backup is in progress</li>" +
-		"    <li>PINK - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
-		"    <li>RED  - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
+		"    <li>BLUE   - A Database backup is in progress</li>" +
+		"    <li>YELLOW - Has a long running transaction issued by a user.</li>" +
+		"    <li>PINK   - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
+		"    <li>RED    - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -113,17 +114,20 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	
-	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
-	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB   = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
-	public static final String GRAPH_NAME_LOGSIZE_USED_PCT  = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
+	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
+	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
+	public static final String GRAPH_NAME_LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
+//	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "runtime-replaced" };
+		String[] labels         = new String[] { "runtime-replaced" };
+//		String[] openTranLabels = new String[] { "Seconds" };
 		
-		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT, new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT, labels));
-		addTrendGraphData(GRAPH_NAME_LOGSIZE_LEFT_MB,   new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_LEFT_MB,   labels));
-		addTrendGraphData(GRAPH_NAME_LOGSIZE_USED_PCT,  new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_USED_PCT,  labels));
+		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT,  new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT,  labels));
+		addTrendGraphData(GRAPH_NAME_LOGSIZE_LEFT_MB,    new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_LEFT_MB,    labels));
+		addTrendGraphData(GRAPH_NAME_LOGSIZE_USED_PCT,   new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_USED_PCT,   labels));
+//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, openTranLabels));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -137,7 +141,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
@@ -147,18 +152,31 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 				"DB Transaction Log Space used in PCT",     // Menu CheckBox text
 				"DB Transaction Log Space used in Percent", // Label 
 				labels, 
-				false, // is Percent Graph
+				true,  // is Percent Graph
 				this, 
 				false, // visible at start
-				-1);  // minimum height
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
+
+//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+//				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+//				"Oldest Open Transaction in any Databases, in Seconds", // Label 
+//				openTranLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
 		}
 	}
 
@@ -203,6 +221,31 @@ extends CountersModel
 			                                                            "How many percent have we <b>used</b> of the transaction log. near 100% = Full<br> " +
 			                                                            "<b>Formula</b>: Pct = 100.0 - ((oval_LogSizeFreeInMb / oval_LogSizeInMb) * 100.0)<br>" +
 			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranStartTime","<html>" +
+			                                                            "Start time of the oldest open transaction in this database.<br> " +
+			                                                            "<b>Formula</b>: OldestTranStartTime = column: master.dbo.syslogshold.starttime<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranInSeconds","<html>" +
+			                                                            "Number of seconds since the oldest open transaction in this database was started. <br> " +
+			                                                            "<b>Formula</b>: OldestTranInSeconds = datediff(ss, master.dbo.syslogshold.starttime, getdate())<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranName",     "<html>" +
+			                                                            "Name of the oldest open transaction in this database.<br> " +
+			                                                            "<b>Formula</b>: OldestTranName = column: master.dbo.syslogshold.name<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranSpid",     "<html>" +
+			                                                            "SPID, which is resopnsible for the oldest open transaction in this database<br> " +
+			                                                            "<b>Formula</b>: OldestTranSpid = column: master.dbo.syslogshold.spid<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranProg",     "<html>" +
+			                                                             "Application Name, which is resopnsible for the oldest open transaction in this database<br> " +
+			                                                             "<b>Formula</b>: OldestTranProg = (select p.program_name from master.dbo.sysprocesses p where p.spid = master.dbo.syslogshold.spid)<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "OldestTranPage",     "<html>" +
+			                                                            "Page number in the transaction log, which holds the oldest open transaction in this database.<br> " +
+			                                                            "<b>Note:</b> you can do: dbcc traceon(3604)  dbcc page(dbid, pagenum) to see the content of that page.<br> " +
+			                                                            "<b>Formula</b>: OldestTranProg = column: master.dbo.syslogshold.page<br>" +
+			                                                        "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -228,7 +271,7 @@ extends CountersModel
 
 		if (isClusterEnabled)
 		{
-			cols1 += "InstanceID, ";
+			cols1 += "od.InstanceID, ";
 		}
 
 		String ceDbRecoveryStatus = ""; // 
@@ -236,12 +279,12 @@ extends CountersModel
 		String SuspendedProcesses = "";
 		if (aseVersion >= 12510)
 		{
-			QuiesceTag         = "QuiesceTag, ";
-			SuspendedProcesses = "SuspendedProcesses, ";
+			QuiesceTag         = "od.QuiesceTag, ";
+			SuspendedProcesses = "od.SuspendedProcesses, ";
 		}
 		if (isClusterEnabled)
 		{
-			ceDbRecoveryStatus = "CeDbRecoveryStatus = db_recovery_status(DBID), ";
+			ceDbRecoveryStatus = "CeDbRecoveryStatus = db_recovery_status(od.DBID), ";
 		}
 		
 		// 15.7 ESD#2
@@ -251,9 +294,9 @@ extends CountersModel
 		String nl_15702        = "";
 		if (aseVersion >= 15702)
 		{
-			PRSUpdateCount  = "PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
-			PRSSelectCount  = "PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
-			PRSRewriteCount = "PRSRewriteCount, "; // Number of times PRSes (Precomputed Result Set) were considered valid for query rewriting during compilation
+			PRSUpdateCount  = "od.PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
+			PRSSelectCount  = "od.PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
+			PRSRewriteCount = "od.PRSRewriteCount, "; // Number of times PRSes (Precomputed Result Set) were considered valid for query rewriting during compilation
 			nl_15702        = " \n";
 		}
 
@@ -265,21 +308,27 @@ extends CountersModel
 		// select @pgsPerMb   : 512=2K, 256=4K, 128=8K, 64=16K 
 		// select mbUsed = pagesUsed / @pgsPerMb
 
-		String DbSizeInMb      = "DbSizeInMb      = (select sum(u.size) from master..sysusages u readpast where u.dbid = mond.DBID)                          / (1024*1024/@@maxpagesize), \n";
-		String LogSizeInMb     = "LogSizeInMb     = (select sum(u.size) from master..sysusages u readpast where u.dbid = mond.DBID and (segmap & 4) = 4)     / (1024*1024/@@maxpagesize), \n";
-		String LogSizeFreeInMb = "LogSizeFreeInMb = convert(numeric(10,1), (lct_admin('logsegment_freepages',DBID)-lct_admin('reserved_for_rollbacks',DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String DbSizeInMb      = "DbSizeInMb      = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID)                                  / (1024*1024/@@maxpagesize), \n";
+		String LogSizeInMb     = "LogSizeInMb     = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4)           / (1024*1024/@@maxpagesize), \n";
+		String LogSizeFreeInMb = "LogSizeFreeInMb = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
 		String LogSizeUsedPct  = "LogSizeUsedPct  = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
-		cols1 += "DBName, DBID, " + ceDbRecoveryStatus + "AppendLogRequests, AppendLogWaits, \n" +
+		cols1 += "od.DBName, od.DBID, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
 		         "AppendLogContPct = CASE \n" +
-		         "                      WHEN AppendLogRequests > 0 \n" +
-		         "                      THEN convert(numeric(10,2), ((AppendLogWaits+0.0)/AppendLogRequests)*100.0) \n" +
+		         "                      WHEN od.AppendLogRequests > 0 \n" +
+		         "                      THEN convert(numeric(10,2), ((od.AppendLogWaits+0.0)/od.AppendLogRequests)*100.0) \n" +
 		         "                      ELSE convert(numeric(10,2), 0.0) \n" +
 		         "                   END, \n" +
 		         DbSizeInMb + LogSizeInMb + LogSizeFreeInMb + LogSizeUsedPct + 
-		         "TransactionLogFull, " + SuspendedProcesses + 
+		         "od.TransactionLogFull, " + SuspendedProcesses + "\n" +
+		         "OldestTranStartTime = h.starttime, \n" + 
+		         "OldestTranInSeconds = CASE WHEN datediff(day, h.starttime, getdate()) > 20 THEN -1 ELSE  datediff(ss, h.starttime, getdate()) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+		         "OldestTranName      = h.name, \n" + 
+		         "OldestTranSpid      = h.spid, \n" + 
+		         "OldestTranProg      = (select p.program_name from master..sysprocesses p where h.spid = p.spid), \n" + 
+		         "OldestTranPage      = h.page,\n" + 
 		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +
-		         "BackupInProgress, LastBackupFailed, BackupStartTime, ";
+		         "od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
 		cols2 += "";
 		cols3 += QuiesceTag;
 		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
@@ -287,16 +336,19 @@ extends CountersModel
 		}
 		if (aseVersion >= 15025)
 		{
-			cols2 += "LastTranLogDumpTime, LastCheckpointTime, ";
+			cols2 += "od.LastTranLogDumpTime, od.LastCheckpointTime, ";
 		}
 		String cols = cols1 + cols2 + cols3;
 		cols = StringUtil.removeLastComma(cols);
 
 		String sql = 
 			"select " + cols + "\n" +
-			"from master..monOpenDatabases mond\n" +
-			"where DBID in (select db.dbid from master..sysdatabases db readpast where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
-			"order by DBName \n";
+			"from master..monOpenDatabases od, master..syslogshold h \n" +
+			"where od.DBID in (select db.dbid from master..sysdatabases db readpast where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
+			"  and od.DBID *= h.dbid \n" + 
+			"  and h.name != '$replication_truncation_point' \n" + 
+			"order by od.DBName \n" +
+			"";
 
 		return sql;
 	}
@@ -304,6 +356,7 @@ extends CountersModel
 	/** 
 	 * Compute the AppendLogContPct for DIFF values
 	 */
+	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
 		int AppendLogRequests,         AppendLogWaits;
@@ -445,5 +498,14 @@ extends CountersModel
 			tgdp.setLabel(lArray);
 			tgdp.setData(dArray);
 		}
+//		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC.equals(tgdp.getName()))
+//		{
+//			Double[] arr = new Double[1];
+//			arr[0] = this.getAbsValueMax("OldestTranInSeconds"); // MAX
+//			
+//			// Set the values
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
+//		}
 	}
 }

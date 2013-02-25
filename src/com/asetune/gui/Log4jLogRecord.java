@@ -29,6 +29,7 @@ extends LogRecord
 		return isWarning;
 	}
 
+	@Override
 	public boolean isSevereLevel()
 	{
 		boolean isSevere = false;

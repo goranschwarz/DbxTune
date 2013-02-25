@@ -29,6 +29,7 @@ extends DefaultTableCellRenderer
 		setHorizontalTextPosition(10);
 	}
 
+	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
 	{
 		JTableHeader tableHeader = table.getTableHeader();
@@ -129,6 +130,7 @@ class SortIcon implements Icon, SwingConstants
 //		g.drawString(Integer.toString(_priority+1), x+1, y+1);
 //		g.setFont(f);
 //	}
+	@Override
 	public void paintIcon(Component c, Graphics g, int x, int y)
 	{
 		iconRenderer.paintTriangle(g, x, y-4, size, direction, true);
@@ -139,11 +141,13 @@ class SortIcon implements Icon, SwingConstants
 		g.setFont(f);
 	}
 
+	@Override
 	public int getIconWidth()
 	{
 		return size + 5;
 	}
 
+	@Override
 	public int getIconHeight()
 	{
 		return size / 2;

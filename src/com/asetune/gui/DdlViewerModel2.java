@@ -296,6 +296,7 @@ extends DefaultTreeTableModel
 //		public void add(TypeEntry te)   { _typeList.add(te); }
 		public void add(TypeEntry te)   { super.add(te); }
 		public String getDisplayString(){ return _dbname; }
+		@Override
 		public String toString()        { return getDisplayString(); }
 //		public String toString()        { return "DbEntry("+_dbname+")"; }
 
@@ -333,6 +334,7 @@ extends DefaultTreeTableModel
 		public void add(ObjectEntry oe) { super.add(oe); };
 		public String getTypeName()     { return DdlViewer.getTypeName(_type); }
 		public String getDisplayString(){ return getTypeName(); }
+		@Override
 		public String toString()        { return getDisplayString(); }
 //		public String toString()        { return "TypeEntry("+_type+")"; }
 		@Override
@@ -381,6 +383,7 @@ extends DefaultTreeTableModel
 		public String    _extraInfoText;
 
 		public String getDisplayString(){ return _name; }
+		@Override
 		public String toString()        { return getDisplayString(); }
 //		public String toString()        { return "ObjectEntry("+_dbname+":"+_type+":"+_name+")"; }
 

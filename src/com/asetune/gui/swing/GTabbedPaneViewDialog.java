@@ -234,6 +234,7 @@ public class GTabbedPaneViewDialog
 		_apply.setEnabled(false);
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
@@ -445,6 +446,7 @@ public class GTabbedPaneViewDialog
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TabPos.GroupIcon .ordinal()) return Icon.class;
@@ -452,6 +454,7 @@ public class GTabbedPaneViewDialog
 				if (column == TabPos.TabVisible.ordinal()) return Boolean.class;
 				return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int col)
 			{
 				if (col == TabPos.TabVisible.ordinal())
@@ -616,6 +619,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("Show Counter View Dialog");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: Show Counter View Dialog.");
@@ -629,6 +633,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("Hide all columns");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: Hide all columns.");
@@ -650,6 +655,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("setTabOrder(String[]: '"+Arrays.asList(sa1)+"'.");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: setTabOrder(String[]: '"+Arrays.asList(sa1)+"'.");
@@ -663,6 +669,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("setTabOrderAndVisibility(String[]: '"+Arrays.asList(sa2)+"'.");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: setTabOrderAndVisibility(String[]: '"+Arrays.asList(sa2)+"'.");
@@ -676,6 +683,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("setTabOrderAndVisibility(String: '"+str+"')");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: setTabOrderAndVisibility(String: '"+str+"')");
@@ -688,6 +696,7 @@ public class GTabbedPaneViewDialog
 			mi = new JMenuItem("getTabOrderAndVisibility()");
 			mi.addActionListener(new ActionListener()
 			{
+				@Override
 				public void actionPerformed(ActionEvent e)
 				{
 					System.out.println("ACTION: getTabOrderAndVisibility()");

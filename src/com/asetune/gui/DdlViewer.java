@@ -39,7 +39,6 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTreeTable;
 import org.jdesktop.swingx.treetable.AbstractMutableTreeTableNode;
@@ -57,6 +56,8 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -233,7 +234,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		JPanel panel = SwingUtils.createPanel("TreeView", false);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 		
-		_object_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_object_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_object_scroll, this);
 
 		panel.add(_object_scroll, "push, grow, wrap");
 
@@ -245,7 +247,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		JPanel panel = SwingUtils.createPanel("TreeView", false);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 		
-		_depends_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_depends_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_depends_scroll, this);
 
 		panel.add(_depends_scroll, "push, grow, wrap");
 
@@ -257,7 +260,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		JPanel panel = SwingUtils.createPanel("TreeView", false);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 		
-		_optDiag_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_optDiag_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_optDiag_scroll, this);
 
 		panel.add(_optDiag_scroll, "push, grow, wrap");
 
@@ -269,7 +273,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		JPanel panel = SwingUtils.createPanel("TreeView", false);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 		
-		_extraInfo_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_extraInfo_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(_extraInfo_scroll, this);
 
 		panel.add(_extraInfo_scroll, "push, grow, wrap");
 
@@ -283,6 +288,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		{
 	        private static final long serialVersionUID = 0L;
 
+			@Override
 			public String getToolTipText(MouseEvent e) 
 			{
 				String tip = null;
@@ -305,16 +311,16 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		};
 
 
-		final WaitForExecDialog wait = new WaitForExecDialog(this, "Reading DDL information from Offline storage.");
+		WaitForExecDialog wait = new WaitForExecDialog(this, "Reading DDL information from Offline storage.");
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
-		BgExecutor terminateConnectionTask = new BgExecutor()
+		BgExecutor bgExec = new BgExecutor(wait)
 		{
 			@Override
 			public Object doWork()
 			{
 				_logger.info("Starting a thread that that will read the offline database entries.");
-				wait.setState("Reading offline entries.");
+				getWaitDialog().setState("Reading offline entries.");
 
 				List<DdlDetails> ddlObjects = PersistReader.getInstance().getDdlObjects(false);
 //				DdlViewerModel model = new DdlViewerModel(ddlObjects);
@@ -325,7 +331,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 //				return model;
 			}
 		};
-		Object retObj = wait.execAndWait(terminateConnectionTask);
+		Object retObj = wait.execAndWait(bgExec);
 
 		if (retObj != null && retObj instanceof DdlViewerModel)
 		{
@@ -405,6 +411,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		// to work, so lets the EventThreda do it for us after the windows is visible.
 		Runnable deferredAction = new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				_treeTable.requestFocus();
@@ -658,7 +665,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
-		Object source = e.getSource();
+//		Object source = e.getSource();
 
 		saveProps();
 	}
@@ -721,7 +728,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		}
 		if (x != -1 && y != -1)
 		{
-			this.setLocation(x, y);
+			if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+				this.setLocation(x, y);
 		}
 		
 		int divLoc = conf.getIntProperty("ddlview.dialog.splitPane.dividerLocation",  -1);
