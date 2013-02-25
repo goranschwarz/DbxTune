@@ -57,9 +57,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 305;
-	$ASEMON_LATEST_VERSION_STR = "3.0.1";
-	$ASEMON_LATEST_VERSION_STR = "2012-06-19";
+	$ASEMON_LATEST_VERSION_SRC = 314;
+	$ASEMON_LATEST_VERSION_STR = "3.2.0";
+	$ASEMON_LATEST_VERSION_STR = "2013-02-25";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asetune.com/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
@@ -149,6 +149,7 @@
 	$java_version            = getUrlParam('java_version');
 	$java_vm_version         = getUrlParam('java_vm_version');
 	$java_vm_vendor          = getUrlParam('java_vm_vendor');
+	$sun_arch_data_model     = getUrlParam('sun_arch_data_model');
 	$java_home               = getUrlParam('java_home');
 	$java_class_path         = getUrlParam('java_class_path');
 	$memory                  = getUrlParam('memory');
@@ -215,6 +216,7 @@
 		java_version,
 		java_vm_version,
 		java_vm_vendor,
+		sun_arch_data_model,
 		java_home,
 		java_class_path,
 		memory,
@@ -252,6 +254,7 @@
 		'$java_version',
 		'$java_vm_version',
 		'$java_vm_vendor',
+		'$sun_arch_data_model',
 		'$java_home',
 		'$java_class_path',
 		'$memory',
