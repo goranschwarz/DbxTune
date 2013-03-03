@@ -114,6 +114,7 @@ import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
+import com.asetune.check.CheckForUpdates;
 import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.ConnectionDialog;
@@ -457,6 +458,10 @@ public class QueryWindow
 		else
 			hostPortStr = aseServer;
 
+		// use IGNORE_DONE_IN_PROC=true, if not set in the options in the connection dialog
+		AseConnectionFactory.setPropertiesForAppname("SqlWindow", "IGNORE_DONE_IN_PROC", "true");
+		
+		// Try make an initial connection...
 		Connection conn = null;
 		if ( ! StringUtil.isNullOrBlank(asePassword) )
 		{
@@ -476,7 +481,6 @@ public class QueryWindow
 	//			throw e;
 			}
 		}
-
 
 		// Create a QueryWindow component that uses the factory object.
 		QueryWindow qw = new QueryWindow(conn, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
@@ -1000,6 +1004,12 @@ public class QueryWindow
 		
 		// Set components if visible, enabled etc...
 		setComponentVisibility();
+		
+		if (winType == WindowType.CMDLINE_JFRAME)
+		{
+			_logger.info("Checking for new release...");
+			CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+		}
 	}
 
 	private void loadProps()
@@ -4658,6 +4668,8 @@ public class QueryWindow
 		{
 			Properties props = new Properties();
 			props.put("CHARSET", "iso_1");
+			AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
+			
 			conn = AseConnectionFactory.getConnection(hostPortStr, null, "sa", "", Version.getAppName()+"-QueryWindow", null, props, null);
 		}
 		catch (SQLException e)

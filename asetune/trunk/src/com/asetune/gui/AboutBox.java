@@ -174,7 +174,8 @@ public class AboutBox
 			"Version: "+Version.getVersionStr()+"<br>" +
 			"Build: "+Version.getBuildStr()+"<br>";
 
-		if (Version.getVersionStr().endsWith(".dev"))
+//		if (Version.getVersionStr().endsWith(".dev"))
+		if (Version.IS_DEVELOPMENT_VERSION)
 			str += "<b>Note: This is a development version</b><br>";
 
 		str +=

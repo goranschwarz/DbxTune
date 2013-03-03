@@ -1424,6 +1424,8 @@ public class MainFrame
 						SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
 						return;
 					}
+
+					AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
 	
 //					Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-QueryWindow", null);
 					Connection conn = getNewConnection(Version.getAppName()+"-QueryWindow");

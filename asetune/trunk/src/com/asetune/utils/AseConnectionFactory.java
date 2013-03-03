@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +51,9 @@ public class AseConnectionFactory
 	private static String              _appname             = "";
 	private static String              _hostname            = "";
 	private static Properties          _props               = new Properties();
+	
+	/** Some application names might want to have some specific properties added, if not already in the URL */
+	private static HashMap<String, Properties> _defaultAppNameProps = new HashMap<String, Properties>();
 
 	private static SyInterfacesDriver _interfacesDriver = null;
 
@@ -267,6 +271,32 @@ public class AseConnectionFactory
 		_appname     = "";
 		_hostname    = "";
 		_props       = new Properties();
+		_defaultAppNameProps = new HashMap<String, Properties>();
+	}
+
+	/** Set default properties for a specific application name */
+	public static void setPropertiesForAppname(String appname, Map<String,String> map)
+	{
+		Properties props = new Properties();
+		if (map != null)
+			props.putAll(map);
+		_defaultAppNameProps.put(appname, props);
+	}
+	/** Set default properties for a specific application name */
+	public static void setPropertiesForAppname(String appname, Properties props)
+	{
+		if (props == null)
+			props = new Properties();
+		_defaultAppNameProps.put(appname, props);
+	}
+	/** Set default properties for a specific application name */
+	public static void setPropertiesForAppname(String appname, String propname, String propValue)
+	{
+		Properties props = _defaultAppNameProps.get(appname);
+		if (props == null)
+			props = new Properties();
+		props.put(propname, propValue);
+		_defaultAppNameProps.put(appname, props);
 	}
 
 	public static void setProperties(Map<String,String> map)
@@ -337,6 +367,7 @@ public class AseConnectionFactory
 		_hostname = hostname;
 	}
 	
+	public static Properties          getPropertiesForAppname(String appname) { return _defaultAppNameProps.get(appname); }
 	public static Properties          getProperties()              { return _props; }
 	public static Object              getProperty(String propname) { return _props.getProperty(propname); }
 	public static String              getDriver()                  { return _driver; }
@@ -1198,6 +1229,29 @@ public class AseConnectionFactory
 		// The default value is false.
 		if (props.getProperty("QUERY_TIMEOUT_CANCELS_ALL") == null) 
 			props.put("QUERY_TIMEOUT_CANCELS_ALL", "true");
+
+		// some applications might want to have additional OPTIONS (if not already set)
+		// Lets put those "default" options in (if not already set)
+		// For example in 'sqlw' this might be the 'IGNORE_DONE_IN_PROC=true' 
+		if (props.getProperty("APPLICATIONNAME") != null)
+		{
+			String tmpAppName = props.getProperty("APPLICATIONNAME");
+			Properties tmpProps = _defaultAppNameProps.get(tmpAppName);
+			if (tmpProps != null)
+			{
+				for (Object oKey : tmpProps.keySet())
+				{
+					if (oKey instanceof String)
+					{
+						String key = (String) oKey;
+						String val = tmpProps.getProperty(key);
+						
+						if (props.getProperty(key) == null) 
+							props.put(key, val);
+					}
+				}
+			}
+		}
 
 		// if host,port is in the interfaces/sql.ini, set the SERVICENAME property
 //		String serverName = AseConnectionFactory.getIServerName(hostPortStr);

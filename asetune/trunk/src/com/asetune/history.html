@@ -16,7 +16,34 @@ li   {margin-bottom: 6px}
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-02-25</H2>
+<H2>2012-03-03</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Performance Counters initialized with wrong ASE release</b><br>
+	When connecting to ASE Release 15.0.2 or higher, the ESD# was stripped of.<br>
+	This was due to trusting the sp_version 'montables' information.<br>
+	The 'montables' version string is not maintained with the same version string as 'installmaster'<br>
+	Solution in ASE 15.0.2 or higher is to use the 'installmaster' entry instead of 'montables'<br>
+	This bug was introduced in version '2013-02-25', and in my opinion so serious I needed to make a new release ASAP.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tab: 'SPID Wait', 'SPID Activity' and 'Waits'</b><br>
+	Stopped using the tempdb.guest.monWaitEventInfo and tempdb.guest.monWaitClassInfo<br>
+	Now doing the translation from WaitEventID to the descriptions directly in java code instead.<br>
+	This was done due to: if you have 'granular permissions' configured in ASE 15.7 ESD#2 there was problems reading the above tables.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tool: SQL Window</b><br>
+	Use IGNORE_DONE_IN_PROC=true as the default option when connecting to ASE.<br>
+	This will exclude all extra/intermediate row counts when executing a stored procedure.<br>
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2013-02-25</H2>
 <UL>
 	<LI>
 	<b>Major enhancements to the tool SQL Window</b><br>

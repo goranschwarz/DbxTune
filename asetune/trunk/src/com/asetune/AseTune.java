@@ -626,21 +626,25 @@ public class AseTune
 				Exception ex = new Exception(msg);
 				if (_gui)
 				{
+					try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
+					catch (Exception e) { _logger.warn("Problem setting the Look And Feel to 'getSystemLookAndFeelClassName()'.", e); }
+
 					SwingUtils.showErrorMessage(Version.getAppName()+" - This DEVELOPMENT VERSION has expired",
-							"This DEVELOPMENT VERSION has expired.\n" +
-							"\n" +
-							"The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. \n" +
-							"A new version can be downloaded here 'http://www.asetune.com'\n" +
-							"\n" +
-							"The application will still start\n" +
-							"But it can only read data from Persistent Counter Storage, also called 'offline databases'.\n" +
-							"\n" +
+						"<html>" +
+							"<h2>This DEVELOPMENT VERSION has expired.</h2>" +
+							"The <i>time to live</i> period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. <br>" +
+							"A new version can be downloaded at <A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
+							"<br>" +
+							"The application will still be started, in <b>restricted mode</b><br>" +
+							"It can only read data from <i>Persistent Counter Storage</i>, also called <i>'offline databases'</i>.<br>" +
+							"<br>" +
 							"But I strongly encourage you to download the latest release, " +
 							"This 'start' option was implemented as a fail-safe mechanism, and " +
 							"should only be used if the new "+Version.getAppName()+" version is not capable of reading the " +
 							"old database. In 99.9% the new "+Version.getAppName()+" version will be able to read " +
-							"Performance Counters stored by a earlier "+Version.getAppName()+" release.",
-							ex);
+							"Performance Counters stored by a earlier "+Version.getAppName()+" release." +
+						"</html>",
+						ex);
 				}
 				else
 				{

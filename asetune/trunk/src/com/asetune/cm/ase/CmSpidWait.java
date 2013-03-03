@@ -7,6 +7,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -26,7 +28,7 @@ import com.asetune.utils.StringUtil;
 public class CmSpidWait
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmSpidWait.class);
+	private static Logger        _logger          = Logger.getLogger(CmSpidWait.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSpidWait.class.getSimpleName();
@@ -163,26 +165,6 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlInitForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
-	{
-		String monWaitInfoWhere = "";
-		if (aseVersion >= 15700)
-			monWaitInfoWhere = "where Language = ''en_US''";
-
-		String sql =
-			"/*------ Create permanent tables for monWaitEventInfo & monWaitClassInfo in tempdb. -------*/ \n" +
-			"/*------ hopefully this is less expensive than doing the join via CIS -------*/ \n" +
-			"if ((select object_id('tempdb.guest.monWaitEventInfo')) is null) \n" +
-			"   exec('select * into tempdb.guest.monWaitEventInfo from master..monWaitEventInfo "+monWaitInfoWhere+"') \n" +
-			"\n" +
-			"if ((select object_id('tempdb.guest.monWaitClassInfo')) is null) \n" +
-			"   exec('select * into tempdb.guest.monWaitClassInfo from master..monWaitClassInfo "+monWaitInfoWhere+"') \n" +
-			"";
-	
-		return sql;
-	}
-
-	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -206,7 +188,8 @@ extends CountersModel
 			UserName = "UserName = suser_name(W.ServerUserID), ";
 
 		cols = InstanceID + "W.SPID, W.KPID, " + UserName + "\n" +
-			"Class=C.Description, Event=I.Description, \n" +
+			"WaitClassDesc = convert(varchar(50),''), -- runtime replaced with cached values from monWaitClassInfo \n" +
+			"WaitEventDesc = convert(varchar(50),''), -- runtime replaced with cached values from monWaitEventInfo \n" +
 			"W.WaitEventID, W.WaitTime, W.Waits, \n" +
 			"WaitTimePerWait = CASE WHEN W.Waits > 0 \n" +
 			"                       THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) \n" +
@@ -215,9 +198,8 @@ extends CountersModel
 
 		String sql = 
 			"select " + cols +
-			"from master..monProcessWaits W, tempdb.guest.monWaitEventInfo I, tempdb.guest.monWaitClassInfo C \n" +
-			"where W.WaitEventID = I.WaitEventID \n" +
-			"  and I.WaitClassID = C.WaitClassID \n" +
+			"from master..monProcessWaits W \n" +
+			"where 1 = 1 \n" +
 			sql_sample_extraWhereClause +
 			"order by " + (isClusterEnabled ? "W.SPID, W.WaitEventID, W.InstanceID" : "W.SPID, W.WaitEventID") + "\n" +
 			"";
@@ -249,6 +231,77 @@ extends CountersModel
 	{
 		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
 		return "";
+	}
+
+	/** 
+	 * Fill in the WaitEventDesc column with data from
+	 * MonTableDictionary.. transforms a WaitEventId -> text description
+	 * This so we do not have to do a sub select in the query that gets data
+	 * doing it this way, means better performance, since the values are cached locally in memory
+	 */
+	@Override
+	public void localCalculation(SamplingCnt newSample)
+	{
+		// Where are various columns located in the Vector 
+		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1;
+		int waitEventID = 0;
+		String waitEventDesc = "";
+		String waitClassDesc = "";
+	
+		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		if (mtd == null)
+			return;
+
+		if (newSample == null)
+			return;
+
+		// Find column Id's
+		List<String> colNames = newSample.getColNames();
+		if (colNames==null) 
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if      (colName.equals("WaitEventID"))   pos_WaitEventID   = colId;
+			else if (colName.equals("WaitEventDesc")) pos_WaitEventDesc = colId;
+			else if (colName.equals("WaitClassDesc")) pos_WaitClassDesc = colId;
+
+			// Noo need to continue, we got all our columns
+			if (pos_WaitEventID >= 0 && pos_WaitEventDesc >= 0 && pos_WaitClassDesc >= 0)
+				break;
+		}
+
+		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
+		{
+			_logger.debug("Can't find the position for columns ('WaitEventID'="+pos_WaitEventID+", 'WaitEventDesc'="+pos_WaitEventDesc+", 'WaitClassDesc'="+pos_WaitClassDesc+")");
+			return;
+		}
+		
+		// Loop on all counter rows
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		{
+			Object o_waitEventId  = newSample.getValueAt(rowId, pos_WaitEventID);
+
+			if (o_waitEventId instanceof Number)
+			{
+				waitEventID = ((Number)o_waitEventId).intValue();
+
+				if (mtd.hasWaitEventDescription(waitEventID))
+				{
+					waitEventDesc = mtd.getWaitEventDescription(waitEventID);
+					waitClassDesc = mtd.getWaitEventClassDescription(waitEventID);
+				}
+				else
+				{
+					waitEventDesc = "";
+					waitClassDesc = "";
+				}
+
+				newSample.setValueAt(waitEventDesc, rowId, pos_WaitEventDesc);
+				newSample.setValueAt(waitClassDesc, rowId, pos_WaitClassDesc);
+			}
+		}
 	}
 
 	/** 

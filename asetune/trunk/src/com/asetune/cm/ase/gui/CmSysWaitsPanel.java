@@ -135,8 +135,8 @@ extends TabularCntrPanel
 
 		if (dataTable != null)
 		{
-			int ClassName_pos   = dataTable.findViewColumn("Class");
-			int EventName_pos   = dataTable.findViewColumn("Event");
+			int ClassName_pos   = dataTable.findViewColumn("WaitClassDesc");
+			int EventName_pos   = dataTable.findViewColumn("WaitEventDesc");
 //			int WaitEventID_pos = dataTable.findViewColumn("WaitEventID");
 			int WaitTime_pos    = dataTable.findViewColumn("WaitTime"); 
 			int Waits_pos       = dataTable.findViewColumn("Waits");

@@ -626,10 +626,10 @@ public class CheckDialog
 
 		JFrame frame = new JFrame();
 
-		check._asetuneVersion = "1.0.0";
-		check._downloadUrl    = "http://www.asetune.com/download.html";
-		check._checkSucceed   = true;
-		check._hasUpgrade     = true;
+		check._newAppVersion = "1.0.0";
+		check._downloadUrl   = "http://www.asetune.com/download.html";
+		check._checkSucceed  = true;
+		check._hasUpgrade    = true;
 		CheckDialog.showDialog(frame, check);
 
 		check._checkSucceed = true;

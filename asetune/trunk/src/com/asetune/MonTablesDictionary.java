@@ -79,7 +79,7 @@ public class MonTablesDictionary
 	 * If this is true use the monTable/installMaster<br>
 	 * If this is false use the ASE Binary (which could lead to incorrect syntax etc, due to missing column names introduced in later ASE Binary versions, but installmaster has not been installed after upgrade)  
 	 */
-	private boolean _useMonTablesVersionWhenBinAndScriptIsOutOfSync = true;
+	private boolean _trustMonTablesVersion = true;
 
 	/** ASE Sort Order ID */
 	private int     _aseSortId     = -1;
@@ -90,12 +90,12 @@ public class MonTablesDictionary
 
 	/** 
 	 * The version we should use when creating SQL Statements for the MDA Tables
-	 * depends on Executable/installMaster/monTable 
-	 * and user questions '_useMonTablesVersionWhenBinAndScriptIsOutOfSync' 
+	 * depends on Executable/installMaster/monTable and to some extent the ASE version if below ASE 12.5.4 
+	 * and user questions '_trustMonTablesVersion' 
 	 */
 	public int getMdaVersion()
 	{
-		if (_useMonTablesVersionWhenBinAndScriptIsOutOfSync)
+		if (_trustMonTablesVersion)
 			return getAseMonTableVersionNum();
 		return getAseExecutableVersionNum();
 	}
@@ -116,14 +116,12 @@ public class MonTablesDictionary
 	 * Also if we failed to execute sp_version, then use the binary version<br> 
 	 * sp_version only exists in ASE 12.5.4 or above (manuals says 12.5.3 esd#?), then use the binary version 
 	 */
-	public int     getAseMonTableVersionNum()      
+	public int getAseMonTableVersionNum()
 	{
-		int version = 0;
+		int version = _montablesVersionNum; 
 
 		if (_aseVersionNum >= 15020)
 			version = _installmasterVersionNum;
-
-		version = _montablesVersionNum; 
 
 		// If _installmasterVersionNum or _montablesVersionNum is 0
 		// sp_version has not been executed properly, needs ASE 12.5.(4), or if the execution fails for some reason
@@ -888,10 +886,9 @@ public class MonTablesDictionary
 								options,  //the titles of buttons
 								options[0]); //default button title
 
-							boolean useMonTablesVersion = (answer == 0);
-							_useMonTablesVersionWhenBinAndScriptIsOutOfSync = useMonTablesVersion;
+							_trustMonTablesVersion = (answer == 0);
 
-							if (_useMonTablesVersionWhenBinAndScriptIsOutOfSync)
+							if (_trustMonTablesVersion)
 								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. ASE Binary version was '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.");
 							else
 								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'. ASE installmaster version was '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'.");
