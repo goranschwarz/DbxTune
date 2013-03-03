@@ -917,27 +917,27 @@ implements Cloneable, ITableTooltip
 	}
 
 	/** How many milliseconds did we spend on executing the SQL statement that fetched the performance counters */
-	public long getSqlRefreshTime()      { return _sqlRefreshTime; }
+	public long getSqlRefreshTime()       { return _sqlRefreshTime; }
 	/** Used by the PersistReader to set refresh time */
-	public void setSqlRefreshTime(int t) { _sqlRefreshTime = t; }
+	public void setSqlRefreshTime(long t) { _sqlRefreshTime = t; }
 	public void beginSqlRefresh() { _sqlRefreshStartTime = System.currentTimeMillis(); }
 	public void endSqlRefresh()   {	_sqlRefreshTime = System.currentTimeMillis() - _sqlRefreshStartTime; }
 
 	/** How many milliseconds did we spend on executing the GUI code that updated the GUI */
-	public long getGuiRefreshTime()      { return _guiRefreshTime; }
+	public long getGuiRefreshTime()       { return _guiRefreshTime; }
 	/** Used by the PersistReader to set refresh time */
-	public void setGuiRefreshTime(int t) { _guiRefreshTime = t; }
+	public void setGuiRefreshTime(long t) { _guiRefreshTime = t; }
 	public void beginGuiRefresh() { _guiRefreshStartTime = System.currentTimeMillis(); }
 	public void endGuiRefresh()   {	_guiRefreshTime = System.currentTimeMillis() - _guiRefreshStartTime; }
 
 	/** How many milliseconds did we spend on executing the LocalCalculation code */
-	public long getLcRefreshTime()      { return _lcRefreshTime; }
+	public long getLcRefreshTime()       { return _lcRefreshTime; }
 	/** Used by the PersistReader to set refresh time */
-	public void setLcRefreshTime(int t) { _lcRefreshTime = t; }
+	public void setLcRefreshTime(long t) { _lcRefreshTime = t; }
 	/** Begin time of Local Calculation */
 	public void beginLcRefresh() { _lcRefreshStartTime = System.currentTimeMillis(); }
 	/** End time of Local Calculation */
-	public void endLcRefresh()   {	_lcRefreshTime = System.currentTimeMillis() - _lcRefreshStartTime; }
+	public long endLcRefresh()   {	_lcRefreshTime = System.currentTimeMillis() - _lcRefreshStartTime; return _lcRefreshTime; }
 
 	public int getQueryTimeout()
 	{
@@ -2870,6 +2870,18 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * do local calculation, this should be overridden for local calculations...
+	 * <p>
+	 * This only allow changing Absolute values, and it's called before the localCalculation(prevSample, newSample, diffData)
+	 * 
+	 * @param newSample the new values
+	 */
+	public void localCalculation(SamplingCnt newSample)
+	{
+	}
+
+
+	/**
+	 * do local calculation, this should be overridden for local calculations...
 	 * 
 	 * @param prevSample
 	 * @param newSample
@@ -3469,6 +3481,11 @@ implements Cloneable, ITableTooltip
 //			firstTimeSample = false; // done later
 		}
 
+		// translate some fields in the Absolute Counters
+		beginLcRefresh();
+		localCalculation(tmpNewSample);
+		long firstLcTime = endLcRefresh();
+
 		// Used later
 		final List<Integer> deletedRows = new ArrayList<Integer>();;
 
@@ -3494,7 +3511,8 @@ implements Cloneable, ITableTooltip
 			// Compute local stuff
 			beginLcRefresh();
 			localCalculation(_prevSample, tmpNewSample, null);
-			endLcRefresh();
+			long secondLcTime = endLcRefresh();
+			setLcRefreshTime(firstLcTime + secondLcTime);
 
 			setDataInitialized(true); // maybe move this to the Run class later, which does the init
 		}
@@ -3526,7 +3544,8 @@ implements Cloneable, ITableTooltip
 				// we got some data, compute the rates and update the data model
 				tmpRateData = SamplingCnt.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
-				endLcRefresh();
+				long secondLcTime = endLcRefresh();
+				setLcRefreshTime(firstLcTime + secondLcTime);
 
 				// If we would like to have a "localRateCalculation()" this would be the place to implement it
 				//localRateCalculation(tmpRateData)

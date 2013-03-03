@@ -102,6 +102,11 @@ update: check_for_update.php
 	$ASETUNE_LATEST_VERSION_STR = "x.y.z";
 	$ASETUNE_LATEST_VERSION_STR = "YYYY-MM-DD";
 
+update: wsql_check_for_update.php
+	$SQLW_LATEST_VERSION_SRC = nnn;
+	$SQLW_LATEST_VERSION_STR = "x.y.z";
+	$SQLW_LATEST_VERSION_STR = "YYYY-MM-DD";
+
 
 ###########################################################
 ## CLEANUP

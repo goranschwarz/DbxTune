@@ -96,6 +96,8 @@ public class CheckForUpdates
 	private   static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
 	private   static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
 
+	private   static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
+
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
 
@@ -125,7 +127,7 @@ public class CheckForUpdates
 	private String         _action        = "";
 
 	// The below is protected, just because test purposes, it should be private
-	protected String       _asetuneVersion = "";
+	protected String       _newAppVersion  = "";
 	protected String       _downloadUrl    = "";
 	protected String       _whatsNewUrl    = "";
 	protected boolean      _hasUpgrade;
@@ -138,7 +140,8 @@ public class CheckForUpdates
 
 	private static boolean _initialized = false;
 
-	private static int     _checkId = -1;
+	private static int     _checkId     = -1;
+	private static int     _checkIdSqlW = -1;
 
 	private final static int DEFAULT_TIMEOUT = 20*1000;
 
@@ -434,10 +437,10 @@ public class CheckForUpdates
 			// ACTION:NO-UPGRADE
 			//----------------------------------------------
 
-			_action         = "";
-			_asetuneVersion = "";
-			_downloadUrl    = DEFAULT_DOWNLOAD_URL;
-			_whatsNewUrl    = DEFAULT_WHATSNEW_URL;
+			_action        = "";
+			_newAppVersion = "";
+			_downloadUrl   = DEFAULT_DOWNLOAD_URL;
+			_whatsNewUrl   = DEFAULT_WHATSNEW_URL;
 
 			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
 			String line;
@@ -455,10 +458,10 @@ public class CheckForUpdates
 					{
 						_logger.debug("   - STRING["+i+"]='"+sa[i]+"'.");
 
-						if (i == 1) _action         = sa[1];
-						if (i == 2) _asetuneVersion = sa[2];
-						if (i == 3) _downloadUrl    = sa[3];
-						if (i == 4) _whatsNewUrl    = sa[4];
+						if (i == 1) _action        = sa[1];
+						if (i == 2) _newAppVersion = sa[2];
+						if (i == 3) _downloadUrl   = sa[3];
+						if (i == 4) _whatsNewUrl   = sa[4];
 					}
 				}
 				if (line.startsWith("OPTIONS:"))
@@ -604,7 +607,7 @@ public class CheckForUpdates
 			{
 				_hasUpgrade = true;
 				_logger.debug("-UPGRADE-");
-				_logger.debug("-to:"+_asetuneVersion);
+				_logger.debug("-to:"+_newAppVersion);
 				_logger.debug("-at:"+_downloadUrl);
 				_logger.debug("-at:"+_whatsNewUrl);
 			}
@@ -668,7 +671,7 @@ public class CheckForUpdates
 	 */
 	public String  getNewAppVersionStr()
 	{
-		return _asetuneVersion;
+		return _newAppVersion;
 	}
 
 	/**
@@ -729,6 +732,365 @@ public class CheckForUpdates
 //	{
 //		return _url;
 //	}
+
+
+	/**
+	 * Check for a later version of the software
+	 * @param owner A JFrame or similar
+	 * @param showNoUpgrade Even if no upgrade is available, show info about that in a GUI message.
+	 */
+	public static void noBlockCheckSqlWindow(final Component owner, final boolean showNoUpgrade, final boolean showFailure)
+	{
+		Runnable checkLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				CheckForUpdates chk = new CheckForUpdates();
+
+				// Go and check
+				chk.checkSqlWindow();
+
+				if (! chk.checkSucceed())
+				{
+					if (owner != null && showFailure)
+						CheckDialog.showDialog(owner, chk);
+
+					_logger.info("Check for latest version failed.");
+					return;
+				}
+
+				if (chk.hasUpgrade())
+				{
+					if (owner != null)
+						CheckDialog.showDialog(owner, chk);
+
+					_logger.info("New Upgrade is Available. New version is '"+chk.getNewAppVersionStr()+"' " +
+							"and can be downloaded here '"+chk.getDownloadUrl()+"'.");
+				}
+				else
+				{
+					if (showNoUpgrade)
+					{
+						if (owner != null)
+							CheckDialog.showDialog(owner, chk);
+					}
+
+//					if (chk.hasFeedback())
+//					{
+//						if (owner != null)
+//							CheckDialog.showDialog(owner, chk);
+//					}
+
+					if (chk.isResponseOfHtml())
+					{
+						if (owner != null)
+							CheckDialog.showDialog(owner, chk);
+					}
+					else
+					{
+						_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
+					}
+				}
+			}
+		};
+		Thread checkThread = new Thread(checkLater);
+		checkThread.setName("checkForUpdates");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Go and check for updates
+	 */
+	public void checkSqlWindow()
+	{
+		// URS to use
+		String urlStr = SQLWIN_CHECK_UPDATE_URL;
+
+		_hasUpgrade   = false;
+		_checkSucceed = false;
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+		String clientTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("clientCheckTime",     clientTime);
+
+		urlParams.add("clientSourceDate",     Version.getSourceDate());
+		urlParams.add("clientSourceVersion",  Version.getSourceRev());
+		urlParams.add("clientAppVersion",     Version.getVersionStr());
+//		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
+
+		try
+		{
+			InetAddress addr = InetAddress.getLocalHost();
+
+			urlParams.add("clientHostName",          addr.getHostName());
+			urlParams.add("clientHostAddress",       addr.getHostAddress());
+			urlParams.add("clientCanonicalHostName", addr.getCanonicalHostName());
+
+		}
+		catch (UnknownHostException e)
+		{
+		}
+
+		urlParams.add("user_name",          System.getProperty("user.name"));
+		urlParams.add("user_home",          System.getProperty("user.home"));
+		urlParams.add("user_dir",           System.getProperty("user.dir"));
+		urlParams.add("user_country",       System.getProperty("user.country"));
+		urlParams.add("user_language",      System.getProperty("user.language"));
+		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
+		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
+		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
+//		urlParams.add("gui",                AseTune.hasGUI()+"");
+
+		urlParams.add("java_version",       System.getProperty("java.version"));
+		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
+		urlParams.add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
+		urlParams.add("sun_arch_data_model",System.getProperty("sun.arch.data.model"));
+		urlParams.add("java_home",          System.getProperty("java.home"));
+//		if (_useHttpPost)
+//			urlParams.add("java_class_path",System.getProperty("java.class.path"));
+//		else
+//			urlParams.add("java_class_path","discarded when using sendHttpParams()");
+		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
+		urlParams.add("os_name",            System.getProperty("os.name"));
+		urlParams.add("os_version",         System.getProperty("os.version"));
+		urlParams.add("os_arch",            System.getProperty("os.arch"));
+		urlParams.add("sun_desktop",        System.getProperty("sun.desktop"));
+		urlParams.add("-end-",              "-end-");
+
+		try
+		{
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
+
+			//----------------------------------------------
+			// This is how a response would look like
+			//----------------------------------------------
+			// ACTION:UPGRADE:$ASETUNE_LATEST_VERSION_STR:$DOWNLOAD_URL"
+			// ACTION:NO-UPGRADE
+			//----------------------------------------------
+
+			_action        = "";
+			_newAppVersion = "";
+			_downloadUrl   = DEFAULT_DOWNLOAD_URL;
+			_whatsNewUrl   = DEFAULT_WHATSNEW_URL;
+
+			// Set default values for some stuff (which normally is for AseTune)
+			_sendConnectInfo      = false;
+			_sendMdaInfo          = false;
+			_sendMdaInfoBatchSize = 20;
+			_sendUdcInfo          = false;
+			_sendCounterUsageInfo = false;
+			_sendLogInfoWarning   = false;
+			_sendLogInfoError     = false;
+
+			_connectCount         = 0;
+
+			_sendLogInfoThreshold = 100;
+			_sendLogInfoCount     = 0;
+
+			// Read response
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			boolean foundActionLine = false;
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ACTION:"))
+				{
+					foundActionLine = true;
+					String[] sa = line.split(":");
+					for (int i=0; i<sa.length; i++)
+					{
+						_logger.debug("   - STRING["+i+"]='"+sa[i]+"'.");
+
+						if (i == 1) _action        = sa[1];
+						if (i == 2) _newAppVersion = sa[2];
+						if (i == 3) _downloadUrl   = sa[3];
+						if (i == 4) _whatsNewUrl   = sa[4];
+					}
+				}
+				if (line.startsWith("OPTIONS:"))
+				{
+					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
+					String options = line.substring("OPTIONS:".length());
+					_logger.debug("Receiving Options from server '"+options+"'.");
+					String[] sa = options.split(",");
+					for (int i=0; i<sa.length; i++)
+					{
+						String[] keyVal = sa[i].split("=");
+						if (keyVal.length == 2)
+						{
+							String key = keyVal[0].trim();
+							String val = keyVal[1].trim();
+							boolean bVal = val.equalsIgnoreCase("true");
+
+							if (key.equalsIgnoreCase("sendConnectInfo"))
+							{
+								_sendConnectInfo = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+//							else if (key.equalsIgnoreCase("sendUdcInfo"))
+//							{
+//								_sendUdcInfo = bVal;
+//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+//							}
+//							else if (key.equalsIgnoreCase("sendMdaInfo"))
+//							{
+//								_sendMdaInfo = bVal;
+//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+//							}
+//							else if (key.equalsIgnoreCase("sendMdaInfoBatchSize"))
+//							{
+//								try
+//								{
+//									int intVal = Integer.parseInt(val);
+//									_sendMdaInfoBatchSize = intVal;
+//									_logger.debug("Setting option '"+key+"' to '"+intVal+"'.");
+//								}
+//								catch (NumberFormatException ex)
+//								{
+//									_logger.warn("Problems reading option '"+key+"', with value '"+val+"'. Can't convert to Integer. Caught: "+ex);
+//								}
+//							}
+//							else if (key.equalsIgnoreCase("sendCounterUsageInfo"))
+//							{
+//								_sendCounterUsageInfo = bVal;
+//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+//							}
+							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
+							{
+								_sendLogInfoWarning = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoError"))
+							{
+								_sendLogInfoError = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoThreshold"))
+							{
+								try
+								{
+									_sendLogInfoThreshold = Integer.parseInt(val);
+									_logger.debug("Setting option '"+key+"' to '"+val+"'.");
+								}
+								catch (NumberFormatException e)
+								{
+									_logger.debug("NumberFormatException: Setting option '"+key+"' to '"+val+"'.");
+								}
+							}
+							else
+							{
+								_logger.debug("Unknown option '"+key+"' from server with value '"+val+"'.");
+							}
+						}
+						else
+							_logger.debug("Option '"+sa[i]+"' from server has strange key/valye.");
+					}
+				}
+				if (line.startsWith("FEEDBACK:"))
+				{
+					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
+					String feedback = line.substring("FEEDBACK:".length()).trim();
+					_logger.debug("Receiving feedback from server '"+feedback+"'.");
+
+					if ( ! "".equals(feedback) )
+					{
+						String[] sa = feedback.split(":");
+						for (int i=0; i<sa.length; i++)
+						{
+							if (i == 0) _feedbackDateStr = sa[0];
+							if (i == 1) _feedbackUrl     = sa[1];
+						}
+						try
+						{
+							SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+							_feedbackDate = sdf.parse(_feedbackDateStr);
+						}
+						catch (ParseException e)
+						{
+						}
+					}
+				}
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.warn("When checking for new version, found an 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("CHECK_ID_SQLW:"))
+				{
+					String actionResponse = line.substring( "CHECK_ID_SQLW:".length() ).trim();
+					try { _checkIdSqlW = Integer.parseInt(actionResponse); }
+					catch (NumberFormatException ignore) {}
+					_logger.debug("Received check_id='"+_checkIdSqlW+"' from update site.");
+				}
+			}
+			in.close();
+			_responseString = responseLines;
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _downloadUrl != null && !_downloadUrl.trim().equals("") )
+			{
+				if ( ! _downloadUrl.startsWith("http://") )
+					_downloadUrl = "http://" + _downloadUrl;
+			}
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _whatsNewUrl != null && !_whatsNewUrl.trim().equals("") )
+			{
+				if ( ! _whatsNewUrl.startsWith("http://") )
+					_whatsNewUrl = "http://" + _whatsNewUrl;
+			}
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _feedbackUrl != null && !_feedbackUrl.trim().equals("") )
+			{
+				if ( ! _feedbackUrl.startsWith("http://") )
+					_feedbackUrl = "http://" + _feedbackUrl;
+			}
+
+			if (_action.equals("UPGRADE"))
+			{
+				_hasUpgrade = true;
+				_logger.debug("-UPGRADE-");
+				_logger.debug("-to:"+_newAppVersion);
+				_logger.debug("-at:"+_downloadUrl);
+				_logger.debug("-at:"+_whatsNewUrl);
+			}
+			else
+			{
+				_hasUpgrade = false;
+				_logger.debug("-NO-UPGRADE-");
+			}
+
+			if ( ! foundActionLine )
+			{
+				_logger.warn("When checking for new version, no 'ACTION:' response was found. The response rows was '" + responseLines + "'.");
+			}
+
+			_checkSucceed = true;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("When we checking for later version, we had problems", ex);
+		}
+	}
+
+
 
 
 	/**
