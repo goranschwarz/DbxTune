@@ -134,6 +134,7 @@
 		doCleanup("delete from asemon_counter_usage_info where userName  in('gorans', 'i063783') ");
 		doCleanup("delete from asemon_error_info         where userName  in('gorans', 'i063783') ");
 		doCleanup("delete from asemon_error_info2        where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from sqlw_usage                where user_name in('gorans', 'i063783') ");
 
 		// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup("delete from asemon_udc_info");
@@ -194,9 +195,6 @@
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
-
-
-
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
@@ -273,6 +271,7 @@
 		describe("asemon_error_info");
 		describe("asemon_error_info2");
 		describe("asemon_error_info_save");
+		describe("sqlw_usage");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
