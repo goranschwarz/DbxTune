@@ -57,18 +57,18 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 314;
-	$ASEMON_LATEST_VERSION_STR = "3.2.0";
-	$ASEMON_LATEST_VERSION_STR = "2013-02-25";
-	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
-	$WHATSNEW_URL              = "www.asetune.com/history.html";
-	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
-	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
-	$FEEDBACK_URL              = "";
-	$PROBLEM_URL               = "2012-06-01:www.asemon.se/asetune_problem.html";
-//	$PROBLEM_URL               = "";
+	$SQLW_LATEST_VERSION_SRC = 318;
+	$SQLW_LATEST_VERSION_STR = "3.2.1";
+	$SQLW_LATEST_VERSION_STR = "2013-03-03";
+	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
+	$WHATSNEW_URL            = "www.asetune.com/history.html";
+	$SEND_OPTIONS            = "sendConnectInfo=false, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
+//	$FEEDBACK_URL            = "2011-06-09:www.asemon.se/feedback.html";
+	$FEEDBACK_URL            = "";
+//	$PROBLEM_URL             = "2012-06-01:www.asemon.se/asetune_problem.html";
+	$PROBLEM_URL             = "";
 
-//	$FEEDBACK_URL              = $PROBLEM_URL;
+//	$FEEDBACK_URL            = $PROBLEM_URL;
 
 	//------------------------------------------
 	// if debug is sent, print some extra info on the outstream
@@ -106,9 +106,9 @@
 	//------------------------------------------
 	// CHECK if later version exists
 	//-------
-	if ($clientSrcVer < $ASEMON_LATEST_VERSION_SRC)
+	if ($clientSrcVer < $SQLW_LATEST_VERSION_SRC)
 	{
-		echo "ACTION:UPGRADE:$ASEMON_LATEST_VERSION_STR:$DOWNLOAD_URL:$WHATSNEW_URL\n";
+		echo "ACTION:UPGRADE:$SQLW_LATEST_VERSION_STR:$DOWNLOAD_URL:$WHATSNEW_URL\n";
 		echo "OPTIONS: $SEND_OPTIONS\n";
 		echo "FEEDBACK: $FEEDBACK_URL\n";
 	}
@@ -129,8 +129,8 @@
 
 	$clientSourceDate        = getUrlParam('clientSourceDate');
 	$clientSourceVersion     = getUrlParam('clientSourceVersion');
-	$clientAppVersionStr     = getUrlParam2('clientAseTuneVersion', 'clientAsemonVersion');
-	$clientExpireDate        = getUrlParam('clientExpireDate');
+	$clientAppVersionStr     = getUrlParam('clientAppVersion');
+//	$clientExpireDate        = getUrlParam('clientExpireDate');
 
 	$clientHostName          = getUrlParam('clientHostName');
 	$clientHostAddress       = getUrlParam('clientHostAddress');
@@ -140,7 +140,7 @@
 	$user_home               = getUrlParam('user_home');
 	$user_dir                = getUrlParam('user_dir');
 	$propfile                = getUrlParam('propfile');
-	$gui                     = getUrlParam('gui');
+//	$gui                     = getUrlParam('gui');
 	$sun_desktop             = getUrlParam('sun_desktop');
 	$user_country            = getUrlParam('user_country');
 	$user_language           = getUrlParam('user_language');
@@ -151,7 +151,7 @@
 	$java_vm_vendor          = getUrlParam('java_vm_vendor');
 	$sun_arch_data_model     = getUrlParam('sun_arch_data_model');
 	$java_home               = getUrlParam('java_home');
-	$java_class_path         = getUrlParam('java_class_path');
+//	$java_class_path         = getUrlParam('java_class_path');
 	$memory                  = getUrlParam('memory');
 	$os_name                 = getUrlParam('os_name');
 	$os_version              = getUrlParam('os_version');
@@ -161,32 +161,12 @@
 
 
 	//------------------------------------------
-	// If user is 'gorans', get out of here otherwise I will flod the log with personal entries
-	//-------
-	if ( $user_name == "goransXXX" )
-	{
-		if ( $debug == "true" )
-			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
-		exit;
-	}
-	if ( empty($user_name ) )
-	{
-		if ( $debug == "true" )
-			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
-		exit;
-	}
-	if ( $user_name == "goransXXXXXXXX" )
-	{
-		echo "ERROR: ---WARNING--- THE USER 'GORANS' SHOULD BE LOG DISABLED, HOPEFULLY THIS IS A TEST.\n";
-	}
-
-	//------------------------------------------
 	// Now connect to the database and insert a usage record
 	//-------
 	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
 	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
 
-	$sql = "insert into asemon_usage
+	$sql = "insert into sqlw_usage
 	(
 		serverAddTime,
 		clientCheckTime,
@@ -195,8 +175,7 @@
 
 		clientSourceDate,
 		clientSourceVersion,
-		clientAsemonVersion,
-		clientExpireDate,
+		clientAppVersion,
 
 		clientHostName,
 		clientHostAddress,
@@ -207,7 +186,6 @@
 		user_home,
 		user_dir,
 		propfile,
-		gui,
 		sun_desktop,
 		user_country,
 		user_language,
@@ -218,7 +196,6 @@
 		java_vm_vendor,
 		sun_arch_data_model,
 		java_home,
-		java_class_path,
 		memory,
 		os_name,
 		os_version,
@@ -229,12 +206,11 @@
 		NOW(),
 		'$clientCheckTime',
 
-		$ASEMON_LATEST_VERSION_SRC,
+		$SQLW_LATEST_VERSION_SRC,
 
 		'$clientSourceDate',
 		$clientSourceVersion,
 		'$clientAppVersionStr',
-		'$clientExpireDate',
 
 		'$clientHostName',
 		'$clientHostAddress',
@@ -245,7 +221,6 @@
 		'$user_home',
 		'$user_dir',
 		'$propfile',
-		'$gui',
 		'$sun_desktop',
 		'$user_country',
 		'$user_language',
@@ -256,7 +231,6 @@
 		'$java_vm_vendor',
 		'$sun_arch_data_model',
 		'$java_home',
-		'$java_class_path',
 		'$memory',
 		'$os_name',
 		'$os_version',
@@ -274,7 +248,7 @@
 
 	//------------------------------------------
 	// Send a responce id
-	printf("CHECK_ID: %d\n", mysql_insert_id());
+	printf("CHECK_ID_SQLW: %d\n", mysql_insert_id());
 
 	//------------------------------------------
 	// Close connection to the database

@@ -13,10 +13,43 @@ li   {margin-bottom: 6px}
 </HEAD>
 <BODY>
 
+<FONT SIZE="6" COLOR="red">A new Version of AseTune is Available.</FONT><br>
+Even if AseTune tells you've got the latest version, there is a new one.<br>
+Download it at <A HREF="http://www.asetune.com/download.html">http://www.asetune.com/download.html</A><br>
+or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourceforge.net/projects/asetune/files/</A><br>
+<br>
+
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-02-25</H2>
+<H2>2012-03-03</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Performance Counters initialized with wrong ASE release</b><br>
+	When connecting to ASE Release 15.0.2 or higher, the ESD# was stripped of.<br>
+	This was due to trusting the sp_version 'montables' information.<br>
+	The 'montables' version string is not maintained with the same version string as 'installmaster'<br>
+	Solution in ASE 15.0.2 or higher is to use the 'installmaster' entry instead of 'montables'<br>
+	This bug was introduced in version '2013-02-25', and in my opinion so serious I needed to make a new release ASAP.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tab: 'SPID Wait', 'SPID Activity' and 'Waits'</b><br>
+	Stopped using the tempdb.guest.monWaitEventInfo and tempdb.guest.monWaitClassInfo<br>
+	Now doing the translation from WaitEventID to the descriptions directly in java code instead.<br>
+	This was done due to: if you have 'granular permissions' configured in ASE 15.7 ESD#2 there was problems reading the above tables.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tool: SQL Window</b><br>
+	Use IGNORE_DONE_IN_PROC=true as the default option when connecting to ASE.<br>
+	This will exclude all extra/intermediate row counts when executing a stored procedure.<br>
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2013-02-25</H2>
 <UL>
 	<LI>
 	<b>Major enhancements to the tool SQL Window</b><br>
@@ -103,7 +136,7 @@ li   {margin-bottom: 6px}
 	</p>
 	<p>
 	   Please let me know if you still have memory issues.<br>
-	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script. 
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script.
 	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
 	</p>
 	Also new default values for Java memory:
@@ -141,7 +174,7 @@ li   {margin-bottom: 6px}
 	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
 	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
 	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
-	as you enter various commands.<br> 
+	as you enter various commands.<br>
 	</LI>
 
 	<LI>
@@ -178,8 +211,8 @@ li   {margin-bottom: 6px}
 	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
 	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
 	<p>
-	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br> 
-	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread. 
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br>
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread.
 	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
 	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
 	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
@@ -304,9 +337,9 @@ li   {margin-bottom: 6px}
 	<LI>
 	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
 	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
-	Also the field_name 'fglockspins' can optionally be discarded. 
+	Also the field_name 'fglockspins' can optionally be discarded.
 	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
-	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.) 
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.)
 	</LI>
 
 	<LI>

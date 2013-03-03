@@ -57,9 +57,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 314;
-	$ASEMON_LATEST_VERSION_STR = "3.2.0";
-	$ASEMON_LATEST_VERSION_STR = "2013-02-25";
+	$ASEMON_LATEST_VERSION_SRC = 318;
+	$ASEMON_LATEST_VERSION_STR = "3.2.1";
+	$ASEMON_LATEST_VERSION_STR = "2013-03-03";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asetune.com/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
@@ -175,7 +175,7 @@
 			echo "DEBUG STOP PROCESSING: CHECK FOR UPDATE, user is '$user_name'.\n";
 		exit;
 	}
-	if ( $user_name == "gorans" )
+	if ( $user_name == "goransXXXXXXXX" )
 	{
 		echo "ERROR: ---WARNING--- THE USER 'GORANS' SHOULD BE LOG DISABLED, HOPEFULLY THIS IS A TEST.\n";
 	}

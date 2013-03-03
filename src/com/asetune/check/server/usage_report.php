@@ -45,6 +45,7 @@
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?full=true"           >Full Report (first 300)</A>               <BR>
 <A HREF="http://www.asemon.se/usage_report.php?sap=true"            >SAP Systems Report (first 300)</A>        <BR>
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true"           >SQL Window (first 300)</A>        <BR>
 <BR>
 <h2>Admin:</h2>
 DB Cleanup:
@@ -75,6 +76,8 @@ DB Cleanup:
 	$rpt_timeoutInfo        = $_GET['timeoutInfo'];
 	$rpt_full               = $_GET['full'];
 	$rpt_sap                = $_GET['sap'];
+
+	$rpt_sqlw               = $_GET['sqlw'];
 
 	$del_deleteLogId        = $_GET['deleteLogId'];
 	$save_saveLogId         = $_GET['saveLogId'];
@@ -161,6 +164,9 @@ DB Cleanup:
 
 				if ( $colname == "sybUserName" )
 					echo "<td nowrap><A HREF=\"http://syberspase.sybase.com/compdir/mainMenu.do?keyword=$cell&submit=Go\" target=\"_blank\">$cell</A></td>";
+
+				else if ( $colname == "sapUserName" )
+					echo "<td nowrap><A HREF=\"http://someAddressXXX=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "userNameUsage" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
@@ -618,7 +624,7 @@ DB Cleanup:
 
 
 		//------------------------------------------
-		// FROM sybase.com
+		// FROM sybase.com and sap.corp
 		//------------------------------------------
 		//----------- Trunacte NOW table and pupulate it again
 		mysql_query("TRUNCATE TABLE sumSybaseUsersStartNow") or die("ERROR: " . mysql_error());
@@ -630,7 +636,8 @@ DB Cleanup:
 				NOW()
 			FROM asemon_usage
 			WHERE
-				SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sybase.com'
+				   SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sybase.com'
+				OR SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sap.corp'
 			GROUP BY
 				user_name
 			") or die("ERROR: " . mysql_error());
@@ -639,35 +646,37 @@ DB Cleanup:
 		$result = mysql_query("
 			SELECT n.userName as userNameUsage,
 				n.userName as sybUserName,
+				n.userName as sapUserName,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
-			ORDER BY 5 desc, 4 desc, 3 desc");
+			ORDER BY 6 desc, 5 desc, 4 desc");
 
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Sybase users, Start Count, order by START_TIME");
+		htmlResultset($result, "Sybase and SAP users, Start Count, order by START_TIME");
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
 			SELECT n.userName as userNameUsage,
 				n.userName as sybUserName,
+				n.userName as sapUserName,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
-			ORDER BY 4 desc, 3 desc");
+			ORDER BY 4 desc");
 
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Sybase users, Start Count");
+		htmlResultset($result, "Sybase and SAP users, Start Count");
 
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_diffReset == "true" )
@@ -1776,6 +1785,28 @@ DB Cleanup:
 			die("Query to show fields from table failed");
 		}
 		htmlResultset($result, "SAP asemon_connect_info Report");
+	}
+
+
+
+	//-------------------------------------------
+	// FULL REPORT
+	//-------------------------------------------
+	if ( $rpt_sqlw == "true" )
+	{
+		$sql = "
+			SELECT *
+			FROM sqlw_usage
+			ORDER BY rowid desc
+			LIMIT 300
+		";
+
+		// sending query
+		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($result, "SQL Window Usage Report");
 	}
 
 	// Close connection to the database
