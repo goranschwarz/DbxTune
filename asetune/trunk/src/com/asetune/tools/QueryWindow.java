@@ -15,6 +15,7 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.MouseInfo;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -24,6 +25,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -35,15 +37,18 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +89,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 import javax.swing.Timer;
+import javax.swing.TransferHandler;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
@@ -100,6 +106,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.FileLocation;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -108,6 +115,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.jdesktop.swingx.JXTable;
+import org.jfree.chart.ChartColor;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
@@ -117,13 +125,17 @@ import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
+import com.asetune.gui.CommandHistoryDialog;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.FavoriteCommandDialog;
+import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
-import com.asetune.sql.pipe.UnknownPipeCommandException;
+import com.asetune.sql.pipe.PipeCommand;
+import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.ui.autocomplete.CompletionProviderAse;
@@ -142,6 +154,8 @@ import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
+import com.asetune.utils.PlatformUtils;
+import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -159,10 +173,13 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class QueryWindow
 //	extends JFrame
 //	extends JDialog
-	implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener
+	implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
 	private static final long serialVersionUID = 1L;
+	private static final String LOCAL_JVM = ManagementFactory.getRuntimeMXBean().getName();
+
+	public final static String  APP_NAME                    = "SqlWindow";
 
 	public final static String  PROPKEY_APP_PREFIX          = "QueryWindow.";
 
@@ -174,6 +191,15 @@ public class QueryWindow
 	
 	public final static String  PROPKEY_lastFileNameSaveMax = "LastFileList.saveSize";
 	public final static int     DEFAULT_lastFileNameSaveMax = 20;
+
+	public final static String  PROPKEY_historyFileName        = PROPKEY_APP_PREFIX + "CommandHistory.filename";
+	public final static String  DEFAULT_historyFileName        = Version.APP_STORE_DIR + File.separator + APP_NAME + ".command.history.xml";
+
+	public final static String  PROPKEY_favoriteCmdFileNameSql = PROPKEY_APP_PREFIX + "FavoritCommands.filename.sql";
+	public final static String  DEFAULT_favoriteCmdFileNameSql = Version.APP_STORE_DIR + File.separator + APP_NAME + ".favorite.sql.commands.xml";
+
+	public final static String  PROPKEY_favoriteCmdFileNameRcl = PROPKEY_APP_PREFIX + "FavoritCommands.filename.rcl";
+	public final static String  DEFAULT_favoriteCmdFileNameRcl = Version.APP_STORE_DIR + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
 
 	static
 	{
@@ -188,6 +214,7 @@ public class QueryWindow
 	// Actions
 	public static final String ACTION_CONNECT                   = "CONNECT";
 	public static final String ACTION_DISCONNECT                = "DISCONNECT";
+	public static final String ACTION_CLONE_CONNECT             = "CLONE_CONNECT";
 	public static final String ACTION_FILE_NEW                  = "FILE_NEW";
 	public static final String ACTION_FILE_OPEN                 = "FILE_OPEN";
 //	public static final String ACTION_FILE_CLOSE                = "FILE_CLOSE";
@@ -201,6 +228,7 @@ public class QueryWindow
 	public static final String ACTION_CMD_SQL                   = "CMD_SQL";
 	public static final String ACTION_CMD_RCL                   = "CMD_RCL";
 
+	public static final String ACTION_VIEW_CMD_HISTORY          = "VIEW_CMD_HISTORY";
 	public static final String ACTION_VIEW_LOG_TAIL             = "VIEW_LOG_TAIL";
 	public static final String ACTION_VIEW_ASE_CONFIG           = "VIEW_ASE_CONFIG";
 	public static final String ACTION_RS_GENERATE_CHANGED_DDL   = "RS_GENERATE_CHANGED_DDL";
@@ -216,17 +244,18 @@ public class QueryWindow
 //	private JTextArea	_query           = new JTextArea();           // A field to enter a query in
 //	private RSyntaxTextArea	_query       = new RSyntaxTextArea();     // A field to enter a query in
 	private TextEditorPane	_query       = new TextEditorPane();    // A field to enter a query in
-	private RTextScrollPane _queryScroll = new RTextScrollPane(_query);
+	private RTextScrollPane _queryScroll = new RTextScrollPane(_query, true);
+	private ErrorStrip      _queryErrStrip = new ErrorStrip(_query);
 	private RSyntaxTextArea	_resultText  = null;
-	private JButton     _exec            = new JButton("Exec");       // Execute the
-	private JButton     _execGuiShowplan = new JButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
+	private JButton     _exec            = new ExecButton("Exec");       // Execute the
+	private JButton     _execGuiShowplan = new ExecButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
 	private JButton     _setOptions      = new JButton("Set");        // Do various set ... options
 	private JButton     _copy            = new JButton("Copy Res");    // Copy All resultsets to clipboard
 //	private JCheckBox   _showplan        = new JCheckBox("GUI Showplan", false);
 	private JCheckBox   _rsInTabs        = new JCheckBox("In Tabbed Panel", false);
 	private JCheckBox   _asPlainText     = new JCheckBox("As Plain Text", DEFAULT_asPlainText);
 	private JCheckBox   _showRowCount    = new JCheckBox("Row Count", DEFAULT_showRowCount);
-	private JComboBox   _dbs_cobx        = new JComboBox();
+	private JComboBox   _dbnames_cbx     = new JComboBox();
 	private JPanel      _resPanel        = new JPanel();
 	private JScrollPane _resPanelScroll  = new JScrollPane(_resPanel);
 	private RTextScrollPane _resPanelTextScroll  = new RTextScrollPane();
@@ -245,6 +274,8 @@ public class QueryWindow
 	private String      _connectedToSysListeners   = null;
 	private String      _connectedAsUser           = null;
 	private String      _connectedWithUrl          = null;
+	
+	private String      _currentDbName             = null; // probably only maintained for ASE
 
 	/** if DB returns a error message, stop executions */
 	private boolean     _abortOnDbMessages         = false;
@@ -270,6 +301,14 @@ public class QueryWindow
 	private JButton     _rsWhoIsDown_but = SwingUtils.makeToolbarButton(Version.class, "rs_admin_who_is_down.png", ACTION_RS_WHO_IS_DOWN, this, "Execute Replication Server Command 'admin who_is_down' (Ctrl-w)", "who_is_down");
 	private JButton     _viewLogFile_but = SwingUtils.makeToolbarButton(Version.class, "tail_logfile.png",         ACTION_VIEW_LOG_TAIL,  this, "Show Server logfile",                                    "logfile");
 
+	private JLabel      _jvm_lbl         = new JLabel(LOCAL_JVM);
+	private CommandHistoryDialog _cmdHistoryDialog = null;
+	private String      _cmdHistoryFilename        = DEFAULT_historyFileName;
+
+	private FavoriteCommandManagerSql _favoriteCmdManagerSql  = null;
+	private String                    _favoriteCmdFilenameSql = DEFAULT_favoriteCmdFileNameSql;
+	private FavoriteCommandManagerRcl _favoriteCmdManagerRcl  = null;
+	private String                    _favoriteCmdFilenameRcl = DEFAULT_favoriteCmdFileNameRcl;
 
 	// if we start from the CMD Line, add a few extra stuff
 	//---------------------------------------
@@ -281,6 +320,7 @@ public class QueryWindow
 	private JMenu               _file_m                 = new JMenu("File");
 	private JMenuItem           _connect_mi             = new JMenuItem("Connect...");
 	private JMenuItem           _disconnect_mi          = new JMenuItem("Disconnect");
+	private JMenuItem           _cloneConnect_mi        = new JMenuItem("New Window, Clone Connection");
 	private JMenuItem           _fNew_mi                = new JMenuItem("New File");
 	private JMenuItem           _fOpen_mi               = new JMenuItem("Open File...");
 //	private JMenuItem           _fClose_mi              = new JMenuItem("Close");
@@ -291,6 +331,7 @@ public class QueryWindow
 
 	// View
 	private JMenu               _view_m                 = new JMenu("View");
+	private JMenuItem           _viewCmdHistory_mi      = new JMenuItem("Command History");
 	private JMenuItem           _viewLogFile_mi         = new JMenuItem("Tail on Server Log File");
 	private JMenuItem           _ase_viewConfig_mi      = new JMenuItem("View ASE Configuration...");
 	private JMenuItem           _rs_configChangedDdl_mi = new JMenuItem("View RCL for changed configurations...");
@@ -303,16 +344,23 @@ public class QueryWindow
 	private JMenu               _tools_m                = new JMenu("Tools");
 	private JMenuItem           _toolDummy_mi           = new JMenuItem("Dummy entry");
 
-
+	// Start time
+	private static long _startTime = System.currentTimeMillis();
+	public static long getStartTime()
+	{
+		return _startTime;
+	}
+	
+	
 	/**
 	 * Constructor for CommandLine parameters
 	 * @param cmd
 	 * @throws Exception
 	 */
-	public QueryWindow(CommandLine cmd)
+	public QueryWindow(final CommandLine cmd)
 	throws Exception
 	{
-		Version.setAppName("SqlWindow");
+		Version.setAppName(APP_NAME);
 		
 		// Create store dir if it did not exists.
 		File appStoreDir = new File(Version.APP_STORE_DIR);
@@ -388,7 +436,7 @@ public class QueryWindow
 		// OK, lets get ASE user/passwd/server/dbname
 		//---------------------------------------------------------------
 		String aseUsername = System.getProperty("user.name"); 
-		String asePassword = "";
+		String asePassword = null;
 		String aseServer   = System.getenv("DSQUERY");
 		String aseDbname   = "";
 		String sqlQuery    = "";
@@ -459,34 +507,71 @@ public class QueryWindow
 			hostPortStr = aseServer;
 
 		// use IGNORE_DONE_IN_PROC=true, if not set in the options in the connection dialog
-		AseConnectionFactory.setPropertiesForAppname("SqlWindow", "IGNORE_DONE_IN_PROC", "true");
+		AseConnectionFactory.setPropertiesForAppname(APP_NAME, "IGNORE_DONE_IN_PROC", "true");
 		
+//		// Try make an initial connection...
+//		Connection conn = null;
+//		if ( ! StringUtil.isNullOrBlank(aseUsername) )
+//		{
+//			// If -P was not passed: try to get any saved password 
+//			if (!cmd.hasOption('P') && asePassword == null)
+//				asePassword = ConnectionDialog.getPasswordForServer(hostPortStr);
+//
+//			_logger.info("Connecting as user '"+aseUsername+"' to server='"+aseServer+"'. Which is located on '"+hostPortStr+"'.");
+//			try
+//			{
+//				Properties props = new Properties();
+//	//			props.put("CHARSET", "iso_1");
+//				conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, APP_NAME, null, props, null);
+//	
+//				// Set the correct dbname, if it hasnt already been done
+//				AseConnectionUtils.useDbname(conn, aseDbname);
+//			}
+//			catch (SQLException e)
+//			{
+//				_logger.error("Problems connecting: " + AseConnectionUtils.sqlExceptionToString(e));
+//	//			throw e;
+//			}
+//		}
+//
+//		// Create a QueryWindow component that uses the factory object.
+//		QueryWindow qw = new QueryWindow(conn, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
+//		qw.openTheWindow();
+////		init(conn, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
+////		openTheWindow();
 		// Try make an initial connection...
-		Connection conn = null;
-		if ( ! StringUtil.isNullOrBlank(asePassword) )
-		{
-			_logger.info("Connecting as user '"+aseUsername+"' to server='"+aseServer+"'. Which is located on '"+hostPortStr+"'.");
-			try
-			{
-				Properties props = new Properties();
-	//			props.put("CHARSET", "iso_1");
-				conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "SqlWindow", null, props, null);
-	
-				// Set the correct dbname, if it hasnt already been done
-				AseConnectionUtils.useDbname(conn, aseDbname);
-			}
-			catch (SQLException e)
-			{
-				_logger.error("Problems connecting: " + AseConnectionUtils.sqlExceptionToString(e));
-	//			throw e;
-			}
-		}
 
 		// Create a QueryWindow component that uses the factory object.
-		QueryWindow qw = new QueryWindow(conn, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
+		final QueryWindow qw = new QueryWindow(null, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
+
+		// if command line parameters, try to connect (using all that pre-built logic) 
+		// But defer the action so that the wind has time to open.
+		if ( cmd.hasOption('U') )
+		{
+			// If -P was not passed: try to get any saved password 
+			if (!cmd.hasOption('P') && asePassword == null)
+				asePassword = ConnectionDialog.getPasswordForServer(hostPortStr);
+
+			final String ppeStr = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP + 
+				"={aseUsername="+ aseUsername + 
+				",asePassword=" + asePassword + 
+				",aseServer="   + aseServer + 
+				",aseDbname="   + aseDbname + 
+				"}";
+
+			Runnable deferedAction = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					qw.action_connect(new ActionEvent(cmd, 1, ppeStr));
+				}
+			};
+			SwingUtilities.invokeLater(deferedAction);
+		}
+
+		// Now open the window
 		qw.openTheWindow();
-//		init(conn, sqlQuery, sqlFile, true, WindowType.CMDLINE_JFRAME, null);
-//		openTheWindow();
 	}
 
 	/**
@@ -561,6 +646,7 @@ public class QueryWindow
 			// FILE
 			_file_m.add(_connect_mi);
 			_file_m.add(_disconnect_mi);
+			_file_m.add(_cloneConnect_mi);
 			_file_m.addSeparator();
 			_file_m.add(_fNew_mi);
 			_file_m.add(_fOpen_mi);
@@ -575,6 +661,7 @@ public class QueryWindow
 			_file_m .setMnemonic(KeyEvent.VK_F);
 	
 			// VIEW
+			_view_m.add(_viewCmdHistory_mi);
 			_view_m.add(_viewLogFile_mi);
 			_view_m.add(_ase_viewConfig_mi);
 			_view_m.add(_rs_configChangedDdl_mi);   
@@ -600,6 +687,7 @@ public class QueryWindow
 //			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, ActionEvent.ALT_MASK));
 			_connect_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 			_disconnect_mi     .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			_cloneConnect_mi   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 
 			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
@@ -607,6 +695,8 @@ public class QueryWindow
 			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 
 			_rsWhoIsDown_mi    .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+
+			_viewCmdHistory_mi .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 
 			// TOOLBAR
 //			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
@@ -620,6 +710,9 @@ public class QueryWindow
 			_toolbar.add(_cmdSql_but,      "hidemode 3");
 			_toolbar.add(_cmdRcl_but,      "hidemode 3");
 			_toolbar.add(_rsWhoIsDown_but, "hidemode 3");
+			_toolbar.add(new JLabel(),     "pushx, growx"); // Dummy entry to "grow" so next will be located to the right
+			_toolbar.add(_jvm_lbl,         "");
+
 			// Visibility for TOOLBAR components at startup
 			_viewLogFile_but.setEnabled(false);
 			_cmdSql_but     .setVisible(false);
@@ -627,12 +720,23 @@ public class QueryWindow
 			_rsWhoIsDown_but.setVisible(false);
 
 
+			// Set icons for some buttons
+			_exec           .setIcon(SwingUtils.readImageIcon(Version.class, "images/exec.png"));
+			_execGuiShowplan.setIcon(SwingUtils.readImageIcon(Version.class, "images/exec_with_plan.png"));
+			_exec           .setText(null);
+			_execGuiShowplan.setText(null);
+			
+			
+			_jvm_lbl.setToolTipText("<html>This is <i>PID@hostname</i>, where this java process is running.</html>");
+
 			//--------------------------
 			// MENU - Icons
 			_connect_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect16.gif"));
 			_disconnect_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect16.gif"));
+			_cloneConnect_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/clone_connect_16.png"));
 			_exit_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
 			_viewLogFile_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/tail_logfile.png"));
+			_viewCmdHistory_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/command_history.png"));
 			_ase_viewConfig_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
 			_rs_configAllDdl_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_configChangedDdl_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
@@ -641,15 +745,17 @@ public class QueryWindow
 
 			//--------------------------
 			// MENU - Actions
-			_connect_mi   .setActionCommand(ACTION_CONNECT);
-			_disconnect_mi.setActionCommand(ACTION_DISCONNECT);
-			_fNew_mi      .setActionCommand(ACTION_FILE_NEW);
-			_fOpen_mi     .setActionCommand(ACTION_FILE_OPEN);
-//			_fClose_mi    .setActionCommand(ACTION_FILE_CLOSE);
-			_fSave_mi     .setActionCommand(ACTION_FILE_SAVE);
-			_fSaveAs_mi   .setActionCommand(ACTION_FILE_SAVE_AS);
-			_exit_mi      .setActionCommand(ACTION_EXIT);
+			_connect_mi     .setActionCommand(ACTION_CONNECT);
+			_disconnect_mi  .setActionCommand(ACTION_DISCONNECT);
+			_cloneConnect_mi.setActionCommand(ACTION_CLONE_CONNECT);
+			_fNew_mi        .setActionCommand(ACTION_FILE_NEW);
+			_fOpen_mi       .setActionCommand(ACTION_FILE_OPEN);
+//			_fClose_mi      .setActionCommand(ACTION_FILE_CLOSE);
+			_fSave_mi       .setActionCommand(ACTION_FILE_SAVE);
+			_fSaveAs_mi     .setActionCommand(ACTION_FILE_SAVE_AS);
+			_exit_mi        .setActionCommand(ACTION_EXIT);
 
+			_viewCmdHistory_mi     .setActionCommand(ACTION_VIEW_CMD_HISTORY);
 			_viewLogFile_mi        .setActionCommand(ACTION_VIEW_LOG_TAIL);
 			_ase_viewConfig_mi     .setActionCommand(ACTION_VIEW_ASE_CONFIG);
 			_rs_configChangedDdl_mi.setActionCommand(ACTION_RS_GENERATE_CHANGED_DDL);
@@ -661,6 +767,7 @@ public class QueryWindow
 			// And the action listener
 			_connect_mi     .addActionListener(this);
 			_disconnect_mi  .addActionListener(this);
+			_cloneConnect_mi.addActionListener(this);
 			_fNew_mi        .addActionListener(this);
 			_fOpen_mi       .addActionListener(this);
 //			_fClose_mi      .addActionListener(this);
@@ -668,6 +775,7 @@ public class QueryWindow
 			_fSaveAs_mi     .addActionListener(this);
 			_exit_mi        .addActionListener(this);
 
+			_viewCmdHistory_mi     .addActionListener(this);
 			_viewLogFile_mi        .addActionListener(this);
 			_ase_viewConfig_mi     .addActionListener(this);
 			_rs_configChangedDdl_mi.addActionListener(this);
@@ -719,11 +827,17 @@ public class QueryWindow
 		//super();
 		//super.setTitle(Version.getAppName()+" Query"); // Set window title
 //		ImageIcon icon = new ImageIcon(getClass().getResource("swing/images/query16.gif"));
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png");
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png");
 //		super.setIconImage(icon.getImage()); // works if we are a JFrame
 //		((Frame)this.getOwner()).setIconImage(icon.getImage()); // works if we are a JDialog
 
-		_window.setIconImage(icon.getImage());
+//		_window.setIconImage(icon16.getImage());
+//		_window.setIconImage(icon32.getImage());
+		ArrayList<Image> iconList = new ArrayList<Image>();
+		if (icon16 != null) iconList.add(icon16.getImage());
+		if (icon32 != null) iconList.add(icon32.getImage());
+		_window.setIconImages(iconList);
 
 		_closeConnOnExit = closeConnOnExit;
 
@@ -790,10 +904,34 @@ public class QueryWindow
 		}
 
 		// Set various components
-		_exec.setToolTipText("Executes the select sql statement above (Ctrl-e)(Alt+e)(F5)(F9)."); 
+		_exec.setToolTipText(
+			"<html>" +
+			"<b>Execute</b><br>" +
+			"<br>" +
+			"Executes the <b>select</b> SQL Statement(s) above.<br>" +
+			"If no text is selected, everything in the window will be executed.<br>" +
+			"<br>" +
+			"<b>Keybord shortcuts</b>: Ctrl-e, Alt+e, F5, F9<br>" +
+			"<b>Tip 1</b>: You can <b><i>drop</i></b> any text on this button using <b><i>Drag & Drop</i></b>, example from any history window (Ctrl-h)...<br>" +
+			"<b>Tip 2</b>: If you don't want to execute everything in the window by accident. Add the following as the first line:<br>" +
+			"<code>print 'Execute the whole thing... Well I didnt think so...'</code><br>" +
+			"<code>exit</code><br>" +
+			"</html>"); 
 		_exec.setMnemonic('e');
 
-		_execGuiShowplan.setToolTipText("Executes the select sql statement above, but use the GUI Showplan, only in ASE 15.0 or above (Ctrl-Shift+e)(Alt+Shift+e)(Shift+F5)(Shift+F9)."); 
+		_execGuiShowplan.setToolTipText(
+			"<html>" +
+			"<b>Execute with GUI Showplan</b><br>" +
+			"<br>" +
+			"Executes the <b>select</b> SQL Statement(s) above, but use the GUI Showplan. <i>only in ASE 15.0 or above</i><br>" +
+			"If no text is selected, everything in the window will be executed.<br>" +
+			"<br>" +
+			"<b>Keybord shortcuts</b>: Ctrl-Shift+e, Alt+Shift+e, Shift+F5, Shift+F9<br>" +
+			"<b>Tip 1</b>: You can <b><i>drop</i></b> any text on this button using <b><i>Drag & Drop</i></b>, example from any history window (Ctrl-h)...<br>" +
+			"<b>Tip 2</b>: If you don't want to execute everything in the window by accident. Add the following as the first line:<br>" +
+			"<code>print 'Execute the whole thing... Well I didnt think so...'</code><br>" +
+			"<code>exit</code><br>" +
+			"</html>"); 
 		_execGuiShowplan.setMnemonic('E');
 
 		_setOptions.setToolTipText("Set various options, for example: set showplan on|off.");
@@ -802,7 +940,7 @@ public class QueryWindow
 
 //		_showplan.setToolTipText("<html>Show Graphical showplan for the sql statement (work with ASE 15.x).</html>");
 		
-		_dbs_cobx    .setToolTipText("<html>Change database context.</html>");
+		_dbnames_cbx .setToolTipText("<html>Change database context.</html>");
 		_rsInTabs    .setToolTipText("<html>Check this if you want to have multiple result sets in individual tabs.</html>");
 		_asPlainText .setToolTipText("<html>No fancy output, just write the output as 'plan text'.</html>");
 		_showRowCount.setToolTipText("<html>" +
@@ -816,14 +954,14 @@ public class QueryWindow
 		                             "That's why this option is visible, so you can turn this on/off as you which!" +
 		                             "</html>");
 		_copy        .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
-		_query       .setToolTipText("<html>" +
-									"Put your SQL query here.<br>" +
-									"If you select text and press 'exec' only the highlighted text will be sent to the ASE.<br>" +
-									"<br>" +
-									"Note: <b>Ctrl+Space</b> Brings up code completion. This is <b>not</b> working good for the moment, but it will be enhanced.<br>" +
-									"<br>" +
-								"</html>");
-		_query.setUseFocusableTips(false);
+//		_query       .setToolTipText("<html>" +
+//									"Put your SQL query here.<br>" +
+//									"If you select text and press 'exec' only the highlighted text will be sent to the ASE.<br>" +
+//									"<br>" +
+//									"Note: <b>Ctrl+Space</b> Brings up code completion. This is <b>not</b> working good for the moment, but it will be enhanced.<br>" +
+//									"<br>" +
+//								"</html>");
+//		_query.setUseFocusableTips(false);
 		
 		_query.addCaretListener(this);
 
@@ -838,7 +976,7 @@ public class QueryWindow
 		AsetuneTokenMaker.init();  
 
 		// Setup Auto-Completion for SQL
-		_compleationProviderAbstract = CompletionProviderAbstractSql.installAutoCompletion(conn, _query, _window, this);
+		_compleationProviderAbstract = CompletionProviderAbstractSql.installAutoCompletion(conn, _query, _queryErrStrip, _window, this);
 //		_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _window, this);
 //		_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query, _window, this);
 //		_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query, _window, this);
@@ -875,10 +1013,15 @@ public class QueryWindow
 			contentPane.add(_toolbar, BorderLayout.NORTH);
 		contentPane.add(_splitPane);
 
+//		top.add(_queryScroll, BorderLayout.CENTER);
 		top.add(_queryScroll, BorderLayout.CENTER);
+		top.add(_queryErrStrip, BorderLayout.LINE_END);
+//		top.add(_queryErrStrip, BorderLayout.LINE_START);
 		top.setMinimumSize(new Dimension(300, 100));
 
-		bottom.add(_dbs_cobx,       "split 6, hidemode 2");
+		_queryErrStrip.setVisible(false);
+		
+		bottom.add(_dbnames_cbx,    "split 6, hidemode 2");
 		bottom.add(_exec,           "");
 		bottom.add(_execGuiShowplan,"");
 		bottom.add(_rsInTabs,       "hidemode 2");
@@ -942,7 +1085,7 @@ public class QueryWindow
 
 		_exec           .addActionListener(this);
 		_execGuiShowplan.addActionListener(this);
-		_dbs_cobx       .addActionListener(this);
+		_dbnames_cbx    .addActionListener(this);
 		_copy           .addActionListener(this);
 
 		_exec           .setActionCommand(ACTION_EXECUTE);
@@ -952,13 +1095,29 @@ public class QueryWindow
 		if (_conn != null && _connType == ConnectionDialog.ASE_CONN)
 			setDbNames();
 
-		// Kick of a initial SQL query, if one is specified.
+		// Write some initial text, and mark it
+		// or Kick of a initial SQL query, if one is specified.
 		if (StringUtil.isNullOrBlank(sql))
 		{
-			String helper = "Write your SQL query here";
-			_query.setText(helper);
-			_query.setSelectionStart(0);
-			_query.setSelectionEnd(helper.length());
+			// if no input file
+			if ( StringUtil.isNullOrBlank(inputFile) )
+			{
+				Runnable doLater = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						_query.requestFocus();
+
+						String helper = "Write your SQL query here";
+						_query.setText(helper);
+						_query.setSelectionStart(0);
+						_query.setSelectionEnd(helper.length());
+						_query.setDirty(false);
+					}
+				};
+				SwingUtilities.invokeLater(doLater);
+			}
 		}
 		else
 		{
@@ -1020,6 +1179,10 @@ public class QueryWindow
 		_asPlainText .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,  DEFAULT_asPlainText) );
 		_showRowCount.setSelected( conf.getBooleanProperty(PROPKEY_showRowCount, DEFAULT_showRowCount) );
 
+		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
+		_favoriteCmdFilenameSql = conf.getProperty(PROPKEY_favoriteCmdFileNameSql, DEFAULT_favoriteCmdFileNameSql);
+		_favoriteCmdFilenameRcl = conf.getProperty(PROPKEY_favoriteCmdFileNameRcl, DEFAULT_favoriteCmdFileNameRcl);
+
 		loadFileHistory();
 	}
 
@@ -1036,6 +1199,10 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_asPlainText,         _asPlainText .isSelected());
 		conf.setProperty(PROPKEY_showRowCount,        _showRowCount.isSelected());
 		
+		conf.setProperty(PROPKEY_historyFileName,        _cmdHistoryFilename);
+		conf.setProperty(PROPKEY_favoriteCmdFileNameSql, _favoriteCmdFilenameSql);
+		conf.setProperty(PROPKEY_favoriteCmdFileNameRcl, _favoriteCmdFilenameRcl);
+
 		conf.save();
 	}
 
@@ -1116,7 +1283,10 @@ public class QueryWindow
 
 		if (ACTION_DISCONNECT.equals(actionCmd))
 			action_disconnect(e);
-
+		
+		if (ACTION_CLONE_CONNECT.equals(actionCmd))
+			action_cloneConnect(e);
+		
 		if (ACTION_FILE_NEW.equals(actionCmd))
 			action_fileNew(e);
 
@@ -1156,6 +1326,9 @@ public class QueryWindow
 		if (ACTION_RS_WHO_IS_DOWN.equals(actionCmd))
 			action_rsWhoIsDown(e);
 
+		if (ACTION_VIEW_CMD_HISTORY.equals(actionCmd))
+			action_viewCmdHistory(e);
+
 		if (ACTION_VIEW_LOG_TAIL.equals(actionCmd))
 			action_viewLogTail(e);
 
@@ -1170,9 +1343,9 @@ public class QueryWindow
 			actionExecute(e, true);
 
 		// ACTION for "database context"
-		if (_dbs_cobx.equals(source))
+		if (_dbnames_cbx.equals(source))
 		{
-			useDb( (String) _dbs_cobx.getSelectedItem() );
+			useDb( (String) _dbnames_cbx.getSelectedItem() );
 			
 			// mark code completion for refresh
 			if (_compleationProviderAbstract != null)
@@ -1225,8 +1398,25 @@ public class QueryWindow
 		if (_jdialog != null) _jdialog.setTitle(title);
 	}
 
+	private boolean isNull(String str)
+	{
+		if (str == null)        return true;
+		if (str.equals("null")) return true;
+		return false;
+	}
 	private void action_connect(ActionEvent e)
 	{
+		// just for debugging...
+		//new Exception("action_connect called from").printStackTrace();
+
+		Object source = null;
+		String action = null;
+		if (e != null)
+		{
+			source = e.getSource();
+			action = e.getActionCommand();
+		}
+
 		// Create a new dialog Window
 		boolean checkAseCfg    = false;
 		boolean showAseTab     = true;
@@ -1242,15 +1432,62 @@ public class QueryWindow
 		_connectedToSysListeners   = null;
 		_connectedAsUser           = null;
 		_connectedWithUrl          = null;
+		
+		_currentDbName             = null;
 
 		// mark code completion for refresh
 		if (_compleationProviderAbstract != null)
 			_compleationProviderAbstract.setNeedRefresh(true);
 
+		// set default database name, in case if it's a ASE Server
+		String aseDbname = null;
+		
+		// Create the connection dialog
 		ConnectionDialog connDialog = new ConnectionDialog(_jframe, checkAseCfg, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab, showJdbcTab);
-		// Show the dialog and wait for response
-		connDialog.setVisible(true);
-		connDialog.dispose();
+
+		// If the source is "CommandLine" Parameters
+		//   - call the ConnectionDialogs logic to just connect
+		// else
+		//   - open the dialog
+		if (source != null && source instanceof CommandLine && showAseTab)
+		{
+			if ( action != null && action.startsWith(ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP) )
+			{
+				try
+				{
+					// user, passwd commes as the String:
+					// conn.onStartup={aseUsername=user, asePassword=pass, ...} see below for props
+					// PropPropEntry parses the entries and then we can query the PPE object
+					_logger.debug(action);
+					PropPropEntry ppe = new PropPropEntry(action);
+					String key = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP;
+
+					if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
+					if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
+					if (!isNull(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
+
+//					if (!isNull(ppe.getProperty(key, "sshUsername"))) connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
+//					if (!isNull(ppe.getProperty(key, "sshPassword"))) connDialog.setSshPassword(ppe.getProperty(key, "sshPassword"));
+//					if (!isNull(ppe.getProperty(key, "sshHostname"))) connDialog.setSshHostname(ppe.getProperty(key, "sshHostname"));
+//					if (!isNull(ppe.getProperty(key, "sshPort"))    ) connDialog.setSshPort    (ppe.getProperty(key, "sshPort"));
+
+					if (!isNull(ppe.getProperty(key, "aseDbname"))) 
+						aseDbname = ppe.getProperty(key, "aseDbname");
+
+					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
+				}
+				catch(Exception ex)
+				{
+					_logger.warn(ex.getMessage());
+				}
+			}
+		}
+		else
+		{
+			// Show the dialog and wait for response
+			connDialog.setVisible(true);
+			connDialog.dispose();
+		}
 
 		// Get what was connected to...
 		int connType = connDialog.getConnectionType();
@@ -1289,9 +1526,12 @@ public class QueryWindow
 
 				if (connDialog.isDatabaseProduct(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
 				{
+					if (aseDbname != null)
+						AseConnectionUtils.useDbname(_conn, aseDbname);
+
 					setDbNames();
 
-					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query, _window, this);
+					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query, _queryErrStrip, _window, this);
 
 					_aseVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
 
@@ -1307,14 +1547,14 @@ public class QueryWindow
 				}
 				else if (connDialog.isDatabaseProduct(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
 				{
-					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query, _window, this);
+					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query, _queryErrStrip, _window, this);
 
 					_aseVersion = AseConnectionUtils.getRsVersionNumber(_conn);
 					_logger.info("Connected to Replication Server version '"+_aseVersion+"'.");
 				}
 				else
 				{
-					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _window, this);
+					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
 
 					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
 				}
@@ -1326,7 +1566,7 @@ public class QueryWindow
 		}
 		else if ( connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _window, this);
+			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
 
 			_conn = connDialog.getOfflineConn();
 			_connType = ConnectionDialog.OFFLINE_CONN;
@@ -1337,7 +1577,7 @@ public class QueryWindow
 		}
 		else if ( connType == ConnectionDialog.JDBC_CONN)
 		{
-			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _window, this);
+			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
 
 			_conn = connDialog.getJdbcConn();
 			_connType = ConnectionDialog.JDBC_CONN;
@@ -1368,7 +1608,7 @@ public class QueryWindow
 		// sets Save, SaveAs to enabled or not
 		caretUpdate(null);
 
-		_dbs_cobx.setVisible(true);
+		_dbnames_cbx.setVisible(true);
 		
 //		if (_conn == null)
 		if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
@@ -1377,11 +1617,12 @@ public class QueryWindow
 			_connect_but    .setEnabled(true);
 			_disconnect_mi  .setEnabled(false);
 			_disconnect_but .setEnabled(false);
+			_cloneConnect_mi.setEnabled(false);
 			
 			_viewLogFile_but.setEnabled(false);
 			_viewLogFile_mi .setEnabled(false);
 
-			_dbs_cobx       .setEnabled(false);
+			_dbnames_cbx    .setEnabled(false);
 			_exec           .setEnabled(false);
 			_rsInTabs       .setEnabled(false);
 			_asPlainText    .setEnabled(false);
@@ -1390,7 +1631,7 @@ public class QueryWindow
 			_execGuiShowplan.setEnabled(false);
 			
 			setSrvInTitle("not connected");
-			_statusBar.setServerName(null, null, null, null, null, null, null);
+			_statusBar.setNotConnected();
 
 			return;
 		}
@@ -1400,6 +1641,7 @@ public class QueryWindow
 			_connect_but    .setEnabled(false);
 			_disconnect_mi  .setEnabled(true);
 			_disconnect_but .setEnabled(true);
+			_cloneConnect_mi.setEnabled(true);
 
 			_viewLogFile_but.setEnabled(true);
 			_viewLogFile_mi .setEnabled(true);
@@ -1420,7 +1662,7 @@ public class QueryWindow
 				_ase_viewConfig_mi     .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
 				_cmdSql_but            .setVisible(true);
 
-				_dbs_cobx       .setEnabled(true);
+				_dbnames_cbx    .setEnabled(true);
 				_exec           .setEnabled(true);
 				_rsInTabs       .setEnabled(true);
 				_asPlainText    .setEnabled(true);
@@ -1437,7 +1679,7 @@ public class QueryWindow
 				_rsWhoIsDown_but       .setVisible(true);
 				_rsWhoIsDown_mi        .setVisible(true);
 
-				_dbs_cobx              .setVisible(false);
+				_dbnames_cbx           .setVisible(false);
 				_exec                  .setEnabled(true);
 				_rsInTabs              .setEnabled(true);
 				_asPlainText           .setEnabled(true);
@@ -1449,7 +1691,7 @@ public class QueryWindow
 
 		if ( _connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_dbs_cobx       .setEnabled(false);
+			_dbnames_cbx    .setEnabled(false);
 			_exec           .setEnabled(true);
 			_rsInTabs       .setEnabled(true);
 			_asPlainText    .setEnabled(true);
@@ -1463,7 +1705,7 @@ public class QueryWindow
 
 		if ( _connType == ConnectionDialog.JDBC_CONN)
 		{
-			_dbs_cobx       .setEnabled(false);
+			_dbnames_cbx    .setEnabled(false);
 			_exec           .setEnabled(true);
 			_rsInTabs       .setEnabled(true);
 			_asPlainText    .setEnabled(true);
@@ -1489,6 +1731,8 @@ public class QueryWindow
 		_connectedAsUser           = null;
 		_connectedWithUrl          = null;
 
+		_currentDbName             = null;
+		
 		if (_conn != null)
 		{
 			try
@@ -1501,7 +1745,7 @@ public class QueryWindow
 				_viewLogFile_but.setEnabled(false);
 				_viewLogFile_mi .setEnabled(false);
 
-				_dbs_cobx       .setEnabled(false);
+				_dbnames_cbx    .setEnabled(false);
 				_exec           .setEnabled(false);
 				_rsInTabs       .setEnabled(false);
 				_asPlainText    .setEnabled(false);
@@ -1510,13 +1754,105 @@ public class QueryWindow
 				_execGuiShowplan.setEnabled(false);
 
 				setSrvInTitle(null);
-				_statusBar.setServerName(null, null, null, null, null, null, null);
+				_statusBar.setNotConnected();
 			}
 			catch (SQLException ex)
 			{
 				_logger.error("Problems closing database connection.", ex);
 			}
 		}
+	}
+
+	private void action_cloneConnect(ActionEvent e)
+	{
+		// Get environemnt
+		final String SQLW_HOME = System.getProperty("SQLW_HOME");
+
+		// Create base command
+		String baseCmd = "sqlw.bat";
+		if (PlatformUtils.getCurrentPlattform() != PlatformUtils.Platform_WIN)
+			baseCmd = "./sqlw.sh";
+
+		// Create command line parameters
+		ArrayList<String> cmdLineParams = new ArrayList<String>();
+
+		cmdLineParams.add(baseCmd);
+		cmdLineParams.add("-U" + _connectedAsUser);
+		cmdLineParams.add("-S" + _connectedToServerName);
+//		cmdLineParams.add("--cloneStart");
+
+		if (_dbnames_cbx.isVisible() && _dbnames_cbx.getItemCount() > 0)
+		{
+			String dbname = (String) _dbnames_cbx.getSelectedItem();
+			cmdLineParams.add("-D" + dbname);
+		}
+
+		_logger.debug("-----BEGIN-CLONE-CONNECT-----------------------------------------------");
+		_logger.debug("OS Start Directory: " + SQLW_HOME );
+		_logger.debug("OS Command Array:   " + cmdLineParams);
+		_logger.debug("-----END---CLONE-CONNECT-----------------------------------------------");
+
+		System.out.println("-----BEGIN-CLONE-CONNECT-----------------------------------------------");
+		System.out.println("OS Start Directory: " + SQLW_HOME );
+		System.out.println("OS Command Array:   " + cmdLineParams);
+		System.out.println("-----END---CLONE-CONNECT-----------------------------------------------");
+
+		// Now execute a OS Command
+		try
+		{
+//			Runtime.getRuntime().exec(osCmd);
+
+			int winPosX = _window.getLocationOnScreen().x;
+			int winPosY = _window.getLocationOnScreen().y;
+			String propPropEntryStr = "WinProps={x="+winPosX+", y="+winPosY+"}"; // see PropPropEntry
+
+			ProcessBuilder pb = new ProcessBuilder(cmdLineParams);
+			Map<String, String> env = pb.environment();
+			env.put("SQLW_CLONE_CONNECT_PROPS", propPropEntryStr);
+			pb.directory(new File(SQLW_HOME));
+			pb.redirectErrorStream(true);
+			Process p = pb.start();
+
+			// If we don't read the stream(s) from Process, it may simply not "start" or start slowly
+			final InputStream stdOut = p.getInputStream();
+			Thread stdInOutReaderThread = new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					try
+					{
+						byte[] buffer = new byte[8192];
+						int len = -1;
+						while((len = stdOut.read(buffer)) > 0)
+//							; // just throw the buffer away, so we don't block on outputs...
+							System.out.write(buffer, 0, len);
+					}
+					catch (IOException ignore) {}
+				}
+			});
+			stdInOutReaderThread.setDaemon(true);
+			stdInOutReaderThread.setName("cloneConnect:stdInOutReader");
+			stdInOutReaderThread.start();
+			
+//			String[] strArr = new String[cmdLineParams.size()];
+//			int i=0;
+//			for (String str : cmdLineParams)
+//				strArr[i++] = str;
+//				
+//			Runtime.getRuntime().exec(strArr, new String[] {"SQLW_CLONE_CONNECT_PROPS="+LOCAL_JVM}, new File(SQLW_HOME));
+		}
+		catch (IOException ex)
+		{
+			SwingUtils.showErrorMessage(_window, "Problems starting new "+Version.getAppName(), 
+				"<html>" +
+				"<h2>Problems starting a new "+Version.getAppName()+"</h2>" +
+				"OS Start Directory: " + SQLW_HOME + "<br>" +
+				"OS Command Array: " + cmdLineParams +  "<br>" +
+				"</html>", ex);
+		}
+		// maybe use:      http://docs.oracle.com/javase/6/docs/api/java/lang/ProcessBuilder.html
+		// or fallback to: http://docs.oracle.com/javase/6/docs/api/java/lang/Runtime.html#exec%28java.lang.String[]%29
 	}
 
 
@@ -1994,6 +2330,13 @@ public class QueryWindow
 			false);
 	}
 
+	private void action_viewCmdHistory(ActionEvent e)
+	{
+		if (_cmdHistoryDialog == null)
+			_cmdHistoryDialog = new CommandHistoryDialog(this, _window);
+		_cmdHistoryDialog.setVisible(true);
+	}
+
 	private void action_viewLogTail(ActionEvent e)
 	{
 //		SwingUtils.showInfoMessage("Not yet implemented", "<html><h2>Sorry NOT Yet Implemented.</h2></html>");
@@ -2003,6 +2346,36 @@ public class QueryWindow
 	}
 
 
+	//////////////////////////////////////////////////////////////
+	// BEGIN: IMPLEMEMNTS the CommandHistoryDialog HistoryExecutor
+	//////////////////////////////////////////////////////////////
+	@Override
+	public void historyExecute(String cmd)
+	{
+		displayQueryResults(cmd, false);
+	}
+	@Override
+	public void saveHistoryFilename(String filename)
+	{
+		_cmdHistoryFilename = filename;
+		saveProps();
+	}
+
+	@Override
+	public String getHistoryFilename()
+	{
+		return _cmdHistoryFilename;
+	}
+	
+	@Override
+	public String getSourceId() 
+	{
+		return LOCAL_JVM;
+	}
+	//////////////////////////////////////////////////////////////
+	// END: IMPLEMEMNTS the CommandHistoryDialog HistoryExecutor
+	//////////////////////////////////////////////////////////////
+	
 	private void actionExecute(ActionEvent e, boolean guiShowplanExec)
 	{
 		// If we had an JTabbedPane, what was the last index
@@ -2157,6 +2530,24 @@ public class QueryWindow
 		int winPosY = conf.getIntProperty("QueryWindow.size.pos.y",         -1);
 		int divLoc  = conf.getIntProperty("QueryWindow.splitPane.location", -1);
 
+		// If this window is a "cloned" window...
+		// Or if other SQL Windows processes is started FIXME: implement this
+		// Then move the window slightly
+		//FIXME: Jps.java -- to get othet running applications...
+		//       This will also cover when you start several windows but from the command line (or not cloning)
+
+		if (System.getenv("SQLW_CLONE_CONNECT_PROPS") != null)
+		{
+			String propPropStr = System.getenv("SQLW_CLONE_CONNECT_PROPS");
+			_logger.info("SQLW_CLONE_CONNECT_PROPS was passed with the values: "+propPropStr);
+			
+			PropPropEntry ppe = new PropPropEntry(propPropStr);
+			winPosX = ppe.getIntProperty("WinProps", "x", winPosX);
+			winPosY = ppe.getIntProperty("WinProps", "y", winPosY);
+			if (winPosX > 0) winPosX -= 70;
+			if (winPosY > 0) winPosY -= 20;
+		}
+
 //		winPosX=0;
 //		winPosY=0;
 		openTheWindow(width, height, winPosX, winPosY, divLoc);
@@ -2290,6 +2681,7 @@ public class QueryWindow
 		try
 		{
 			_conn.createStatement().execute("use "+dbname);
+			_currentDbName = dbname;
 			return true;
 		}
 		catch(SQLException e)
@@ -2321,12 +2713,13 @@ public class QueryWindow
 			{
 				cwdb = rs.getString(1);
 			}
+			_currentDbName = cwdb;
 
-			String currentSelectedDb = (String) _dbs_cobx.getSelectedItem();
+			String currentSelectedDb = (String) _dbnames_cbx.getSelectedItem();
 			if ( ! cwdb.equals(currentSelectedDb) )
 			{
 				// Note this triggers: code completion for refresh
-				_dbs_cobx.setSelectedItem(cwdb);
+				_dbnames_cbx.setSelectedItem(cwdb);
 			}
 
 			return cwdb;
@@ -2346,7 +2739,7 @@ public class QueryWindow
 	/**
 	 * Get 'all' databases from ASE, and set the ComboBox to Current Working database
 	 */
-	private void setDbNames()
+	private boolean setDbNames()
 	{
 		try
 		{
@@ -2359,28 +2752,43 @@ public class QueryWindow
 				cbm.addElement(rs.getString(1));
 				cwdb = rs.getString(2);
 			}
+			_currentDbName = cwdb;
 
 			// Check if number of databases has changed
-			int currentDbCount = _dbs_cobx.getItemCount();
+			int currentDbCount = _dbnames_cbx.getItemCount();
 			if (cbm.getSize() != currentDbCount)
 			{
-				_dbs_cobx.setModel(cbm);
+				_dbnames_cbx.setModel(cbm);
 			}
 
 			// Check if Current Working database has changed
-			String currentSelectedDb = (String) _dbs_cobx.getSelectedItem();
+			String currentSelectedDb = (String) _dbnames_cbx.getSelectedItem();
 			if ( ! cwdb.equals(currentSelectedDb) )
 			{
 				// Note this triggers: code completion for refresh
-				_dbs_cobx.setSelectedItem(cwdb);
+				_dbnames_cbx.setSelectedItem(cwdb);
 			}
+			return true;
 		}
 		catch(SQLException e)
 		{
 			DefaultComboBoxModel cbm = new DefaultComboBoxModel();
 			cbm.addElement("Problems getting dbnames");
-			_dbs_cobx.setModel(cbm);
+			_dbnames_cbx.setModel(cbm);
+			return false;
 		}
+	}
+
+	private void doDummySelect()
+	throws SQLException
+	{
+		Statement stmnt   = _conn.createStatement();
+		ResultSet rs      = stmnt.executeQuery("select 1");
+		while (rs.next())
+		{
+		}
+		rs.close();
+		stmnt.close();
 	}
 
 	/*---------------------------------------------------
@@ -2455,6 +2863,1192 @@ public class QueryWindow
 			return popup;
 	}
 
+	public void displayQueryResults(final String sql, final boolean guiShowplanExec)
+	{
+		if (_conn == null)
+		{
+			SwingUtils.showErrorMessage(_window, "Not Connected", "Can't Execute, since we are not connected to any server.", null);
+			return;
+		}
+
+		if (true)
+		{
+			if (_cmdHistoryDialog == null)
+				_cmdHistoryDialog = new CommandHistoryDialog(this, _window);
+
+			_cmdHistoryDialog.addEntry(_connectedToServerName, _connectedAsUser, _currentDbName, sql);
+		}
+
+		final SqlProgressDialog progress = new SqlProgressDialog(_window, _conn, sql);
+
+		// Execute in a Swing Thread
+		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
+		{
+			@Override
+			protected String doInBackground() throws Exception
+			{
+				if (guiShowplanExec)
+				{
+					_resPanel.removeAll();
+					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					
+					JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
+					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+
+					AsePlanViewer pv = new AsePlanViewer(_conn, sql);
+					pv.setVisible(true);
+				}
+				else
+				{
+					_resPanel.removeAll();
+					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					
+					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.");
+					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+
+					displayQueryResults(_conn, sql, progress, false);
+				}
+				return null;
+			}
+
+		};
+//		progress.setSwingWorker(doBgThread);
+		doBgThread.addPropertyChangeListener(progress);
+		doBgThread.execute();
+
+		// A dialog will be visible until the SwingWorker is done (if bgThread takes less than 200ms, the vialog will be skipped)
+		progress.waitForExec(doBgThread, 200);
+		//System.out.println("Background Executor is done = "+doBgThread.isDone());
+
+		// We will continue here, when results has been sent by server
+		//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+
+		try
+		{
+			doBgThread.get();
+		}
+		catch (Exception ex)
+		{
+			// lets write the exception to the output window...
+			_resPanelScroll    .setVisible(false);
+			_resPanelTextScroll.setVisible(true);
+
+			_logger.trace("NO RS: "+_resultCompList.size());
+
+			RSyntaxTextAreaX out = new RSyntaxTextAreaX();
+			RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+			installResultTextExtraMenuEntries(out);
+			_resPanelTextScroll.setViewportView(out);
+			_resPanelTextScroll.setLineNumbersEnabled(true);
+
+			// set this globaly as well
+			_resultText = out;
+
+			// add exception text to OUTPUT TEXT
+			out.setText(ex.toString());
+
+			// DO POPUP
+			SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
+					"<html>" +
+					"<h2>Problems when executing Statement</h2>" +
+					ex.getMessage() +
+					"</html>", 
+					ex);
+		}
+
+		if (guiShowplanExec)
+		{
+			_resPanel.removeAll();
+			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+			
+			JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
+			_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+		}
+		
+
+		try 
+		{
+			// are we still connected?
+			_conn.isClosed(); 
+
+			// if ASE, refresh the database list and currect working database
+			if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
+			{
+				// issue 'select 1' to check if the connection is valid
+				doDummySelect();
+
+				// getCurrentDb() is also done in setDbNames()
+				// it only refreshes the DB Combobox if number of databases has changed.
+				setDbNames();
+				
+				// Also get "various statuses" like if we are in a transaction or not
+				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
+				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+			}
+		}
+		catch (SQLException e) 
+		{
+			_conn = null; 
+		}
+
+		setWatermark();
+	}
+
+	
+	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	{
+		if (rs == null)
+			return;
+		try
+		{
+			putSqlWarningMsgs(rs.getWarnings(), resultCompList, debugStr, batchStartRow);
+			rs.clearWarnings();
+		}
+		catch (SQLException e)
+		{
+		}
+	}
+	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	{
+		if (stmnt == null)
+			return;
+		try
+		{
+			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, debugStr, batchStartRow);
+			stmnt.clearWarnings();
+		}
+		catch (SQLException e)
+		{
+		}
+	}
+
+	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	{
+		while (sqe != null)
+		{
+			int    msgNum      = sqe.getErrorCode();
+			String msgText     = sqe.getMessage();
+			int    msgSeverity = -1;
+			
+			StringBuilder sb = new StringBuilder();
+			if(sqe instanceof EedInfo)
+			{
+				// Error is using the addtional TDS error data.
+				EedInfo eedi = (EedInfo) sqe;
+				msgSeverity  = eedi.getSeverity();
+				if(eedi.getSeverity() > 10)
+				{
+					boolean firstOnLine = true;
+					sb.append("Msg " + sqe.getErrorCode() +
+							", Level " + eedi.getSeverity() + ", State " +
+							eedi.getState() + ":\n");
+
+					if( eedi.getServerName() != null)
+					{
+						sb.append("Server '" + eedi.getServerName() + "'");
+						firstOnLine = false;
+					}
+					if(eedi.getProcedureName() != null)
+					{
+						sb.append( (firstOnLine ? "" : ", ") +
+								"Procedure '" + eedi.getProcedureName() + "'");
+						firstOnLine = false;
+					}
+					sb.append( (firstOnLine ? "" : ", ") +
+							"Line " + eedi.getLineNumber() + (batchStartRow >= 0 ? " (script row "+(batchStartRow+eedi.getLineNumber())+")" : "") +
+							", Status " + eedi.getStatus() + 
+							", TranState " + eedi.getTranState() + ":\n");
+				}
+				// Now print the error or warning
+				String msg = sqe.getMessage();
+				if (msg.endsWith("\n"))
+					sb.append(msg);
+				else
+					sb.append(msg+"\n");
+			}
+			else
+			{
+				// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
+				if ( ! sqe.getSQLState().equals("010P4") )
+				{
+					sb.append("Unexpected exception : " +
+							"SqlState: " + sqe.getSQLState()  +
+							" " + sqe.toString() +
+							", ErrorCode: " + sqe.getErrorCode() + "\n");
+				}
+			}
+			
+			// Add the info to the list
+			if (sb.length() > 0)
+			{
+				// If new-line At the end, remove it
+				if ( sb.charAt(sb.length()-1) == '\n' )
+					sb.deleteCharAt(sb.length()-1);
+
+				String aseMsg = sb.toString();
+				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity) );
+
+				if (_logger.isTraceEnabled())
+					_logger.trace("ASE Msg("+debugStr+"): "+aseMsg);
+			}
+
+			sqe = sqe.getNextException();
+		}
+	}
+
+	/**
+	 * This method uses the supplied SQL query string, and the
+	 * ResultSetTableModelFactory object to create a TableModel that holds
+	 * the results of the database query.  It passes that TableModel to the
+	 * JTable component for display.
+	 **/
+	private void displayQueryResults(Connection conn, String goSql, final SqlProgressDialog progress, boolean guiShowErrors)
+	throws Exception
+	{
+		// If we've called close(), then we can't call this method
+		if (conn == null)
+			throw new IllegalStateException("Connection already closed.");
+
+		// It may take a while to get the results, so give the user some
+		// immediate feedback that their query was accepted.
+//		_msgline.setText("Sending SQL to ASE...");
+		_statusBar.setMsg("Sending SQL to ASE...");
+
+		// Setup a message handler
+		// Set an empty Message handler
+		SybMessageHandler curMsgHandler = null;
+		if (conn instanceof SybConnection)
+		{
+			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
+//			((SybConnection)conn).setSybMessageHandler(null);
+			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
+			{
+				@Override
+				public SQLException messageHandler(SQLException sqle)
+				{
+					// When connecting to repserver we get those messages, so discard them
+					// Msg 32, Level 12, State 0:
+					// Server 'GORAN_1_RS', Line 0, Status 0, TranState 0:
+					// Unknown rpc received.
+					if (ConnectionDialog.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
+					{
+						if (sqle.getErrorCode() == 32)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("Discarding RepServer Message: "+ AseConnectionUtils.sqlExceptionToString(sqle));
+							return null;
+						}
+					}
+					
+					// Add it to the progress dialog
+					progress.addMessage(sqle);
+
+					// If we want to STOP if we get any errors that is a SQLError (not SQLWarnings)
+					if (_abortOnDbMessages)
+						return sqle;
+
+					// Downgrade ALL messages to warnings, so executions wont be interuppted.
+					return AseConnectionUtils.sqlExceptionToWarning(sqle);
+				}
+			});
+		}
+
+		try
+		{
+//			Statement  stmnt = conn.createStatement();
+//			ResultSet  rs    = null;
+//			int rowsAffected = 0;
+
+			// a linked list where to "store" result sets or messages
+			// before "displaying" them
+			_resultCompList = new ArrayList<JComponent>();
+
+			String sql = "";
+			// treat each 'go' rows as a individual execution
+			// readCommand(), does the job
+//			int batchCount = AseSqlScript.countSqlGoBatches(goSql);
+//			int cmdCount = 0;
+//			BufferedReader br = new BufferedReader( new StringReader(goSql) );
+//			for(String s1=AseSqlScript.readCommand(br); s1!=null; s1=AseSqlScript.readCommand(br))
+//			{
+			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true);
+			int batchCount = sr.getSqlTotalBatchCount();
+			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
+			{
+				// FIXME: create a Reader, 
+				//        that has batchStartRow, 
+				//        goExecutionsNumber(go 20)
+				//        can read "exit"/"quit"/"reset" and other isql commands
+				// The reader or (batchStartRow) should be passed to putSqlWarningMsgs() (probably NOT to ConnectionMessageHandler)
+//				int cmdCount = sr.getSqlBatchNumber();
+				progress.setState("Sending SQL to ASE for statement " + sr.getSqlBatchNumber());
+
+				// This can't be part of the for loop, then it just stops if empty row
+				if ( StringUtil.isNullOrBlank(sql) )
+					continue;
+
+				progress.setCurrentSqlText(sql, batchCount > 1);
+
+				// if 'go 10' we need to execute this 10 times
+				for (int cmd=0; cmd<sr.getMultiExecCount(); cmd++)
+				{
+					int rowsAffected = 0;
+					boolean useCallableStatement = false;
+
+//--------------------------------------------
+// for RPC executions...
+// see: C:\old_pc\dell_d810\c\projects\ericsson\oss\pm\nws_from_cvs\nws\source\com\ericsson\nws\sql\DbConnection.java
+//--------------------------------------------
+					// Used when SQL String do NOT start with "exec "
+					// Used during ResultSet loop
+					Statement	stmnt = null;
+
+					// Used when SQL String starts with "exec "
+					CallableStatement cstmnt = null;
+
+					// Any result sets
+					ResultSet rs = null;
+
+					// RPC handling if the text starts with '\exec '
+					// Lets use CallableStatements instead
+					// If the SQL Statement starts with "exec ", transform it into a
+					// CallableStamenet instead.
+					// The for of this would be: {?=call procName(parameters)}
+					ArrayList<RpcParam> rpcParams = null;
+					if ( sql.startsWith("\\exec ") || sql.startsWith("\\rpc ") )
+					{
+						boolean forceRpc = false;
+						if (sql.startsWith("\\rpc "))
+							forceRpc = true;
+
+						// Flag that this is officially a CallableStatement now
+						useCallableStatement = true;
+
+						// Initialize this to be empty at start
+						rpcParams = new ArrayList<QueryWindow.RpcParam>();
+
+						String procName = "";
+						String parameters = "";
+
+						String rpcParamsStr = null;
+						int rpcParamsBeginIdx = sql.indexOf(":(");
+						int rpcParamsEndIdx   = StringUtil.indexOfEndBrace(sql, rpcParamsBeginIdx + 2, ')');
+
+						int firstSpace = sql.indexOf(" ");
+						firstSpace++;
+						int secondSpace = sql.indexOf(" ", firstSpace);
+						secondSpace++;
+						
+						//System.out.println("sqlStatement=|"+sqlStatement+"|, firstSpace="+firstSpace+", secondSpace="+secondSpace);
+
+						if (secondSpace > firstSpace)
+						{
+							procName = sql.substring(firstSpace, secondSpace);
+							if (rpcParamsBeginIdx == -1)
+								parameters = sql.substring(secondSpace).trim();
+							else
+								parameters = sql.substring(secondSpace, rpcParamsBeginIdx).trim();
+
+							if (rpcParamsBeginIdx != -1)
+							{
+								rpcParamsBeginIdx += 2;
+								rpcParamsStr = sql.substring(rpcParamsBeginIdx, rpcParamsEndIdx);
+							}
+						}
+						else
+						{
+							procName = sql.substring(firstSpace);
+							parameters = "";
+						}
+
+						// RPC Parameters spec ':({int|string}=val[ out][,...])'
+						// \exec procname ?, ?, ? :(int=3,string=val, int=99)
+						if (rpcParamsStr != null)
+						{
+							rpcParams = RpcParam.parse(rpcParamsStr);
+						}
+
+						sql = "{?=call "+procName+"("+parameters+")}";
+//System.out.println("NEW PROC SQL: |"+sql+"|.");
+
+						int questionMarkCount = StringUtil.charCount(parameters, '?');
+						if (questionMarkCount == 0 && parameters.length() > 0)
+						{
+							String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
+							String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
+							String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
+							
+							String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
+							             "Trying to execute a stored procedure via RPC method. The parameter list dosn't contain any Question Marks('?') This will probably *force* the JDBC driver to deliver the call as a 'language' statament to the server. \n" +
+							             "Current CallableStatement sql looks like '"+sql+"'. \n" +
+							             "If you want it to be sent as a RPC to the server, you needs to use Question Marks(?) for the parameter(s), and a parameter specification (se below) so that the JDBC driver can issue the call in an aproperiate way. \n" +
+							             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
+							             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
+							             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+
+							// if issued by '\rpc' then throw an exception
+							// otherwise just write a warning message and continue
+							if (forceRpc)
+								throw new SQLException(msg);
+
+							// logg... but remove all NewLines
+							_logger.warn(msg.replace("\n", ""));
+
+							// Add WARNING Message to the result
+							_resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg));
+						}
+						if (questionMarkCount != rpcParams.size())
+						{
+							String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
+							String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
+							String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
+							
+							String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
+							             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the paramete specification count (QuestionMarkCount="+questionMarkCount+", paramSpecCount="+rpcParams.size()+"). \n" +
+							             "Current CallableStatement sql looks like '"+sql+"'. \n" +
+							             "ParameterSpecification looks like '"+rpcParamsStr+"'. \n" +
+							             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
+							             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
+							             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+							throw new SQLException(msg);
+						}
+					}
+
+					// Get a Statement or a CallableStatement
+					if (useCallableStatement)
+					{
+						// Get a CallableStatement...
+						cstmnt = _conn.prepareCall(sql);
+
+						// Set RPC Parameters
+						if (rpcParams != null)
+						{
+							int pos = 1;
+							for (RpcParam param : rpcParams)
+							{
+								pos++;
+								cstmnt.setObject(pos, param._val, param._sqlType);
+	
+								if (param._isOutput)
+									cstmnt.registerOutParameter(pos, param._sqlType);
+							}
+						}
+						// Register the return-status
+						cstmnt.registerOutParameter(1, Types.INTEGER);
+					}
+					else
+					{
+						// Get a "regular" Statement...
+						stmnt = _conn.createStatement();
+					}
+
+
+					// Execute the SQL
+					// Use CallableStaement or the Statement depending on what it is.
+					boolean hasRs;
+					if (useCallableStatement)
+					{
+						hasRs = cstmnt.execute();
+
+						// From this point we can use the Statement reference variable (in most cases)
+						// This since CallableStatement is extended from Statement
+						stmnt = cstmnt;
+					}
+					else
+						hasRs = stmnt.execute(sql);
+
+//					// Execute
+//					_logger.debug("Executing SQL statement: "+sql);
+//					boolean hasRs = stmnt.execute(sql);
+		
+					progress.setState("Waiting for ASE to deliver resultset.");
+//					_msgline.setText("Waiting for ASE to deliver resultset.");
+					_statusBar.setMsg("Waiting for ASE to deliver resultset.");
+		
+					// iterate through each result set
+					int rsCount = 0;
+					do
+					{
+						// Append, messages and Warnings to _resultCompList, if any
+						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine());
+		
+						if(hasRs)
+						{
+							rsCount++;
+//							_msgline.setText("Reading resultset "+rsCount+".");
+							_statusBar.setMsg("Reading resultset "+rsCount+".");
+		
+							// Get next resultset to work with
+							rs = stmnt.getResultSet();
+		
+							// Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine());
+							putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine());
+
+							// Check for BCP pipe command
+							PipeCommand pipeCmd = sr.getPipeCmd();
+							if (pipeCmd != null && pipeCmd.isBcp())
+							{
+								pipeCmd.getCmd().doEndPoint(rs);
+							}
+							else
+							{
+								if (_asPlainText.isSelected())
+								{
+									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
+									for (SQLWarning sqlw : tm.getSQLWarningList())
+										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
+									
+									_resultCompList.add(new JPlainResultSet(tm));
+									// FIXME: use a callback interface instead
+								}
+								else
+								{
+									// Convert the ResultSet into a TableModel, which fits on a JTable
+									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
+									for (SQLWarning sqlw : tm.getSQLWarningList())
+										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
+				
+									// Create the JTable, using the just created TableModel/ResultSet
+									JXTable tab = new JXTable(tm);
+									tab.setSortable(true);
+									tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+									tab.packAll(); // set size so that all content in all cells are visible
+									tab.setColumnControlVisible(true);
+									tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+									tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+	//								SwingUtils.calcColumnWidths(tab);
+	
+									// Add a popup menu
+									tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
+	
+	//								for(int i=0; i<tm.getColumnCount(); i++)
+	//								{
+	//									Object o = tm.getValueAt(0, i);
+	//									if (o!=null)
+	//										System.out.println("Col="+i+", Class="+o.getClass()+", Comparable="+((o instanceof Comparable)?"true":"false"));
+	//									else
+	//										System.out.println("Col="+i+", ---NULL--");
+	//								}
+									// Add the JTable to a list for later use
+									_resultCompList.add(tab);
+									// FIXME: use a callback interface instead
+								}
+							}
+		
+							// Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-", sr.getSqlBatchStartLine());
+
+							// Close it
+							rs.close();
+						}
+		
+						// Treat update/row count(s)
+						rowsAffected = stmnt.getUpdateCount();
+						if (rowsAffected >= 0)
+						{
+//							rso.add(rowsAffected);
+//System.out.println("hasRs="+hasRs+", rowsAffected="+rowsAffected);
+							if (_showRowCount.isSelected())
+							{
+//								System.out.println("(" + rowsAffected + " rows affected)\n");
+//								_resultCompList.add( new JAseMessage("(" + rowsAffected + " rows affected)") );
+								_resultCompList.add( new JAseRowCount(rowsAffected) );
+							}
+						}
+		
+						// Check if we have more resultsets
+						// If any SQLWarnings has not been found above, it will throw one here
+						// so catch raiserrors or other stuff that is not SQLWarnings.
+						hasRs = stmnt.getMoreResults();
+		
+						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+					}
+					while (hasRs || rowsAffected != -1);
+		
+					// get the return status from the stored procedure
+					// Also try to get OUTput parameters
+					if (useCallableStatement)
+					{
+						int returnStatus = cstmnt.getInt(1);
+						_resultCompList.add( new JAseProcRetCode(returnStatus) );
+						
+						// Set RPC Parameters
+						if (rpcParams != null)
+						{
+							int pos = 1;
+							for (RpcParam param : rpcParams)
+							{
+								pos++;
+								
+								if (param._isOutput)
+								{
+									Object outParamVal = cstmnt.getObject(pos);
+									_resultCompList.add( new JAseProcRetParam(pos-1, outParamVal, param._sqlType) );
+								}
+							}
+						}
+
+					}
+
+					// Append, messages and Warnings to _resultCompList, if any
+					putSqlWarningMsgs(stmnt, _resultCompList, "-before-stmnt.close()-", sr.getSqlBatchStartLine());
+					
+					// Close the statement
+					stmnt.close();
+
+				} // end: 'go 10'
+				
+			} // end: read batches
+			
+//			br.close();
+			sr.close();
+
+//			// Close the statement
+//			stmnt.close();
+
+			
+			progress.setState("Add data to GUI result");
+
+
+			//-----------------------------
+			// Add data... to panel(s) in various ways
+			// - one result set, just add it
+			// - many result sets
+			//        - Add to JTabbedPane
+			//        - OR: append the result sets as named panels
+			//-----------------------------
+			_resPanel.removeAll();
+			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+
+			// Release this, if '_asPlainText' is enabled it will be set at the end... 
+			_resultText = null;
+
+
+
+			int numOfTables = countTables(_resultCompList);
+			if (numOfTables == 1)
+			{
+				_resPanelScroll    .setVisible(true);
+				_resPanelTextScroll.setVisible(false);
+
+				int msgCount = 0;
+				int rowCount = 0;
+				_logger.trace("Only 1 RS");
+
+				// Add ResultSet  
+				for (JComponent jcomp: _resultCompList)
+				{
+					if (jcomp instanceof JTable)
+					{
+						JTable tab = (JTable) jcomp;
+
+						// JScrollPane is on _resPanel
+						// So we need to display the table header ourself
+						JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+						p.add(tab.getTableHeader(), "wrap");
+						p.add(tab,                  "wrap");
+
+						_logger.trace("1-RS: add: JTable");
+						_resPanel.add(p, "");
+
+						rowCount = tab.getRowCount();
+					}
+					else if (jcomp instanceof JAseMessage)
+					{
+						JAseMessage msg = (JAseMessage) jcomp;
+						_logger.trace("1-RS: JAseMessage: "+msg.getText());
+						_resPanel.add(msg, "gapy 1, growx, pushx");
+
+						msgCount++;
+					}
+				}
+//				_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
+				_statusBar.setMsg(" "+rowCount+" rows, and "+msgCount+" messages.");
+			}
+			else if (numOfTables > 1)
+			{
+				_resPanelScroll    .setVisible(true);
+				_resPanelTextScroll.setVisible(false);
+
+				int msgCount = 0;
+				int rowCount = 0;
+				_logger.trace("Several RS: "+_resultCompList.size());
+				
+				if (_rsInTabs.isSelected())
+				{
+					// Add Result sets to individual tabs, on a JTabbedPane 
+					JTabbedPane tabPane = new JTabbedPane();
+					_logger.trace("JTabbedPane: add: JTabbedPane");
+					_resPanel.add(tabPane, "");
+
+					int i = 1;
+					for (JComponent jcomp: _resultCompList)
+					{
+						if (jcomp instanceof JTable)
+						{
+							JTable tab = (JTable) jcomp;
+
+							// JScrollPane is on _resPanel
+							// So we need to display the table header ourself
+							JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+							p.add(tab.getTableHeader(), "wrap");
+							p.add(tab,                  "wrap");
+
+							_logger.trace("JTabbedPane: add: JTable("+i+")");
+							tabPane.addTab("Result "+(i++), p);
+
+							rowCount += tab.getRowCount();
+						}
+						else if (jcomp instanceof JAseMessage)
+						{
+							// FIXME: this probably not work if we want to have the associated messages in the correct tab
+							JAseMessage msg = (JAseMessage) jcomp;
+							_resPanel.add(msg, "gapy 1, growx, pushx");
+							_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
+
+							msgCount++;
+						}
+					}
+					if (_lastTabIndex > 0)
+					{
+						if (_lastTabIndex < tabPane.getTabCount())
+						{
+							tabPane.setSelectedIndex(_lastTabIndex);
+							_logger.trace("Restore last tab index pos to "+_lastTabIndex);
+						}
+					}
+//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				}
+				else
+				{
+					// Add Result sets to individual panels, which are 
+					// appended to the result panel
+					int i = 1;
+					for (JComponent jcomp: _resultCompList)
+					{
+						if (jcomp instanceof JTable)
+						{
+							JTable tab = (JTable) jcomp;
+
+							// JScrollPane is on _resPanel
+							// So we need to display the table header ourself
+							JPanel p = new JPanel(new MigLayout("insets 0 0, gap 0 0"));
+							Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
+							p.setBorder(border);
+							p.add(tab.getTableHeader(), "wrap");
+							p.add(tab,                  "wrap");
+							_logger.trace("JPane: add: JTable("+i+")");
+							_resPanel.add(p, "");
+
+							rowCount += tab.getRowCount();
+						}
+						else if (jcomp instanceof JAseMessage)
+						{
+							JAseMessage msg = (JAseMessage) jcomp;
+							_logger.trace("JPane: JAseMessage: "+msg.getText());
+							_resPanel.add(msg, "gapy 1, growx, pushx");
+
+							msgCount++;
+						}
+					}
+//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				}
+			}
+			else
+			{
+				_resPanelScroll    .setVisible(false);
+				_resPanelTextScroll.setVisible(true);
+
+				_logger.trace("NO RS: "+_resultCompList.size());
+				int msgCount = 0;
+
+				RSyntaxTextAreaX out = new RSyntaxTextAreaX();
+				RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+				installResultTextExtraMenuEntries(out);
+				_resPanelTextScroll.setViewportView(out);
+				_resPanelTextScroll.setLineNumbersEnabled(true);
+
+				// set this globaly as well
+				_resultText = out;
+
+				// Copy results to the output. 
+				boolean prevComponentWasResultSet = false;
+
+				for (JComponent jcomp: _resultCompList)
+				{
+					if (jcomp instanceof JPlainResultSet)
+					{
+						JPlainResultSet prs = (JPlainResultSet) jcomp;
+						out.append(prs.getText());
+						
+						// if _showRowCount is selected, the "(### rows affected)"
+						// is genereated at an earlier stage, so then we do NOT need to add it once more here
+						if ( ! _showRowCount.isSelected() )
+						{
+							out.append("\n");
+//							out.append("(" + prs.getRowCount() + " rows affected)\n");
+							out.append("(" + prs.getRowCount() + " rows affected, in plain resultset)\n");
+							out.append("\n");
+						}
+						prevComponentWasResultSet = true;
+					}
+					else if (jcomp instanceof JAseRowCount)
+					{
+						JAseRowCount msg = (JAseRowCount) jcomp;
+						
+						// If prev was RS, add an extra newlines before and after(for readability)
+						// and to simulate "isql"
+						if ( prevComponentWasResultSet )
+						{
+							out.append("\n");
+							out.append(msg.getText()); out.append("\n");
+							out.append("\n");
+						}
+						else
+						{
+							out.append(msg.getText()); out.append("\n");
+						}
+
+						prevComponentWasResultSet = false;
+					}
+					else if (jcomp instanceof JAseProcRetCode)
+					{
+						JAseProcRetCode msg = (JAseProcRetCode) jcomp;
+
+						out.append(msg.getText()); 
+						out.append("\n");
+
+						prevComponentWasResultSet = false;
+					}
+					else if (jcomp instanceof JAseMessage)
+					{
+						JAseMessage msg = (JAseMessage) jcomp;
+
+						out.append(msg.getText());
+						out.append("\n");
+
+						msgCount++;
+						prevComponentWasResultSet = false;
+					}
+				}
+
+				// If we have a XML text do some special stuff
+				boolean hasXml = out.getText().indexOf("<?xml ") >= 0;
+				if (hasXml)
+				{
+					out.setCodeFoldingEnabled(true);
+					out.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+				}
+
+//				_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
+				_statusBar.setMsg("NO ResultSet, but "+msgCount+" messages.");
+			}
+			
+			// We're done, so clear the feedback message
+			//_msgline.setText(" ");
+		}
+		catch (SQLException ex)
+		{
+			// If something goes wrong, clear the message line
+//			_msgline.setText("Error: "+ex.getMessage());
+			_statusBar.setMsg("Error: "+ex.getMessage());
+//			ex.printStackTrace();
+
+			// Then display the error in a dialog box
+			if (guiShowErrors)
+			{
+				JOptionPane.showMessageDialog(
+//					QueryWindow.this, 
+					_window, 
+					new String[] { // Display a 2-line message
+							ex.getClass().getName() + ": ", 
+							ex.getMessage() },
+					"Error", JOptionPane.ERROR_MESSAGE);
+			}
+			throw ex;
+		}
+		catch (IOException ex)
+		{
+			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			throw ex;
+		}
+		catch (PipeCommandException ex)
+		{
+			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: "+ex, ex);
+			if (guiShowErrors)
+			{
+				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
+			}
+			throw ex;
+		}
+		finally
+		{
+			// restore old message handler
+			if (curMsgHandler != null)
+			{
+				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
+			}
+		}
+		
+		// In some cases, some of the area in not repainted
+		// example: when no RS, but only messages has been displayed
+		_resPanel.repaint();
+	}
+
+	private void installResultTextExtraMenuEntries(final RSyntaxTextArea textArea)
+	{
+		JPopupMenu menu =textArea.getPopupMenu();
+		JMenuItem mi;
+		
+		//--------------------------------
+		// EXECUTE SELECTED TEXT
+		if (textArea != null)
+		{
+			mi = new JMenuItem("Execute Selected Text");
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					String cmd = textArea.getSelectedText();
+					if (cmd == null)
+					{
+						SwingUtils.showInfoMessage(_window, "Nothing to execute", "You need to select/mark some text that you want to execute.");
+						return;
+					}
+					displayQueryResults(cmd, false);
+				}
+			});
+			menu.insert(mi, 0);
+		}
+
+		//--------------------------------
+		menu.insert(new JPopupMenu.Separator(), 1);
+	}
+
+	private int countTables(ArrayList<JComponent> list)
+	{
+		int count = 0;
+		for (JComponent jcomp: list)
+		{
+			if (jcomp instanceof JTable)
+			{
+				count++;
+			}
+		}
+		return count;
+	}
+
+	@Override
+	public SQLException messageHandler(SQLException sqe)
+	{
+		// Pass Warning on...
+		if (sqe instanceof SQLWarning)
+			return sqe;
+
+		// Discard SQLExceptions... but first send them to the _resultCompList
+		// This is a bit ugly...
+		putSqlWarningMsgs(sqe, _resultCompList, "-from-messageHandler()-", -1);
+		return null;
+	}
+
+
+	/*----------------------------------------------------------------------
+	** BEGIN: various output classes
+	**----------------------------------------------------------------------*/ 
+	@SuppressWarnings("unused")
+	private class JAseMessage 
+	extends JTextArea
+	{
+		private static final long serialVersionUID = 1L;
+		
+		private int    _msgNum      = -1;
+		private String _msgText     = null;
+		private int    _msgSeverity = -1;
+
+//		public JAseMessage()
+//		{
+//			_init();
+//		}
+
+		public JAseMessage(final String aseMsg)
+		{
+			super(aseMsg);
+			init();
+		}
+
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity)
+		{
+			super(aseMsg);
+			_msgNum      = msgNum;
+			_msgText     = msgText;
+			_msgSeverity = msgSeverity;
+			init();
+		}
+
+		protected void init()
+		{
+			super.setEditable(false);
+
+			if (_aseMsgFont == null)
+				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+			setFont(_aseMsgFont);
+
+			if (_msgSeverity >= 16)
+				setForeground(ChartColor.DARK_RED);
+
+			setLineWrap(true);
+			setWrapStyleWord(true);
+//			setOpaque(false); // Transparent
+		}
+
+//		public boolean isFocusable()
+//		{
+//			return false;
+//		}
+//
+//		public boolean isRequestFocusEnabled()
+//		{
+//			return false;
+//		}
+	}
+
+	private class JAseRowCount 
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		private int _rowCount;
+
+		public JAseRowCount(final int rowCount)
+		{
+			super("(" + rowCount + " rows affected)");
+			_rowCount = rowCount;
+			init();
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+		
+		@SuppressWarnings("unused")
+		public int getRowCount()
+		{
+			return _rowCount;
+		}
+	}
+
+	private class JAseProcRetCode 
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		private int _returnCode;
+
+		public JAseProcRetCode(final int returnCode)
+		{
+			super("(return status = "+returnCode+")");
+			_returnCode = returnCode;
+			init();
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+		
+		@SuppressWarnings("unused")
+		public int getReturnCode()
+		{
+			return _returnCode;
+		}
+	}
+
+	private class JAseProcRetParam 
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		private int    _pos;
+		private Object _val;
+		private int    _sqlType; // java.sql.Types
+
+		public JAseProcRetParam(final int pos, final Object val, final int type)
+		{
+			super("RPC Return parameter: pos="+pos+", value="+val);
+			_pos     = pos;
+			_val     = val;
+			_sqlType = type;
+			init();
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+		
+		@SuppressWarnings("unused")
+		public Object getValue()
+		{
+			return _val;
+		}
+		@SuppressWarnings("unused")
+		public int getPosition()
+		{
+			return _pos;
+		}
+		@SuppressWarnings("unused")
+		public int getType()
+		{
+			return _sqlType;
+		}
+	}
+
+	private class JPlainResultSet 
+	extends JTextArea
+	{
+		private static final long serialVersionUID = 1L;
+
+		ResultSetTableModel _tm = null;
+
+		public JPlainResultSet(final ResultSetTableModel rstm)
+		{
+			super(rstm.toTableString());
+			_tm = rstm;
+			init();
+		}
+
+		public int getRowCount()
+		{
+			return _tm.getRowCount();
+		}
+
+		protected void init()
+		{
+			super.setEditable(false);
+
+			if (_aseMsgFont == null)
+				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+			setFont(_aseMsgFont);
+
+			setLineWrap(true);
+			setWrapStyleWord(true);
+//			setOpaque(false); // Transparent
+		}
+
+//		public boolean isFocusable()
+//		{
+//			return false;
+//		}
+//
+//		public boolean isRequestFocusEnabled()
+//		{
+//			return false;
+//		}
+	}
+	/*----------------------------------------------------------------------
+	** END: various output classes
+	**----------------------------------------------------------------------*/ 
+
+
+	/*----------------------------------------------------------------------
+	** BEGIN: SqlProgressDialog
+	**----------------------------------------------------------------------*/ 
 	private static class SqlProgressDialog
 	extends JDialog
 	implements PropertyChangeListener, ActionListener
@@ -2808,817 +4402,14 @@ public class QueryWindow
 			_execSqlTimer.stop();
 		}
 	}
+	/*----------------------------------------------------------------------
+	** END: SqlProgressDialog
+	**----------------------------------------------------------------------*/ 
 
-	public void displayQueryResults(final String sql, final boolean guiShowplanExec)
-	{
-		final SqlProgressDialog progress = new SqlProgressDialog(_window, _conn, sql);
 
-		// Execute in a Swing Thread
-		SwingWorker<String, Object> doBgThread = new SwingWorker<String, Object>()
-		{
-			@Override
-			protected String doInBackground() throws Exception
-			{
-				if (guiShowplanExec)
-				{
-					_resPanel.removeAll();
-					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-					
-					JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
-					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
-
-					AsePlanViewer pv = new AsePlanViewer(_conn, sql);
-					pv.setVisible(true);
-				}
-				else
-				{
-					_resPanel.removeAll();
-					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-					
-					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.");
-					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
-
-					displayQueryResults(_conn, sql, progress);
-				}
-				return null;
-			}
-
-		};
-//		progress.setSwingWorker(doBgThread);
-		doBgThread.addPropertyChangeListener(progress);
-		doBgThread.execute();
-
-		// A dialog will be visible until the SwingWorker is done (if bgThread takes less than 200ms, the vialog will be skipped)
-		progress.waitForExec(doBgThread, 200);
-		//System.out.println("Background Executor is done = "+doBgThread.isDone());
-
-		// We will continue here, when results has been sent by server
-		//System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-
-		if (guiShowplanExec)
-		{
-			_resPanel.removeAll();
-			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-			
-			JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
-			_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
-		}
-		
-
-		// if ASE, refresh the database list and currect working database
-		if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
-		{
-			// getCurrentDb() is also done in setDbNames()
-			// it only refreshes the DB Combobox if number of databases has changed.
-			setDbNames();
-			
-			// Also get "various statuses" like if we are in a transaction or not
-			_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
-			_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
-			setWatermark();
-		}
-	}
-
-	
-	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
-	{
-		if (rs == null)
-			return;
-		try
-		{
-			putSqlWarningMsgs(rs.getWarnings(), resultCompList, debugStr, batchStartRow);
-			rs.clearWarnings();
-		}
-		catch (SQLException e)
-		{
-		}
-	}
-	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
-	{
-		if (stmnt == null)
-			return;
-		try
-		{
-			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, debugStr, batchStartRow);
-			stmnt.clearWarnings();
-		}
-		catch (SQLException e)
-		{
-		}
-	}
-
-	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
-	{
-		while (sqe != null)
-		{
-			StringBuilder sb = new StringBuilder();
-			if(sqe instanceof EedInfo)
-			{
-				// Error is using the addtional TDS error data.
-				EedInfo eedi = (EedInfo) sqe;
-				if(eedi.getSeverity() > 10)
-				{
-					boolean firstOnLine = true;
-					sb.append("Msg " + sqe.getErrorCode() +
-							", Level " + eedi.getSeverity() + ", State " +
-							eedi.getState() + ":\n");
-
-					if( eedi.getServerName() != null)
-					{
-						sb.append("Server '" + eedi.getServerName() + "'");
-						firstOnLine = false;
-					}
-					if(eedi.getProcedureName() != null)
-					{
-						sb.append( (firstOnLine ? "" : ", ") +
-								"Procedure '" + eedi.getProcedureName() + "'");
-						firstOnLine = false;
-					}
-					sb.append( (firstOnLine ? "" : ", ") +
-							"Line " + eedi.getLineNumber() + (batchStartRow >= 0 ? " (script row "+(batchStartRow+eedi.getLineNumber())+")" : "") +
-							", Status " + eedi.getStatus() + 
-							", TranState " + eedi.getTranState() + ":\n");
-				}
-				// Now print the error or warning
-				String msg = sqe.getMessage();
-				if (msg.endsWith("\n"))
-					sb.append(msg);
-				else
-					sb.append(msg+"\n");
-			}
-			else
-			{
-				// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
-				if ( ! sqe.getSQLState().equals("010P4") )
-				{
-					sb.append("Unexpected exception : " +
-							"SqlState: " + sqe.getSQLState()  +
-							" " + sqe.toString() +
-							", ErrorCode: " + sqe.getErrorCode() + "\n");
-				}
-			}
-			
-			// Add the info to the list
-			if (sb.length() > 0)
-			{
-				// If new-line At the end, remove it
-				if ( sb.charAt(sb.length()-1) == '\n' )
-					sb.deleteCharAt(sb.length()-1);
-
-				String aseMsg = sb.toString();
-				resultCompList.add( new JAseMessage(aseMsg) );
-
-				if (_logger.isTraceEnabled())
-					_logger.trace("ASE Msg("+debugStr+"): "+aseMsg);
-			}
-
-			sqe = sqe.getNextException();
-		}
-	}
-
-	/**
-	 * This method uses the supplied SQL query string, and the
-	 * ResultSetTableModelFactory object to create a TableModel that holds
-	 * the results of the database query.  It passes that TableModel to the
-	 * JTable component for display.
-	 **/
-	private void displayQueryResults(Connection conn, String goSql, final SqlProgressDialog progress)
-	{
-		// If we've called close(), then we can't call this method
-		if (conn == null)
-			throw new IllegalStateException("Connection already closed.");
-
-		// It may take a while to get the results, so give the user some
-		// immediate feedback that their query was accepted.
-//		_msgline.setText("Sending SQL to ASE...");
-		_statusBar.setMsg("Sending SQL to ASE...");
-
-		// Setup a message handler
-		// Set an empty Message handler
-		SybMessageHandler curMsgHandler = null;
-		if (conn instanceof SybConnection)
-		{
-			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
-//			((SybConnection)conn).setSybMessageHandler(null);
-			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
-			{
-				@Override
-				public SQLException messageHandler(SQLException sqle)
-				{
-					// When connecting to repserver we get those messages, so discard them
-					// Msg 32, Level 12, State 0:
-					// Server 'GORAN_1_RS', Line 0, Status 0, TranState 0:
-					// Unknown rpc received.
-					if (ConnectionDialog.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
-					{
-						if (sqle.getErrorCode() == 32)
-						{
-							if (_logger.isDebugEnabled())
-								_logger.debug("Discarding RepServer Message: "+ AseConnectionUtils.sqlExceptionToString(sqle));
-							return null;
-						}
-					}
-					
-					// Add it to the progress dialog
-					progress.addMessage(sqle);
-
-					// If we want to STOP if we get any errors that is a SQLError (not SQLWarnings)
-					if (_abortOnDbMessages)
-						return sqle;
-
-					// Downgrade ALL messages to warnings, so executions wont be interuppted.
-					return AseConnectionUtils.sqlExceptionToWarning(sqle);
-				}
-			});
-		}
-
-		try
-		{
-			Statement  stmnt = conn.createStatement();
-			ResultSet  rs    = null;
-			int rowsAffected = 0;
-
-			// a linked list where to "store" result sets or messages
-			// before "displaying" them
-			_resultCompList = new ArrayList<JComponent>();
-
-			String sql = "";
-			// treat each 'go' rows as a individual execution
-			// readCommand(), does the job
-//			int batchCount = AseSqlScript.countSqlGoBatches(goSql);
-//			int cmdCount = 0;
-//			BufferedReader br = new BufferedReader( new StringReader(goSql) );
-//			for(String s1=AseSqlScript.readCommand(br); s1!=null; s1=AseSqlScript.readCommand(br))
-//			{
-			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true);
-			int batchCount = sr.getSqlTotalBatchCount();
-			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
-			{
-				// FIXME: create a Reader, 
-				//        that has batchStartRow, 
-				//        goExecutionsNumber(go 20)
-				//        can read "exit"/"quit"/"reset" and other isql commands
-				// The reader or (batchStartRow) should be passed to putSqlWarningMsgs() (probably NOT to ConnectionMessageHandler)
-//				int cmdCount = sr.getSqlBatchNumber();
-				progress.setState("Sending SQL to ASE for statement " + sr.getSqlBatchNumber());
-
-				// This can't be part of the for loop, then it just stops if empty row
-				if ( StringUtil.isNullOrBlank(sql) )
-					continue;
-
-				progress.setCurrentSqlText(sql, batchCount > 1);
-
-				// if 'go 10' we need to execute this 10 times
-				for (int cmd=0; cmd<sr.getMultiExecCount(); cmd++)
-				{
-					// Execute
-					_logger.debug("Executing SQL statement: "+sql);
-					boolean hasRs = stmnt.execute(sql);
-		
-					progress.setState("Waiting for ASE to deliver resultset.");
-//					_msgline.setText("Waiting for ASE to deliver resultset.");
-					_statusBar.setMsg("Waiting for ASE to deliver resultset.");
-		
-					// iterate through each result set
-					int rsCount = 0;
-					do
-					{
-						// Append, messages and Warnings to _resultCompList, if any
-						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine());
-		
-						if(hasRs)
-						{
-							rsCount++;
-//							_msgline.setText("Reading resultset "+rsCount+".");
-							_statusBar.setMsg("Reading resultset "+rsCount+".");
-		
-							// Get next resultset to work with
-							rs = stmnt.getResultSet();
-		
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine());
-							putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine());
-
-							if (_asPlainText.isSelected())
-							{
-								ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
-								for (SQLWarning sqlw : tm.getSQLWarningList())
-									putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
-								
-								_resultCompList.add(new JPlainResultSet(tm));
-								// FIXME: use a callback interface instead
-							}
-							else
-							{
-								// Convert the ResultSet into a TableModel, which fits on a JTable
-								ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
-								for (SQLWarning sqlw : tm.getSQLWarningList())
-									putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
-			
-								// Create the JTable, using the just created TableModel/ResultSet
-								JXTable tab = new JXTable(tm);
-								tab.setSortable(true);
-								tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-								tab.packAll(); // set size so that all content in all cells are visible
-								tab.setColumnControlVisible(true);
-								tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-								tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-//								SwingUtils.calcColumnWidths(tab);
-
-								// Add a popup menu
-								tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
-
-//								for(int i=0; i<tm.getColumnCount(); i++)
-//								{
-//									Object o = tm.getValueAt(0, i);
-//									if (o!=null)
-//										System.out.println("Col="+i+", Class="+o.getClass()+", Comparable="+((o instanceof Comparable)?"true":"false"));
-//									else
-//										System.out.println("Col="+i+", ---NULL--");
-//								}
-								// Add the JTable to a list for later use
-								_resultCompList.add(tab);
-								// FIXME: use a callback interface instead
-							}
-		
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-", sr.getSqlBatchStartLine());
-
-							// Close it
-							rs.close();
-						}
-		
-						// Treat update/row count(s)
-						rowsAffected = stmnt.getUpdateCount();
-						if (rowsAffected >= 0)
-						{
-//							rso.add(rowsAffected);
-//System.out.println("hasRs="+hasRs+", rowsAffected="+rowsAffected);
-							if (_showRowCount.isSelected())
-							{
-//								System.out.println("(" + rowsAffected + " rows affected)\n");
-//								_resultCompList.add( new JAseMessage("(" + rowsAffected + " rows affected)") );
-								_resultCompList.add( new JAseRowCount(rowsAffected) );
-							}
-						}
-		
-						// Check if we have more resultsets
-						// If any SQLWarnings has not been found above, it will throw one here
-						// so catch raiserrors or other stuff that is not SQLWarnings.
-						hasRs = stmnt.getMoreResults();
-		
-						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
-					}
-					while (hasRs || rowsAffected != -1);
-		
-					// Append, messages and Warnings to _resultCompList, if any
-					putSqlWarningMsgs(stmnt, _resultCompList, "-before-stmnt.close()-", sr.getSqlBatchStartLine());
-					
-				} // end: 'go 10'
-				
-			} // end: read batches
-			
-//			br.close();
-			sr.close();
-
-			// Close the statement
-			stmnt.close();
-
-			
-			progress.setState("Add data to GUI result");
-
-
-			//-----------------------------
-			// Add data... to panel(s) in various ways
-			// - one result set, just add it
-			// - many result sets
-			//        - Add to JTabbedPane
-			//        - OR: append the result sets as named panels
-			//-----------------------------
-			_resPanel.removeAll();
-			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-
-			// Release this, if '_asPlainText' is enabled it will be set at the end... 
-			_resultText = null;
-
-
-
-			int numOfTables = countTables(_resultCompList);
-			if (numOfTables == 1)
-			{
-				_resPanelScroll    .setVisible(true);
-				_resPanelTextScroll.setVisible(false);
-
-				int msgCount = 0;
-				int rowCount = 0;
-				_logger.trace("Only 1 RS");
-
-				// Add ResultSet  
-				for (JComponent jcomp: _resultCompList)
-				{
-					if (jcomp instanceof JTable)
-					{
-						JTable tab = (JTable) jcomp;
-
-						// JScrollPane is on _resPanel
-						// So we need to display the table header ourself
-						JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-						p.add(tab.getTableHeader(), "wrap");
-						p.add(tab,                  "wrap");
-
-						_logger.trace("1-RS: add: JTable");
-						_resPanel.add(p, "");
-
-						rowCount = tab.getRowCount();
-					}
-					else if (jcomp instanceof JAseMessage)
-					{
-						JAseMessage msg = (JAseMessage) jcomp;
-						_logger.trace("1-RS: JAseMessage: "+msg.getText());
-						_resPanel.add(msg, "gapy 1, growx, pushx");
-
-						msgCount++;
-					}
-				}
-//				_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
-				_statusBar.setMsg(" "+rowCount+" rows, and "+msgCount+" messages.");
-			}
-			else if (numOfTables > 1)
-			{
-				_resPanelScroll    .setVisible(true);
-				_resPanelTextScroll.setVisible(false);
-
-				int msgCount = 0;
-				int rowCount = 0;
-				_logger.trace("Several RS: "+_resultCompList.size());
-				
-				if (_rsInTabs.isSelected())
-				{
-					// Add Result sets to individual tabs, on a JTabbedPane 
-					JTabbedPane tabPane = new JTabbedPane();
-					_logger.trace("JTabbedPane: add: JTabbedPane");
-					_resPanel.add(tabPane, "");
-
-					int i = 1;
-					for (JComponent jcomp: _resultCompList)
-					{
-						if (jcomp instanceof JTable)
-						{
-							JTable tab = (JTable) jcomp;
-
-							// JScrollPane is on _resPanel
-							// So we need to display the table header ourself
-							JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-							p.add(tab.getTableHeader(), "wrap");
-							p.add(tab,                  "wrap");
-
-							_logger.trace("JTabbedPane: add: JTable("+i+")");
-							tabPane.addTab("Result "+(i++), p);
-
-							rowCount += tab.getRowCount();
-						}
-						else if (jcomp instanceof JAseMessage)
-						{
-							// FIXME: this probably not work if we want to have the associated messages in the correct tab
-							JAseMessage msg = (JAseMessage) jcomp;
-							_resPanel.add(msg, "gapy 1, growx, pushx");
-							_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
-
-							msgCount++;
-						}
-					}
-					if (_lastTabIndex > 0)
-					{
-						if (_lastTabIndex < tabPane.getTabCount())
-						{
-							tabPane.setSelectedIndex(_lastTabIndex);
-							_logger.trace("Restore last tab index pos to "+_lastTabIndex);
-						}
-					}
-//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-				}
-				else
-				{
-					// Add Result sets to individual panels, which are 
-					// appended to the result panel
-					int i = 1;
-					for (JComponent jcomp: _resultCompList)
-					{
-						if (jcomp instanceof JTable)
-						{
-							JTable tab = (JTable) jcomp;
-
-							// JScrollPane is on _resPanel
-							// So we need to display the table header ourself
-							JPanel p = new JPanel(new MigLayout("insets 0 0, gap 0 0"));
-							Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
-							p.setBorder(border);
-							p.add(tab.getTableHeader(), "wrap");
-							p.add(tab,                  "wrap");
-							_logger.trace("JPane: add: JTable("+i+")");
-							_resPanel.add(p, "");
-
-							rowCount += tab.getRowCount();
-						}
-						else if (jcomp instanceof JAseMessage)
-						{
-							JAseMessage msg = (JAseMessage) jcomp;
-							_logger.trace("JPane: JAseMessage: "+msg.getText());
-							_resPanel.add(msg, "gapy 1, growx, pushx");
-
-							msgCount++;
-						}
-					}
-//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-				}
-			}
-			else
-			{
-				_resPanelScroll    .setVisible(false);
-				_resPanelTextScroll.setVisible(true);
-
-				_logger.trace("NO RS: "+_resultCompList.size());
-				int msgCount = 0;
-
-				RSyntaxTextAreaX out = new RSyntaxTextAreaX();
-				RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
-				installResultTextExtraMenuEntries(out);
-				_resPanelTextScroll.setViewportView(out);
-				_resPanelTextScroll.setLineNumbersEnabled(true);
-
-				// set this globaly as well
-				_resultText = out;
-
-				// Copy results to the output. 
-				boolean prevComponentWasResultSet = false;
-
-				for (JComponent jcomp: _resultCompList)
-				{
-					if (jcomp instanceof JPlainResultSet)
-					{
-						JPlainResultSet prs = (JPlainResultSet) jcomp;
-						out.append(prs.getText());
-						
-						// if _showRowCount is selected, the "(### rows affected)"
-						// is genereated at an earlier stage, so then we do NOT need to add it once more here
-						if ( ! _showRowCount.isSelected() )
-						{
-							out.append("\n");
-//							out.append("(" + prs.getRowCount() + " rows affected)\n");
-							out.append("(" + prs.getRowCount() + " rows affected, in plain resultset)\n");
-							out.append("\n");
-						}
-						prevComponentWasResultSet = true;
-					}
-					else if (jcomp instanceof JAseRowCount)
-					{
-						JAseRowCount msg = (JAseRowCount) jcomp;
-						
-						// If prev was RS, add an extra newlines before and after(for readability)
-						// and to simulate "isql"
-						if ( prevComponentWasResultSet )
-						{
-							out.append("\n");
-							out.append(msg.getText()); out.append("\n");
-							out.append("\n");
-						}
-						else
-						{
-							out.append(msg.getText()); out.append("\n");
-						}
-
-						prevComponentWasResultSet = false;
-					}
-					else if (jcomp instanceof JAseMessage)
-					{
-						JAseMessage msg = (JAseMessage) jcomp;
-						out.append(msg.getText());
-						out.append("\n");
-
-						msgCount++;
-						prevComponentWasResultSet = false;
-					}
-				}
-
-				// If we have a XML text do some special stuff
-				boolean hasXml = out.getText().indexOf("<?xml ") >= 0;
-				if (hasXml)
-				{
-					out.setCodeFoldingEnabled(true);
-					out.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
-				}
-
-//				_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
-				_statusBar.setMsg("NO ResultSet, but "+msgCount+" messages.");
-			}
-			
-			// We're done, so clear the feedback message
-			//_msgline.setText(" ");
-		}
-		catch (SQLException ex)
-		{
-			// If something goes wrong, clear the message line
-//			_msgline.setText("Error: "+ex.getMessage());
-			_statusBar.setMsg("Error: "+ex.getMessage());
-//			ex.printStackTrace();
-
-			// Then display the error in a dialog box
-			JOptionPane.showMessageDialog(
-//					QueryWindow.this, 
-					_window, 
-					new String[] { // Display a 2-line message
-							ex.getClass().getName() + ": ", 
-							ex.getMessage() },
-					"Error", JOptionPane.ERROR_MESSAGE);
-		}
-		catch (IOException ex)
-		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-		}
-		catch (UnknownPipeCommandException ex)
-		{
-			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: "+ex, ex);
-			SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
-		}
-		finally
-		{
-			// restore old message handler
-			if (curMsgHandler != null)
-			{
-				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
-			}
-		}
-		
-		// In some cases, some of the area in not repainted
-		// example: when no RS, but only messages has been displayed
-		_resPanel.repaint();
-	}
-
-	private void installResultTextExtraMenuEntries(final RSyntaxTextArea textArea)
-	{
-		JPopupMenu menu =textArea.getPopupMenu();
-		JMenuItem mi;
-		
-		//--------------------------------
-		// EXECUTE SELECTED TEXT
-		if (textArea != null)
-		{
-			mi = new JMenuItem("Execute Selected Text");
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					String cmd = textArea.getSelectedText();
-					if (cmd == null)
-					{
-						SwingUtils.showInfoMessage(_window, "Nothing to execute", "You need to select/mark some text that you want to execute.");
-						return;
-					}
-					displayQueryResults(cmd, false);
-				}
-			});
-			menu.insert(mi, 0);
-		}
-
-		//--------------------------------
-		menu.insert(new JPopupMenu.Separator(), 1);
-	}
-
-	private int countTables(ArrayList<JComponent> list)
-	{
-		int count = 0;
-		for (JComponent jcomp: list)
-		{
-			if (jcomp instanceof JTable)
-			{
-				count++;
-			}
-		}
-		return count;
-	}
-
-	@Override
-	public SQLException messageHandler(SQLException sqe)
-	{
-		// Pass Warning on...
-		if (sqe instanceof SQLWarning)
-			return sqe;
-
-		// Discard SQLExceptions... but first send them to the _resultCompList
-		// This is a bit ugly...
-		putSqlWarningMsgs(sqe, _resultCompList, "-from-messageHandler()-", -1);
-		return null;
-	}
-
-	private class JAseMessage 
-	extends JTextArea
-	{
-
-		private static final long serialVersionUID = 1L;
-
-//		public JAseMessage()
-//		{
-//			_init();
-//		}
-
-		public JAseMessage(final String s)
-		{
-			super(s);
-			init();
-		}
-
-		protected void init()
-		{
-			super.setEditable(false);
-
-			if (_aseMsgFont == null)
-				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
-			setFont(_aseMsgFont);
-
-			setLineWrap(true);
-			setWrapStyleWord(true);
-//			setOpaque(false); // Transparent
-		}
-
-//		public boolean isFocusable()
-//		{
-//			return false;
-//		}
-//
-//		public boolean isRequestFocusEnabled()
-//		{
-//			return false;
-//		}
-	}
-
-	private class JAseRowCount 
-	extends JAseMessage
-	{
-		private static final long serialVersionUID = 1L;
-
-		private int _rowCount;
-
-		public JAseRowCount(final int rowCount)
-		{
-			super("(" + rowCount + " rows affected)");
-			_rowCount = rowCount;
-			init();
-		}
-		
-		@SuppressWarnings("unused")
-		public int getRowCount()
-		{
-			return _rowCount;
-		}
-	}
-
-	private class JPlainResultSet 
-	extends JTextArea
-	{
-		private static final long serialVersionUID = 1L;
-
-		ResultSetTableModel _tm = null;
-
-		public JPlainResultSet(final ResultSetTableModel rstm)
-		{
-			super(rstm.toTableString());
-			_tm = rstm;
-			init();
-		}
-
-		public int getRowCount()
-		{
-			return _tm.getRowCount();
-		}
-
-		protected void init()
-		{
-			super.setEditable(false);
-
-			if (_aseMsgFont == null)
-				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
-			setFont(_aseMsgFont);
-
-			setLineWrap(true);
-			setWrapStyleWord(true);
-//			setOpaque(false); // Transparent
-		}
-
-//		public boolean isFocusable()
-//		{
-//			return false;
-//		}
-//
-//		public boolean isRequestFocusEnabled()
-//		{
-//			return false;
-//		}
-	}
-
-
+	/*----------------------------------------------------------------------
+	** BEGIN: set OPTIONS buttin stuff
+	**----------------------------------------------------------------------*/ 
 	/**
 	 * Private helper class for createSetOptionButton()
 	 * @author gorans
@@ -3821,64 +4612,6 @@ public class QueryWindow
 			popupMenu.add(mi);
 		}
 
-		//
-		// If we want to get what switches are enabled, and 'x' check the box or not...
-		// Lets do this LATER
-		// show switch - just shows traceflags
-		// I dont know how to get 'set showplan' or other options... sysoptions does NOT record them
-		//
-//		if (aseVersion >= 15020)
-//		{
-//			popupMenu.addPopupMenuListener(new PopupMenuListener()
-//			{
-//				@Override
-//				public void popupMenuWillBecomeVisible(PopupMenuEvent e)
-//				{
-//					// Get current switch settings
-//					String sql = "show switch";
-//					try
-//					{
-//						Statement stmnt = _conn.createStatement();
-//						stmnt.executeUpdate(sql);
-//						String wmsg = AseConnectionUtils.getSqlWarningMsgs(stmnt.getWarnings());
-//						if ( ! StringUtil.isNullOrBlank(wmsg) )
-//						{
-//							_logger.info("popupMenuWillBecomeVisible: "+wmsg);
-//							stmnt.clearWarnings();
-//						}
-//						stmnt.close();
-//
-//						// Add all integers in the config to a Set
-//						Set<Integer> flags = new LinkedHashSet<Integer>();
-//						String configStr = wmsg;
-//						String[] sa = configStr.split("\\s"); // \s = A whitespace character: [ \t\n\x0B\f\r] 
-//						for (String str : sa)
-//						{
-//							try
-//							{
-//								int intTrace = Integer.parseInt(str.replace(",", ""));
-//								flags.add(intTrace);
-//							}
-//							catch (NumberFormatException ignore) {/*ignore*/}
-//						}
-//						if (flags.size() > 0)
-//						{
-//						}
-//						System.out.println("Active Trace flags: "+flags);
-//					}
-//					catch (SQLException ex)
-//					{
-//						_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString(), ex);
-//					}
-//				}
-//				@Override
-//				public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
-//				@Override
-//				public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
-//			});
-//		}
-
-		
 		return popupMenu;
 	}
 
@@ -3918,7 +4651,367 @@ public class QueryWindow
 		
 		return button;
 	}
+	/*----------------------------------------------------------------------
+	** END: set OPTIONS buttin stuff
+	**----------------------------------------------------------------------*/ 
 
+
+	
+	/*----------------------------------------------------------------------
+	** BEGIN: Favorite SQL and RCL button stuff
+	**----------------------------------------------------------------------*/ 
+	private JButton createSqlCommandsButton(JButton button, final int version)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setToolTipText(
+			"<html>Execute various predefined SQL Statements.<br>" +
+			"<br>" +
+			"If ${selectedText} is part of the commands text, it will be replaced with content in the following order" +
+			"<ul>" +
+			"   <li>Marked/Selected text in the query text</li>" +
+			"   <li>Marked/Selected text in the result text</li>" +
+			"   <li>Content from the Copy/Paste buffer</li>" +
+			"</ul>" +
+			"</html>");
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/command_sql.png"));
+
+		JPopupMenu popupMenu = createSqlCommandsButtonPopupMenu(version);
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	private JPopupMenu createSqlCommandsButtonPopupMenu(final int version)
+	{
+		ArrayList<FavoriteCommandEntry> commandList = new ArrayList<FavoriteCommandDialog.FavoriteCommandEntry>();
+		commandList.add(new FavoriteCommandEntry("select DBNAME=db_name(), SERVER=@@servername, VERSION=@@version", "db_name(), @@servername, @@version", "What are we using"));
+		commandList.add(new FavoriteCommandEntry("sp_who",                                        "", "Who is logged in on the system"));
+		commandList.add(new FavoriteCommandEntry("sp_helpdb",                                     "", "What databases are on this ASE"));
+		commandList.add(new FavoriteCommandEntry("sp_helpdevice",                                 "", "What devices are on this ASE"));
+		commandList.add(new FavoriteCommandEntry("sp_configure 'nondefault'",                     "", "Get <b>changed</b> configuration parameters"));
+		commandList.add(new FavoriteCommandEntry("sp_helptext '${selectedText}', NULL, NULL, 'showsql,linenumbers'", "sp_helptext '${selectedText}'", "Get stored procedure text"));
+		commandList.add(new FavoriteCommandEntry("sp_help '${selectedText}'",                     "", "Get more information about a object"));
+		commandList.add(new FavoriteCommandEntry("sp_spaceused '${selectedText}'",                "", "How much space does a table consume"));
+		commandList.add(new FavoriteCommandEntry("sp_helprotect '${selectedText}'",               "", "Who can do what with an object"));
+		commandList.add(new FavoriteCommandEntry("sp_helpcache",                                  "", "Get caches and sizes"));
+		commandList.add(new FavoriteCommandEntry("sp_cacheconfig",                                "", "Get cache configurations"));
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		commandList.add(new FavoriteCommandEntry("",                                              "", "Note: Use Ctrl+Space to get code assist for table/column/procedure/etc completion..."));
+
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
+		
+		// Add user defined Statements
+		final JMenu udMenu = new JMenu("Execute User Defined SQL Statements");
+		udMenu.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite.png"));
+		popupMenu.add( udMenu );
+
+		if (_favoriteCmdManagerSql == null)
+			_favoriteCmdManagerSql = new FavoriteCommandManagerSql(udMenu);
+		_favoriteCmdManagerSql.rebuild();
+
+		// Add entry: OPEN User Defined Command Editor
+		JMenuItem openDialog = new JMenuItem("Edit User Defined SQL Commands");
+		openDialog.setToolTipText("Open User Defined SQL Commands Editor");
+		openDialog.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite_file.png"));
+		openDialog.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (_favoriteCmdManagerSql == null)
+					_favoriteCmdManagerSql = new FavoriteCommandManagerSql(udMenu);
+				_favoriteCmdManagerSql.open();
+			}
+		});
+		popupMenu.add(openDialog);
+
+		// add SEPARATOR
+		popupMenu.add( new JSeparator() );
+
+		// add the SYSTEM functions
+		createUserDefinedMenu(popupMenu, commandList);
+		
+		return popupMenu;
+	}
+
+
+	private JButton createRclCommandsButton(JButton button, final int version)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setToolTipText(
+			"<html>Execute various predefined RCL Statements.<br>" +
+			"<br>" +
+			"If ${selectedText} is part of the commands text, it will be replaced with content in the following order" +
+			"<ul>" +
+			"   <li>Marked/Selected text in the query text</li>" +
+			"   <li>Marked/Selected text in the result text</li>" +
+			"   <li>Content from the Copy/Paste buffer</li>" +
+			"</ul>" +
+			"<b>NOTE</b>: if first word is 'RSSD:' the command will be executed in the RSSD database<br>" +
+			"This is done by issuing 'connect rssd', the 'the command', then 'disconnect'" +
+			"</html>");
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/command_rcl.png"));
+
+		JPopupMenu popupMenu = createRclCommandsButtonPopupMenu(version);
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	private JPopupMenu createRclCommandsButtonPopupMenu(final int version)
+	{
+		ArrayList<FavoriteCommandEntry> commandList = new ArrayList<FavoriteCommandDialog.FavoriteCommandEntry>();
+		commandList.add(new FavoriteCommandEntry("admin health",                       "", "Displays status information.  Status is HEALTHY when all threads are running, otherwise SUSPECT."));
+		commandList.add(new FavoriteCommandEntry("admin who",                          "", "What threads are in the server"));
+		commandList.add(new FavoriteCommandEntry("admin who_is_down",                  "", "Displays the threads that are not running."));
+		commandList.add(new FavoriteCommandEntry("admin disk_space",                   "", "Displays the state and amount of used space for disk partitions"));
+		commandList.add(new FavoriteCommandEntry("admin logical_status",               "", "Displays status of logical connections of Warm Standby"));
+		commandList.add(new FavoriteCommandEntry("admin who, sqm",                     "", "Displays status information about all queues"));
+		commandList.add(new FavoriteCommandEntry("admin who, sqt",                     "", "Displays status information about the transactions of each queue"));
+		commandList.add(new FavoriteCommandEntry("admin who, dist",                    "", "Displays information about DIST thread"));
+		commandList.add(new FavoriteCommandEntry("admin who, dsi",                     "", "Displays information about each DSI scheduler thread running in the Replication Server"));
+		commandList.add(new FavoriteCommandEntry("admin show_connections",             "", "Displays information about all connections from the Replication Server to data servers and to other Replication Servers"));
+		commandList.add(new FavoriteCommandEntry("admin rssd_name",                    "", "Where is the RSSD located"));
+		commandList.add(new FavoriteCommandEntry("admin version",                      "", "Show Replication Server Version"));
+
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		
+		commandList.add(new FavoriteCommandEntry("trace 'on', 'dsi', 'dsi_buf_dump'",  "", "Turn ON: Write SQL statements executed by the DSI Threads to the RS log"));
+		commandList.add(new FavoriteCommandEntry("trace 'off', 'dsi', 'dsi_buf_dump'", "", "Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
+
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		
+		commandList.add(new FavoriteCommandEntry("RSSD: rmp_queue ''",                 "", "Show Queue size for each database/connection"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helpdb",                    "", "What databases are connected to the system"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helpdbrep",                 "", "Database Replication Definitions"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helpdbsub",                 "", "Database Subscriptions"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helprep",                   "", "Table Replication Definitions"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helpsub",                   "", "Table Subscriptions"));
+		commandList.add(new FavoriteCommandEntry("RSSD: rs_helpuser",                  "", "Users in <b>this</b> Replication Server"));
+
+		commandList.add(FavoriteCommandEntry.addSeparator());
+		commandList.add(new FavoriteCommandEntry("",                                   "", "Note: Use Ctrl+Space to get code assist for table/column/procedure/etc completion..."));
+		
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
+
+		// Add user defined Statements
+		final JMenu udMenu = new JMenu("Execute User Defined RCL Statements");
+		udMenu.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite.png"));
+		popupMenu.add( udMenu );
+//		popupMenu.add( createUserDefinedMenu(udMenu, "ud.menu.rcl.", Configuration.getInstance(Configuration.USER_CONF)) );
+		if (_favoriteCmdManagerRcl == null)
+			_favoriteCmdManagerRcl = new FavoriteCommandManagerRcl(udMenu);
+		_favoriteCmdManagerRcl.rebuild();
+
+		// Add entry: OPEN User Defined Command Editor
+		JMenuItem openDialog = new JMenuItem("Edit User Defined RCL Commands");
+		openDialog.setToolTipText("Open User Defined RCL Commands Editor");
+		openDialog.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite_file.png"));
+		openDialog.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (_favoriteCmdManagerRcl == null)
+					_favoriteCmdManagerRcl = new FavoriteCommandManagerRcl(udMenu);
+				_favoriteCmdManagerRcl.open();
+			}
+		});
+		popupMenu.add(openDialog);
+
+		// add SEPARATOR
+		popupMenu.add( new JSeparator() );
+		
+		// add the SYSTEM functions
+		createUserDefinedMenu(popupMenu, commandList);
+
+		return popupMenu;
+	}
+	
+	//////////////////////////////////////////////////////////////
+	// BEGIN: IMPLEMEMNTS the FavoriteCommandDialog FavoriteOwner
+	//////////////////////////////////////////////////////////////
+	private class FavoriteCommandManagerSql 
+	implements FavoriteCommandDialog.FavoriteOwner
+	{
+		private FavoriteCommandDialog _favDialog = new FavoriteCommandDialog(this, _window);
+		private JMenu                 _udMenu    = null; // User Defined Commands Menu
+
+		public FavoriteCommandManagerSql(JMenu udMenu)
+		{
+			_udMenu = udMenu;
+		}
+
+		public void open()
+		{
+			_favDialog.reload();
+			_favDialog.setVisible(true);
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public void rebuild()
+		{
+			ArrayList<FavoriteCommandEntry> entries = _favDialog.getEntries();
+			createUserDefinedMenu(_udMenu, entries);
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public void saveFavoriteFilename(String filename)
+		{
+			_favoriteCmdFilenameSql = filename;
+			saveProps();
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public String getFavoriteFilename()
+		{
+			return _favoriteCmdFilenameSql;
+		}
+	}
+	private class FavoriteCommandManagerRcl 
+	implements FavoriteCommandDialog.FavoriteOwner
+	{
+		private FavoriteCommandDialog _favDialog = new FavoriteCommandDialog(this, _window);
+		private JMenu                 _udMenu    = null; // User Defined Commands Menu
+
+		public FavoriteCommandManagerRcl(JMenu udMenu)
+		{
+			_udMenu = udMenu;
+		}
+
+		public void open()
+		{
+			_favDialog.reload();
+			_favDialog.setVisible(true);
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public void rebuild()
+		{
+			ArrayList<FavoriteCommandEntry> entries = _favDialog.getEntries();
+			createUserDefinedMenu(_udMenu, entries);
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public void saveFavoriteFilename(String filename)
+		{
+			_favoriteCmdFilenameRcl = filename;
+			saveProps();
+		}
+
+		/** implemets FavoriteCommandDialog.FavoriteOwner */
+		@Override
+		public String getFavoriteFilename()
+		{
+			return _favoriteCmdFilenameRcl;
+		}
+	}
+	//////////////////////////////////////////////////////////////
+	// END: IMPLEMEMNTS the FavoriteCommandDialog FavoriteOwner
+	//////////////////////////////////////////////////////////////
+	
+	public void createUserDefinedMenu(JMenu menu, ArrayList<FavoriteCommandEntry> entries)
+	{
+		menu.removeAll();
+
+		// No entries
+		if (entries.size() == 0)
+		{
+			JMenuItem mi = new JMenuItem("<html> <b>No Used Defined Command Favorities has been added</b><br> </html>");
+			menu.add(mi);
+			return;
+		}
+
+		createUserDefinedMenu((JComponent)menu, entries);
+	}
+	public void createUserDefinedMenu(JPopupMenu menu, ArrayList<FavoriteCommandEntry> entries)
+	{
+		createUserDefinedMenu((JComponent)menu, entries);
+	}
+	private void createUserDefinedMenu(JComponent menu, ArrayList<FavoriteCommandEntry> entries)
+	{
+		// Now add the above commands...
+		for (FavoriteCommandEntry entry : entries)
+		{
+			if (entry.isSeparator())
+			{
+				menu.add(new JSeparator());
+				continue;
+			}
+
+			// Add entry
+			JMenuItem mi = new JMenuItem();
+			FavoriteCommandDialog.setBasicInfo(mi, entry);
+
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					JMenuItem mi = (JMenuItem) e.getSource();
+
+					String cmd = mi.getActionCommand();
+					if (cmd.startsWith("RSSD: "))
+					{
+						String rssdCmd = cmd.substring("RSSD: ".length());
+						cmd="connect rssd\n" +
+						    "go\n" +
+						    rssdCmd + "\n" +
+						    "go\n" +
+						    "disconnect\n" +
+						    "go\n";
+					}
+					cmd = replaceTemplateStringForCommandButton("${selectedText}", cmd);
+					if (cmd != null)
+						displayQueryResults(cmd, false);
+				}
+			});
+			menu.add(mi);
+		}
+	}
 	/** 
 	 * replace <code>${selectedText}</code> with a proper command <br>
 	 * If the result command has a newline, a confirm question will be asked.
@@ -4009,398 +5102,15 @@ public class QueryWindow
 		}
 		return cmd;
 	}
-
-	private JPopupMenu createSqlCommandsButtonPopupMenu(final int version)
-	{
-		final String SEPARATOR = "SEPARATOR";
-		LinkedHashMap<String, String> commands = new LinkedHashMap<String, String>();
-
-		commands.put("select DBNAME=db_name(), SERVER=@@servername, VERSION=@@version", "What db, server are we connected to");
-		commands.put("sp_who",                                        "Who is logged in on the system");
-		commands.put("sp_helpdb",                                     "What databases are on this ASE");
-		commands.put("sp_helpdevice",                                 "What devices are on this ASE");
-		commands.put("sp_configure 'nondefault'",                     "Get <b>changed</b> configuration parameters");
-		commands.put("sp_helptext '${selectedText}', NULL, NULL, 'showsql,linenumbers'", "Get stored procedure text");
-		commands.put("sp_help '${selectedText}'",                     "Get more information about a object");
-		commands.put("sp_spaceused '${selectedText}'",                "How much space does a table consume");
-		commands.put("sp_helprotect '${selectedText}'",               "Who can do what with an object");
-		commands.put("sp_helpcache",                                  "Get caches and sizes");
-		commands.put("sp_cacheconfig",                                "Get cache configurations");
-//		commands.put("", "");
-//		commands.put("", "");
-		commands.put(SEPARATOR+".99",                                 SEPARATOR);
-		commands.put("",                                              "Note: Use Ctrl+Space to get code assist for more predefined SQL and table/column/procedure/etc completion...");
+	/*----------------------------------------------------------------------
+	** END: Favorite SQL and RCL button stuff
+	**----------------------------------------------------------------------*/ 
 
 
-		// Do PopupMenu
-		final JPopupMenu popupMenu = new JPopupMenu();
-		
-		// Add user defined Statements
-		popupMenu.add( createUserDefinedMenu(null, "ud.menu.sql.", Configuration.getInstance(Configuration.USER_CONF)) );
-		popupMenu.add( new JSeparator() );
-		
-		// Now add the above commands...
-		for (String cmd : commands.keySet())
-		{
-			String val = commands.get(cmd);
-
-			if (SEPARATOR.equals(val))
-			{
-				popupMenu.add(new JSeparator());
-				continue;
-			}
-
-			// Add entry
-			JMenuItem mi;
-
-			String toolTipText = commands.get(cmd);
-			String miText = "<html><b>"+cmd+"</b> - <i><font color=\"green\">"+toolTipText+"</font></i></html>";
-
-			mi = new JMenuItem();
-			mi.setText(miText);
-			mi.setActionCommand(cmd);
-			mi.setToolTipText(toolTipText);
-//			mi.putClientProperty("CMD_SQL", cmd);
-
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					JMenuItem mi = (JMenuItem) e.getSource();
-
-					String cmd = mi.getActionCommand();
-					cmd = replaceTemplateStringForCommandButton("${selectedText}", cmd);
-					if (cmd != null)
-						displayQueryResults(cmd, false);
-				}
-			});
-			popupMenu.add(mi);
-		}
-		
-		return popupMenu;
-	}
-
-	private JButton createSqlCommandsButton(JButton button, final int version)
-	{
-		if (button == null)
-			button = new JButton();
-
-		button.setToolTipText(
-			"<html>Execute various predefined SQL Statements.<br>" +
-			"<br>" +
-			"If ${selectedText} is part of the commands text, it will be replaced with content in the following order" +
-			"<ul>" +
-			"   <li>Marked/Selected text in the query text</li>" +
-			"   <li>Marked/Selected text in the result text</li>" +
-			"   <li>Content from the Copy/Paste buffer</li>" +
-			"</ul>" +
-			"</html>");
-		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/command_sql.png"));
-
-		JPopupMenu popupMenu = createSqlCommandsButtonPopupMenu(version);
-		button.setComponentPopupMenu(popupMenu);
-
-		// If we click on the button, display the popup menu
-		button.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				Object source = e.getSource();
-				if (source instanceof JButton)
-				{
-					JButton but = (JButton)source;
-					JPopupMenu pm = but.getComponentPopupMenu();
-					pm.show(but, 14, 14);
-					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
-				}
-			}
-		});
-		
-		return button;
-	}
-
-	private JPopupMenu createRclCommandsButtonPopupMenu(final int version)
-	{
-		final String SEPARATOR = "SEPARATOR";
-		LinkedHashMap<String, String> commands = new LinkedHashMap<String, String>();
-
-		commands.put("admin health",                       "Displays status information.  Status is HEALTHY when all threads are running, otherwise SUSPECT.");
-		commands.put("admin who",                          "What threads are in the server");
-		commands.put("admin who_is_down",                  "Displays the threads that are not running.");
-		commands.put("admin disk_space",                   "Displays the state and amount of used space for disk partitions");
-		commands.put("admin logical_status",               "Displays status of logical connections of Warm Standby");
-		commands.put("admin who, sqm",                     "Displays status information about all queues");
-		commands.put("admin who, sqt",                     "Displays status information about the transactions of each queue");
-		commands.put("admin who, dist",                    "Displays information about DIST thread");
-		commands.put("admin who, dsi",                     "Displays information about each DSI scheduler thread running in the Replication Server");
-		commands.put("admin show_connections",             "Displays information about all connections from the Replication Server to data servers and to other Replication Servers");
-		commands.put("admin rssd_name",                    "Where is the RSSD located");
-		commands.put("admin version",                      "Show Replication Server Version");
-
-		commands.put(SEPARATOR+".1",                       SEPARATOR);
-		
-		commands.put("trace 'on', 'dsi', 'dsi_buf_dump'",  "Turn ON: Write SQL statements executed by the DSI Threads to the RS log");
-		commands.put("trace 'off', 'dsi', 'dsi_buf_dump'", "Turn OFF: Write SQL statements executed by the DSI Threads to the RS log");
-
-		commands.put(SEPARATOR+".2",                       SEPARATOR);
-		
-		commands.put("RSSD: rmp_queue ''",                 "Show Queue size for each database/connection");
-		commands.put("RSSD: rs_helpdb",                    "What databases are connected to the system");
-		commands.put("RSSD: rs_helpdbrep",                 "Database Replication Definitions");
-		commands.put("RSSD: rs_helpdbsub",                 "Database Subscriptions");
-		commands.put("RSSD: rs_helprep",                   "Table Replication Definitions");
-		commands.put("RSSD: rs_helpsub",                   "Table Subscriptions");
-		commands.put("RSSD: rs_helpuser",                  "Users in <b>this</b> Replication Server");
-
-		commands.put(SEPARATOR+".99",                      SEPARATOR);
-		commands.put("",                                   "Note: Use Ctrl+Space to get code assist for more predefined RCL and other object completions...");
-
-		// Do PopupMenu
-		final JPopupMenu popupMenu = new JPopupMenu();
-
-		// Add user defined Statements
-		popupMenu.add( createUserDefinedMenu(null, "ud.menu.rcl.", Configuration.getInstance(Configuration.USER_CONF)) );
-		popupMenu.add( new JSeparator() );
-		
-		// Now add the above commands...
-		for (String cmd : commands.keySet())
-		{
-			String val = commands.get(cmd);
-
-			if (SEPARATOR.equals(val))
-			{
-				popupMenu.add(new JSeparator());
-				continue;
-			}
-
-			// Add entry
-			JMenuItem mi;
-
-			String toolTipText = val;
-			String miText = "<html><b>"+cmd+"</b> - <i><font color=\"green\">"+toolTipText+"</font></i></html>";
-
-			mi = new JMenuItem();
-			mi.setText(miText);
-			mi.setActionCommand(cmd);
-			mi.setToolTipText(toolTipText);
-//			mi.putClientProperty("CMD_SQL", cmd);
-
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					JMenuItem mi = (JMenuItem) e.getSource();
-
-					String cmd = mi.getActionCommand();
-					if (cmd.startsWith("RSSD: "))
-					{
-						String rssdCmd = cmd.substring("RSSD: ".length());
-						cmd="connect rssd\n" +
-						    "go\n" +
-						    rssdCmd + "\n" +
-						    "go\n" +
-						    "disconnect\n" +
-						    "go\n";
-					}
-					cmd = replaceTemplateStringForCommandButton("${selectedText}", cmd);
-					if (cmd != null)
-						displayQueryResults(cmd, false);
-				}
-			});
-			popupMenu.add(mi);
-		}
-		
-		return popupMenu;
-	}
-	private JButton createRclCommandsButton(JButton button, final int version)
-	{
-		if (button == null)
-			button = new JButton();
-
-		button.setToolTipText(
-			"<html>Execute various predefined RCL Statements.<br>" +
-			"<br>" +
-			"If ${selectedText} is part of the commands text, it will be replaced with content in the following order" +
-			"<ul>" +
-			"   <li>Marked/Selected text in the query text</li>" +
-			"   <li>Marked/Selected text in the result text</li>" +
-			"   <li>Content from the Copy/Paste buffer</li>" +
-			"</ul>" +
-			"<b>NOTE</b>: if first word is 'RSSD:' the command will be executed in the RSSD database<br>" +
-			"This is done by issuing 'connect rssd', the 'the command', then 'disconnect'" +
-			"</html>");
-		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/command_rcl.png"));
-
-		JPopupMenu popupMenu = createRclCommandsButtonPopupMenu(version);
-		button.setComponentPopupMenu(popupMenu);
-
-		// If we click on the button, display the popup menu
-		button.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				Object source = e.getSource();
-				if (source instanceof JButton)
-				{
-					JButton but = (JButton)source;
-					JPopupMenu pm = but.getComponentPopupMenu();
-					pm.show(but, 14, 14);
-					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
-				}
-			}
-		});
-		
-		return button;
-	}
 	
-	/**
-	 * 
-	 * @param menu   if null a new JMenuPopup will be created otherwise it will be appended to it
-	 * @param prefix prefix of the property string. Should contain a '.' at the end
-	 * @param conf
-	 * @param owner 
-	 * @return
-	 */
-	public JMenu createUserDefinedMenu(JMenu menu, final String prefix, Configuration conf)
-	{
-		_logger.debug("createUserDefinedMenu(): prefix='"+prefix+"'.");
-
-		//Create the popup menu.
-		if (menu == null)
-		{
-			menu = new JMenu("Use Defined Statements");
-		}
-
-		boolean addedEntries = false;
-		for (String prefixStr : conf.getUniqueSubKeys(prefix, true))
-		{
-			_logger.debug("createUserDefinedMenu(): found prefix '"+prefixStr+"'.");
-
-			// Read cmd
-			String menuCmd = conf.getPropertyRaw(prefixStr+".cmd");
-
-			// Read menu text
-			String menuText = conf.getPropertyRaw(prefixStr+".name");
-
-			// Read menu tooltip
-			String menuTooltip = conf.getPropertyRaw(prefixStr+".tooltip");
-
-			// Read menu icon
-			String menuIcon = conf.getPropertyRaw(prefixStr+".icon");
-
-			// Check that we got everything we needed
-			if (menuCmd == null)
-			{
-				_logger.warn("Missing property '"+prefixStr+".cmd'");
-				continue;
-			}
-
-			if ("SEPARATOR".equals(menuCmd))
-			{
-				menu.add(new JSeparator());
-				continue;
-			}
-
-			// Add entry
-			JMenuItem mi;
-
-			String text        = (menuText    == null ? menuCmd : menuText);
-			String toolTipText = (menuTooltip == null ? "" : menuTooltip);
-			String miText      = "<html><b>"+text+"</b> - <i><font color=\"green\">"+toolTipText+"</font></i></html>";
-
-			mi = new JMenuItem();
-			mi.setText(miText);
-			mi.setActionCommand(menuCmd);
-			mi.setToolTipText(menuTooltip == null ? menuCmd : menuTooltip);
-			if (menuText != null && menuTooltip != null)
-				mi.setToolTipText(menuCmd);
-//			mi.putClientProperty("CMD_SQL", cmd);
-
-			if (menuIcon != null)
-				mi.setIcon(SwingUtils.readImageIcon(Version.class, menuIcon));
-
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					JMenuItem mi = (JMenuItem) e.getSource();
-
-					String cmd = mi.getActionCommand();
-					if (cmd.startsWith("RSSD: "))
-					{
-						String rssdCmd = cmd.substring("RSSD: ".length());
-						cmd="connect rssd\n" +
-						    "go\n" +
-						    rssdCmd + "\n" +
-						    "go\n" +
-						    "disconnect\n" +
-						    "go\n";
-					}
-					cmd = replaceTemplateStringForCommandButton("${selectedText}", cmd);
-					if (cmd != null)
-						displayQueryResults(cmd, false);
-				}
-			});
-			addedEntries = true;
-			menu.add(mi);
-		}
-
-		if ( ! addedEntries )
-		{
-			JMenuItem mi = new JMenuItem(
-					"<html>" +
-					"<b>Add user defined menu items by adding records in:</b><br>" +
-					"File: " + conf.getFilename() + "<br>" +
-					"<br>" +
-					"With Entries: <br>" +
-					"<code>" +
-					prefix + "01.cmd     = CMD to execute        <b>(mandatory)</b><br>" +
-					prefix + "01.name    = Text to show in menu  <b>(optional)</b><br>" +
-					prefix + "01.tooltip = tooltip for this menu <b>(optional)</b><br>" +
-					prefix + "01.icon    = path to a icon        <b>(optional)</b><br>" +
-					"</code>" +
-					"<br>" +
-					"Menu items are added in the order of: " + prefix + "<b>##</b>.cmd<br>" +
-					"Add a separator by: " + prefix + "<b>##</b>.cmd=SEPARATOR<br>" +
-					"<br>" +
-					"<b>Choosing this item will place a template in the copy paste buffer<br>" +
-					"This will make it easy for you to add entries in the config file.</b>" +
-					"</html>");
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					String template = 
-						prefix + "01.cmd     = select * from sysobjects where type = 'U'\n" +
-						prefix + "01.name    = List User Tables in current db\n" +
-						prefix + "01.tooltip = some additional text for USER TABLES.\n" +
-						prefix + "01.icon    = /path/to/icon/name.png\n" +
-						"\n" +
-						prefix + "02.cmd     = select * from sysobjects where type = 'P'\n" +
-						prefix + "02.name    = List Procedures in current db\n" +
-						prefix + "02.tooltip = some additional text for PRODECURES\n" +
-						prefix + "02.icon    = /path/to/icon/name.png\n" +
-						"\n";
-
-					// Add it to clipboard
-					StringSelection data = new StringSelection(template);
-					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-					clipboard.setContents(data, data);
-				}
-			});
-			menu.add(mi);
-		}
-
-		return menu;
-	}
-	
-	
+	/*----------------------------------------------------------------------
+	** BEGIN: last used file(s) methods
+	**----------------------------------------------------------------------*/ 
 	/**
 	 * Safe what files we have been used
 	 * @param name
@@ -4519,8 +5229,132 @@ public class QueryWindow
 
 		return _lastFileNameList.get(0);
 	}
+	/*----------------------------------------------------------------------
+	** END: last used file(s) methods
+	**----------------------------------------------------------------------*/ 
+
 	
-	/*---------------------------------------------------
+
+	/*----------------------------------------------------------------------
+	** BEGIN: ExecButton which accepts Drop of Strings
+	**----------------------------------------------------------------------*/ 
+	private class ExecButton extends JButton
+	{
+		private static final long serialVersionUID = 1L;
+		ExecButton(String label)
+		{
+			super(label);
+
+			setTransferHandler(new TransferHandlerExecButton());
+		}
+
+		private class TransferHandlerExecButton
+		extends TransferHandler
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public boolean canImport(TransferHandler.TransferSupport support)
+			{
+				if ( ! support.isDataFlavorSupported(DataFlavor.stringFlavor) )
+					return false;
+				support.setDropAction(COPY);
+				return true;
+			}
+
+			@Override
+			public boolean importData(TransferHandler.TransferSupport support)
+			{
+				if ( ! canImport(support) )
+					return false;
+
+				// fetch the data and bail if this fails
+				String data;
+				try {
+					data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
+				} catch (UnsupportedFlavorException e) {
+					return false;
+				} catch (IOException e) {
+					return false;
+				}
+
+				Component targetDropComp = support.getComponent();
+
+				// Figgure out if the is a exec that wants to show the GUI EXECUTION PLAN
+				boolean showGuiExecPlan = false;
+				if (targetDropComp instanceof JButton)
+				{
+					String actionCommand = ((JButton) targetDropComp).getActionCommand();
+					if (ACTION_EXECUTE_GUI_SHOWPLAN.equals(actionCommand))
+						showGuiExecPlan = true;
+				}
+
+				displayQueryResults(data, showGuiExecPlan);
+
+				return true;
+			}
+		};
+	};
+	/*----------------------------------------------------------------------
+	** END: ExecButton which accepts Drop of Strings
+	**----------------------------------------------------------------------*/ 
+
+	
+	/*----------------------------------------------------------------------
+	** BEGIN: class RpcParam
+	**----------------------------------------------------------------------*/ 
+	private static class RpcParam
+	{
+		private int     _sqlType  = Types.OTHER;
+		private Object  _val      = null;
+		private boolean _isOutput = false;
+		
+		public static RpcParam parseEntry(String entry)
+		{
+			int eqPos   = entry.indexOf('=');
+			String type = entry.substring(0, eqPos).trim();
+			String val  = entry.substring(eqPos+1).trim();
+			
+			RpcParam p = new RpcParam();
+
+			if (val.endsWith(" out") || val.endsWith(" OUT") )
+			{
+				p._isOutput = true;
+				val = val.substring(0, val.length() - " out".length()).trim();
+			}
+			if ( (val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("'") && val.endsWith("'")) )
+			{
+				val = val.substring(1, val.length() - 1);
+			}
+
+			if      ("int"   .equals(type)) {p._sqlType = Types.INTEGER; p._val = new Integer(val); }
+			else if ("string".equals(type)) {p._sqlType = Types.VARCHAR; p._val = new String(val); }
+			else throw new RuntimeException("Unknown RPC Datatype '"+type+"'.");
+
+			return p;
+		}
+		public static ArrayList<RpcParam> parse(String rpcParamsStr)
+		{
+			ArrayList<RpcParam> retList = new ArrayList<RpcParam>();
+
+			String[] tmp = rpcParamsStr.split(",");
+			for (int i=0; i<tmp.length; i++)
+			{
+				String entry = tmp[i].trim();
+				RpcParam p = parseEntry(entry);
+//				System.out.println("RPC PARAM "+i+": '"+entry+"'. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
+				retList.add(p);
+			}
+			return retList;
+		}
+	}
+	/*----------------------------------------------------------------------
+	** END: class RpcParam
+	**----------------------------------------------------------------------*/ 
+	
+
+	
+	/*----------------------------------------------------
 	 ** BEGIN: Watermark stuff
 	 **---------------------------------------------------
 	 */
@@ -4748,10 +5582,10 @@ public class QueryWindow
 	}
 
 	/**
-	 * Build the options parser. Has to be synchronized because of the way
+	 * Build the options com.asetune.parser. Has to be synchronized because of the way
 	 * Options are constructed.
 	 * 
-	 * @return an options parser.
+	 * @return an options com.asetune.parser.
 	 */
 	private static synchronized Options buildCommandLineOptions()
 	{
@@ -4779,7 +5613,7 @@ public class QueryWindow
 	private static CommandLine parseCommandLine(String[] args, Options options)
 	throws ParseException
 	{
-		// create the command line parser
+		// create the command line com.asetune.parser
 		CommandLineParser parser = new PosixParser();	
 	
 		// parse the command line arguments

@@ -86,6 +86,7 @@ DB Cleanup:
 	$mda_verifyVersion      = $_GET['mda_verifyVersion'];
 	$mda_lowVersion         = $_GET['mda_lowVersion'];
 	$mda_highVersion        = $_GET['mda_highVersion'];
+	$mda_isCluster          = $_GET['mda_isCluster'];
 
 	// sub command
 	$rpt_onDomain           = $_GET['onDomain'];
@@ -166,7 +167,7 @@ DB Cleanup:
 					echo "<td nowrap><A HREF=\"http://syberspase.sybase.com/compdir/mainMenu.do?keyword=$cell&submit=Go\" target=\"_blank\">$cell</A></td>";
 
 				else if ( $colname == "sapUserName" )
-					echo "<td nowrap><A HREF=\"http://someAddressXXX=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"https://sapneth2.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=SEARCH&UserID=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "userNameUsage" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
@@ -193,7 +194,7 @@ DB Cleanup:
 					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
 
 				else if ( $colname == "srvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "deleteSrvVersion" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">$cell</A></td>";
@@ -966,8 +967,9 @@ DB Cleanup:
 			<b>Show new tables/columns for two differect ASE Versons</b>
 			<form action="usage_report.php" method="get">
 				<input type="text" size=4 name="mda" readonly="mda" value="diff" />
-				Low Version:   <input type="text" size=5 maxlength=5 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
-				High Version:  <input type="text" size=5 maxlength=5 name="mda_highVersion" value="' . $mda_highVersion . '" />
+				Is ASE Cluster Edition (0 or 1, default=0):<input type="text" size=5 maxlength=5 name="mda_isCluster"   value="' . $mda_isCluster   . '" />
+				Low Version:                               <input type="text" size=5 maxlength=5 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
+				High Version:                              <input type="text" size=5 maxlength=5 name="mda_highVersion" value="' . $mda_highVersion . '" />
 				<input type="submit" />
 			</form>
 
@@ -1035,8 +1037,13 @@ DB Cleanup:
 		//------------------------------------------
 		if ( $rpt_mda == "diff" )
 		{
+			if ( $mda_isCluster == "" )
+			{
+				$mda_isCluster = 0;
+			}
+
 			//-----------------------------
-			$label = "MDA TABLE DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new tables in HIGH Version will be visible)";
+			$label = "MDA TABLE DIFF Report: isCluster=$mda_isCluster, low=$mda_lowVersion, High=$mda_highVersion (only new tables in HIGH Version will be visible)";
 			$sql = "
 				SELECT h.srvVersion,
 					h.isClusterEnabled,
@@ -1046,11 +1053,13 @@ DB Cleanup:
 					h.Length        as NumOfParameters,
 					h.Description,
 					l.srvVersion
-				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName  = l.TableName
-				                                                       AND l.srvVersion = $mda_lowVersion
-				                                                       AND l.type       = 'T')
-				WHERE h.srvVersion = $mda_highVersion
-				  AND h.type       = 'T'
+				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName        = l.TableName
+				                                                       AND l.isClusterEnabled = $mda_isCluster
+				                                                       AND l.srvVersion       = $mda_lowVersion
+				                                                       AND l.type             = 'T')
+				WHERE h.srvVersion       = $mda_highVersion
+				  AND h.isClusterEnabled = $mda_isCluster
+				  AND h.type             = 'T'
 				HAVING l.srvVersion IS NULL
 				ORDER BY h.TableID
 			";
@@ -1076,12 +1085,14 @@ DB Cleanup:
 					h.Indicators,
 					h.Description,
 					l.srvVersion
-				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName  = l.TableName
-				                                                       AND h.ColumnName = l.ColumnName
-				                                                       AND l.srvVersion = $mda_lowVersion
-				                                                       AND l.type       = 'C')
-				WHERE h.srvVersion = $mda_highVersion
-				  AND h.type       = 'C'
+				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName        = l.TableName
+				                                                       AND h.ColumnName       = l.ColumnName
+				                                                       AND l.isClusterEnabled = $mda_isCluster
+				                                                       AND l.srvVersion       = $mda_lowVersion
+				                                                       AND l.type             = 'C')
+				WHERE h.srvVersion       = $mda_highVersion
+				  AND h.isClusterEnabled = $mda_isCluster
+				  AND h.type             = 'C'
 				HAVING l.srvVersion IS NULL
 				ORDER BY h.TableID, h.ColumnID
 			";
@@ -1100,6 +1111,10 @@ DB Cleanup:
 		if ( is_numeric($rpt_mda) )
 		{
 			$srvVersion = $rpt_mda;
+			if ( $mda_isCluster == "" )
+			{
+				$mda_isCluster = 0;
+			}
 
 			//-----------------------------
 			$label = "monTableColumns -- sysobject/syscolumns SANITY CHECK if name MATCHES (if 0 rows it's OK)";
@@ -1119,14 +1134,15 @@ DB Cleanup:
 					m.Indicators,
 					m.Description,
 					s.srvVersion
-				FROM asemon_mda_info m LEFT JOIN asemon_mda_info s ON (    m.TableName  = s.TableName
-				                                                       AND m.ColumnName = s.ColumnName
-				                                                       AND m.srvVersion = s.srvVersion
-				                                                       AND s.type       = 'S'
-
+				FROM asemon_mda_info m LEFT JOIN asemon_mda_info s ON (    m.TableName        = s.TableName
+				                                                       AND m.ColumnName       = s.ColumnName
+				                                                       AND m.isClusterEnabled = s.isClusterEnabled
+				                                                       AND m.srvVersion       = s.srvVersion
+				                                                       AND s.type             = 'S'
 				                                                       )
-				WHERE m.srvVersion = $srvVersion
-				  AND m.type       = 'C'
+				WHERE m.srvVersion       = $srvVersion
+				  AND m.isClusterEnabled = $mda_isCluster
+				  AND m.type             = 'C'
 				HAVING s.srvVersion IS NULL
 				ORDER BY m.TableID, m.ColumnID
 			";
@@ -1145,7 +1161,8 @@ DB Cleanup:
 				SELECT srvVersion, isClusterEnabled, TableName, rowId, TableID, ColumnID as cols, Length as params, Description
 				FROM asemon_mda_info
 				WHERE type = 'T'
-				  AND srvVersion = $srvVersion
+				  AND srvVersion       = $srvVersion
+				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, TableName
 			";
 
@@ -1163,7 +1180,8 @@ DB Cleanup:
 				SELECT *
 				FROM asemon_mda_info
 				WHERE type = 'T'
-				  AND srvVersion = $srvVersion
+				  AND srvVersion       = $srvVersion
+				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
 			";
 
@@ -1180,7 +1198,8 @@ DB Cleanup:
 				SELECT *
 				FROM asemon_mda_info
 				WHERE type = 'C'
-				  AND srvVersion = $srvVersion
+				  AND srvVersion       = $srvVersion
+				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
 			";
 
@@ -1197,7 +1216,8 @@ DB Cleanup:
 				SELECT *
 				FROM asemon_mda_info
 				WHERE type = 'P'
-				  AND srvVersion = $srvVersion
+				  AND srvVersion       = $srvVersion
+				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
 			";
 
@@ -1214,7 +1234,8 @@ DB Cleanup:
 				SELECT *
 				FROM asemon_mda_info
 				WHERE type = 'S'
-				  AND srvVersion = $srvVersion
+				  AND srvVersion       = $srvVersion
+				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
 			";
 
@@ -1232,7 +1253,8 @@ DB Cleanup:
 				$sql = "
 					SELECT *
 					FROM asemon_mda_info
-					WHERE srvVersion = $srvVersion
+					WHERE srvVersion       = $srvVersion
+				      AND isClusterEnabled = $mda_isCluster
 					ORDER BY rowId
 				";
 

@@ -22,14 +22,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
 import javax.swing.RowSorter.SortKey;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.AbstractTableModel;
@@ -102,6 +108,12 @@ extends JXTable
 	@Override
 	public void setModel(TableModel newModel)
 	{
+		setModelInternal(newModel, 0);
+	}
+
+	/** just wrap the super setModel() */
+	private void setModelInternal(TableModel newModel, int neastLevel)
+	{
 		// In some cases, we get the following stack trace
 		// -----------------------------------------------------
 		// 2011-12-15 09:42:24,561 - WARN  - AWT-EventQueue-0          - 16  :SwingExceptionHandler.java     - Problems in AWT/Swing Event Dispatch Thread, Caught: java.lang.ArrayIndexOutOfBoundsException: 58 >= 54
@@ -131,7 +143,7 @@ extends JXTable
 		// so, lets add a try catch...
 		try
 		{
-//			// Noo ned to continue if it's the same model ????
+//			// No need to continue if it's the same model ????
 //			TableModel currentModel = getModel();
 //			if (newModel.equals(currentModel))
 //			{
@@ -155,9 +167,22 @@ extends JXTable
 			}
 			loadColumnLayout();
 		}
-		catch (Throwable t)
+		catch (IndexOutOfBoundsException ex)
 		{
-			_logger.warn("Problems setting GTable.setModel(). Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"').", t);
+			// If called for first time and we get problems, try once more...
+			if (neastLevel == 0)
+			{
+				_logger.info("Problems setting GTable.setModel(). (first time call) Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+				setModelInternal(newModel, neastLevel++);
+			}
+			else
+			{
+				_logger.warn("Problems setting GTable.setModel(). (second time call) Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"'). I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex, ex);
+			}
+		}
+		catch (Throwable ex)
+		{
+			_logger.warn("Problems setting GTable.setModel(). Table/Component name='"+getName()+"'. TableModel=(class="+(newModel==null?"null":newModel.getClass().getName())+", toString='"+newModel+"').", ex);
 		}
 	}
 
@@ -282,14 +307,114 @@ extends JXTable
 		getColumnModel().addColumnModelListener(columnModelListener);
 
 		// Set special Render to print multiple columns sorts
-//		_thisTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
-		GTable.this.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+		getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+
+		// Set columnHeader popup menu
+		getTableHeader().setComponentPopupMenu(createTableHeaderPopupMenu());
 
 		//--------------------------------------------------------------------
 		// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
 		//--------------------------------------------------------------------
-//		_thisTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
-		GTable.this.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+		setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+	}
+
+	/**
+	 * Creates the JMenu on the Component, this can be overrided by a subclass.
+	 */
+	public JPopupMenu createTableHeaderPopupMenu()
+	{
+		JPopupMenu popup = new JPopupMenu();
+
+		popup.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				JPopupMenu p = (JPopupMenu) e.getSource();
+
+				// remove all old items (if any)
+				p.removeAll();
+
+				// Add all columns to the menu if the column control is available
+				if (isColumnControlVisible())
+				{
+					JMenuItem mi;
+
+					// RESTORE ORIGINAL COLUMN LAYOUT
+					mi = new JMenuItem("Reset to Original Column Layout");
+					p.add(mi);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							GTable.this.setOriginalColumnLayout();
+						}
+					});
+
+					// ADJUST COLUMN WIDTH
+					mi = new JMenuItem("Adjust Column Width"); // Resizes all columns to fit their content
+					p.add(mi);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							GTable.this.packAll();
+						}
+					});
+
+					// Separator
+					p.add(new JSeparator());
+					
+					// Create all column checkbox entries "on the fly"
+					for (TableColumn tc : getColumns(true))
+					{
+						final TableColumnExt tcx = (TableColumnExt) tc;
+	
+						String  colName      = tcx.getHeaderValue() + "";
+						boolean colIsVisible = tcx.isVisible();
+	
+						mi = new JCheckBoxMenuItem();
+						mi.setText(colName);
+						mi.setSelected(colIsVisible);
+						mi.addActionListener(new ActionListener()
+						{
+							@Override
+							public void actionPerformed(ActionEvent e)
+							{
+								JCheckBoxMenuItem mi = (JCheckBoxMenuItem) e.getSource();
+								try
+								{
+									// If first time fails, try a second time
+									try	{ tcx.setVisible(mi.isSelected()); }
+									catch (IndexOutOfBoundsException ex)
+									{
+										_logger.info("Problems setting TableColumnExt.setVisible(). (first time exec) Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+										tcx.setVisible(mi.isSelected());
+									}
+								}
+								catch (IndexOutOfBoundsException ex)
+								{
+									_logger.warn("Problems setting TableColumnExt.setVisible(). (second time exec) Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex);
+								}
+								catch (Throwable ex)
+								{
+									_logger.warn("Problems setting TableColumnExt.setVisible(). Table/Component name='"+getName()+"'. I guess this is a bug in JXTable, which doesn't take into account that we have hidden columns... Caught: "+ex, ex);
+								}
+							}
+						});
+	
+						p.add(mi);
+					}
+				}
+			}
+			
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+			@Override public void popupMenuCanceled(PopupMenuEvent e) {}
+		});
+
+		return popup;
 	}
 
 //    /**
@@ -1077,7 +1202,7 @@ extends JXTable
 	}
 
 	/**
-	 * This timer is started when a colomn in the table has been moved/removed
+	 * This timer is started when a column in the table has been moved/removed
 	 * It will save the column order layout...
 	 * A timer is needed because, when we move a column the method columnMoved() is kicked of
 	 * for every pixel we move the mouse.

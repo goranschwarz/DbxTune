@@ -66,4 +66,22 @@ public class SshTunnelInfo
 
 		return "";
 	}
+
+	public String getInfoString()
+	{
+//		boolean generateLocalPort = isLocalPortGenerated();
+		int    localPort = getLocalPort();
+		String destHost  = getDestHost();
+		int    destPort  = getDestPort();
+		String sshHost   = getSshHost();
+		int    sshPort   = getSshPort();
+		String sshUser   = getSshUsername();
+//		String sshPass   = getSshPassword();
+
+		return
+			"LocalPort=" + localPort + ", " +
+			"DestHost='" + destHost  + ":" + destPort  + "', " +
+			"SshHost='"  + sshHost   + ":" + sshPort   + "', " +
+			"SshUser='"  + sshUser   + "'.";
+	}
 }

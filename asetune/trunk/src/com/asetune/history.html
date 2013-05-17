@@ -22,6 +22,117 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2012-MM-DD</H2>
+<UL>
+	<LI>
+	<b>New jConnect driver</b><br>
+	From jConnect 6.05 to jConnect 7.07 ESD#4<br>
+	</LI>
+
+	<LI>
+	<b>Large Icons</b><br>
+	For some windows and dialogs, a set of 32*32 pixel icons was created. Works better for Windows7 and MacOS<br>
+	</LI>
+
+	<LI>
+	<b>New tool - Stacktrace analyzer</b><br>
+	This tool can be used in strange circumstances to analyze in what code path the ASE Server is in.<br>
+	The tool will just <i>read</i> a stacktrace file produced by the ASE Server using a special mode on the server (called sybmon)
+	a small shell script <i>template</i> is also available. But the shellscript has to be created executed by <i>you</i>.
+	Then FTP the output and read the file using this tool.<br>
+	If this tool will be used a lot, then I will need to implement a SSH execution of the script and grab the output back to
+	the local machine so you don't need to do all the above. Then the tool would be a bit more <i>automatic</i> if you <b>really</b>
+	need that functionality, let me know and I will see what I can do!<br>
+	</LI>
+
+	<LI>
+	<b>Change - The default behaviour of "change to tab" </b><br>
+	When any blocking locks or long running transactions appears in the system a "popup" will become visible
+	that asks you what you want to do "stay in current tab" or "change to tab ???". <br>
+	The default was previously to: "Always show this dialog when this happens" and "Change focus to tab '???'"<br>
+	The new defaults are: "Stay in <b>current</b> tab, or simply, do nothing" and "Remember the above choice until the application restarts"<br>
+	</LI>
+
+	<LI>
+	<b>Change - Most JTables now has a "right click" pupup menu on the column headings</b><br>
+	Most JTables you can now choose what columns to be visible, simply by "right click" on the column header and pupup menu will be visible with some options.
+	</LI>
+
+	<LI>
+	<b>Bug fix: Performance Counter 'Threads' - missing records</b><br>
+	This problem has only been seen if ASE runs on the Windows platform.<br>
+	To few records in the Performance Counter. This was due to a bad join from monThread to monTask<br>
+	The join towards monTask is only to distinguage syb_system_pool:NetController and syb_system_pool:DiskController<br>
+	Now using a outer join to get records that doesn't have a record in monTask<br>
+	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads 
+	but the rest of the "engine" threads has no matching entry in monTask, because they are not executing anything.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancements to Graphs attached to the Performance Counter 'Threads'</b><br>
+	The labels for the '<i>CPU Thread BusyTicksPct Average per Pool Type</i>' now contains how many threads it averages on.<br>
+	The labels for the '<i>CPU Thread BusyTicksPct Usage per Thread</i>' now reflects the "thread number" within the <code>ThreadPoolNameType</code> instead of the <code>ThreadID</code> this makes it a bit more readable I hope.<br>
+	</LI>
+
+	<LI>
+	<b>Summary Panel - Enhancement</b><br>
+	<ul>
+	  <li><code>fullTranslogCount</code> - Checking if any database transaction logs are full, using <code>lct_admin('logfull', dbid)</code> was to expensive, or time consuming.<br>
+	      This was replaced with checking the <code>monOpenDatabases.TransactionLogFull</code> column, this is only done if the user has <code>mon_role</code> granted and configuration <code>enable monitoring</code> is enabled.
+	      If the above is not true, we fall back and use the old <code>lct_admin('logfull', dbid)</code> check.</li>
+	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold' 
+	      when trying to get oldest open transaction. If you are not authorized to select on syslogshold, a static value of -99 will be used instead.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Loading Recorded Session - Enhancements</b><br>
+	<ul>
+	   <li>When connecting to the data store, show a GUI Dialog what you are connecting to.<br>
+	       This to help determinate if we are actually doing something... or if the GUI is blocked in some way.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Offline DDL View - Enhancements</b><br>
+	<ul>
+	   <li>Double click on a row will show the content (same as: rightClick -&gt; Show)</li>
+	   <li>Arrow Keys: up/down, after stop moving, wait for 350ms, then 'show content'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>SQL Window - Enhancements</b><br>
+	<ul>
+	   <li>Better error handling if connection is aborted/killed in the ASE Server while processing</li>
+	   <li>Added some static text to the ASE code completion 'alter thread pool...'</li>
+	   <li>Command history, which is persisted and shared between different Concurrent SQL Windows instances</li>
+	   <li>Favorite SQL/RCL button now has the ability to add/change/remove your own SQL Favorites using a small dialog</li>
+	   <li>If you want to connect to a JDBC source where the driver is <b>not</b> in the current classpath, a dialog has been created so you can add JDBC driver to the system without having to change the bat or shell file that started the SQL Window tool.</li>
+	   <li>Open a new SQL Window tool, with that is connected to the same server. Use 'Clone Connect' in the menu.</li>
+	   <li>Using Icons instead of text for the "Exec" and "GUI Showplan Exec"</li>
+	   <li>Use "Drag and Drop" on the buttons "Exec" and "GUI Showplan Exec" to execute a SQL Statement. This will be usable from the <b>History window</b>, that is if you have two SQL Windows opened. But only one History Window... Then you can do "Drag" from the History Table and "Drop" on the SQL Windows "exec button" where you want it to be executed.</li>
+	   <li>Simple '<b>grep</b>' functionality. do: <code>exec sp_who&lt;NL&gt;go | grep 'sa'</code> will do grep for 'sa' in the output from the resultset(s)</li>
+	   <li>Simple '<b>bcp</b>' functionality. do: <code>select * from t1 where c1='x'&lt;NL&gt;go | bcp dbname.owner.desttab -Usa -Pxxx -STO_SRV </code> will try to BCP values into the table in the destination server.</li>
+	   <li>Simple '<b>rpc</b>' functionality. do: <code>\exec|rpc sp_who ? :( string = '2' )</code> will try to do a RPC call to ASE using a JDBC CallableStatement to execute the procedure. In this example we call sp_who with a <i>string</i> parameter of value "2". This is also the only way to check return code and output parameters from a stored procedure.</li>
+	   <li>to get help on <i>go</i> commands do: <code>go | ?</code> </li>
+	   <li>Bug fix: In some cases a <i>error popup</i> window was displayed to early, then it was hard to figgure out if the command was still running or not. This is fixed.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Log Tail - Enhancements</b><br>
+	<ul>
+	   <li>Removed some bug: In some cases a whole line were not treated as one line...</li>
+	   <li>Added: how many "old" rows that should be included in the tail.</li>
+	   <li>Added: Start from the beginning of a file..</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2012-03-03</H2>
 <UL>
 	<LI>

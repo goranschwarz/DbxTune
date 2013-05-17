@@ -9,7 +9,7 @@ import java.io.Reader;
 import java.io.StringReader;
 
 import com.asetune.sql.pipe.PipeCommand;
-import com.asetune.sql.pipe.UnknownPipeCommandException;
+import com.asetune.sql.pipe.PipeCommandException;
 
 /**
  * Read a file or a String with 'go' terminations.<br>
@@ -133,6 +133,73 @@ public class AseSqlScriptReader
 		_execWithoutGoAtTheEnd = execWithoutGoAtTheEnd;
 	}
 
+	public static boolean hasCommandTerminator(String sqlStr)
+	{
+		Reader         reader;
+		BufferedReader bReader;
+		
+		if (sqlStr == null)
+			throw new IllegalArgumentException("Input string can't be null.");
+
+		reader = new StringReader(sqlStr);
+		bReader = new BufferedReader(reader);
+
+		boolean hasTerminator = false;
+
+		try
+		{
+			// Get lines from the reader
+			String lastRow = "";
+			String row;
+			for (row = bReader.readLine(); row != null; row = bReader.readLine())
+			{
+				if (StringUtil.isNullOrBlank(row))
+					continue;
+				lastRow = row;
+			}
+	
+			//---------------------------------
+			// Now investigate lastRow
+			//---------------------------------
+	
+			row = lastRow;
+
+			// if end of batch 'go [###]'
+			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+			{
+				hasTerminator = true;
+			}
+	
+			// if end of batch 'reset'
+			if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+			{
+				hasTerminator = true;
+			}
+			
+			// do no more (kind of EOF): 'quit/exit'
+			if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
+			     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+			{
+				hasTerminator = true;
+			}
+		}
+		catch (IOException e)
+		{
+		}
+		finally
+		{
+			try
+			{
+				bReader.close();
+				reader.close();
+			}
+			catch (IOException ignore) {}
+		}
+
+
+		return hasTerminator;
+	}
+
 	/**
 	 * Get number of batches in this Reader
 	 * <p>
@@ -248,7 +315,7 @@ public class AseSqlScriptReader
 	 * @return SQL Commands in Current batch, no more batches returns null
 	 */
 	public String getSqlBatchString()
-	throws IOException, UnknownPipeCommandException
+	throws IOException, PipeCommandException
 	{
 		_multiExecCount = 1;
 		_pipeCommand    = null;
@@ -440,7 +507,7 @@ public class AseSqlScriptReader
 		{
 			e.printStackTrace();
 		}
-		catch(UnknownPipeCommandException e)
+		catch(PipeCommandException e)
 		{
 			e.printStackTrace();
 		}

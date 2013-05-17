@@ -8,7 +8,7 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -168,6 +168,13 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		String preDropTmpTables =
+			"\n " +
+			"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
+			"if ((select object_id('#tempResult')) IS NOT NULL) drop table #tempResult \n" +
+			"go \n" +
+			"\n";
+
 //		String sql = "select * from master..monThread";
 //		String sql = 
 //			"select \n" +
@@ -185,7 +192,10 @@ extends CountersModel
 		String sql = 
 			"select \n" +
 			"     th.InstanceID, th.ThreadPoolID, th.ThreadPoolName, \n" +
-			"     ThreadType = CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'User Tasks') ELSE ta.Name END, \n" +
+			"     ThreadType = CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'Engine') \n" +
+			"                       WHEN ta.Name IS NULL       THEN convert(varchar(30),'Engine') \n" +
+			"                       ELSE ta.Name \n" +
+			"                  END, \n" +
 			"     th.State, th.ThreadID, \n" +
 			"     th.TaskRuns, th.TotalTicks, th.IdleTicks, th.SleepTicks, th.BusyTicks, \n" +
 			"     IdleTicksPct  = convert(numeric(10,1), ((th.IdleTicks +0.0)/(th.TotalTicks+0.0)) * 100.0), \n" +
@@ -195,11 +205,27 @@ extends CountersModel
 			"     th.KTID, th.OSThreadID, th.AltOSThreadID, th.ThreadAffinity, \n" +
 			"     th.MinorFaults, th.MajorFaults, \n" +
 			"     th.VoluntaryCtxtSwitches, th.NonVoluntaryCtxtSwitches, \n" +
-			"     ThreadPoolNameType = th.ThreadPoolName + ':' + CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'User Tasks') ELSE ta.Name END \n" +
+			"     ThreadPoolNameType = th.ThreadPoolName + ':' \n" +
+			"                        + CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'Engine') \n" +
+			"                               WHEN ta.Name IS NULL       THEN convert(varchar(30),'Engine') \n" +
+			"                               ELSE ta.Name \n" +
+			"                          END, \n" +
+			"     ThreadPoolNameTypeNum = convert(int, 0) \n" +
+			"into #tempResult \n" +
 			"from master..monThread th, master..monTask ta \n" +
-			"where th.InstanceID = ta.InstanceID \n" +
-			"  and th.ThreadID   = ta.ThreadID \n" +
-			"  and th.KTID       = ta.KTID \n" +
+			"where th.InstanceID *= ta.InstanceID \n" +
+			"  and th.ThreadID   *= ta.ThreadID \n" +
+			"  and th.KTID       *= ta.KTID \n" +
+			"order by th.ThreadPoolID, th.ThreadID \n" +
+			"     \n" +
+			"update #tempResult \n" +
+			"set ThreadPoolNameTypeNum = isnull((select #tempResult.ThreadID - min(TMP.ThreadID) + 1 \n" +
+			"                                      from #tempResult TMP \n" +
+			"                                     where #tempResult.ThreadPoolNameType  = TMP.ThreadPoolNameType  \n" +
+			"                                   ), #tempResult.ThreadID)  \n" +
+			"    \n" +
+			"select * from #tempResult \n" +
+			"drop table #tempResult \n" +
 			"";
 			
 		return sql;
@@ -223,28 +249,61 @@ extends CountersModel
 		if (GRAPH_NAME_BUSY_AVG.equals(tgdp.getName()))
 		{
 			// Get distinct pool name types
-			ArrayList<String> poolNameTypes = new ArrayList<String>();
+//			ArrayList<String> poolNameTypes = new ArrayList<String>();
+//			int pos_poolName = findColumn("ThreadPoolNameType");
+//			for (int r=0; r< this.size(); r++)
+//			{
+//				String poolNameType = (String) getValueAt(r, pos_poolName);
+//				if ( ! poolNameTypes.contains(poolNameType))
+//					poolNameTypes.add(poolNameType);
+//			}
+//			
+//			// Write 1 "line (busy)" for every distinct poolName
+//			Double[] dArray = new Double[poolNameTypes.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i=0; i< poolNameTypes.size(); i++)
+//			{
+//				// get Average BusyTicksPct per poolName
+//				String poolName = poolNameTypes.get(i);
+//				int[] pkRows = this.getAbsRowIdsWhere("ThreadPoolNameType", poolName);
+//				Double BusyTicksPct  = this.getDiffValueAvg(pkRows, "BusyTicksPct");
+//				//Double SleepTicksPct = this.getDiffValueAvg(pkRows, "SleepTicksPct");
+//
+//				lArray[i] = poolName;
+//				dArray[i] = BusyTicksPct;
+//			}
+//			// Set the values
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setLabel(lArray);
+//			tgdp.setData(dArray);
+
+			LinkedHashMap<String, Integer> poolNameTypes = new LinkedHashMap<String, Integer>();
 			int pos_poolName = findColumn("ThreadPoolNameType");
 			for (int r=0; r< this.size(); r++)
 			{
 				String poolNameType = (String) getValueAt(r, pos_poolName);
-				if ( ! poolNameTypes.contains(poolNameType))
-					poolNameTypes.add(poolNameType);
+				Integer count = poolNameTypes.get(poolNameType);
+				if (count == null)
+					poolNameTypes.put(poolNameType, 1);
+				else
+					poolNameTypes.put(poolNameType, count.intValue() + 1);
 			}
 
 			// Write 1 "line (busy)" for every distinct poolName
 			Double[] dArray = new Double[poolNameTypes.size()];
 			String[] lArray = new String[dArray.length];
-			for (int i=0; i< poolNameTypes.size(); i++)
+			int i = 0;
+			for (String poolName : poolNameTypes.keySet())
 			{
-				// get Average BusyTicksPct per poolName
-				String poolName = poolNameTypes.get(i);
+				Integer count = poolNameTypes.get(poolName);
+
 				int[] pkRows = this.getAbsRowIdsWhere("ThreadPoolNameType", poolName);
 				Double BusyTicksPct  = this.getDiffValueAvg(pkRows, "BusyTicksPct");
 				//Double SleepTicksPct = this.getDiffValueAvg(pkRows, "SleepTicksPct");
 
-				lArray[i] = poolName;
+				lArray[i] = poolName + "(" + count + ")";
 				dArray[i] = BusyTicksPct;
+				i++;
 			}
 			// Set the values
 			tgdp.setDate(this.getTimestamp());
@@ -261,12 +320,13 @@ extends CountersModel
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				String ThreadPoolNameType = this.getRateString  (i, "ThreadPoolNameType");
-				String ThreadID           = this.getRateString  (i, "ThreadID");
-				String InstanceID         = this.getRateString  (i, "InstanceID");
+				String ThreadPoolNameType    = this.getRateString  (i, "ThreadPoolNameType");
+//				String ThreadID              = this.getRateString  (i, "ThreadID");
+				String ThreadPoolNameTypeNum = this.getRateString  (i, "ThreadPoolNameTypeNum");
+				String InstanceID            = this.getRateString  (i, "InstanceID");
 
 				String labelName;
-				if      (ThreadPoolNameType.startsWith("syb_default_pool:"))               labelName = useShortNames ? "UT" : "UserTasks";
+				if      (ThreadPoolNameType.startsWith("syb_default_pool:"))               labelName = useShortNames ? "E" : "Engine";
 				else if (ThreadPoolNameType.startsWith("syb_system_pool:DiskController" )) labelName = "DiskCtrl";
 				else if (ThreadPoolNameType.startsWith("syb_system_pool:NetController" ))  labelName = "NetCtrl";
 				else if (ThreadPoolNameType.startsWith("syb_system_pool:sybperf helper" )) labelName = "WinPerfmonHelper";
@@ -274,9 +334,9 @@ extends CountersModel
 				else labelName = ThreadPoolNameType;
 				
 				if (isClusterEnabled())
-					labelName = InstanceID + ":" + labelName + "-" + ThreadID;
+					labelName = InstanceID + ":" + labelName + "-" + ThreadPoolNameTypeNum;
 				else
-					labelName =                    labelName + "-" + ThreadID;
+					labelName =                    labelName + "-" + ThreadPoolNameTypeNum;
 
 				lArray[i] = labelName;
 				dArray[i] = this.getRateValueAsDouble(i, "BusyTicksPct");

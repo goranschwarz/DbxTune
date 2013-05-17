@@ -19,6 +19,7 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
@@ -47,6 +48,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JWindow;
@@ -67,6 +69,7 @@ import javax.swing.text.html.HTMLEditorKit;
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.jdesktop.swingx.JXEditorPane;
 import org.jdesktop.swingx.JXErrorPane;
 import org.jdesktop.swingx.error.ErrorInfo;
 
@@ -153,6 +156,125 @@ public class SwingUtils
 			}
 		}
 		return result;
+	}
+
+	/**
+	 * Set the String residing on the clipboard.	
+	 */
+	public static void setClipboardContents(String s)
+	{
+		StringSelection selection = new StringSelection(s);
+		Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+	}
+
+    /**
+     * borrowed from BasicErrorPaneUI
+     * Converts the incoming string to an escaped output string. This method
+     * is far from perfect, only escaping &lt;, &gt; and &amp; characters
+     */
+    private static String escapeXml(String input) {
+        String s = input == null ? "" : input.replace("&", "&amp;");
+        s = s.replace("<", "&lt;");
+        return s = s.replace(">", "&gt;");
+    }
+    /**
+     * borrowed from BasicErrorPaneUI
+     */
+	private static String getDetailsAsHTML(ErrorInfo errorInfo)
+	{
+		if ( errorInfo.getErrorException() != null )
+		{
+			// convert the stacktrace into a more pleasent bit of HTML
+			StringBuffer html = new StringBuffer("<html>");
+			html.append("<h2>" + escapeXml(errorInfo.getTitle()) + "</h2>");
+			html.append("<HR size='1' noshade>");
+			html.append("<div></div>");
+			html.append("<b>Message:</b>");
+			html.append("<pre>");
+			html.append("    " + escapeXml(errorInfo.getErrorException().toString()));
+			html.append("</pre>");
+			html.append("<b>Level:</b>");
+			html.append("<pre>");
+			html.append("    " + errorInfo.getErrorLevel());
+			html.append("</pre>");
+			html.append("<b>Stack Trace:</b>");
+			Throwable ex = errorInfo.getErrorException();
+			while (ex != null)
+			{
+				html.append("<h4>" + ex.getMessage() + "</h4>");
+				html.append("<pre>");
+				for (StackTraceElement el : ex.getStackTrace())
+				{
+					html.append("    " + el.toString().replace("<init>", "&lt;init&gt;") + "\n");
+				}
+				html.append("</pre>");
+				ex = ex.getCause();
+			}
+			html.append("</html>");
+			return html.toString();
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param throwable any Throwable to be displayed
+	 */
+	public static void showInfoMessageExt(Component owner, String title, String msg, JCheckBox chkbox, Throwable throwable)
+	{
+		showMessageExt(Level.INFO, owner, title, msg, chkbox, throwable);
+	}
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param throwable any Throwable to be displayed
+	 */
+	public static void showWarnMessageExt(Component owner, String title, String msg, JCheckBox chkbox, Throwable throwable)
+	{
+		showMessageExt(Level.WARNING, owner, title, msg, chkbox, throwable);
+	}
+	/**
+	 * 
+	 * @param owner     parent GUI component
+	 * @param title     window title
+	 * @param msg       the error message to be displayed
+	 * @param chkbox    If we want to have a check box, which can have "do not show this next time"
+	 * @param throwable any Throwable to be displayed
+	 */
+	public static void showErrorMessageExt(Component owner, String title, String msg, JCheckBox chkbox, Throwable throwable)
+	{
+		showMessageExt(Level.SEVERE, owner, title, msg, chkbox, throwable);
+	}
+
+	/** just convert the Throwable into a JPanel and call showMessageExt */
+	private static void showMessageExt(final Level errorLevel, final Component owner, final String title, final String msg, final JCheckBox chkbox, Throwable throwable)
+	{
+		JXEditorPane details = new JXEditorPane();
+        details.setContentType("text/html");
+        JScrollPane detailsScrollPane = new JScrollPane(details);
+        detailsScrollPane.setPreferredSize(new Dimension(10, 250));
+        details.setEditable(false);
+
+        ErrorInfo info = new ErrorInfo(title, msg, null, null, throwable, errorLevel, null);
+		String htmlText = getDetailsAsHTML(info);
+		details.setText(htmlText);
+		details.setCaretPosition(0);
+
+		JPanel stackTracePanel = new JPanel();
+		stackTracePanel.setLayout(new MigLayout());
+		stackTracePanel.add(detailsScrollPane, "push, grow");
+		
+		showMessageExt(errorLevel, owner, title, msg, chkbox, stackTracePanel);
 	}
 
 	/**

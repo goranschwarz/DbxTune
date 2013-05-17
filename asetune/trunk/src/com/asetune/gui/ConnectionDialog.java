@@ -17,6 +17,7 @@ import java.awt.event.KeyListener;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -77,8 +78,10 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
@@ -91,6 +94,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.H2UrlHelper;
+import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
@@ -316,7 +320,8 @@ public class ConnectionDialog
 	private ImageIcon          _sendOfflineImageIcon        = SwingUtils.readImageIcon(Version.class, "images/pcs_send_32.png");
 	private JLabel             _sendOfflineIcon             = new JLabel(_sendOfflineImageIcon);
 	private MultiLineLabel     _sendOfflineHelp             = new MultiLineLabel();
-	private JLabel             _sendOfflineNotYetImpl1_lbl  = new JLabel("<html><b>NOT YET IMPLEMETED</b></html>", JLabel.CENTER);
+//	private JLabel             _sendOfflineNotYetImpl1_lbl  = new JLabel("<html><i>NOT YET IMPLEMETED</i></html>", JLabel.CENTER);
+	private JLabel             _sendOfflineNotYetImpl1_lbl  = new JLabel("<html><i></i></html>", JLabel.CENTER);
 	private JLabel             _sendOfflineNotYetImpl2_lbl  = new JLabel();
 	private JButton            _sendOfflineSend_but         = new JButton("Send DB for analyze...");
 	private JButton            _sendOfflineTestConn_but     = new JButton("Test Connectivity");
@@ -344,6 +349,9 @@ public class ConnectionDialog
 	private ImageIcon          _jdbcDriverInfoImageIcon  = SwingUtils.readImageIcon(Version.class, "images/pcs_read_32.png"); // FIXME: get a icon for this
 	private JLabel             _jdbcDriverInfoIcon       = new JLabel(_jdbcDriverInfoImageIcon);
 	private MultiLineLabel     _jdbcDriverInfoHelp       = new MultiLineLabel();
+	private GTable             _jdbcDiTable              = new GTable();
+	private DefaultTableModel  _jdbcDiTableModel         = new DefaultTableModel();
+	private JButton            _jdbcDiAddDriver_but      = new JButton("Add Driver");
 
 	//---- Buttons at the bottom
 	private JLabel             _ok_lbl         = new JLabel(""); // Problem description if _ok is disabled
@@ -632,6 +640,8 @@ public class ConnectionDialog
 //	public PersistentCounterHandler getPcsWriter()      { return _pcsWriter; }
 	public Connection               getOfflineConn()    { return _offlineConn; }
 	public Connection               getJdbcConn()       { return _jdbcConn; }
+
+	public SshTunnelInfo            getAseSshTunnelInfo() { return _aseSshTunnelInfo; }
 
 	public Date getDisConnectTime()
 	{
@@ -1290,6 +1300,7 @@ public class ConnectionDialog
 		"    </ul>" +
 		"    The default value for <code>format</code> can be changed with in the Configuration file with property <code>PersistWriterJdbc.h2DateParseFormat=formatString</code> <br>" +
 		"    The default value for <code>roll</code>   can be changed with in the Configuration file with property <code>PersistWriterJdbc.h2NewDbOnDateChange=true|false</code> <br>" +
+		"    Content of the <code></code> is based on Java <A HREF=\"http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html\">SimpleDateFormat</A>, http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html <br>" +
 		"  </li>" +
 		"  <li><code>${SERVERNAME} </code> <br>" +
 		"    The SERVERNAME will be substituted with the content of the ASE global variable <code>@@servername</code> of which ASE server we are monitoring.<br>" +
@@ -1608,7 +1619,7 @@ public class ConnectionDialog
 			"To get this extra service you need to contact goran_schwarz@hotmail.com\n");
 
 		_sendOfflineNotYetImpl2_lbl.setText("<html>" +
-				"This functionality is <b>NOT YET IMPLEMETED</b>, sorry...<br>" +
+				"This functionality is <i>NOT YET IMPLEMETED</i>, sorry...<br>" +
 				"<br>" +
 				"But if you are <b>interested</b> in this functionality<br>" +
 				"Please let me know, so I can implemented it ASAP<br>" +
@@ -1722,7 +1733,10 @@ public class ConnectionDialog
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 		_jdbcDriverInfoPanel = panel;
 		
-		_jdbcDriverInfoHelp.setText("What JDBC Drivers are known to the system\n");
+		_jdbcDriverInfoHelp.setText(
+				"What JDBC Drivers are known to the system\n" +
+				"Or what drivers has been registered in the Java DriverManager.\n" +
+				"This is not 100% functional yet (some bugs in the dialog)");
 
 //		_jdbcDriver_lbl  .setToolTipText("JDBC drivername to be used when creating the connection");
 //		_jdbcDriver_cbx  .setToolTipText("JDBC drivername to be used when creating the connection");
@@ -1738,7 +1752,93 @@ public class ConnectionDialog
 		panel.add(_jdbcDriverInfoIcon,  "");
 		panel.add(_jdbcDriverInfoHelp,  "wmin 100, push, grow, wrap 15");
 
-		panel.add(new JLabel("NOT YET IMPLEMENTED"),   "");
+//		panel.add(new JLabel("NOT YET IMPLEMENTED"),   "wrap");
+		
+		panel.add(new JdbcDriverHelper.JdbcDriverInfoPanel(), "span, push, grow");
+
+//		_jdbcDiTableModel.addColumn("Class");
+//		_jdbcDiTableModel.addColumn("Description");
+//		_jdbcDiTableModel.addColumn("Home Page");
+//		_jdbcDiTableModel.addColumn("Version");
+//		_jdbcDiTableModel.addColumn("Jar File");
+//		_jdbcDiTableModel.addColumn("toString");
+//
+//		for (Enumeration<Driver> drivers = DriverManager.getDrivers(); drivers.hasMoreElements();)
+//		{
+//			Driver driver    = drivers.nextElement();
+//			String className = driver.getClass().getName();
+//			String desc      = "";
+//			String homePage  = "";
+//			String version   = "";
+//			if      ("sun.jdbc.odbc.JdbcOdbcDriver"    .equals(className)) { desc = "JDBC - ODBC Bridge";     homePage = "en.wikipedia.org/wiki/JDBC_driver"; }
+//			else if ("com.sybase.jdbc3.jdbc.SybDriver" .equals(className)) { desc = "Sybase JDBC 3.0 Driver"; homePage = "www.sybase.com/jconnect"; }
+//			else if ("com.sybase.jdbc4.jdbc.SybDriver" .equals(className)) { desc = "Sybase JDBC 4.0 Driver"; homePage = "www.sybase.com/jconnect"; }
+//			else if ("net.sourceforge.jtds.jdbc.Driver".equals(className)) { desc = "jTDS Driver";            homePage = "jtds.sourceforge.net"; }
+//			else if ("org.h2.Driver"                   .equals(className)) { desc = "H2 Driver";              homePage = "www.h2database.com"; }
+//			else if ("com.sap.db.jdbc.Driver"          .equals(className)) { desc = "SAP HANA Driver";        homePage = "www.sap.com/HANA"; }
+//
+//			try
+//			{
+//				DriverPropertyInfo[] dpi = driver.getPropertyInfo("", null);
+//				if (dpi != null)
+//				{
+//					for (int i=0; i<dpi.length; i++)
+//					{
+//						String xName  = dpi[i].name;
+//						String xValue = dpi[i].value;
+//					//	String xDesc  = dpi[i].description;
+//					//	System.out.println("dpi["+i+"]: name='"+dpi[i].name+"', value='"+dpi[i].value+"', desc='"+dpi[i].description+"'.");
+//						
+//						if (xName != null && xName.toLowerCase().startsWith("version"))
+//						{
+//							version = xValue;
+//							if (version != null && version.indexOf('\n') >= 0)
+//								version = version.substring(0, version.indexOf('\n'));
+//						}
+//					}
+//				}
+//			}
+//			catch (Throwable ignore) {}
+//
+//			Vector<String> row = new Vector<String>();
+//			row.add(className);
+//			row.add(desc);
+//			row.add(homePage);
+//			row.add(version);
+//			row.add("<in system classpath>");
+//			row.add(driver.toString());
+//			_jdbcDiTableModel.addRow(row);
+////			try
+////			{
+////				System.out.println("DRIVER: class='"+driver.getClass().getName()+"', props="+driver.getPropertyInfo("", null));
+////			}
+////			catch (SQLException e)
+////			{
+////				// TODO Auto-generated catch block
+////				e.printStackTrace();
+////			}
+//		}
+//		JScrollPane jScrollPane = new JScrollPane();
+//		jScrollPane.setViewportView(_jdbcDiTable);
+//
+//		_jdbcDiTable.setModel(_jdbcDiTableModel);
+//		_jdbcDiTable.setSortable(true);
+//		_jdbcDiTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+//		_jdbcDiTable.setColumnControlVisible(true);
+//		_jdbcDiTable.packAll();
+//
+//		panel.add(jScrollPane,           "span, push, grow, wrap");
+//		panel.add(_jdbcDiAddDriver_but,  "span, right, pushx, wrap");
+//
+//		_jdbcDiAddDriver_but.setEnabled(false);
+//		_jdbcDiAddDriver_but.setToolTipText("Sorry not yet implemeted...");
+
+		/*
+		http://stackoverflow.com/questions/288828/how-to-use-a-jdbc-driver-from-an-arbitrary-location
+		http://www.kfu.com/~nsayer/Java/dyn-jdbc.html
+		http://www.jroller.com/tackline/entry/dynamically_loading_jdbc_drivers
+		*/
+		
 //		panel.add(_jdbcDriver_lbl,   "");
 //		panel.add(_jdbcDriver_cbx,   "push, grow, wrap");
 //
@@ -2987,41 +3087,129 @@ public class ConnectionDialog
 		return _jdbcConn != null;
 	}
 
+//	/**
+//	 * Test to connect
+//	 */
+//	private Connection jdbcConnect(String appname, String driver, String url, String user, String passwd)
+//	{
+//		try
+//		{
+//			Class.forName(driver).newInstance();
+//			Properties props = new Properties();
+//			props.put("user", user);
+//			props.put("password", passwd);
+//	
+//			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+//			Connection conn = DriverManager.getConnection(url, props);
+//	
+//			return conn;
+//		}
+//		catch (SQLException e)
+//		{
+//			StringBuffer sb = new StringBuffer();
+//			while (e != null)
+//			{
+//				sb.append( "\n" );
+//				sb.append( e.getMessage() );
+//				e = e.getNextException();
+//			}
+////			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+//			SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection FAILED.\n\n"+sb.toString(), e);
+//		}
+//		catch (Exception e)
+//		{
+////			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
+//			SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection FAILED.\n\n"+e.toString(), e);
+//		}
+//		return null;
+//	}
 	/**
 	 * Test to connect
 	 */
-	private Connection jdbcConnect(String appname, String driver, String url, String user, String passwd)
+	private Connection jdbcConnect(final String appname, final String driver, final String url, final String user, final String passwd)
 	{
-		try
+		WaitForExecDialog wait = new WaitForExecDialog(this, "JDBC Connect...");
+		BgExecutor doWork = new BgExecutor(wait)
 		{
-			Class.forName(driver).newInstance();
-			Properties props = new Properties();
-			props.put("user", user);
-			props.put("password", passwd);
-	
-			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
-			Connection conn = DriverManager.getConnection(url, props);
-	
-			return conn;
-		}
-		catch (SQLException e)
-		{
-			StringBuffer sb = new StringBuffer();
-			while (e != null)
+			@Override
+			public Object doWork()
 			{
-				sb.append( "\n" );
-				sb.append( e.getMessage() );
-				e = e.getNextException();
+				try
+				{
+					// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
+					Driver jdbcDriver = DriverManager.getDriver(url);
+					if (jdbcDriver == null)
+						Class.forName(driver).newInstance();
+
+//					Class.forName(driver).newInstance();
+//					JdbcDriverHelper.newDriverInstance(driver);
+
+					Properties props = new Properties();
+					props.put("user", user);
+					props.put("password", passwd);
+
+					_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+					getWaitDialog().setState(
+							"<html>" +
+							"Driver: "+ driver + "<br>" +
+							"URL: "   + url    + "<br>" +
+							"User: "  + user   + "<br>" +
+							"</html>");
+					SwingUtils.setWindowMinSize(getWaitDialog());
+
+					Connection conn = DriverManager.getConnection(url, props);
+
+					return conn;
+				}
+				catch (SQLException ex)
+				{
+					SQLException eTmp = ex;
+					StringBuffer sb = new StringBuffer();
+					while (eTmp != null)
+					{
+						sb.append( "\n" );
+						sb.append( eTmp.getMessage() );
+						eTmp = eTmp.getNextException();
+					}
+					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+sb.toString());
+					setException(ex);
+				}
+				catch (Exception ex)
+				{
+					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch Exception) Caught: "+ex);
+					setException(ex);
+				}
+				return null;
 			}
-//			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+sb.toString(), Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
-			SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection FAILED.\n\n"+sb.toString(), e);
-		}
-		catch (Exception e)
+		};
+		Connection conn = (Connection) wait.execAndWait(doWork, 100);
+
+		if (doWork.hasException())
 		{
-//			JOptionPane.showMessageDialog(this, "Connection FAILED.\n\n"+e.toString(),  Version.getAppName()+" - jdbc connect", JOptionPane.ERROR_MESSAGE);
-			SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection FAILED.\n\n"+e.toString(), e);
+			Throwable t = doWork.getException();
+			if (t instanceof SQLException)
+			{
+				SQLException e = (SQLException) t;
+				StringBuffer sb = new StringBuffer();
+				while (e != null)
+				{
+					sb.append( "\n" );
+					sb.append( e.getMessage() );
+					e = e.getNextException();
+				}
+				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (SQLException) FAILED.\n\n"+sb.toString(), e);
+			}
+			else if (t instanceof Exception)
+			{
+				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (Exception) FAILED.\n\n"+t.toString(), t);
+			}
+			else
+			{
+				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (other) FAILED.\n\n"+t.toString(), t);
+			}
 		}
-		return null;
+
+		return conn;
 	}
 
 	/**
@@ -3258,11 +3446,22 @@ public class ConnectionDialog
 		// --- PCS: COMBOBOX: JDBC DRIVER ---
 		if (_pcsJdbcDriver_cbx.equals(source))
 		{
-			String jdbcDriver = _pcsJdbcDriver_cbx.getEditor().getItem().toString();
+//			String jdbcDriver = _pcsJdbcDriver_cbx.getEditor().getItem().toString();
+			String jdbcDriver = _pcsJdbcDriver_cbx.getSelectedItem().toString();
+
 			if ("org.h2.Driver".equals(jdbcDriver))
 				_pcsH2Option_startH2NetworkServer_chk.setVisible(true);
 			else
 				_pcsH2Option_startH2NetworkServer_chk.setVisible(false);
+			
+			// add templates
+			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
+			if (urlTemplates != null && urlTemplates.size() > 0)
+			{
+				_pcsJdbcUrl_cbx.removeAllItems();
+				for (String template : urlTemplates)
+					_pcsJdbcUrl_cbx.addItem(template);
+			}
 		}
 
 		// --- PCS: BUTTON: JDBC TEST CONNECTION ---
@@ -3355,11 +3554,22 @@ public class ConnectionDialog
 		// --- OFFLINE: COMBOBOX: JDBC DRIVER ---
 		if (_offlineJdbcDriver_cbx.equals(source))
 		{
-			String jdbcDriver = _offlineJdbcDriver_cbx.getEditor().getItem().toString();
+//			String jdbcDriver = _offlineJdbcDriver_cbx.getEditor().getItem().toString();
+			String jdbcDriver = _offlineJdbcDriver_cbx.getSelectedItem().toString();
+			
 			if ("org.h2.Driver".equals(jdbcDriver))
 				_offlineH2Option_startH2NwSrv_chk.setVisible(true);
 			else
 				_offlineH2Option_startH2NwSrv_chk.setVisible(false);
+
+			// Get templates
+			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
+			if (urlTemplates != null && urlTemplates.size() > 0)
+			{
+				_offlineJdbcUrl_cbx.removeAllItems();
+				for (String template : urlTemplates)
+					_offlineJdbcUrl_cbx.addItem(template);
+			}
 		}
 
 		// --- OFFLINE: BUTTON: "..." 
@@ -3415,6 +3625,16 @@ public class ConnectionDialog
 		if (_jdbcDriver_cbx.equals(source))
 		{
 //			String jdbcDriver = _jdbcDriver_cbx.getEditor().getItem().toString();
+			String jdbcDriver = _jdbcDriver_cbx.getSelectedItem().toString();
+
+			// Get templates
+			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
+			if (urlTemplates != null && urlTemplates.size() > 0)
+			{
+				_jdbcUrl_cbx.removeAllItems();
+				for (String template : urlTemplates)
+					_jdbcUrl_cbx.addItem(template);
+			}
 		}
 		
 		// --- JDBC: BUTTON: "..." 
@@ -4461,6 +4681,25 @@ public class ConnectionDialog
 //		loadPropsForServer(hostPortStr);
 //	}
 
+	public static String getPasswordForServer(String hostPortStr)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String str = null;
+
+		// First do "conn.password.hostName.portNum", if not found, go to "conn.password"
+		str = conf.getProperty("conn.password."+hostPortStr);
+		if (str != null)
+		{
+			return str;
+		}
+		else
+		{
+			str = conf.getProperty("conn.password");
+			if (str != null)
+				return str;
+		}
+		return str;
+	}
 	private void loadPropsForServer(String hostPortStr)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -4490,17 +4729,21 @@ public class ConnectionDialog
 		}
 
 		// First do "conn.password.hostName.portNum", if not found, go to "conn.password"
-		str = conf.getProperty("conn.password."+hostPortStr);
+		str = getPasswordForServer(hostPortStr);
 		if (str != null)
-		{
 			_asePasswd_txt.setText(str);
-		}
-		else
-		{
-			str = conf.getProperty("conn.password");
-			if (str != null)
-				_asePasswd_txt.setText(str);
-		}
+
+//		str = conf.getProperty("conn.password."+hostPortStr);
+//		if (str != null)
+//		{
+//			_asePasswd_txt.setText(str);
+//		}
+//		else
+//		{
+//			str = conf.getProperty("conn.password");
+//			if (str != null)
+//				_asePasswd_txt.setText(str);
+//		}
 		
 		// SSH Tunnel stuff: first for host:port, then use fallback
 //		str = conf.getProperty(PROPERTY_CONN_SSH_TUNNEL+"."+hostPortStr);

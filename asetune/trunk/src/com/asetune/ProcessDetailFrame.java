@@ -8,12 +8,14 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
+import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
@@ -439,9 +441,18 @@ public class ProcessDetailFrame extends JFrame
 	private void jbInit()
 	throws Exception
 	{
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
-		if (icon != null)
-			setIconImage(icon.getImage());
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif");
+		if (icon16 != null || icon32 != null)
+		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
+			setIconImages(iconList);
+		}
+//		if (icon != null)
+//			setIconImage(icon.getImage());
 
 		titledBorderCurrent = new TitledBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.white, Color.white, new Color(103, 101, 98), new Color(148, 145, 140)), "Current Statement");
 		titledBorderPlan    = new TitledBorder(BorderFactory.createEtchedBorder(Color.white, new Color(148, 145, 140)), "Plan text");

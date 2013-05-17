@@ -28,6 +28,7 @@ import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -49,6 +50,8 @@ import com.asetune.pcs.PersistReader.CmNameSum;
 import com.asetune.pcs.PersistReader.SampleCmCounterInfo;
 import com.asetune.pcs.PersistReader.SessionInfo;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.ssh.SshTunnelInfo;
+import com.asetune.tools.QueryWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
@@ -372,6 +375,8 @@ public class CheckForUpdates
 		Date timeNow = new Date(System.currentTimeMillis());
 		String clientTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
+		String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - AseTune.getStartTime());
+
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
 
@@ -381,6 +386,7 @@ public class CheckForUpdates
 		urlParams.add("clientSourceVersion",  Version.getSourceRev());
 		urlParams.add("clientAseTuneVersion", Version.getVersionStr());
 		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
+		urlParams.add("appStartupTime",       appStartupTime);
 
 		try
 		{
@@ -820,12 +826,15 @@ public class CheckForUpdates
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
 
+		String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - QueryWindow.getStartTime());
+
 		urlParams.add("clientCheckTime",     clientTime);
 
 		urlParams.add("clientSourceDate",     Version.getSourceDate());
 		urlParams.add("clientSourceVersion",  Version.getSourceRev());
 		urlParams.add("clientAppVersion",     Version.getVersionStr());
 //		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
+		urlParams.add("appStartupTime",       appStartupTime);
 
 		try
 		{
@@ -1095,8 +1104,9 @@ public class CheckForUpdates
 
 	/**
 	 * @param connType ConnectionDialog.ASE_CONN | ConnectionDialog.OFFLINE_CONN
+	 * @param sshTunnelInfo 
 	 */
-	public static void sendConnectInfoNoBlock(final int connType)
+	public static void sendConnectInfoNoBlock(final int connType, final SshTunnelInfo sshTunnelInfo)
 	{
 		// TRACE IN DEVELOPMENT
 //		if (_printDevTrace && _checkId < 0)
@@ -1127,7 +1137,7 @@ public class CheckForUpdates
 			public void run()
 			{
 				CheckForUpdates connInfo = new CheckForUpdates();
-				connInfo.sendConnectInfo(connType);
+				connInfo.sendConnectInfo(connType, sshTunnelInfo);
 
 				CheckForUpdates udcInfo = new CheckForUpdates();
 				udcInfo.sendUdcInfo();
@@ -1141,8 +1151,9 @@ public class CheckForUpdates
 
 	/**
 	 * Send info on connection
+	 * @param sshTunnelInfo 
 	 */
-	public void sendConnectInfo(final int connType)
+	public void sendConnectInfo(final int connType, SshTunnelInfo sshTunnelInfo)
 	{
 		// URL TO USE
 		String urlStr = ASETUNE_CONNECT_INFO_URL;
@@ -1198,6 +1209,7 @@ public class CheckForUpdates
 		String srvSortOrderId   = "";
 		String srvSortOrderName = "";
 		String srvSapSystemInfo = "";
+		String sshTunnelInfoStr = "";
 
 		String usePcs           = "";
 		String pcsConfig        = "";
@@ -1216,6 +1228,9 @@ public class CheckForUpdates
 			srvSortOrderId   = mtd.getAseSortId() + "";
 			srvSortOrderName = mtd.getAseSortName();
 			srvSapSystemInfo = mtd.getSapSystemInfo();
+
+			if (sshTunnelInfo != null)
+				sshTunnelInfoStr = sshTunnelInfo.getInfoString();
 
 			// Get role list from the Summary CM
 //			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
@@ -1248,6 +1263,7 @@ public class CheckForUpdates
 			srvSortOrderId   = "offline-read";
 			srvSortOrderName = "offline-read";
 			srvSapSystemInfo = "offline-read";
+			sshTunnelInfoStr = "offline-read";
 
 			usePcs           = "true";
 			pcsConfig        = "";
@@ -1283,6 +1299,7 @@ public class CheckForUpdates
 		urlParams.add("srvSortOrderId",      srvSortOrderId);
 		urlParams.add("srvSortOrderName",    srvSortOrderName);
 		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
+		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
 
 		urlParams.add("usePcs",              usePcs);
 		urlParams.add("pcsConfig",           pcsConfig);
@@ -2291,6 +2308,10 @@ public class CheckForUpdates
 			// install the log backend implementation
 			com.btr.proxy.util.Logger.setBackend(new com.btr.proxy.util.Logger.LogBackEnd()
 			{
+				// Discard messages if they have already been seen, use a timestamp to determen if we should re-log them again
+				private HashMap<String, Long> _logDiscardCache = new HashMap<String, Long>();
+				private long _reLogTimeout = 1000 * 900; // 15 minutes
+
 				@Override
 				public boolean isLogginEnabled(com.btr.proxy.util.Logger.LogLevel logLevel)
 				{
@@ -2325,18 +2346,35 @@ public class CheckForUpdates
 					Configuration conf = Configuration.getCombinedConfiguration();
 					if ( ! conf.getBooleanProperty("proxyvole.debug.stacktaceOnLogMessages", false) )
 						t = null;
-						
 
+					String logMsg = msg + tMsg;
+
+					// If the message has been written lately, discard it...
+					// TODO: maybe add a counter, so we can write how many times it has been repeated/discared
+					if (_logDiscardCache.containsKey(logMsg))
+					{
+						long firstLogTime = _logDiscardCache.get(logMsg);
+						long firstLogAge  = System.currentTimeMillis() - firstLogTime;
+						if ( firstLogAge < _reLogTimeout )
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("com.btr.proxy.util.Logger.LogBackEnd: Discarding log message, (firstLogAge='"+firstLogAge+"', re-logTimeout='"+_reLogTimeout+"': "+logMsg);
+							return;
+						}
+					}
+					_logDiscardCache.put(logMsg, new Long(System.currentTimeMillis()));
+
+					
 //					System.out.println("PROXY-VOLE.log(logLevel="+logLevel+"): "+msg);
-					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(msg + tMsg, t);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(msg + tMsg, t);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info( msg + tMsg, t);
-//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn( msg + tMsg, t);
-//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(msg + tMsg, t);
+					if      (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.TRACE)  ) _logger.trace(logMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.DEBUG)  ) _logger.debug(logMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.INFO)   ) _logger.info( logMsg, t);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.warn( logMsg, t);
+//					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.error(logMsg, t);
 					// downgrade WAR and ERROR to INFO, this so it wont open the log window
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info( msg + tMsg, t);
-					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info( msg + tMsg, t);
-					else _logger.info("Unhandled loglevel("+logLevel+"): " + msg + tMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.WARNING)) _logger.info( logMsg, t);
+					else if (logLevel.equals(com.btr.proxy.util.Logger.LogLevel.ERROR)  ) _logger.info( logMsg, t);
+					else _logger.info("Unhandled loglevel("+logLevel+"): " + logMsg, t);
 				}
 			});
 

@@ -1,17 +1,23 @@
 package com.asetune.gui.swing;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
+import javax.swing.Timer;
 import javax.swing.tree.TreeNode;
 
 import org.jdesktop.swingx.JXTreeTable;
 
 public class TreeTableNavigationEnhancer
-implements KeyListener 
+implements KeyListener, MouseListener, ActionListener
 {
 	private JXTreeTable    _treeTable;
 	private ActionExecutor _action;
+	Timer _moveTimer = new Timer(350, this);
 
 	public interface ActionExecutor
 	{
@@ -22,6 +28,9 @@ implements KeyListener
 	{
 		this._treeTable = treeTable;
 		this._action    = action;
+		
+		treeTable.addKeyListener(this);
+		treeTable.addMouseListener(this);
 	}
 
 	@Override public void keyTyped   (KeyEvent e) { }
@@ -73,7 +82,31 @@ implements KeyListener
 //					_treeTable.getSelectionModel().setSelectionInterval(_treeTable.getSelectedRow()-1, _treeTable.getSelectedRow()-1);
 			}
 		}
+		else if (e.getKeyCode() == KeyEvent.VK_UP)
+		{
+			// Start clock, do _action.doActionShow(); when timer expires
+			if ( ! _moveTimer.isRunning() )
+				_moveTimer.start();
+			else
+				_moveTimer.restart();
+		}
+		else if (e.getKeyCode() == KeyEvent.VK_DOWN)
+		{
+			// Start clock, do _action.doActionShow(); when timer expires
+			if ( ! _moveTimer.isRunning() )
+				_moveTimer.start();
+			else
+				_moveTimer.restart();
+		}
 	}
+
+	@Override
+	public void actionPerformed(ActionEvent e)
+	{
+		_action.doActionShow();
+		_moveTimer.stop();
+	}
+
 
 	protected int getParentRow(int row) 
 	{
@@ -110,4 +143,34 @@ implements KeyListener
 //		}
 //		return row;
 //	}
+
+	@Override
+	public void mouseClicked(MouseEvent e)
+	{
+		if (e.getClickCount() == 2 && !e.isConsumed()) 
+		{
+			e.consume();
+			_action.doActionShow();
+		}
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e)
+	{
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e)
+	{
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent e)
+	{
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e)
+	{
+	}
 }

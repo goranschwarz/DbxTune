@@ -11,6 +11,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Point;
@@ -108,6 +109,8 @@ import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.tools.AseAppTraceDialog;
+import com.asetune.tools.AseStackTraceAnalyzer;
+import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
 import com.asetune.tools.LogTailWindow;
 import com.asetune.tools.QueryWindow;
 import com.asetune.tools.WindowType;
@@ -203,6 +206,7 @@ public class MainFrame
 	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL                  = "OPEN_CAPTURE_SQL";
 	public static final String ACTION_OPEN_ASE_APP_TRACE                = "OPEN_ASE_APP_TRACE";
+	public static final String ACTION_OPEN_ASE_STACKTRACE_TOOL          = "OPEN_ASE_STACKTRACE_TOOL";
 	public static final String ACTION_OPEN_DDL_VIEW                     = "OPEN_DDL_VIEW";
 	public static final String ACTION_OPEN_SQL_QUERY_WIN                = "OPEN_SQL_QUERY_WIN";
 	public static final String ACTION_OPEN_LOCK_TOOL                    = "OPEN_LOCK_TOOL";
@@ -286,6 +290,7 @@ public class MainFrame
 	private JMenuItem           _aseConfMon_mi                 = new JMenuItem("Configure ASE for Monitoring...");
 	private JMenuItem           _captureSql_mi                 = new JMenuItem("Capture SQL...");
 	private JMenuItem           _aseAppTrace_mi                = new JMenuItem("ASE Application Tracing...");
+	private JMenuItem           _aseStackTraceAnalyzer_mi      = new JMenuItem("ASE StackTrace Analyzer...");
 	private JMenuItem           _ddlView_mi                    = new JMenuItem("DDL Viewer...");
 	private JMenu               _preDefinedSql_m               = null;
 	private JMenuItem           _sqlQuery_mi                   = new JMenuItem("SQL Query Window...");
@@ -482,9 +487,19 @@ public class MainFrame
 	protected void initComponents() 
 	{
 		setTitle(Version.getAppName(), null);
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
-		if (icon != null)
-			setIconImage(icon.getImage());
+//		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
+//		if (icon != null)
+//			setIconImage(icon.getImage());
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif");
+		if (icon16 != null || icon32 != null)
+		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
+			setIconImages(iconList);
+		}
 
 		
 		//-------------------------------------------------------------------------
@@ -534,6 +549,7 @@ public class MainFrame
 		_aseConfMon_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_captureSql_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 		_aseAppTrace_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
+		_aseStackTraceAnalyzer_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_stack_trace_tool.png"));
 		_ddlView_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/ddl_view_tool.png"));
 		_sqlQuery_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_query_window.png"));
 //		_lockTool_mi                  .setIcon(SwingUtils.readImageIcon(Version.class, "images/locktool16.gif"));
@@ -576,6 +592,7 @@ public class MainFrame
 		_tools_m.add(_aseConfMon_mi);
 		_tools_m.add(_captureSql_mi);
 		_tools_m.add(_aseAppTrace_mi);
+		_tools_m.add(_aseStackTraceAnalyzer_mi);
 		_tools_m.add(_ddlView_mi);
 		_preDefinedSql_m = createPredefinedSqlMenu();
 		if (_preDefinedSql_m != null) _tools_m.add(_preDefinedSql_m);
@@ -610,6 +627,7 @@ public class MainFrame
 		_aseConfMon_mi                .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_captureSql_mi                .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
 		_aseAppTrace_mi               .setActionCommand(ACTION_OPEN_ASE_APP_TRACE);
+		_aseStackTraceAnalyzer_mi     .setActionCommand(ACTION_OPEN_ASE_STACKTRACE_TOOL);
 		_ddlView_mi                   .setActionCommand(ACTION_OPEN_DDL_VIEW);
 		_sqlQuery_mi                  .setActionCommand(ACTION_OPEN_SQL_QUERY_WIN);
 //		_lockTool_mi                  .setActionCommand(ACTION_OPEN_LOCK_TOOL);
@@ -642,6 +660,7 @@ public class MainFrame
 		_aseConfMon_mi                .addActionListener(this);
 		_captureSql_mi                .addActionListener(this);
 		_aseAppTrace_mi               .addActionListener(this);
+		_aseStackTraceAnalyzer_mi     .addActionListener(this);
 		_ddlView_mi                   .addActionListener(this);
 		_sqlQuery_mi                  .addActionListener(this);
 //		_lockTool_mi                  .addActionListener(this);
@@ -1375,8 +1394,28 @@ public class MainFrame
 		{
 			String servername    = MonTablesDictionary.getInstance().getAseServerName();
 			String aseVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
-			AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
-			apptrace.setVisible(true);
+			int    aseVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+			if (aseVersionNum >= 15020)
+			{
+				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
+				apptrace.setVisible(true);
+			}
+			else
+			{
+				// NOT supported in ASE versions below 15.0.2
+				String htmlMsg = 
+					"<html>" +
+					"  <h2>Sorry this functionality is not available in ASE "+AseConnectionUtils.versionIntToStr(aseVersionNum)+"</h2>" +
+					"  Application Tracing is introduced in ASE 15.0.2" +
+					"</html>";
+				SwingUtils.showInfoMessage(this, "Not supported for this ASE Version", htmlMsg);
+			}
+		}
+
+		if (ACTION_OPEN_ASE_STACKTRACE_TOOL.equals(actionCmd))
+		{
+			AseStackTraceAnalyzer.AseStackTreeView view = new AseStackTreeView(null);
+			view.setVisible(true);
 		}
 
 		if (ACTION_OPEN_DDL_VIEW.equals(actionCmd))
@@ -2258,7 +2297,7 @@ public class MainFrame
 					PersistentCounterHandler.getInstance().addChangeListener(this);
 				}
 
-				CheckForUpdates.sendConnectInfoNoBlock(connType);
+				CheckForUpdates.sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
 
 				// if not MON_ROLE or MonitoringNotEnabled, show all GRAPHS available for this mode (global variables)
 				boolean setMinimalGraphConfig = false;
@@ -2363,7 +2402,7 @@ public class MainFrame
 //				// Start it
 //				_reader.start();
 				
-				CheckForUpdates.sendConnectInfoNoBlock(connType);
+				CheckForUpdates.sendConnectInfoNoBlock(connType, null);
 			}
 		} // end: OFFLINE_CONN
 	}
@@ -3705,6 +3744,7 @@ public class MainFrame
 			mf._aseConfMon_mi                .setEnabled(true);
 			mf._captureSql_mi                .setEnabled(true);
 			mf._aseAppTrace_mi               .setEnabled(true);
+			mf._aseStackTraceAnalyzer_mi     .setEnabled(true);
 			mf._ddlView_mi                   .setEnabled(false);
 			mf._preDefinedSql_m              .setEnabled(true);
 			mf._sqlQuery_mi                  .setEnabled(true);
@@ -3756,6 +3796,7 @@ public class MainFrame
 			mf._aseConfMon_mi                .setEnabled(false);
 			mf._captureSql_mi                .setEnabled(false);
 			mf._aseAppTrace_mi               .setEnabled(false);
+			mf._aseStackTraceAnalyzer_mi     .setEnabled(true);
 			mf._ddlView_mi                   .setEnabled(true);
 			mf._preDefinedSql_m              .setEnabled(false);
 			mf._sqlQuery_mi                  .setEnabled(true);
@@ -3807,6 +3848,7 @@ public class MainFrame
 			mf._aseConfMon_mi                .setEnabled(false);
 			mf._captureSql_mi                .setEnabled(false);
 			mf._aseAppTrace_mi               .setEnabled(false);
+			mf._aseStackTraceAnalyzer_mi     .setEnabled(true);
 			mf._ddlView_mi                   .setEnabled(false);
 			mf._preDefinedSql_m              .setEnabled(false);
 			mf._sqlQuery_mi                  .setEnabled(false);
@@ -4141,33 +4183,38 @@ public class MainFrame
 			sql = _udTooltipMap.get(colName);
 
 		// Make a default for some COLUMNS if they was not found in the USER DEFINED MAP
-		if (sql == null && "SPID".equalsIgnoreCase(colName))
+		if (sql == null)
 		{
-			String monWaitEventInfoWhere = "";
-			if (MonTablesDictionary.hasInstance())
+			if (    "SPID"          .equalsIgnoreCase(colName)
+				 || "OldestTranSpid".equalsIgnoreCase(colName)
+			   )
 			{
-				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
-					monWaitEventInfoWhere = " and W.Language = 'en_US'";
+				String monWaitEventInfoWhere = "";
+				if (MonTablesDictionary.hasInstance())
+				{
+					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
+						monWaitEventInfoWhere = " and W.Language = 'en_US'";
+				}
+				sql = 
+					"select " +
+					" MP.SPID, " +
+					" MP.Login, " +
+					" MP.DBName, " +
+					" MP.Application, " +
+					" MP.Command, " +
+					" MP.SecondsWaiting, " +
+					" MP.SecondsConnected , " +
+					" MP.WaitEventID, " +
+					" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
+					" MP.BlockingSPID, " +
+					" procname = (select object_name(sp.id,sp.dbid) from master..sysprocesses sp where sp.spid = MP.SPID), " +
+					" MP.BatchID, " +
+					" MP.LineNumber, " +
+					" MP.BlockingXLOID, " +
+					" MP.MasterTransactionID" +
+					" from monProcess MP " +
+					" where MP.SPID = ? ";
 			}
-			sql = 
-				"select " +
-				" MP.SPID, " +
-				" MP.Login, " +
-				" MP.DBName, " +
-				" MP.Application, " +
-				" MP.Command, " +
-				" MP.SecondsWaiting, " +
-				" MP.SecondsConnected , " +
-				" MP.WaitEventID, " +
-				" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
-				" MP.BlockingSPID, " +
-				" procname = (select object_name(sp.id,sp.dbid) from master..sysprocesses sp where sp.spid = MP.SPID), " +
-				" MP.BatchID, " +
-				" MP.LineNumber, " +
-				" MP.BlockingXLOID, " +
-				" MP.MasterTransactionID" +
-				" from monProcess MP " +
-				" where MP.SPID = ? ";
 		}
 		
 		return sql;

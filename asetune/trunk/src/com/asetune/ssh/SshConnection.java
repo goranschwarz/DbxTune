@@ -415,6 +415,47 @@ public class SshConnection
 	}
 
 	/**
+	 * Create a file
+	 * @param filename to create
+	 */
+	public boolean createNewFile(String filename)
+	throws IOException
+	{
+		if (isClosed())
+			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
+		Session sess = _conn.openSession();
+		sess.execCommand("touch '" + filename + "'");
+
+		InputStream stdout = new StreamGobbler(sess.getStdout());
+		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+		String output = "";
+		while (true)
+		{
+			String line = br.readLine();
+			if (line == null)
+				break;
+
+			output += line;
+		}
+
+		Integer rc = sess.getExitStatus();
+
+		sess.close();
+		
+		_logger.debug("createNewFile: '"+filename+"' produced '"+output+"'.");
+
+		if ( ! StringUtil.isNullOrBlank(output) )
+			throw new IOException("createNewFile('"+filename+"') produced output, which wasn't expected. Output: "+output);
+
+		if (rc != null && rc.intValue() != 0)
+			throw new IOException("createNewFile('"+filename+"') return code not zero. rc="+rc+". Output: "+output);
+
+		return true;
+	}
+
+	/**
 	 * Remove a file
 	 * @param filename to remove
 	 */

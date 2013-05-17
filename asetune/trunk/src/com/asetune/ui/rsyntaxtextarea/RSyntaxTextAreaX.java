@@ -169,4 +169,14 @@ extends RSyntaxTextArea
 		
 		return RSyntaxUtilitiesX.getCharsAllowedInWords();
 	}
+	
+//	@Override
+//	public String getToolTipText(MouseEvent e)
+//	{
+//		String superToolTip = super.getToolTipText(e);
+//		int offset = viewToModel(e.getPoint());
+//		System.out.println("getToolTipText(): viewToModel="+offset);
+//		
+//		return superToolTip;
+//	}
 }

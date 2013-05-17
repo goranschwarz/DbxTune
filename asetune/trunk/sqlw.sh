@@ -65,6 +65,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.14.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 
 export PATH=${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
@@ -117,7 +118,7 @@ then
 	echo "----------------------------------------------------------------"
 	OS=mac
 	export JVM_PARAMS="$JVM_PARAMS -Xdock:name=${longAppName}"
-	export JVM_PARAMS="$JVM_PARAMS -Xdock:icon=${APPL_HOME}/lib/${shortAppName}_icon_32.gif"
+	export JVM_PARAMS="$JVM_PARAMS -Xdock:icon=${APPL_HOME}/lib/${shortAppName}_icon_32.png"
 	export JVM_PARAMS="$JVM_PARAMS -Dapple.laf.useScreenMenuBar=true"
 	export JVM_PARAMS="$JVM_PARAMS -Dcom.apple.mrj.application.apple.menu.about.name=${longAppName}"
 #	export JVM_PARAMS="$JVM_PARAMS -Dapple.awt.brushMetalLook=true"

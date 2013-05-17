@@ -255,7 +255,11 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		boolean hasMonRole = false;
+		boolean isMonitoringEnabled = false;
+		boolean canDoSelectOnSyslogshold = true;
 		String nwAddrInfo = "'no sa_role'";
+
 		if (isRuntimeInitialized())
 		{
 			if (isRoleActive(AseConnectionUtils.SA_ROLE))
@@ -264,10 +268,53 @@ extends CountersModel
 //				nwAddrInfo = "(select min(convert(varchar(255),address_info)) from syslisteners where address_info not like 'localhost%')";
 				nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, guiOwner) + "'";
 			}
+			hasMonRole = isRoleActive(AseConnectionUtils.MON_ROLE);
+			isMonitoringEnabled = getMonitorConfig("enable monitoring") > 0;
+
+			// Check if we can do select on syslogshold
+			canDoSelectOnSyslogshold = AseConnectionUtils.canDoSelectOnTable(conn, "master.dbo.syslogshold");
+			if ( ! canDoSelectOnSyslogshold )
+				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Problems accessing 'master.dbo.syslogshold' table, column 'oldestOpenTranInSec' will not hold valid data.");
 		}
 		else
 			nwAddrInfo = "'tcp listeners goes here, if we are connected'";
 
+		//
+		// Compose SQL for fullTranslogCount
+		// If user has 'mon_role' and 'enable monitoring' has been configured, get the value from monOpenDatabases
+		// Otherwise fallback on using the slower lct_admin('logfull', dbid)
+		//
+		String fullTranslogCount = 
+			", fullTranslogCount  = (select convert(int, sum(lct_admin('logfull', dbid))) \n" +
+			"                        from master..sysdatabases readpast \n" +
+			"                        where (status & 32   != 32  ) and (status & 256  != 256 ) \n" +
+			"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
+			"                          and (status & 4096 != 4096) \n" +
+			"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
+			"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n";
+		if (hasMonRole && isMonitoringEnabled)
+		{
+			fullTranslogCount = 
+				", fullTranslogCount  = (select convert(int, sum(od.TransactionLogFull)) \n" +
+				"                        from master..monOpenDatabases od ) \n";
+		}
+		
+		//
+		//
+		//
+		String oldestOpenTranInSec = 
+			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"                                               THEN -1 \n" +
+			"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
+			"                                          END),0) \n" +
+			"                        from master..syslogshold h \n" +
+			"                        where h.name != '$replication_truncation_point' ) \n";
+		if ( ! canDoSelectOnSyslogshold )
+		{
+			oldestOpenTranInSec =
+				", oldestOpenTranInSec  = -99 \n";
+		}
+		
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
@@ -323,19 +370,22 @@ extends CountersModel
 				// 32 - Database is offline until recovery completes
 				// model is used during create database... so skip this one to
 //				", fullTranslogCount  = (select sum(lct_admin('logfull', dbid)) \n" +
-				", fullTranslogCount  = (select convert(int, sum(lct_admin('logfull', dbid))) \n" +
-				"                        from master..sysdatabases readpast \n" +
-				"                        where (status & 32   != 32  ) and (status & 256  != 256 ) \n" +
-				"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
-				"                          and (status & 4096 != 4096) \n" +
-				"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
-				"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n" + 
-				", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-				"                                               THEN -1 \n" +
-				"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
-				"                                          END),0) \n" +
-				"                        from master..syslogshold h \n" +
-				"                        where h.name != '$replication_truncation_point' ) \n" +
+//				", fullTranslogCount  = (select convert(int, sum(lct_admin('logfull', dbid))) \n" +
+//				"                        from master..sysdatabases readpast \n" +
+//				"                        where (status & 32   != 32  ) and (status & 256  != 256 ) \n" +
+//				"                          and (status & 1024 != 1024) and (status & 2048 != 2048) \n" +
+//				"                          and (status & 4096 != 4096) \n" +
+//				"                          and (status2 & 16  != 16  ) and (status2 &  32 != 32  ) \n" +
+//				"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n" + 
+				fullTranslogCount +
+
+//				", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+//				"                                               THEN -1 \n" +
+//				"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
+//				"                                          END),0) \n" +
+//				"                        from master..syslogshold h \n" +
+//				"                        where h.name != '$replication_truncation_point' ) \n" +
+				oldestOpenTranInSec + 
 
 				", pack_received      = @@pack_received \n" +
 				", pack_sent          = @@pack_sent \n" +

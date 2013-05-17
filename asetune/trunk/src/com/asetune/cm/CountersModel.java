@@ -1508,7 +1508,9 @@ implements Cloneable, ITableTooltip
 			if ( sql != null && ! getCounterController().isMonConnected() )
 			{
 				// IF SPID, get values from JTable in OFFLINE MODE
-				if ("SPID".equalsIgnoreCase(colName))
+				if (    "SPID"          .equalsIgnoreCase(colName) 
+				     || "OldestTranSpid".equalsIgnoreCase(colName)
+				   )
 				{
 					if (MainFrame.isOfflineConnected())
 					{
@@ -1532,11 +1534,32 @@ implements Cloneable, ITableTooltip
 								}
 								else
 								{
+									int cellSpidInt = -1;
+									if (cellValue instanceof Number)
+										cellSpidInt = ((Number)cellValue).intValue();
+									else
+									{
+										return "<html>" +
+												"Current Cell value '"+cellValue+"' is not a <i>Number</i>.<br>" +
+												"The object type is <code>"+cellValue.getClass().getName()+"</code><br>" +
+												"It must be of datatype <code>Number</code><br>" +
+												"</html>";
+									}
+										
 									int spid_pos = ctmRate.findColumn("SPID");
 									int rowCount = ctmRate.getRowCount();
 									for (int r=0; r<rowCount; r++)
 									{
-										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
+										Object rowCellValue = ctmRate.getValueAt(r, spid_pos);
+										int rowSpidInt = -1;
+										if (rowCellValue instanceof Number)
+											rowSpidInt = ((Number)rowCellValue).intValue();
+										else
+											continue;
+//										System.out.println("CellValue='"+cellValue+"', tableRow="+r+", Value="+ctmRate.getValueAt(r, spid_pos)+", TableObjType="+ctmRate.getValueAt(r, spid_pos).getClass().getName()+", cellValueObjType="+cellValue.getClass().getName());
+										
+//										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
+										if ( cellSpidInt == rowSpidInt )
 										{
 											StringBuilder sb = new StringBuilder(300);
 											sb.append("<html>\n");

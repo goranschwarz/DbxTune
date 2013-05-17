@@ -56,6 +56,15 @@ public class AseConnectionUtils
 //	private static String SQL_VERSION_NUM = "select @@version_number";
 //	private static String SQL_SP_VERSION  = "sp_version 'installmontables'";
 
+	
+	/**
+	 * What is current working database
+	 * @return database name, null on failure
+	 */
+	public static String getDbname(Connection conn)
+	{
+		return getCurrentDbname(conn);
+	}
 	/**
 	 * What is current working database
 	 * @return database name, null on failure
@@ -789,6 +798,11 @@ public class AseConnectionUtils
 		}
 	}
 
+	/** Check if a connection is ok or not, no GUI error, just return true or false */
+	public static boolean isConnectionOk(Connection conn)
+	{
+		return isConnectionOk(conn, false, null);
+	}
 	public static boolean isConnectionOk(Connection conn, boolean guiMsgOnError, Component guiOwner)
 	{
 		String msg   = "";
@@ -1597,7 +1611,7 @@ public class AseConnectionUtils
 						});
 
 						SwingUtils.showWarnMessageExt(parent, "Problems when checking 'Monitor Role'",
-								msgHtml, chk, null);
+								msgHtml, chk, (JPanel)null);
 					}
 //					return false;
 				}
@@ -1695,7 +1709,7 @@ public class AseConnectionUtils
 //								msgHtml, null);
 						
 						SwingUtils.showWarnMessageExt(parent, "Problems when checking 'Sybase TS Role'",
-								msgHtml, chk, null);
+								msgHtml, chk, (JPanel)null);
 					}
 				}
 			} // end: ! has_sybase_ts_role
@@ -1806,7 +1820,7 @@ public class AseConnectionUtils
 							if (has_sa_role)
 							{
 								// Show message, not with the extra dialog
-								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, null);
+								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, (JPanel)null);
 
 								// open config dialog
 								AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum);
@@ -3420,5 +3434,40 @@ public class AseConnectionUtils
 		}
 	}
 
+	/**
+	 * Check if we can do a simple select on the provided table.
+	 * <p>
+	 * The SQL issued would be "select * from "+tableName+" where 1=2"
+	 * @param tableName the table name passed into the query. In here you can add the databasename and owner if you like. Example "master.dbo.syslogshold"
+	 * @return true if no problems, false if connection is not OK or SQLException where thrown in the select statement.
+	 */
+	public static boolean canDoSelectOnTable(Connection conn, String tableName)
+	{
+		String sql = "select * from "+tableName+" where 1=2";
+
+		// Check if the connection is OK
+		if ( ! isConnectionOk(conn) )
+		{
+			return false;
+		}
+
+		// Check if we can do select on syslogshold
+		try 
+		{
+			// do dummy select, which will return 0 rows
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {}
+			rs.close();
+			stmt.close();
+			
+			return true;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems doing simple SQL '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			return false;
+		}
+	}
 }
 

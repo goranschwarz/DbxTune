@@ -2156,10 +2156,15 @@ public class PersistWriterJdbc
 								int dataLength = str.length();
 								String colName = cols.get(c);
 
-								String truncStr = str.substring(0, allowedLength - 3) + "...";
+								// Add '...' at the end if it's a long string, or simply "chop it of" if it's a very short string.
+								String truncStr = "";
+								if (allowedLength <= 3)
+									truncStr = str.substring(0, allowedLength);
+								else
+									truncStr = str.substring(0, allowedLength - 3) + "...";
 
 								_logger.info("save(): Truncating a Overflowing String value. table='"+tabName+"', column='"+colName+"', allowedLength="+allowedLength+", dataLength="+dataLength+", newStr["+truncStr.length()+"]='"+truncStr+"', originStr["+str.length()+"]='"+str+"'.");
-								
+
 								str = truncStr;
 							}
 						}
@@ -2597,6 +2602,13 @@ public class PersistWriterJdbc
 		if (_shutdownWithNoWait)
 		{
 			_logger.info("DDL Lookup Storage: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
+
+		// Check that we have started and all table has been created...
+		if ( ! isSessionStarted() )
+		{
+			_logger.warn("DDL Lookup Storage: Discard entry due to PCS '"+getName()+"' has not yet been fully started'. (Storage tables might not be there yet).");
 			return;
 		}
 

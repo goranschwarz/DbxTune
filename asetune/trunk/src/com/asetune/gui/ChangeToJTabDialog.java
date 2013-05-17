@@ -299,7 +299,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		else if ( action.equals(PROP_ACTION_STAY) )
 			_action_stay_rb.setSelected(true);
 		else
-			_action_change_rb.setSelected(true);
+			_action_stay_rb.setSelected(true);
 
 		// NEXT TIME
 		if ( nextTime.equals(PROP_NEXT_TIME_ALWAYS_REMEMBER) )
@@ -309,7 +309,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		else if ( nextTime.equals(PROP_NEXT_TIME_QUESTION) )
 			_next_alwaysAsk_rb.setSelected(true);
 		else
-			_next_alwaysAsk_rb.setSelected(true);
+			_next_rememberSession_rb.setSelected(true);
 	}
 
 	private void saveProps()

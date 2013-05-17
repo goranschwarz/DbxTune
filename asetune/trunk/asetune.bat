@@ -136,6 +136,7 @@ set classpath=%classpath%;%ASETUNE_HOME%\lib\autocomplete.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jcommon-1.0.17.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jfreechart-1.0.14.jar
+set classpath=%classpath%;%ASETUNE_HOME%\lib\antlr-4.0-complete.jar
 
 rem --- echo %CLASSPATH%
 

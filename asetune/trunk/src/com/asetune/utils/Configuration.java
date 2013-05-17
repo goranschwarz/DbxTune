@@ -659,20 +659,23 @@ extends Properties
 	public int setProperty(String propName, int t)
 	{
 		Object prev = setProperty( propName, Integer.toString(t) );
-		return prev==null ? -1 : Integer.parseInt( (String)prev );
+		return prev==null ? -1 : parseInt( (String)prev );
 	}
 
 	public long setProperty(String propName, long l)
 	{
 		Object prev = setProperty( propName, Long.toString(l) );
-		return prev==null ? -1 : Long.parseLong( (String)prev );
+		return prev==null ? -1 : parseLong( (String)prev );
 	}
 
 	public boolean setProperty(String propName, boolean b)
 	{
 		Object prev = setProperty( propName, Boolean.toString(b) );
-		return prev==null ? false : Boolean.parseBoolean( (String)prev );
+		return prev==null ? false : parseBoolean( (String)prev );
 	}
+	private int     parseInt(String str)     {try {return Integer.parseInt(str);}     catch(Throwable e) {return 0;}}
+	private long    parseLong(String str)    {try {return Long.parseLong(str);}       catch(Throwable e) {return 0;}}
+	private boolean parseBoolean(String str) {try {return Boolean.parseBoolean(str);} catch(Throwable e) {return false;}}
 
 //			public static final String USE_DEFAULT = "USE_DEFAULT:";
 //			//-----------------------

@@ -606,7 +606,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt.setEditable(false);
 
 		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
-				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.</html>";
+				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"<br>" +
+				"<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>";
 		_oldestOpenTran_lbl.setText("Oldest Open Tran");
 		_oldestOpenTran_lbl.setToolTipText(tooltip);
 		_oldestOpenTran_txt.setToolTipText(tooltip);

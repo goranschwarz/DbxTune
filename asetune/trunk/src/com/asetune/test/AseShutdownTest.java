@@ -150,7 +150,7 @@ public class AseShutdownTest
 		System.out.println("user = '"+user+"'");
 		System.out.println("pwd  = '"+pawd+"'");
 		
-		String jdbcDriver    = "com.sybase.jdbc3.jdbc.SybDriver";
+		String jdbcDriver    = "com.sybase.jdbc4.jdbc.SybDriver";
 		String jdbcUrl       = "jdbc:sybase:Tds:"+host+":"+port;
 		String jdbcUser      = user;
 		String jdbcPasswd    = pawd;

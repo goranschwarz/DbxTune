@@ -85,19 +85,19 @@ public class StatusBar extends JPanel
 //		add(new JLabel(),            "push, grow"); // Dummy filler
 
 		add(_currentFilenameIsDirty, "");
-		add(_currentFilename,        "push, grow");
+		add(_currentFilename,        "pushx, growx");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
-		add(_aseConnStateInfo,       "split, grow, hidemode 2");
+		add(_aseConnStateInfo,       "split, growx, hidemode 2");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
-		add(_userName,               "grow");
+		add(_userName,               "growx");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
-		add(_serverName,             "grow");
+		add(_serverName,             "growx");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
-		add(_productStringShort,     "grow");
+		add(_productStringShort,     "growx");
 	}
 	
 	public void setMsg(String text)
@@ -120,6 +120,12 @@ public class StatusBar extends JPanel
 	public void setFilenameDirty(boolean dirty)
 	{
 		_currentFilenameIsDirty.setVisible(dirty);
+	}
+
+	public void setNotConnected()
+	{
+		setServerName(null, null, null, null, null, null, null);
+		setAseConnectionStateInfo(null);
 	}
 
 	public void setServerName(String srvName, String productName, String productVersion, String serverName, String username, String withUrl, String sysListeners)

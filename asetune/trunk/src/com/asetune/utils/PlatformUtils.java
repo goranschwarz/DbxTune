@@ -135,4 +135,142 @@ public class PlatformUtils
 	{
 		return System.getenv("KDE_SESSION_VERSION") != null;
 	}
+	
+
+//	import sun.jvmstat.monitor.*;
+	/**
+	 * Get number if started JVM's that is running a specific main class
+	 * @return
+	 */
+//	public static int getJvmProgramCount(String mainClassName)
+//	{
+//		RuntimeMXBean xxx = ManagementFactory.getRuntimeMXBean();
+//		MonitoredHost
+//	}
 }
+
+// CODE FROM: JPS
+// But it needs tools.jar, which isn't available if you only have a JRE
+//		try
+//		{
+//			HostIdentifier hostId = arguments.hostId();
+//			MonitoredHost monitoredHost = MonitoredHost.getMonitoredHost(hostId);
+//
+//			// get the set active JVMs on the specified host.
+//			Set jvms = monitoredHost.activeVms();
+//
+//			for (Iterator j = jvms.iterator(); j.hasNext(); /* empty */)
+//			{
+//				StringBuilder output = new StringBuilder();
+//				Throwable lastError = null;
+//
+//				int lvmid = ((Integer) j.next()).intValue();
+//
+//				output.append(String.valueOf(lvmid));
+//
+//				if ( arguments.isQuiet() )
+//				{
+//					System.out.println(output);
+//					continue;
+//				}
+//
+//				MonitoredVm vm = null;
+//				String vmidString = "//" + lvmid + "?mode=r";
+//
+//				try
+//				{
+//					VmIdentifier id = new VmIdentifier(vmidString);
+//					vm = monitoredHost.getMonitoredVm(id, 0);
+//				}
+//				catch (URISyntaxException e)
+//				{
+//					// unexpected as vmidString is based on a validated hostid
+//					lastError = e;
+//					assert false;
+//				}
+//				catch (Exception e)
+//				{
+//					lastError = e;
+//				}
+//				finally
+//				{
+//					if ( vm == null )
+//					{
+//						/*
+//						 * we ignore most exceptions, as there are race
+//						 * conditions where a JVM in 'jvms' may terminate before
+//						 * we get a chance to list its information. Other
+//						 * errors, such as access and I/O exceptions should stop
+//						 * us from iterating over the complete set.
+//						 */
+//						output.append(" -- process information unavailable");
+//						if ( arguments.isDebug() )
+//						{
+//							if ( (lastError != null) && (lastError.getMessage() != null) )
+//							{
+//								output.append("\n\t");
+//								output.append(lastError.getMessage());
+//							}
+//						}
+//						System.out.println(output);
+//						if ( arguments.printStackTrace() )
+//						{
+//							lastError.printStackTrace();
+//						}
+//						continue;
+//					}
+//				}
+//
+//				output.append(" ");
+//				output.append(MonitoredVmUtil.mainClass(vm, arguments.showLongPaths()));
+//
+//				if ( arguments.showMainArgs() )
+//				{
+//					String mainArgs = MonitoredVmUtil.mainArgs(vm);
+//					if ( mainArgs != null && mainArgs.length() > 0 )
+//					{
+//						output.append(" ").append(mainArgs);
+//					}
+//				}
+//				if ( arguments.showVmArgs() )
+//				{
+//					String jvmArgs = MonitoredVmUtil.jvmArgs(vm);
+//					if ( jvmArgs != null && jvmArgs.length() > 0 )
+//					{
+//						output.append(" ").append(jvmArgs);
+//					}
+//				}
+//				if ( arguments.showVmFlags() )
+//				{
+//					String jvmFlags = MonitoredVmUtil.jvmFlags(vm);
+//					if ( jvmFlags != null && jvmFlags.length() > 0 )
+//					{
+//						output.append(" ").append(jvmFlags);
+//					}
+//				}
+//
+//				System.out.println(output);
+//
+//				monitoredHost.detach(vm);
+//			}
+//		}
+//		catch (MonitorException e)
+//		{
+//			if ( e.getMessage() != null )
+//			{
+//				System.err.println(e.getMessage());
+//			}
+//			else
+//			{
+//				Throwable cause = e.getCause();
+//				if ( (cause != null) && (cause.getMessage() != null) )
+//				{
+//					System.err.println(cause.getMessage());
+//				}
+//				else
+//				{
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//	}

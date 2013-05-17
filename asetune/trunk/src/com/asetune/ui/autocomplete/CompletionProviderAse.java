@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.ShorthandCompletion;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 
@@ -30,7 +31,7 @@ extends CompletionProviderAbstractSql
 
 	protected Map<String, String> _aseMonTableDesc = new HashMap<String, String>();
 
-	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, Window window, ConnectionProvider connectionProvider)
+	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
 		_logger.info("Installing Syntax and AutoCompleation for Sybase ASE ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL+").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
@@ -42,7 +43,11 @@ extends CompletionProviderAbstractSql
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
 //		ac.setChoicesWindowSize(600, 600);
 		ac.setDescriptionWindowSize(600, 600);
-		
+
+//		textPane.addParser(new SybaseAseParser());
+//		// enable the ErrorStripe ????
+//		errorStrip.setVisible(true);
+
 		return acProvider;
 	}
 
@@ -147,7 +152,11 @@ extends CompletionProviderAbstractSql
 				"--dbname..sp_logiosize '8' -- to use the 8K memory pool (4 pages per IO) \n" +
 				"",
 				"Create a 'log cache' and bind database(s) to it."));
-		
+
+		provider.addStaticCompletion(new ShorthandCompletion(provider, "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		provider.addStaticCompletion(new ShorthandCompletion(provider, "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		provider.addStaticCompletion(new ShorthandCompletion(provider, "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+
 		// monTables
 		provider.addStaticCompletion(new ShorthandCompletion(provider, 
 				"monTables",  
@@ -158,6 +167,10 @@ extends CompletionProviderAbstractSql
 				"monColumns", 
 				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
+		
+		// \exec  and \rpc templates
+		provider.addStaticCompletion(new ShorthandCompletion(provider, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		provider.addStaticCompletion(new ShorthandCompletion(provider, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
 		
 		return provider;
 	}

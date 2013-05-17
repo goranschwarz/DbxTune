@@ -11,6 +11,7 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -37,6 +38,7 @@ import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.H2UrlHelper;
+import com.asetune.utils.JdbcDriverHelper;
 
 
 
@@ -240,6 +242,22 @@ implements ActionListener
 				_jdbcUrl_cbx.getSelectedItem().toString(),
 				_jdbcUsername.getText(), 
 				_jdbcPassword.getText());
+		}
+
+		// --- URL: BUTTON: "..." 
+		if (_jdbcDriver_cbx.equals(source))
+		{
+//			String jdbcDriver = _jdbcDriver_cbx.getEditor().getItem().toString();
+			String jdbcDriver = _jdbcDriver_cbx.getSelectedItem().toString();
+
+			// Get templates
+			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
+			if (urlTemplates != null && urlTemplates.size() > 0)
+			{
+				_jdbcUrl_cbx.removeAllItems();
+				for (String template : urlTemplates)
+					_jdbcUrl_cbx.addItem(template);
+			}
 		}
 
 		// --- URL: BUTTON: "..." 

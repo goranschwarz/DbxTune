@@ -9,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -56,6 +57,8 @@ public class FileTail
 	private String _filename = null;
 	/** The log file to tail */
 	private File _localFile = null;
+	/** Charset that a local file consists of */
+	private Charset _localFileCharset = null;
 
 	/**
 	 * Defines whether the log file tailer should include the entire contents of
@@ -114,6 +117,11 @@ public class FileTail
 		_linesFromEnd     = linesFromEnd;
 
 		_execMode = TailType.LOCAL;
+	}
+	
+	public void setLocalFileCharset(Charset charset)
+	{
+		_localFileCharset = charset;
 	}
 
 	/**
@@ -188,6 +196,31 @@ public class FileTail
 		else if (_execMode == TailType.SSH)
 		{
 			return _sshConn.doFileExist(_filename);
+		}
+		else
+		{
+			throw new RuntimeException("Unknown execution type '"+_execMode+"'.");
+		}
+	}
+
+	/**
+	 * create a file.
+	 * @return
+	 * @throws IOException
+	 */
+	public boolean createFile()
+	throws IOException
+	{
+		if (_execMode == TailType.LOCAL)
+		{
+			if (_localFile == null)
+				throw new RuntimeException("Local file can not be null");
+
+			return _localFile.createNewFile();
+		}
+		else if (_execMode == TailType.SSH)
+		{
+			return _sshConn.createNewFile(_filename);
 		}
 		else
 		{
@@ -377,6 +410,9 @@ public class FileTail
 				
 				Charset osCharset = Charset.forName(_sshConn.getOsCharset());
 
+				String strSpillOut = null;
+				String strSpillErr = null;
+
 				byte[] buffer = new byte[16*1024]; // 16K
 				while(_running)
 				{
@@ -431,35 +467,121 @@ public class FileTail
 						 */
 						while (stdout.available() > 0)
 						{
+//							int len = stdout.read(buffer);
+//							if (len > 0) // this check is somewhat paranoid
+//							{
+//								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+//								String row = null;
+//								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+//								while ((row = sr.readLine()) != null)
+//								{
+//									fireNewTraceRow(row);
+//								}
+//							}
+
 							int len = stdout.read(buffer);
 							if (len > 0) // this check is somewhat paranoid
 							{
 								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-								String row = null;
-								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-								while ((row = sr.readLine()) != null)
+								String strBuf = new String(buffer, 0, len, osCharset);
+
+								// add "spill" that did NOT have a newline terminator
+								if (strSpillOut != null)
 								{
-									fireNewTraceRow(row);
+									strBuf = strSpillOut + strBuf;
+									len += strSpillOut.length();
+									strSpillOut = null;
+								}
+
+								// Check for "spill" that is after last newline
+								// if we have "spill" save that to next iteration
+								int lastNlPos = strBuf.lastIndexOf('\n');
+								if (lastNlPos == -1) // No newline was found, save the whole string to next read
+								{
+									strSpillOut = strBuf;
+									strBuf = null;
+								} 
+								else if (len > lastNlPos)  // string after last newline = save to next read
+								{
+									strSpillOut = strBuf.substring(lastNlPos + 1);
+									strBuf      = strBuf.substring(0, lastNlPos);
+								}
+
+								// read the buffer line-by-line and "send" it to any listeners
+								if (strBuf != null)
+								{
+									BufferedReader br = new BufferedReader(new StringReader(strBuf));
+									String row = null;
+									while ((row = br.readLine()) != null)
+									{
+										fireNewTraceRow(row);
+									}
 								}
 							}
 						}
 
 						while (stderr.available() > 0)
 						{
+//							int len = stderr.read(buffer);
+//							if (len > 0) // this check is somewhat paranoid
+//							{
+//								String row = null;
+//								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
+//								while ((row = sr.readLine()) != null)
+//								{
+//									if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
+//									{
+//										_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+//									}
+//									//System.out.println("STDERR: "+row);
+//									fireNewTraceRow(row);
+//									//_logger.error("Received on STDERR: "+row);
+//								}
+//							}
+
 							int len = stderr.read(buffer);
 							if (len > 0) // this check is somewhat paranoid
 							{
-								String row = null;
-								BufferedReader sr = new BufferedReader(new StringReader(new String(buffer, 0, len, osCharset)));
-								while ((row = sr.readLine()) != null)
+								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
+								String strBuf = new String(buffer, 0, len, osCharset);
+
+								// add "spill" that did NOT have a newline terminator
+								if (strSpillErr != null)
 								{
-									if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
+									strBuf = strSpillErr + strBuf;
+									len += strSpillErr.length();
+									strSpillErr = null;
+								}
+
+								// Check for "spill" that is after last newline
+								// if we have "spill" save that to next iteration
+								int lastNlPos = strBuf.lastIndexOf('\n');
+								if (lastNlPos == -1) // No newline was found, save the whole string to next read
+								{
+									strSpillErr = strBuf;
+									strBuf = null;
+								} 
+								else if (len > lastNlPos)  // string after last newline = save to next read
+								{
+									strSpillErr = strBuf.substring(lastNlPos + 1);
+									strBuf      = strBuf.substring(0, lastNlPos);
+								}
+
+								// read the buffer line-by-line and "send" it to any listeners
+								if (strBuf != null)
+								{
+									BufferedReader br = new BufferedReader(new StringReader(strBuf));
+									String row = null;
+									while ((row = br.readLine()) != null)
 									{
-										_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+										if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
+										{
+											_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+										}
+										//System.out.println("STDERR: "+row);
+										fireNewTraceRow(row);
+										//_logger.error("Received on STDERR: "+row);
 									}
-//									System.out.println("STDERR: "+row);
-									fireNewTraceRow(row);
-									//_logger.error("Received on STDERR: "+row);
 								}
 							}
 						}
@@ -495,20 +617,25 @@ public class FileTail
 			public void run()
 			{
 				printStartMessage();
+				LinkedList<String> startupRows = null;
 
 				// The file pointer keeps track of where we are in the file
 				long filePointer = 0;
 
 				// Determine start point
 				if (_startAtBeginning)
+				{
 					filePointer = 0;
+				}
 				else
 				{
 					filePointer = _localFile.length();
 					// FIXME for a better estimates...
-					filePointer -= _linesFromEnd * 80; // lets say one row is 80 chars wide
+					filePointer -= _linesFromEnd * 160; // lets say one row is 160 chars wide
 					if (filePointer < 0)
 						filePointer = 0;
+					else
+						startupRows = new LinkedList<String>();
 				}
 
 				try
@@ -516,6 +643,11 @@ public class FileTail
 					// Start 
 					_running = true;
 					_shutdownIsComplete = false;
+
+					byte[] buffer = new byte[16*1024]; // 16K
+//					byte[] buffer = new byte[1024]; // 16K
+//					byte[] buffer = new byte[80]; // 16K
+					String strSpill = null;
 
 					RandomAccessFile raf = new RandomAccessFile(_localFile, "r");
 					while (_running)
@@ -536,26 +668,97 @@ public class FileTail
 							{
 								// There is data to read
 								raf.seek(filePointer);
-								String row = raf.readLine();
-								while (row != null)
+								int len = raf.read(buffer);
+								if (len > 0)
 								{
-									fireNewTraceRow(row);
-									row = raf.readLine();
+									String strBuf;
+									if (_localFileCharset == null)
+										strBuf = new String(buffer, 0, len);
+									else
+										strBuf = new String(buffer, 0, len, _localFileCharset);
+									
+									// add "spill" that did NOT have a newline terminator
+									if (strSpill != null)
+									{
+										strBuf = strSpill + strBuf;
+										len += strSpill.length();
+//										System.out.println("++++++ SPILL-INS: |"+strSpill+"|");
+//										System.out.println("++++++ SPILL-RES: |"+strBuf+"|");
+										strSpill = null;
+									}
+
+									// Check for "spill" that is after last newline
+									// if we have "spill" save that to next iteration
+									int lastNlPos = strBuf.lastIndexOf('\n');
+									if (lastNlPos == -1) // No newline was found, save the whole string to next read
+									{
+										strSpill = strBuf;
+										strBuf = null;
+//										System.out.println("------ NO-NEW-LINE - SPILL: |"+strSpill+"|");
+									} 
+									else if (len > lastNlPos)  // string after last newline = save to next read
+									{
+//										System.out.println("------ CHECK: len("+len+") > lastNlPos("+lastNlPos+").");
+										
+										strSpill = strBuf.substring(lastNlPos + 1);
+										strBuf   = strBuf.substring(0, lastNlPos);
+
+//										System.out.println("------ SPILL: |"+strSpill+"|");
+//										System.out.println("------ KEEP:  |"+strBuf+"|");
+									}
+
+									// read the buffer line-by-line and "send" it to any listeners
+									if (strBuf != null)
+									{
+										BufferedReader br = new BufferedReader(new StringReader(strBuf));
+										String row = null;
+										while ((row = br.readLine()) != null)
+										{
+											if (startupRows != null)
+												startupRows.add(row);
+											else
+												fireNewTraceRow(row);
+										}
+									}
 								}
 								filePointer = raf.getFilePointer();
 							}
+							else
+							{
+								// If we are in startup mode...
+								//   - remove some entries from the "saved" list
+								//   - all the listeners with the rows
+								//   - then remove the list to go into "normal" mode
+								// else
+								//   - wait for some time and check the file for new entries
+								if (startupRows != null)
+								{
+									while(startupRows.size() > _linesFromEnd)
+										startupRows.removeFirst();
+									
+									for (String row : startupRows)
+										fireNewTraceRow(row);
 
-							// Sleep for the specified interval
-							Thread.sleep(_sleepTime);
+									startupRows = null;
+								}
+								else
+								{
+									// Sleep for the specified interval
+									Thread.sleep(_sleepTime);
+								}
+							}
 						}
 						catch (InterruptedException e)
 						{
+							_logger.debug("InterruptedException: Tail on file '"+_localFile+"'. Checking if 'running' is still true. Caught: "+e);
 						}
 						catch (FileNotFoundException e)
 						{
+							_logger.debug("FileNotFoundException: Tail on file '"+_localFile+"'. Continuing, hopefully it will exist in next iteration. Caught: "+e);
 						}
 						catch (IOException e)
 						{
+							_logger.debug("IOException: Tail on file '"+_localFile+"'. This is ignored, continuing. Caught: "+e);
 						}
 					}
 
@@ -564,11 +767,11 @@ public class FileTail
 				} 
 				catch (FileNotFoundException e)
 				{
-					_logger.error("Problems tailing file", e);
+					_logger.error("Problems Tail on file '"+_localFile+"'. Caught: "+e, e);
 				}
 				catch (IOException e)
 				{
-					_logger.error("Problems tailing file", e);
+					_logger.error("Problems Tail on file '"+_localFile+"'. Caught: "+e, e);
 				}
 
 				printStopMessage();

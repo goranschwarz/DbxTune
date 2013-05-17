@@ -886,7 +886,7 @@ implements ActionListener
 
 	private Connection aseConnection(boolean showInfo, boolean closeConn, String appname, String dbname, String user, String passwd, String host, String port)
 	{
-//		String driverClassName = System.getProperty("jdbc_driver_class_name", "com.sybase.jdbc3.jdbc.SybDriver");
+//		String driverClassName = System.getProperty("jdbc_driver_class_name", "com.sybase.jdbc4.jdbc.SybDriver");
 //		String startOfConnUrl  = System.getProperty("jdbc_start_of_conn_url", "jdbc:sybase:Tds:");
 
 

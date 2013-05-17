@@ -657,6 +657,23 @@ public class StringUtil
 	}
 
 	/**
+	 * Remove any trailing white spaces and newlines
+	 * @param str
+	 * @return
+	 */
+	public static String stripNewLine(String str)
+	{
+		if (str == null)
+			return null;
+		
+		if (str.indexOf('\n') >= 0)
+			str = str.replace("\n", "");;
+		if (str.indexOf('\r') >= 0)
+			str = str.replace("\r", "");;
+		return str.trim();
+	}
+
+	/**
 	 * Add newlines to the input string.
 	 * @param str Input string
 	 * @param rowLength The approx row length
@@ -833,6 +850,82 @@ public class StringUtil
 
 		return str;
 	}
+	
+	/**
+	 * Count number of matching characters in the string
+	 * @param str
+	 * @param ch
+	 * @return count
+	 */
+	public static int charCount(String str, char ch)
+	{
+		int count = 0;
+		for (int i=0; i<str.length(); i++)
+		{
+			if (str.charAt(i) == ch)
+				count++;
+		}
+		return count;
+	}
+
+	/**
+	 * Get position of the matching brace.
+	 *
+	 * @param searchStr the string to search in
+	 * @param startPos start position in the serachStr, the position must be <b>after</b> the start char we want to match
+	 * @param endChar supported chars are: ), }, ]
+	 * 
+	 * @return position of matching brace. -1 if it wasn't found.
+	 */
+	public static int indexOfEndBrace(String searchStr, int startPos, char endChar)
+	{
+		char beginChar = ' ';
+
+		if      (endChar == '}') beginChar = '{';
+		else if (endChar == ']') beginChar = '[';
+		else if (endChar == ')') beginChar = '(';
+
+		int matchCount = 1; // When it reaches 0, we exit with the position
+
+		char[] search = searchStr.toCharArray();
+		for (int i=startPos; i<search.length; i++)
+		{
+			char c = search[i];
+			if (c == beginChar) matchCount++; // increment if we see any new "begin" char
+			if (c == endChar)   matchCount--;
+			
+			if (matchCount == 0)
+				return i;
+		}
+		return -1;
+	}
+
+	/**
+	 * returns a "safe" XML tag content string
+	 * <p>
+	 * if '&' or '<' exists in the passed string a CDATA substitution will be done.
+	 * <p>
+	 * Example:<br>
+	 * <pre>
+	 * xmlSafe("abcde") returns "abcd"
+	 * xmlSafe("select * from t1 where (c1 & 1024)=1024 and c2 < 99") returns "&lt;![CDATA[select * from t1 where (c1 & 1024)=1024 and c2 < 99]]&gt;"
+	 * </pre>
+	 *
+	 * @param inStr the input string
+	 * 
+	 * @return a clean XML string that can is escaped if it contains & or < characters.
+	 */
+	public static String xmlSafe(String inStr)
+	{
+		if (inStr == null)
+			return null;
+		
+		if (inStr.indexOf('&') > 0 || inStr.indexOf('<') > 0)
+		{
+			return "<![CDATA[" + inStr + "]]>";
+		}
+		return inStr;
+	}
 
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -842,6 +935,16 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println("TEST 1-1: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ) xxx",   0, ')') == -1 ? "OK" : "FAIL"));
+		System.out.println("TEST 1-2: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ) xxx",   5, ')') != -1 ? "OK" : "FAIL"));
+		System.out.println("TEST 1-3: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ] xxx",   5, ')') == -1 ? "OK" : "FAIL"));
+		System.out.println("TEST 1-4: " + (indexOfEndBrace("abc ( 123 4 5 ( 6 7 ) xxx", 5, ')') == -1 ? "OK" : "FAIL"));
+		System.out.println("TEST 1-5: " + (indexOfEndBrace("abc 123 4 5 6 7 ) xxx",     0, ')') != -1 ? "OK" : "FAIL"));
+		System.out.println("TEST 1-6: " + (indexOfEndBrace("abc)",                      0, ')') ==  3 ? "OK" : "FAIL"));
+
+		System.exit(0);
+
+
 		String[] htmlStrArr = {"a<>bc", "<html>a<b>b</b>c</html>", "abc,"};
 		for (String s : htmlStrArr)
 		{
