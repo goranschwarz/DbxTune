@@ -35,7 +35,7 @@
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.0.5_Source.zip">
+	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.0.5.1_Source.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/autocomplete"/>
 		</attributes>
@@ -89,6 +89,11 @@
 	<classpathentry kind="lib" path="lib/jsqlparser.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://jsqlparser.sourceforge.net/docs/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/antlr-4.0-complete.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://antlr4.org/api/Java/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="classes"/>

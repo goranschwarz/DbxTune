@@ -367,6 +367,7 @@ implements PropertyChangeListener, ActionListener
 		private Thread            _bgThread    = null;
 //		private boolean           _wasCanceled = false;
 		private WaitForExecDialog _waitDialog  = null;
+		private Throwable         _throwable   = null;
 
 		/**
 		 * Constructor
@@ -393,6 +394,18 @@ implements PropertyChangeListener, ActionListener
 			return _waitDialog;
 		}
 
+		public boolean hasException()
+		{
+			return _throwable != null;
+		}
+		public Throwable getException()
+		{
+			return _throwable;
+		}
+		public void setException(Throwable t)
+		{
+			_throwable = t;
+		}
 		/**
 		 * Should the cancel button be visible or not. <br>
 		 * Override this to change functionality

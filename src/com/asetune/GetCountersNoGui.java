@@ -677,7 +677,7 @@ public class GetCountersNoGui
 						continue;
 					}
 
-					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN);
+					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
 				}
 				catch (SQLException e)
 				{

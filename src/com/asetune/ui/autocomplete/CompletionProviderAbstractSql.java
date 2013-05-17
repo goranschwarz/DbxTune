@@ -18,6 +18,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.autocomplete.Util;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
@@ -300,7 +301,7 @@ extends CompletionProviderAbstract
 
 		RSyntaxTextArea textArea = (RSyntaxTextArea)comp;
 
-		setCharsAllowedInWordCompletion("_.*");
+		setCharsAllowedInWordCompletion("_.*/");
 
 //		// Parse 
 //		String allText     = comp.getText();
@@ -553,7 +554,7 @@ extends CompletionProviderAbstract
 			}
 		} // end _needRefresh
 
-		
+
 		//-----------------------------------------------------------
 		// Complete DATABASES
 		//
@@ -1503,6 +1504,24 @@ extends CompletionProviderAbstract
 	//////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////
+	/** 
+	 * Check if input contains normal chars, or non-normal chars
+	 * @return "[" + name + "]" if the name contains anything other than Letter or Digits. If only normal chars it returns same as the input.
+	 */
+	private static String fixStrangeNames(String name)
+	{
+		boolean normalChars = true;
+		for (int i=0; i<name.length(); i++)
+		{
+			if ( ! Character.isLetterOrDigit(name.charAt(i)) )
+			{
+				normalChars = false;
+				break;
+			}
+		}
+		return normalChars ? name : "["+name+"]"; 
+	}
+
     /**
 	 * Our own Completion class, which overrides toString() to make it HTML aware
 	 */
@@ -1513,7 +1532,7 @@ extends CompletionProviderAbstract
 		
 		public SqlDbCompletion(CompletionProviderAbstractSql provider, DbInfo di)
 		{
-			super(provider, di._dbName, di._dbName);
+			super(provider, di._dbName, fixStrangeNames(di._dbName));
 
 			_dbInfo = di;
 
@@ -1531,7 +1550,7 @@ extends CompletionProviderAbstract
 		@Override
 		public String toString()
 		{
-			return "<html>" + super.toString() + "</html>";
+			return "<html><body>" + super.toString() + "</body></html>";
 		}
 	}
 
@@ -1548,7 +1567,7 @@ extends CompletionProviderAbstract
 			super(provider, 
 				ti._tabName,
 				! quoteTableNames 
-					? ti._tabSchema+"."+ti._tabName 
+					? ti._tabSchema+"."+fixStrangeNames(ti._tabName) 
 					: "\""+ti._tabSchema+"\".\""+ti._tabName+"\"");
 
 			_tableInfo = ti;
@@ -1567,7 +1586,7 @@ extends CompletionProviderAbstract
 		@Override
 		public String toString()
 		{
-			return "<html>" + super.toString() + "</html>";
+			return "<html><body>" + super.toString() + "</body></html>";
 		}
 	}
 
@@ -1583,7 +1602,7 @@ extends CompletionProviderAbstract
 		{
 			super(provider, 
 				pi._procName,
-				pi._procName);
+				fixStrangeNames(pi._procName));
 
 			_procInfo = pi;
 
@@ -1601,7 +1620,7 @@ extends CompletionProviderAbstract
 		@Override
 		public String toString()
 		{
-			return "<html>" + super.toString() + "</html>";
+			return "<html><body>" + super.toString() + "</body></html>";
 		}
 	}
 
@@ -1615,7 +1634,7 @@ extends CompletionProviderAbstract
 		
 		public SqlColumnCompletion(CompletionProvider provider, String tabAliasName, String colname, TableInfo tableInfo)
 		{
-			super(provider, colname, (tabAliasName == null ? colname : tabAliasName+"."+colname));
+			super(provider, fixStrangeNames(colname), (tabAliasName == null ? colname : tabAliasName+"."+colname));
 			_tableInfo = tableInfo;
 
 			TableColumnInfo ci = _tableInfo.getColumnInfo(colname);
@@ -1636,7 +1655,7 @@ extends CompletionProviderAbstract
 		@Override
 		public String toString()
 		{
-			return "<html>" + super.toString() + "</html>";
+			return "<html><body>" + super.toString() + "</body></html>";
 		}
 	}
 
@@ -2059,12 +2078,12 @@ extends CompletionProviderAbstract
 	 * @param connProvider
 	 * @return CompletionProviderAbstract
 	 */
-	public static CompletionProviderAbstract installAutoCompletion(Connection conn, TextEditorPane textPane, Window window, ConnectionProvider connProvider)
+	public static CompletionProviderAbstract installAutoCompletion(Connection conn, TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connProvider)
 	{
 		if (conn == null)
 		{
 			_logger.info("Installing Completion Provider for JDBC");
-			return CompletionProviderJdbc.installAutoCompletion(textPane, window, connProvider);
+			return CompletionProviderJdbc.installAutoCompletion(textPane, errorStrip, window, connProvider);
 		}
 
 		try
@@ -2075,23 +2094,23 @@ extends CompletionProviderAbstract
 			if (ConnectionDialog.DB_PROD_NAME_SYBASE_ASE.equals(prodName))
 			{
 				_logger.info("Installing Completion Provider for Sybase ASE");
-				return CompletionProviderAse.installAutoCompletion(textPane, window, connProvider);
+				return CompletionProviderAse.installAutoCompletion(textPane, errorStrip, window, connProvider);
 			}
 			else if (ConnectionDialog.DB_PROD_NAME_SYBASE_RS.equals(prodName))
 			{
 				_logger.info("Installing Completion Provider for Sybase Replication Server");
-				return CompletionProviderRepServer.installAutoCompletion(textPane, window, connProvider);
+				return CompletionProviderRepServer.installAutoCompletion(textPane, errorStrip, window, connProvider);
 			}
 			else
 			{
 				_logger.info("Installing Completion Provider for JDBC");
-				return CompletionProviderJdbc.installAutoCompletion(textPane, window, connProvider);
+				return CompletionProviderJdbc.installAutoCompletion(textPane, errorStrip, window, connProvider);
 			}
 		}
 		catch (SQLException e)
 		{
 			_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. Caught: "+e);
-			return CompletionProviderJdbc.installAutoCompletion(textPane, window, connProvider);
+			return CompletionProviderJdbc.installAutoCompletion(textPane, errorStrip, window, connProvider);
 		}
 	}
 }

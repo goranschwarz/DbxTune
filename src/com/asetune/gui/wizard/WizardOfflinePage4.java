@@ -41,6 +41,7 @@ implements ActionListener, TableModelListener
 	private static final String WIZ_HELP = "Some Performance Counters has local options, which you can edit here. Click 'Value' cell to change the desired value.";
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Local Option", "Data Type", "Value", "StringValue", "Description"};
@@ -59,6 +60,7 @@ implements ActionListener, TableModelListener
 		private static final long	serialVersionUID	= 1L;
 
 		// tooltip on cells
+		@Override
 		public String getToolTipText(MouseEvent e) 
 		{
 			String tip = null;
@@ -78,6 +80,7 @@ implements ActionListener, TableModelListener
 		}
 
 		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+		@Override
 		public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
 		{
 			Component c = super.prepareRenderer(renderer, row, column);
@@ -126,6 +129,7 @@ implements ActionListener, TableModelListener
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TAB_POS_ICON)             return Icon.class;
@@ -133,6 +137,7 @@ implements ActionListener, TableModelListener
 				return Object.class;
 			}
 
+			@Override
 			public boolean isCellEditable(int row, int col)
 			{
 				if (col == TAB_POS_OPTION_BOL_VALUE || col == TAB_POS_OPTION_STR_VALUE)
@@ -259,6 +264,7 @@ implements ActionListener, TableModelListener
 		return null;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 	}

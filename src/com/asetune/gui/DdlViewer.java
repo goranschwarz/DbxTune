@@ -3,6 +3,7 @@ package com.asetune.gui;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Frame;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,6 +13,7 @@ import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -121,14 +123,21 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		// Set the icon, if we "just" do setIconImage() on the JDialog
 		// it will not be the "correct" icon in the Alt-Tab list on Windows
 		// So we need to grab the owner, and set that since the icon is grabbed from the owner...
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png");
-		if (icon != null)
+//		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png");
+//		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool_32.png");
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ddl_view_tool.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/ddl_view_tool_32.png");
+		if (icon16 != null || icon32 != null)
 		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
 			Object owner = getOwner();
 			if (owner != null && owner instanceof Frame)
-				((Frame)owner).setIconImage(icon.getImage());
+				((Frame)owner).setIconImages(iconList);
 			else
-				setIconImage(icon.getImage());
+				setIconImages(iconList);
 		}
 
 		setLayout( new BorderLayout() );
@@ -388,7 +397,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		_treeTable.setSortable(true);
 		_treeTable.setColumnControlVisible(true);
 
-		_treeTable.addKeyListener(new TreeTableNavigationEnhancer(_treeTable, this));
+//		_treeTable.addKeyListener(new TreeTableNavigationEnhancer(_treeTable, this));
+		new TreeTableNavigationEnhancer(_treeTable, this);
 //		_treeTable.getColumnModel().getColumn(0).setWidth(250);
 
 		_tablePopupMenu = createDataTablePopupMenu();
@@ -553,7 +563,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			if (tn == null)
 			{
 				String htmlMsg = "<html>The object '"+objectName+"' wasn't found in the DDL View storage.</html>";
-				SwingUtils.showInfoMessageExt(this, "Object not found", htmlMsg, null, null);
+				SwingUtils.showInfoMessageExt(this, "Object not found", htmlMsg, null, (JPanel)null);
 			}
 			else
 			{

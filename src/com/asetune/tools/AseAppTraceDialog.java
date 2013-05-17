@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -217,14 +218,19 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		// Set the icon, if we "just" do setIconImage() on the JDialog
 		// it will not be the "correct" icon in the Alt-Tab list on Windows
 		// So we need to grab the owner, and set that since the icon is grabbed from the owner...
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png");
-		if (icon != null)
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool_32.png");
+		if (icon16 != null || icon32 != null)
 		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
 			Object owner = getOwner();
 			if (owner != null && owner instanceof Frame)
-				((Frame)owner).setIconImage(icon.getImage());
+				((Frame)owner).setIconImages(iconList);
 			else
-				setIconImage(icon.getImage());
+				setIconImages(iconList);
 		}
 
 		_aseVersionStr = aseVersionStr;

@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dialog;
+import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -544,9 +545,20 @@ implements ActionListener
 			_exit_mi        .addActionListener(this);
 		}
 
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/rs_dump_queue.png");
-		if (icon != null)
-			_window.setIconImage(icon.getImage());
+//		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/rs_dump_queue.png");
+//		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/rs_dump_queue_32.png");
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/view_rs_queue_32.png");
+		if (icon16 != null || icon32 != null)
+		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
+			_window.setIconImages(iconList);
+		}
+//		if (icon != null)
+//			_window.setIconImage(icon.getImage());
 
 		// Arrange to quit the program when the user closes the window
 		_window.addWindowListener(new WindowAdapter()

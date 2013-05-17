@@ -79,6 +79,7 @@ set classpath=%classpath%;%PERF_DEMO_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-cli-1.2.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\proxy-vole_20121203.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\ganymed-ssh2-build251beta1.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\antlr-4.0-complete.jar
 
 rem --- echo %CLASSPATH%
 

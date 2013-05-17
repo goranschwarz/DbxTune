@@ -39,7 +39,7 @@ public class AseConnectionFactory
 
 	public static final String PROPERTY_LOGINTIMEOUT = "AseConnectionFactory.loginTimeout";
 	
-	private static String              _driver              = "com.sybase.jdbc3.jdbc.SybDriver";
+	private static String              _driver              = "com.sybase.jdbc4.jdbc.SybDriver";
 	private static String              _urlTemplate         = "jdbc:sybase:Tds:HOST:PORT";
 	private static String              _urlTemplateHostPort = "HOST:PORT";
 //	private static String              _host                = "";
@@ -65,7 +65,7 @@ public class AseConnectionFactory
 	 */
 	static
 	{
-		String jdbcDriver      = "com.sybase.jdbc3.jdbc.SybDriver";
+		String jdbcDriver      = "com.sybase.jdbc4.jdbc.SybDriver";
 		String jdbcUrlTemplate = "jdbc:sybase:Tds:HOST:PORT";
 
 		// for jTDS, the below can be used. See http://jtds.sourceforge.net/
@@ -1603,7 +1603,7 @@ public class AseConnectionFactory
 //		Connection conn = null;
 //		try
 //		{
-//			String jdbcDriver = "com.sybase.jdbc3.jdbc.SybDriver";
+//			String jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";
 //			String jdbcUrl    = "jdbc:sybase:Tds:HOSTNAME:HOSTPORT";
 //			if (_props != null)
 //			{

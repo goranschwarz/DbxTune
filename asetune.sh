@@ -70,6 +70,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.14.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 
 export PATH=${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}

@@ -20,6 +20,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.sql.Timestamp;
 import java.util.List;
@@ -153,8 +154,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	*/
 	protected void initComponents() 
 	{
+//		if (_owner != null)
+//			setIconImage(_owner.getIconImage());
 		if (_owner != null)
-			setIconImage(_owner.getIconImage());
+			setIconImages(_owner.getIconImages());
 		
 		setTitle("Offline Session Viewer");
 
@@ -301,7 +304,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		_treeTable.setSortable(true);
 		_treeTable.setColumnControlVisible(true);
 
-		_treeTable.addKeyListener(new TreeTableNavigationEnhancer(_treeTable));
+//		_treeTable.addKeyListener(new TreeTableNavigationEnhancer(_treeTable));
+		TreeTableNavigationEnhancer ttne = new TreeTableNavigationEnhancer(_treeTable);
+		_treeTable.addKeyListener(ttne);
+		_treeTable.addMouseListener(ttne);
 		_treeTable.getColumnModel().getColumn(0).setWidth(250);
 
 		_tablePopupMenu = createDataTablePopupMenu();
@@ -463,7 +469,6 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		// which then calls: refreshTable(List sessionList)
 		// wchich populate the GUI
 		reader.loadSessions();
-		
 	}
 	private void refreshTable(List<SessionInfo> sessionList)
 	{
@@ -1087,7 +1092,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 
 	public class TreeTableNavigationEnhancer
-	implements KeyListener 
+	implements KeyListener, MouseListener
 	{
 		private JXTreeTable _treeTable;
 
@@ -1182,6 +1187,36 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 //			}
 //			return row;
 //		}
+
+		@Override
+		public void mouseClicked(MouseEvent e)
+		{
+			if (e.getClickCount() == 2 && !e.isConsumed()) 
+			{
+				e.consume();
+				doActionShow();
+			}
+		}
+
+		@Override
+		public void mousePressed(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e)
+		{
+		}
 	}
 
 	/*---------------------------------------------------

@@ -28,6 +28,7 @@ CREATE TABLE asemon_usage
 	clientSourceDate        timestamp,
 	clientSourceVersion     int,
 	clientAsemonVersion     varchar(20),
+	appStartupTime          varchar(10),
 	clientExpireDate        varchar(10),
 	
 	clientHostName          varchar(40),
@@ -70,7 +71,8 @@ CREATE TABLE asemon_connect_info
 	connectId               int,
 	
 	srvName                 varchar(30),
-	srvIpPort               varchar(60),
+	srvIpPort               varchar(100),
+	sshTunnelInfo           varchar(100),
 	srvUser                 varchar(30),
 	srvUserRoles            varchar(300),
 	srvVersionStr           varchar(150),
@@ -220,6 +222,7 @@ CREATE TABLE sqlw_usage
 	clientSourceDate        timestamp,
 	clientSourceVersion     int,
 	clientAppVersion        varchar(20),
+	appStartupTime          varchar(10),
 	
 	clientHostName          varchar(40),
 	clientHostAddress       varchar(20),

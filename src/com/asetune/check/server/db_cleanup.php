@@ -256,6 +256,12 @@
 		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSapSystemInfo varchar(40)  AFTER srvSortOrderName");
 		//doCleanup("ALTER TABLE asemon_connect_info DROP COLUMN srvIsSapSystem");
 
+		//doCleanup("ALTER TABLE asemon_usage ADD COLUMN appStartupTime varchar(10)  AFTER clientAsemonVersion");
+		//doCleanup("ALTER TABLE sqlw_usage   ADD COLUMN appStartupTime varchar(10)  AFTER clientAppVersion");
+
+		//doCleanup("ALTER TABLE asemon_connect_info ADD sshTunnelInfo varchar(100)  AFTER srvIpPort");
+		//doCleanup("ALTER TABLE asemon_connect_info MODIFY srvIpPort varchar(100)");
+
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
 //");

@@ -33,7 +33,7 @@ extends CountersModel
 	public static final String   SHORT_NAME       = "Spinlock Act";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"Spinlock Activity based on the MDA Table monSpinlockActivity introduced in ASE 17.7 ESD#2<br>" +
+		"Spinlock Activity based on the MDA Table monSpinlockActivity introduced in ASE 15.7 ESD#2<br>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;

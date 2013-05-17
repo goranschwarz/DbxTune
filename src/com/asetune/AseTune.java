@@ -70,6 +70,14 @@ public class AseTune
 		return _hasDevVersionExpired;
 	}
 
+	// Start time
+	private static long _startTime = System.currentTimeMillis();
+	public static long getStartTime()
+	{
+		return _startTime;
+	}
+	
+	
 	/**
 	 * Initialize and start AseTune
 	 * @param propFile

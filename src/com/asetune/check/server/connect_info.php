@@ -32,6 +32,7 @@
 
 	$srvName            = getUrlParam('srvName');
 	$srvIpPort          = getUrlParam('srvIpPort');
+	$sshTunnelInfo      = getUrlParam('sshTunnelInfo');
 	$srvUser            = getUrlParam('srvUser');
 	$srvUserRoles       = getUrlParam('srvUserRoles');
 	$srvVersionStr      = getUrlParam('srvVersionStr');
@@ -55,6 +56,7 @@
 
 	$srvName       = mysql_real_escape_string($srvName);
 	$srvIpPort     = mysql_real_escape_string($srvIpPort);
+	$sshTunnelInfo = mysql_real_escape_string($sshTunnelInfo);
 	$srvUser       = mysql_real_escape_string($srvUser);
 	$srvVersionStr = mysql_real_escape_string($srvVersionStr);
 
@@ -73,6 +75,7 @@
 
 		srvName,
 		srvIpPort,
+		sshTunnelInfo,
 		srvUser,
 		srvUserRoles,
 		srvVersionStr,
@@ -96,6 +99,7 @@
 
 		'$srvName',
 		'$srvIpPort',
+		'$sshTunnelInfo',
 		'$srvUser',
 		'$srvUserRoles',
 		'$srvVersionStr',

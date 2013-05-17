@@ -130,6 +130,7 @@
 	$clientSourceDate        = getUrlParam('clientSourceDate');
 	$clientSourceVersion     = getUrlParam('clientSourceVersion');
 	$clientAppVersionStr     = getUrlParam2('clientAseTuneVersion', 'clientAsemonVersion');
+	$appStartupTime          = getUrlParam('appStartupTime');
 	$clientExpireDate        = getUrlParam('clientExpireDate');
 
 	$clientHostName          = getUrlParam('clientHostName');
@@ -196,6 +197,7 @@
 		clientSourceDate,
 		clientSourceVersion,
 		clientAsemonVersion,
+		appStartupTime,
 		clientExpireDate,
 
 		clientHostName,
@@ -234,6 +236,7 @@
 		'$clientSourceDate',
 		$clientSourceVersion,
 		'$clientAppVersionStr',
+		'$appStartupTime',
 		'$clientExpireDate',
 
 		'$clientHostName',

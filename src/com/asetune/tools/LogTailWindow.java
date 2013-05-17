@@ -3,6 +3,7 @@ package com.asetune.tools;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Frame;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Properties;
 
@@ -26,7 +28,9 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.UIManager;
@@ -71,7 +75,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 //	private String          _tailFileName           = null;
 
 	private FileTail        _fileTail               = null;
-	private int             _initialLinesInTail     = 50;
+//	private int             _initialLinesInTail     = 50;
 
 	private JPanel          _topPanel               = null;
 	private JLabel          _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
@@ -86,6 +90,12 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private JCheckBox       _tailNewRecordsTop_chk  = new JCheckBox("Move to last row when input is received", true);
 	private JCheckBox       _tailNewRecordsBot_chk  = new JCheckBox("Move to last row when input is received", true);
 
+	private JLabel             _tailSize_lbl        = new JLabel("Start at line from end");
+	private SpinnerNumberModel _tailSize_spm        = new SpinnerNumberModel(DEFAULT_TAIL_SIZE, 10, 99999, 10);
+	private JSpinner           _tailSize_sp         = new JSpinner(_tailSize_spm);
+	private JCheckBox          _tailFromStart_cbx   = new JCheckBox("Start at begining of file", DEFAULT_TAIL_FROM_START);
+	
+	
 	private String[]        _accessTypeArr          = new String[] {"Choose a method", "SSH Access", "Direct/Local Access"};
 	private JPanel          _accessTypePanel        = null;
 	private JLabel          _accessType_lbl         = new JLabel("Log File Access");
@@ -111,6 +121,13 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private RSyntaxTextArea _logTail_txt            = new RSyntaxTextArea();
 	private RTextScrollPane _logTail_scroll         = new RTextScrollPane(_logTail_txt);
 
+
+	
+//	private static final String  PROPKEY_TAIL_SIZE       = "LogTail.size";
+	private static final int     DEFAULT_TAIL_SIZE       = 100;
+	
+//	private static final String  PROPKEY_TAIL_FROM_START = "LogTail.start_at_begining_of_file";
+	private static final boolean DEFAULT_TAIL_FROM_START = false;
 
 	/**
 	 * Get servername, srvVersion and logFileName from the server
@@ -152,14 +169,19 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		// Set the icon, if we "just" do setIconImage() on the JDialog
 		// it will not be the "correct" icon in the Alt-Tab list on Windows
 		// So we need to grab the owner, and set that since the icon is grabbed from the owner...
-		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "images/log_trace_tool.png");
-		if (icon != null)
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/log_trace_tool.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/log_trace_tool_32.png");
+		if (icon16 != null || icon32 != null)
 		{
+			ArrayList<Image> iconList = new ArrayList<Image>();
+			if (icon16 != null) iconList.add(icon16.getImage());
+			if (icon32 != null) iconList.add(icon32.getImage());
+
 			Object owner = getOwner();
 			if (owner != null && owner instanceof Frame)
-				((Frame)owner).setIconImage(icon.getImage());
+				((Frame)owner).setIconImages(iconList);
 			else
-				setIconImage(icon.getImage());
+				setIconImages(iconList);
 		}
 
 		_fileType      = filetype;
@@ -313,6 +335,10 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_serverName_cbx.setToolTipText("");
 		_serverNameRemove_but.setToolTipText("Removes this entry from the list");
 
+		_tailSize_lbl      .setToolTipText("<html>How many old entries from the file should we include<br> <b>Note</b>: For Linux/Unix systems the max value is 999.</html>");
+		_tailSize_sp       .setToolTipText(_tailSize_lbl.getToolTipText());
+		_tailFromStart_cbx .setToolTipText("<html>Start from the beginning of the file...</html>");
+		
 		panel.add(_serverName_lbl,       "");
 		panel.add(_serverName_cbx,       "span 2, split, pushx, growx");
 		panel.add(_serverNameRemove_but, "wrap");
@@ -322,6 +348,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 		panel.add(_logFilename_lbl,      "");
 		panel.add(_logFilename_txt,      "pushx, growx, wrap");
+
+		panel.add(_tailSize_lbl,         "");
+		panel.add(_tailSize_sp,          "split");
+		panel.add(_tailFromStart_cbx,    "gapleft 20, wrap");
+
 		panel.add(_tailNewRecordsTop_chk,"span, wrap");
 
 		_serverName_cbx.setEditable(true);
@@ -332,9 +363,13 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 		_logFilename_txt      .addActionListener(this);
 		_serverName_cbx       .addActionListener(this);
+		_tailFromStart_cbx    .addActionListener(this);
 		_tailNewRecordsTop_chk.addActionListener(this);
 
 		// Focus action listener
+
+		// Initial visibility
+		_tailSize_sp.setEnabled( ! _tailFromStart_cbx.isSelected() );
 
 		return panel;
 	}
@@ -462,6 +497,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		// CHKBOX: keep both _tailNewRecords buttons in sync... (they should be the same button)
 		if (_tailNewRecordsBot_chk.equals(source))
 			_tailNewRecordsTop_chk.setSelected(_tailNewRecordsBot_chk.isSelected());
+
+		// visibility
+		_tailSize_sp.setEnabled( ! _tailFromStart_cbx.isSelected() );
 
 		isConnected();   // enable/disable components
 		validateInput(); // are we allowed to connect, or are we missing information
@@ -640,6 +678,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		conf.setProperty("LogTail.misc."+getServername()+".tail",     _tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected() );
 		conf.setProperty("LogTail.misc."+getServername()+".filename", _logFilename_txt.getText() );
 
+		conf.setProperty("LogTail.misc."+getServername()+".tail_size",       _tailSize_spm      .getNumber().intValue());
+		conf.setProperty("LogTail.misc."+getServername()+".from_file_start", _tailFromStart_cbx.isSelected());
+
 		//----------------------------------
 		// TYPE
 		//----------------------------------
@@ -725,6 +766,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_tailNewRecordsTop_chk.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
 		_tailNewRecordsBot_chk.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
 		
+		_tailSize_spm     .setValue(    conf.getIntProperty(    "LogTail.misc."+servername+".tail_size",       DEFAULT_TAIL_SIZE));
+		_tailFromStart_cbx.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".from_file_start", DEFAULT_TAIL_FROM_START));
+
+		_tailSize_sp.setEnabled( ! _tailFromStart_cbx.isSelected() );
+
 		if ( ! atStartup )
 		{
 			String logfile = conf.getProperty("LogTail.misc."+servername+".filename");
@@ -863,7 +909,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				return false;
 
 			// Start the TAIL on the file...
-			_fileTail = new FileTail(_sshConn, getTailFilename(), _initialLinesInTail);
+			if (_tailFromStart_cbx.isSelected())
+				_fileTail = new FileTail(_sshConn, getTailFilename(), true);
+			else
+				_fileTail = new FileTail(_sshConn, getTailFilename(), _tailSize_spm.getNumber().intValue());
+
 			if (_fileTail.doFileExist())
 			{
 				_fileTail.addTraceListener(this);
@@ -881,8 +931,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		else if (index == ACCESS_TYPE_LOCAL)
 		{
 			// Start the TAIL on the file...
-//			_fileTail = new FileTail(getTailFilename(), true);
-			_fileTail = new FileTail(getTailFilename(), _initialLinesInTail);
+			if (_tailFromStart_cbx.isSelected())
+				_fileTail = new FileTail(getTailFilename(), true);
+			else
+				_fileTail = new FileTail(getTailFilename(), _tailSize_spm.getNumber().intValue());
+
 			if (_fileTail.doFileExist())
 			{
 				_fileTail.addTraceListener(this);

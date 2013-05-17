@@ -536,7 +536,7 @@ public class AseStackTraceAnalyzer
 	 * The graphical representation of the parsed sybmon stack trace file.
 	 * @author gorans
 	 */
-	private static class AseStackTreeView
+	public static class AseStackTreeView
 	extends JFrame
 	implements ActionListener
 	{
@@ -1002,12 +1002,13 @@ public class AseStackTraceAnalyzer
 				" \n" +
 				"echo 'Starting' \n" +
 				" \n" +
-				"dttm=$(date +%Y%m%d_%H%M%S) \n" +
+				"ts=$(date +%Y%m%d_%H%M%S) \n" +
+				"logFile=\"stacktrace_${DSQUERY}_${ts}.out\" \n" +
 				" \n" +
 				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON \n" +
-				"cat $SYBASE/$SYBASE_ASE \n" +
+				"catalog $SYBASE/$SYBASE_ASE \n" +
 				"attach $DSQUERY \n" +
-				"log on sample_${dttm}.out \n" +
+				"log on ${logFile} \n" +
 				"set display off \n" +
 				"sample count=500 interval=100 context=y \n" +
 				"log close \n" +

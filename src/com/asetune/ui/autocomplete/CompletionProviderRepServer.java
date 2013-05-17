@@ -20,6 +20,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.autocomplete.Util;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextArea;
@@ -41,7 +42,7 @@ extends CompletionProviderAbstract
 	
 	private ArrayList<RsCompletion> _rsdbList = new ArrayList<RsCompletion>();
 
-	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, Window window, ConnectionProvider connectionProvider)
+	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
 		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Server ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL+").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL);

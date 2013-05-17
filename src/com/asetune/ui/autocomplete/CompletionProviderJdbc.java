@@ -5,6 +5,7 @@ import java.awt.Window;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 
@@ -15,7 +16,7 @@ extends CompletionProviderAbstractSql
 {
 	private static Logger _logger = Logger.getLogger(CompletionProviderJdbc.class);
 
-	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, Window window, ConnectionProvider connectionProvider)
+	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
 		_logger.info("Installing Syntax and AutoCompleation for JDBC ("+SyntaxConstants.SYNTAX_STYLE_SQL+").");
 		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);

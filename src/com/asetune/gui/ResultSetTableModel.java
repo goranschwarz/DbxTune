@@ -188,8 +188,8 @@ public class ResultSetTableModel
 	/** apply pipe cmd filter */
 	private boolean addRow(ArrayList<Object> row)
 	{
-		if (_pipeCmd == null)
-			return true;
+		if (   _pipeCmd == null  ) return true;
+		if ( ! _pipeCmd.isGrep() ) return true;
 
 		String regexpStr = ".*" + _pipeCmd.getRegExp() + ".*";
 System.out.println("ResultSetTableModel: applying filter: java-regexp '"+regexpStr+"', on row: "+row);
