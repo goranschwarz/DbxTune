@@ -1,0 +1,3439 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+<TITLE>AseTune History</TITLE>
+<META NAME="Author" CONTENT="Goran Schwarz">
+<META NAME="Description" CONTENT="Helptext">
+
+<style type="text/css">
+body {font-family: Arial, Verdana, Helvetica, sans-serif; background-color: #FFFFFF; color:#000000}
+li   {margin-bottom: 6px}
+</style>
+
+</HEAD>
+<BODY>
+
+<FONT SIZE="6" COLOR="red">A new Version of AseTune is Available.</FONT><br>
+Even if AseTune tells you've got the latest version, there is a new one.<br>
+Download it at <A HREF="http://www.asetune.com/download.html">http://www.asetune.com/download.html</A><br>
+or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourceforge.net/projects/asetune/files/</A><br>
+<br>
+
+<H1>History of what has been done so far</H1>
+
+<!-- ========================================================================== -->
+<H2>2012-03-03</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Performance Counters initialized with wrong ASE release</b><br>
+	When connecting to ASE Release 15.0.2 or higher, the ESD# was stripped of.<br>
+	This was due to trusting the sp_version 'montables' information.<br>
+	The 'montables' version string is not maintained with the same version string as 'installmaster'<br>
+	Solution in ASE 15.0.2 or higher is to use the 'installmaster' entry instead of 'montables'<br>
+	This bug was introduced in version '2013-02-25', and in my opinion so serious I needed to make a new release ASAP.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tab: 'SPID Wait', 'SPID Activity' and 'Waits'</b><br>
+	Stopped using the tempdb.guest.monWaitEventInfo and tempdb.guest.monWaitClassInfo<br>
+	Now doing the translation from WaitEventID to the descriptions directly in java code instead.<br>
+	This was done due to: if you have 'granular permissions' configured in ASE 15.7 ESD#2 there was problems reading the above tables.<br>
+	</LI>
+
+	<LI>
+	<b>Change in tool: SQL Window</b><br>
+	Use IGNORE_DONE_IN_PROC=true as the default option when connecting to ASE.<br>
+	This will exclude all extra/intermediate row counts when executing a stored procedure.<br>
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2013-02-25</H2>
+<UL>
+	<LI>
+	<b>Major enhancements to the tool SQL Window</b><br>
+	Most enhancements are for the stand alone version. (<code>sqlw.bat</code> or <code>sqlw.sh</code>)<br>
+	Try it out and <b>send me feedback and suggestions</b><br>
+	Enhancements:<br>
+	<ul>
+	   <li>Connect to "any" JDBC driver (the driver must be in the CLASSPATH, at least for the moment, work in progress for this)</li>
+	   <li>Save (SQL/RCL) text content to a file. Save As. Load a file. Last Used files... (see the File Menu)</li>
+	   <li>Can now connect to Replication Server</li>
+	   <li>Syntax highlighting for RCL - Replication Command Language</li>
+	   <li>Basic Code Completion for Replication Server Commands and Connection names</li>
+	   <li>View Current ASE Configuration has been added, if you are connected to ASE.</li>
+	   <li>View Current RepServer Configuration has been added, if you are connected to RS.</li>
+	   <li>RS: Resume/Suspend RepAgent/DSI dialog. (right click in the JTable and do 'resume')</li>
+	   <li>RS: View Stable Queue Content. (Menu-&gt;View-&gt;View Stable Queue Content) (right click in the JTable and do 'view Queue Content') <i>NOTE: this is't 100% complete yet, need more work done</i></li>
+	   <li>Row Count option (see row count for ins/upd/del) and not just the selects. stored procedures like 'sp_who' will add <b>many</b> row counts. use URL Option <code>IGNORE_DONE_IN_PROC=true</code> in the Connection Dialog to minimize additional row count entries from stored procs.</li>
+	   <li>ASE: check @@trancount and @@transtate after each executed SQL Statement. a WARNING "watermark" will be visible if you are in a transaction. (try it: simply execute <code>begin tran</code>, then <code>commit/rollback tran</code>. to reset status 'TRAN ABORT', execute <code>begin tran  commit tran</code>)</li>
+	   <li>Predefined SQL/RCL commands, clock the RCL/SQL Button on the Toolbar and kick it off.</li>
+	   <li>RS: Admin who_is_down button on the Toolbar.</li>
+	   <li>Watermark in the RCL/SQL text editor, that tells you if you are connected or not...</li>
+	   <li>Status bar at the bottom that tells you user/server you are connected to, also tooltip on the ASE/RS field (located at lower right corner) will show you @@servername, JDBC Product Name, @@version, ports the server listens at.</li>
+	   <li>
+	      Improved Code Completion for for ASE:
+	      <ul>
+	         <li>exec &lt;Ctrl-Space&gt; will show procedures only, if the procedure start with 'sp_' all system stored procedures will be displayed. You can also use '*' to do wildcard searches, for example 'exec sp_*rep_agent*' will show any procedure that has the name 'rep_agent' in it.</li>
+	         <li>use &lt;Ctrl-Space&gt; will show databases</li>
+	         <li>FIXME: add more stuff here...</li>
+	      </ul>
+	   </li>
+	</ul>
+	Bug fixes:<br>
+	<ul>
+	   <li>Binary datatype is now displayed as 0x{value}.</li>
+	   <li>A bunch more.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Java Memory usage by AseTune</b><br>
+	AseTune uses a lot of memory, first of all Swing consumes quite some memory,
+	  then all data in the Performance Counters does take memory,
+	  then that data is stored in the 'in-memory' history, so we can go back and view data that within the history limit (defaults to 10 minutes)<br>
+	When not yet connected, I think I have decreased the memory usage a bit (some unnecessary calls to Swing was removed).<br>
+	But when you are connected and sampling data, the only thing I can do is try to cleanup or give the Java Garbage Collector <i>hints</i> that it should go to work.<br>
+	<br>
+	The following strategies has been implemented...
+	<ul>
+	   <li>A memory monitor thread, that will check how much memory we have left every third second and take actions (see below).</li>
+	   <li>On every data sample, also check if we are reaching "near end of memory" and take actions (see below).</li>
+	   <li>If the Swing Event Dispatch Thread receives OutOfMemoryError a notification to the Memory Monitor is sent.</li>
+	   <li>By Default the In-Memory storage is disabled. Or actually set to a low value (1 minute).</li>
+	</ul>
+	<br>
+	The following Actions is available for AseTune.
+	<ul>
+	   <li>
+	      if <b>less than 130MB</b> left
+	      <ul>
+              <li>enable option 'Do Java Garbage Collect after counters has been refreshed'. <br><b>Note</b>: the GUI might be perceived as a bit slow/sluggish when it has to do all that extra extensive Java Memory Garbage Collections</li>
+              <li>show a pop up message that the above has been enabled.</li>
+              <li>This can be disabled again from Menu-&gt;View-&gt;Preference-&gt;Do Java Garbage Collect after counters has been refreshed</li>
+	      </ul>
+	   </li>
+	   <li>
+	      if <b>less than 30MB</b> left
+	      <ul>
+              <li>The 'in-memory' counter view is cleared</li>
+              <li>The 'in-memory' counter history is set to a low value (typically 0 or 1 minute)</li>
+              <li>Advice the Java Garbage Collector to clean up memory</li>
+              <li>show a pop up message that this has been done.</li>
+              <li>'in-memory' counter history, can be set back at the top of the summary, graphs panel. </li>
+	      </ul>
+	   </li>
+	</ul>
+	<p>
+	   The default threshold values can be changed in any of the properties files.<br>
+	   Low-on-memory: <code>asetune.memory.monitor.threshold.low_on_memory.mb=newValueInMB</code><br>
+	   Out-of-memory: <code>asetune.memory.monitor.threshold.out_of_memory.mb=newValueInMB</code><br>
+	</p>
+	<p>
+	   When <i>'Do Java Garbage Collect after counters has been refreshed'</i> is enabled a small GUI pops up to tell
+	   you what's it doing since it might be a time consuming task to do the Java Garbage Collection.<br>
+	</p>
+	<p>
+	   Please let me know if you still have memory issues.<br>
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script.
+	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
+	</p>
+	Also new default values for Java memory:
+	<ul>
+	   <li>32 bit JVM's will use 1024 as max memory (JVM switches: -Xmx1024m -Xms64m)</li>
+	   <li>64 bit JVM's will use 2048 as max memory (JVM switches: -Xmx2048m -Xms64m)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Connection Dialog Changes (added SSH Tunnel option)</b><br>
+	Connecting to ASE can now be done over an SSH Tunnel, which is automatically setup from AseTune via any SSH Server.<br>
+	This is used to simplify connecting to any ASE that is located on a "shielded" network.<br>
+	An example could be if you sit on one network and want to connect a ASE that is on the development network,
+	  and the firewall wont let you connect to the ASE port on the development net. As long as you can connect
+	  to any host that has a SSH server on the development net, problem is solved by the SSH Port Forwarding
+	  functionality. (or wait for the network administrators to open the port, if it's allowed)<br>
+	Here is the "big picture" how it works
+	<ul>
+	  <li>Setting up a local listener port (for example 2955). </li>
+	  <li>The ASE Client (AseTune) connect to localhost:2955. </li>
+	  <li>The SSH connection tunnels/forwards the packets sent on localhost:2955 to an "intermediate" SSH Host (via port 22). </li>
+	  <li>The SSH Daemon then opens a connection to the Destination host:port (lets say asedevhost:5000) and forwards the data traffic. </li>
+	</ul>
+	This means: as long you can connect to the "intermediate" SSH Host you can connect to a ASE located on <i>the other side</i>.<br>
+	The above help text and a picture trying to explain it will be visible in the Connection-SSH Dialog.<br>
+	</LI>
+
+	<LI>
+	<b>New: View -&gt; View/Tail the ASE Errolog</b><br>
+	If you want to view/tail the ASE errorlog file directly (and not via the monErrorLog table)<br>
+	This is a simple tail on the log file. If the log files is <b>not</b> located on the same machine, which
+	you run AseTune on, a SSH (Secure Shell) connection is made to the remote machine to start the tail, the
+	output of the tail is then streamed back to the "log viewer" GUI which just presents the data.<br>
+	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
+	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
+	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
+	as you enter various commands.<br>
+	</LI>
+
+	<LI>
+	<b>New: tab 'Spinlock Act' in the group 'Server'</b><br>
+	In ASE 15.7.0 ESD#2 a table monSpinlockActivity was introduced, where spinlock contention is visible<br>
+	This Performance Counter is a complement to 'Spinlock Sum', which uses table sysmonitors.<br>
+	</LI>
+
+	<LI>
+	<b>New: tab 'Memory Usage' in the group 'Server'</b><br>
+	In ASE 15.7.0 ESD#3 a table monMemoryUsage was introduced, where internal memory usage and allocations is visible<br>
+	</LI>
+
+	<LI>
+	<b>New: Graphs in the Summary Panel</b><br>
+	<ul>
+	   <li>'Number of Concurrent Blocking Locks'                                              - Grab 'LockWaits' from the CmSummary and present it in a graph.</li>
+	   <li>'Oldest Open Transaction in any Databases'                                         - Grab the new 'Oldest Open Tran' field from the Summary and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Read+Write), per Second and Device'                    - Read+Write Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Read), per Second and Device'                          - Read       Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Number of Disk Operations (Write), per Second and Device'                         - Write      Disk Operations for all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Read+Write) in Milliseconds, per Device'                  - IO Service Time for Read+Write on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Read) in Milliseconds, per Device (15.7 esd#2 or later)'  - IO Service Time for Read       on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Device IO Service Time (Write) in Milliseconds, per Device (15.7 esd#2 or later)' - IO Service Time for Write      on all devices from the Devices Performance Counter and present it in a graph.</li>
+	   <li>'Statement Cache Hit Rate, in Percent'                                             - From tab 'Statement Cache'.</li>
+	   <li>'CPU Thread BusyTicksPct Average per Pool Type (15.7 and later)'                   - Average BusyTicksPct per PoolType. from Threads 'tab'.</li>
+	   <li>'CPU Thread BusyTicksPct Usage per Thread (15.7 and later)'                        - BusyTicksPct per Thread.           from Threads 'tab'.</li>
+	   <li>'Host Monitor - CPU Graph'                                                         - From tab 'Host Monitoring' - 'OS CPU (vmstat)'.</li>
+	   <li>'Host Monitor - Load Average Graph'                                                - From tab 'Host Monitoring' - 'OS Load Average'.</li>
+	</ul>
+	In ASE 15.7 ESD#2, the granularity of IOTime is much better than in earlier releases where the resolution was 100ms<br>
+	So that is why the Graphs for 'Device IO Service Time' based on monDeviceIO (CmDeviceIo) was introduced.<br>
+	Also a bug or strange behavior was introduced in ASE 15.7 ESD#2 in table 'monIOQueue', column 'IOTime',
+	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
+	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
+	<p>
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br>
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread.
+	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
+	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
+	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
+	</p>
+	</LI>
+
+	<LI>
+	<b>New: Summary Panel, added one field 'Oldest Open Tran'.</b><br>
+	When there are databases that has Transactions that has been Opened for more than a second, a red icon in
+	the status bar shows up, telling you how old the oldest open transaction is in seconds.<br>
+	If you press the icon, you will jump to the 'Databases' tab.<br>
+	In Databases Tab, databases with 'Open Transactions' will be marked with a yellow background.
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Objects' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>IOSize1Page       </code> - Number of 1 page physical reads performed for the object</li>
+	   <li><code>IOSize2Pages      </code> - Number of 2 pages physical reads performed for the object</li>
+	   <li><code>IOSize4Pages      </code> - Number of 4 pages physical reads performed for the object</li>
+	   <li><code>IOSize8Pages      </code> - Number of 8 pages physical reads performed for the object</li>
+	   <li><code>PRSSelectCount    </code> - Number of times PRS (Precomputed Result Set) was selected for query rewriting plan during compilation</li>
+	   <li><code>LastPRSSelectDate </code> - Last date the PRS (Precomputed Result Set) was selected for query rewriting plan during compilation</li>
+	   <li><code>PRSRewriteCount   </code> - Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation</li>
+	   <li><code>LastPRSRewriteDate</code> - Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Devices' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>ReadTime          </code> - Total time spent reading from the device (ms)</li>
+	   <li><code>WriteTime         </code> - Total time spent writing to the device (ms)</li>
+	   <li><code>ReadServiceTimeMs </code> - Calculation, formula: ReadTime / Reads</li>
+	   <li><code>WriteServiceTimeMs</code> - Calculation, formula: WriteTime / Writes</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Processes' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>IOSize1Page </code> - Number of 1 page physical reads performed by the process</li>
+	   <li><code>IOSize2Pages</code> - Number of 2 pages physical reads performed for the process</li>
+	   <li><code>IOSize4Pages</code> - Number of 4 pages physical reads performed for the process</li>
+	   <li><code>IOSize8Pages</code> - Number of 8 pages physical reads performed for the process</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Databases' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>PRSUpdateCount </code> - Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table</li>
+	   <li><code>PRSSelectCount </code> - Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation</li>
+	   <li><code>PRSRewriteCount</code> - Number of times PRSes (Precomputed Result Set) were considered valid for query rewriting during compilation</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Databases' for to see Old Open Transactions (from syslogshold)</b><br>
+	<ul>
+	   <li><code>OldestTranStartTime </code> - Start time of the oldest open transaction in this database.</li>
+	   <li><code>OldestTranInSeconds </code> - Number of seconds since the oldest open transaction in this database was started.</li>
+	   <li><code>OldestTranName      </code> - Name of the oldest open transaction in this database</li>
+	   <li><code>OldestTranSpid      </code> - SPID, which is resopnsible for the oldest open transaction in this database</li>
+	   <li><code>OldestTranProg      </code> - Application Name, which is resopnsible for the oldest open transaction in this database</li>
+	   <li><code>OldestTranPage      </code> - Page number in the transaction log, which holds the oldest open transaction in this database</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Statement Cache Details' for ASE 15.7.0 ESD#2</b><br>
+	<ul>
+	   <li><code>AvgScanRows           </code> - Average scanned rows read per execution</li>
+	   <li><code>MaxScanRows           </code> - Maximum scanned rows read per execution</li>
+	   <li><code>AvgQualifyingReadRows </code> - Average qualifying data rows for read DML per execution</li>
+	   <li><code>MaxQualifyingReadRows </code> - Maximum qualifying data rows for read DML per execution</li>
+	   <li><code>AvgQualifyingWriteRows</code> - Average qualifying data rows for write DML per execution</li>
+	   <li><code>MaxQualifyingWriteRows</code> - Maximum qualifying data rows for write DML per execution</li>
+	   <li><code>LockWaits             </code> - Total number of lock waits</li>
+	   <li><code>LockWaitTime          </code> - Total lock-wait time (ms)</li>
+	   <li><code>SortCount             </code> - Total number of sort operations</li>
+	   <li><code>SortSpilledCount      </code> - Total number of sort operations spilling to disk</li>
+	   <li><code>TotalSortTime         </code> - Total sort time (ms)</li>
+	   <li><code>MaxSortTime           </code> - Maximum sort time (ms)</li>
+	   <li><code>ParallelDegreeReduced </code> - The number of times the degree of parallelism in the plan was reduced but it still executed as a parallel query (parallel plans only)</li>
+	   <li><code>ParallelPlanRanSerial </code> - The number of times a parallel query plan was adjusted so that it executed without parallelism (parallel plans only)</li>
+	   <li><code>WorkerThreadDeficit   </code> - The total thread deficit for all executions of a parallel plan (parallel plans only)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Cached Procedures'</b><br>
+	<ul>
+	   <li><code>RequestCntDiff</code> - Same as RequestCnt, so show both the Abs values and Diff for RequestCnt in the diff/rate view.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Option in in tab 'Statement Cache Details'</b><br>
+	<ul>
+	   <li><code>sampleMetricsCountGtZero</code> - include or exclude <code>where MetricsCount > 0</code> In some ASE Versions we would want this, but in some not...</li>
+	</ul>
+	</LI>
+
+	<LI>
+
+	<b>ASE Config View Dialog</b><br>
+	<ul>
+	   <li>This is now a stand alone window</li>
+	   <li>It can be refreshed</li>
+	   <li>It's accessible  from the 'stand alone' SQL Window tool (sqlw.bat or sqlw.sh)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>In most text editors fields, looking at SQL or various text</b><br>
+	<ul>
+	   <li>Right Click Menu - Now has a 'find' entry</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
+	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
+	Also the field_name 'fglockspins' can optionally be discarded.
+	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.)
+	</LI>
+
+	<LI>
+	<b>Bug fix: Recoding a session for a ASE 15.7.0 EDS#2</b><br>
+	Record a AseTune session on a ASE 15.7.0 ESD#2 was not working, which is now fixed.<br>
+	The problem was that lct_admin() was returning 'unsigned int' and in previous releases
+	it simply returned data type 'int'. If the storage engine (in this case H2) doesn't support
+	data type 'unsigned int' the recoding failed.<br>
+	Solution: I'm simply casting the 'unsigned int' to 'int'
+	</LI>
+
+	<LI>
+	<b>Bug fix: various fixes</b><br>
+	<ul>
+	   <li>Offline mode, OfflineSessionViewer, Show on day,hour,minute level did not work as intended.</li>
+	   <li>Offline mode, keyToRid was not initialized in some cases, which caused problems in getRowNumberForPkValue()</li>
+	   <li>Small layout issue with the Split pane for panels with Extended info panels, like local graphs etc</li>
+	   <li>Additional help text, and tip when a Performance Counter depends on other Performance Counters.</li>
+	   <li>If you connect to a server that is NOT ASE, then print some errors about it.</li>
+	   <li>'mon_role' granted to any "user defined role(s)" attached to the user, was not detected at login time.</li>
+	   <li>Mac users now has 'Mac menu bar' and the "doc icon". This behaviour can be changed in the asetune.sh</li>
+	   <li>Menu Shortcut keyboard character has been changed from "Alt" to "Platform dependant" (Windown: Ctrl, Mac: Cmd)</li>
+	   <li>The Graph display ordering was a bit faulty. new/unknown Graphs is now added to the end...</li>
+	   <li>Connection Dialog, ASE User name, must be filled in.</li>
+	   <li>Connection Dialog, could in some cases be too small, so the OK button wasnt visible.</li>
+	   <li>If saved main window location, seems to be out-of-screen, do not set the location. this might break virtual desktop or multiple screens</li>
+	   <li>ASE Application Tracing Tool, is now a bit more stable. Doing deferred updates to the trace window each 100ms (if new trace entries has arrived)</li>
+	   <li>Offline Wizard, various small fixes</li>
+	   <li>A bunch of other small bug fixes</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.6.4,      Component: Swing Labs, JXTable</li>
+	  <li>To version 1.2.17,     Component: Log4J</li>
+	  <li>To version 1.0.14,     Component: JFreeChart</li>
+	  <li>To version 2.0.5.1,    Component: RSyntaxTextArea</li>
+	  <li>To version 2.0.5.1,    Component: Autocomplete, part of RSyntaxTextArea</li>
+	  <li>To version 1.3.169,    Component: H2 database</li>
+	  <li>To version 2012-12-03, Component: ProxyVole</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2012-06-19</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Connection Dialog</b><br>
+	In some cases the OK button for making a new connection was not visible.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Create 'User Defined Counter' wizard.</b><br>
+	The SQL statement was in some cases missing at the last page.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Move to tab. (blocking locks, full transaction log)</b><br>
+	When 'blocking locks' or 'full transaction log' happened, a pop up with the option to move
+	to that Performance Counter Tab should be visible.<br>
+	This did not work after redoing the "tab grouping" in version 3.0.0 (2012-04-20)<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: ASE 15.7 and above using ASE non English localizations</b><br>
+	If you where using a non English localization as the ASE default language and ASE 15.7 or higher
+	the tool had problems starting. Now I just issue 'set language us_english' when connecting.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: various fixes</b><br>
+	<ul>
+	   <li>Early initialization of the encryption package, makes the connection dialog open faster.</li>
+	   <li>Capture SQL tool, could overflow on datediff when calculating execution times.</li>
+	   <li>when ASE is in 'SHUTDOWN mode', skip writing some warning messages...</li>
+	   <li>Re-initialize Performance Counters on errors 10353 and 12052 (config was changed)</li>
+	   <li>Tab 'SPID Activity' had some issues when highlighting SPID's</li>
+	   <li>GTable had null pointer exceptions in some cases when saving currently selected row</li>
+	   <li>SQL Statements was in some cases faulty generated for ASE 15.0.0, regarding pssinfo</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: various bug fixes for ASE Cluster Edition</b><br>
+	<ul>
+	   <li>The Performance Counter Properties Dialog did not initialize with Cluster Edition checkbox to a valid state</li>
+	   <li>CmSummary now removes checking of tempdb's that are not on the local instanceid.</li>
+	   <li>CmIoQueueSum now summarizes disk io's for all instances.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: In 'ASE Configuration' view</b><br>
+	<ul>
+	   <li>A new tab which shows information from sp_tempdb.</li>
+	   <li>A new tab which shows information from sp_cluster 'logical'. <i>Only if ASE CE</i> </li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Removed: Performance Counters, in Group 'RepAgent'</b><br>
+	<ul>
+	   <li>RA SQL Activity   - This wasn't working from a MDA point of view.</li>
+	   <li>RA SQL Misses     - This wasn't working from a MDA point of view.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changed: Wizard; Create 'Offline Session'.</b><br>
+	<ul>
+		<li>Added a checkbox 'do not enter' ASE information, instead use command line switches.</li>
+		<li>Dropdown boxes on JDBC driver and URL for PCS or recording database</li>
+		<li>Added some help text and pointers to Command Line Switches</li>
+		<li>Also added some new fields, like 'Start the recording at'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changed: Persistent Counter Storage, when using ASE as the PCS</b><br>
+	If ASE is used as the Persistent Counter Storage when recording a session
+	<ul>
+		<li>AseTune is now using DYNAMIC_PREPARE and caching/reusing the prepared statements when writing data to the database.</li>
+		<li>The 'set delayed_commit on' is also issued.</li>
+	</ul>
+	This makes it a bit faster when using ASE as the Persistent Counter Storage<br>
+	<b>Note:</b> Using H2 database for PCS is still the preferred choice, because it's <b>much</b> more lightweight
+	and not 100% ACID, it flushes the data to disk at a later stage, which makes it a <b>much</b>
+	faster choice when recording a session. And also the H2 database is probably located on your local PC
+	so we don't store information on the same server as we are monitoring.
+	</LI>
+
+	<LI>
+	<b>Changed: Persistent Counter Storage, database is full</b><br>
+	For ASE and H2: when hitting full database errors, the connection to the monitored server is closed and
+	the entries in the PCS queue is discarded.<br>
+	A GUI message is also displayed about this if you are in GUI mode.<br>
+	</LI>
+
+	<LI>
+	<b>Changed: Performance Counter initialization.</b><br>
+	if ASE Binary is of a later version than installmaster, we have a out-of-sync situation.<br>
+	A question with what version Performance Counters should be initialized with is presented.<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.3.167, Component: H2 database</li>
+	  <li>To version 2.0.3, Component: RSyntaxTextArea, AutoComplete</li>
+	</ul>
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2012-04-20</H2>
+<UL>
+	<LI>
+	<b>New layout of Performance Counters</b><br>
+	It started to be "to many tabs", so now the Performance Counters are grouped in "sub tabs"<br>
+	The following tab groups are available
+	<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=2>
+		<TR><TH>Group Name</TH> <TH>Hold Performance Counters</TH></TR>
+		<TR><TD NOWRAP>Server        </TD> <TD>'Processes', 'SPID Waits', 'SPID Activity', 'Databases', 'Temp Db', 'Waits', 'Engines', 'Threads', 'System Load', 'Spinlock Sum', 'Sysmon Raw', 'Errorlog', 'Deadlock', 'Lock Timeout', 'sp_monitorconfig', 'Work Queues'.</TD></TR>
+		<TR><TD NOWRAP>Object/Access </TD> <TD>'Objects', 'Procedure Call Stack', 'Active Objects', 'Active Statements', 'Blocking', 'Table Compression', 'Missing Statistics', 'QP Metrics'.</TD></TR>
+		<TR><TD NOWRAP>Cache         </TD> <TD>'Caches', 'Pools', 'Cached Procedures', 'Procedure Cache Load', 'Cached Objects', 'Proc Cache Module Usage', 'Proc Cache Memory Usage', 'Statement Cache', 'Statement Cache Details'.</TD></TR>
+		<TR><TD NOWRAP>Disk          </TD> <TD>'Devices', 'IO Sum', 'IO Queue', 'IO Controllers'.</TD></TR>
+		<TR><TD NOWRAP>RepAgent      </TD> <TD>'Rep Senders', 'Log Activity', 'Log Scanners', 'Log Scanners Time', 'RA SQL Activity', 'RA SQL Misses', 'RepAgent Sysmon'.</TD></TR>
+		<TR><TD NOWRAP>Host Monitor  </TD> <TD>'OS Disk Stat', 'OS CPU(vmstat)', 'OS CPU(mpstat)', 'OS Load Average'.</TD></TR>
+		<TR><TD NOWRAP>User Defined  </TD> <TD>Performance Counters created by <b>you</b> or any other user.</TD></TR>
+	</TABLE>
+	If you want to have the old behavior, with no sub group, this can be changed in View-&gt;Preferences-&gt;Group Performance Counters<br>
+	</LI>
+
+	<LI>
+	<b>New: in tab the 'Waits', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'WaitTime' and/or number of 'Waits' by the individual Events, or as a summary at the Wait Event Class<br>
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Devices', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'TotalIOs', 'Reads', 'APFReads' and 'Writes' in different graphs.<br>
+	The distribution in the graphs are by Logical Device Name<br>
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'IOSum', graph(s) on the right hand side (local Graph)</b><br>
+	You can view 'IOs', 'IOTime', 'AvgServ_ms' in different graphs.<br>
+	The distribution in the graphs are by 'IOType' (User Data, User Log, Tempdb Data, Tempdb log, System)<br>
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Procedure Cache Module Usage', graph(s) on the right hand side (local Graph)</b><br>
+	You can view Active Memory Usage, by ModuleName<br>
+	</LI>
+
+	<LI>
+	<b>New: in the tab 'Procedure Cache Memory Usage', graph(s) on the right hand side (local Graph)</b><br>
+	You can view Active Memory Usage, with one Summary Graph, or one graph for each 'ModuleName'<br>
+	The distribution in the graphs are by 'AllocatorName'<br>
+	</LI>
+
+	<LI>
+	<b>New: tab 'OS Load Average' in the Host Monitor group</b><br>
+	Show 'Load Average' from the OS, this is grabbed from the os command 'uptime'<br>
+	</LI>
+
+	<LI>
+	<b>Change: users does not require 'mon_role' and 'enable monitoring' anymore</b><br>
+	If a user logs in without 'mon_role' or if 'enable monitoring' is not enabled, AseTune
+	will still allow the user to login.<br>
+	But the environment will be <b>restricted</b>. Number of available Performance Counters will
+	of course be very limited. The Summary panel will still be maintained, in there you have
+	access to ASE Servers global variables for CPU, Disk and Network. Graphs connected to the
+	summary fields will automatically be enabled.<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Cached Objects'</b><br>
+	<ul>
+	   <li><code>ProcessesAccessing</code> - Number of processes currently accessing the object</li>
+	   <li><code>TotalSizeKBDiff   </code> - <code>TotalSizeKB</code> as diff calculated from previous sample</li>
+	   <li><code>CachedKBDiff      </code> - <code>CachedKB</code> as diff calculated from previous sample</li>
+	   <li><code>TableCachedPct    </code> - How much of this table is kept in the cache. <b>Formula</b>: <code>CachedKB/TotalSizeKB * 100</code></li>
+	   <li><code>CacheID           </code> - Just the ID of the cache</li>
+	   <li><code>TotalCacheSizeKB  </code> - The size of the data cache where this table is residing</li>
+	   <li><code>CacheUsagePct     </code> - How much space does this table use of the whole cache. <b>Formula</b>: <code>CachedKB/TotalCacheSizeKB * 100</code></li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Engines'</b><br>
+	ThreadID was introduced in 15.7.0<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Objects'</b><br>
+	ObjectCacheDate was introduced in 15.7.0: The date and time when the descriptor for this object was installed in the metadata cache	<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Statement Cache Details'</b><br>
+	StmtType was introduced in 15.7.0: The type of the cached statement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'RepAgent'</b><br>
+	<ul>
+	   <li>Rep Senders       - Provides information on Rep Agent Sender tasks.</li>
+	   <li>Log Activity      - Provides information on Rep Agent Log Activity.</li>
+	   <li>Log Scanners      - Provides information on Rep Agent Scanner tasks.</li>
+	   <li>Log Scanners Time - Provides information on the time spent by the Rep Agent Scanner tasks.</li>
+	   <li>RA SQL Activity   - Provides statistics on statements replicated as SQL for all open objects.</li>
+	   <li>RA SQL Misses     - Provides statistics on statements that could not be replicated as SQL for all open objects.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Server'</b><br>
+	<ul>
+	   <li>SPID Activity - SPID CPU and Wait Time activity per sample interval and a bunch of other values as well<br>
+	       This implementation was mainly done by Niklas Andersson.</li>
+	   <li>Threads       - Provides information on ASE threads.</li>
+	   <li>Work Queues   - Provides information on work queues.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Object Access'</b><br>
+	<ul>
+	   <li>Table Compression - Table Compression Information</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: Performance Counters, in Group 'Disk'</b><br>
+	<ul>
+	   <li>IO Controllers - Provides information on I/O controllers.</li>
+	</ul>
+	This is the first version of them, so please send input on enhancement.<br>
+	</LI>
+
+	<LI>
+	<b>New: In the Wizard 'Create Offline Session', added Performance Counters Local Options</b><br>
+	A new page where you can change Local Options for Performance Counters.<br>
+	</LI>
+
+	<LI>
+	<b>New: In 'ASE Configuration' view</b><br>
+	<ul>
+	   <li>A new tab which shows information from monThreadPool.       <i>Only from 15.7 and above</i> </li>
+	   <li>A new tab which shows information from monDeviceSpaceUsage. <i>Only from 15.7 and above</i> </li>
+	   <li>A new tab which shows information from monLicenses.         <i>Only from 15.0 and above</i> </li>
+	</ul>
+	Added a 'refresh' button.<br>
+	</LI>
+
+	<LI>
+	<b>New: In 'Configure ASE for Monitoring' dialog, added 'capture compression statistics'</b><br>
+	Added the sp_configure 'capture compression statistics' to the dialog.<br>
+	</LI>
+
+	<LI>
+	<b>New: Counters for ASE 15.7.0 ESD#1</b><br>
+	In tab 'Engines' added columns: <code>HkgcPendingItemsDcomp, HkgcOverflowsDcomp</code><br>
+	In tab 'Objects' added columns: <code>HkgcRequestsDcomp, HkgcPendingDcomp, HkgcOverflowsDcomp</code><br>
+	</LI>
+
+	<LI>
+	<b>New: for all Performance Counters, a "mini" graph in table cell</b><br>
+	On Percent counters, a new "mini" graph is visible at the bottom of the cell, which tries to write a small
+	bar graph of the percentage used.<br>
+	This can be disabled using the property 'TabularCntrPanel.table.graph.percent=false'<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: in Performance Counter 'QP Metrics', collapse all qtext column rows into 1 row.</b><br>
+	Previously only 255 bytes chunks of the SQL text (qtext) was displayed per row, and the sequence was incremented for every row/chunk<br>
+	Now all SQL chunks are "collapsed" into the sequence 0 row. So only 1 row is presented per saved SQL Statement<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: When you get a out-of-memory pop up.</b><br>
+	When you get a out-of-memory, I previously just purged the in-memory history<br>
+	In addition I also now lower the in-memory history size to 1 minute<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: no-gui mode.</b><br>
+	<ul>
+		<li>-e hh[:mm] to enable/start the recording at a specific time later on the same day.</li>
+		<li>-d default: used the template database name '${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}'</li>
+		<li>-n small|medium|large|all templates, can now be "altered" using "templateName,+CmName,-CmName" to add/remove CM's from any of the predefined templates</li>
+	</ul><br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: to connection dialog, deferred connect</b><br>
+	<ul>
+		<li>connect at a specific time later on the same day</li>
+		<li>Set a stop/disconnect time</li>
+	</ul>
+	The above parameters is good if you want to record a night session/batch job that is executed in a specific time frame<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: to Dialog: Configure ASE for Monitoring...</b><br>
+	If you change a parameter the dependent CM's will be re-initialized, so you don't have to re-connect after a Monitor config change.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Disable Monitoring on disconnect or exit.</b><br>
+	In the "ASE Monitor Configuration" panel you can choose to "disable monitoring", "prompt" on exit.<br>
+	This has been extended to "on exit or disconnect", so new when this option has been enabled,
+	a dialog is displayed when you disconnect from a ASE (or it simply disables monitoring).<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Dialog "Configure ASE for Monitoring", Disable Monitoring.</b><br>
+	If you have <b>disabled</b> monitoring using the Dialog "Configure ASE for Monitoring",
+	then monitoring can not continue, so lets simply do disconnect... <br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Connection Dialog, choosing a sql.ini/interfaces file.</b><br>
+	Sometimes the old sql.ini/interfaces file was loaded, this is better now.<br>
+	Also if you choose a new sql.ini/interfaces file, and it not in the correct format
+	a question will pop up, to ask if you want to edit the file.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: When ASE is in shutdown mode, put data collection on hold.</b><br>
+	Previously all sorts of error messages was thrown, when ASE was in shutdown mode<br>
+	Not it says 'ASE Shutdown in progress' in the watermark and data collection is simply
+	put on hold until the ASE goes down. And if reconnect is enabled, it will then wait for
+	the ASE restart to complete and connect again.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Code completion in the SQL Window tool.</b><br>
+	Fixed some issues here, and also added some more static completions.<br>
+	The code completion initialization, can now be canceled.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counters, restore selected row after refresh.</b><br>
+	Restore of selected row in the table did not work as supposed.<br>
+	Now it tries to restore current selected table row by using the primary key, if it can't
+	use the primary key, it will try to fall back to last selected model row.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Tabs with graphs, failed if columns were moved/reordered</b><br>
+	In tabs that has graphs, sometimes failed creating the graph.<br>
+	This was only in the case when users had moved/reordered columns, then I used index position
+	instead of model position when getting data.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Tabs. Remember Abs/Diff/Rate counter settings</b><br>
+	Previously it was always set to RATE, but now last decision is saved and restored after restarts<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Various small fixes</b><br>
+	As always, various bug fixes that I have forgot about or to small to mention.<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.3.166, Component: H2 database</li>
+	  <li>To version 2.0.2, Component: RSyntaxTextArea, AutoComplete</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Finally major code re-factoring has been done</b><br>
+	<ul>
+	  <li>All Performance Counters are now in individual files.</li>
+	  <li>Basic foundation for ability to add modules like RS, IQ, etc.<br>
+	      But it's a long way until this will be finalized.</li>
+	  <li>and more...</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2012-01-05</H2>
+<UL>
+	<LI>
+	<b>New Functionality: ASE Application Tracing</b><br>
+	A new tool 'ASE Application Tracing', for details see http://www.sybase.com/files/White_Papers/ASE15-apptrace-070507-wp.pdf
+	for more information how this works.<br>
+	This is just a GUI on top of ASE 'set tracefile ...' functionality.<br>
+	The add on for the GUI is that it can work with remote files, so you can start the trace on your
+	local client (probably a PC), then if the ASE is located on a Unix/Linux host an Secure Shell SSH connection
+	will be opened to do tail of the trace file. This makes it <b>much</b> easier to view the trace file.<br>
+	Also current executed stored procedures etc will be fetch and displayed in the local interface<br>
+	This is a really usefull tool if you want to trace what a specific SPID is doing in the server.<br>
+	<b>Note:</b> This uses a lot of memory in the GUI... lets see if we can fix that in any future release.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Performance Counter Properties Dialog.</b><br>
+	When you right click on the JTabbedPane, you can choose Properties.<br>
+	This Dialog was previously a Simple HTML based Dialog.<br>
+	Now it's Swing based components with following functionality<br>
+	<ul>
+		<li>Check generated SQL, even if the Performance Counter is <b>not</b> initialized.</li>
+		<li>Simulate other ASE Versions: check what SQL will be generated for another ASE release, and in ASE Cluster Edition</li>
+		<li>Syntax highlighted SQL area</li>
+		<li>Color highlights in SQL area for PrimaryKey, Difference and Percent columns</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changed behavior: Connecting to different ASE Version, no need to restart AseTune</b><br>
+	It's now supported to connect to ASE Version X, then disconnect and connect to another ASE Version<br>
+	</LI>
+
+	<LI>
+	<b>New: SQL Code Completion in SQL Window tool</b><br>
+	Using Ctrl+Space you bring up SQL Code Completion, for table names and columns<br>
+	For the moment I don't use a parser to check where in the SQL code you are, so for the moment
+	it's kind off basic... Column completion work works in a limited way for table aliases.<br>
+	Please report strange behavior...<br>
+	</LI>
+
+	<LI>
+	<b>New: DDL storage functionality</b><br>
+	In some of the performance counters, get top 10, or all rows (DBName, ObjectName) and get various
+	information from the ASE Server (sp_help/procText, sp__optdiag, sp_depends) on tables/procedures<br>
+	If the table or procedure has dependencies to other tables/procedures, add q DDL request of those objects as well.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Connection Dialog, PCS: now show DDL Lookup/Storage properties</b><br>
+	When recording a session you can now choose to do "DDL Lookup" and save it to the Persistent Counter Store<br>
+	</LI>
+
+	<LI>
+	<b>New: View DDL </b><br>
+	The entries stored be the 'DDL storage functionality' can be viewed in a TreeTable,<br>
+	Access the 'View DDL' from:
+	<ul>
+		<li>MainMenu -&gt; Tools -&gt; DDL Viewer</li>
+		<li>Any Performance Counter: Right click menu -&gt; DDL Viewer</li>
+	</ul>
+	<b>Note:</b> For the moment 'DDL View' is only available in "offline" mode. In the future this
+	could also be implemented for "online" access.
+	</LI>
+
+	<LI>
+	<b>New: Performance Counter 'SPID Waits'</b><br>
+	Use this to track wait time for individual SPID's, There will be approximate 5-10 rows per SPID.
+	So there could be quite a bunch of rows in this one...<br>
+	</LI>
+
+	<LI>
+	<b>New functionality in Tab: Databases</b><br>
+	A local bar graph "Transaction Log Space Usage in Percent". Colors of the bars
+	(green = less than 80% usage, orange = between 80-90% usage, red = above 90% usage)<br>
+	A Dialog has also been created to choose what databases should be part of both the local
+	bar graph and the attached trend graphs. This is on the button "Set 'Graph' databases".<br>
+	</LI>
+
+	<LI>
+	<b>New functionality in Tab: Sysmon Raw</b><br>
+	Calculating some of the ordinary "sp_sysmon" calculation.<br>
+	The goal is to present some kind of sp_sysmon report simulation in the "Extended Info Panel".<br>
+	Maybe a TreeTable or similar will present the information, but a lot of work is still needed here.<br>
+	For now: the information is printed as raw text, in the Extended Info Panel, which is located on the right hand side for the text report.<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in 'Statement Cache Details'</b><br>
+	In ASE 15.7, Show 'show_cached_plan_in_xml(SSQLID, 0)' in the details.<br>
+	The information will be saved/displayed in raw XML format until a good reader is available.
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Objects': Column name 'ObjectName' was showing IndexName instead of table name</b><br>
+	In AseTune Version 2011-09-30, 2.6.0: I changed to used <code>ObjectName</code> column instead of <code>ObjectName=object_name(...)</code><br>
+	This was not so good since the "raw" <code>ObjectName</code> displayed the IndexName instead of table name, so <br>
+	I changed it back to display the table name using <code>object_name(...)</code>, and also added a column (in ase 15.0.2 or higher)<br>
+	that displays the IndexName. This will make it easier to filter and sort on table name.<br>
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Objects': Added some columns</b><br>
+	<ul>
+	    <li>NumUsedPages - which just does: <code>data_pages(A.DBID, A.ObjectID, A.IndexID)</code></li>
+	    <li>RowsPerPage - which calculates number of rows per page</li>
+	    <li>Remark - which tries to figure out what is happening of with this object. is it a table scan, etc...</li>
+	</ul>
+	The above columns will make it easier to check if many LogicalReads "ok", meaning is this on a small or large table<br>
+	This can be disabled/enabled from the Local Options, in the 'Objects' tab.
+	Or from any of the configuration files, using property 'CMobjectActivity.TabRowCount=true|false'<br>
+	<b>Note:</b>The column 'Remark' should be treaded as 'experimental', use tooltip on the cell to get more information about the remark.<br>
+	</LI>
+
+	<LI>
+	<b>Change: tab 'Proc Cache Memory Usage', now holds more values</b><br>
+	Now we do outer join on monProcedureCacheModuleUsage *= monProcedureCacheMemoryUsage<br>
+	This means that memory modules that does not have detailed sections, now is available by
+	the 'head/main' section. For example Dynamic SQL, does NOT have any details, which made it
+	a bit harder to read. But now these modules are also available in the details.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Summary Panel, some negative counters to zero</b><br>
+	In the summary panel, some counters that could turn negative are now reseted to zero<br>
+	(Transactions, io_total_read, io_total_write, pack_received, pack_sent, packet_errors)<br>
+	If the above counters goes negative trend graphs would be "unreadable"<br>
+	while other columns should be able to turn negative like (Connections etc...)<br>
+	</LI>
+
+	<LI>
+	<b>Add/Changes to: SQL Window, stand alone utility</b><br>
+	When starting the SQL Window tool as an external java process, using sqlw.bat. A menu bar and
+	a toolbar panel is created. This so you can connect/disconnect to ASE servers using the Connection Dialog.<br>
+	The stand alone utility 'sqlw' is released in this drop.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: SQL/Query Window</b><br>
+	<ul>
+		<li>Now has a "cancel" button, when a statement is executing</li>
+		<li>All ASE SQLExceptions are converted into SQLWarnings and printed along with the result sets.<br>
+		    For non ASE connections (offline storage) will still throw SQLExceptions</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change: Tool: Capture SQL</b><br>
+	<ul>
+		<li>New field to write "extra where clause, on active statements</li>
+		<li>New field to write "order by, on active statements</li>
+	</ul>
+	If SQL error happens, the refresh will STOP and wait for you to fix any syntax errors in "where restrictions".<br>
+	Last executed SQL statement can be viewed wit tooltip on the panel.<br>
+	Note: This tool will be rewritten from scratch "soon"<br>
+	</LI>
+
+	<LI>
+	<b>Changed text in error message: Connection Dialog</b><br>
+	Some users had problems connecting, simply due to a faulty password.<br>
+	They just interpreted the "raw" JDBC error message in faulty way... It was to complicated<br>
+	So I added extra text in case the main exception was 'JZ00L'.<br>
+	</LI>
+
+	<LI>
+	<b>Change: "Extended Info Panel" on all Performance Counter tabs.</b><br>
+	The "Extended Info Panel" on each 'tab' has previously always been invisible/minimized. Now the
+	divider location is saved to the user temporary properties. This so we can remember how
+	large the Extended Info Panel is for the 'Databases' or other Performance Counter tabs.<br>
+	</LI>
+
+	<LI>
+	<b>Change: all Performance Counters, right click menu</b><br>
+	The context sensitive right click menu now has alternate column names and optional columns<br>
+	This simply means that they will be enabled (available to click on) on more tabs.<br>
+	</LI>
+
+	<LI>
+	<b>Add Messages: Wait Event Dictionary</b><br>
+	Added 5 new 'Wait Event Descriptions' from ASE Documentation 'Performance and Tuning Series: Monitoring Tables', Document ID 'DC00848-01-1570-01'<br>
+	</LI>
+
+	<LI>
+	<b>GUI Change: in all Performance Counters when reading offline database.</b><br>
+	Previously the field 'Clear Time' was empty, this field is not visible in offline mode anymore<br>
+	Instead a new field 'Head Time' is visible, so we can see that what head/main time this tab is
+	displaying, this makes it easier to detect if we are looking at the correct data.<br>
+	</LI>
+
+	<LI>
+	<b>Change: H2 PCS, Persist Counter Storage, connect properties</b><br>
+	When recording a session in a H2 database, set some basic options if they are not part of the URL<br>
+	<ul>
+	    <li><code>DATABASE_TO_UPPER=false</code> - Do <b>not</b> convert Table and Column names to upper.</li>
+	    <li><code>MAX_COMPACT_TIME=2000</code>   - The maximum time in milliseconds used to compact a database when closing.</li>
+	</ul>
+	Also setting some options in the database after connect<br>
+	<ul>
+	    <li><code>SET COMPRESS_LOB DEFLATE</code>       - Compress LOB Large OBjects, text/image fields.</li>
+	    <li><code>SET DEFAULT_LOCK_TIMEOUT 15000</code> - Change the LOCK timeout to 15 seconds.</li>
+	    <li><code>SET QUERY_TIMEOUT 15000</code>        - Change query timeout timeout to 15 seconds.</li>
+	</ul>
+	Also do '<code>SHUTDOWN COMPACT</code>' in method, stopServices()<br>
+	The intention for these changes is that the database size will be smaller...<br>
+	</LI>
+
+	<LI>
+	<b>New: Tooltip on SPID, in offline mode for all Performance Counter</b><br>
+	Tooltip on SPID in JTable cells now work in offline mode as well<br>
+	First it loads the 'Processes tab', then it check if the SPID is there and reads all the information.<br>
+	If the 'Processes' is not saved, then the ordinary 'Not able to load...' will be displayed.<br>
+	</LI>
+
+	<LI>
+	<b>Enhanced functionality: The offline/in-memory Slider can be moved with keyboard shortcuts.</b><br>
+	The offline/in-memory Slider can now be moved using
+	<ul>
+		<li>Crtl+left or Ctrl+right for one tick at time</li>
+		<li>Shift+left or Shift+right for 10 ticks at time</li>
+		<li>Crtl+Shift+left or Ctrl+Shift+right move to next slot that has data</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changes to: Menu enable/disabled</b><br>
+	Menus is now more context sensitive of what mode we are in. When connected etc, some menus will be enabled and disabled.<br>
+	</LI>
+
+	<LI>
+	<b>Changes to: Disconnect</b><br>
+	Now when we disconnect from ASE or the offline database, a dialog is popping up telling you what
+	it for the moment is doing.<br>
+	</LI>
+
+	<LI>
+	<b>Add: include servername in Window Title</b><br>
+	Show the ASE servername, or host:port number which this instance of AseTune is connected to<br>
+	format: 'AseTune - SrvName - extra information string'<br>
+	If we are NOT connected, no server name will be specified.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Screen capture.</b><br>
+	The text in the Dialog can now be Copy+Paste.<br>
+	This makes it easier to access the storage directory.<br>
+	</LI>
+
+	<LI>
+	<b>Change: HostMonitor data type when storing counters</b><br>
+	HostMonitor, expanded most data type storage from 7,1 or 5,1 to 10,1<br>
+	</LI>
+
+	<LI>
+	<b>Change: ASE View Configuration Dialog</b><br>
+	Some columns is now "editable", this simply means easier to do copy + paste<br>
+	It does NOT mean, that you can change the configuration values...<br>
+	</LI>
+
+	<LI>
+	<b>Change: Do graceful shutdown on Persistent Counter Handler</b><br>
+	PCS try to do graceful shutdown, with "timeout" of 10 seconds.<br>
+	</LI>
+
+	<LI>
+	<b>Change: Main Window, Status Panel, added status for PCS Handler</b><br>
+	Details about how many entries that are in the Different Persist Queues
+	are now visible in the main window... a field with 3 counters has been added<br>
+	</LI>
+
+	<LI>
+	<b>Change: Offline reader, read "User Defined Counters", UDC from offline DB</b><br>
+	If the recorded database contains UDC, User Defined Counters that is NOT installed in the GUI
+	simply create the UDC and add it to the GUI temporarily<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 15.5 ESD#11, Component: jconn3.jar, jconn4.jar, jConnect Driver from JDK 15.5 ESD#11</li>
+	  <li>To version 1.3.163, Component: H2 database</li>
+	  <li>To version 15.7, Component: dsparser.jar, Sybase extension for reading interfaces, sql.ini files</li>
+	  <li>To version 15.7, Component: planviewer.jar, Sybase extension to view showplan, used by dbisql.exe</li>
+	  <li>To version 3.2.2, Component: jchart2d, Graph package</li>
+	  <li>To version 4.2, Component: MigLayout, Layout Manager</li>
+	  <li>To version 20111102, Component: proxy-vole, Access Internet Via WEB Proxy</li>
+	  <li>To version 1.6.2-2, Component: swingx-core, JXTable...</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Databases</b><br>
+	In offline mode, when reading the Performance Counters from the offline database, the local bar graph wasn't updated.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Missing Statistics</b><br>
+	This used to much CPU resources for checking if column was part of any index.<br>
+	It uses a little less CPU now, but I still need to tune it in more detailed.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Spinlock Sum</b><br>
+	in pre 15.0 ASE, 'Arithmetic overflow occurred' could happen due to sum(many 'int' rows), now converting counters to numeric(12,0) before doing sum.<br>
+	In ASE 15.0 and higher, convert to bigint is done<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Processes</b><br>
+	On highly utilized systems, timeouts happened. I guess this is due to joining with the monX proxy tables.<br>
+	So now I snapshot monProcessActivity, monProcess, monProcessNetIO into temp tables and join from there.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Copy + Paste as 'Ascii Table' from JTables, now sorted</b><br>
+	Now the copied table will be in the same sorted order as the JTable.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Summary, Databases: Timeout when creating new databases.</b><br>
+	Added 'readpast' to sub selects on sysdatabases & sysusages, this will hopefully just
+	skipping reading this row from the ASE Version where locking schema 'datarows' has been
+	used for System tables. If I remember correctly this is ASE 15.x<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Performance Counter Tables, save/restore column layout</b><br>
+	Previously only 1 layout was saved, so if we connected to several different ASE versions, this wasn't working very well<br>
+	Now only column layout will be saved for each ASE Server version.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Tab Spinlock Sum, for ASE Cluster Edition</b><br>
+	For cache partitions (cachelets) to many rows was returned, causing the "difference" calculation
+	found "Duplicate key" and logged error messages about that.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: asetune.bat, problems with quote and backslash chars in Env Variables</b><br>
+	problems if SYBASE was set to:
+	<ul>
+	    <li>set SYBASE="c:\Program Files\sybase"</li>
+	    <li>set SYBASE="c:\Program Files\sybase\"</li>
+	    <li>set SYBASE=c:\Program Files\sybase\</li>
+	</ul>
+	The trailing \ will be stripped, also the surrounding quotes...<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Persistent Counter Storage, Strings can be overflowed.</b><br>
+	When storing to long Strings in the PCS, in H2 we got Exception: org.h2.jdbc.JdbcBatchUpdateException: Value too long for column<br>
+	Solution: If the string we are going to store is "longer" that the database allowed storage size, then
+	truncate the end of the string (the part of the string that we want be able to store),
+	and add '...' as a marker that is has been truncated.
+	</LI>
+
+	<LI>
+	<b>bug fix: Copy + Paste for to ascii table did not handle newLine.</b><br>
+	Now the ascii table looks better if any "cell" has newlines in them<br>
+	If this happens, I also add an extra vertical row separator, so it's easier to see where a new row starts<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: in offline mode, the filter 'column list' wasn't loaded.</b><br>
+	This is now fixed<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: tab 'Objects': to many DuplicateKey errors/Exceptions.</b><br>
+	Changed the internal PrimaryKey from: '<code>[InstanceID,] ObjectName, DBName, IndexID</code>' to: '<code>[InstanceID,] ObjectID, DBID, IndexID</code>'.<br>
+	Hopefully this will cause to less DuplicateKey errors.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Problems to login</b><br>
+	When a user logs in, I check for 'mon_role' (and 'sybase_ts_role'), if user doesn't have those roles
+	I will try to automatically grant those roles, if current user is authorized to do this.<br>
+	Fix: current user should have 'sso_role' not 'sa_role' to do automatic grant.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: check if connection is still open, done to often</b><br>
+	This only means that the isOpen() check will hopefully already been done by the watchdog, which
+	means that the GUI will not freeze or lag behind, because it's not the Swing Dispatch Thread that calls
+	the database to check if the connection is still open.<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: Main Tabbed Pane, "tabs": Scroll/Wrap properties</b><br>
+	If the Performance Counter 'tabs' doesnt fit on one row, do we want the tabs to "scroll" or "wrap"<br>
+	Have all tabs on one row (scroll), or use multiple rows for 'tabs' (Wrap), Warpa is the default behaviour.<br>
+	This was previously not saved and restored on AseTune restart, now it is<br>
+	</LI>
+
+	<LI>
+	<b>bug fix: User Defined Counters, show Properties works</b><br>
+	User Defined Counter, you can now view the SQL Statement with properties<br>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2011-09-30</H2>
+<UL>
+	<LI>
+	<b>Bug fix: Connecting to ASE</b><br>
+	If $SYBASE was set, but "$SYBASE/ini" directory or "$SYBASE/ini/sql.ini" file didn't exist, the
+	Connection Dialog complained about: Connecting to a different ASE Version, This is NOT supported now...<br>
+	This is now fixed.
+	</LI>
+
+	<LI>
+	<b>Changes in: all "tabs" and the dialog "Change 'Performance Counter' Options..."</b><br>
+	<ul>
+	    <li>Query timeout can be changed in the "options" panel in each "tab".</li>
+	    <li>A new column for Query Timeout has been added to the "Change 'Performance Counter' Options..." dialog.</li>
+	    <li>New default value to 30 seconds on some Performance Counters that may take a lot of time, you'll find them in the above dialog.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change in: tab "missing stats"</b><br>
+	The column list now also reflects if the specific column is part of any index, and the position within the index<br>
+	column 'UpdStatDate' shows what data last update statistic was made on the table, 'not found' if statistics hasn't been updated at all.
+	</LI>
+
+	<LI>
+	<b>Changes in: SQL Window</b><br>
+	<ul>
+		<li>Added template/completion for 'sp_helptext...'</li>
+		<li>Allow 'go' in the SQL Text, currently executing SQL will be highlighted in the 'executing SQL' panel.</li>
+		<li>Added a button 'Set'. With this you can quick choose 'set showplan' and other query optimizing/diagnostics settings.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changes in: When starting AseTune</b><br>
+	The SYBASE environment variable is not mandatory anymore<br>
+	On Windows: If AseTune can't find the 'sql.ini' file, a dummy one is created under '$HOME/.asetune/sql.ini'<br>
+	On Unix: If AseTune can't find the 'interfaces' file, a dummy one is created under '$HOME/.asetune/interfaces'<br>
+	HOME is get from: <code>System.getProperty("user.home");</code><br>
+	In this file you can add you'r own servers if you like to.
+	</LI>
+
+	<LI>
+	<b>Changes in: Connection Dialog</b><br>
+	Added a button "Edit", so you can edit the content of interfaces or sql.ini file directly from the GUI.<br>
+	</LI>
+
+	<LI>
+	<b>Changes in: Performance Counter Properties Dialog</b><br>
+	Now also shows:
+	<ul>
+		<li>Depends On ASE Configuration</li>
+		<li>Depends On ASE Role</li>
+		<li>Depends On Other Performance Counter</li>
+		<li>Needs ASE Version</li>
+		<li>Needs ASE CE Version</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changes in: Performance Counter "Spinlock Sum"</b><br>
+	Rewrote the query to use temporary tables for 'sysmonitors' instead of the "real" table.<br>
+	This will hopefully be much faster, at least for ASE prior to ASE 15.0.2
+	</LI>
+
+	<LI>
+	<b>Limitation: for Persistent Counter Storage, when using ASE earlier than 15.0</b><br>
+	I wont allow pre 15.0 ASE servers to act as PCS. This because long table names are not allowed.<br>
+	If you have any complaints about this, please inform me.<br>
+	Also if the Page Size is less than 4K, I will issue a warning message saying that you may run
+	into problems. This because the PCS is probably storing wider rows than 1961 bytes.
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counter Collectors, Read timed out</b><br>
+	When Exception: JZ006: Caught IOException: java.net.SocketTimeoutException: Read timed out.<br>
+	was raised in some cases, the GUI was simply blocked.<br>
+	I added jConnect property 'QUERY_TIMEOUT_CANCELS_ALL=true', which sends a CANCEL request to the
+	ASE server upon timeout Exceptions. I hope that this will fix most timeout hang situations.<br>
+	If it doesn't, please do the following and send me the results.
+	<pre>
+        cd $JAVA_HOME
+        cd bin
+        C:\Program Files\Java\jdk1.6.0_24\bin>jps
+        <b>8428</b> AseTune
+        7100 QueryWindow
+        9620 Jps
+        3844 Agent
+        6140
+        C:\Program Files\Java\jdk1.6.0_24\bin>jstack <b>8428</b>
+        ...Send me the output of this command...
+	</pre>
+	</LI>
+
+	<LI>
+	<b>Bug fix: AseTune need 'sa_role' to monitor anything in ASE 15.0.2 and above</b><br>
+	This was due to the fact that I called ASE function <code>asehostname()</code>, which needs 'sa_role'.<br>
+	This is now fixed.<br>
+	Consequence: if you use ${ASEHOSTNAME} in the URL template when storing data in the Persistent Counter Storage, you will not get the asehostname(), instead you will get the @@servername
+	</LI>
+
+	<LI>
+	<b>Bug fix: Change 'Trend graph history time' was broken. with stack trace in AseTune.log</b><br>
+	This is now fixed.
+	</LI>
+
+	<LI>
+	<b>Bug fix: in 'ASE Monitor Configuration Dialog'</b><br>
+	<code>Capture Missing Statistics</code> options were enabled even if we had connected to a ASE earlier than 15.0.3 ESD#1<br>
+	<code>Query Processing Metrics</code>   options were enabled even if we had connected to a ASE earlier than 15.0.2<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counter tabs, with local options</b><br>
+	Tried to save local options to the combined properties instead of TEMP properties. <br>
+	This is now fixed.
+	</LI>
+
+	<LI>
+	<b>Bug fix: During Connect, getting ASE Cache Configuration was blocking in some odd cases.</b><br>
+	Added Query Timeout off 10 seconds when snapshotting Various ASE Configurations.
+	</LI>
+
+	<LI>
+	<b>Bug fix: Parsing some @@version strings with "ESD#x.y XXX" strings</b><br>
+	Changed logic to find first non number character and stop there. This means that sub ESD version wont be used.
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2011-09-09</H2>
+<UL>
+	<LI>
+	<FONT SIZE="5"><b>Product name change from AseMon to AseTune.</b></FONT><br>
+	Note: old temporary configuration changes are not converted.<br>
+	If you want to look at your old temp configuration it's at: $HOME/.asemon/asemon.save.properties<br>
+	$HOME: on a windows box is at: <code>C:\Documents and Settings\<i>username</i></code>
+	</LI>
+
+	<LI>
+	<b>New: Added some items when grabbing ASE Configuration at startup.</b><br>
+	'sp_version', 'sp_shmdumpconfig' and 'sp_monitorconfig'
+	</LI>
+
+	<LI>
+	<b>New: Added shortcut buttons to Sourceforge and Facebook at the Summary Panel.</b>
+	This is just a simple way to get people to use SourceForge and Facebook to do bug and enhance reports
+	</LI>
+
+	<LI>
+	<b>New tab: QP Metrics</b><br>
+	This gets information from the view 'sysquerymetrics' in all databases.<br>
+	Note: Use sp_configure 'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max'
+	to set the <b>server side filtering</b>. Otherwise you will probably end up with full transaction log etc in all smaller databases.<br>
+	Extra functionality that are supported on the 'tab'
+	<ul>
+	  <li>Local SQL filtering, just adds SQL to the where clause.</li>
+	  <li>Drop/purge of current QP Metrics</li>
+	  <li>Jumping directly to ASE Monitor Configuration Dialog</li>
+	</ul>
+	This is based on the white paper <A HREF="http://www.sybase.com/files/White_Papers/Sybase_ASE15_QMatrix_wp_021508.pdf">Performance Tuning in ASE 15 Using Query Processing Metrics</A>
+	</LI>
+
+	<LI>
+	<b>Added ASE 15.7 MDA columns to Performance Counters</b><br>
+	<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=2>
+		<TR> <TH>Tab Name                </TH> <TH>Column Names</TH> </TR>
+		<TR> <TD>Objects                 </TD> <TD><code>SharedLockWaitTime, ExclusiveLockWaitTime, UpdateLockWaitTime                                      </code></TD> </TR>
+		<TR> <TD>Data Caches             </TD> <TD><code>Status, Type, CacheSize, ReplacementStrategy, APFReads, Overhead                                   </code></TD> </TR>
+		<TR> <TD>Pools                   </TD> <TD><code>LogicalReads, PhysicalWrites, APFReads, APFPercentage, WashSize                                    </code></TD> </TR>
+		<TR> <TD>Cached Procedures       </TD> <TD><code>ExecutionCount, CPUTime, ExecutionTime, PhysicalReads, LogicalReads, PhysicalWrites, PagesWritten  </code></TD> </TR>
+		<TR> <TD>Procedure Call Stack    </TD> <TD><code>ExecutionCount, CPUTime, ExecutionTime, PhysicalReads, LogicalReads, PhysicalWrites, PagesWritten  </code></TD> </TR>
+		<TR> <TD>Statement Cache Details </TD> <TD><code>OptimizationGoal, OptimizerLevel                                                                   </code></TD> </TR>
+		<TR> <TD>Active Statements       </TD> <TD><code>HostName, ClientName, ClientHostName, ClientApplName                                               </code></TD> </TR>
+		<TR> <TD>Deadlock                </TD> <TD>a bunch of new columns                                                                                          </TD> </TR>
+		<TR> <TD>Lock Timeout            </TD> <TD>This tab is new for 15.7                                                                                        </TD> </TR>
+	</TABLE>
+	Note: I used a preliminary document for what's new on 15.7, so I have NOT tested this yet.
+	</LI>
+
+	<LI>
+	<b>New: in tab 'Databases', a new right click menu entry 'dump tran ${DBName} with truncate_only'</b><br>
+	This makes it easier to truncate the transaction log in a specific database if we run out of space.
+	</LI>
+
+	<LI>
+	<b>New: in tab 'Databases', 4 new Columns 'DbSizeInMb', 'LogSizeInMb', 'LogSizeFreeInMb' and 'LogSizeUsedPct'</b><br>
+	Also added 2 graph to keep track of "Log Space left in MB" and "Log Space used in PCT".<br>
+	Databases in the attached Graphs can be excluded<br>
+	Exclude a database from graphs is based on:
+	<ul>
+	    <li>Part of the skip list</li>
+	    <li>Database size is lower than the skip limit</li>
+	</ul>
+	Db skip list can be changed with the property <code>CMopenDatabases.skipDbsInGraphs=db1ToSkip, db2ToSkip...</code><br>
+	Db size limit can be changed with the property <code>CMopenDatabases.skipDbsWithSizeLtInGraphs=#mb</code><br>
+	In the file '<code>$HOME/.asetune/asetune.user.properties</code>'.<br>
+	The default skip list is: <code>master, model, pubs2, sybmgmtdb, sybpcidb, sybsecurity, sybsystemdb, sybsystemprocs</code><br>
+	The default size limit is: <code>300</code><br>
+	If you <b>always</b> want a database present in the graphs, add database to property <code>CMopenDatabases.keepDbsInGraphs=db1, db2...</code><br>
+	Note: string in the "skip/keep" lists is java regex patterns.<br>
+	New Table Background colors:
+	<ul>
+	    <li>BLUE - A Database backup is in progress</li>
+	    <li>PINK - The transaction log for this database is filled to 90%, and will probably soon be full.</li>
+	    <li>RED  - The transaction log for this database is <b>full</b> and users are probably suspended.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 4.0, Component: MIGLayout</li>
+	  <li>To version 1.3.159, Component: H2 database</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Added ASE configuration to dialog 'Configure ASE for Monitoring'</b><br>
+	'capture missing statistics', 'enable metrics capture',
+	'metrics elap max', 'metrics exec max', 'metrics lio max', and 'metrics pio max' in the
+	dialog 'Configure ASE for Monitoring'. <br>
+	Also moved this dialog to the 'tools' menu instead of 'view'.
+	</LI>
+
+	<LI>
+	<b>Add: in tab "Objects" added some columns.</b><br>
+	Note: this is only done if we connect to ASE CE of version 15.5 ESD#1 or above<br>
+	Added columns: <code>MaxPhysicalLockWaitTime, MaxTransferReqWaitTime, MaxServiceTime,
+		AvgQueueWaitTime, MaxQueueWaitTime, MaxTimeWaitedOnLocalUsers, MaxTransferSendWaitTime,
+		MaxIOServiceTime, MaxDowngradeServiceTime</code> <br>
+	</LI>
+
+	<LI>
+	New: in log4j window</b><br>
+	a checkbox if the window should be opened on errors, or simply stay in background
+	</LI>
+
+	<LI>
+	<b>Changed behavior: for all CM's</b><br>
+	Now <b>discarding</b> all ASE Messages with number 0, which probably is a 'print message'<br>
+	If this is not the behavior you want this can be changed from the config file, using:<br>
+	<samp>
+	<i>shortCmName</i>.discardMsgZero=<b>true</b>|false<br>
+	<i>shortCmName</i>.discardMsgZeroPrintInfo=<b>true</b>|false
+	</samp>
+	</LI>
+
+	<LI>
+	<b>Changed behavior: for all CM's</b><br>
+	Now <b>discarding</b> all ASE Messages that has to do with "in recovery" or "LOAD DATABASE"<br>
+	When databases where undergoing "LOAD DATABASE", some CM's failed with messages complaining complaining about database is offline or in recovery...<br>
+	Also the 'get ASE configuration' when connecting, complained about the same thing...<br>
+	If this is not the behavior you want this can be changed from the config file, using:<br>
+	<samp>
+	<i>shortCmName</i>.discardMsgLoadDb=<b>true</b>|false<br>
+	<i>shortCmName</i>.discardMsgLoadDbPrintInfo=<b>true</b>|false
+	</samp>
+	</LI>
+
+	<LI>
+	<b>Changed behavior: Tooltip in JTable of Performance Counters are now focusable</b><br>
+	By pressing F2 or by clicking in the text window.
+	This means that you can now copy text from some tooltip windows. Especially good for Active Statements,
+	so you can copy the showplan and SQL statements directly.<br>
+	Also moved tooltip text from the JTable to be located on the "GUI tab" headers tooltip instead<br>
+	The tooltip "describing highlighted rows" in the JTable was simply disturbing and was hiding the performance counters.
+	</LI>
+
+	<LI>
+	<b>Changed behavior: Tools-&gt;SQL Query Window </b><br>
+	<ul>
+	  <li>Added Syntax Highlight to the query text.</li>
+	  <li>Simple code completion for some basic commands where added. (Ctrl+Space)</li>
+	  <li>
+		Show "what" SQL statement you are executing in a pop-up.<br>
+		The pop-up will disappear when first result set arrives.<br>
+	    This makes it easier to see what is happening when executing statements via pop-up
+	    menu ("right click") on JTables, for example some commands does take a substantial time,
+	    then we want to know what has been sent to the server.
+	  </li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Changed behavior: Tools-&gt;Capture SQL </b><br>
+	If config "plan text pipe active" wasn't enabled, a message window was displayed asking you to reconfigure.
+	Now: This reconfigure message will only appear if you have selected the checkbox 'Sample showplan text'.
+	</LI>
+
+	<LI>
+	<b>Bug fix: Open an empty offline database gives strange error messages.</b><br>
+	When connecting to an offline database, I simply check if some AseMon system tables exists,
+	if they do not exists, inform user about this and stay in the Connection Dialog.
+	</LI>
+
+	<LI>
+	<b>Bug fix: The wizard 'Create Offline Session' wrote the wrong user/password in the props file.</b><br>
+	And the PersistWriter class picked up the wrong password if it was encrypted.
+	</LI>
+
+	<LI>
+	<b>Bug fix: The wizard 'Create Offline Session', created empty ssh information to the offline file.</b><br>
+	This was done even if none was necessary, which broke no-gui mode in some cases.
+	</LI>
+
+	<LI>
+	<b>Bug fix: The RepAgent collector, used a ASE 15.x syntax, which made ASE 11.5.4.x to break.</b><br>
+	Solution: simply removing the optional text in: 'fetch [next from] cursor_name into @var'
+	</LI>
+
+	<LI>
+	<b>Bug fix: PersistWriter</b><br>
+	When a Performance Collector had no rows in it and had a Graph connected to it, we still tried to store the data, which cased some SQL syntax errors.<br>
+	This was typically for a User Defined Collector, which grabbed info from a empty "trace" table.
+	Solution: simply don't store Graph data with no rows in them.
+	</LI>
+
+	<LI>
+	<b>Bug fix: for CMactiveStatements, adding dependant role 'sybase_ts_role'</b><br>
+	Also connect layer: if the user has 'sa_role' role, trying to grant 'sybase_ts_role' automatically.
+	</LI>
+
+	<LI>
+	<b>Bug fix: GetCounters thread, when checking for full transaction log in master database.</b><br>
+	New rule for when truncate the transaction log in master. Only if 'capture missing statistics'
+	is enabled and number of free pages is less than 50 (100K in a 2K page server).
+	</LI>
+
+	<LI>
+	<b>Bug fix: Summary Panel, Ordering of graphs.</b><br>
+	In some circumstances, after reordering the graphs, we were not able to enable them again. This is fixed now.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Connection Dialog.</b><br>
+	If 'enable monitoring' is not set, a re-config dialog will be displayed.<br>
+	If the re-config was successfully, then continue with the login.<br>
+	Previously you had to click on a bunch of windows, then "connect" again, but this is now removed.
+	</LI>
+
+	<LI>
+	<b>Bug fix: User Defined Counter.</b><br>
+	The wizard wrote 'sqlOpen' in the properties file, now writes 'sqlInit'.<br>
+	Is some cases the 'sqlInit' were done several times, or none.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Persistent Counter Store.</b><br>
+	Storing AseTuen Configuration was broken.<br>
+	Now saving 'system.config', 'user.config', 'temp.config' and 'system.properties'.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Performance Counter Properties Dialog</b><br>
+	Now works a bit better on the templates, but I need to do more here.
+	</LI>
+
+	<LI>
+	<b>Bug fix: Graph 'Number of disk operations per second'.</b><br>
+	The labels did not represent the correct counter, so wrong counter value was displayed for some of the labels.
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2011-07-15</H2>
+<UL>
+	<LI>
+	<b>Extended the check and save of ASE Configuration</b><br>
+	Now sp_helpdb, sp_helpdevice, sp_helpserver and active traceflags are also stored in the
+	Persistent Counter Storage<br>
+	Trace flags also has a short explanation. The description are static and was extracted from ASE 15.5
+	The values can be viewed from the main menu -&gt; View -&gt; View ASE Configuration...
+	</LI>
+
+	<LI>
+	<b>Blocking Locks, Pop up</b><br>
+	If there were "blocking locks" in the system or "full transaction logs", a dialog pops up and
+	asked if you want to "move"	to that "tab". The decision was hard to reset...<br>
+	I added a button in the concerned "tabs" so you	reset the "Move to tab" decision.
+	</LI>
+
+	<LI>
+	<b>"Offline Session Viewer" Dialog:</b><br>
+	<ul>
+	  <li>If you did "show" on a Timestamp and the parent SessionLevel had not been loaded, it will
+	      automatically be loaded in the main window. This means it will load all the graphs for that
+	      period and then position you at the Timestamp you did "show" on.</li>
+	  <li>The right click menu on the <b>root</b> objects now has a menu item to check what version of
+	      AseMon that was used to save the performance counters.</li>
+	  <li>Option "Show Counter Info". If this is checked the TreeTable also shows what Performance
+	      Counters that has been saved. A counter will display, which reflects how many records each
+	      Performance Counter has. "---" means no records. <br>
+	      At the day, hour and minute level a counter "summary" will display, this will tell you how
+	      many records all the children levels has. <br>
+	      Note: This will probably be redone, so I need feedback on how to solve this better.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>"Connection Dialog", tab "Counter Storage" and "Offline Connect", button "..."</b><br>
+	This button now opens the JFileChooser in same directory as the currently used database file.<br>
+	When you choose a new database file. The old file will be replaced with the chosen one.<br>
+	If any templates was currently selected, the JFileChooser will be opened in $ASEMON_SAVE_DIR
+	</LI>
+
+	<LI>
+	<b>Added some "internal" to the "Sample Information", which can be accessed via the tool tip</b><br>
+	<ul>
+	  <li>SQL Refresh Time - How long it took to execute the SQL statement to get Performance Counters</li>
+	  <li>GUI Refresh Time - How long it took to refresh the GUI, including sorting the JTable</li>
+	  <li>Local Calculation Time - Time spent in the method localCalculation() </li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>All tabs: Automatic Resize of Column Width, on/off</b><br>
+	Previously all columns width was auto resized every now and then, in many cases this caused you'r
+	eyes to flip around on the screen, which is some cases was a bit disturbing.<br>
+	Now I'm saving the column width along with the column order, sort order etc. This means that we
+	now can choose if we want the previous saved layout or do automatic resize of the column width.<br>
+	<ul>
+	  <li>In the right click menu in any Performance Counters JTable you can set what you want to do
+	      for this table, the options are 'Use Global Settings' or 'Do Auto Adjustment'
+	      or 'Use the saved column width'</li>
+	  <li>In the MainMenu-&gt;Preferences-&gt;Auto Resize Column Width you can choose to 'Auto Adjustment' or not.</li>
+	</ul>
+	This is especially useful when viewing AseMon recordings (offline data)
+	</LI>
+
+	<LI>
+	<b>Tab: Active Statements</b><br>
+	Tooltip help for HasMonSqlText and HasDbccSqlText was sometimes to wide, so now I try to format the
+	text before showing it in the tooltip. This means, making line brakes if the output is to wide.
+	</LI>
+
+	<LI>
+	<b>Tab: Statement Cache Details</b><br>
+	Local Options to enable/disable 'SQL Text' and 'Showplan' results has been added.<br>
+	This was introduced so we can disable it in the case those options took to much memory in AseMon
+	or they where using to much resources on the ASE server side.
+	</LI>
+
+	<LI>
+	<b>Tab: Objects</b><br>
+	Added a column TabRowCount, which simply does row_count(DBID, ObjectID), if this is to heavy, it can be disabled with the property <code>CMobjActivity.TabRowCount=false</code>. <br>
+	Note TabRowCount is only done in 15.0 or above<br>
+	Took away all the cluster columns in 15.5, if we are not connected to a cluster ASE<br>
+	</LI>
+
+	<LI>
+	<b>Tab: Spinlock Sum</b><br>
+	Added records to track individual spinlocks on Data Caches (each CACHLET is now calculated)<br>
+	Added records to track individual spinlocks on Engine RunQueue (type=KERNEL-INST)<br>
+	Also a column 'type' was added, which contains: CACHE, CACHLET, DBTABLE, RESOURCE, KERNEL, KERNEL-INST, OTHER<br>
+	Let me know if it takes more resources than previously.
+	</LI>
+
+	<LI>
+	<b>New Dialog: Change 'Graph' Order and Visibility</b><br>
+	In this one you can change the order of the graphs in the Trend Graphs Dashboard<br>
+	The dialog can be reached from main menu: View -&gt; Change 'Graph' Order and Visibility
+	and from right click on any of the graphs.<br>
+	</LI>
+
+	<LI>
+	<b>Changes to graph enable/disable</b><br>
+	Previously enable/disable of graphs could only be done from the Main Menu-&gt;View-&gt;Active Graphs<br>
+	Now you can right click on any of the graphs, and in the "AseMon Menu" you have options to enable and disable graphs.<br>
+	In any of the Performance Counter Tabs, in the Options Panel, top right, there is now a "graph" button.
+	If the button is visible this Tab <b>has</b> Graphs attached. By clicking on the button, you can enable
+	or disable the graphs attached to this Performance Counter Tab.
+	Also in the "Summary" panel you have the Graph Button, right beside the label "Summary Panel",
+	Click it to enable or disable graphs attached to the Summary Fields.
+	</LI>
+
+	<LI>
+	<b>Added one field to the Summary panel, 'Full Transaction Logs'.</b><br>
+	When there are databases that has full Transaction Logs, a red icon in the status bar shows up,
+	telling you how many databases that has full transaction logs.<br>
+	If you press the icon, you will jump to the 'Databases' tab.<br>
+	In Databases Tab, databases with full transaction logs will be marked with a red background.
+	</LI>
+
+	<LI>
+	<b>Bug fix: offline connect</b><br>
+	If you connected to a "offline database" to view sampled performance counters,
+	then you couldn't disconnect and connect to a new "offline database" without restarting the GUI.<br>
+	This is now fixed. Some additional cleaning up could be done like: clearing the GUI, but then latest
+	graphs that were loaded will also be cleared. So lets wait with the "full clean" a bit...
+	</LI>
+
+	<LI>
+	<b>nogui mode:</b><br>
+	Added <code>-f | --finish</code> switch, which shutdown or stop the no-gui service after # hours<br>
+	</LI>
+
+	<LI>
+	<b>nogui mode:</b><br>
+	Changed <code>-d | --dbname</code> switch, which specifies the offline URL string.<br>
+	<code>-d|--dbname</code> Now accepts variables <code>${DATE}, ${SERVERNAME}, ${ASEHOSTNAME}, ${ASEMON_HOME}, ${ASEMON_SAVE_DIR}</code><br>
+	<br>
+	Explanation of the above variables<br>
+		<ul>
+		<li><code>${DATE[:format=fmt[;roll=true|false]]}</code><br>
+		The DATE will be substituted with a timestamp, the format of the timestamp is specified by modifier 'format'.<br>
+		<br>
+		The DATE variable has modifiers, which means you can change the behaviour of the variable.<br>
+		<ul>
+			<li>modifier: "<code>format=formatSpecification</code>" Is how the DATE string should be built. the specification is according to <code>java.text.SimpleDateFormat</code>, and the default value is <code>yyyy-MM-dd</code></li>
+			<li>modifier: "<code>roll=true|false</code>"            This means: start/create a new database if we roll over into a new DATE string. with format=<code>yyyy-MM-dd</code> a new DB will be created every midnight, with format=<code>yyyy-MM-dd_HH</code> a new DB will be created every hour. The default value for <code>roll</code> is <code>false</code>. </li>
+		</ul>
+		<br>
+		The default value for <code>format</code> can be changed with in the Configuration file with property <code>PersistWriterJdbc.h2DateParseFormat=formatString</code> <br>
+		The default value for <code>roll</code>   can be changed with in the Configuration file with property <code>PersistWriterJdbc.h2NewDbOnDateChange=true|false</code> <br>
+			</li>
+		<li><code>${SERVERNAME} </code> <br>
+		The SERVERNAME will be substituted with the content of the ASE global variable <code>@@servername</code> of which ASE server we are monitoring.<br>
+			</li>
+		<li><code>${ASEHOSTNAME}</code> <br>
+		The ASEHOSTNAME will be substituted with the output from ASE function <code>asehostname()</code> of which ASE server we are monitoring.<br>
+			</li>
+		<li><code>${ASEMON_HOME}</code> <br>
+		The ASEMON_HOME will be substituted with the installation path of AseMon.<br>
+			</li>
+		<li><code>${ASEMON_SAVE_DIR}</code> <br>
+		The ASEMON_SAVE_DIR will be substituted with ${ASEMON_HOME}/data or whatever the environment variable is set to.<br>
+			</li>
+		</ul>
+	Example:<br>
+	<code>asemon -Usa -Pnull -SGORAN_1_DS -uxyz -ppasswd -shost1 -n all -i 30 -D H2 -d xxx.${ASEHOSTNAME}.${DATE:format=yyyy-MM-dd.HH;roll=true}</code><br>
+	The above example, does:
+	<ul>
+		<li>Connects to ASE 'GORAN_1_DS' with user 'sa'      <br><code>-Usa -Pnull -SGORAN_1_DS</code></li>
+		<li>Host monitoring on host 'host1' with user 'xyz'  <br><code>-uxyz -ppasswd -shost1</code></li>
+		<li>Samples all Performance Counters                 <br><code>-n all</code></li>
+		<li>Sample every 30 seconds                          <br><code>-i 30</code></li>
+		<li>Use H2 as the database storage                   <br><code>-D H2</code></li>
+		<li>H2 dbname would be 'xxx.host1.2011-05-04.19' in current path. Every hour a new database will be created.
+	                                                         <br><code>-d xxx.${ASEHOSTNAME}.${DATE:format=yyyy-MM-dd.HH;roll=true}</code></li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Variables in URL</b><br>
+	The variables <code>${DATE}, ${SERVERNAME}, ${ASEHOSTNAME}, ${ASEMON_HOME}, ${ASEMON_SAVE_DIR}</code>
+	also works in the Connection Dialog in the "Counter Storage" tab.
+	</LI>
+
+	<LI>
+	<b>Changed the name of the error log.</b><br>
+	For GUI mode: still ~/.asemon.AseMon.log<br>
+	For NO-GUI mode: ~/.asemon.AseMon.nogui.log<br>
+	Previously when running GUI and NO-GUI mode on same machine, they shared the error log.
+	</LI>
+
+	<LI>
+	<b>nogui mode:</b><br>
+	if you are using ASE to store the performance counters, then use DYNAMIC_PREPARE
+	and do 'set statement_cache off', this for performance reasons.<br>
+	NOTE: this is only done by specifying -D and -d switches for the moment.
+	</LI>
+
+	<LI>
+	<b>"offline-read" mode</b><br>
+	In "offline-read" mode, the "Offline Session Viewer" dialog checks for new Samples, which could arrive in the background.
+	A Watermark in the dialog will tell you how many new samples that has been stored since last "refresh".
+	Background storage of Performance Counters could for example be performed by the "no-gui" process if anyone has started that module.
+	</LI>
+
+	<LI>
+	<b>nogui mode:</b><br>
+	Added <code>-r | --reconfigure</code> switch<br>
+	This means that even if some ASE configuration options is not set, then configure them automatically. <br>
+	Configuration names and there defaults is presented below.<br>
+	It's only configuration options with a equal sign after, which automatically can be reconfigured.<br>
+	<br>
+	<TABLE BORDER=1 CELLSPACING=0 CELLPADDING=2>
+		<TR> <TH>Name                    </TH> <TH>Configuration                                                                </TH> </TR>
+		<TR> <TD>Summary                 </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Objects                 </TD> <TD>enable monitoring=1, object lockwait timing=1, per object statistics active=1</TD> </TR>
+		<TR> <TD>Processes               </TD> <TD>enable monitoring=1, object lockwait timing=1, wait event timing=1           </TD> </TR>
+		<TR> <TD>Databases               </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>Temp Db                 </TD> <TD>enable monitoring=1, object lockwait timing=1, per object statistics active=1</TD> </TR>
+		<TR> <TD>Waits                   </TD> <TD>enable monitoring=1, wait event timing=1                                     </TD> </TR>
+		<TR> <TD>Engines                 </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>System Load             </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Data Caches             </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>Pools                   </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>Devices                 </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>IO Sum                  </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>IO Queue                </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>Spinlock Sum            </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Sysmon Raw              </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>RepAgent                </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Cached Procedures       </TD> <TD>per object statistics active=1                                               </TD> </TR>
+		<TR> <TD>Procedure Cache         </TD> <TD>enable monitoring=1                                                          </TD> </TR>
+		<TR> <TD>Procedure Call Stack    </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Cached Objects          </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Errorlog                </TD> <TD>enable monitoring=1, errorlog pipe active=1, errorlog pipe max=200           </TD> </TR>
+		<TR> <TD>Deadlock                </TD> <TD>enable monitoring=1, deadlock pipe active=1, deadlock pipe max=500           </TD> </TR>
+		<TR> <TD>Proc Cache Module Usage </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Proc Cache Memory Usage </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>Statement Cache         </TD> <TD>enable monitoring=1, enable stmt cache monitoring=1, statement cache size    </TD> </TR>
+		<TR> <TD>Statement Cache Details </TD> <TD>enable monitoring=1, enable stmt cache monitoring=1, statement cache size    </TD> </TR>
+		<TR> <TD>Active Objects          </TD> <TD>enable monitoring=1, per object statistics active=1                          </TD> </TR>
+		<TR> <TD>Active Statements       </TD> <TD>enable monitoring=1, statement statistics active=1, wait event timing=1      </TD> </TR>
+		<TR> <TD>Blocking                </TD> <TD>enable monitoring=1, wait event timing=1                                     </TD> </TR>
+		<TR> <TD>Missing Statistics      </TD> <TD>capture missing statistics                                                   </TD> </TR>
+		<TR> <TD>sp_monitorconfig        </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>OS CPU(vmstat)          </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>OS Disk Stat            </TD> <TD>NONE                                                                         </TD> </TR>
+		<TR> <TD>OS CPU(mpstat)          </TD> <TD>NONE                                                                         </TD> </TR>
+	</TABLE>
+ 	</LI>
+
+	<LI>
+	<b>SQL Tool</b><br>
+	The mouse wheel is now much faster when scrolling over graphs and SQL Tool Query result sets
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 3.2.1, Component: jChart2D </li>
+	  <li>To version 3.7.4, Component: MIGLayout</li>
+	  <li>To version 1.3.155, Component: H2 database</li>
+	  <li>To version 2011-05-15, Component: ProxyVole</li>
+	</ul>
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2011-04-21</H2>
+<UL>
+	<LI>
+	<b>New Tab: RepAgent, which is the same thing as the RepAgent section from sp_sysmon</b><br>
+	Note: This has dependencies on the tab 'spinlock', which does the dbcc command...
+	</LI>
+
+	<LI>
+	<b>Extended error checking when connecting to a ASE Server.</b><br>
+	Note: more work is needed here, but I have a hard time trying all various ASE configurations.
+	</LI>
+
+	<LI>
+	<b>Dialog "found new AseMon version".</b><br>
+	Now shows a HTML Pane with "What's new" (history.html)
+	</LI>
+
+	<LI>
+	<b>The Wizard pages now has a Overview page, which describes what the Wizard is good for</b><br>
+	Basically a Overview what the wizard does...
+	</LI>
+
+	<LI>
+	<b>Tab 'System Load':</b><br>
+	Added graph: 'Run Queue Length, Server Wide' averaging over all engines and instances (if it's a cluster').<br>
+	Added graph: 'Run Queue Length, Per Engine' Uses the 'Avg_1min', this so we can see the 'Run Queue Length' per engine to verify if any engine are overloaded.<br>
+	Note: this only work if we are above 15.5<br>
+	</LI>
+
+	<LI>
+	<b>Tab 'Waits':</b><br>
+	I added a column WaitTimePerWait, which is the calculation of WaitTime / Waits
+	</LI>
+
+	<LI>
+	<b>Tab 'Objects':</b><br>
+	I added a column LockContPct, which describes the lock contention in percent
+	</LI>
+
+	<LI>
+	<b>Tab 'Devices':</b><br>
+	Added column 'TotalIOs', Just a summary of Read + Writes<br>
+	Added column 'ReadsPct', How much of the total IO's was reads <br>
+	Added column 'APFReadsPct', How many of the reads where Async Prefetch requests <br>
+	Added column 'WritesPct', How much of the total IO's was writes <br>
+	</LI>
+
+	<LI>
+	<b>Tab 'Databases':</b><br>
+	For Cluster Edition, now calls db_recovery_status(DBID) to check if the database is
+	undergoing node-failure recovery.<br>
+	Added column 'AppendLogContPct', how much contention in percent do we have on the Log Semaphore<br>
+	Also added a graph that shows the Log Semaphore Contention, so we can see the trend.
+	</LI>
+
+	<LI>
+	<b>Tab 'Temp Db':</b><br>
+	Added column 'AppendLogContPct', how much contention in percent do we have on the Log Semaphore<br>
+	Also added a graph that shows the Log Semaphore Contention, so we can see the trend.
+	</LI>
+
+	<LI>
+	<b>Tab 'Statement Cache':</b><br>
+	Added column 'CacheHitPct', Reuse percentage of the statement cache.<br>
+	Added column 'UnusedSizeKB', Just how much memory is free for the moment.<br>
+	Added column 'AvgStmntSizeInKB', How much memory does each of the statements take.<br>
+	Added column 'NumStatementsDiff', which simply is a duplicate of 'NumStatements', but it has difference calculations applied to it.<br>
+	Added right-click menu: - Remove ALL entries from the Statement Cache. do: dbcc purgesqlcache<br>
+	Added right-click menu: - Print Summaries of the Statements in the Statement Cache. do: dbcc prsqlcache<br>
+	Added Graph for: NumSearches, HitCount, NumInserts, NumRemovals
+	</LI>
+
+	<LI>
+	<b>Tab 'Statement Cache Details':</b><br>
+	Added column 'HasShowplan' and 'msgAsColValue' The associated execution plan of the SSQLID.<br>
+	Added column 'HasSqltext' and 'sqltext' The SQL Text of the SSQLID.<br>
+	Also rearranged the column order and added tooltip.<br>
+	Added right-click menu: - Remove ALL entries from the Statement Cache. do: dbcc purgesqlcache<br>
+	Added right-click menu: - Remove A Specific ${SSQLID} from the Statement Cache. do: dbcc purgesqlcache(${SSQLID})<br>
+	Added right-click menu: - Print info about the Statement ${SSQLID}. do dbcc prsqlcache(${SSQLID}, 1)<br>
+	</LI>
+
+	<LI>
+	<b>Tab 'Proc Cache Module Usage':</b><br>
+	Added column 'ActiveDiff', which simply is a duplicate of 'Active', but it has difference calculations applied to it.<br>
+	Added a graph, which displays the Active count for each module, so we can track this for a longer time. When I did this
+	I also needed to implement a minimum size of the graph panel (since I wanted this graph larger than the defaults),
+	which also lead to a right-click menu on the graph's panel so we can set a new minimum size on all the graph panels.
+	Unfortunately to reach the menu you need to right-click at the very bottom of the graph panel (below the series labels)
+	</LI>
+
+	<LI>
+	<b>Tab 'Proc Cache Memory Usage':</b><br>
+	Added column 'ActiveDiff', which simply is a duplicate of 'Active', but it has difference calculations applied to it.<br>
+	</LI>
+
+	<LI>
+	<b>Added more explanations to the MonWaitEventIdDictionary.</b><br>
+	'Comments' and 'Most Common Cause' was used from the document: Managing Workloads with ASE: Techniques for OLTP Scaling and Performance Management with Large SMP and Shared Disk Clusters<br>
+	which you can get from: http://www.sybase.com/detail?id=1091630
+	</LI>
+
+	<LI>
+	<b>Added some Menu shortcuts, connect, disconnect etc...</b><br>
+	</LI>
+
+	<LI>
+	<b>Basic Operating System Monitoring capabilities</b><br>
+	Three new Tabs has been created for this:<br>
+		<ul>
+		<li><code>OS Disk Stat  </code> which uses iostat or vmstat to get OS disk statistics</li>
+		<li><code>OS CPU(vmstat)</code> which uses vmstat to get OS overall OS statistics</li>
+		<li><code>OS CPU(mpstat)</code> which uses mpstat to get OS statistics per CPU</li>
+		</ul>
+	The 'Operating System Monitoring' subsystem is using a SSH (Secure Shell) connection to remote host.
+	In that SSH connection we can kick of the various OS Commands and receive the output (see below for more details)<br>
+	<br>
+	Below is a breath description of the subsystem<br>
+		<ul>
+			<li>
+			What is this Basic Operating System Monitoring.<br>
+			If you want to monitor the Operating System with some basic command, this is one way you can do it.<br>
+			And also if you are storing the Performance Counters in a Persistent storage, the OS Monitoring is in sync with <br>
+			the Performance Counters from the monitored ASE Server, which makes it easier to correlate the various metrics.
+			</li>
+
+			<li>
+			What OS Monitoring Commands are supported for the moment.<br>
+			The basic command which for the moment is supported is:
+			<ul>
+			  <li> <code> iostat </code></li>
+			  <li> <code> vmstat </code></li>
+			  <li> <code> mpstat </code></li>
+			</ul>
+			If you are using <b>Veritas</b> as the Disk IO subsystem and want to sample disk statistics with <b>vxstat</b> and not iostat.<br>
+			Make sure <b>vxstat</b> is executable and in the <b>$PATH</b> off the user that you're connecting to the Operating System with.<br>
+			Then it will execute <b>vxstat</b> instead of iostat and use that information.
+			</li>
+
+			<li>
+			But every Operating System work slightly different.<br>
+			But all Operating Systems has different layouts for the various commands. <br>
+			For Example 'iostat' does not produce the same output on Solaris as it does on Linux. <br>
+			<br>
+			When a connection to the OS made, It will try to identify what OS were connecting to (by using uname -a) and then use OS specific parsers. <br>
+			This implies that a \"parser\" is implement for every OS.<br>
+			So if you are getting errors, faulty output or that your OS is not supported, please notify me and I will try to fix it.<br>
+			Also if you want to change the parameters/flags to the OS Commands, to get better Performance Counters, kick me and I'll fix it!<br>
+			<br>
+			The only thing that can change by ourself is the OS Commands sleep interval<br>
+			This is done by adding the below information to the configuration file. (asemon.properties)"
+			<ul>
+			  <li> for iostat: <code>MonitorIoSolaris.sleep=5</code></li>
+			  <li> for mpstat: <code>MonitorVmstatAix.sleep=5</code></li>
+			  <li> for vmstat: <code>MonitorMpstatLinux.sleep=5</code></li>
+			</ul>
+			You can probably fill in the blanks... <code>[Monitor][Subsystem][Osname].sleep=[samplePeriodToTheCommand]</code><br>
+			<br>
+			If you need to debug or check what the OS Command is sending, you can add the following to the Configuration file:<br>
+			<code>log4j.logger.asemon.hostmon.HostMonitor=DEBUG</code><br>
+			<br>
+			Or you can use the 'log viewer' to change the 'log level' while AseMon is still running: <br>
+			MainMenu-&gt;View-&gt;Open Log Window..., then Press 'Set log level'... locate asemon.hostmon.HostMonitor and change it.
+			</li>
+
+			<li>
+			The big picture of how it's implememted.<br>
+			The way it's implemented:<br>
+			<ul>
+			  <li> Start a background task that executes for instance 'iostat' every 2 seconds (iostat -xdz 2) or whatever sample period (see section above).</li>
+			  <li> Parse the output from the OS Command and store it in a intermediate in-memory storage.</li>
+			  <li> Then when AseMon think it's time to sample some Performance Counters (depends on AseMon's sample time)<br>
+			       The subsystem does an <b>average</b> calculation on the intermediate stored values and then resets the intermidiate storage so that new samples from the OS Command can be sampled. <br>
+			  <li> Now the Performance Counters or values are available to view in AseMon.</li>
+			</ul>
+			For 'vmstat' I choose a slightly different approach, this since 'vmstat' is only delivering one row per vmstats-sample period. <br>
+			So in this case I do <b>not</b> do a summary or average calculation.<br>
+			<br>
+			Instead I simply displays <b>all</b> the sampled records I have received from the command with a 'timestamp' column to indicate when it was received.<br>
+			If you instead want to have some kind of average or summary, please notify me and explain...
+			</li>
+
+			<li>
+			What to expect in upcomming releases of AseMon.<br>
+			In current release there are limited support for User Defined OS Monitoring, which you can add to the Configuration file<br>
+			In future release, the plan is to add a <b>Wizard</b> where you can add User Defined Host Monitor Counters and maybe support for diff/rate counters as well.<br>
+			<br>
+			With a Used Defined OS Monitoring you could for example Monitor Outputs from <b>your</b> Application Server or in whatever way you think is's usable.<br>
+			<pre>
+#-------------------------------------------------
+# Example of a simple file list
+# isStreaming=false, means that it's executed at every AseMon sample interval
+#-------------------------------------------------
+hostmon.udc.TestGoransLs.displayName                   = List of files in $HOME
+hostmon.udc.TestGoransLs.description                   = This would be the tooltip help on the Tab for: List of files in $HOME
+hostmon.udc.TestGoransLs.osCommand                     = ls -Fl | egrep -v '^d'
+hostmon.udc.TestGoransLs.osCommand.isStreaming         = false
+hostmon.udc.TestGoransLs.addStrColumn.umode            = {length=10, sqlColumnNumber=1,  parseColumnNumber=1,  isNullable=false, description=xxx}
+hostmon.udc.TestGoransLs.addIntColumn.files            = {           sqlColumnNumber=2,  parseColumnNumber=2,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addStrColumn.owner            = {length=10, sqlColumnNumber=3,  parseColumnNumber=3,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addStrColumn.group            = {length=10, sqlColumnNumber=4,  parseColumnNumber=4,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addIntColumn.sizeInBytes      = {           sqlColumnNumber=5,  parseColumnNumber=5,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addStrColumn.date             = {length=10, sqlColumnNumber=6,  parseColumnNumber=6,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addStrColumn.time             = {length=5,  sqlColumnNumber=7,  parseColumnNumber=7,  isNullable=true,  description=xxx}
+hostmon.udc.TestGoransLs.addStrColumn.filename         = {length=99, sqlColumnNumber=8,  parseColumnNumber=8,  isNullable=true,  description=xxx}
+
+#-------------------------------------------------
+# Example of mpstat
+# isStreaming=true, means that it's executed once, and a background thread parses the output stream from the command
+#                   and on each AseMon sample interval, a average calculation is done on the sampled records.
+#                   numOfSamples is an counter indicator, which reflects how many sampled records the average is based on.
+#-------------------------------------------------
+hostmon.udc.TestGoransMpstat.displayName               = UD Mpstat
+hostmon.udc.TestGoransMpstat.description               = This would be the tooltip help on the Tab for: UD Mpstat
+hostmon.udc.TestGoransMpstat.osCommand                 = mpstat -P ALL 1
+hostmon.udc.TestGoransMpstat.osCommand.isStreaming     = true
+hostmon.udc.TestGoransMpstat.addStrColumn.CPU          = {length=30,             sqlColumnNumber=1,  parseColumnNumber=3,  isNullable=false, description=Processor number. The keyword all indicates that statistics are calculated as averages among all processors.}
+hostmon.udc.TestGoransMpstat.addIntColumn.numOfSamples = {                       sqlColumnNumber=2,  parseColumnNumber=0,  isNullable=true,  description=Number of 'sub' sample entries of iostat this value is based on}
+hostmon.udc.TestGoransMpstat.addStatColumn.usrPct      = {precision=10, scale=1, sqlColumnNumber=3,  parseColumnNumber=4,  isNullable=true,  description=Show the percentage of CPU utilization that occurred while executing at the user level (application).}
+hostmon.udc.TestGoransMpstat.addStatColumn.nicePct     = {precision=10, scale=1, sqlColumnNumber=4,  parseColumnNumber=5,  isNullable=true,  description=Show the percentage of CPU utilization that occurred while executing at the user level with nice priority.}
+hostmon.udc.TestGoransMpstat.addStatColumn.sysPct      = {precision=10, scale=1, sqlColumnNumber=5,  parseColumnNumber=6,  isNullable=true,  description=Show the percentage of CPU utilization that occurred while executing at the system level (kernel). Note that this does not include time spent servicing hardware and software interrupts.}
+hostmon.udc.TestGoransMpstat.addStatColumn.iowaitPct   = {precision=10, scale=1, sqlColumnNumber=6,  parseColumnNumber=7,  isNullable=true,  description=Show the percentage of time that the CPU or CPUs were idle during which the system had an outstanding disk I/O request.}
+hostmon.udc.TestGoransMpstat.addStatColumn.irqPct      = {precision=10, scale=1, sqlColumnNumber=7,  parseColumnNumber=8,  isNullable=true,  description=Show the percentage of time spent by the CPU or CPUs to service hardware interrupts.}
+hostmon.udc.TestGoransMpstat.addStatColumn.softPct     = {precision=10, scale=1, sqlColumnNumber=8,  parseColumnNumber=9,  isNullable=true,  description=Show the percentage of time spent by the CPU or CPUs to service software interrupts.}
+hostmon.udc.TestGoransMpstat.addStatColumn.stealPct    = {precision=10, scale=1, sqlColumnNumber=9,  parseColumnNumber=10, isNullable=true,  description=Show the percentage of time spent in involuntary wait by the virtual CPU or CPUs while the hypervisor was servicing another virtual processor.}
+hostmon.udc.TestGoransMpstat.addStatColumn.guestPct    = {precision=10, scale=1, sqlColumnNumber=10, parseColumnNumber=11, isNullable=true,  description=Show the percentage of time spent by the CPU or CPUs to run a virtual processor.}
+hostmon.udc.TestGoransMpstat.addStatColumn.idlePct     = {precision=10, scale=1, sqlColumnNumber=11, parseColumnNumber=12, isNullable=true,  description=Show the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request.}
+hostmon.udc.TestGoransMpstat.setPkColumns              = CPU
+hostmon.udc.TestGoransMpstat.setPercentColumns         = usrPct, nicePct, sysPct, iowaitPct, irqPct, softPct, stealPct, guestPct, idlePct
+hostmon.udc.TestGoransMpstat.setSubSampleColumn        = numOfSamples
+hostmon.udc.TestGoransMpstat.setParseRegexp            = DEFAULT
+hostmon.udc.TestGoransMpstat.skipRows.CPU              = CPU
+#--------------------------------- OK, lets attach a graph to it as well
+hostmon.udc.TestGoransMpstat.graph=true
+hostmon.udc.TestGoransMpstat.graph.type=byRow
+hostmon.udc.TestGoransMpstat.graph.name=mpstatGraph
+hostmon.udc.TestGoransMpstat.graph.label=MpStat Graph
+hostmon.udc.TestGoransMpstat.graph.menuLabel=MpStat Graph
+hostmon.udc.TestGoransMpstat.graph.data.cols=idlePct
+hostmon.udc.TestGoransMpstat.graph.data.methods=absVal
+hostmon.udc.TestGoransMpstat.graph.data.labels=-pk-
+			</pre>
+			</li>
+		</ul>
+	</LI>
+
+	<LI>
+	<b>Configurations will now be get from several Configuration files</b><br>
+	The search order is USER_TEMP, USER_CONF, SYSTEM_CONF: so if you save something in your private files it will override the System configuration.<br>
+	The default configuration files are: USER_TEMP='$HOME/.asemon/asemon.save.properties', USER_CONF='$HOME/.asemon/asemon.user.properties', SYSTEM_CONF='$ASEMON_HOME/asemon.properties'
+	</LI>
+
+	<LI>
+	<b>Added some command line options, -D for shortcut ASE/ASA PCS storage.</b><br>
+	Also fixed some issues for PCS when storing data in ASE and ASA<br>
+	Fixed the "check for new sample values", this is useful when: reading a Persistent Storage from
+	the GUI, while at the same time someone (probably the no GUI mode) is applying data to it.
+	</LI>
+
+	<LI>
+	<b>Restricted GUI mode when "time to live" has expired.</b><br>
+	When "In Development Version" and "time to live" has expired, the GUI will still be able to start, but a very restricted
+	environment is available. Only: Persistent Counter Storge - Read (offline read) will be available.<br>
+	This 'start' option was implemented as a fail-safe mechanism, and should only be used if the new
+	AseMon version is not capable of reading the old database. In 99.9% the new AseMon version will
+	be able to read Performance Counters stored by a earlier AseMon release.
+	</LI>
+
+	<LI>
+	<b>Added "Pre Defined SQL Statements" in the main menu: tools-&gt;Predefined SQL Statements</b><br>
+	In here there is a bunch of SQL Statements that can help you...<br>
+	You can add you'r own statements in the "user" properties file "$HOME/.asemon/asemon.user.properties"<br>
+	The <code>01</code> and <code>02</code> is used to specify in what order in the menu they should be presented.
+	<pre>
+# Do some SQL
+user.predefined.sql.01.name                      = xxx - select something, bla bla bla
+user.predefined.sql.01.execute                   = select NOW=getdate()
+
+# Execute your stored proc, if the proc isn't installed, install it using the file.
+# needsVersion is if it containes SQL that is onlky valid from a specific version of ASE (specified as 15032, for 15.0.3 ESD#2, should always be 5 numbers)
+user.predefined.sql.02.name                      = sp__xxx - my own proc...
+user.predefined.sql.02.execute                   = exec sp__xxx
+user.predefined.sql.02.install.needsVersion      = 0
+user.predefined.sql.02.install.dbname            = sybsystemprocs
+user.predefined.sql.02.install.procName          = sp__xxx
+user.predefined.sql.02.install.procDateThreshold = 2011-04-14
+user.predefined.sql.02.install.scriptName        = C:/tmp/sp__xxx.sql
+user.predefined.sql.02.install.needsRole         = sa_role
+	</pre>
+	</LI>
+
+	<LI>
+	<b>Swing Event Dispatch Thread (EDT) debuging...</b><br>
+	If the GUI seems a bit slow or unresponsive, you can turn on a debug option -x EDT_HANG<br>
+	Then you will get stacktraces when EDT runs into deadlocks and when a single execution
+	on the EDT takes to long... This will simplify debugging and fixing GUI issues in the future.<br>
+	Turn this on with: -x EDT_HANG<br>
+	Check available debug options: -x list
+	</LI>
+
+	<LI>
+	<b>bug fix:</b><br>
+	if a Graph was indicated as "non visible" on creation, the option "Enable background data polling"
+	in the Performance Counter Tab was disabled, which ment that we couldn't enable
+	BG mode without first "enable and disable" the graph attached to this CM.<br>
+	Now I wont change the background property, I will simply show a label in the right corner of the
+	"options" panel, that says "has active graphs", if any graphs is active for this Performance Counter.
+	</LI>
+
+	<LI>
+	<b>Made some changes to dependant Performance Counters and how they do refresh</b><br>
+	A bit less messages in the error log, and better GUI watermarks for when next refresh should happen.
+	</LI>
+
+	<LI>
+	<b>bug fix: SQL Capture tool</b><br>
+	When to sample data in the tabs 'Object', 'Waits' and 'Locks' did not work to 100%<br>
+	Now it works as it does in the Main window.
+	</LI>
+
+	<LI>
+	<b>Using ant to make final distribution</b><br>
+	The distribution is not using aseman.jar as it's compiled source (classes dir is just there for development)<br>
+	asemon_YYYY-MM-DD.zip does not contain the asemon subdirectory anymore. So unpacking has changed slightly
+	</LI>
+
+	<LI>
+	<b>Also a <b>bunch</b> of small changes not mentioned in this doc.</b><br>
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2011-01-12</H2>
+<UL>
+	<LI>
+	The work to port to Java Generics has been started...
+	</LI>
+
+	<LI>
+	Splash screen when starting.
+	</LI>
+
+	<LI>
+	Check for Java 6 version is done prior to starting asemon (in that bat/sh file)<br>
+	This because in java 6, we are using the splash screen option, which is not available
+	in earlier releases on java. If the version control is done later, then we will receive
+	an error that the command line switch '-splash' is unknown...
+	</LI>
+
+	<LI>
+	When switched to Java 1.6 and JXTable 1.6.2, the below started to happen:<br>
+	When rows are deleted from a JTable, in some cases it used the "deleted" view row
+	from the table to get cell values for rendering in some cases. <br>
+	I don't know why this is happening, but it seems to happen in some repaint scenario
+	when I have highlighters (in JXTable) + a bunch of more stuff...<br>
+	A lot of the faults has been removed, but some are still left...<br>
+	A ';' sign is printed to the standard output every time it happens. This just to notify
+	me in the future, that the problem still exists...
+	</LI>
+
+	<LI>
+	Tab: active statements<br>
+	Added 2 columns 'HasMonSqlText' and 'MonSqlText', which does: <br>
+	select SQLText from master..monProcessSQLText where SPID = &lt;SPID&gt;<br>
+	This will show the current running SQL Statement, this will then also include
+	SQL statements that has been executed via dynamic SQL inside a Stored procedure.
+	exec('do SQL here'). In some cases/versions it's not showed by DBCC sqltext().<br>
+	It will also help you to validate if the SQL statement is still running. Info from the
+	monProcessSQLText only has rows if the statement is still running, while DBCC sqltext
+	will show you the <b>last</b> executed SQL statement, which is still left in the PSS structure.
+	</LI>
+
+	<LI>
+	Tabs: Process, Active Statements, Blocking<br>
+	On SPID's that are blocked: Changed default color to PINK (almost read)
+	</LI>
+
+	<LI>
+	In Memory History: the history time can now be set lower than the Graph History<br>
+	A Spinner on the right of "Graph History in Minutes" is now available...<br>
+	To access the "in memory history", press the "DB magnifyingGlass" icon on the toolbar.
+	</LI>
+
+	<LI>
+	Cell renders has been changed to format numbers in a better way.<br>
+	Spaces between "large" numbers for readability.
+	</LI>
+
+	<LI>
+	Multiple column sorts can now be done (current implementation supports 3 columns).<br>
+	The column header, has a indicator that tells you if the sort is done Ascending, Descending or Unsorted.
+	The indicator also tells you if this column is the first, second or third column in the sort.<br>
+	Initial Sort order (first click) has also been changed to Descending, so that high numbers is at top, because this is what we normally want to sort at.
+	</LI>
+
+	<LI>
+	Storing and Restoring of JTable Column Order, Visibility and Sort Order now works better.<br>
+	Especially when viewing offline and in-memory data.<br>
+	</LI>
+
+	<LI>
+	Now also storing/restoring the filter panel on asemon restarts.<br>
+	Also applying the filters when changing between	different data samples in the offline mode.
+	also works when changing between InMemory view and Regular Online view.
+	</LI>
+
+	<LI>
+	Tab: Active Statements<br>
+	Previously the MultiSampled flag was raised when the SPID was present between two samples.<br>
+	Now that check also includes in the StartTime for the statement is the same.
+	</LI>
+
+	<LI>
+	ASE Configuration (both sp_configure, sp_helpcache and sp_cacheconfig) are stored in the
+	Persistent Counter Storage (a offline database) when asemon starts.<br>
+	The configuration can be viewed from the GUI when reading the offline database.
+	</LI>
+
+	<LI>
+	New Tab: Procedure Call Stack<br>
+	This will show the nesting level of how the procs/triggers/views are executed.<br>
+	This could be used as a small profiler, to check what procedure stack is currently executing,
+	but to make it into a better profiler this needs to be sampled *often*, which might not be a good idea...
+	</LI>
+
+	<LI>
+	New graphs:<br>
+	<UL type="circle">
+	<LI>CPU Summary using global variables @@cpu_busy, @@cpu_io (depends on tab 'Summary')</LI>
+	<LI>Number of transactions (only in ASE 15.0.3 ESD#1 and higher) (depends on tab 'Summary')</LI>
+	<LI>Number of Connections/users that are connected to the ASE (depends on tab 'Summary')</LI>
+	<LI>Disk read/write per second using global variables @@total_read, @@total_write (depends on tab 'Summary')</LI>
+	<LI>Network Packet read/sent per second using global variables @@pack_recv, @@pack_sent (depends on tab 'Summary')</LI>
+	<LI>Checkpoint and Housekeeper Writes per second (depends on tab 'Processes')</LI>
+	<LI>Number of Procedure Requests per Second (depends on tab 'Procedure Cache')</LI>
+	</UL>
+	</LI>
+
+	<LI>
+	Tab: Engines<br>
+	in ASE 15.5 the column 'IO CPU Time' was added to the monEngine table... <br>
+	Start to use that one, otherwise the percentage calculation will be wrong.
+	</LI>
+
+	<LI>
+	Number of tabs has started to be a factor... it becomes harder to navigate between them.<br>
+	So now you can hide tabs that you are not using, or simply reorder the tabs to suit your usage of asemon.<br>
+	Right click on any tab, and choose 'Tab Options', in here you can personalize the tabs a bit.<br>
+	Or from the main menu: View -&gt; Change 'Tab Titles' Order and Visibility <br>
+	The second thing that has been done on tab navigation is: on the toolbar two new buttons has
+	been added where you can Activate (jump to) a specific tab. One button is in the original order,
+	the second button is sorted on the tab title name.
+	</LI>
+
+	<LI>
+	New Tab: sp_monitorconfig<br>
+	This simply executes the procedure sp_monitorconfig, which could be handy to have<br>
+	Recommendation is to have the 'postpone' field set to 600 (10 minutes or so), so we do not sample this that often.
+	</LI>
+
+	<LI>
+	Saving the active graphs in the Summary panel, did not work, fixed that...<br>
+	So now after a restart I remember what graphs was active or disabled.
+	</LI>
+
+	<LI>
+	File Location changes:<br>
+	Temporary GUI save settings file (asemon.save.properties), "screen capture" files and log files
+	directory has been moved from ($HOME) to ($HOME/.asemon)
+	</LI>
+
+	<LI>
+	When the expire date for the in-development release a GUI pop up is showed.
+	</LI>
+
+	<LI>
+	Tab: Processes<br>
+	The local option "Show System Processes" did not work on some ASE versions, this was fixed
+	</LI>
+
+	<LI>
+	Tab: Active Objects: In some cases (for example "self joins"), the object/table was
+	presented several times by the MDA tables, which caused this tab to fail.<br>
+	This has been fixed in the following way: if several rows with the same PK is found,
+	and we have a column that is named 'dupMergeCount', we simply merge the previous found
+	row with the current one (simulate a sum()) and increment the column 'dupMergeCount',
+	the last thing is done just to specify how many rows we actually merged into this row.<br>
+	If 'dupMergeCount' is above 0, then we will have several rows summarized into this row.
+	</LI>
+
+	<LI>
+	Command line parameters: A couple of new ones has been introduced<br>
+	For example: -U user -P passwd -S server -s sampleTime -d h2dbname <br>
+	These switches is mainly for the --noGui option (override values in the noGui config file)<br>
+	If you have not produced a noGui config file via the "offline wizard" you can now choose
+	to specify --NoGui small|medium|large|all, which collects a predefined subset of
+	Performance Counters into the Persistent Counter Storage.<br>
+	If you want full control over what to collect, please use the "offline wizard" to specify
+	what Performance Counters that should be collected.
+	</LI>
+
+	<LI>
+	Tab: Blocking<br>
+	Fixed so that it can contain multiple PK (this since no difference calculations is done in this tab)
+	</LI>
+
+	<LI>
+	The pop up dialog informing you about "out of memory" situations,
+	now the OK button works to close the window
+	</LI>
+
+	<LI>
+	The tooltip on column header does not work in offline mode.<br>
+	The solution was to store the MDA help dictionary stuff in the offline database, and read
+	it in again when connection to a offline database.
+	</LI>
+
+	<LI>
+	In earlier releases the ESD level was reset to 0 or 1 when it was over 9<br>
+	Now the max ESD level is keept at 9, so even if you running ESD#10 it will
+	show as #9 in the internal integer holding ase version.<br>
+	This will be redone in later some later release, using better granularity of the version number.<br>
+	Also ESD number handling was changed in some release to support "sub ESD levels",
+	so a @@version string can now look like (Adaptive Server Enterprise/12.5.4/EBF 15400 ESD#7.1/P/...) <br>
+	The parsing for this does now work, but I do not keep track of the ESD sub level.
+	</LI>
+
+	<LI>
+	Tab: Cached Procedures<br>
+	Now has a Icon, which tells you what type of object it is (rule, view, trigger or procedure)
+	</LI>
+
+	<LI>
+	When asemon connect to ASE it puts the asemon version into the sysprocesses.host field
+	</LI>
+
+	<LI>
+	Tab: Active Statements<br>
+	new option: get procedure call stack, which also gets the procedure call stack from the table monProcessProcedures
+	</LI>
+
+	<LI>
+	SQL Window Tool, add icon so it's visible in the "taskbar" in windows.<br>
+	This makes it easier to navigate between many different SQL Windows...
+	</LI>
+
+	<LI>
+	When in the in-memory view, the previous versions still updated the 'Summary' panel.<br>
+	This is not done anymore.
+	</LI>
+
+	<LI>
+	A Dummy/Demo test application has been made, so you can "simulate" workload towards an ASE Server
+	and train yourself how to use asemon.<br>
+	This is the file perfdemo.bat<br>
+	To be able to use this you must install a test/demo database, see README.txt and DO_DEMO.txt in classes/asemon/perftest/sql for more information<br>
+	My intention was not to release this application, I created it simply to do "dummy load"
+	on the ASE server during a customer demo that I gave, but you might also be able to use it,
+	please give me some feedback if it should be included in the package or if I should be deleted.<br>
+	So the README.txt and DO_DEMO.txt files are just my internal notes...
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-10-29</H2>
+<UL>
+	<LI>
+	Changed to Java 1.6, so I wont support JVM 1.5 anymore...<br>
+	The change to 1.6 was needed for the new SwingX (JXTable etc) 1.6.2 (went from 1.0 to 1.6.2)<br>
+	</LI>
+
+	<LI>
+	A first attempt to store column order and restore that order after restart.<br>
+	This will most likely fuckup some other stuff where I don't convert viewToModel,
+	but it's a first attempt...<br>
+	Also storing the sort order and restores that.
+	</LI>
+
+	<LI>
+	Also added some 'restore column order' and some other stuff into the right click menu
+	on Counter Model tables.
+	</LI>
+
+	<LI>
+	Changed from JChart2D 3.1.0 -&gt; 3.2.0<br>
+	Changed the tool tip to be on 2 rows, showing "Label: value\n Time: time"
+	</LI>
+
+	<LI>
+	A first attempt to save and load the filter (Column, Operation, Value, NoZeroCounters)
+	</LI>
+
+	<LI>
+	When moving around using the arrows key on the keyboard on the in-memory and offline slider
+	caused the system to update the view on every keystroke. This overloaded the system when holding
+	down the arrow key. So I added timers of 100ms, which means that loading of data is done
+	when no input has been given for 100ms.
+	</LI>
+
+	<LI>
+	Using proxy-vole (http://code.google.com/p/proxy-vole) as a automatic proxy resolver
+	when checking updates or doing other http requests.<br>
+	For example this means that if the client is using a proxy server when doing internet/web
+	lookups, the client can now use the PAC file in IExplorer or Firefox to figgure out what
+	proxy server to use. (PAC=Proxy Auto Config. http://en.wikipedia.org/wiki/Proxy_auto-config)
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-06-22</H2>
+<UL>
+	<LI>
+	New version of the H2 database is used: 1.2.135 (2010-05-08)<br>
+	This version supports embedded BLOBS in the database, so no extra directories for blobs will be created
+	</LI>
+
+	<LI>
+	Tab: Processes &amp; Active Statements<br>
+	Added column 'WaitClassDesc', which is the class description for the WaitEventID
+	</LI>
+
+	<LI>
+	Tab: Active Statements<br>
+	<UL type="circle">
+	<LI>Added column 'multiSampled', which is 'YES' if the PK (SPID, monSource [,InstanceID]) was visible in the previous sample as well</LI>
+	<LI>Added column 'pssinfo_tempdb_pages' to check how many tempdb pages this SPID is currently using</LI>
+	<LI>Added column 'tempdb_name' to check what tempdb this SIPD is using</LI>
+	<LI>Stacktrace, which is deferred to the localCalculation() method is not executed if the WaitEventID has changed.</LI>
+	<LI>Tooltip on sqlText is not adding extra newlines, which made large outputs a bit unreadable</LI>
+	<LI>Also marked the 'multiSampled' rows with the color 'ORANGE'</LI>
+	<LI>InMemoryHistory: Is now showing the checkboxes and tooltip for Active Statements</LI>
+	</UL>
+	</LI>
+
+	<LI>
+	Tab: Cached Objects<br>
+	Changed default postponeTime to 600, every 10 minutes
+	</LI>
+
+	<LI>
+	Tab: Blocking<br>
+	Is now only available for ase servers over version 15.0.0 ESD#2
+	</LI>
+
+	<LI>
+	Tab: System Load<br>
+	Rearranged the column layout to make it a bit more readable
+	</LI>
+
+	<LI>
+	Dialog: CheckForNewUpdates<br>
+	Now doing a better job of remembering the checkbox 'do not show this again'<br>
+	And some better text descriptions...
+	</LI>
+
+	<LI>
+	Dialog: ConnectionDialog<br>
+	For the 'offline read', you can start the H2 as a network server
+	</LI>
+
+	<LI>
+	in 'offline read' mode, I added 'Fast Forwad' and 'Rewind' buttons, which goes to the next sample time
+	that has data for this tab. It's especially good in 'Active Statement' and other tabs where
+	data is not always present, for example if you have the 'postpone time' set...<br>
+	The Buttons are located in every tab in the 'Sample Information' panel.
+	</LI>
+
+	<LI>
+	Added a "rowcount" label to indicate how many rows there are in the JTable.<br>
+	It's located "Show Counter Type" panel
+	</LI>
+
+	<LI>
+	Some changes how data is displayed in the 'offline read' if data can't be found for the selected sample period
+	</LI>
+
+	<LI>
+	Connection dialog:<br>
+	in tab 'Counter Storage', Changed the layout of the panel/JTable "What Counter Data should be Persisted"
+	</LI>
+
+	<LI>
+	Offline wizard:<br>
+	in page 3 'What should be offline sampled', Changed the layout of the panel/JTable<br>
+	And added the button "Set to Template", so we can reuse what we are currently doing in the GUI.
+	</LI>
+
+	<LI>
+	Upgraded to latest H2 version, 1.2.137 (2010-06-06)
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-04-27</H2>
+<UL>
+	<LI>
+	A bunch of bug fixes and improvements not listed here
+	</LI>
+
+	<LI>
+	Tab: Processes<br>
+	The choice to disable sampling of "system threads".<br>
+	In ASE Cluster Edition, there are a bunch of system threads/SPID's, which could
+	blur the vision in this tab.<br>
+	For now; this was implemented using SQL, but in the future it might very well be
+	a "filter" option instead. Then we would still benefit from the "Persistence Counter Storage"
+	to store all threads in the database (if we were using that), but when later when viewing
+	data we could filter them out in the GUI.
+	</LI>
+
+	<LI>
+	Query Window:<br>
+	When doing "ctrl-c" to copy into the clipboard in some places the new-line was not copied.<br>
+	A "copy" button was also implemented that takes "all" the objects in the result set output
+	and put it into the clipboard, JTables are coped into ASCII tables.
+	keys: F5, F9 are now shortcuts to execute SQL, this to emulate dbisql<br>
+	</LI>
+
+	<LI>
+	You can now Pause all data collection by pressing the 'Pause icon' on the tool bar or
+	the 'Pause Icon' in the status field. To resume data collection, just press the same icon gain,
+	which now will have a 'Play icon'.
+	</LI>
+
+	<LI>
+	Added dbcc pss(0, ${SPID}, 2) on the right click in all tables.
+	</LI>
+
+	<LI>
+	Tab: Engines<br>
+	Only select records from monEngines with the Status 'online'.<br>
+	Also a new column 'IOCPUTime' was added if you're above ASE 15.5 and 15.0.3 CE<br>
+	NOTE: it's currently not part of the percentage calculation.
+	</LI>
+
+	<LI>
+	For ASE Cluster Edition, remember the system_view settings (cluster or instance)<br>
+	The system view can be changed in the 'Summary' tab if you are connected to a ASE CE.
+	</LI>
+
+	<LI>
+	Login dialog: when pressing enter in the password field and all the mandatory fields are filled in
+	a login is attempted (same as pressing OK button).
+	</LI>
+
+	<LI>
+	Screen shots can now be made from a button on the tool bar, using the "Camera icon".<br>
+	It will produce a JPG file in the "home" directory.
+	</LI>
+
+	<LI>
+	Tab: Objects when we are in 15.5 and 15.0.3 CE, I have added a bunch of new columns, mainly for
+	Cluster Edition measurements...
+	</LI>
+
+	<LI>
+	In the 'Summary' tab I also grabs @@connections and an 15.5 or 15.0.3 CE I also get Transactions
+	from the monState table. (in CE the Transactions columns does not seem to work in a good manner)
+	</LI>
+
+	<LI>
+	When there are blocking spid's, a red icon in the status bar shows up, telling you how many
+	spid's that are currently blocked. If you press the icon, you will jump to the 'Blocking' tab.
+	</LI>
+
+	<LI>
+	If you're running out of memory, I will try to clear all in memory history and do
+	Garbage Collection. After the GC hopefully enough memory will be available to continue.<br>
+	TODO: I show a blocking message, this needs to changed into a non blocking message.
+	</LI>
+
+	<LI>
+	An all tabs: a User Defined SQL statement for tool tip on cell content can be added<br>
+	This is done in the config file, example:<br>
+	table.tooltip.SPID=select * from sysprocesses where spid = ?<br>
+	table.tooltip.CMprocActivity.SPID=select suser_name(suid) from sysprocesses where spid = ?<br>
+	The first config would execute SQL and show the result set as a tool tip in all tab's<br>
+	The second will override the default when you are in tab 'CMprocActivity'.<br>
+	For SPID there is a default tool tip that shows some info from monProcess
+	</LI>
+
+	<LI>
+	Tab: Active Statements<br>
+	A spid that holds blocking locks, may not always be visible in monProcessStatement<br>
+	For example id you in isql do 'begin tran; insert into t1 values(1); go', the spid will
+	be in status 'waiting for incoming network data' and not really active.<br>
+	There for I introduced two set of rows 'ACTIVE' and 'BLOCKER', the 'ACTIVE' originates from
+	monProcessStatement, while 'BLOCKERS' are spid's that blocks others from working. Both the
+	'ACTIVE' and the 'BLOCKER' can be visible in the table.<br>
+	Also added 'dbcc stacktrace' of all spid's visible in this table<br>
+	The ability to disable 'showplan', 'sqltext' and 'stacktrace' can be done from the GUI
+	and is written to the user settings temporary property file as
+	'CMActiveStatements.sample.showplan=false, CMActiveStatements.sample.dbccSqltext=false, CMActiveStatements.sample.dbccSqltext=false'.<br>
+	Also added column 'BlockingOtherSpids' which is a list of spid's that the current spid is blocking,
+	and by the way, rows/spid's that blocks other will be marked with the color red.
+	</LI>
+
+	<LI>
+	bugfix: User Defined Counter wizard, name checking was partially faulty.<br>
+	Name can now only be a-z, A-Z, 0-9 and not starting with CM.
+	</LI>
+
+	<LI>
+	Added 'needRole' to CounterModel and UserDefinedCounterModel, which will be checked
+	just as 'needConfig' and show errors on the 'tab' if you are not authorized to view
+	the 'tab'.<br>
+	Also added a bunch of stuff so that non 'sa' users can use the tool as well.
+	</LI>
+
+	<LI>
+	Better support for command line switches. This is now done in java instead of
+	the bat or shell script that starts asemon.
+	</LI>
+
+	<LI>
+	Made changes in the ConnectionDialog to support JDBC options + a JdbcOptionDialog
+	where you can choose from the JDBC driver provided options. Or simply type them in manually<br>
+	Also multiple host:port are fetched from the sql.ini/interfaces file and can also be
+	typed in manually. However jConnect doesn't seem to like it...<br>
+	If the information which is
+	you can switch to use the "raw" URL mode instead, check the 'Use URL' check box, then
+	the URL text field will be used when connection. By pressing &lt;enter&gt; in the field the
+	URL text will be parsed and transferred to the above disabled fields.
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-02-22</H2>
+<UL>
+	<LI>
+	Added "sp_showplan" and "dbcc sqltext" in tab 'Active Statements'. <br>
+	The full showplan text is displayed using tool tip. Or copy the table using
+	right click 'copy table to clipboard'.
+	</LI>
+
+	<LI>
+	Added 'Data Type' in the Create 'User Defined Counter' Wizard.<br>
+	If it's not a number datatype, the column can't be chosen as a 'diff' counter<br>
+	Also added some checks in the Graph part, so that we can't continue, if wrong
+	method type is chosen (if diff is not on, only absolute methods can be chosen)
+	</LI>
+
+	<LI>
+	Table Cell background color can be customized in the properties file, defaults are:<br>
+	<pre>
+	CMobjActivity.color.index     = ORANGE <br>
+	CMprocActivity.color.system   = YELLOW <br>
+	CMprocActivity.color.running  = GREEN <br>
+	CMprocActivity.color.blocked  = ORANGE <br>
+	CMprocActivity.color.blocking = RED <br>
+	CMcachedObjects.color.index   = ORANGE <br>
+	CMActiveObjects.color.index   = ORANGE <br>
+	CMblocking.color.blocking     = RED <br>
+	</pre>
+	</LI>
+
+	<LI>
+	Changed Copy + Paste handling from the JTable<br>
+	Which means I added 'Copy Cell', 'Copy Row' and also added 'Copy Table as Ascii-table'
+	</LI>
+
+	<LI>
+	If you are on a slow connection to the dataserver, it will now work faster.<br>
+	I removed a lot of extra calls to Connection.isClosed(), which issues 'exec sp_mda 0,7'
+	to check if the connection is alive or not. I simply cached the check for X milliseconds.
+	</LI>
+
+	<LI>
+	The QueryWindow now has a ScrollPane/SplitPane for the SQL Text as well.<br>
+	When the window is opened the size of the SQL Text is "calculated" to a proper size
+	for that specific SQL Batch.<br>
+	Also added 'Copy table/row to clipboard' in the jtable popup menu
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-02-14</H2>
+<UL>
+	<LI>
+	Asemon now works with ASE Cluster Edition<br>
+	The column InstanceId has been added in the case we connects to a Cluster Enabled ASE.
+	Some extra information is also displayed in the 'Summary' tab. In this panel you can also
+	choose if you want to view counters for the whole cluster or just the instance which
+	asemon is connected to.<br>
+	Specific Counter Tab's will probably added later on, but for now create you'r own Cluster
+	Specific counters using the wizard 'create User Defined Counter', please send you'r best
+	Cluster Edition Counters to me so I can implement them for everyone.
+	</LI>
+
+	<LI>
+	Added Counter tab 'Sysmon Raw' which works in peer with 'Spinlock Sum'.<br>
+	This counter is in extreme first version, and just reads the values that was left over
+	from the 'Spinlock Sum' counter tab. No enrichment of the data has be done so far, so
+	it's just the "raw" counters that the sp_sysmon is using.<br>
+	In the future a sp_sysmon look alike can be done (lets use a JXTreeTable for that).
+	</LI>
+
+	<LI>
+	A better implementation of the indicator icon, now the Icon on the Tab is repainted
+	or replaced with a 2 pixel larger icon that has a green stripe on the left side of the icon.<br>
+	Thanx Reine Lindqvist
+	</LI>
+
+	<LI>
+	A new Counter Tab 'Blocking' that shows information about SPID's that are involved in
+	a normal 'blocking lock' situation.<br>
+	This was also done by Reine Lindqvist
+	</LI>
+
+	<LI>
+	change to the tab 'Blocking' when we have blocking SPID's<br>
+	If 'Lock Waits' counter in the 'Summary' panel is above 0, an popup will ask you if you
+	want to set the 'Blocked' tab as the active tab.
+	</LI>
+
+	<LI>
+	Color coding on some Counter tabs<br>
+	tab - 'Objects':        ORANGE = This is an Index<br>
+	tab - 'Cached Objects': ORANGE = This is an Index<br>
+	tab - 'Active Objects': ORANGE = This is an Index<br>
+	tab - 'Blocking':       RED    = when column 'Blocked State' == 'Blocking'<br>
+	tab - 'Processes':      RED    = when 'SPID' is Blocking other SPID's<br>
+	tab - 'Processes':      ORANGE = when 'SPID' are Blocked by other SPID's<br>
+	tab - 'Processes':      YELLOW = when 'Login' is empty, meaning it's a ASE SYSTEM thread/spid<br>
+	tab - 'Processes':      GREEN  = when 'status' is in 'running' or 'runnable'<br>
+	</LI>
+
+	<LI>
+	Added Java version check when asemon starts. has to be 1.5 for the moment.
+	</LI>
+
+	<LI>
+	bugfix: on 'Processes' Tab, when not case sensitive sort order,
+	the problem 'Ambiguous column name spid' was raised.<br>
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2010-01-28</H2>
+<UL>
+	<LI>
+	Implemented "offline" reader<br>
+	This means that we now can read data from a database into the GUI, the data has previously
+	been stored by asemon into that database (Persistent Counter Storage).<br>
+	The sampled data could have been stored by the "non gui" mode or by the GUI itself,
+	and viewed at a later time.<br>
+	This functionality also enables us to have <b>one</b> "no gui" asemon that stores the data
+	in the Persistent Counter Storage and <b>many</b> asemon GUI's that views the data.<br>
+	That is if several dba's wants to view the same data without having several asemon GUI's
+	that each individually issues SQL statements to collect data.<br>
+	Please I need feedback on how this is working...
+	</LI>
+
+	<LI>
+	A green "line/stripe" at the right hand side of the tab on the TabbedPane, which
+	indicates that there are sampled data under that tab.<br>
+	This needs rework, because it overwrites menu items, tool tip and other components
+	that are displayed on top of the "stripe" indicator.
+	</LI>
+
+	<LI>
+	In the Persistent Counter Storage, you can now choose if you want to store <b>all</b>
+	data or just some of them, you can choose to store Absolute, Diff or Rate Counters in
+	the data store.<br>
+	There are check boxes for this in each counter panel and also in the Wizard that creates
+	an file for the off line storage.
+	</LI>
+
+	<LI>
+	If we loose the database connection to the monitored server in GUI mode, it tries to
+	automatically reconnect if the option is set in the Connection dialog.
+	</LI>
+
+	<LI>
+	Menu-&gt;view-&gt;Set Counter Set Parameters<br>
+	Is a new Dialog where you can change most of the options that is normally located
+	under each "tab". This means that you do not have to click around so much when you want
+	to change some option under <b>all</b> the various tabs.
+	</LI>
+
+	<LI>
+	The graphs are now zoomable. Just drag the mouse over the are you want to zoom in on.
+	Right click and do "zoom out" when you are done.
+	</LI>
+
+	<LI>
+	When creating a offline session file from the wizard, the passwords are now encrypted.
+	</LI>
+
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2009-11-23</H2>
+<UL>
+	<LI>
+		'Deadlock' and 'Errorlog' tabs now works again.
+	</LI>
+
+	<LI>
+		two new tabs 'System Load' and 'Temp Db'<br>
+		'System Load' needs ASE 15.5 or higher and shows information from the monSysLoad, which can help you
+		determine how long the "run queue length" is. Which is almost the same as 'load average' on Unix systems.
+		'Temp db' shows you various information about tempdb usage.
+	</LI>
+
+	<LI>
+		The filter now also works for 'Deadlock' and the 'Errolog' tabs
+	</LI>
+
+	<LI>
+		'Diff' and 'Rate' counters choice panel are now disabled if there are no diff columns specified
+	</LI>
+
+	<LI>
+		introduced 'needAseVersion' and 'needAseConfig' for all CM's<br>
+		This means it's easier to specify lowest ASE version for this "tab" to start work.
+		The same goes for configuration.<br>
+		If version or configuration is not satisfied a "watermark" text on the tab will show what was wrong.
+	</LI>
+
+	<LI>
+		In all tabs, a new time option were introduced, the 'postpone'...<br>
+		This means that for tabs that we do not want to sample as often as we usually do, we can set a
+		minimum time to wait before we refresh this tab. This could be used for tabs like 'Cached Objects'
+		which could be "heavy" for the system to sample on every sample interval.
+	</LI>
+
+	<LI>
+		The summary panel now also contains a bunch of new counters.
+	</LI>
+
+	<LI>
+		If ASE is between 15.0.3 esd#1 and 15.0.3 esd#3 and sp_configure 'capture missing statistics' is true.
+		The CR 581760 makes ASE to capture statistics for MDA Tables, which might lead to a full
+		transaction log in the master database.<br>
+		So check for a "near full" transaction log and do 'dump tran master with truncate_only' if we are near.
+	</LI>
+
+	<LI>
+		If the stored procedure 'sp_missing_stats' in the tab 'Missing Statistics' is missing.
+		It will automatically be installed if you have 'sa_role' otherwise the "watermark" will indicate
+		this it's missing and needs to be installed.<br>
+		The procedure will not be re-installed every time, it checks for creation time, and will only
+		be re-created when a new version of it is applicable.
+	</LI>
+
+	<LI>
+		The watermark functionality can now handle multiple rows.
+	</LI>
+
+	<LI>
+		Also a lot of small changes.
+	</LI>
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2009-11-06</H2>
+<UL>
+	<LI>
+		Automatically open the log viewer when a log message with the severity ERROR or
+		higher is logged.<br>
+		LogViewer also remembers the window size and position.
+	</LI>
+
+	<LI>
+		A new "tab" that shows what tables/columns the optimizer is missing statistics on.<br>
+		This needs ASE 15.0.3 ESD#1, and <code>sp_configure 'capture missing statistics', 1</code><br>
+		A word of warning so for: The transaction log in the master database will/could fill up due to
+		a bug in ASE where missing statistics on <code>mon*</code> tables is updated in <code>master..sysstatistics</code><br>
+		A stored procedure <code>sp_missing_stats</code>, which (for now) will have to be manually
+		installed before this tab will work...
+	</LI>
+
+	<LI>
+		Un-selecting rows can now be done in JTables, also the background color could be
+		set with the properties:
+		<pre>
+			table.setSelectionBackground={true|false}
+			table.setSelectionBackground.r=intVal
+			table.setSelectionBackground.g=intVal
+			table.setSelectionBackground.b=intVal
+		</pre>
+	</LI>
+
+	<LI>
+		When a database connection is lost, better GUI error handling is applied.<br>
+		Meaning show LogViewer, set the watermark to "Not Connected".
+	</LI>
+
+	<LI>
+		Changes on the Connect-on-startup, now using logic from the ConnectionDialog.
+	</LI>
+
+	<LI>
+		Also a lot of small changes.
+	</LI>
+</UL>
+
+<!-- ========================================================================== -->
+<H2>2009-05-21 - 2009-11-01</H2>
+<UL>
+	<LI>
+		A long period has passed since I did anything, this was due to I was in an accident
+		where I broke/crushed both my hands/wrists, so I had <b>problems</b> coding...<br>
+		But now I'm back again :)
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-05-20</H2>
+<UL>
+	<LI>
+		Changed the Color of the timeLine marker to dark gray.
+	</LI>
+
+	<LI>
+		Added tick markers on the timeLine slider.
+	</LI>
+
+	<LI>
+		Separating the TrendGraph's data into TrenGraphDataPoint class<br>
+		This makes it possible to save the graph data in it's own table,
+		which makes it easier when reading "off-line" data in a later stage
+	</LI>
+
+	<LI>
+		Added some AseMon* dictionary tables, which makes it easier when
+		reading "off-line" data in a later stage
+	</LI>
+
+	<LI>
+		In "off-line" noGui mode, when connecting, try to enable basic
+		monitor settings if not already configured.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-05-15</H2>
+<UL>
+	<LI>
+		A first version where you can view older Counter Values<br>
+		All <b>sampled</b> counters are stored In-Memory, the counters are
+		discarded from memory when "Trend Graph History in Minutes" expires.
+		This means as long as the values are shown in the graph, they stays in memory.<br>
+		To enter Navigation mode for viewing the in-memory counters is done by
+		double-click in one of the graphs, or press the "View Counters" in the
+		toolbar. Navigation is done with the slider in the toolbar or by
+		double-click on a interesting point in one of the graphs.<br>
+		A vertical line in the graphs represents where we are in the in-memory counters.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-04-30</H2>
+<UL>
+	<LI>
+		Used defined graphs can now do one trace line for every row.<br>
+		The 'graph.type' should then by 'byRow'<br>
+		'graph.data.cols' should contain the column name to get value from<br>
+		'graph.data.methods' can be 'absVal', 'diffVal' or 'rateVal'.
+		'graph.data.labels' can be a column name to get value from, or if that
+		   name is not found the values for the Primary Key will be used.
+		   So if you for example specify '-pk-', which is a unknown column name
+		   Then the PK values for that row will be used as the "label" for that line.
+	</LI>
+
+	<LI>
+		Properties MenuItem on Counter Tab, this so we can see what SQL that is
+		executing when we refresh the Counter Model.
+	</LI>
+
+	<LI>
+		Wizard for crating User Defined Counters
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-04-09</H2>
+<UL>
+	<LI>
+		Added panel 'Active/Process Statements'.
+	</LI>
+
+	<LI>
+		Moved monProcessObject from asemon.properties into GetCounters.
+	</LI>
+
+	<LI>
+		Added a summary page in the offline wizard.
+	</LI>
+
+	<LI>
+		The offline is started from asemon script using parameters.<br>
+		asemon -nogui -config &lt;conffile&gt;<br>
+	</LI>
+
+	<LI>
+		The offline is completely dependent on this wizard generated
+		config file. (Used to use asemon.properties).
+		The wizard now copies the necessary info from asemon.properties
+		to the generated file.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-04-08</H2>
+<UL>
+	<LI>
+		New web adress 'www.asemon.se', so references was changed for this
+	</LI>
+
+	<LI>
+		Started to work on Storing Counter Data from the GUI<br>
+		A new Connection dialog has been made... but isn't finished yet.
+		It works to setup a Counter Storage, but it needs more work.<br>
+		Offline connect doesn't work yet, I can't yet read stored data and
+		present it in the GUI, thats the next step.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-31</H2>
+<UL>
+	<LI>
+		Checking for updates on the net (but I need to change the web address later)<br>
+		But I need to implement the web page for new downloads etc...
+	</LI>
+
+	<LI>
+		Re-coded MainFrame and moved to GUI<br>
+	</LI>
+
+	<LI>
+		Trendgraph<br>
+		- setChartMaxHistoryTimeInMinutes() could get garbled.<br>
+		- Add dummypoint when not connected to avoid NPE from ToolTip.
+		- also moved TrendGraph
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-26</H2>
+<UL>
+	<LI>
+		Capture SQL on the right click menu
+	</LI>
+
+	<LI>
+		Copy table information to clipboard (but: needs more work)
+	</LI>
+
+	<LI>
+		Changed a bunch of the Icons and added icons to the GTabbedPane,
+		right click menu, goto tab.
+	</LI>
+
+	<LI>
+		SQL Window can now show graphical showplan views (same as dbisql).<br>
+		Some graphical changes as well, print/raiserror messages now comes
+		in-line with the result sets (priviously it was just at the end)<BR>
+		You can also select cells to copy+paste values from.<br>
+		Messages are now also copy+paste enabled.
+	</LI>
+
+	<LI>
+		Using MigLayout in summary panel for graphs now, which makes it a bit
+		nicer for resizing... the graphs grows in height now as well.
+	</LI>
+
+	<LI>
+		For the filter "Do not show unchanged counter rows" I added the abbility
+		to dissregard some columns. So even if it's a diff counter and it's NOT
+		zero it will still filtered out that column.<br>
+		This is good for "WaitTime" column in the "Processes" tab. Because it's
+		always contains values... I still want to see the diff/rate values.
+		But I don't want to use them (as valid values) in the filter check.
+	</LI>
+
+	<LI>
+		The filter "Do not show unchanged counter rows" has also been moved from
+		the Options panel to the Filter panel, where it really resides.<br>
+		This also made me move the "Counter Type" panel one snap left...
+	</LI>
+
+	<LI>
+		Selected row in the table is still selected after a "data refresh"
+		and hopefully it's the same row even if it has changed location
+		due to resort of the new/refreshed data...
+	</LI>
+
+	<LI>
+		MainFrame - status panel (at bottom) now has Memory information<br>
+		This class will be needed to recode soon - the code is ugly...
+	</LI>
+
+	<LI>
+		If data collection is paused, a watermark text will inform you
+		about the Pause...
+	</LI>
+
+	<LI>
+		The AboutBox panel now contains<br>
+		- History<br>
+		- Todo<br>
+		- System Properties<br>
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-16</H2>
+<UL>
+	<LI>
+		Moved the negativeDiffCounters to Zero so we can choose this
+		for each panel....
+	</LI>
+
+	<LI>
+		Added icons for the TableCntrPanel and most of the CM's
+	</LI>
+
+	<LI>
+		Some small changes on the xmenu stuff.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2009-03-13</H2>
+<UL>
+	<LI>
+		ALOT OF THINGS WHERE DONE
+	</LI>
+
+	<LI>
+		Moved a lot of files around, the goal is that all GUI components should be in 'gui' package
+	</LI>
+
+	<LI>
+		Configuration.java: moved to utils package, and added encrypt/decrypt of passwords
+	</LI>
+
+	<LI>
+		AseMonitoringConfig -&gt; gui.AseMonitoringConfigDialog: remade gui layout
+	</LI>
+
+	<LI>
+		CountersModel Made it a TableModel... there is a lot more needed to be done on this one
+		and that will be done in next check-in
+	</LI>
+
+	<LI>
+		A new dictionary for displaying ToolTip on WaitEventId
+	</LI>
+
+	<LI>
+		Moved Version information into its own class 'Version.java'
+	</LI>
+
+	<LI>
+		The ConnectionDialog has been totally rewritten
+	</LI>
+
+	<LI>
+		Auto login ability on startup
+	</LI>
+
+	<LI>
+		A logAppender for log4j that has a Gui Window so we can look at the errorlog graphically
+		and also change the log level "on the fly", but the log level is not saved into the
+		properties file. We only want to change it during this session.
+	</LI>
+
+	<LI>
+		Total new Dialog for changing some small properties (only Refresh rate for now)
+	</LI>
+
+	<LI>
+		A new 'Query window' has been added to the MainFrame menu. This will open a GUI 'isql'
+	</LI>
+
+	<LI>
+		TabularCntrPanel has been rewritten:
+		<UL>
+			<LI> The TabbedPane has been rewritten to do "dock/undock" tabs into windows and
+				 right click popups on the Tabbs that handles more stuff.
+			<LI> now using MigLayout as it's Gui layout manager
+			<LI> Using JXTable instead of JTable
+			<LI> Sorting is done by JXTable
+			<LI> Filtering is done by JXTable
+			<LI> Highlighting/Color setting is done by JXTable (in JTable this is CellRenderer)
+			<LI> right-click on the table now uses 'xmenu', which is specified in the config file
+				so now it's really easy to add your own right click menu items.
+				Default menu items is 'stored proc text, sp callstack, optdiag, sp_help, sp_spaceused...'
+		</UL>
+	</LI>
+
+	<LI>
+		A bunch of new icons has been added
+	</LI>
+
+	<LI>
+		AboutBox total rewrite
+	</LI>
+
+	<LI>
+		And a lot more small stuff
+	</LI>
+
+	<LI>
+		NOTE: A lot more is needed to be changed and cleanup, so this is just a partial check-in.
+	</LI>
+
+	<LI>
+		Reine Changed TrendGraph to use JChart2D instead of JFreeChart, this due to
+		performance reasons when we had *long* "Graph History Time".
+		This was merged in from the "trunk".
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-02-12</H2>
+<UL>
+	<LI>
+		Multiple ResultSets is now handled
+	</LI>
+
+	<LI>
+		Watermark on the summary graphs is now on the scroll panel,
+		this makes the watermark more center of the view/what we see...
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-02-03</H2>
+<UL>
+	<LI>
+		User Defined Graph can be added
+		this probably needs more work, but for now it's "ok"...
+	</LI>
+
+	<LI>
+		SummaryPanel was "redesigned" and moved to GUI package
+	</LI>
+
+	<LI>
+		Default ASEMon Icon was changed (added more blue on the table)
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2009-01-23</H2>
+<UL>
+	<LI>
+		Sometimes that graphs did not get updated in the summary panel.
+		This was a timing problem, when data is captured, it's done with
+		it's own thread. If the "get data" thread was not complete before
+		we wanted to update the graphs, the graphs was not updated.
+		So now I wait for the "get data thread" to complete before continue.
+	</LI>
+
+	<LI>
+		The Toolbar was added.
+	</LI>
+
+	<LI>
+		The first glans at "offline setup wizard" was created (need more work here)
+	</LI>
+
+	<LI>
+		Changed the j4log from 1.2.8 -&gt; 1.2.15
+	</LI>
+
+	<LI>
+		Some small stuff as well
+	</LI>
+
+	<LI>
+		Default ASEMon Icon was changed
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-31</H2>
+<UL>
+	<LI>
+		Fixed bug in summary panel counte. If ASE listens to several networks
+		only show the first "min()" listener. otherwise the subquery will fail...
+	</LI>
+
+	<LI>
+		Added Wrap/Scroll capability in the TabPanel
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-27</H2>
+<UL>
+	<LI>
+		Fixed bug in engine average calculation...
+		in version X i changed getRateValueAvg to discard 0.0 as "rows"
+		this was to support the Average Service Time in DeviceIO graph better.
+		But now I'm using getRateValueAvgGtZero instead.
+	</LI>
+
+	<LI>
+		Added the "WATER MARK" text to TabularControlPanel and SummaryPanel
+		to easier know what is happening behind the scenes... are we connected...
+	</LI>
+
+	<LI>
+		Added some descriptions for Tooltip on the TABS.
+	</LI>
+
+	<LI>
+		added methods: isMonConnected(), getMonConnection() this will hopefully
+		be used to distinguish between OFF-Line mode and ON-Line mode.
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-24</H2>
+<UL>
+	<LI>
+		Added this "version history" comment
+	</LI>
+
+	<LI>
+		Doing "late initialization" of CountersObject, which means that
+		we can create the GUI graphics and decide later what SQL statement to
+		use dependent on what version the ASE Server is of.
+	</LI>
+
+	<LI>
+		Took away a lot of static variables in GetCounters and MainFrame
+	</LI>
+</UL>
+
+
+
+<!-- ========================================================================== -->
+<H2>2008-10-16</H2>
+<UL>
+	<LI>
+		Major thing is NO-GUI mode is configurable and can persist the
+		counters in a JDBC session. (ASE and H2 has been tested)
+		H2 would be the preferred option. This so we can store the
+		counters in another server/database store than the one we
+		pulling out data from. Using the H2 DB it would also be
+		easier to sample ASE counters on Unix systems and later on
+		view them on a Windows machine.
+	</LI>
+
+	<LI>
+		some changes to "capture SQL" tool.
+	</LI>
+
+	<LI>
+		saving more options in the "save props" file!
+	</LI>
+
+	<LI>
+		And a lot more small things.
+	</LI>
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>200x-xx-xx</H2>
+<UL>
+	<LI>
+		Started from asemon 0.96 by Jean-Paul Martin<BR>
+		Redone a whole lot of things
+	</LI>
+
+	<LI>
+		Automatic resize of columns headers in tables
+	</LI>
+
+	<LI>
+		Cell renders are not dependent on Object type, but it's now
+		using method calls to decide what to do when rendering.
+	</LI>
+
+	<LI>
+		Do not remember all things I did back then
+	</LI>
+</UL>
+
+
+
+
+</BODY>
+</HTML>
