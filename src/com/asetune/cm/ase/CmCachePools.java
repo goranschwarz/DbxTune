@@ -173,7 +173,8 @@ extends CountersModel
 		String WashSize        = "";
 
 
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			LogicalReads    = "LogicalReads, \n";
 			PhysicalWrites  = "PhysicalWrites, \n";

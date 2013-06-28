@@ -612,6 +612,10 @@ implements Cloneable, ITableTooltip
 //		c._sumRowCountDiff            = this._sumRowCountDiff;
 //		c._sumRowCountRate            = this._sumRowCountRate;
 		
+		c._isNonConfiguredMonitoringAllowed       = this._isNonConfiguredMonitoringAllowed;
+		c._hasNonConfiguredMonitoringHappened     = this._hasNonConfiguredMonitoringHappened;
+		c._lastNonConfiguredMonitoringMessageList = this._lastNonConfiguredMonitoringMessageList; // Should we clone this or not...
+
 		return c;
 	}
 	
@@ -1043,7 +1047,8 @@ implements Cloneable, ITableTooltip
 			// Check postpone
 			if ( getTimeToNextPostponedRefresh() > 0 )
 			{
-				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
 				refresh = false;
 			}
 
@@ -1071,7 +1076,8 @@ implements Cloneable, ITableTooltip
 			// Check postpone
 			if ( getTimeToNextPostponedRefresh() > 0 )
 			{
-				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
 				refresh = false;
 			}
 
@@ -1439,7 +1445,7 @@ implements Cloneable, ITableTooltip
 	{
 		Object obj = _clientProperty.get(key);
 		if (_logger.isDebugEnabled())
-		_logger.debug("getName().getClientProperty(key='"+key+"') returns='"+obj+"', type='"+(obj==null?"null":obj.getClass().getName())+"'.");
+			_logger.debug("getName().getClientProperty(key='"+key+"') returns='"+obj+"', type='"+(obj==null?"null":obj.getClass().getName())+"'.");
 		return obj;
 	}
 
@@ -1505,13 +1511,27 @@ implements Cloneable, ITableTooltip
 		{
 			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
 
+			// If we reading an offline database, go there to fetch data...
 			if ( sql != null && ! getCounterController().isMonConnected() )
 			{
 				// IF SPID, get values from JTable in OFFLINE MODE
-				if (    "SPID"          .equalsIgnoreCase(colName) 
-				     || "OldestTranSpid".equalsIgnoreCase(colName)
+				if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
+				     || "OldestTranSpid".equalsIgnoreCase(colName) // from CmOpenDatabases
+				     || "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+				     || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+				     || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
 				   )
 				{
+					// Determine the COLUMN name to be used in the search
+					String whereColName = "SPID";
+					if (    "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+						 || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+						 || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
+					   )
+					{
+						whereColName = "KPID";
+					}
+					
 					if (MainFrame.isOfflineConnected())
 					{
 						// FIXME: _counterController is NOT set for UDC Counters (especially when initialized from OfflineStorage)
@@ -1534,9 +1554,9 @@ implements Cloneable, ITableTooltip
 								}
 								else
 								{
-									int cellSpidInt = -1;
+									int cellPidInt = -1;
 									if (cellValue instanceof Number)
-										cellSpidInt = ((Number)cellValue).intValue();
+										cellPidInt = ((Number)cellValue).intValue();
 									else
 									{
 										return "<html>" +
@@ -1546,20 +1566,20 @@ implements Cloneable, ITableTooltip
 												"</html>";
 									}
 										
-									int spid_pos = ctmRate.findColumn("SPID");
+									int pid_pos = ctmRate.findColumn(whereColName);
 									int rowCount = ctmRate.getRowCount();
 									for (int r=0; r<rowCount; r++)
 									{
-										Object rowCellValue = ctmRate.getValueAt(r, spid_pos);
-										int rowSpidInt = -1;
+										Object rowCellValue = ctmRate.getValueAt(r, pid_pos);
+										int rowPidInt = -1;
 										if (rowCellValue instanceof Number)
-											rowSpidInt = ((Number)rowCellValue).intValue();
+											rowPidInt = ((Number)rowCellValue).intValue();
 										else
 											continue;
 //										System.out.println("CellValue='"+cellValue+"', tableRow="+r+", Value="+ctmRate.getValueAt(r, spid_pos)+", TableObjType="+ctmRate.getValueAt(r, spid_pos).getClass().getName()+", cellValueObjType="+cellValue.getClass().getName());
 										
 //										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
-										if ( cellSpidInt == rowSpidInt )
+										if ( cellPidInt == rowPidInt )
 										{
 											StringBuilder sb = new StringBuilder(300);
 											sb.append("<html>\n");
@@ -1597,7 +1617,7 @@ implements Cloneable, ITableTooltip
 									}
 								}
 //								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
-								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
+								return "<html>Can't find the "+whereColName+" '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
 							}
 						}
 					} // end: offline
@@ -2297,16 +2317,16 @@ implements Cloneable, ITableTooltip
 	{
 		return _isActive;
 	}
-	public void setActive(boolean b, String problemDescription)
+	public void setActive(boolean state, String problemDescription)
 	{
-		_isActive    = b;
+		_isActive    = state;
 		_problemDesc = problemDescription;
 		if (_problemDesc == null)
 			_problemDesc = "";
 		
 		if (tabPanel != null)
 		{
-			tabPanel.setEnabled(b);
+			tabPanel.setEnabled(state);
 		}
 	}
 	/** */
@@ -2491,7 +2511,8 @@ implements Cloneable, ITableTooltip
 			if (didNotHaveRoles.endsWith(", "))
 				didNotHaveRoles = didNotHaveRoles.substring(0, didNotHaveRoles.length()-2);
 
-			_logger.debug(getName() + ": should be HIDDEN.");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName() + ": should be HIDDEN.");
 			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. The following role(s) were needed '"+StringUtil.toCommaStr(dependsOnRole)+"', and you do not have the following role(s) '"+didNotHaveRoles+"'.");
 
 			setActive(false, "This info is only available if you have '"+StringUtil.toCommaStr(dependsOnRole)+"' role(s) enabled.\nYou are missing the following role(s) '"+didNotHaveRoles+"'.");
@@ -2533,7 +2554,8 @@ implements Cloneable, ITableTooltip
 		if (configNameArr.length >= 2) reConfigValue = configNameArr[1];
 
 		int configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
-		_logger.debug("Checking for ASE Configuration '"+configName+"', which has value '"+configHasValue+"'. Option to re-configure to value '"+reConfigValue+"' if not set.");
+		if (_logger.isDebugEnabled()) 
+			_logger.debug("Checking for ASE Configuration '"+configName+"', which has value '"+configHasValue+"'. Option to re-configure to value '"+reConfigValue+"' if not set.");
 
 		// In NO_GUI mode, we might want to auto configure monitoring...
 		boolean doReconfigure = false;
@@ -2575,18 +2597,27 @@ implements Cloneable, ITableTooltip
 				}
 
 				configHasValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
-				_logger.debug("After re-config, the ASE Configuration '"+configName+"', now has value '"+configHasValue+"'.");
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("After re-config, the ASE Configuration '"+configName+"', now has value '"+configHasValue+"'.");
 			}
 		}
 
 		if (configHasValue > 0)
 		{
-			_logger.debug(getName() + ": should be VISABLE.");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName() + ": should be VISABLE.");
 			return true;
 		}
 		else
 		{
-			_logger.debug(getName() + ": should be HIDDEN.");
+			if (isNonConfiguredMonitoringAllowed())
+			{
+				_logger.warn("Non Configured Monitoring is allowed: When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I found that '"+configName+"' wasn't configured (which is done with: sp_configure '"+configName+"'), so counters in '"+getDisplayName()+"' may not be relyable.");
+				return true;
+			}
+
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName() + ": should be HIDDEN.");
 			String reconfigOptionStr = " or using the nogui mode: --reconfigure switch";
 			if (reConfigValue == null)
 				reconfigOptionStr = "";
@@ -2627,6 +2658,40 @@ implements Cloneable, ITableTooltip
 				rc = false;
 		}
 		return rc;
+	}
+
+	/** get a list of all the missing configuration for this CM
+	 * @return null if nothing is missing, or a comma separated string with the missing configs
+	 */
+	public String getMissigConfig(Connection conn)
+	{
+		String[] dependsOnConfig = getDependsOnConfig();
+
+		if (dependsOnConfig == null)
+			return null;
+
+		String missing = "";
+		for (int i=0; i<dependsOnConfig.length; i++)
+		{
+			if (dependsOnConfig[i] == null || (dependsOnConfig[i] != null && dependsOnConfig[i].trim().equals("")) )
+				continue;
+
+			String configName = dependsOnConfig[i].trim();
+
+			// Strip away any "reconfig value": "enable monitoring=1" -> "enable monitoring"
+			if (configName.indexOf('=') >= 0)
+				configName = configName.substring(0, configName.indexOf('=')).trim();
+
+			// Get config from the server
+			int configValue = AseConnectionUtils.getAseConfigRunValueNoEx(conn, configName);
+			if (configValue == 0)
+				missing += configName + ", ";				
+		}
+		missing = StringUtil.removeLastComma(missing);
+		
+		if (StringUtil.isNullOrBlank(missing))
+			return null;
+		return missing;
 	}
 
 	/** 
@@ -2680,7 +2745,8 @@ implements Cloneable, ITableTooltip
 		}
 		else
 		{
-			_logger.debug(getName() + ": should be HIDDEN.");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName() + ": should be HIDDEN.");
 			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersionStr()+", I need at least ASE Version "+getDependsOnVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Server Version is above " + getDependsOnVersionStr());
@@ -2707,7 +2773,8 @@ implements Cloneable, ITableTooltip
 		}
 		else
 		{
-			_logger.debug(getName() + ": should be HIDDEN.");
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName() + ": should be HIDDEN.");
 			_logger.warn("When trying to initialize Counters Model '"+getName()+")', named '"+getDisplayName()+"' in ASE Cluster Edition Version "+getServerVersionStr()+", I need at least ASE Cluster Edition Version "+getDependsOnCeVersionStr()+" for that.");
 
 			setActive(false, "This info is only available if ASE Cluster Edition Server Version is above " + getDependsOnCeVersionStr());
@@ -2806,7 +2873,8 @@ implements Cloneable, ITableTooltip
 				String msg = "Missing stored proc '"+procName+"' in database '"+dbname+"' please create it.";
 				setActive(false, msg);
 
-				_logger.debug(getName() + ": should be HIDDEN.");
+				if (_logger.isDebugEnabled()) 
+					_logger.debug(getName() + ": should be HIDDEN.");
 				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 
 				TabularCntrPanel tcp = getTabPanel();
@@ -3240,7 +3308,8 @@ implements Cloneable, ITableTooltip
 		// is it time to do refresh or not
 		if (getTimeToNextPostponedRefresh() > 0)
 		{
-			_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
 			// NOTE: should we do setValidSampleData(false) here or not?, I think so...
 			setValidSampleData(false);
 			return;
@@ -3258,7 +3327,11 @@ implements Cloneable, ITableTooltip
 		int rowsFetched = 0;
 		try
 		{
+			// reset some stuff
+			setNonConfiguredMonitoringHappened(false); // also resets the message(s) etc...
 			setSampleException(null);
+
+			// call the implementation
 			rowsFetched = refreshGetData(conn);
 
 			// if we fetched any rows, this means that we would have a Valid Sample
@@ -3282,6 +3355,12 @@ implements Cloneable, ITableTooltip
 		}
 		finally
 		{
+			if (hasNonConfiguredMonitoringHappened())
+			{
+				setNonConfiguredMonitoringMissingParams(getMissigConfig(conn));
+				fireNonConfiguredMonitoringHappened();
+			}
+
 			// restore old message handler
 			if (curMsgHandler != null)
 			{
@@ -3312,9 +3391,7 @@ implements Cloneable, ITableTooltip
 	protected int refreshGetData(Connection conn) throws Exception
 	{
 		if (_logger.isDebugEnabled())
-		{
 			_logger.debug("Entering refreshCM() method for " + _name);
-		}
 
 		if (conn == null)
 			return -1;
@@ -3640,7 +3717,8 @@ implements Cloneable, ITableTooltip
 						if (getTabPanel() != null && !getTabPanel().isTableInitialized())
 						{
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
-							_logger.debug(getName()+":------doFireTableStructureChanged------");
+							if (_logger.isDebugEnabled())
+								_logger.debug(getName()+":------doFireTableStructureChanged------");
 							fireTableStructureChanged();
 							
 							// Hmm do I need to do this here...
@@ -3651,7 +3729,8 @@ implements Cloneable, ITableTooltip
 							firstTimeSample = false;
 
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
-							_logger.debug(getName()+":------doFireTableStructureChanged------");
+							if (_logger.isDebugEnabled()) 
+								_logger.debug(getName()+":------doFireTableStructureChanged------");
 							fireTableStructureChanged();
 						}
 						else
@@ -3675,7 +3754,8 @@ implements Cloneable, ITableTooltip
 //								}
 //							}
 							//System.out.println(getName()+":-fireTableData-CHANGED-");
-							_logger.debug(getName()+":-fireTableData-CHANGED-");
+							if (_logger.isDebugEnabled()) 
+								_logger.debug(getName()+":-fireTableData-CHANGED-");
 							fireTableDataChanged();
 						}
 					}
@@ -4168,7 +4248,8 @@ implements Cloneable, ITableTooltip
 		int idCol = data.findColumn(colname);
 		if (idCol == -1)
 		{
-			_logger.debug("getValue: Can't find the column '" + colname + "'.");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: Can't find the column '" + colname + "'.");
 			return null;
 		}
 		if (data.getRowCount() <= rowId)
@@ -4196,7 +4277,8 @@ implements Cloneable, ITableTooltip
 
 		if (data == null)
 		{
-			_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): data==null; return null");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): data==null; return null");
 			return null;
 		}
 
@@ -4204,7 +4286,8 @@ implements Cloneable, ITableTooltip
 		int rowId = data.getRowNumberForPkValue(pkStr);
 		if (rowId < 0)
 		{
-			_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+			if (_logger.isDebugEnabled())
+				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
 			return null;
 		}
 
@@ -4212,7 +4295,8 @@ implements Cloneable, ITableTooltip
 		Object o = getValue(whatData, rowId, colname);
 		if (o == null)
 		{
-			_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+			if (_logger.isDebugEnabled()) 
+				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
 			return null;
 		}
 
@@ -4315,12 +4399,14 @@ implements Cloneable, ITableTooltip
 
 			if (o instanceof Number)
 			{
-				_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
 				result = ((Number) o).doubleValue();
 			}
 			else
 			{
-				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
 				result = Double.parseDouble(o.toString());
 			}
 
@@ -4375,12 +4461,14 @@ implements Cloneable, ITableTooltip
 
 			if (o instanceof Number)
 			{
-				_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
 				result = ((Number) o).doubleValue();
 			}
 			else
 			{
-				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
 				result = Double.parseDouble(o.toString());
 			}
 
@@ -4434,17 +4522,20 @@ implements Cloneable, ITableTooltip
 
 			if (o instanceof Long)
 			{
-				_logger.debug("Colname='" + colname + "', Long: " + ((Long) o).longValue());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', Long: " + ((Long) o).longValue());
 				result += ((Long) o).longValue();
 			}
 			else if (o instanceof Double)
 			{
-				_logger.debug("Colname='" + colname + "', Double: " + ((Double) o).doubleValue());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', Double: " + ((Double) o).doubleValue());
 				result += ((Double) o).doubleValue();
 			}
 			else
 			{
-				_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+				if (_logger.isDebugEnabled()) 
+					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
 				result += Double.parseDouble(o.toString());
 			}
 		}
@@ -4677,18 +4768,19 @@ implements Cloneable, ITableTooltip
 
 		if (tempProps != null)
 		{
-			tempProps.setProperty(base + PROP_currentDataSource,          getDataSource());
-			tempProps.setProperty(base + PROP_filterAllZeroDiffCounters,  isFilterAllZero());
-			tempProps.setProperty(base + PROP_sampleDataIsPaused,         isDataPollingPaused());
-			tempProps.setProperty(base + PROP_sampleDataInBackground,     isBackgroundDataPollingEnabled());
-			tempProps.setProperty(base + PROP_negativeDiffCountersToZero, isNegativeDiffCountersToZero());
-			tempProps.setProperty(base + PROP_persistCounters,            isPersistCountersEnabled());
-			tempProps.setProperty(base + PROP_persistCounters_abs,        isPersistCountersAbsEnabled());
-			tempProps.setProperty(base + PROP_persistCounters_diff,       isPersistCountersDiffEnabled());
-			tempProps.setProperty(base + PROP_persistCounters_rate,       isPersistCountersRateEnabled());
+			tempProps.setProperty(base + PROPKEY_currentDataSource,              getDataSource());
+			tempProps.setProperty(base + PROPKEY_filterAllZeroDiffCounters,      isFilterAllZero());
+			tempProps.setProperty(base + PROPKEY_sampleDataIsPaused,             isDataPollingPaused());
+			tempProps.setProperty(base + PROPKEY_sampleDataInBackground,         isBackgroundDataPollingEnabled());
+			tempProps.setProperty(base + PROPKEY_negativeDiffCountersToZero,     isNegativeDiffCountersToZero());
+			tempProps.setProperty(base + PROPKEY_persistCounters,                isPersistCountersEnabled());
+			tempProps.setProperty(base + PROPKEY_persistCounters_abs,            isPersistCountersAbsEnabled());
+			tempProps.setProperty(base + PROPKEY_persistCounters_diff,           isPersistCountersDiffEnabled());
+			tempProps.setProperty(base + PROPKEY_persistCounters_rate,           isPersistCountersRateEnabled());
+			tempProps.setProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, isNonConfiguredMonitoringAllowed());
 
-			tempProps.setProperty(base + PROP_postponeTime,               getPostponeTime());
-			tempProps.setProperty(base + PROP_queryTimeout,               getQueryTimeout());
+			tempProps.setProperty(base + PROPKEY_postponeTime,                   getPostponeTime());
+			tempProps.setProperty(base + PROPKEY_queryTimeout,                   getQueryTimeout());
 
 			tempProps.save();
 		}
@@ -4698,20 +4790,21 @@ implements Cloneable, ITableTooltip
 	{
 		String base = this.getName() + ".";
 
-		Configuration.registerDefaultValue(base + PROP_queryTimeout,               getDefaultQueryTimeout());
+		Configuration.registerDefaultValue(base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout());
 
-		Configuration.registerDefaultValue(base + PROP_currentDataSource,          getDefaultDataSource());
+		Configuration.registerDefaultValue(base + PROPKEY_currentDataSource,              getDefaultDataSource());
 
-		Configuration.registerDefaultValue(base + PROP_filterAllZeroDiffCounters,  getDefaultIsFilterAllZero());
-		Configuration.registerDefaultValue(base + PROP_sampleDataIsPaused,         getDefaultIsDataPollingPaused());
-		Configuration.registerDefaultValue(base + PROP_sampleDataInBackground,     getDefaultIsBackgroundDataPollingEnabled());
-		Configuration.registerDefaultValue(base + PROP_negativeDiffCountersToZero, getDefaultIsNegativeDiffCountersToZero());
-		Configuration.registerDefaultValue(base + PROP_persistCounters,            getDefaultIsPersistCountersEnabled());
-		Configuration.registerDefaultValue(base + PROP_persistCounters_abs,        getDefaultIsPersistCountersAbsEnabled());
-		Configuration.registerDefaultValue(base + PROP_persistCounters_diff,       getDefaultIsPersistCountersDiffEnabled());
-		Configuration.registerDefaultValue(base + PROP_persistCounters_rate,       getDefaultIsPersistCountersRateEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_filterAllZeroDiffCounters,      getDefaultIsFilterAllZero());
+		Configuration.registerDefaultValue(base + PROPKEY_sampleDataIsPaused,             getDefaultIsDataPollingPaused());
+		Configuration.registerDefaultValue(base + PROPKEY_sampleDataInBackground,         getDefaultIsBackgroundDataPollingEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_negativeDiffCountersToZero,     getDefaultIsNegativeDiffCountersToZero());
+		Configuration.registerDefaultValue(base + PROPKEY_persistCounters,                getDefaultIsPersistCountersEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_persistCounters_abs,            getDefaultIsPersistCountersAbsEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled());
+		Configuration.registerDefaultValue(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed());
 
-		Configuration.registerDefaultValue(base + PROP_postponeTime,               getDefaultPostponeTime());
+		Configuration.registerDefaultValue(base + PROPKEY_postponeTime,                   getDefaultPostponeTime());
 	}
 
 	protected void loadProps()
@@ -4724,44 +4817,46 @@ implements Cloneable, ITableTooltip
 
 		if (confProps != null)
 		{
-			setQueryTimeout(confProps.getIntProperty(PROP_queryTimeout, getQueryTimeout()));
-			setQueryTimeout(confProps.getIntProperty(base + PROP_queryTimeout, getQueryTimeout()));
+			setQueryTimeout(confProps.getIntProperty(PROPKEY_queryTimeout, getQueryTimeout()));
+			setQueryTimeout(confProps.getIntProperty(base + PROPKEY_queryTimeout, getQueryTimeout()));
 		}
 
 		if (tempProps != null)
 		{
 			_inLoadProps = true;
 
-			setQueryTimeout(                 tempProps.getIntProperty(    base + PROP_queryTimeout,               getQueryTimeout()) );
+			setQueryTimeout(                  tempProps.getIntProperty(    base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout()) );
 
-			setDataSource(                   tempProps.getIntProperty(    base + PROP_currentDataSource,          getDefaultDataSource())           ,false);
+			setDataSource(                    tempProps.getIntProperty(    base + PROPKEY_currentDataSource,              getDefaultDataSource())                      ,false);
 
-			setFilterAllZero(                tempProps.getBooleanProperty(base + PROP_filterAllZeroDiffCounters,  isFilterAllZero())                ,false);
-			setPauseDataPolling(             tempProps.getBooleanProperty(base + PROP_sampleDataIsPaused,         isDataPollingPaused())            ,false);
-			setBackgroundDataPollingEnabled( tempProps.getBooleanProperty(base + PROP_sampleDataInBackground,     isBackgroundDataPollingEnabled()) ,false);
-			setNegativeDiffCountersToZero(   tempProps.getBooleanProperty(base + PROP_negativeDiffCountersToZero, isNegativeDiffCountersToZero())   ,false);
-			setPersistCounters(              tempProps.getBooleanProperty(base + PROP_persistCounters,            isPersistCountersEnabled())       ,false);
-			setPersistCountersAbs(           tempProps.getBooleanProperty(base + PROP_persistCounters_abs,        isPersistCountersAbsEnabled())    ,false);
-			setPersistCountersDiff(          tempProps.getBooleanProperty(base + PROP_persistCounters_diff,       isPersistCountersDiffEnabled())   ,false);
-			setPersistCountersRate(          tempProps.getBooleanProperty(base + PROP_persistCounters_rate,       isPersistCountersRateEnabled())   ,false);
+			setFilterAllZero(                 tempProps.getBooleanProperty(base + PROPKEY_filterAllZeroDiffCounters,      getDefaultIsFilterAllZero())                 ,false);
+			setPauseDataPolling(              tempProps.getBooleanProperty(base + PROPKEY_sampleDataIsPaused,             getDefaultIsDataPollingPaused())             ,false);
+			setBackgroundDataPollingEnabled(  tempProps.getBooleanProperty(base + PROPKEY_sampleDataInBackground,         getDefaultIsBackgroundDataPollingEnabled())  ,false);
+			setNegativeDiffCountersToZero(    tempProps.getBooleanProperty(base + PROPKEY_negativeDiffCountersToZero,     getDefaultIsNegativeDiffCountersToZero())    ,false);
+			setPersistCounters(               tempProps.getBooleanProperty(base + PROPKEY_persistCounters,                getDefaultIsPersistCountersEnabled())        ,false);
+			setPersistCountersAbs(            tempProps.getBooleanProperty(base + PROPKEY_persistCounters_abs,            getDefaultIsPersistCountersAbsEnabled())     ,false);
+			setPersistCountersDiff(           tempProps.getBooleanProperty(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled())    ,false);
+			setPersistCountersRate(           tempProps.getBooleanProperty(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled())    ,false);
+			setNonConfiguredMonitoringAllowed(tempProps.getBooleanProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed()),false);
 
-			setPostponeTime(                 tempProps.getIntProperty    (base + PROP_postponeTime,               getPostponeTime())                ,false);
+			setPostponeTime(                  tempProps.getIntProperty    (base + PROPKEY_postponeTime,                   getDefaultPostponeTime())                    ,false);
 
 			_inLoadProps = false;
 		}
 	}
 
-	public static final String PROP_currentDataSource          = "currentDataSource";
-	public static final String PROP_filterAllZeroDiffCounters  = "filterAllZeroDiffCounters";
-	public static final String PROP_sampleDataIsPaused         = "sampleDataIsPaused";
-	public static final String PROP_sampleDataInBackground     = "sampleDataInBackground";
-	public static final String PROP_negativeDiffCountersToZero = "negativeDiffCountersToZero";
-	public static final String PROP_persistCounters            = "persistCounters";
-	public static final String PROP_persistCounters_abs        = "persistCounters.abs";
-	public static final String PROP_persistCounters_diff       = "persistCounters.diff";
-	public static final String PROP_persistCounters_rate       = "persistCounters.rate";
-	public static final String PROP_postponeTime               = "postponeTime";
-	public static final String PROP_queryTimeout               = "queryTimeout";
+	public static final String PROPKEY_currentDataSource              = "currentDataSource";
+	public static final String PROPKEY_filterAllZeroDiffCounters      = "filterAllZeroDiffCounters";
+	public static final String PROPKEY_sampleDataIsPaused             = "sampleDataIsPaused";
+	public static final String PROPKEY_sampleDataInBackground         = "sampleDataInBackground";
+	public static final String PROPKEY_negativeDiffCountersToZero     = "negativeDiffCountersToZero";
+	public static final String PROPKEY_persistCounters                = "persistCounters";
+	public static final String PROPKEY_persistCounters_abs            = "persistCounters.abs";
+	public static final String PROPKEY_persistCounters_diff           = "persistCounters.diff";
+	public static final String PROPKEY_persistCounters_rate           = "persistCounters.rate";
+	public static final String PROPKEY_postponeTime                   = "postponeTime";
+	public static final String PROPKEY_queryTimeout                   = "queryTimeout";
+	public static final String PROPKEY_nonConfiguredMonitoringAllowed = "nonConfiguredMonitoringAllowed";
 
 
 	
@@ -4832,5 +4927,131 @@ implements Cloneable, ITableTooltip
 
 	/** Get what template level this CM should be part of. the level can be <code>SMALL, MEDIUM, LARGE, ALL or OFF</code> */
 	public Type    getTemplateLevel()                                   { return Type.ALL; }
+
+
+
+
+	//-------------------------------------------------------
+	// BEGIN: NON CONFIGURED MONITORING 
+	//-------------------------------------------------------
+	private boolean            _isNonConfiguredMonitoringAllowed       = false;
+	private boolean            _hasNonConfiguredMonitoringHappened     = false;
+	private LinkedList<String> _lastNonConfiguredMonitoringMessageList = null;
+	private String             _nonConfiguredMonitoringMissingParams   = null;
+
+	public boolean getDefaultIsNonConfiguredMonitoringAllowed()
+	{
+		return false;
+	}
+	public boolean isNonConfiguredMonitoringAllowed()
+	{
+		return _isNonConfiguredMonitoringAllowed;
+	}
+	public boolean setNonConfiguredMonitoringAllowed(boolean isItAllowed)
+	{
+		return _isNonConfiguredMonitoringAllowed = isItAllowed;
+	}
+	public void setNonConfiguredMonitoringAllowed(boolean isItAllowed, boolean saveProps)
+	{
+		// No need to continue if we are not changing it
+		if (isNonConfiguredMonitoringAllowed() == isItAllowed)
+			return;
+
+		setNonConfiguredMonitoringAllowed(isItAllowed);
+		if (saveProps)
+			saveProps();
+	}
+
+
+//	public ArrayList<INonConfiguredMonitoring> _nonConfiguredMonitoringListeners = new ArrayList<INonConfiguredMonitoring>();
+//	public void removeNonConfiguredMonitoringHappenedListener(INonConfiguredMonitoring listener)
+//	{
+//		_nonConfiguredMonitoringListeners.add(listener);
+//	}
+//	public void addNonConfiguredMonitoringHappenedListener(INonConfiguredMonitoring)
+//	{
+//		_nonConfiguredMonitoringListeners.remove(listener);
+//	}
+	public void fireNonConfiguredMonitoringHappened()
+	{
+//		for (INonConfiguredMonitoring listener : _nonConfiguredMonitoringListeners)
+//			listener.someMethodInTheListener();
+
+		_logger.warn("CM: name='"+getName()+"', hasNonConfiguredMonitoringHappened()=true, getNonConfiguedMonitoringMessage='"+getNonConfiguredMonitoringMessage(false)+"'.");
+
+		// the below is done within the watermark check
+//		TabularCntrPanel tcp = getTabPanel();
+//		if (tcp != null)
+//		{
+//			tcp.setNonConfiguredMonitoring(...);
+//		}
+	}
+
+	public boolean hasNonConfiguredMonitoringHappened()
+	{
+		return _hasNonConfiguredMonitoringHappened;
+	}
+	public void setNonConfiguredMonitoringHappened(boolean hasHappen)
+	{
+		// Reset the message structure if value is false
+		if (hasHappen == false)
+		{
+			resetNonConfiguredMonitoringMessage();
+			resetNonConfiguredMonitoringMissingParams();
+		}
+
+		_hasNonConfiguredMonitoringHappened = hasHappen;
+	}
+
+	public void addNonConfiguedMonitoringMessage(String message)
+	{
+		if (message == null)
+			return;
+
+		if (_lastNonConfiguredMonitoringMessageList == null)
+			_lastNonConfiguredMonitoringMessageList = new LinkedList<String>();
+
+		message = StringUtil.removeLastNewLine(message);
+
+		_lastNonConfiguredMonitoringMessageList.add(message);
+	}
+	public void resetNonConfiguredMonitoringMessage()
+	{
+		_lastNonConfiguredMonitoringMessageList = null;
+	}
+	/** @returns a string, if empty a "" string will be returned */
+	public String getNonConfiguredMonitoringMessage(boolean asHtmlStr)
+	{
+		if (_lastNonConfiguredMonitoringMessageList == null)     return "";
+		if (_lastNonConfiguredMonitoringMessageList.size() == 0) return "";
+		if (_lastNonConfiguredMonitoringMessageList.size() == 1) return _lastNonConfiguredMonitoringMessageList.get(0);
+		
+		StringBuilder sb = new StringBuilder();
+		for (String msg : _lastNonConfiguredMonitoringMessageList)
+			sb.append(msg).append("\n");
+		return sb.toString();
+	}
+	public List<String> getNonConfiguedMonitoringMessageList()
+	{
+		return _lastNonConfiguredMonitoringMessageList;
+	}
+
+	public void resetNonConfiguredMonitoringMissingParams()
+	{
+		_nonConfiguredMonitoringMissingParams = null;
+	}
+	public void setNonConfiguredMonitoringMissingParams(String params)
+	{
+		_nonConfiguredMonitoringMissingParams = params;
+	}
+	public String getNonConfiguredMonitoringMissingParams()
+	{
+		if (_nonConfiguredMonitoringMissingParams == null)     
+			return "";
+		return _nonConfiguredMonitoringMissingParams;
+	}
+	//-------------------------------------------------------
+	// END: NON CONFIGURED MONITORING 
+	//-------------------------------------------------------
 
 }

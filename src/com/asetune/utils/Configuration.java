@@ -38,17 +38,17 @@ extends Properties
 	** class members
 	**---------------------------------------------------
 	*/
-    private static final long serialVersionUID = 5707562050158600080L;
+	private static final long serialVersionUID = 5707562050158600080L;
 
-    private static final String ENCRYPTED_PREFIX = "encrypted:";
+	private static final String ENCRYPTED_PREFIX = "encrypted:";
 
 
-    public static final String SYSTEM_CONF = "SYSTEM_CONF"; 
-    public static final String USER_CONF   = "USER_CONF"; 
-    public static final String USER_TEMP   = "USER_TEMP"; 
-    public static final String PCS         = "PCS"; 
-    
-    /** Log4j logging. */
+	public static final String SYSTEM_CONF = "SYSTEM_CONF"; 
+	public static final String USER_CONF   = "USER_CONF"; 
+	public static final String USER_TEMP   = "USER_TEMP"; 
+	public static final String PCS         = "PCS"; 
+	
+	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(Configuration.class);
 
 	// implements singleton pattern
@@ -72,6 +72,16 @@ extends Properties
 
 	private String _embeddedMessage = "This file will be overwritten and maintained by "+Version.getAppName();
 
+	public static final String HAS_GUI     = "application.gui";
+	public static boolean hasGui()
+	{
+		return System.getProperty(HAS_GUI, "true").equalsIgnoreCase("true");
+	}
+	public static void setGui(boolean hasGui)
+	{
+		System.setProperty(HAS_GUI, Boolean.toString(hasGui));
+	}
+	
 
 	/*---------------------------------------------------
 	** Constructors

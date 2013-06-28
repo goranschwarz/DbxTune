@@ -131,6 +131,24 @@ implements SybMessageHandler
 		StringBuilder logMsg  = new StringBuilder();
 		StringBuilder isqlMsg = new StringBuilder();
 
+		// Msg 10353:               You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
+		// Msg 12052:               Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+		// Msg 12036: ASE 12.5.0.3: Collection of monitoring data for table '%.*s' requires that the '%s' configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+		//     12036: ASE 15.7.0.0: Incomplete configuration on instance ID %d. Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
+		// so lets reinitialize CM, to check again for next sample
+		if (code == 12052 || code == 12036)
+		{
+			if (_cm.isNonConfiguredMonitoringAllowed())
+			{
+				_cm.setNonConfiguredMonitoringHappened(true);
+				_cm.addNonConfiguedMonitoringMessage(code + ": " + msgStr);
+
+				// Downgrade into an SQLWarning or simply return null...
+				return null;
+			}
+		}
+		
+
 		if (sqle instanceof EedInfo)
 		{
 			EedInfo m = (EedInfo) sqle;

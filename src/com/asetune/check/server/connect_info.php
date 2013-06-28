@@ -1,19 +1,21 @@
 <?php
-	//----------------------------------------
-	// FUNCTION: get params from POST or GET
-	//----------------------------------------
-	function getUrlParam($param)
-	{
-		if(!empty($_POST))
-		{
-			return $_POST[$param];
-		}
-		else if(!empty($_GET))
-		{
-			return urldecode($_GET[$param]);
-		}
+	require("gorans_functions.php");
 
-	}
+//	//----------------------------------------
+//	// FUNCTION: get params from POST or GET
+//	//----------------------------------------
+//	function getUrlParam($param)
+//	{
+//		if(!empty($_POST))
+//		{
+//			return $_POST[$param];
+//		}
+//		else if(!empty($_GET))
+//		{
+//			return urldecode($_GET[$param]);
+//		}
+//
+//	}
 
 	//------------------------------------------
 	// if debug is sent, print some extra info on the outstream
@@ -27,7 +29,8 @@
 	$userName           = getUrlParam('userName');
 
 	$connectId          = getUrlParam('connectId');
-	$srvVersion         = getUrlParam('srvVersion');
+	$srvVersion         = versionFix(getUrlParam('srvVersion'));
+//	$srvVersion         = getUrlParam('srvVersion');
 	$isClusterEnabled   = getUrlParam('isClusterEnabled');
 
 	$srvName            = getUrlParam('srvName');

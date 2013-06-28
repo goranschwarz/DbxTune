@@ -204,7 +204,8 @@ extends CountersModel
 		cols1 = cols2 = cols3 = "";
 
 		String optGoalPlan = "";
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -244,7 +245,8 @@ extends CountersModel
 		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the process
 		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
 		String nl_15702           = ""; // NL for this section
-		if (aseVersion >= 15702)
+//		if (aseVersion >= 15702)
+		if (aseVersion >= 1570020)
 		{
 			IOSize1Page        = "A.IOSize1Page, ";
 			IOSize2Pages       = "A.IOSize2Pages, ";
@@ -268,15 +270,18 @@ extends CountersModel
 			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
 			+ IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
-		if (aseVersion >= 12520)
+//		if (aseVersion >= 12520)
+		if (aseVersion >= 1252000)
 		{
 			cols2+="  A.WorkTables,  \n";
 		}
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 			cols2+="  tempdb_name = db_name(tempdb_id(SP.spid)), pssinfo_tempdb_pages = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
 		}
-		if (aseVersion >= 15025)
+//		if (aseVersion >= 15025)
+		if (aseVersion >= 1502050)
 		{
 			cols2+="  N.NetworkEngineNumber, MP.ServerUserID, \n";
 		}

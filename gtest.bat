@@ -95,8 +95,8 @@ rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%SQLW_HOME%\classes
 set classpath=%classpath%;%SQLW_HOME%\lib\asetune.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
 rem set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.2.7.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar

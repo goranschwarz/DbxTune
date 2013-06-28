@@ -73,8 +73,8 @@ extends JDialog implements ActionListener, ChangeListener
 	private SpinnerNumberModel _testVersionMaint_spm = new SpinnerNumberModel(0, 0, 9, 1); // value, min, max, step
 	private JSpinner           _testVersionMaint_sp  = new JSpinner(_testVersionMaint_spm);
 
-	private JLabel             _testVersionEsd_lbl   = new JLabel("ESD#");
-	private SpinnerNumberModel _testVersionEsd_spm   = new SpinnerNumberModel(3, 0, 9, 1); // value, min, max, step
+	private JLabel             _testVersionEsd_lbl   = new JLabel("ESD#/SP");
+	private SpinnerNumberModel _testVersionEsd_spm   = new SpinnerNumberModel(3, 0, 999, 1); // value, min, max, step
 	private JSpinner           _testVersionEsd_sp    = new JSpinner(_testVersionEsd_spm);
 
 	private JCheckBox          _testVersionIsCe_chk  = new JCheckBox("Cluster Edition", false);
@@ -247,8 +247,8 @@ extends JDialog implements ActionListener, ChangeListener
 		_testVersionMaint_lbl .setToolTipText("<html>Mintenance version of the ASE Server, Example: 15.0.<b>3</b></html>");
 		_testVersionMaint_sp  .setToolTipText("<html>Mintenance version of the ASE Server, Example: 15.0.<b>3</b></html>");
 
-		_testVersionEsd_lbl   .setToolTipText("<html>ESD (Electronic Software Distribution) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b></html>");
-		_testVersionEsd_sp    .setToolTipText("<html>ESD (Electronic Software Distribution) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b></html>");
+		_testVersionEsd_lbl   .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 ASE changed from ESD into SP.</html>");
+		_testVersionEsd_sp    .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 ASE changed from ESD into SP.</html>");
 
 		_testVersionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a ASE Cluster Edition</html>");
 
@@ -298,7 +298,8 @@ extends JDialog implements ActionListener, ChangeListener
 		//------------ END: TOOLTIP
 		
 		
-		int     aseVersion  = 12503;
+//		int     aseVersion  = 12503;
+		int     aseVersion  = 1250030;
 		boolean isCeEnabled = false;
 
 		if (_cm.isRuntimeInitialized())
@@ -485,7 +486,9 @@ extends JDialog implements ActionListener, ChangeListener
 		int maint = _testVersionMaint_spm.getNumber().intValue();
 		int esd   = _testVersionEsd_spm  .getNumber().intValue();
 
-		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
+//		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
+		int ver = (major * 100000) + (minor * 10000) + (maint * 1000) + esd;
+//System.out.println("stateChanged: ver="+ver+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+".");
 
 		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
 
@@ -498,16 +501,22 @@ extends JDialog implements ActionListener, ChangeListener
 			versionStr = "00.0.0"; // then the below aseVersionStringToNumber() work better
 
 		int version = AseConnectionUtils.aseVersionStringToNumber(versionStr);
-		int major = version                                     / 1000;
-		int minor =(version -  (major * 1000))                  / 100;
-		int maint =(version - ((major * 1000) + (minor * 100))) / 10;
-		int esd   = version - ((major * 1000) + (minor * 100) + (maint * 10));
+//		int major = version                                     / 1000;
+//		int minor =(version -  (major * 1000))                  / 100;
+//		int maint =(version - ((major * 1000) + (minor * 100))) / 10;
+//		int esd   = version - ((major * 1000) + (minor * 100) + (maint * 10));
+		int major = version                                         / 100000;
+		int minor =(version -  (major * 100000))                    / 10000;
+		int maint =(version - ((major * 100000) + (minor * 10000))) / 1000;
+		int esd   = version - ((major * 100000) + (minor * 10000) + (maint * 1000));
 		
+//System.out.println("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+".");
 		_testVersionMajor_spm.setValue(major);
 		_testVersionMinor_spm.setValue(minor);
 		_testVersionMaint_spm.setValue(maint);
 		_testVersionEsd_spm  .setValue(esd);
 
+//		_testVersionShort_txt.setText(AseConnectionUtils.versionIntToStr(version));
 		_testVersionInt_txt  .setText(Integer.toString(version));
 	}
 
@@ -540,6 +549,7 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlClose.setText(sqlClose);
 
 		String aseVersionStr = AseConnectionUtils.versionIntToStr(aseVersion);
+//System.out.println("loadFieldsUsingVersion(): version="+aseVersion+", aseVersionStr='"+aseVersionStr+"'.");
 		_testVersionShort_txt.setText(aseVersionStr);
 		parseVersionString(aseVersionStr);
 

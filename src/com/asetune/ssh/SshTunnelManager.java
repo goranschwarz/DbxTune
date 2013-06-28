@@ -35,12 +35,13 @@ public class SshTunnelManager
 	/** local class */
 	private static class LocalPortForwarderWrapper
 	{
-		public LocalPortForwarderWrapper(int port, LocalPortForwarder localPortForwarder, String sshConnKey)
+		public LocalPortForwarderWrapper(int port, LocalPortForwarder localPortForwarder, String sshConnKey, SshConnection sshConnection)
 		{
 			_numberOfUsers      = 0;
 			_port               = port;
 			_localPortForwarder = localPortForwarder;
 			_sshConnKey         = sshConnKey;
+			_sshConnection      = sshConnection;
 		}
 		public void incrementUsage() 
 		{
@@ -54,6 +55,7 @@ public class SshTunnelManager
 		public int                _port;
 		public LocalPortForwarder _localPortForwarder;
 		public String             _sshConnKey;
+		public SshConnection      _sshConnection;
 	}
 	private static class SshConnectionWrapper
 	{
@@ -88,7 +90,7 @@ public class SshTunnelManager
 
 
 	/** 
-	 * guess what port number we will get 
+	 * guess what port number we will get (this also sets the localport in sshTunnelInfo)
 	 */
 	public int guessPort(String hostPortStr, SshTunnelInfo sshTunnelInfo)
 	{
@@ -101,13 +103,16 @@ public class SshTunnelManager
 		LocalPortForwarderWrapper lpfw =  _tunnelCache.get(hostPortStr);
 		if ( lpfw != null )
 		{
-			return lpfw._port;
+			// Set the local port with the one in the cache
+			sshTunnelInfo.setLocalPort(lpfw._port);
 		}
 		
 		if (sshTunnelInfo.getLocalPort() <= 0 && sshTunnelInfo.isLocalPortGenerated())
 		{
-			return getFirstFreeLocalPortNumber();
+			int firstFreeLocalPortNumber = getFirstFreeLocalPortNumber();
+			sshTunnelInfo.setLocalPort(firstFreeLocalPortNumber);
 		}
+
 		return sshTunnelInfo.getLocalPort();
 	}
 
@@ -132,21 +137,42 @@ public class SshTunnelManager
 		LocalPortForwarderWrapper lpfw =  _tunnelCache.get(hostPortStr);
 		if ( lpfw != null )
 		{
-			lpfw.incrementUsage();
-			// FIXME: should we test if the connection is up and running / valid
-			_logger.info("Reusing an Previously setup Tunnel for '"+hostPortStr+"' that uses Local Port '"+lpfw._port+"', which sshConnKey '"+connKey+"'.");
-			return;
+			if (lpfw._sshConnection.isConnected())
+			{
+				lpfw.incrementUsage();
+				// FIXME: should we test if the connection is up and running / valid
+				_logger.info("Reusing an Previously setup Tunnel for '"+hostPortStr+"' that uses Local Port '"+lpfw._port+"', which sshConnKey '"+connKey+"'.");
+				sshTunnelInfo.setLocalPort(lpfw._port);
+				return;
+			}
+			else
+			{
+				// remove the cached entry
+				lpfw = null;
+				_tunnelCache.remove(hostPortStr);
+			}
 		}
 		
 		// Get SSH Connection if we already has a connection
+		boolean makeNewShhConnection = true;
 		SshConnectionWrapper sshConnWrap = _connectionCache.get(connKey);
-		
 		if (sshConnWrap != null)
 		{
-			sshConnWrap.incrementUsage();
-			_logger.info("Reusing an already connected SSH Connection to "+connInfo);
+			if (sshConnWrap._sshConnection.isConnected())
+			{
+				sshConnWrap.incrementUsage();
+				_logger.info("Reusing an already connected SSH Connection to "+connInfo);
+				makeNewShhConnection = false;
+			}
+			else
+			{
+				// remove the cached entry
+				sshConnWrap = null;
+				_connectionCache.remove(connKey);
+			}
 		}
-		else
+
+		if (makeNewShhConnection)
 		{
 			SshConnection sshConn = new SshConnection(
 				sshTunnelInfo.getSshHost(), 
@@ -165,7 +191,7 @@ public class SshTunnelManager
 
 		// Create a local port forwarder
 		LocalPortForwarder lpf = sshConnWrap._sshConnection.createLocalPortForwarder(sshTunnelInfo);
-		lpfw = new LocalPortForwarderWrapper(sshTunnelInfo.getLocalPort(), lpf, connKey);
+		lpfw = new LocalPortForwarderWrapper(sshTunnelInfo.getLocalPort(), lpf, connKey, sshConnWrap._sshConnection);
 		lpfw.incrementUsage();
 		
 		// Add it to the "cache"

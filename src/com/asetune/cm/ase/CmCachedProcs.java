@@ -1,14 +1,19 @@
 package com.asetune.cm.ase;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.ase.gui.CmCachedProcsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -105,10 +110,49 @@ extends CountersModel
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		if (srvVersion >= 15700)
+//		if (srvVersion >= 15700)
+		if (srvVersion >= 1570000)
 			return NEED_CONFIG;
 
 		return new String[] {"per object statistics active=1"};
+	}
+
+	@Override
+	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			mtd.addColumn("monCachedProcedures",  "CompileAgeInSec",     "<html>" +
+			                                                                     "How many seconds where this plan compiled<br>" +
+			                                                                     "<b>Formula</b>: datediff(ss, CompileDate, getdate())<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgCPUTime",          "<html>" +
+                                                                                 "CPU Time per execution count<br>" +
+                                                                                 "<b>Formula</b>: CPUTime / ExecutionCount<br>" +
+                                                                         "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgExecutionTime",    "<html>" +
+                                                                                 "Execution Time per execution count<br>" +
+                                                                                 "<b>Formula</b>: ExecutionTime / ExecutionCount<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgPhysicalReads",    "<html>" +
+                                                                                 "Physical Reads per execution count<br>" +
+                                                                                 "<b>Formula</b>: PhysicalReads / ExecutionCount<br>" +
+                                                                         "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgLogicalReads",     "<html>" +
+                                                                                 "Logical Reads per execution count<br>" +
+                                                                                 "<b>Formula</b>: LogicalReads / ExecutionCount<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgPhysicalWrites",   "<html>" +
+                                                                                 "Physical Writes per execution count<br>" +
+                                                                                 "<b>Formula</b>: PhysicalWrites / ExecutionCount<br>" +
+			                                                             "</html>");
+			mtd.addColumn("monCachedProcedures",  "AvgPagesWritten",     "<html>" +
+                                                                                 "Pages Written per execution count<br>" +
+                                                                                 "<b>Formula</b>: PagesWritten / ExecutionCount<br>" +
+			                                                             "</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
 	}
 
 	@Override
@@ -141,21 +185,28 @@ extends CountersModel
 		String ase1550_nl         = "";
 
 		// ASE 15.7
-		String ExecutionCount = "";
-		String CPUTime        = "";
-		String ExecutionTime  = "";
-		String PhysicalReads  = "";
-		String LogicalReads   = "";
-		String PhysicalWrites = "";
-		String PagesWritten   = "";
-		String ase1570_nl     = "";
+		String ExecutionCount    = "";
+		String CPUTime           = "";
+		String ExecutionTime     = "";
+		String PhysicalReads     = "";
+		String LogicalReads      = "";
+		String PhysicalWrites    = "";
+		String PagesWritten      = "";
+		String AvgCPUTime        = ""; // xxx / ExecutionCount
+		String AvgExecutionTime  = ""; // xxx / ExecutionCount
+		String AvgPhysicalReads  = ""; // xxx / ExecutionCount
+		String AvgLogicalReads   = ""; // xxx / ExecutionCount
+		String AvgPhysicalWrites = ""; // xxx / ExecutionCount
+		String AvgPagesWritten   = ""; // xxx / ExecutionCount
+		String ase1570_nl        = "";
 
 		if (isClusterEnabled)
 		{
 			InstanceID = "InstanceID, ";
 		}
 
-		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
+//		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
+		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
 		{
 			orderBy = "order by RequestCnt desc \n";
 
@@ -165,23 +216,39 @@ extends CountersModel
 			ase1550_nl         = "\n";
 		}
 
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
-			ExecutionCount = "ExecutionCount, ";
-			CPUTime        = "CPUTime, ";
-			ExecutionTime  = "ExecutionTime, ";
-			PhysicalReads  = "PhysicalReads, ";
-			LogicalReads   = "LogicalReads, ";
-			PhysicalWrites = "PhysicalWrites, ";
-			PagesWritten   = "PagesWritten, ";
-			ase1570_nl     = "\n";
+			ExecutionCount    = "ExecutionCount, ";
+			CPUTime           = "CPUTime, ";
+			ExecutionTime     = "ExecutionTime, ";
+			PhysicalReads     = "PhysicalReads, ";
+			LogicalReads      = "LogicalReads, ";
+			PhysicalWrites    = "PhysicalWrites, ";
+			PagesWritten      = "PagesWritten, ";
+
+			AvgCPUTime        = "AvgCPUTime        = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (CPUTime        + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgExecutionTime  = "AvgExecutionTime  = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (ExecutionTime  + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPhysicalReads  = "AvgPhysicalReads  = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (PhysicalReads  + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgLogicalReads   = "AvgLogicalReads   = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (LogicalReads   + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPhysicalWrites = "AvgPhysicalWrites = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (PhysicalWrites + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPagesWritten   = "AvgPagesWritten   = CASE WHEN ExecutionCount > 0 THEN convert(numeric(16,1), (PagesWritten   + 0.0) / (ExecutionCount + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+
+			ase1570_nl        = "\n";
 		}
 		
 		cols = 
 			InstanceID + 
-			"PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate, " +
+			"PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate, CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
 			ase1550_nl + RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +
-			ase1570_nl + ExecutionCount + CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
+			ase1570_nl + ExecutionCount + ase1570_nl +  
+			AvgCPUTime + 
+			AvgExecutionTime + 
+			AvgPhysicalReads + 
+			AvgLogicalReads + 
+			AvgPhysicalWrites + 
+			AvgPagesWritten +
+			CPUTime + ExecutionTime + PhysicalReads + LogicalReads + PhysicalWrites + PagesWritten +
 			"";
 
 		// remove last comma
@@ -195,6 +262,77 @@ extends CountersModel
 		return sql;
 	}
 
+	@Override
+	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	{
+		long ExecutionCount,          RequestCnt;
+		int  ExecutionCount_pos = -1, RequestCnt_pos = -1;
+
+		long CPUTime,             ExecutionTime,             PhysicalReads,             LogicalReads,             PhysicalWrites,             PagesWritten;
+		int  CPUTime_pos    = -1, ExecutionTime_pos    = -1, PhysicalReads_pos    = -1, LogicalReads_pos    = -1, PhysicalWrites_pos    = -1, PagesWritten_pos    = -1;
+		int  AvgCPUTime_pos = -1, AvgExecutionTime_pos = -1, AvgPhysicalReads_pos = -1, AvgLogicalReads_pos = -1, AvgPhysicalWrites_pos = -1, AvgPagesWritten_pos = -1;
+
+		// Find column Id's
+		List<String> colNames = diffData.getColNames();
+		if (colNames == null)
+			return;
+		for (int colId = 0; colId < colNames.size(); colId++)
+		{
+			String colName = (String) colNames.get(colId);
+			if      (colName.equals("RequestCnt"))        RequestCnt_pos        = colId;
+			else if (colName.equals("ExecutionCount"))    ExecutionCount_pos    = colId;
+			else if (colName.equals("CPUTime"))           CPUTime_pos           = colId;
+			else if (colName.equals("ExecutionTime"))     ExecutionTime_pos     = colId;
+			else if (colName.equals("PhysicalReads"))     PhysicalReads_pos     = colId;
+			else if (colName.equals("LogicalReads"))      LogicalReads_pos      = colId;
+			else if (colName.equals("PhysicalWrites"))    PhysicalWrites_pos    = colId;
+			else if (colName.equals("PagesWritten"))      PagesWritten_pos      = colId;
+			else if (colName.equals("AvgCPUTime"))        AvgCPUTime_pos        = colId;
+			else if (colName.equals("AvgExecutionTime"))  AvgExecutionTime_pos  = colId;
+			else if (colName.equals("AvgPhysicalReads"))  AvgPhysicalReads_pos  = colId;
+			else if (colName.equals("AvgLogicalReads"))   AvgLogicalReads_pos   = colId;
+			else if (colName.equals("AvgPhysicalWrites")) AvgPhysicalWrites_pos = colId;
+			else if (colName.equals("AvgPagesWritten"))   AvgPagesWritten_pos   = colId;
+		}
+
+		if (ExecutionCount_pos >= 0)
+		{
+			// Loop on all diffData rows
+			for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+			{
+				RequestCnt     = ((Number) diffData.getValueAt(rowId, RequestCnt_pos    )).longValue();
+				ExecutionCount = ((Number) diffData.getValueAt(rowId, ExecutionCount_pos)).longValue();
+				CPUTime        = ((Number) diffData.getValueAt(rowId, CPUTime_pos       )).longValue();
+				ExecutionTime  = ((Number) diffData.getValueAt(rowId, ExecutionTime_pos )).longValue();
+				PhysicalReads  = ((Number) diffData.getValueAt(rowId, PhysicalReads_pos )).longValue();
+				LogicalReads   = ((Number) diffData.getValueAt(rowId, LogicalReads_pos  )).longValue();
+				PhysicalWrites = ((Number) diffData.getValueAt(rowId, PhysicalWrites_pos)).longValue();
+				PagesWritten   = ((Number) diffData.getValueAt(rowId, PagesWritten_pos  )).longValue();
+	
+				if (ExecutionCount == 0)
+					ExecutionCount = RequestCnt;
+
+				doAvgCalculation(diffData, ExecutionCount, CPUTime,        rowId, AvgCPUTime_pos);
+				doAvgCalculation(diffData, ExecutionCount, ExecutionTime,  rowId, AvgExecutionTime_pos);
+				doAvgCalculation(diffData, ExecutionCount, PhysicalReads,  rowId, AvgPhysicalReads_pos);
+				doAvgCalculation(diffData, ExecutionCount, LogicalReads,   rowId, AvgLogicalReads_pos);
+				doAvgCalculation(diffData, ExecutionCount, PhysicalWrites, rowId, AvgPhysicalWrites_pos);
+				doAvgCalculation(diffData, ExecutionCount, PagesWritten,   rowId, AvgPagesWritten_pos);
+			}
+		}
+	}
+	private void doAvgCalculation(SamplingCnt data, long divByValue, long val, int rowId, int setColPos)
+	{
+		if (divByValue > 0)
+		{
+			double calc = (val + 0.0) / (divByValue + 0.0);
+
+			BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+			data.setValueAt(newVal, rowId, setColPos);
+		}
+		else
+			data.setValueAt(new BigDecimal(0), rowId, setColPos);
+	}
 
 	/** 
 	 * Get number of rows to save/request ddl information for 
@@ -208,7 +346,8 @@ extends CountersModel
 	@Override
 	public String[] getDdlDetailsSortOnColName()
 	{
-		if (getServerVersion() < 15500)
+//		if (getServerVersion() < 15500)
+		if (getServerVersion() < 1550000)
 			return null;
 
 		String[] sa = {"RequestCntDiff"};

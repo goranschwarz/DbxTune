@@ -57,6 +57,8 @@ DB Cleanup:
 <i>(only for admin, <b>so please do not use</b>)</i>
 
 <?php
+	require("gorans_functions.php");
+
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	//------------------------------------------
@@ -82,152 +84,23 @@ DB Cleanup:
 	$del_deleteLogId        = $_GET['deleteLogId'];
 	$save_saveLogId         = $_GET['saveLogId'];
 
-	$mda_deleteVersion      = $_GET['mda_deleteVersion'];
-	$mda_verifyVersion      = $_GET['mda_verifyVersion'];
-	$mda_lowVersion         = $_GET['mda_lowVersion'];
-	$mda_highVersion        = $_GET['mda_highVersion'];
+	$mda_deleteVersion      = versionFix($_GET['mda_deleteVersion']);
+	$mda_verifyVersion      = versionFix($_GET['mda_verifyVersion']);
+	$mda_lowVersion         = versionFix($_GET['mda_lowVersion']);
+	$mda_highVersion        = versionFix($_GET['mda_highVersion']);
 	$mda_isCluster          = $_GET['mda_isCluster'];
 
+	$ipDesc_key             = $_GET['ipDesc_key'];
+	$ipDesc_val             = $_GET['ipDesc_val'];
+
 	// sub command
-	$rpt_onDomain           = $_GET['onDomain'];
-	$rpt_onUser             = $_GET['onUser'];
-	$rpt_onId               = $_GET['onId'];
+	$rpt_onDomain            = $_GET['onDomain'];
+	$rpt_onUser              = $_GET['onUser'];
+	$rpt_onId                = $_GET['onId'];
+	$rpt_getAppStartsForIp   = $_GET['getAppStartsForIp'];
+	$rpt_getConnectForIp     = $_GET['getConnectForIp'];
+	$rpt_getConnectForDomain = $_GET['getConnectForDomain'];
 
-//	function get_ip_address() {
-//	    foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key) {
-//	        if (array_key_exists($key, $_SERVER) === true) {
-//	            foreach (explode(',', $_SERVER[$key]) as $ip) {
-//	                if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
-//	                    return $ip;
-//	                }
-//	            }
-//	        }
-//	    }
-//	}
-//	$ip = get_ip_address();
-//	echo "IP ADDRESS: " . $ip . "<br>\n";
-//$url=file_get_contents("http://whatismyipaddress.com/ip/$ip");
-
-
-
-	function htmlResultset($result, $headName, $colNameForNewLine='')
-	{
-		$colIdForNewLine = -1;
-		$fields_num = mysql_num_fields($result);
-
-		// printing some info about what this is
-		echo "<h1>" . $headName . "</h1>";
-
-		// printing table header
-		echo "<table border=\"0\" class=\"sortable\">";
-		echo "<tr>";
-		// printing table headers
-		for($i=0; $i<$fields_num; $i++)
-		{
-			$field = mysql_fetch_field($result);
-			echo "<td nowrap>{$field->name}</td>";
-			if ($colNameForNewLine != "")
-			{
-				if ($colNameForNewLine == "{$field->name}")
-					$colIdForNewLine = $i;
-			}
-		}
-		echo "</tr>\n";
-
-		$atRow = -1;
-
-		// printing table rows
-		while($row = mysql_fetch_row($result))
-		{
-			$atRow++;
-			echo "<tr>";
-
-			// Make a new line, if a repeatable column changes content (make a separator)
-			if ($colIdForNewLine >= 0)
-			{
-				$colValue = $row[$colIdForNewLine];
-
-				if ($atRow >= 1)
-				{
-					if ($lastColValForNewLine != $colValue)
-						echo "<tr> <td><br></td> </tr>";
-				}
-				$lastColValForNewLine = $colValue;
-			}
-
-			// $row is array... foreach( .. ) puts every element
-			// of $row to $cell variable
-			$col=-1;
-			foreach($row as $cell)
-			{
-				$col++;
-				$colname = mysql_field_name($result, $col);
-
-				if ( $colname == "sybUserName" )
-					echo "<td nowrap><A HREF=\"http://syberspase.sybase.com/compdir/mainMenu.do?keyword=$cell&submit=Go\" target=\"_blank\">$cell</A></td>";
-
-				else if ( $colname == "sapUserName" )
-					echo "<td nowrap><A HREF=\"https://sapneth2.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=SEARCH&UserID=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "userNameUsage" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "domainName" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onDomain=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "wwwDomainName" )
-					echo "<td nowrap><A HREF=\"http://$cell\" target=\"_blank\">$cell</A></td>";
-
-				else if ( $colname == "checkId" || $colname == "rowid")
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "showLogId" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "deleteLogId" || $colname == "deleteLogId2" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "saveLogId" || $colname == "saveLogId2" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&saveLogId=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "callerIpAddress" )
-					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
-
-				else if ( $colname == "srvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "deleteSrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">$cell</A></td>";
-
-				else if ( $colname == "verifySrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">$cell</A></td>";
-				else
-				{
-					$cellCont = nl2br($cell, false);
-					echo "<td nowrap>$cellCont</td>";
-				}
-			}
-
-			echo "</tr>\n";
-		}
-		echo "</table>\n";
-		mysql_free_result($result);
-
-		// printing table rows
-//		while($row = mysql_fetch_row($result))
-//		{
-//			echo "<tr>";
-//
-//			// $row is array... foreach( .. ) puts every element
-//			// of $row to $cell variable
-//			foreach($row as $cell)
-//				echo "<td nowrap>$cell</td>";
-//
-//			echo "</tr>\n";
-//		}
-//		echo "</table>\n";
-//		mysql_free_result($result);
-	}
 
 	//-------------------------------------------
 	// CONNECT to database
@@ -279,6 +152,75 @@ DB Cleanup:
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "on domain $rpt_onDomain");
+	}
+
+	//-------------------------------------------
+	// APP-STARTS ON_CALLER_IP
+	//-------------------------------------------
+	if ( $rpt_getAppStartsForIp != "" )
+	{
+		$sql = "
+			SELECT *
+			FROM asemon_usage
+			WHERE callerIpAddress = '" . $rpt_getAppStartsForIp . "'
+			ORDER BY serverAddTime desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "AppStarts MADE BY Caller IP Address $rpt_getAppStartsForIp");
+	}
+
+	//-------------------------------------------
+	// CONNECTIONS ON_CALLER_IP
+	//-------------------------------------------
+	if ( $rpt_getConnectForIp != "" )
+	{
+		$sql = "
+			SELECT *
+			FROM asemon_connect_info
+			WHERE checkId IN (SELECT rowid
+			                  FROM asemon_usage
+			                  WHERE callerIpAddress = '" . $rpt_getConnectForIp . "'
+			                 )
+			ORDER BY checkId desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "CONNECTIONS MADE BY Caller IP Address $rpt_getConnectForIp");
+	}
+
+	//-------------------------------------------
+	// CONNECTIONS ON_DOMAIN
+	//-------------------------------------------
+	if ( $rpt_getConnectForDomain != "" )
+	{
+		$sql = "
+			SELECT *
+			FROM asemon_connect_info
+			WHERE checkId IN (SELECT rowid
+			                  FROM asemon_usage
+			                  WHERE SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = '" . $rpt_getConnectForDomain . "'
+			                 )
+			ORDER BY checkId desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "CONNECTIONS MADE BY Domain $rpt_getConnectForDomain");
 	}
 
 	//-------------------------------------------
@@ -440,6 +382,26 @@ DB Cleanup:
 
 
 	//-------------------------------------------
+	// IP CALLER, assign a description
+	//-------------------------------------------
+	if ( $ipDesc_key != "" )
+	{
+		mysql_query("DELETE FROM callerIpDescription WHERE callerIpAddress = '" . $ipDesc_key . "'")         or die("ERROR: " . mysql_error());
+		mysql_query("INSERT INTO callerIpDescription values('" . $ipDesc_key . "', '" . $ipDesc_val . "')")  or die("ERROR: " . mysql_error());
+
+		$sql = "SELECT * FROM callerIpDescription";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Caller IP Descriptions");
+	}
+
+
+	//-------------------------------------------
 	// SUMMARY REPORT, COUNT
 	//-------------------------------------------
 	if ( $rpt_summary_count == "true" )
@@ -557,7 +519,73 @@ DB Cleanup:
 
 
 		//------------------------------------------
-		// Summary per domain
+		// Summary per: CALLER-IP-ADDRESS
+		//------------------------------------------
+//		mysql_query("CREATE TABLE sumCallerIpStartNow (callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+//		mysql_query("CREATE TABLE sumCallerIpStartPriv(callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+//		mysql_query("CREATE TABLE callerIpDescription (callerIpAddress varchar(20), description varchar(50))")                                          or die("ERROR: " . mysql_error());
+
+		//----------- Trunacte NOW table and pupulate it again
+		mysql_query("TRUNCATE TABLE sumCallerIpStartNow") or die("ERROR: " . mysql_error());
+		mysql_query("INSERT INTO    sumCallerIpStartNow(callerIpAddress, usageCount, lastStarted, pollTime)
+			SELECT
+--				callerIpAddress,
+				COALESCE(callerIpAddress,'**********'),
+				count(*),
+				max(serverAddTime),
+				NOW()
+			FROM asemon_usage
+--			WHERE callerIpAddress IS NOT NULL
+			GROUP BY
+				callerIpAddress
+			") or die("ERROR: " . mysql_error());
+
+		//----------- GET RESULTS & PRINT IT
+		$result = mysql_query("
+			SELECT n.callerIpAddress,
+				n.callerIpAddress AS getAppStartsForIp,
+				n.callerIpAddress AS getConnectForIp,
+				COALESCE(d.description,'**********') AS Description,
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastStarted,
+				p.pollTime AS lastPollTime
+			FROM sumCallerIpStartNow n
+				LEFT JOIN sumCallerIpStartPriv p ON n.callerIpAddress = p.callerIpAddress
+				LEFT JOIN callerIpDescription  d ON n.callerIpAddress = d.callerIpAddress
+			ORDER BY 7 desc, 6 desc, 5 desc
+			LIMIT 30");
+
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "Caller IP ADDRESS, ORDER BY START_TIME    TOP 30");
+
+		//----------- Move NOW table into PREV
+		if ( $rpt_summary_diffReset == "true" )
+		{
+			mysql_query("TRUNCATE TABLE sumCallerIpStartPriv") or die("ERROR: " . mysql_error());
+			mysql_query("INSERT INTO    sumCallerIpStartPriv (SELECT * FROM sumCallerIpStartNow)") or die("ERROR: " . mysql_error());
+		}
+
+		//------------------------------------------
+		// build a form, for callerIpDescription
+		//------------------------------------------
+		echo '
+			<b>Assign a description for: </b>
+			<form action="usage_report.php" method="get">
+				IP:          <input type="text" size=20 maxlength=20 name="ipDesc_key" value="" />
+				Description: <input type="text" size=50 maxlength=50 name="ipDesc_val" value="" />
+				<input type="submit" />
+			</form>
+		';
+
+
+
+
+		//------------------------------------------
+		// SUMMARY PER DOMAIN
 		//------------------------------------------
 //			SELECT
 //				SUBSTRING_INDEX(clientCanonicalHostName, '.', -2)  as domainName,
@@ -585,12 +613,13 @@ DB Cleanup:
 		$result = mysql_query("
 			SELECT n.domainName,
 				CONCAT('www.', n.domainName) AS wwwDomainName,
+				n.domainName AS getConnectForDomain,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumDomainStartNow n LEFT JOIN sumDomainStartPriv p ON n.domainName = p.domainName
-			ORDER BY 5 desc, 4 desc, 3 desc
+			ORDER BY 6 desc, 5 desc, 4 desc
 			LIMIT 20");
 
 		if (!$result) {
@@ -603,12 +632,13 @@ DB Cleanup:
 		$result = mysql_query("
 			SELECT n.domainName,
 				CONCAT('www.', n.domainName) AS wwwDomainName,
+				n.domainName AS getConnectForDomain,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumDomainStartNow n LEFT JOIN sumDomainStartPriv p ON n.domainName = p.domainName
-			ORDER BY 4 desc, 3 desc, 5 desc");
+			ORDER BY 5 desc, 4 desc, 6 desc");
 
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
@@ -622,6 +652,8 @@ DB Cleanup:
 			mysql_query("TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysql_error());
 			mysql_query("INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysql_error());
 		}
+
+
 
 
 		//------------------------------------------
@@ -968,8 +1000,8 @@ DB Cleanup:
 			<form action="usage_report.php" method="get">
 				<input type="text" size=4 name="mda" readonly="mda" value="diff" />
 				Is ASE Cluster Edition (0 or 1, default=0):<input type="text" size=5 maxlength=5 name="mda_isCluster"   value="' . $mda_isCluster   . '" />
-				Low Version:                               <input type="text" size=5 maxlength=5 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
-				High Version:                              <input type="text" size=5 maxlength=5 name="mda_highVersion" value="' . $mda_highVersion . '" />
+				Low Version:                               <input type="text" size=9 maxlength=9 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
+				High Version:                              <input type="text" size=9 maxlength=9 name="mda_highVersion" value="' . $mda_highVersion . '" />
 				<input type="submit" />
 			</form>
 
@@ -1110,7 +1142,7 @@ DB Cleanup:
 		//-----------------------------
 		if ( is_numeric($rpt_mda) )
 		{
-			$srvVersion = $rpt_mda;
+			$srvVersion = versionFix($rpt_mda);
 			if ( $mda_isCluster == "" )
 			{
 				$mda_isCluster = 0;

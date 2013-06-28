@@ -19,8 +19,8 @@ javaLibDir=\$APP_PACKAGE/Contents/Resources/Java
 # Compose the class path that we will use later on.
 #
 export CP=${CP}:$javaLibDir/asetune.jar
-export CP=${CP}:$javaLibDir/jconn3.jar
 export CP=${CP}:$javaLibDir/jconn4.jar
+export CP=${CP}:$javaLibDir/jconn3.jar
 export CP=${CP}:$javaLibDir/jtds-1.2.7.jar
 export CP=${CP}:$javaLibDir/dsparser.jar
 export CP=${CP}:$javaLibDir/log4j-1.2.17.jar

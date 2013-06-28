@@ -515,17 +515,20 @@ public abstract class PersistWriterBase
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"CmName"           +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"graphCount"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"absRows"          +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"diffRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"rateRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"sqlRefreshTime"   +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"guiRefreshTime"   +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"lcRefreshTime"    +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("    "+fill(qic+"SessionStartTime"      +qic,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SessionSampleTime"     +qic,40)+" "+fill(getDatatype("datetime",-1,  -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"CmName"                +qic,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"type"                  +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"graphCount"            +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"absRows"               +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"diffRows"              +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"rateRows"              +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"sqlRefreshTime"        +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"guiRefreshTime"        +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"lcRefreshTime"         +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"nonCfgMonHappened"     +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"nonCfgMonMissingParams"+qic,40)+" "+fill(getDatatype("varchar", 100, -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"nonCfgMonMessages"     +qic,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_MON_TAB_DICT)
@@ -732,21 +735,24 @@ public abstract class PersistWriterBase
 		}
 		else if (type == SESSION_SAMPLE_DETAILES)
 		{
-			sbSql.append("insert into ").append(tabName) .append(" (");
-			sbSql.append(qic).append("SessionStartTime") .append(qic).append(", ");
-			sbSql.append(qic).append("SessionSampleTime").append(qic).append(", ");
-			sbSql.append(qic).append("CmName")           .append(qic).append(", ");
-			sbSql.append(qic).append("type")             .append(qic).append(", ");
-			sbSql.append(qic).append("graphCount")       .append(qic).append(", ");
-			sbSql.append(qic).append("absRows")          .append(qic).append(", ");
-			sbSql.append(qic).append("diffRows")         .append(qic).append(", ");
-			sbSql.append(qic).append("rateRows")         .append(qic).append(", ");
-			sbSql.append(qic).append("sqlRefreshTime")   .append(qic).append(", ");
-			sbSql.append(qic).append("guiRefreshTime")   .append(qic).append(", ");
-			sbSql.append(qic).append("lcRefreshTime")    .append(qic).append("");
+			sbSql.append("insert into ").append(tabName)      .append(" (");
+			sbSql.append(qic).append("SessionStartTime")      .append(qic).append(", ");
+			sbSql.append(qic).append("SessionSampleTime")     .append(qic).append(", ");
+			sbSql.append(qic).append("CmName")                .append(qic).append(", ");
+			sbSql.append(qic).append("type")                  .append(qic).append(", ");
+			sbSql.append(qic).append("graphCount")            .append(qic).append(", ");
+			sbSql.append(qic).append("absRows")               .append(qic).append(", ");
+			sbSql.append(qic).append("diffRows")              .append(qic).append(", ");
+			sbSql.append(qic).append("rateRows")              .append(qic).append(", ");
+			sbSql.append(qic).append("sqlRefreshTime")        .append(qic).append(", ");
+			sbSql.append(qic).append("guiRefreshTime")        .append(qic).append(", ");
+			sbSql.append(qic).append("lcRefreshTime")         .append(qic).append(", ");
+			sbSql.append(qic).append("nonCfgMonHappened")     .append(qic).append(", ");
+			sbSql.append(qic).append("nonCfgMonMissingParams").append(qic).append(", ");
+			sbSql.append(qic).append("nonCfgMonMessages")     .append(qic).append(" ");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
 		else if (type == SESSION_MON_TAB_DICT)
 		{

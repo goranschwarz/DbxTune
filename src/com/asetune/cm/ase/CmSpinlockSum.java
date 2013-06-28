@@ -169,11 +169,13 @@ extends CountersModel
 		String datatype    = "numeric(12,0)"; 
 		String optGoalPlan = "";
 
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 		{
 			datatype    = "bigint";
 		}
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -261,13 +263,17 @@ extends CountersModel
 			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' "+restrictTmpSysmonitorsWhere+" \n" +
 			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' "+restrictTmpSysmonitorsWhere+" \n" +
 			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' "+restrictTmpSysmonitorsWhere+" \n";
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 			sqlCreateTmpSysmonitors =
 				"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
 				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' "+restrictTmpSysmonitorsWhere+" \n" +
 				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' "+restrictTmpSysmonitorsWhere+" \n" +
 				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' "+restrictTmpSysmonitorsWhere+" \n";
-
+		sqlCreateTmpSysmonitors += 
+			"-- A 'go' here will make the second batch optimize better \n" +
+			"go \n";
+		
 		String sqlDropTmpTabPWS   = 
 			"\n" +
 			"drop table #sysmonitorsP \n"+
@@ -392,10 +398,12 @@ extends CountersModel
 		//---------------------------------------------
 		String sqlInit = "DBCC traceon(3604) \n";
 
-		if (aseVersion < 12520)
+//		if (aseVersion < 12520)
+		if (aseVersion < 1252000)
 			sqlInit += "DBCC traceon(8399) \n";
 
-		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion < 15000) )
+//		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion < 15000) )
+		if (aseVersion >= 1502000 || (aseVersion >= 1254010 && aseVersion < 1500000) )
 		{
 			sqlInit = "set switch on 3604 with no_info \n";
 		}

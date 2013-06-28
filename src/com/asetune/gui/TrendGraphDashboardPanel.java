@@ -74,6 +74,7 @@ extends JPanel
 
 	// Used to launch WEB BROWSER
 	private Desktop            _desktop = null;
+	private boolean            _initialized = false;
 
 	public TrendGraphDashboardPanel()
 	{
@@ -89,6 +90,7 @@ extends JPanel
 		initComponentActions();
 		
 		setComponentVisibility();
+		_initialized = true;
 	}
 
 	private void setComponentVisibility()
@@ -452,8 +454,12 @@ extends JPanel
 		conf.setProperty("in-memory.history.in-sync-with-graph-history", str);
 
 		// Graph Order
-		str = StringUtil.toCommaStr(getGraphOrderStrList());
-		conf.setProperty("graph.order", str);
+		// Only save if we are initialized... otherwise we will overwrite the "graph.order"
+		if (_initialized)
+		{
+			str = StringUtil.toCommaStr(getGraphOrderStrList());
+			conf.setProperty("graph.order", str);
+		}
 
 		conf.save();
 	}
@@ -485,7 +491,6 @@ extends JPanel
 		boolean inMemHistoryEnabled = conf.getBooleanProperty(PROPKEY_inMemoryHistoryEnabled, DEFAULT_inMemoryHistoryEnabled);
 		setInMemHistoryEnable( inMemHistoryEnabled );
 
-		
 		// Graph Order
 		String str = conf.getProperty("graph.order", "");
 		_savedGraphNameOrder = StringUtil.parseCommaStrToList(str);
@@ -506,7 +511,7 @@ extends JPanel
 	}
 
 	/**
-	 * Set the order of the graphs, but do not modify if they shgould be visibale or not.
+	 * Set the order of the graphs, but do not modify if they should be visible or not.
 	 * @param newGraphOrder A collection of graph names
 	 */
 	public void setGraphOrder(Collection<String> newGraphOrder, boolean printWarnings)

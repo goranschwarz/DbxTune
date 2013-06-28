@@ -37,7 +37,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_REP_AGENT;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 12540;
+//	public static final int      NEED_SRV_VERSION = 12540;
+	public static final int      NEED_SRV_VERSION = 1254000;
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"sysmonitors"};

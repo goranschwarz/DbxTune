@@ -3,7 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/dsparser.jar"/>
-	<classpathentry kind="lib" path="lib/jconn3.jar"/>
 	<classpathentry kind="lib" path="lib/jtds-1.2.7.jar" sourcepath="3pp/jtds-1.2.7-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://jtds.sourceforge.net/doc/"/>
@@ -96,5 +95,6 @@
 			<attribute name="javadoc_location" value="http://antlr4.org/api/Java/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/jconn4.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

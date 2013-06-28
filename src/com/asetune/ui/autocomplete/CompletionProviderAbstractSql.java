@@ -315,8 +315,8 @@ extends CompletionProviderAbstract
 //		String nextWord1   = getRelativeWord(textArea,  1);
 //		String nextWord2   = getRelativeWord(textArea,  2);
 		String prevWord1   = getRelativeWord(textArea, -1);
-//		String prevWord2   = getRelativeWord(textArea, -2);
-//		String prevWord3   = getRelativeWord(textArea, -3);
+		String prevWord2   = getRelativeWord(textArea, -2);
+		String prevWord3   = getRelativeWord(textArea, -3);
 //		String prevWord4   = getRelativeWord(textArea, -4);
 
 //		System.out.println("-----------------------------------");
@@ -1513,11 +1513,19 @@ extends CompletionProviderAbstract
 		boolean normalChars = true;
 		for (int i=0; i<name.length(); i++)
 		{
-			if ( ! Character.isLetterOrDigit(name.charAt(i)) )
-			{
-				normalChars = false;
-				break;
-			}
+			char c = name.charAt(i);
+//			if ( ! Character.isLetterOrDigit(c) )
+//			{
+//				normalChars = false;
+//				break;
+//			}
+			// goto next character for any "allowed" characters
+			if ( Character.isLetterOrDigit(c) ) continue;
+			if ( c == '_' )                     continue;
+
+			// if any other chars, then break and signal "non-normal-char" detected
+			normalChars = false;
+			break;
 		}
 		return normalChars ? name : "["+name+"]"; 
 	}

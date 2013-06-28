@@ -56,9 +56,13 @@ implements ActionListener
 	private static final String NEED_VERSION_TOOLTIP = "<html>" + 
 	                                                      "Lowest ASE Version where this Counter Model works on.<br>" +
 	                                                      "Specify this as a number/integer.<br>" +
-	                                                      "Example 1: 15030, which is 15.0.3<br>" +
-	                                                      "Example 2: 15031, which is 15.0.3 ESD#1<br>" +
-	                                                      "Note: always use 5 digits as the version number. Or 0 if you mean 'any version'<br>" +
+//	                                                      "Example 1: 15030, which is 15.0.3<br>" +
+//	                                                      "Example 2: 15031, which is 15.0.3 ESD#1<br>" +
+	                                                      "Example 1: 1503000, which is 15.0.3<br>" +
+	                                                      "Example 2: 1503010, which is 15.0.3 ESD#1<br>" +
+	                                                      "Example 3: 1503042, which is 15.0.3 ESD#4.2<br>" +
+	                                                      "Example 4: 1570100, which is 15.7 SP100<br>" +
+	                                                      "Note: always use 7 digits as the version number. Or 0 if you mean 'any version'<br>" +
 	                                                  "</html>";
 
 	private static final String NEED_ROLE_DEFAULT   = "<mon_role, sa_role, xxx_role, ...>";
@@ -253,8 +257,8 @@ implements ActionListener
 					return "ASE Version needs to be a number."; 
 				}
 
-				if (aseVersionInt > 0 && aseVersionStr.length() != "15031".length())
-					return "ASE Version needs to be a number, Example 15031 (15.0.3 ESD#1).";
+				if (aseVersionInt > 0 && aseVersionStr.length() != "1503010".length())
+					return "ASE Version needs to be a number, Example 1503011 (15.0.3 ESD#1.1).";
 			}
 		}
 

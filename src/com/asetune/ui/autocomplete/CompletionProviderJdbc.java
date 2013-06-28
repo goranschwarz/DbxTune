@@ -22,7 +22,7 @@ extends CompletionProviderAbstractSql
 		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
-		AutoCompletion ac = new AutoCompletion(acProvider);
+		AutoCompletion ac = new SqlAutoCompletion(acProvider);
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
 //		ac.setChoicesWindowSize(600, 600);

@@ -186,7 +186,8 @@ extends CountersModel
 		String ClientApplName = "";
 		String ase1570_nl     = "";
 
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			HostName       = "P.HostName, ";
 			ClientName     = "P.ClientName, ";
@@ -196,7 +197,8 @@ extends CountersModel
 		}
 
 		String optGoalPlan = "";
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -207,7 +209,8 @@ extends CountersModel
 		}
 
 		String dbNameCol  = "dbname=db_name(S.DBID)";
-		if (aseVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
+//		if (aseVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
+		if (aseVersion >= 1502060) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
 		{
 			dbNameCol  = "dbname=S.DBName";
 		}
@@ -238,7 +241,8 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null)";
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 			cols2 += "S.RowsAffected, " +
 			         "tempdb_name = db_name(tempdb_id(S.SPID)), \n" +
@@ -249,7 +253,8 @@ extends CountersModel
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "S.SPID != @@spid";
 //		if (aseVersion >= 12540 && aseVersion <= 15000)
-		if (aseVersion < 15000)
+//		if (aseVersion < 15000)
+		if (aseVersion < 1500000)
 		{
 			whereSpidNotMe = "S.SPID != convert(int,@@spid)";
 		}
@@ -275,7 +280,8 @@ extends CountersModel
 		}
 
 		dbNameCol  = "dbname=db_name(P.DBID)";
-		if (aseVersion >= 15020) // just a guess what release this was introduced. 15020 is OK
+//		if (aseVersion >= 15020) // just a guess what release this was introduced. 15020 is OK
+		if (aseVersion >= 1502000) // just a guess what release this was introduced. 15020 is OK
 		{
 			dbNameCol  = "dbname=P.DBName";
 		}
@@ -306,7 +312,8 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null)";
-		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 			cols2 += "RowsAffected=-1, " +
 			         "tempdb_name = db_name(tempdb_id(P.SPID)), \n" +

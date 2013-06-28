@@ -167,7 +167,8 @@ extends CountersModel
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 			pkCols.add("PartitionID");
 
 		pkCols.add("CacheID");
@@ -204,7 +205,8 @@ extends CountersModel
 
 		String TableCachedPct    = "";
 		String TotalSizeKB_where = "";
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 		{
 			TableCachedPct    = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
 			TotalSizeKB_where = "  and M.TotalSizeKB > 0 \n";
@@ -215,10 +217,12 @@ extends CountersModel
 		cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, "+TableCachedPct+"M.CacheName, M.CacheID, \n" +
 		         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
 
-		if (aseVersion >= 15504) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+//		if (aseVersion >= 15504) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+		if (aseVersion >= 1550040) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
 			cols2 += "M.ProcessesAccessing, \n";
 
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 			cols2 += "M.PartitionID, M.PartitionName, M.TotalSizeKB, TotalSizeKBDiff=M.TotalSizeKB, \n";
 
 		String sql = 

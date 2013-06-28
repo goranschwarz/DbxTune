@@ -54,6 +54,10 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"LockWaits", "CheckPoints", "NumDeadlocks", "Connections", "Transactions", 
+		"Rollbacks", "Selects", "Updates", "Inserts", "Deletes", "Merges",              // new in 15.7 SP100
+		"TableAccesses", "IndexAccesses", "TempDbObjects", "WorkTables",                // new in 15.7 SP100
+		"ULCFlushes", "ULCFlushFull", "ULCKBWritten",                                   // new in 15.7 SP100
+		"PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites", "LogicalReads", // new in 15.7 SP100 
         "cpu_busy", "cpu_io", "cpu_idle", "io_total_read", "io_total_write", 
         "aaConnections", "distinctLogins", 
         "pack_received", "pack_sent", "packet_errors", "total_errors"};
@@ -98,7 +102,7 @@ extends CountersModel
 		counterController.setSummaryCm(this);
 		
 		addTrendGraphs();
-		
+
 		CounterSetTemplates.register(this);
 	}
 
@@ -107,25 +111,48 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
-	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__TRANSACTION;
 	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
 	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
 
+	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";               // Transactions, Rollbacks
+	public static final String GRAPH_NAME_SELECT_OPERATIONS  = "SelectOperationsGraph";    // Selects
+	public static final String GRAPH_NAME_IUDM_OPERATIONS    = "IudmOperationsGraph";      // Inserts, Updates, Deletes, Merges
+	public static final String GRAPH_NAME_TAB_IND_ACCESS     = "TabIndAccessGraph";        // TableAccesses, IndexAccesses
+	public static final String GRAPH_NAME_TEMPDB_ACCESS      = "TempdbAccessGraph";        // TempDbObjects, WorkTables
+	public static final String GRAPH_NAME_ULC                = "UlcGraph";                 // ULCFlushes, ULCFlushFull, ULCKBWritten
+	public static final String GRAPH_NAME_IO_RW              = "IoRwGraph";                // PagesRead, PagesWritten, PhysicalReads, PhysicalWrites
+	public static final String GRAPH_NAME_LOGICAL_READ       = "LogicalReadGraph";         // LogicalReads
+
 	private void addTrendGraphs()
 	{
-		String[] labels_aaCpu         = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-		String[] labels_transaction   = new String[] { "Transactions" };
-		String[] labels_blockingLocks = new String[] { "Blocking Locks" };
-		String[] labels_connection    = new String[] { "UserConnections", "distinctLogins", "@@connections" };
-		String[] labels_aaDiskRW      = new String[] { "@@total_read", "@@total_write" };
-		String[] labels_aaNwPacket    = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-		String[] labels_openTran      = new String[] { "Seconds" };
+		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
+		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
+		String[] labels_connection       = new String[] { "UserConnections", "distinctLogins", "@@connections" };
+		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
+		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+		String[] labels_openTran         = new String[] { "Seconds" };
+
+		String[] labels_transaction      = new String[] { "Transactions", "Rollbacks" };
+		String[] labels_selectOperations = new String[] { "Selects" };
+		String[] labels_iudmOperations   = new String[] { "Inserts", "Updates", "Deletes", "Merges" };
+		String[] labels_tabIndAccess     = new String[] { "TableAccesses", "IndexAccesses" };
+		String[] labels_tempdbAccess     = new String[] { "TempDbObjects", "WorkTables" };
+		String[] labels_ulc              = new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" };
+		String[] labels_ioRw             = new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" };
+		String[] labels_logicalReads     = new String[] { "LogicalReads" };
 		
 		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu));
 		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
+		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations));
+		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations));
+		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess));
+		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess));
+		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc));
+		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw));
+		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads));
 		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
 		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
 		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
@@ -149,18 +176,95 @@ extends CountersModel
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
-				"Transaction per second", 	                                         // Menu CheckBox text
-				"Number of Transaction per Second (only in 15.0.3 esd#3 and later)", // Label 
+				"ASE Operations - Transaction per second",                         // Menu CheckBox text
+				"ASE Operations - Transaction per Second (15.0.3 esd#3 or above)", // Label 
 				labels_transaction, 
-				false, // is Percent Graph
+				false,   // is Percent Graph
 				this, 
-				false, // visible at start
-				15033, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
+				false,   // visible at start
+				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
+				"ASE Operations - Selects per second", 	                     // Menu CheckBox text
+				"ASE Operations - Selects per Second (15.7 SP100 or above)", // Label 
+				labels_selectOperations, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
+				"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
+				"ASE Operations - Ins/Upd/Del/Merge per Second (15.7 SP100 or above)", // Label 
+				labels_iudmOperations, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
+				"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
+				"ASE Operations - Table/Index Access per Second (15.7 SP100 or above)", // Label 
+				labels_tabIndAccess, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
+				"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
+				"ASE Operations - Tempdb Objects and Work Tables per Second (15.7 SP100 or above)", // Label 
+				labels_tempdbAccess, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_ULC,
+				"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
+				"ASE Operations - User Log Cache Information per Second (15.7 SP100 or above)", // Label 
+				labels_ulc, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_IO_RW,
+				"ASE Operations - IO's per second", 	                  // Menu CheckBox text
+				"ASE Operations - IO's per Second (15.7 SP100 or above)", // Label 
+				labels_ioRw, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_LOGICAL_READ,
+				"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
+				"ASE Operations - Logical Reads per Second (15.7 SP100 or above)", // Label 
+				labels_logicalReads, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-				"Blocking Locks", 	                  // Menu CheckBox text
+				"Blocking Locks", 	                                     // Menu CheckBox text
 				"Number of Concurrently Blocking Locks (from monState)", // Label 
 				labels_blockingLocks, 
 				false, // is Percent Graph
@@ -279,6 +383,15 @@ extends CountersModel
 		else
 			nwAddrInfo = "'tcp listeners goes here, if we are connected'";
 
+		
+		// Allow This CM to read monState even if 'enable monitoring' is turned off...
+		setNonConfiguredMonitoringAllowed(false); // to reset this if we disconnects from SP100, and connects to a lower version
+		if (aseVersion >= 1570100)
+		{
+			setNonConfiguredMonitoringAllowed(true);
+		}
+
+
 		//
 		// Compose SQL for fullTranslogCount
 		// If user has 'mon_role' and 'enable monitoring' has been configured, get the value from monOpenDatabases
@@ -337,6 +450,28 @@ extends CountersModel
 			cols1 += ", Transactions        = sum(Transactions) \n";
 			cols1 += ", StartDate           = min(StartDate) \n";
 			cols1 += ", CountersCleared     = max(CountersCleared) \n";
+			
+			if (aseVersion >= 1570100)
+			{
+				cols1 += ", Rollbacks          = sum(Rollbacks) \n";	
+				cols1 += ", Selects            = sum(Selects) \n";
+				cols1 += ", Updates            = sum(Updates) \n";
+				cols1 += ", Inserts            = sum(Inserts) \n";
+				cols1 += ", Deletes            = sum(Deletes) \n";
+				cols1 += ", Merges             = sum(Merges) \n";
+				cols1 += ", TableAccesses      = sum(TableAccesses) \n";
+				cols1 += ", IndexAccesses      = sum(IndexAccesses) \n";
+				cols1 += ", TempDbObjects      = sum(TempDbObjects) \n";
+				cols1 += ", WorkTables         = sum(WorkTables) \n";
+				cols1 += ", ULCFlushes         = sum(ULCFlushes) \n";
+				cols1 += ", ULCFlushFull       = sum(ULCFlushFull) \n";
+				cols1 += ", ULCKBWritten       = sum(ULCKBWritten) \n";
+				cols1 += ", PagesRead          = sum(PagesRead) \n";
+				cols1 += ", PagesWritten       = sum(PagesWritten) \n";
+				cols1 += ", PhysicalReads      = sum(PhysicalReads) \n";
+				cols1 += ", PhysicalWrites     = sum(PhysicalWrites) \n";
+				cols1 += ", LogicalReads       = sum(LogicalReads) \n";
+			}
 		}
 
 		cols2 = ", aseVersion         = @@version \n" +
@@ -348,7 +483,8 @@ extends CountersModel
 				", asePageSize        = @@maxpagesize \n" +
 
 				", bootcount          = @@bootcount \n" + // from 12.5.0.3
-				", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+//				", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+				", recovery_state     = "+ (aseVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
 
 				", cpu_busy           = @@cpu_busy \n" +
 				", cpu_io             = @@io_busy \n" +
@@ -429,6 +565,25 @@ extends CountersModel
 		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
 		{
 			checkAndSetNc20(counters, rowId, "Transactions");
+			checkAndSetNc20(counters, rowId, "Rollbacks");
+			checkAndSetNc20(counters, rowId, "Selects");
+			checkAndSetNc20(counters, rowId, "Updates");
+			checkAndSetNc20(counters, rowId, "Inserts");
+			checkAndSetNc20(counters, rowId, "Deletes");
+			checkAndSetNc20(counters, rowId, "Merges");
+			checkAndSetNc20(counters, rowId, "TableAccesses");
+			checkAndSetNc20(counters, rowId, "IndexAccesses");
+			checkAndSetNc20(counters, rowId, "TempDbObjects");
+			checkAndSetNc20(counters, rowId, "WorkTables");
+			checkAndSetNc20(counters, rowId, "ULCFlushes");
+			checkAndSetNc20(counters, rowId, "ULCFlushFull");
+			checkAndSetNc20(counters, rowId, "ULCKBWritten");
+			checkAndSetNc20(counters, rowId, "PagesRead");
+			checkAndSetNc20(counters, rowId, "PagesWritten");
+			checkAndSetNc20(counters, rowId, "PhysicalReads");
+			checkAndSetNc20(counters, rowId, "PhysicalWrites");
+			checkAndSetNc20(counters, rowId, "LogicalReads");
+			
 			checkAndSetNc20(counters, rowId, "io_total_read");
 			checkAndSetNc20(counters, rowId, "io_total_write");
 			checkAndSetNc20(counters, rowId, "pack_received");
@@ -459,6 +614,9 @@ extends CountersModel
 	{
 		int aseVersion = getServerVersion();
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_AA_CPU.equals(tgdp.getName()))
 		{
 			// FIXME: in ASE 15.7 threaded mode, the @@cpu_io seems to use the DiskController Thread for all engines...
@@ -497,15 +655,17 @@ extends CountersModel
 			}
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_TRANSACTION.equals(tgdp.getName()))
 		{
-			int tranPos = -1;
+			int transactions_pos = -1;
 			if (getCounterDataAbs() != null)
-				tranPos = getCounterDataAbs().findColumn("Transactions");
+				transactions_pos = getCounterDataAbs().findColumn("Transactions");
 			
-			// if you don't have 'mon_role', the column 'Transactions' is not part of the 
-			// resultset even if we are above 15.0.3 ESD#3
-			if ( aseVersion < 15033 || tranPos == -1 )
+			// if you don't have 'mon_role', the column 'Transactions' is not part of the result set even if we are above 15.0.3 ESD#3
+			if ( aseVersion < 1503030 || transactions_pos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TRANSACTION);
@@ -518,10 +678,63 @@ extends CountersModel
 			}
 			else
 			{
+				if ( aseVersion >= 1570100 )
+				{
+					Double[] dArray = new Double[2];
+					String[] lArray = new String[] { "Transactions", "Rollbacks" };
+
+					dArray[0] = this.getRateValueSum("Transactions");
+					dArray[1] = this.getRateValueSum("Rollbacks");
+					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(lArray);
+					tgdp.setData(dArray);
+				}
+				else
+				{
+					Double[] dArray = new Double[1];
+					String[] lArray = new String[] { "Transactions" };
+
+					dArray[0] = this.getRateValueSum("Transactions");
+					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"'.");
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(lArray);
+					tgdp.setData(dArray);
+				}
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_SELECT_OPERATIONS.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("Selects");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_SELECT_OPERATIONS);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
 				Double[] arr = new Double[1];
 
-				arr[0] = this.getRateValueSum("Transactions");
-				_logger.debug("updateGraphData(TransGraph): Transactions='"+arr[0]+"'.");
+				arr[0] = this.getRateValueSum("Selects");
+				_logger.debug("updateGraphData("+GRAPH_NAME_SELECT_OPERATIONS+"): Selects='"+arr[0]+"'.");
 
 				// Set the values
 				tgdp.setDate(this.getTimestamp());
@@ -529,6 +742,223 @@ extends CountersModel
 			}
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_IUDM_OPERATIONS.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("Inserts");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_IUDM_OPERATIONS);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[4];
+
+				arr[0] = this.getRateValueSum("Inserts");
+				arr[1] = this.getRateValueSum("Updates");
+				arr[2] = this.getRateValueSum("Deletes");
+				arr[3] = this.getRateValueSum("Merges");
+				_logger.debug("updateGraphData("+GRAPH_NAME_IUDM_OPERATIONS+"): Inserts='"+arr[0]+"', Updates='"+arr[1]+"', Deletes='"+arr[2]+"', Merges='"+arr[3]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TAB_IND_ACCESS.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("TableAccesses");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_TAB_IND_ACCESS);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[2];
+
+				arr[0] = this.getRateValueSum("TableAccesses");
+				arr[1] = this.getRateValueSum("IndexAccesses");
+				_logger.debug("updateGraphData("+GRAPH_NAME_TAB_IND_ACCESS+"): TableAccesses='"+arr[0]+"', IndexAccesses='"+arr[1]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TEMPDB_ACCESS.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("TempDbObjects");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_TEMPDB_ACCESS);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[2];
+
+				arr[0] = this.getRateValueSum("TempDbObjects");
+				arr[1] = this.getRateValueSum("WorkTables");
+				_logger.debug("updateGraphData("+GRAPH_NAME_TEMPDB_ACCESS+"): TempDbObjects='"+arr[0]+"', WorkTables='"+arr[1]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_ULC.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("ULCFlushes");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_ULC);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[3];
+
+				arr[0] = this.getRateValueSum("ULCFlushes");
+				arr[1] = this.getRateValueSum("ULCFlushFull");
+				arr[2] = this.getRateValueSum("ULCKBWritten");
+				_logger.debug("updateGraphData("+GRAPH_NAME_ULC+"): ULCFlushes='"+arr[0]+"', ULCFlushFull='"+arr[1]+"', ULCKBWritten='"+arr[2]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_IO_RW.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("PagesRead");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_IO_RW);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[4];
+
+				arr[0] = this.getRateValueSum("PagesRead");
+				arr[1] = this.getRateValueSum("PagesWritten");
+				arr[2] = this.getRateValueSum("PhysicalReads");
+				arr[3] = this.getRateValueSum("PhysicalWrites");
+				_logger.debug("updateGraphData("+GRAPH_NAME_IO_RW+"): PagesRead='"+arr[0]+"', PagesWritten='"+arr[1]+"', PhysicalReads='"+arr[2]+"', PhysicalWrites='"+arr[3]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_LOGICAL_READ.equals(tgdp.getName()))
+		{
+			int col_pos = -1;
+			if (getCounterDataAbs() != null)
+				col_pos = getCounterDataAbs().findColumn("LogicalReads");
+			
+			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
+			if ( aseVersion < 1570100 || col_pos == -1 )
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_LOGICAL_READ);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				Double[] arr = new Double[1];
+
+				arr[0] = this.getRateValueSum("LogicalReads");
+				_logger.debug("updateGraphData("+GRAPH_NAME_LOGICAL_READ+"): LogicalReads='"+arr[0]+"'.");
+
+				// Set the values
+				tgdp.setDate(this.getTimestamp());
+				tgdp.setData(arr);
+			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_BLOCKING_LOCKS.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[1];
@@ -541,6 +971,9 @@ extends CountersModel
 			tgdp.setData(arr);
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_CONNECTION.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[3];
@@ -555,6 +988,9 @@ extends CountersModel
 			tgdp.setData(arr);
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_AA_DISK_READ_WRITE.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[2];
@@ -568,6 +1004,9 @@ extends CountersModel
 			tgdp.setData(arr);
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_AA_NW_PACKET.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[3];
@@ -582,6 +1021,9 @@ extends CountersModel
 			tgdp.setData(arr);
 		}
 
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
 		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[1];

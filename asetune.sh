@@ -50,8 +50,8 @@ export SPLASH=-splash:${javaSplashScreen}
 
 export CLASSPATH=${APPL_HOME}/classes
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.2.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
@@ -99,6 +99,18 @@ then
 	
 	exit 1
 fi
+
+#------------------------------------------------------------------------
+#--- Parse some command line parameters
+#--- - reset SPLASH if we have -noGui command line switch
+#------------------------------------------------------------------------
+for arg in "$@"
+do
+	case "$arg" in
+	-n*)      export SPLASH="";;
+	--noGui*) export SPLASH="";;
+	esac
+done
 
 #------------------------------------------------------------------------
 #--- SET memory parameters, if 64 bit java: add more memory

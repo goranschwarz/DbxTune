@@ -162,7 +162,8 @@ extends CountersModel
 		cols1 = cols2 = cols3 = "";
 
 		String ThreadID = "";
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			ThreadID = "ThreadID, ";
 		}
@@ -176,7 +177,8 @@ extends CountersModel
 		String HkgcPendingItemsDcomp = "";
 		String HkgcOverflowsDcomp    = "";
 		String nl_15701              = "";
-		if (aseVersion >= 15701)
+//		if (aseVersion >= 15701)
+		if (aseVersion >= 1570010)
 		{
 			HkgcPendingItemsDcomp = "HkgcPendingItemsDcomp, ";
 			HkgcOverflowsDcomp    = "HkgcOverflowsDcomp, ";
@@ -184,22 +186,26 @@ extends CountersModel
 		}
 		
 		cols1 += "EngineNumber, CurrentKPID, PreviousKPID, CPUTime, SystemCPUTime, UserCPUTime, \n";
-		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
+//		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
+		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
 			cols1 += "IOCPUTime, ";
 		cols1 += "IdleCPUTime, ContextSwitches, Connections, \n";
 
 		cols2 += "";
 		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, "+ThreadID+"OSPID";
 
-		if (aseVersion >= 12532)
+//		if (aseVersion >= 12532)
+		if (aseVersion >= 1253020)
 		{
 			cols2 += "Yields, DiskIOChecks, DiskIOPolled, DiskIOCompleted, \n";
 		}
-		if (aseVersion >= 15025)
+//		if (aseVersion >= 15025)
+		if (aseVersion >= 1502050)
 		{
 			cols2 += "MaxOutstandingIOs, ";
 		}
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 		{
 			cols2 += "HkgcMaxQSize, HkgcPendingItems, HkgcHWMItems, HkgcOverflows, \n";
 		}
@@ -228,7 +234,8 @@ extends CountersModel
 		{
 			Double[] dataArray  = new Double[3];
 			String[] labelArray = new String[3];
-			if (aseVersion >= 15500)
+//			if (aseVersion >= 15500)
+			if (aseVersion >= 1550000)
 			{
 				dataArray  = new Double[4];
 				labelArray = new String[4];
@@ -242,7 +249,8 @@ extends CountersModel
 			dataArray[1] = this.getDiffValueAvg("SystemCPUTime");
 			dataArray[2] = this.getDiffValueAvg("UserCPUTime");
 
-			if (aseVersion >= 15500)
+//			if (aseVersion >= 15500)
+			if (aseVersion >= 1550000)
 			{
 				labelArray[0] = "System+User+IO CPU";
 
@@ -267,7 +275,8 @@ extends CountersModel
 		if (GRAPH_NAME_CPU_ENG.equals(tgdp.getName()))
 		{
 			// Set label on the TrendGraph if we are above 15.5
-			if (aseVersion >= 15500)
+//			if (aseVersion >= 15500)
+			if (aseVersion >= 1550000)
 			{
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
@@ -337,7 +346,8 @@ extends CountersModel
 			IdleCPUTime =   ((Number)diffData.getValueAt(rowId, IdleCPUTimeId  )).intValue();
 
 			IOCPUTime = 0;
-			if (aseVersion >= 15500)
+//			if (aseVersion >= 15500)
+			if (aseVersion >= 1550000)
 			{
 				IOCPUTime =   ((Number)diffData.getValueAt(rowId, IOCPUTimeId  )).intValue();
 			}
@@ -378,7 +388,8 @@ extends CountersModel
 			diffData.setValueAt(calcUserCPUTime,   rowId, UserCPUTimeId   );
 			diffData.setValueAt(calcIdleCPUTime,   rowId, IdleCPUTimeId   );
 	
-			if (aseVersion >= 15500)
+//			if (aseVersion >= 15500)
+			if (aseVersion >= 1550000)
 			{
 				diffData.setValueAt(calcIoCPUTime, rowId, IOCPUTimeId);
 			}

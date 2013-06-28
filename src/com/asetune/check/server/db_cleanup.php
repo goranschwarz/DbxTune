@@ -23,6 +23,8 @@
 <BODY>
 
 <?php
+	require("gorans_functions.php");
+
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	//------------------------------------------
@@ -265,6 +267,19 @@
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
 //");
+
+		// FIX VERSION for INT columns
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 1000000 AND srvVersion > 0");
+//		doCleanup("update asemon_mda_info         set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 1000000 AND srvVersion > 0");
+
+		// FIX VERSION for CHAR columns
+//		doCleanup("update asemon_error_info       set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+//		doCleanup("update asemon_error_info2      set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+//		doCleanup("update asemon_error_info_save  set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+
+        // FIX offline-read settings...
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = -1   WHERE srvVersion < 0");
+
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
 	else if ( $doAction == "check" )

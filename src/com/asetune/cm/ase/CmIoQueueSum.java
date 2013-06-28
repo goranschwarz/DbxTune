@@ -168,7 +168,8 @@ extends CountersModel
 		         "  THEN convert(numeric(18,1), sum(convert(numeric(18,0), IOTime))/sum(convert(numeric(18,0), IOs))) \n" +
 		         "  ELSE convert(numeric(18,1), null) \n" +
 		         "END";
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 		}
 

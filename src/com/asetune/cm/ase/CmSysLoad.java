@@ -39,8 +39,10 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 15500;
-	public static final int      NEED_CE_VERSION  = 15020;
+//	public static final int      NEED_SRV_VERSION = 15500;
+	public static final int      NEED_SRV_VERSION = 1550000;
+//	public static final int      NEED_CE_VERSION  = 15020;
+	public static final int      NEED_CE_VERSION  = 1502000;
 
 	public static final String[] MON_TABLES       = new String[] {"monSysLoad"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -183,7 +185,8 @@ extends CountersModel
 		
 		// in ASE 15.7, we get problems if we do the order by
 		// com.sybase.jdbc3.jdbc.SybSQLException: Domain error occurred.
-		if (aseVersion < 15700)
+//		if (aseVersion < 15700)
+		if (aseVersion < 1570000)
 			sql += "order by StatisticID, EngineNumber" + (isClusterEnabled ? ", InstanceID" : "");
 
 		return sql;
@@ -196,7 +199,8 @@ extends CountersModel
 
 		if (GRAPH_NAME_AVG_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 		{
-			if (aseVersion < 15500)
+//			if (aseVersion < 15500)
+			if (aseVersion < 1550000)
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
@@ -231,7 +235,8 @@ extends CountersModel
 
 		if (GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 		{
-			if (aseVersion < 15500)
+//			if (aseVersion < 15500)
+			if (aseVersion < 1550000)
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH);

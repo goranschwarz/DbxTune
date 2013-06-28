@@ -27,7 +27,7 @@
 	$clientTime    = getUrlParam('clientTime');
 	$userName      = getUrlParam('userName');
 
-	$srvVersion    = getUrlParam('srvVersion');
+	$srvVersion    = versionFix(getUrlParam('srvVersion'));
 	$appVersion    = getUrlParam('appVersion');
 
 	$logLevel      = getUrlParam('logLevel');
@@ -58,13 +58,13 @@
 	if (    strpos($logStacktrace, "java.sql.SQLException: JZ006:", 0) === 0                                   // Caught IOException: java.net.SocketTimeoutException: Read timed out
 	     || strpos($logStacktrace, "java.sql.SQLException: JZ0C0:", 0) === 0                                   // java.sql.SQLException: JZ0C0: Connection is already closed
 	     || strpos($logStacktrace, "com.sybase.jdbc3.jdbc.SybSQLException: ERROR: Found NO database", 0) === 0 // com.sybase.jdbc3.jdbc.SybSQLException: ERROR: Found NO database that was marked for replication
-	   ) 
+	   )
 	{
 		$toTableName = "asemon_error_info2";
 	}
-	
 
-	$sql = "insert into $toTableName 
+
+	$sql = "insert into $toTableName
 	(
 		checkId,
 		sendCounter,

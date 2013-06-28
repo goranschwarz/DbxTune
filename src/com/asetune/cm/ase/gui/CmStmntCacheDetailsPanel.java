@@ -154,7 +154,8 @@ extends TabularCntrPanel
 		if (cm != null)
 		{
 			boolean enabled = false;
-			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 15700)
+//			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 15700)
+			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 1570000)
 				enabled = true;
 
 			sampleXmlPlan_chk.setEnabled(enabled);

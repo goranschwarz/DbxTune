@@ -1,53 +1,55 @@
 <?php
-	//----------------------------------------
-	// FUNCTION: get params from POST or GET
-	//----------------------------------------
-	function getUrlParam($param, $debug='false')
-	{
-		if(!empty($_POST))
-		{
-			$val = $_POST[$param];
-		}
-		else if(!empty($_GET))
-		{
-			$val = urldecode($_GET[$param]);
-		}
-		if ( $debug == "true" )
-			echo "DEBUG: getUrlParam='$param', val='$val'.\n";
+	require("gorans_functions.php");
 
-		return $val;
-	}
-	//----------------------------------------
-	// FUNCTION: get POST or GET
-	//----------------------------------------
-	function getDataArray()
-	{
-		if(!empty($_POST))
-		{
-			return $_POST;
-		}
-		else if(!empty($_GET))
-		{
-			return $_GET;
-		}
-		return array();
-	}
-	//----------------------------------------
-	// FUNCTION: toSqlNumber
-	//----------------------------------------
-	function toSqlNumber($input)
-	{
-		if ($input == "")
-			return "NULL";
-		return $input;
-	}
-	// FUNCTION: toSqlStr
-	function toSqlStr($input)
-	{
-		if ($input == "")
-			return "NULL";
-		return "'" . mysql_real_escape_string($input) . "'";
-	}
+//	//----------------------------------------
+//	// FUNCTION: get params from POST or GET
+//	//----------------------------------------
+//	function getUrlParam($param, $debug='false')
+//	{
+//		if(!empty($_POST))
+//		{
+//			$val = $_POST[$param];
+//		}
+//		else if(!empty($_GET))
+//		{
+//			$val = urldecode($_GET[$param]);
+//		}
+//		if ( $debug == "true" )
+//			echo "DEBUG: getUrlParam='$param', val='$val'.\n";
+//
+//		return $val;
+//	}
+//	//----------------------------------------
+//	// FUNCTION: get POST or GET
+//	//----------------------------------------
+//	function getDataArray()
+//	{
+//		if(!empty($_POST))
+//		{
+//			return $_POST;
+//		}
+//		else if(!empty($_GET))
+//		{
+//			return $_GET;
+//		}
+//		return array();
+//	}
+//	//----------------------------------------
+//	// FUNCTION: toSqlNumber
+//	//----------------------------------------
+//	function toSqlNumber($input)
+//	{
+//		if ($input == "")
+//			return "NULL";
+//		return $input;
+//	}
+//	// FUNCTION: toSqlStr
+//	function toSqlStr($input)
+//	{
+//		if ($input == "")
+//			return "NULL";
+//		return "'" . mysql_real_escape_string($input) . "'";
+//	}
 
 
 	//------------------------------------------
@@ -60,7 +62,8 @@
 	$clientTime         = getUrlParam('clientTime');
 	$userName           = getUrlParam('userName');
 
-	$srvVersion         = getUrlParam('srvVersion');
+	$srvVersion         = versionFix(getUrlParam('srvVersion'));
+//	$srvVersion         = getUrlParam('srvVersion');
 	$isClusterEnabled   = getUrlParam('isClusterEnabled');
 
 	$expectedRows       = getUrlParam('expectedRows');

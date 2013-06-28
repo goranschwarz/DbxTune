@@ -65,6 +65,7 @@ implements ActionListener, ConnectionProvider
 	private AseConfigTextPanel     _aseConfigSpVersionPanel          = new AseConfigTextPanel(this, ConfigType.AseSpVersion);
 	private AseConfigTextPanel     _aseConfigShmDumpCfgPanel         = new AseConfigTextPanel(this, ConfigType.AseShmDumpConfig);
 	private AseConfigTextPanel     _aseConfigMonitorCfgPanel         = new AseConfigTextPanel(this, ConfigType.AseMonitorConfig);
+	private AseConfigTextPanel     _aseConfigHelpSortPanel           = new AseConfigTextPanel(this, ConfigType.AseHelpSort);
 	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseLicenseInfo);
 	private AseConfigTextPanel     _aseConfigClusterInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseClusterInfo);
 	
@@ -177,6 +178,8 @@ implements ActionListener, ConnectionProvider
 		panel.setLayout(new MigLayout("insets 0, wrap 1","",""));   // insets Top Left Bottom Right
 
 		//JTabbedPane tabPane = new JTabbedPane();
+		_tabPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+
 		_tabPane.add("ASE Config",       _aseConfigPanel);
 		_tabPane.add("Cache Config",     _aseConfigCachePanel);
 		_tabPane.add("Thread Pools",     _aseConfigThreadPoolPanel);
@@ -189,6 +192,7 @@ implements ActionListener, ConnectionProvider
 		_tabPane.add("sp_version",       _aseConfigSpVersionPanel);
 		_tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
 		_tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
+		_tabPane.add("sp_helpsort",      _aseConfigHelpSortPanel);
 		_tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
 		_tabPane.add("Cluster Info",     _aseConfigClusterInfoPanel);
 

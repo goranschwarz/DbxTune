@@ -1,14 +1,26 @@
 package com.asetune.ssh;
 
+import java.awt.BorderLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import javax.swing.BoxLayout;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+
 import org.apache.log4j.Logger;
 
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Connection;
+import ch.ethz.ssh2.InteractiveCallback;
 import ch.ethz.ssh2.LocalPortForwarder;
 import ch.ethz.ssh2.Session;
 import ch.ethz.ssh2.StreamGobbler;
@@ -111,7 +123,8 @@ public class SshConnection
 		_conn.connect();
 
 		// Authenticate
-		_isAuthenticated = _conn.authenticateWithPassword(_username, _password);
+//		_isAuthenticated = _conn.authenticateWithPassword(_username, _password);
+		_isAuthenticated = authenticate();
 
 		// Get out of here, if not successful authentication
 		if (_isAuthenticated == false)
@@ -126,6 +139,278 @@ public class SshConnection
 		_isConnected = true;
 		return true;
 	}
+	
+	private boolean authenticate()
+	throws IOException
+	{
+//		final String knownHostPath = "~/.ssh/known_hosts";
+//		final String idDSAPath     = "~/.ssh/id_dsa";
+//		final String idRSAPath     = "~/.ssh/id_rsa";
+
+		boolean enableKeyboardInteractive = true;
+//		boolean enableDSA = true;
+//		boolean enableRSA = true;
+
+		String lastError = null;
+
+		while (true)
+		{
+//			if ((enableDSA || enableRSA) && _conn.isAuthMethodAvailable(_username, "publickey"))
+//			{
+//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(publickey) == TRUE");
+//				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(publickey) == TRUE");
+//
+//				if (enableDSA)
+//				{
+//					File key = new File(idDSAPath);
+//
+//					if (key.exists())
+//					{
+//						EnterSomethingDialog esd = new EnterSomethingDialog(null, "DSA Authentication",
+//								new String[] { lastError, "Enter DSA private key password:" }, true);
+//						esd.setVisible(true);
+//
+//System.out.println("SSH-authenticate-DO: authenticateWithPublicKey:DSA");
+//						_logger.debug("SSH-authenticate-DO: authenticateWithPublicKey:DSA");
+//						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
+//
+//						if (res == true)
+//							break;
+//
+//						lastError = "DSA authentication failed.";
+//					}
+//					enableDSA = false; // do not try again
+//				}
+//
+//				if (enableRSA)
+//				{
+//					File key = new File(idRSAPath);
+//
+//					if (key.exists())
+//					{
+//						EnterSomethingDialog esd = new EnterSomethingDialog(null, "RSA Authentication",
+//								new String[] { lastError, "Enter RSA private key password:" }, true);
+//						esd.setVisible(true);
+//
+//System.out.println("SSH-authenticate-DO: authenticateWithPublicKey:RSA");
+//						_logger.debug("SSH-authenticate-DO: authenticateWithPublicKey:RSA");
+//						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
+//
+//						if (res == true)
+//							break;
+//
+//						lastError = "RSA authentication failed.";
+//					}
+//					enableRSA = false; // do not try again
+//				}
+//
+//				continue;
+//			}
+
+			if (enableKeyboardInteractive && _conn.isAuthMethodAvailable(_username, "keyboard-interactive"))
+			{
+//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(keyboard-interactive) == TRUE");
+				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(keyboard-interactive) == TRUE");
+				InteractiveLogic il = new InteractiveLogic(lastError);
+
+//System.out.println("SSH-authenticate-DO: authenticateWithKeyboardInteractive");
+				_logger.debug("SSH-authenticate-DO: authenticateWithKeyboardInteractive");
+				boolean res = _conn.authenticateWithKeyboardInteractive(_username, il);
+
+				if (res == true)
+					break;
+
+				if (il.getPromptCount() == 0)
+				{
+					// aha. the server announced that it supports "keyboard-interactive", but when
+					// we asked for it, it just denied the request without sending us any prompt.
+					// That happens with some server versions/configurations.
+					// We just disable the "keyboard-interactive" method and notify the user.
+
+					lastError = "Keyboard-interactive does not work.";
+
+					enableKeyboardInteractive = false; // do not try this again
+				}
+				else
+				{
+					lastError = "Keyboard-interactive auth failed."; // try again, if possible
+				}
+
+				continue;
+			}
+
+			if (_conn.isAuthMethodAvailable(_username, "password"))
+			{
+//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(password) == TRUE");
+				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(password) == TRUE");
+//				final EnterSomethingDialog esd = new EnterSomethingDialog(loginFrame,
+//						"Password Authentication",
+//						new String[] { lastError, "Enter password for " + _username }, true);
+//
+//				esd.setVisible(true);
+//
+//				if (esd.answer == null)
+//					throw new IOException("Login aborted by user");
+//
+//				boolean res = _conn.authenticateWithPassword(_username, esd.answer);
+
+//System.out.println("SSH-authenticate-DO: authenticateWithPassword");
+				_logger.debug("SSH-authenticate-DO: authenticateWithPassword");
+				boolean res = _conn.authenticateWithPassword(_username, _password);
+				if (res == true)
+					break;
+
+				lastError = "Password authentication failed."; // try again, if possible
+
+				continue;
+			}
+
+			throw new IOException("No supported authentication methods available.");
+		}
+		return true;
+	}
+	/**
+	 * The logic that one has to implement if "keyboard-interactive" authentication shall be supported.
+	 */
+	class InteractiveLogic implements InteractiveCallback
+	{
+		int promptCount = 0;
+		String lastError;
+
+		public InteractiveLogic(String lastError)
+		{
+			this.lastError = lastError;
+		}
+
+		/* the callback may be invoked several times, depending on how many questions-sets the server sends */
+
+		@Override
+		public String[] replyToChallenge(String name, String instruction, int numPrompts, String[] prompt,
+				boolean[] echo) throws IOException
+		{
+//System.out.println("SSH-authenticate-replyToChallenge(name='"+name+"', instruction='"+instruction+"', numPrompts="+numPrompts+", prompt='"+StringUtil.toCommaStr(prompt)+"', echo="+StringUtil.toCommaStr(echo)+")");
+			_logger.debug("SSH-authenticate-replyToChallenge(name='"+name+"', instruction='"+instruction+"', numPrompts="+numPrompts+", prompt='"+StringUtil.toCommaStr(prompt)+"', echo="+StringUtil.toCommaStr(echo)+")");
+
+			// If it *only* asks for "Password:", do not prompt for that... just return it...
+			if (numPrompts == 1 && prompt != null && prompt.length >= 1 && prompt[0].toLowerCase().startsWith("password:"))
+			{
+				return new String[] { _password };
+			}
+
+			String[] result = new String[numPrompts];
+
+			for (int i = 0; i < numPrompts; i++)
+			{
+				/* Often, servers just send empty strings for "name" and "instruction" */
+
+				String[] content = new String[] { lastError, name, instruction, prompt[i] };
+
+				if (lastError != null)
+				{
+					/* show lastError only once */
+					lastError = null;
+				}
+
+				EnterSomethingDialog esd = new EnterSomethingDialog(null, "Keyboard Interactive Authentication",
+						content, !echo[i]);
+
+				esd.setVisible(true);
+
+				if (esd.answer == null)
+					throw new IOException("Login aborted by user");
+
+				result[i] = esd.answer;
+				promptCount++;
+			}
+
+			return result;
+		}
+
+		/* We maintain a prompt counter - this enables the detection of situations where the ssh
+		 * server is signaling "authentication failed" even though it did not send a single prompt.
+		 */
+
+		public int getPromptCount()
+		{
+			return promptCount;
+		}
+	}
+	/**
+	 * This dialog displays a number of text lines and a text field.
+	 * The text field can either be plain text or a password field.
+	 */
+	class EnterSomethingDialog extends JDialog
+	{
+		private static final long serialVersionUID = 1L;
+
+		JTextField answerField;
+		JPasswordField passwordField;
+
+		final boolean isPassword;
+
+		String answer;
+
+		public EnterSomethingDialog(JFrame parent, String title, String content, boolean isPassword)
+		{
+			this(parent, title, new String[] { content }, isPassword);
+		}
+
+		public EnterSomethingDialog(JFrame parent, String title, String[] content, boolean isPassword)
+		{
+			super(parent, title, true);
+
+			this.isPassword = isPassword;
+
+			JPanel pan = new JPanel();
+			pan.setLayout(new BoxLayout(pan, BoxLayout.Y_AXIS));
+
+			for (int i = 0; i < content.length; i++)
+			{
+				if ((content[i] == null) || (content[i] == ""))
+					continue;
+				JLabel contentLabel = new JLabel(content[i]);
+				pan.add(contentLabel);
+
+			}
+
+			answerField = new JTextField(20);
+			passwordField = new JPasswordField(20);
+
+			if (isPassword)
+				pan.add(passwordField);
+			else
+				pan.add(answerField);
+
+			KeyAdapter kl = new KeyAdapter()
+			{
+				@Override
+				public void keyTyped(KeyEvent e)
+				{
+					if (e.getKeyChar() == '\n')
+						finish();
+				}
+			};
+
+			answerField.addKeyListener(kl);
+			passwordField.addKeyListener(kl);
+
+			getContentPane().add(BorderLayout.CENTER, pan);
+
+			setResizable(false);
+			pack();
+			setLocationRelativeTo(null);
+		}
+
+		private void finish()
+		{
+			if (isPassword)
+				answer = new String(passwordField.getPassword());
+			else
+				answer = answerField.getText();
+
+			dispose();
+		}
+	}
 
 	/**
 	 * Creates a new LocalPortForwarder. <br>
@@ -133,7 +418,7 @@ public class SshConnection
 	 * secure tunnel to another host (which may or may not be identical to the remote SSH-2 server). 
 	 * <p>
 	 * This method must only be called after one has passed successfully the authentication step. 
-	 * There is no limit on the number of concurrent forwardings.
+	 * There is no limit on the number of concurrent forwarding.
 	 * 
 	 * @param sshTunnelInfo
 	 * @return LocalPortForwarder
@@ -150,6 +435,8 @@ public class SshConnection
 		{
 //			localPort = sshTunnelInfo.generateLocalPort();
 			localPort = SshTunnelManager.generateLocalPort();
+			
+			sshTunnelInfo.setLocalPort(localPort);
 		}
 
 		try
@@ -201,8 +488,24 @@ public class SshConnection
 	 */
 	public boolean isConnected()
 	{
+		if ( ! _isConnected )
+			return false;
+
 		if (_conn == null)
 			_isConnected = false;
+		else
+		{
+			try 
+			{
+				_logger.debug("isConnected(): SEND IGNORE PACKET to SSH Server.");
+				_conn.sendIgnorePacket();
+			}
+			catch (IOException e) 
+			{
+				_logger.info("isConnected() has problems when sending a 'ignore packet' to the SSH Server. The connection will be closed. sendIgnorePacket Caught: "+e);
+				close();
+			}
+		}
 
 		return _isConnected;
 	}
@@ -545,5 +848,8 @@ public class SshConnection
 			"osCharset='"+_osCharset+"', " +
 			"isConnected='"+_isConnected+"'.";
 	}
+
+
+
 }
 

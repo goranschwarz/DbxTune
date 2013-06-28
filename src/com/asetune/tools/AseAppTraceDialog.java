@@ -1242,7 +1242,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 		// ERROR only on ASE 15.0.2 or higher.
 		int aseVersion = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
-		if (aseVersion < 15020 )
+//		if (aseVersion < 15020 )
+		if (aseVersion < 1502000 )
 		{
 			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to "+AseConnectionUtils.versionIntToStr(aseVersion)+".";
 			_logger.info(msg);

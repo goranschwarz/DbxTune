@@ -1777,27 +1777,37 @@ implements Runnable, ConnectionProvider
 			ResultSetMetaData rsmd = rs.getMetaData();
 			int cols = rsmd.getColumnCount();
 			int row  = 0;
-			boolean hasSqlGuiRefreshTime = cols >= 9;
+			boolean hasSqlGuiRefreshTime   = cols >= 9;
+			boolean hasNonConfiguredFields = cols >= 12;
+//FIXME: nonConfigCapture....cols both in the reader and writer
+//boolean nonConfigCapture
+//String  missingConfigParams
+//String  srvMessage
 
 			// Get Rows
 			while (rs.next())
 			{
-				Timestamp sessionStartTime  = rs.getTimestamp(1);
-				Timestamp sessionSampleTime = rs.getTimestamp(2);
-				String    cmName            = rs.getString(3);
-				int       type              = rs.getInt(4);
-				int       graphCount        = rs.getInt(5);
-				int       absRows           = rs.getInt(6);
-				int       diffRows          = rs.getInt(7);
-				int       rateRows          = rs.getInt(8);
-				int       sqlRefreshTime    = hasSqlGuiRefreshTime ? rs.getInt(9)  : -1;
-				int       guiRefreshTime    = hasSqlGuiRefreshTime ? rs.getInt(10) : -1;
-				int       lcRefreshTime     = hasSqlGuiRefreshTime ? rs.getInt(11) : -1;
+				Timestamp sessionStartTime    = rs.getTimestamp(1);
+				Timestamp sessionSampleTime   = rs.getTimestamp(2);
+				String    cmName              = rs.getString(3);
+				int       type                = rs.getInt(4);
+				int       graphCount          = rs.getInt(5);
+				int       absRows             = rs.getInt(6);
+				int       diffRows            = rs.getInt(7);
+				int       rateRows            = rs.getInt(8);
+				int       sqlRefreshTime      = hasSqlGuiRefreshTime ? rs.getInt(9)  : -1;
+				int       guiRefreshTime      = hasSqlGuiRefreshTime ? rs.getInt(10) : -1;
+				int       lcRefreshTime       = hasSqlGuiRefreshTime ? rs.getInt(11) : -1;
+				boolean   nonConfiguredMonitoringHappened     = (hasNonConfiguredFields ? rs.getInt   (12) : 0) > 0;
+				String    nonConfiguedMonitoringMissingParams =  hasNonConfiguredFields ? rs.getString(13) : null;
+				String    nonConfiguedMonitoringMessages      =  hasNonConfiguredFields ? rs.getString(14) : null;
 
 				// Map cmName from DB->Internal name if needed.
 				cmName = getNameTranslateDbToCm(cmName);
 				
-				CmIndicator cmInd = new CmIndicator(sessionStartTime, sessionSampleTime, cmName, type, graphCount, absRows, diffRows, rateRows, sqlRefreshTime, guiRefreshTime, lcRefreshTime);
+				CmIndicator cmInd = new CmIndicator(sessionStartTime, sessionSampleTime, cmName, type, graphCount, absRows, diffRows, rateRows, 
+						sqlRefreshTime, guiRefreshTime, lcRefreshTime,
+						nonConfiguredMonitoringHappened, nonConfiguedMonitoringMissingParams, nonConfiguedMonitoringMessages);
 
 				// Add it to the indicators map
 				_currentIndicatorMap.put(cmName, cmInd);
@@ -1877,6 +1887,10 @@ implements Runnable, ConnectionProvider
 		cm.setSqlRefreshTime(cmInd._sqlRefreshTime);
 		cm.setGuiRefreshTime(cmInd._guiRefreshTime);
 		cm.setLcRefreshTime (cmInd._lcRefreshTime);
+		
+		cm.setNonConfiguredMonitoringHappened     (cmInd._nonConfiguredMonitoringHappened);
+		cm.addNonConfiguedMonitoringMessage       (cmInd._nonConfiguedMonitoringMessages);
+		cm.setNonConfiguredMonitoringMissingParams(cmInd._nonConfiguedMonitoringMissingParams);
 
 		cm.setDataInitialized(true);
 //		cm.fireTableStructureChanged();
@@ -2360,50 +2374,60 @@ implements Runnable, ConnectionProvider
 
 	public static class CmIndicator
 	{
-		public Timestamp _sessionStartTime  = null;
-		public Timestamp _sessionSampleTime = null;
-		public String    _cmName            = null;
-		public int       _type              = -1;
-		public int       _graphCount        = -1;
-		public int       _absRows           = -1;
-		public int       _diffRows          = -1;
-		public int       _rateRows          = -1;
-		public int       _sqlRefreshTime    = -1;
-		public int       _guiRefreshTime    = -1;
-		public int       _lcRefreshTime     = -1;
+		public Timestamp _sessionStartTime                    = null;
+		public Timestamp _sessionSampleTime                   = null;
+		public String    _cmName                              = null;
+		public int       _type                                = -1;
+		public int       _graphCount                          = -1;
+		public int       _absRows                             = -1;
+		public int       _diffRows                            = -1;
+		public int       _rateRows                            = -1;
+		public int       _sqlRefreshTime                      = -1;
+		public int       _guiRefreshTime                      = -1;
+		public int       _lcRefreshTime                       = -1;
+		public boolean   _nonConfiguredMonitoringHappened     = false;
+		public String    _nonConfiguedMonitoringMissingParams = null;
+		public String    _nonConfiguedMonitoringMessages      = null;
 
 		public CmIndicator(Timestamp sessionStartTime, Timestamp sessionSampleTime, 
 		                   String cmName, int type, int graphCount, int absRows, int diffRows, int rateRows,
-		                   int sqlRefreshTime, int guiRefreshTime, int lcRefreshTime)
+		                   int sqlRefreshTime, int guiRefreshTime, int lcRefreshTime, 
+		                   boolean nonConfiguredMonitoringHappened, String nonConfiguedMonitoringMissingParams, String nonConfiguedMonitoringMessages)
 		{
-			_sessionStartTime  = sessionStartTime;
-			_sessionSampleTime = sessionSampleTime;
-			_cmName            = cmName;
-			_type              = type;
-			_graphCount        = graphCount;
-			_absRows           = absRows;
-			_diffRows          = diffRows;
-			_rateRows          = rateRows;
-			_sqlRefreshTime    = sqlRefreshTime;
-			_guiRefreshTime    = guiRefreshTime;
-			_lcRefreshTime     = lcRefreshTime;
+			_sessionStartTime                    = sessionStartTime;
+			_sessionSampleTime                   = sessionSampleTime;
+			_cmName                              = cmName;
+			_type                                = type;
+			_graphCount                          = graphCount;
+			_absRows                             = absRows;
+			_diffRows                            = diffRows;
+			_rateRows                            = rateRows;
+			_sqlRefreshTime                      = sqlRefreshTime;
+			_guiRefreshTime                      = guiRefreshTime;
+			_lcRefreshTime                       = lcRefreshTime;
+			_nonConfiguredMonitoringHappened     = nonConfiguredMonitoringHappened;
+			_nonConfiguedMonitoringMissingParams = nonConfiguedMonitoringMissingParams;
+			_nonConfiguedMonitoringMessages      = nonConfiguedMonitoringMessages;
 		}
 		
 		@Override
 		public String toString()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.append("sessionStartTime='")   .append(_sessionStartTime) .append("'");
-			sb.append(", sessionSampleTime='").append(_sessionSampleTime).append("'");
-			sb.append(", cmName='")           .append(_cmName)           .append("'");
-			sb.append(", type=")              .append(_type);
-			sb.append(", graphCount=")        .append(_graphCount);
-			sb.append(", absRows=")           .append(_absRows);
-			sb.append(", diffRows=")          .append(_diffRows);
-			sb.append(", rateRows=")          .append(_rateRows);
-			sb.append(", sqlRefreshTime=")    .append(_sqlRefreshTime);
-			sb.append(", guiRefreshTime=")    .append(_guiRefreshTime);
-			sb.append(", lcRefreshTime=")     .append(_lcRefreshTime);
+			sb.append("sessionStartTime='")                     .append(_sessionStartTime) .append("'");
+			sb.append(", sessionSampleTime='")                  .append(_sessionSampleTime).append("'");
+			sb.append(", cmName='")                             .append(_cmName)           .append("'");
+			sb.append(", type=")                                .append(_type);
+			sb.append(", graphCount=")                          .append(_graphCount);
+			sb.append(", absRows=")                             .append(_absRows);
+			sb.append(", diffRows=")                            .append(_diffRows);
+			sb.append(", rateRows=")                            .append(_rateRows);
+			sb.append(", sqlRefreshTime=")                      .append(_sqlRefreshTime);
+			sb.append(", guiRefreshTime=")                      .append(_guiRefreshTime);
+			sb.append(", lcRefreshTime=")                       .append(_lcRefreshTime);
+			sb.append(", nonConfiguredMonitoringHappened=")     .append(_nonConfiguredMonitoringHappened);
+			sb.append(", nonConfiguedMonitoringMissingParams='").append(_nonConfiguedMonitoringMissingParams).append("'");
+			sb.append(", nonConfiguedMonitoringMessages='")     .append(_nonConfiguedMonitoringMessages)     .append("'");
 			return sb.toString();
 		}
 	}

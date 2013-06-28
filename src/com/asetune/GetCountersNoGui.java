@@ -6,6 +6,7 @@ package com.asetune;
 import java.io.Console;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -16,6 +17,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
 import org.apache.log4j.Logger;
 
@@ -53,6 +58,7 @@ public class GetCountersNoGui
 
 	/** sleep time between samples */
 	private int        _sleepTime   = 60;
+	private String     _scriptWaitForNextSample = null;
 
 	/** if above 0, then shutdown the service after X hours */
 //	private int        _shutdownAfterXHours = 0;
@@ -122,10 +128,24 @@ public class GetCountersNoGui
 		}
 		
 		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the NO-GUI sampler component. Using config file '"+_storeProps.getFilename()+"'.");
+		String cmTemplateOption = _storeProps.getProperty("cmdLine.cmOptions");
+		if (cmTemplateOption != null)
+			_logger.info("Initializing the NO-GUI sampler component. Using command line template '"+cmTemplateOption+"'.");
+		else
+			_logger.info("Initializing the NO-GUI sampler component. Using config file '"+_storeProps.getFilename()+"'.");
+
+
+		// Reset the search order to be "just" Configuration.PCS
+		// should we do this or not (or ONLY when using props file, an NOT for templates)
+		Configuration.setSearchOrder( Configuration.PCS );
+		String userConfigFile    = Configuration.getInstance(Configuration.USER_CONF) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_CONF).getFilename();
+		String userTmpConfigFile = Configuration.getInstance(Configuration.USER_TEMP) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_TEMP).getFilename();
+		String pcsConfigFile     = cmTemplateOption                                   != null ? "template="+cmTemplateOption : _storeProps.getFilename();
+		_logger.info("Combined Configuration Search Order has been changed to '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'. This means that USER_CONF='"+userConfigFile+"' and USER_TEMP='"+userTmpConfigFile+"' wont be used for as fallback configurations. Only the PCS='"+pcsConfigFile+"' config will be used.");
 
 		// PROPERTY: sleepTime
-		_sleepTime = _storeProps.getIntMandatoryProperty(offlinePrefix + "sampleTime");
+		_sleepTime               = _storeProps.getIntMandatoryProperty(offlinePrefix + "sampleTime");
+		_scriptWaitForNextSample = _storeProps.getProperty(            offlinePrefix + "script.waitForNextSample");
 
 		// PROPERTY: shutdownAfterXHours
 		_deferedStartTime = _storeProps.getProperty(CounterController.PROPKEY_startRecordingAtTime);
@@ -269,6 +289,7 @@ public class GetCountersNoGui
 		
 		String configStr = 
 			"sleepTime='"+_sleepTime+"', " +
+			"scriptWaitForNextSample='"+(_scriptWaitForNextSample == null ? "using sleepTime" : "using JavaScript")+"', " +
 //			"shutdownAfterXHours='"+_shutdownAfterXHours+"', " +
 			"shutdownAfterXHours='"+_shutdownAtTimeStr+"', " +
 			"startRecordingAtTime='"+_deferedStartTime+"', " +
@@ -283,6 +304,8 @@ public class GetCountersNoGui
 			".";
 		_logger.info("Configuration for NO-GUI sampler: "+configStr);
 
+		if (_scriptWaitForNextSample != null)
+			_logger.info("Using Java Script when waiting for next sample period. Script: "+_scriptWaitForNextSample);
 
 		//---------------------------
 		// Create all the CM objects, the objects will be added to _CMList
@@ -370,7 +393,7 @@ public class GetCountersNoGui
 			int activeCount = 0;
 			for (CountersModel cm : _CMList)
 			{
-				String persistCountersKey = cm.getName() + "." + CountersModel.PROP_persistCounters;
+				String persistCountersKey = cm.getName() + "." + CountersModel.PROPKEY_persistCounters;
 
 				if (cm != null)
 				{
@@ -649,9 +672,11 @@ public class GetCountersNoGui
 				// get a connection
 				try
 				{
-					setMonConnection(AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), (Properties)null, null));
-
+					AseConnectionFactory.setUser(_aseUsername); // Set this just for SendConnectInfo uses it
 					AseConnectionFactory.setHostPort(_aseHostPortStr);
+
+					Connection conn = AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), (Properties)null, null);
+					setMonConnection(conn);
 
 					// CHECK the connection for proper configuration.
 					// If failure, go and FIX
@@ -677,7 +702,8 @@ public class GetCountersNoGui
 						continue;
 					}
 
-					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
+					// Do this later, when the MonTablesDictionary is initialized
+					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
 				}
 				catch (SQLException e)
 				{
@@ -790,7 +816,8 @@ public class GetCountersNoGui
 				String sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
 				// If version is above 15.0.2 and you have 'sa_role' 
 				// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
+//				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
+				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
 				{
 					if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 						sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
@@ -872,6 +899,9 @@ public class GetCountersNoGui
 							mtd.getAseExecutableVersionNum(), 
 							mtd.isClusterEnabled(), 
 							mtd.getMdaVersion());
+
+					// Hopefully this is a better place to send connect info
+					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
 				}
 
 				if (_CMList == null || (_CMList != null && _CMList.size() == 0))
@@ -999,10 +1029,11 @@ public class GetCountersNoGui
 				_logger.debug("Sleeping for "+_sleepTime+" seconds. Waiting for " + getWaitEvent() );
 			}
 
-			// Sleep
-			sleep(_sleepTime * 1000);
-//			try { Thread.sleep( _sleepTime * 1000 ); }
-//			catch (InterruptedException ignore) {}
+			// Sleep / wait for next sample
+			if (_scriptWaitForNextSample != null)
+				scriptWaitForNextSample();
+			else
+				sleep(_sleepTime * 1000);
 
 		} // END: while(_running)
 
@@ -1011,5 +1042,63 @@ public class GetCountersNoGui
 		// so lets stop the Persistent Counter Handler and it's services as well
 		if (pch != null)
 			pch.stop(true, 10*1000);
+	}
+	
+	/**
+	 * User defined exit, to wait for next "data refresh" to happen
+	 * <p>  
+	 * Call Java Script every X milliseconds to determine if we should continue and sample data, or if we should wait.
+	 * <p>
+	 * The java script returns number of milliseconds until next check.<br>
+	 * If the Java script returns 0 or less, then it's time for next check.<br>
+	 * <p>
+	 * So "sleep" can be done in the Java Script Code, or return a number, which means the sleep is done by the Java Code.
+	 * This might help to create a "simpler" Java Script, since sleep is not supported by Java Script...
+	 * 
+	 */
+	private void scriptWaitForNextSample()
+	{
+		ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
+
+		// Set initial start time for the sleep
+		engine.put("waitStartedAtTime", System.currentTimeMillis());
+
+		try
+		{
+			while (true)
+			{
+				String script = _scriptWaitForNextSample;
+
+				// Run the JavaScript
+				Object rc = engine.eval(script);
+				
+				// Nothing was returned, use fall back and do sleep
+				if (rc == null)
+					throw new ScriptException("scriptWaitForNextSample(): NO return code from the java script code.");
+
+				// If JavaScript returns a number: 0=no more wait, >0=sleep for this amount of ms and call script again.
+				if (rc instanceof Number)
+				{
+					// No more wait, if it's 0 or below
+					int waitTime = ((Number) rc).intValue();
+					if (waitTime <= 0)
+						return;
+					else
+					{
+						// Wait for X milliseconds, returned from the JavaScript, and try again.
+						sleep(waitTime);
+						continue;
+					}
+				}
+
+				// If we got here, the script did NOT return a number
+				throw new ScriptException("scriptWaitForNextSample(): unknown return code '"+rc+"' of type '"+rc.getClass().getName()+"'.");
+			}
+		}
+		catch (ScriptException e)
+		{
+			_logger.warn("JavaScript problems with 'WaitForNextSample' JavaScriptCode '"+_scriptWaitForNextSample+"'. Falling back to 'sleep("+_sleepTime+")' Caught: "+e);
+			sleep(_sleepTime * 1000);
+		}
 	}
 }
