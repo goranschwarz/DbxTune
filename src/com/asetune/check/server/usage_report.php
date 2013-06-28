@@ -459,6 +459,35 @@ DB Cleanup:
 		}
 		htmlResultset($result, "ASE CONNECT Count");
 																			echo "	</TD>";
+
+																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Start Count, per day - WITHOUT SOME DOMAINS
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')  as usageDate,
+				count(*)             as usageCount
+			FROM asemon_usage
+			WHERE clientHostName <> 'asetune-virtual-machine'
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')
+			ORDER BY
+				1 desc
+			LIMIT 30
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "START Count WITHOUT 'asetune-virtual-machine'");
+																			echo "	</TD>";
+
+																			echo "	<TD VALIGN=\"top\">";
+																			echo "	</TD>";
 																			echo "</TR>";
 																			echo "</TABLE>";
 
@@ -513,6 +542,31 @@ DB Cleanup:
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($result, "ASE CONNECT Count");
+																			echo "	</TD>";
+
+																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Start Count, per month - WITHOUT SOME DOMAINS
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+				count(*)             as usageCount
+			FROM asemon_usage
+			WHERE clientHostName <> 'asetune-virtual-machine'
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y %b')
+			ORDER BY
+				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+			";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($result, "START Count WITHOUT 'asetune-virtual-machine'");
 																			echo "	</TD>";
 																			echo "</TR>";
 																			echo "</TABLE>";
