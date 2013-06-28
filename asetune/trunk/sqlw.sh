@@ -45,8 +45,8 @@ export SPLASH=-splash:${javaSplashScreen}
 
 export CLASSPATH=${APPL_HOME}/classes
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.2.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar

@@ -18,7 +18,10 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.ase.gui.CmSpinlockActivityPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -39,7 +42,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 15702;
+//	public static final int      NEED_SRV_VERSION = 15702;
+	public static final int      NEED_SRV_VERSION = 1570020;
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monSpinlockActivity"};
@@ -98,9 +102,20 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                       = CM_NAME;
+
+	public static final String  PROPKEY_sample_SpinlockSlotID      = PROP_PREFIX + ".sample.SpinlockSlotID";
+	public static final boolean DEFAULT_sample_SpinlockSlotID      = true;
+
 	
 	private void addTrendGraphs()
 	{
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmSpinlockActivityPanel(this);
 	}
 
 	@Override
@@ -116,6 +131,9 @@ extends CountersModel
 
 		pkCols.add("InstanceID");
 		pkCols.add("SpinlockName");
+		
+		if (srvVersion >= 1570100)
+			pkCols.add("SpinlockSlotID");
 
 		return pkCols;
 	}
@@ -131,13 +149,16 @@ extends CountersModel
 //			"                      END, \n" +
 //			"       Description  = convert(varchar(255), '') \n" +
 //			"from master..monSpinlockActivity \n";
+
+		// in 15.7.0 ESD#2 the SpinlockSlotID was not available, then we need to do SUM/AVG/MAX/MIN and GROUP BY to get 1 row for each Spinlock 
 		String sql = 
 			"select Type = convert(varchar(30), ''), \n" +
 			"       InstanceID, \n" +
 			"       SpinlockName, \n" +
+			"       Instances    = count(*), \n" +
+			((aseVersion >= 1570100) ? "       SpinlockSlotID = convert(int, 0), \n" : "") + // in 15.7 SP100, add SpinlockSlotID as dummy to be consistent with below full statement
 			"       OwnerPID     = max(OwnerPID), \n" +
 			"       LastOwnerPID = max(LastOwnerPID), \n" +
-			"       Instances    = count(*), \n" +
 			"       Grabs        = sum(Grabs), \n" +
 			"       Spins        = sum(Spins), \n" +
 			"       Waits        = sum(Waits), \n" +
@@ -149,8 +170,34 @@ extends CountersModel
 			"       Description  = convert(varchar(255), '') \n" +
 			"from master..monSpinlockActivity \n" +
 			"group by InstanceID, SpinlockName \n" +
-			"order by SpinlockName \n";
+			"order by SpinlockName \n" +
+			"";
 
+		// in 15.7.0 SP100 the SpinlockSlotID was introduced... but we can keep/toggle with the GROUPED select above if we ONLY WANT ONE row for each SpinlockName...
+		boolean showSpinlockSlotID = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_SpinlockSlotID, DEFAULT_sample_SpinlockSlotID);
+		if (aseVersion >= 1570100 && showSpinlockSlotID)
+		{
+			sql = 
+				"select Type = convert(varchar(30), ''), \n" +
+				"       InstanceID, \n" +
+				"       SpinlockName, \n" +
+				"       Instances    = convert(int, 1), \n" +
+				"       SpinlockSlotID, \n" +
+				"       OwnerPID, \n" +
+				"       LastOwnerPID, \n" +
+				"       Grabs, \n" +
+				"       Spins, \n" +
+				"       Waits, \n" +
+				"       Contention, \n" +
+				"       SpinsPerWait = CASE WHEN Waits > 0 \n" +
+				"                           THEN convert(numeric(12,1), (Spins + 0.0) / (Waits + 0.0) ) \n" +
+				"                           ELSE convert(numeric(12,1), 0.0 ) \n" +
+				"                       END, \n" +
+				"       Description  = convert(varchar(255), '') \n" +
+				"from master..monSpinlockActivity \n" +
+				"order by SpinlockName, SpinlockSlotID\n" +
+				"";
+		}
 
 		return sql;
 	}
@@ -185,6 +232,33 @@ extends CountersModel
 		}
 		
 		return superRc;
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public Configuration getLocalConfiguration()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration lc = new Configuration();
+
+		lc.setProperty(PROPKEY_sample_SpinlockSlotID,  conf.getBooleanProperty(PROPKEY_sample_SpinlockSlotID,  DEFAULT_sample_SpinlockSlotID));
+		
+		return lc;
+	}
+
+	@Override
+	public String getLocalConfigurationDescription(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_SpinlockSlotID))  return CmSpinlockActivityPanel.TOOLTIP_sample_SpinlockSlotID;
+	
+		return "";
+	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_SpinlockSlotID))  return Boolean.class.getSimpleName();
+
+		return "";
 	}
 
 	@Override

@@ -95,6 +95,8 @@ import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.table.JTableHeader;
+import javax.swing.text.Document;
+import javax.swing.text.html.HTMLEditorKit;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -249,12 +251,13 @@ public class QueryWindow
 	private RSyntaxTextArea	_resultText  = null;
 	private JButton     _exec            = new ExecButton("Exec");       // Execute the
 	private JButton     _execGuiShowplan = new ExecButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
-	private JButton     _setOptions      = new JButton("Set");        // Do various set ... options
+	private JButton     _setAseOptions   = new JButton("Set");        // Do various set ... options
 	private JButton     _copy            = new JButton("Copy Res");    // Copy All resultsets to clipboard
 //	private JCheckBox   _showplan        = new JCheckBox("GUI Showplan", false);
 	private JCheckBox   _rsInTabs        = new JCheckBox("In Tabbed Panel", false);
 	private JCheckBox   _asPlainText     = new JCheckBox("As Plain Text", DEFAULT_asPlainText);
 	private JCheckBox   _showRowCount    = new JCheckBox("Row Count", DEFAULT_showRowCount);
+	private JButton     _appOptions      = new JButton("Options");
 	private JComboBox   _dbnames_cbx     = new JComboBox();
 	private JPanel      _resPanel        = new JPanel();
 	private JScrollPane _resPanelScroll  = new JScrollPane(_resPanel);
@@ -719,14 +722,6 @@ public class QueryWindow
 			_cmdRcl_but     .setVisible(false);
 			_rsWhoIsDown_but.setVisible(false);
 
-
-			// Set icons for some buttons
-			_exec           .setIcon(SwingUtils.readImageIcon(Version.class, "images/exec.png"));
-			_execGuiShowplan.setIcon(SwingUtils.readImageIcon(Version.class, "images/exec_with_plan.png"));
-			_exec           .setText(null);
-			_execGuiShowplan.setText(null);
-			
-			
 			_jvm_lbl.setToolTipText("<html>This is <i>PID@hostname</i>, where this java process is running.</html>");
 
 			//--------------------------
@@ -903,6 +898,13 @@ public class QueryWindow
 			}
 		}
 
+		// Set icons for some buttons
+		_exec           .setIcon(SwingUtils.readImageIcon(Version.class, "images/exec.png"));
+		_execGuiShowplan.setIcon(SwingUtils.readImageIcon(Version.class, "images/exec_with_plan.png"));
+		_exec           .setText(null);
+		_execGuiShowplan.setText(null);
+		
+		
 		// Set various components
 		_exec.setToolTipText(
 			"<html>" +
@@ -934,8 +936,10 @@ public class QueryWindow
 			"</html>"); 
 		_execGuiShowplan.setMnemonic('E');
 
-		_setOptions.setToolTipText("Set various options, for example: set showplan on|off.");
-		try {_setOptions = createSetOptionButton(null, _aseVersion);}
+		try {_appOptions = createAppOptionButton(null);}
+		catch (Throwable ex) {_logger.error("Problems creating the 'Application Options' button.",ex);}
+
+		try {_setAseOptions = createSetAseOptionButton(null, _aseVersion);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'set options' button.",ex);}
 
 //		_showplan.setToolTipText("<html>Show Graphical showplan for the sql statement (work with ASE 15.x).</html>");
@@ -1024,12 +1028,14 @@ public class QueryWindow
 		bottom.add(_dbnames_cbx,    "split 6, hidemode 2");
 		bottom.add(_exec,           "");
 		bottom.add(_execGuiShowplan,"");
-		bottom.add(_rsInTabs,       "hidemode 2");
-		bottom.add(_asPlainText,    "");
-		bottom.add(_showRowCount,   "");
-		bottom.add(_setOptions,     "");
+//		bottom.add(_rsInTabs,       "hidemode 2");
+//		bottom.add(_asPlainText,    "");
+//		bottom.add(_showRowCount,   "");
+		bottom.add(_appOptions,     "gap 30");
+		bottom.add(_setAseOptions,  "");
 //		bottom.add(_showplan,       "");
-		bottom.add(_copy,           "right, wrap");
+		bottom.add(new JLabel(),    "growx, pushx"); // dummy label to "grow" the _copy to the right side
+		bottom.add(_copy,           "wrap");
 		bottom.add(_resPanelScroll,     "span 4, width 100%, height 100%, hidemode 3");
 		bottom.add(_resPanelTextScroll, "span 4, width 100%, height 100%, hidemode 3");
 //		bottom.add(_msgline, "dock south");
@@ -1559,7 +1565,7 @@ public class QueryWindow
 					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
 				}
 
-				_setOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
+				_setAseOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
 
 				setComponentVisibility();
 			}
@@ -1589,7 +1595,8 @@ public class QueryWindow
 	}
 	private void setComponentVisibility()
 	{
-		_rsInTabs.setVisible(false);
+		// Do we want to show the _rsInTab or not
+		//_rsInTabs.setVisible(false);
 
 		// Set all to invisible, later set the ones that should be visible to true
 		_ase_viewConfig_mi     .setVisible(false);
@@ -1627,7 +1634,7 @@ public class QueryWindow
 			_rsInTabs       .setEnabled(false);
 			_asPlainText    .setEnabled(false);
 			_showRowCount   .setEnabled(false);
-			_setOptions     .setEnabled(false);
+			_setAseOptions  .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 			
 			setSrvInTitle("not connected");
@@ -1667,8 +1674,9 @@ public class QueryWindow
 				_rsInTabs       .setEnabled(true);
 				_asPlainText    .setEnabled(true);
 				_showRowCount   .setEnabled(true);
-				_setOptions     .setEnabled(true);
-				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+				_setAseOptions  .setEnabled(true);
+//				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+				_execGuiShowplan.setEnabled( (_aseVersion >= 1500000) );
 			}
 			else if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
 			{
@@ -1684,7 +1692,7 @@ public class QueryWindow
 				_rsInTabs              .setEnabled(true);
 				_asPlainText           .setEnabled(true);
 				_showRowCount          .setEnabled(true);
-				_setOptions            .setEnabled(false);
+				_setAseOptions         .setEnabled(false);
 				_execGuiShowplan       .setEnabled(false);
 			}
 		}
@@ -1696,7 +1704,7 @@ public class QueryWindow
 			_rsInTabs       .setEnabled(true);
 			_asPlainText    .setEnabled(true);
 			_showRowCount   .setEnabled(true);
-			_setOptions     .setEnabled(false);
+			_setAseOptions  .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 
 			setSrvInTitle(_conn.toString());
@@ -1710,7 +1718,7 @@ public class QueryWindow
 			_rsInTabs       .setEnabled(true);
 			_asPlainText    .setEnabled(true);
 			_showRowCount   .setEnabled(true);
-			_setOptions     .setEnabled(false);
+			_setAseOptions  .setEnabled(false);
 			_execGuiShowplan.setEnabled(false);
 
 			setSrvInTitle(_connectedWithUrl);
@@ -1750,7 +1758,7 @@ public class QueryWindow
 				_rsInTabs       .setEnabled(false);
 				_asPlainText    .setEnabled(false);
 				_showRowCount   .setEnabled(false);
-				_setOptions     .setEnabled(false);
+				_setAseOptions  .setEnabled(false);
 				_execGuiShowplan.setEnabled(false);
 
 				setSrvInTitle(null);
@@ -3371,7 +3379,7 @@ public class QueryWindow
 					{
 						// Append, messages and Warnings to _resultCompList, if any
 						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine());
-		
+
 						if(hasRs)
 						{
 							rsCount++;
@@ -3462,7 +3470,8 @@ public class QueryWindow
 						// so catch raiserrors or other stuff that is not SQLWarnings.
 						hasRs = stmnt.getMoreResults();
 		
-						_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+						if (_logger.isTraceEnabled())
+							_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
 					}
 					while (hasRs || rowsAffected != -1);
 		
@@ -3525,6 +3534,8 @@ public class QueryWindow
 			_resultText = null;
 
 
+			boolean inHtmlMessage = false;
+			StringBuilder htmlMessageBuffer = new StringBuilder();
 
 			int numOfTables = countTables(_resultCompList);
 			if (numOfTables == 1)
@@ -3534,7 +3545,8 @@ public class QueryWindow
 
 				int msgCount = 0;
 				int rowCount = 0;
-				_logger.trace("Only 1 RS");
+				if (_logger.isTraceEnabled())
+					_logger.trace("Only 1 RS");
 
 				// Add ResultSet  
 				for (JComponent jcomp: _resultCompList)
@@ -3549,7 +3561,8 @@ public class QueryWindow
 						p.add(tab.getTableHeader(), "wrap");
 						p.add(tab,                  "wrap");
 
-						_logger.trace("1-RS: add: JTable");
+						if (_logger.isTraceEnabled())
+							_logger.trace("1-RS: add: JTable");
 						_resPanel.add(p, "");
 
 						rowCount = tab.getRowCount();
@@ -3557,10 +3570,29 @@ public class QueryWindow
 					else if (jcomp instanceof JAseMessage)
 					{
 						JAseMessage msg = (JAseMessage) jcomp;
-						_logger.trace("1-RS: JAseMessage: "+msg.getText());
-						_resPanel.add(msg, "gapy 1, growx, pushx");
+						if (msg.hasHtmlStartTag())
+							inHtmlMessage = true;
 
-						msgCount++;
+						// Add it to buffer if HTML, otherwise add the message directly
+						if (inHtmlMessage)
+							htmlMessageBuffer.append(msg._msgText);
+						else
+						{
+							if (_logger.isTraceEnabled())
+								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+							_resPanel.add(msg, "gapy 1, growx, pushx");
+
+							msgCount++;
+						}
+
+						// On HTML end tag, create a HTML Message and add it
+						if (msg.hasHtmlEndTag())
+						{
+							inHtmlMessage = false;
+							_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+
+							msgCount++;
+						}
 					}
 				}
 //				_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
@@ -3573,13 +3605,15 @@ public class QueryWindow
 
 				int msgCount = 0;
 				int rowCount = 0;
-				_logger.trace("Several RS: "+_resultCompList.size());
+				if (_logger.isTraceEnabled())
+					_logger.trace("Several RS: "+_resultCompList.size());
 				
 				if (_rsInTabs.isSelected())
 				{
 					// Add Result sets to individual tabs, on a JTabbedPane 
 					JTabbedPane tabPane = new JTabbedPane();
-					_logger.trace("JTabbedPane: add: JTabbedPane");
+					if (_logger.isTraceEnabled())
+						_logger.trace("JTabbedPane: add: JTabbedPane");
 					_resPanel.add(tabPane, "");
 
 					int i = 1;
@@ -3595,19 +3629,45 @@ public class QueryWindow
 							p.add(tab.getTableHeader(), "wrap");
 							p.add(tab,                  "wrap");
 
-							_logger.trace("JTabbedPane: add: JTable("+i+")");
+							if (_logger.isTraceEnabled())
+								_logger.trace("JTabbedPane: add: JTable("+i+")");
 							tabPane.addTab("Result "+(i++), p);
 
 							rowCount += tab.getRowCount();
 						}
 						else if (jcomp instanceof JAseMessage)
 						{
-							// FIXME: this probably not work if we want to have the associated messages in the correct tab
+//							// FIXME: this probably not work if we want to have the associated messages in the correct tab
+//							JAseMessage msg = (JAseMessage) jcomp;
+//							_resPanel.add(msg, "gapy 1, growx, pushx");
+//							if (_logger.isTraceEnabled())
+//								_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
+//
+//							msgCount++;
 							JAseMessage msg = (JAseMessage) jcomp;
-							_resPanel.add(msg, "gapy 1, growx, pushx");
-							_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
+							if (msg.hasHtmlStartTag())
+								inHtmlMessage = true;
 
-							msgCount++;
+							// Add it to buffer if HTML, otherwise add the message directly
+							if (inHtmlMessage)
+								htmlMessageBuffer.append(msg._msgText);
+							else
+							{
+								if (_logger.isTraceEnabled())
+									_logger.trace("1-RS: JAseMessage: "+msg.getText());
+								_resPanel.add(msg, "gapy 1, growx, pushx");
+
+								msgCount++;
+							}
+
+							// On HTML end tag, create a HTML Message and add it
+							if (msg.hasHtmlEndTag())
+							{
+								inHtmlMessage = false;
+								_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+
+								msgCount++;
+							}
 						}
 					}
 					if (_lastTabIndex > 0)
@@ -3615,7 +3675,8 @@ public class QueryWindow
 						if (_lastTabIndex < tabPane.getTabCount())
 						{
 							tabPane.setSelectedIndex(_lastTabIndex);
-							_logger.trace("Restore last tab index pos to "+_lastTabIndex);
+							if (_logger.isTraceEnabled())
+								_logger.trace("Restore last tab index pos to "+_lastTabIndex);
 						}
 					}
 //					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
@@ -3639,30 +3700,57 @@ public class QueryWindow
 							p.setBorder(border);
 							p.add(tab.getTableHeader(), "wrap");
 							p.add(tab,                  "wrap");
-							_logger.trace("JPane: add: JTable("+i+")");
+							if (_logger.isTraceEnabled())
+								_logger.trace("JPane: add: JTable("+i+")");
 							_resPanel.add(p, "");
 
 							rowCount += tab.getRowCount();
 						}
 						else if (jcomp instanceof JAseMessage)
 						{
+//							JAseMessage msg = (JAseMessage) jcomp;
+//							if (_logger.isTraceEnabled())
+//								_logger.trace("JPane: JAseMessage: "+msg.getText());
+//							_resPanel.add(msg, "gapy 1, growx, pushx");
+//
+//							msgCount++;
 							JAseMessage msg = (JAseMessage) jcomp;
-							_logger.trace("JPane: JAseMessage: "+msg.getText());
-							_resPanel.add(msg, "gapy 1, growx, pushx");
+							if (msg.hasHtmlStartTag())
+								inHtmlMessage = true;
 
-							msgCount++;
+							// Add it to buffer if HTML, otherwise add the message directly
+							if (inHtmlMessage)
+								htmlMessageBuffer.append(msg._msgText);
+							else
+							{
+								if (_logger.isTraceEnabled())
+									_logger.trace("1-RS: JAseMessage: "+msg.getText());
+								_resPanel.add(msg, "gapy 1, growx, pushx");
+
+								msgCount++;
+							}
+
+							// On HTML end tag, create a HTML Message and add it
+							if (msg.hasHtmlEndTag())
+							{
+								inHtmlMessage = false;
+								_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+
+								msgCount++;
+							}
 						}
 					}
 //					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 				}
 			}
-			else
+			else // NO table output, only messages etc.
 			{
 				_resPanelScroll    .setVisible(false);
 				_resPanelTextScroll.setVisible(true);
 
-				_logger.trace("NO RS: "+_resultCompList.size());
+				if (_logger.isTraceEnabled())
+					_logger.trace("NO RS: "+_resultCompList.size());
 				int msgCount = 0;
 
 				RSyntaxTextAreaX out = new RSyntaxTextAreaX();
@@ -3797,6 +3885,50 @@ public class QueryWindow
 		// example: when no RS, but only messages has been displayed
 		_resPanel.repaint();
 	}
+	
+	private JEditorPane createHtmlMessage(StringBuilder sb, boolean resetStringBuilder)
+	{
+		JEditorPane editorPane = new JEditorPane();
+		editorPane.setEditable(false);
+//		editorPane.setContentType("text/html");
+
+		// add a HTMLEditorKit to the editor pane
+		HTMLEditorKit kit = new HTMLEditorKit();
+		editorPane.setEditorKit(kit);
+
+		// add some styles to the html
+//		StyleSheet styleSheet = kit.getStyleSheet();
+//		styleSheet.addRule(".condtiming { display: none; position: absolute; width: 100% }");
+//		styleSheet.addRule("TD { font-family: sans-serif; font-size: 10 }");
+
+		// create a document, set it on the jeditorpane, then add the html
+		Document doc = kit.createDefaultDocument();
+		editorPane.setDocument(doc);
+
+		String htmlText = sb.toString();
+		
+		// Remove strange HTML StyleSheet options
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("htmlPlan.styleSheet.remove.condtiming", true))
+		{
+			String replaceStr = ".condtiming { display: none; position: absolute; width: 100% }";
+			if (htmlText.indexOf(replaceStr) > 0)
+				htmlText = htmlText.replace(replaceStr, "");
+		}
+		if (Configuration.getCombinedConfiguration().getBooleanProperty("htmlPlan.styleSheet.remove.TD", true))
+		{
+			String replaceStr = "TD { font-family: sans-serif; font-size: 10 }";
+			if (htmlText.indexOf(replaceStr) > 0)
+				htmlText = htmlText.replace(replaceStr, "");
+		}
+
+			
+		editorPane.setText(htmlText);
+		
+		if (resetStringBuilder)
+			sb.setLength(0);
+
+		return editorPane;
+	}
 
 	private void installResultTextExtraMenuEntries(final RSyntaxTextArea textArea)
 	{
@@ -3887,6 +4019,7 @@ public class QueryWindow
 			_msgText     = msgText;
 			_msgSeverity = msgSeverity;
 			init();
+//System.out.println("JAseMessage: msgNum="+msgNum+", msgSeverity="+msgSeverity+", msgText='"+msgText+"', aseMsg='"+aseMsg+"'.");
 		}
 
 		protected void init()
@@ -3903,6 +4036,18 @@ public class QueryWindow
 			setLineWrap(true);
 			setWrapStyleWord(true);
 //			setOpaque(false); // Transparent
+		}
+		
+		protected boolean hasHtmlStartTag()
+		{
+			// Actually it looks like Msg=6248 is used as a message number for this messages... but lets keep this below login (ordinary set showplan etc uses the same message)
+			return _msgSeverity <= 10 && _msgText != null && _msgText.startsWith("<HTML>");
+		}
+
+		protected boolean hasHtmlEndTag()
+		{
+			// Actually it looks like Msg=6248 is used as a message number for this messages... but lets keep this below login
+			return _msgSeverity <= 10 && _msgText != null && _msgText.indexOf("</HTML>") > 0;
 		}
 
 //		public boolean isFocusable()
@@ -4453,7 +4598,8 @@ public class QueryWindow
 	{
 		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
 
-		if (aseVersion >= 15020) 
+//		if (aseVersion >= 15020) 
+		if (aseVersion >= 1502000) 
 		{
 			boolean statementCache   = false;
 			boolean literalAutoParam = false;
@@ -4469,17 +4615,67 @@ public class QueryWindow
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 		}
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF", null, "showplan", false, "Displays the query plan"));
-		if (aseVersion >= 15030) 
+//		if (aseVersion >= 15030) 
+		if (aseVersion >= 1503000) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch on 3604,9529 with override", "set switch off 3604,9529", "switch 3604,9529", false, "Traceflag 3604,9529: Include Lava operator execution statistics and resource use in a showplan format at most detailed level."));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics subquerycache ON-OFF", null, "statistics subquerycache", false, "Statistics about internal subquery optimizations"));
-		if (aseVersion >= 15000) 
+//		if (aseVersion >= 15000) 
+		if (aseVersion >= 1500000) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plancost ON-OFF",      null, "statistics plancost",      false, "Query plan in tree format, includes estimated/actual rows and IO's"));
-		if (aseVersion >= 15020) 
+//		if (aseVersion >= 15020) 
+		if (aseVersion >= 1502000) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics resource ON-OFF",      null, "statistics resource",      false, "Resource usage, includes procedure cache and tempdb"));
 
-		if (aseVersion >= 15020)
+		if (aseVersion >= 1570100)
+		{
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
+
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plan_html ON-OFF",                 null, "statistics plan_html",                 false, "Number of rows and number of threads per operator"));
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics timing_html ON-OFF",               null, "statistics timing_html",               false, "Execution statistics related to the timing spent in each operator per execution phase"));
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plan_detail_html ON-OFF",          null, "statistics plan_detail_html",          false, "Details of plan operators, such as the name, different timestamps captured during the execution, number of rows affected"));
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics parallel_plan_detail_html ON-OFF", null, "statistics parallel_plan_detail_html", false, "Details per thread and plan fragments for query plans that are executed in parallel using severalworked threads"));
+			
+
+//			statistics plan_html
+//			-----------------------------------
+//			The plan_html parameter generates a graphical query plan in HTML format containing information about the number of rows and number of threads per operator. 
+//			The syntax is: set statistics plan_html {on | off}
+//
+//
+//			statistics timing_html
+//			-----------------------------------
+//			The timing_html parameter generates a graphical query plan in HTML format containing execution statistics related to the timing spent in each operator per execution phase. 
+//			CPU usage and Wait distribution is generated for queries executed in parallel. 
+//			The syntax is: set statistics timing_html {on | off}
+//
+//
+//			statistics plan_detail_html
+//			-----------------------------------
+//			The plan_detail_html parameter generates a graphical query plan in HTML format containing information details of plan operators, such as the name, different timestamps captured during the execution, number of rows affected,
+//			number of estimated rows, elapsed time, and so on. 
+//			The syntax is: set statistics plan_detail_html {on | off}
+//
+//
+//			statistics parallel_plan_detail_html
+//			-----------------------------------
+//			The parallel_plan_detail_html parameter generates a graphical query plan in HTML format containing information about details per thread and plan fragments for query plans that are executed in parallel using severalworked threads. 
+//			Use this option to diagnose the behavior of specific threads and plan fragments in comparison with the global execution of the query. 
+//			The syntax is: set statistics parallel_ plan_detail_html {on | off}
+//
+//
+//			statistics plan_directory_html
+//			-----------------------------------
+//			The plan_directory_html parameter specifies the directory path name into which to write the HTML query plans. The file name is identified by a combination of user name, spid, and timestamp. 
+//			The syntax is: set statistics plan_directory_html {dirName | on | off}
+//			When set to off, the dumping of the HTML data to an external file is stopped.
+//			When set to on, the dumping of HTML data to an external file in a directory
+//			previously indicated is resumed. No output is generated if a directory name was not previously provided.
+		}
+		
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch ON-OFF 3604", null, "switch 3604", false, "Set traceflag 3604 on|off, <b>the below options needs this</b>."));
@@ -4546,7 +4742,7 @@ public class QueryWindow
 			// END: XML Stuff if we want that in here
 			//---------------------------------------------
 		}
-		
+
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
 //		button.setComponentPopupMenu(popupMenu);
@@ -4621,11 +4817,12 @@ public class QueryWindow
 	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
 	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
 	 */
-	private JButton createSetOptionButton(JButton button, final int aseVersion)
+	private JButton createSetAseOptionButton(JButton button, final int aseVersion)
 	{
 		if (button == null)
 			button = new JButton();
 
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/ase16.png"));
 		button.setToolTipText("<html>Set various options, for example: set showplan on|off.</html>");
 		button.setText("Set");
 
@@ -4652,7 +4849,78 @@ public class QueryWindow
 		return button;
 	}
 	/*----------------------------------------------------------------------
-	** END: set OPTIONS buttin stuff
+	** END: set OPTIONS button stuff
+	**----------------------------------------------------------------------*/ 
+
+	/*----------------------------------------------------------------------
+	** BEGIN: set Application Option Button
+	**----------------------------------------------------------------------*/ 
+	private JPopupMenu createAppOptionPopupMenu()
+	{
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
+		
+//		// Add entry
+//		JCheckBoxMenuItem mi;
+//
+//		mi = new JCheckBoxMenuItem();
+//		mi.setSelected(opt.getDefVal());
+//		mi.setText(miText);
+//		mi.setToolTipText(toolTipText);
+//		mi.putClientProperty(AseOptionOrSwitch.class.getName(), opt);
+
+		// ok lets not create new objects, lets resue already created objects
+		// But change the text a bit...
+		_asPlainText .setText("<html><b>As Plain Text</b>     - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
+		_showRowCount.setText("<html><b>Row Count</b>         - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
+		_rsInTabs    .setText("<html><b>Resultset in Tabs</b> - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+
+		popupMenu.add(_asPlainText);
+		popupMenu.add(_showRowCount);
+		popupMenu.add(_rsInTabs);
+
+		return popupMenu;
+	}
+
+	/**
+	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
+	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
+	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
+	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
+	 */
+	private JButton createAppOptionButton(JButton button)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings.png"));
+		button.setToolTipText("<html>Set various Application Options related to the Statement Execution</html>");
+		button.setText("Options");
+
+		JPopupMenu popupMenu = createAppOptionPopupMenu();
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	/*----------------------------------------------------------------------
+	** BEGIN: set Application Option Button
 	**----------------------------------------------------------------------*/ 
 
 

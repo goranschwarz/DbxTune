@@ -126,13 +126,15 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		String optGoalPlan = "";
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
 
 		String discardSpinlocks = "group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0')";
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 			discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
 
 		String sql =   

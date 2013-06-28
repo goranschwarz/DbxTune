@@ -166,33 +166,46 @@ public class GetCountersGui
 	 */
 	private void startIsMonConnectedWatchDog()
 	{
-		Thread isMonConnectedWatchDog = new Thread()
+		boolean startIsMonConnectedWatchDog = Configuration.getCombinedConfiguration().getBooleanProperty("startIsMonConnectedWatchDog", true);
+//		boolean startIsMonConnectedWatchDog = true;
+		if (startIsMonConnectedWatchDog)
 		{
-			@Override
-			public void run() 
+			Thread isMonConnectedWatchDog = new Thread()
 			{
-				_logger.info("Starting up 'is monitor connected' background thread...");
-				
-				while(true)
+				@Override
+				public void run() 
 				{
-					try
+					_logger.info("Starting up 'is monitor connected' background thread...");
+					
+					while(true)
 					{
-						isMonConnected(true, true);
+						try
+						{
+							// If the monitor is "in refresh", we don't need/want to check
+							// It might cause blocking things if _conn.isClosed() is called
+							// but right now, I'm doing 'select 1' in my own isClosed(conn) check...
+							if ( ! isRefreshing() )
+								isMonConnected(true, true);
 
-						Thread.sleep(1000);
+							Thread.sleep(1000);
+						}
+						catch(Throwable t)
+						{
+							_logger.info("isMonConnectedWatchDog: caught: "+t);
+						}
 					}
-					catch(Throwable t)
-					{
-						_logger.info("isMonConnectedWatchDog: caught: "+t);
-					}
-				}
+				};
 			};
-		};
-		
-		isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
-		isMonConnectedWatchDog.setDaemon(true);
-
-		isMonConnectedWatchDog.start();
+			
+			isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
+			isMonConnectedWatchDog.setDaemon(true);
+	
+			isMonConnectedWatchDog.start();
+		}
+		else
+		{
+			_logger.info("NO START OF 'isMonConnectedWatchDog' thread.");
+		}
 	}
 
 	@Override
@@ -537,7 +550,8 @@ public class GetCountersGui
 					sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
 					// If version is above 15.0.2 and you have 'sa_role' 
 					// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
+//					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
+					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
 					{
 						if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 							sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";

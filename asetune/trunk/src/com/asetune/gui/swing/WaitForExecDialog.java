@@ -27,7 +27,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
-import com.sybase.jdbc3.jdbc.SybConnection;
+import com.sybase.jdbcx.SybConnection;
 
 /**
  * This needs a lot more work

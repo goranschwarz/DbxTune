@@ -101,7 +101,6 @@ implements ActionListener, KeyListener, FocusListener
 	public void setHostPortStr(String hostPortStr)
 	{
 		_hostPortStr = hostPortStr;
-		System.out.println("setHostPortStr(hostPortStr='"+hostPortStr+"')");
 
 		List<String> hostPostList = StringUtil.parseCommaStrToList(hostPortStr);
 		for (String str : hostPostList)
@@ -675,6 +674,11 @@ implements ActionListener, KeyListener, FocusListener
 		strVal = conf.getProperty(PROP_PREFIX +"local.host."+hostPortStr, "localhost");
 		sshInfo.setLocalHost(strVal);
 
+		// If the option is used... either set the LocalPort back to -1 or try to check if this port is busy or not...
+		// but if the local cached "PortForwarderManager" should really pick this up...
+		if (sshInfo.isLocalPortGenerated())
+			sshInfo.setLocalPort(-1);
+
 
 		// DESTINATION *
 		strVal = conf.getProperty(PROP_PREFIX +"destination.host."+hostPortStr, guessDestHost);
@@ -682,7 +686,6 @@ implements ActionListener, KeyListener, FocusListener
 
 		intVal = conf.getIntProperty(PROP_PREFIX +"destination.port."+hostPortStr, guessDestPort);
 		sshInfo.setDestPort(intVal);
-
 		
 		// Below, get hostPortStr first, then get basename as a fallback
 		// HOSTNAME

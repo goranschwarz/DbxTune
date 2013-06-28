@@ -18,8 +18,8 @@
     <mainClass>com.asetune.AseTune</mainClass>
     <cp>.\classes\</cp>
     <cp>.\lib\asetune.jar</cp>
-    <cp>.\lib\jconn3.jar</cp>
     <cp>.\lib\jconn4.jar</cp>
+    <cp>.\lib\jconn3.jar</cp>
     <cp>.\lib\jtds-1.2.7.jar</cp>
     <cp>.\lib\dsparser.jar</cp>
     <cp>.\lib\log4j-1.2.17.jar</cp>

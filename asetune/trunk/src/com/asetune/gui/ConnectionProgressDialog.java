@@ -266,8 +266,10 @@ implements ActionListener, ConnectionProgressCallback
 //				addTask(_urlHelper.getHostPortArr());
 				
 				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
-				int guessPort = SshTunnelManager.getInstance().guessPort(_urlHelper.getHostPortStr(), _sshTunnelInfo);
-				addTask(_sshTunnelInfo.getLocalHost()+":"+guessPort);
+//				int guessPort = SshTunnelManager.getInstance().guessPort(_urlHelper.getHostPortStr(), _sshTunnelInfo);
+//				addTask(_sshTunnelInfo.getLocalHost()+":"+guessPort);
+				SshTunnelManager.getInstance().guessPort(_urlHelper.getHostPortStr(), _sshTunnelInfo);
+				addTask(_sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort());
 			}
 			else
 			{

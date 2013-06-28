@@ -34,9 +34,9 @@ import org.apache.log4j.Logger;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.gui.AseConfigMonitoringDialog;
-import com.sybase.jdbc3.jdbc.SybConnection;
-import com.sybase.jdbc3.jdbc.SybSQLWarning;
+import com.sybase.jdbc4.jdbc.SybSQLWarning;
 import com.sybase.jdbcx.EedInfo;
+import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
 public class AseConnectionUtils
@@ -960,21 +960,58 @@ public class AseConnectionUtils
 	 */
 	public static String versionIntToStr(int version)
 	{
-		int major       = version                                     / 1000;
-		int minor       =(version -  (major * 1000))                  / 100;
-		int maintenance =(version - ((major * 1000) + (minor * 100))) / 10;
-		int rollup      = version - ((major * 1000) + (minor * 100) + (maintenance * 10));
-
-		if (rollup == 0)
-			return major + "." + minor + "." + maintenance;
-		else
-			return major + "." + minor + "." + maintenance + " ESD#" + rollup;
+		if (version > 1000000) // new version number 1570100   (major minor maintenance EsdLevel/ServicePack)
+		{
+			int major       = version                                         / 100000;
+			int minor       =(version -  (major * 100000))                    / 10000;
+			int maintenance =(version - ((major * 100000) + (minor * 10000))) / 1000;
+			int servicePack = version - ((major * 100000) + (minor * 10000) + (maintenance * 1000));
+	
+			if (servicePack == 0)
+			{
+				if (maintenance == 0)
+					return major + "." + minor;
+				else
+					return major + "." + minor + "." + maintenance;
+			}
+			else if (servicePack < 100)
+			{
+				int mainEsd = servicePack / 10;
+				int subEsd  = servicePack % 10;
+				String esdStr = Integer.toString(mainEsd);
+				if (subEsd > 0)
+					esdStr = mainEsd + "." + subEsd;
+				
+				return major + "." + minor + "." + maintenance + " ESD#" + esdStr;
+			}
+			else
+			{
+				if (maintenance == 0)
+					return major + "." + minor + " SP" + servicePack;
+				else
+					return major + "." + minor + "." + maintenance + " SP" + servicePack;
+			}
+			
+		}
+		else // old version number 15704
+		{
+			int major       = version                                     / 1000;
+			int minor       =(version -  (major * 1000))                  / 100;
+			int maintenance =(version - ((major * 1000) + (minor * 100))) / 10;
+			int rollup      = version - ((major * 1000) + (minor * 100) + (maintenance * 10));
+	
+			if (rollup == 0)
+				return major + "." + minor + "." + maintenance;
+			else
+				return major + "." + minor + "." + maintenance + " ESD#" + rollup;
+		}
 	}
 
 	private final static int VERSION_MAJOR        = 1;
 	private final static int VERSION_MINOR        = 2;
 	private final static int VERSION_MAINTENANCE  = 3;
 	private final static int VERSION_ROLLUP       = 4;
+	private final static int VERSION_SERVICE_PACK = 5;
 	/**
 	 * If a version part is overflowing it's max value, try to fix this in here
 	 * <p>
@@ -982,7 +1019,7 @@ public class AseConnectionUtils
 	 * and when we want to convert this into a number of: 1503x the 'x' will be to big
 	 * so we need to convert this into a 3
 	 * <p>
-	 * That is the cind of things we should do in here
+	 * That is the kind of things we should do in here
 	 * 
 	 * @param type
 	 * @param version
@@ -1002,28 +1039,42 @@ public class AseConnectionUtils
 //			if (version >= 100  && version < 1000)  return version / 100;
 //			if (version >= 1000 && version < 10000) return version / 1000;
 		}
+
+		if (type == VERSION_SERVICE_PACK)
+		{
+			if (version <  999)  return version;
+			if (version >= 1000) return 999;
+		}
+
 		return version;
 	}
 	/**
 	 * Parses the ASE version string into a number.<br>
-	 * The version string will be splitted on the character '/' into different
+	 * The version string will be splitter on the character '/' into different
 	 * version parts. The second part will be used as the version string.<br>
 	 * 
-	 * The version part will then be splitted into different parts by the
+	 * The version part will then be splitter into different parts by the
 	 * delimiter '.'<br>
 	 * Four different version parts will be handled:
-	 * Major.Minor.Maintenance.Rollup<br>
+	 * Major.Minor.Maintenance.Rollup ESD#/ServicePack<br>
 	 * Major version part can contain several characters, while the other
-	 * version parts can only contain 1 character (only the first character i
-	 * used).
+	 * version parts can only contain 1 character (only the first character is
+	 * used. except for ServicePack where 3 chars is used).
 	 * 
 	 * @param versionStr
-	 *            the ASE version string fetchedd from the database with select
+	 *            the ASE version string fetched from the database with select
 	 * @@version
 	 * @return The version as a number. <br>
-	 *         The ase version 12.5 will be returned as 12500 <br>
-	 *         The ase version 12.5.2.0 will be returned as 12520 <br>
-	 *         The ase version 12.5.2.1 will be returned as 12521 <br>
+//	 *         The ase version 12.5 will be returned as 12500 <br>
+//	 *         The ase version 12.5.2.0 will be returned as 12520 <br>
+//	 *         The ase version 12.5.2.1 will be returned as 12521 <br>
+	 *         The ase version 12.5         will be returned as 1250000 <br>
+	 *         The ase version 12.5.2.0     will be returned as 1252000 <br>
+	 *         The ase version 12.5.2.1     will be returned as 1252001 <br>
+	 *         The ase version 15.7 ESD#4   will be returned as 1570040 <br>
+	 *         The ase version 15.7 ESD#4.2 will be returned as 1570042 <br>
+	 *         The ase version 15.7 SP100   will be returned as 1570100 <br>
+	 *         The ase version 15.7 SP101   will be returned as 1570101 <br>
 	 */
 // FIXME: this is a ASE-CE version string
 //	 Adaptive Server Enterprise/15.0.3/EBF 16748 Cluster Edition/P/x86_64/Enterprise Linux/asepyxis/2837/64-bit/FBO/Mon Jun  1 08:38:39 2009
@@ -1036,6 +1087,11 @@ public class AseConnectionUtils
 		{
 			String aseVersionNumberStr = null;
 			String aseEsdStr = null;
+			String servivePackStr = null;
+			int    aseVersionNumberStrArrayPos = -1;
+			int    aseEsdStrArrayPos           = -1;
+			int    servivePackStrArrayPos      = -1;
+
 			// Scan the string to see if there are any part that looks like a version str (##.#)
 			for (int i=0; i<aseVersionParts.length; i++)
 			{
@@ -1043,12 +1099,22 @@ public class AseConnectionUtils
 //				if ( aseVersionParts[i].matches("^[0-9][0-9][.][0-9]([.][0-9])*") && aseVersionNumberStr == null )
 				if ( aseVersionParts[i].matches("^[0-9][0-9][.][0-9].*") && aseVersionNumberStr == null )
 				{
-					aseVersionNumberStr = aseVersionParts[i];
+					aseVersionNumberStr         = aseVersionParts[i];
+					aseVersionNumberStrArrayPos = i;
 				}
 
+				// Check for Sybase ESD level
 				if ( aseVersionParts[i].indexOf("ESD#") > 0 && aseEsdStr == null)
 				{
-					aseEsdStr = aseVersionParts[i];
+					aseEsdStr         = aseVersionParts[i];
+					aseEsdStrArrayPos = i;
+				}
+
+				// Check for "SAP Service Pack"
+				if ( aseVersionParts[i].matches(".* SP[0-9][0-9][0-9].*") && servivePackStr == null)
+				{
+					servivePackStr         = aseVersionParts[i];
+					servivePackStrArrayPos = i;
 				}
 			}
 
@@ -1072,7 +1138,8 @@ public class AseConnectionUtils
 					{
 						versionPart = aseVersionNumberParts[0].trim();
 						int major = fixVersionOverflow(VERSION_MAJOR, Integer.parseInt(versionPart));
-						aseVersionNumber += 1000 * major;
+//						aseVersionNumber += 1000 * major;
+						aseVersionNumber += 100000 * major;
 					}
 
 					// MINOR version: ( 12.<5>.2.1 - major.MINOR.maint.rollup )
@@ -1080,11 +1147,8 @@ public class AseConnectionUtils
 					{
 						versionPart = aseVersionNumberParts[1].trim().substring(0, 1);
 						int minor = fixVersionOverflow(VERSION_MINOR, Integer.parseInt(versionPart));
-						if (minor >= 10)
-						{
-							
-						}
-						aseVersionNumber += 100 * minor;
+//						aseVersionNumber += 100 * minor;
+						aseVersionNumber += 10000 * minor;
 					}
 
 					// MAINTENANCE version: ( 12.5.<2>.1 - major.minor.MAINT.rollup )
@@ -1092,44 +1156,101 @@ public class AseConnectionUtils
 					{
 						versionPart = aseVersionNumberParts[2].trim().substring(0, 1);
 						int maint = fixVersionOverflow(VERSION_MAINTENANCE, Integer.parseInt(versionPart));
-						aseVersionNumber += 10 * maint;
+//						aseVersionNumber += 10 * maint;
+						aseVersionNumber += 1000 * maint;
 					}
 
 					// ROLLUP version: ( 12.5.2.<1> - major.minor.maint.ROLLUP )
-					if (aseVersionNumberParts.length >= 4)
+					if (aseVersionNumberParts.length >= 4 && aseVersionNumberStrArrayPos != aseEsdStrArrayPos)
 					{
 						versionPart = aseVersionNumberParts[3].trim().substring(0, 1);
 						int rollup = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-						aseVersionNumber += 1 * rollup;
+						aseVersionNumber += 10 * rollup;
 					}
 					else // go and check for ESD string, which is another way of specifying ROLLUP
 					{
 						if (aseEsdStr != null)
 						{
-							int start = aseEsdStr.indexOf("ESD#");
-							if (start >= 0)
-								start += "ESD#".length();
+							int subEsdStart = -1; // find out ESD# 4.2  (second level)
+							int subEsdEnd   = -1;
+
+							int esdStart = aseEsdStr.indexOf("ESD#");
+							if (esdStart >= 0)
+								esdStart += "ESD#".length();
 
 							// set end to first NON digit (or end of string)
-							int end = start;
-							for (; end<aseEsdStr.length(); end++)
+							int esdEnd = esdStart;
+							for (; esdEnd<aseEsdStr.length(); esdEnd++)
 							{
-								if ( ! Character.isDigit(aseEsdStr.charAt(end)) )
+								if ( ! Character.isDigit(aseEsdStr.charAt(esdEnd)) )
+								{
+									if ( aseEsdStr.charAt(esdEnd) == '.' )
+									{
+										subEsdStart = esdEnd + 1;
+										subEsdEnd   = subEsdStart;
+										for (; subEsdEnd<aseEsdStr.length(); subEsdEnd++)
+											if ( ! Character.isDigit(aseEsdStr.charAt(subEsdEnd)) )
+												break;
+									}
 									break;
+								}
 							}
 
-							if (start != -1)
+							if (esdStart != -1)
 							{
 								try
 								{
-									versionPart = aseEsdStr.trim().substring(start, end);
-									int rollup = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-									aseVersionNumber += 1 * rollup;
+									versionPart = aseEsdStr.trim().substring(esdStart, esdEnd);
+									int mainEsdNum = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
+//									aseVersionNumber += 1 * rollup;
+									aseVersionNumber += 10 * mainEsdNum;
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
 									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + aseVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + aseVersionNumber);
 								}
+							}
+							if (subEsdStart != -1)
+							{
+								try
+								{
+									versionPart = aseEsdStr.trim().substring(subEsdStart, subEsdEnd);
+									int subEsdNum = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
+									aseVersionNumber += 1 * subEsdNum;
+								}
+								catch (RuntimeException e) // NumberFormatException,
+								{
+									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + aseVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + aseVersionNumber);
+								}
+							}
+						}
+					}
+					
+					if (servivePackStr != null)
+					{
+						int start = servivePackStr.indexOf(" SP");
+						if (start >= 0)
+							start += " SP".length();
+
+						// set end to first NON digit (or end of string)
+						int end = start;
+						for (; end<servivePackStr.length(); end++)
+						{
+							if ( ! Character.isDigit(servivePackStr.charAt(end)) )
+								break;
+						}
+
+						if (start != -1)
+						{
+							try
+							{
+								versionPart = servivePackStr.trim().substring(start, end);
+								int servicePack = fixVersionOverflow(VERSION_SERVICE_PACK, Integer.parseInt(versionPart));
+								aseVersionNumber += 1 * servicePack;
+							}
+							catch (RuntimeException e) // NumberFormatException,
+							{
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + aseVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + aseVersionNumber);
 							}
 						}
 					}
@@ -1742,7 +1863,9 @@ public class AseConnectionUtils
 					if (rs.getInt(1) == 0)
 					{
 						String scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmontables";
-						if (aseVersionNum >= 15000)
+//						if (aseVersionNum >= 15000)
+//							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
+						if (aseVersionNum >= 1500000)
 							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
 	
 						String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
@@ -2703,8 +2826,10 @@ public class AseConnectionUtils
 		{
 			 aseVersion = MonTablesDictionary.getInstance().getMdaVersion();
 			
-			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
-			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
+//			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
+//			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
+			if (aseVersion >= 1253000) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
+			if (aseVersion >= 1502050) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
 		}
 		
 		StringBuilder sb = null;
@@ -2807,7 +2932,8 @@ public class AseConnectionUtils
 			String monWaitEventInfoWhere = "";
 			if (MonTablesDictionary.hasInstance())
 			{
-				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
+//				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
+				if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
 				{
 					monWaitClassInfoWhere = " and CI.Language = 'en_US'";
 					monWaitEventInfoWhere = "      and WI.Language = 'en_US' \n";
@@ -3104,7 +3230,8 @@ public class AseConnectionUtils
 		// Statement Cache objects
 		if (isStatementCache)
 		{
-			if (aseVersion >= 15700)
+//			if (aseVersion >= 15700)
+			if (aseVersion >= 1570000)
 			{
 				//-----------------------------------------------------------
 				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
@@ -3197,7 +3324,8 @@ public class AseConnectionUtils
 			else
 			{
 				String sql;
-				if (aseVersion >= 15020)
+//				if (aseVersion >= 15020)
+				if (aseVersion >= 1502000)
 				{
 					sql =
 						"set switch on 3604 with no_info \n" +
@@ -3467,6 +3595,57 @@ public class AseConnectionUtils
 		{
 			_logger.warn("Problems doing simple SQL '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
 			return false;
+		}
+	}
+	
+
+	//////////////////////////////////////////////
+	// Some small TEST CODE
+	//////////////////////////////////////////////
+	public static void main(String[] args)
+	{
+		int version = 0;
+		version = 1250030; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1254010; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570042; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570000; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570100; System.out.println(version + " = "+ versionIntToStr(version));
+
+		testVersion(1250011, "12.5.0 ESD#1.1");
+		testVersion(1250030, "Adaptive Server Enterprise/12.5.0.3/EBF 11449 ESD#4/...");
+//		testVersion(1250090, "Adaptive Server Enterprise/12.5.0.10/P/x86_64/...");
+		testVersion(1254010, "Adaptive Server Enterprise/12.5.4/EBF 16748 SMP ESD#1 /P/x86_64/...");
+		testVersion(1254090, "Adaptive Server Enterprise/12.5.4/EBF 16748 SMP ESD#11/P/x86_64/...");
+		
+		testVersion(1550015, "15.5.0 ESD#1.5");
+		testVersion(1502050, "Adaptive Server Enterprise/15.0.2/EBF 16748 SMP ESD#5 /P/x86_64/...");
+		testVersion(1503040, "Adaptive Server Enterprise/15.0.3/EBF 16748 SMP ESD#4 /P/x86_64/...");
+		testVersion(1503042, "Adaptive Server Enterprise/15.0.3/EBF 16748 SMP ESD#4.2 /P/x86_64/...");
+		
+		testVersion(1570040, "Adaptive Server Enterprise/15.7.0/EBF 16748 SMP ESD#4 /P/x86_64/...");
+		testVersion(1570042, "Adaptive Server Enterprise/15.7.0/EBF 16748 SMP ESD#4.2 /P/x86_64/...");
+
+		testVersion(1570100, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP100 /P/x86_64/...");   
+		testVersion(1570101, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP101 /P/x86_64/...");   
+		testVersion(1570111, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP111 /P/x86_64/...");   
+		testVersion(1570200, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP200 /P/x86_64/...");   
+		testVersion(1570999, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP2000 /P/x86_64/...");  
+		testVersion(1571100, "Adaptive Server Enterprise/15.7.1/EBF 16748 SMP SP100 /P/x86_64/...");   
+	}
+	
+	private static boolean testVersion(int expectedIntVer, String verStr)
+	{
+		int version = aseVersionStringToNumber(verStr);
+		
+		if (version != expectedIntVer) 
+		{
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return false;
+		}
+		else 
+		{
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return true;
 		}
 	}
 }

@@ -45,7 +45,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 15700;
+//	public static final int      NEED_SRV_VERSION = 15700;
+	public static final int      NEED_SRV_VERSION = 1570000;
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monThread"};
@@ -234,7 +235,8 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		if (getServerVersion() < 15700)
+//		if (getServerVersion() < 15700)
+		if (getServerVersion() < 1570000)
 		{
 			// disable the graph checkbox...
 			TrendGraph tg = getTrendGraph(tgdp.getName());

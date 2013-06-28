@@ -277,7 +277,8 @@ extends CountersModel
 		String ceDbRecoveryStatus = ""; // 
 		String QuiesceTag         = "";
 		String SuspendedProcesses = "";
-		if (aseVersion >= 12510)
+//		if (aseVersion >= 12510)
+		if (aseVersion >= 1251000)
 		{
 			QuiesceTag         = "od.QuiesceTag, ";
 			SuspendedProcesses = "od.SuspendedProcesses, ";
@@ -292,7 +293,8 @@ extends CountersModel
 		String PRSSelectCount  = "";
 		String PRSRewriteCount = "";
 		String nl_15702        = "";
-		if (aseVersion >= 15702)
+//		if (aseVersion >= 15702)
+		if (aseVersion >= 1570020)
 		{
 			PRSUpdateCount  = "od.PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
 			PRSSelectCount  = "od.PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
@@ -331,10 +333,12 @@ extends CountersModel
 		         "od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
 		cols2 += "";
 		cols3 += QuiesceTag;
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 		}
-		if (aseVersion >= 15025)
+//		if (aseVersion >= 15025)
+		if (aseVersion >= 1502050)
 		{
 			cols2 += "od.LastTranLogDumpTime, od.LastCheckpointTime, ";
 		}

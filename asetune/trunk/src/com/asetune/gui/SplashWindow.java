@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.HeadlessException;
 import java.awt.SplashScreen;
 import java.io.File;
 
@@ -114,13 +115,22 @@ public class SplashWindow
 
 	public static void close()
 	{
-		if (_splash == null)
-			_splash = SplashScreen.getSplashScreen();
-
-		if (_splash != null)
+		try
 		{
-			_splash.close();
-			_splash = null;
+			if (_splash == null)
+				_splash = SplashScreen.getSplashScreen();
+	
+			if (_splash != null)
+			{
+				_splash.close();
+				_splash = null;
+			}
+		}
+		catch (HeadlessException e)
+		{
+		}
+		catch (UnsupportedOperationException e)
+		{
 		}
 	}
 

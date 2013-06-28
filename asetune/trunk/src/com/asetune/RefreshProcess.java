@@ -239,70 +239,70 @@ public class RefreshProcess extends Thread
 
 
 	/** TODO: keep plans for procedures in a specific cache */ 
-	private void addPlanHistory(int spid, int kpid, int batchId, int dbId, int procId, Batch batch, StringBuffer planText)
-	{
-		if (planText == null)
-			throw new RuntimeException("Passed StringBuffer 'planText' cant be null.");
-
-		// Get rid of last newline
-		int len = planText.length() - 1;
-		if ( planText.charAt(len) == '\n')
-		{
-			planText.setCharAt(len, ' ');
-		}
-
-		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
-
-		Batch existingBatch = (Batch) plansHistory.get(id);
-		if (existingBatch != null)
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("Appending SHOWPLAN to spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'. text="+planText);
-			existingBatch.addShowplanTextLine(planText);
-		}
-		else
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("Adding SHOWPLAN for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'. text="+planText);
-			batch.addShowplanTextLine(planText);
-			plansHistory.put(id, batch);
-		}
-	}
-	private void addPlanHistory(Batch batch)
-	{
-		String id = batch.spid + ":" + batch.kpid + ":" + batch.batchId + ":" + batch.procedureId;
-
-		Batch existingBatch = (Batch) plansHistory.get(id);
-		if (existingBatch != null)
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("Appending SHOWPLAN to spid='"+batch.spid+"', kpid='"+batch.kpid+"', batchId='"+batch.batchId+"', procId='"+batch.procedureId+"', hashtable.key='"+id+"'. text="+batch.getShowplanText());
-			existingBatch.appendShowplanText(batch.getShowplanText());
-		}
-		else
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("Adding SHOWPLAN for spid='"+batch.spid+"', kpid='"+batch.kpid+"', batchId='"+batch.batchId+"', procId='"+batch.procedureId+"', hashtable.key='"+id+"'. text="+batch.getShowplanText());
-			//batch.addShowplanTextLine(planText);
-			plansHistory.put(id, batch);
-		}
-		
-	}
+//	private void addPlanHistory(int spid, int kpid, int batchId, int dbId, int procId, Batch batch, StringBuffer planText)
+//	{
+//		if (planText == null)
+//			throw new RuntimeException("Passed StringBuffer 'planText' cant be null.");
+//
+//		// Get rid of last newline
+//		int len = planText.length() - 1;
+//		if ( planText.charAt(len) == '\n')
+//		{
+//			planText.setCharAt(len, ' ');
+//		}
+//
+//		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
+//
+//		Batch existingBatch = (Batch) plansHistory.get(id);
+//		if (existingBatch != null)
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("Appending SHOWPLAN to spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'. text="+planText);
+//			existingBatch.addShowplanTextLine(planText);
+//		}
+//		else
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("Adding SHOWPLAN for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'. text="+planText);
+//			batch.addShowplanTextLine(planText);
+//			plansHistory.put(id, batch);
+//		}
+//	}
+//	private void addPlanHistory(Batch batch)
+//	{
+//		String id = batch.spid + ":" + batch.kpid + ":" + batch.batchId + ":" + batch.procedureId;
+//
+//		Batch existingBatch = (Batch) plansHistory.get(id);
+//		if (existingBatch != null)
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("Appending SHOWPLAN to spid='"+batch.spid+"', kpid='"+batch.kpid+"', batchId='"+batch.batchId+"', procId='"+batch.procedureId+"', hashtable.key='"+id+"'. text="+batch.getShowplanText());
+//			existingBatch.appendShowplanText(batch.getShowplanText());
+//		}
+//		else
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("Adding SHOWPLAN for spid='"+batch.spid+"', kpid='"+batch.kpid+"', batchId='"+batch.batchId+"', procId='"+batch.procedureId+"', hashtable.key='"+id+"'. text="+batch.getShowplanText());
+//			//batch.addShowplanTextLine(planText);
+//			plansHistory.put(id, batch);
+//		}
+//		
+//	}
 
 	/** TODO: keep plans for procedures in a specific cache */ 
-	private Batch getPlanHistory(int spid, int kpid, int batchId, int dbId, int procId)
-	{
-		//String id = batchId + ":" + dbId + ":" + procId;
-//		String id = batchId + ":" + procId;
-		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
-		Batch batch = (Batch) plansHistory.get(id);
-		
-		if (batch == null)
-			_logger.debug("No SHOWPLAN text was found for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'.");
-			//_logger.debug("No SHOWPLAN text was found for batchId='"+batchId+"', dbId='"+dbId+"', procId='"+procId+"', hashtable.key='"+id+"'.");
-		
-		return batch;
-	}
+//	private Batch getPlanHistory(int spid, int kpid, int batchId, int dbId, int procId)
+//	{
+//		//String id = batchId + ":" + dbId + ":" + procId;
+////		String id = batchId + ":" + procId;
+//		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
+//		Batch batch = (Batch) plansHistory.get(id);
+//		
+//		if (batch == null)
+//			_logger.debug("No SHOWPLAN text was found for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'.");
+//			//_logger.debug("No SHOWPLAN text was found for batchId='"+batchId+"', dbId='"+dbId+"', procId='"+procId+"', hashtable.key='"+id+"'.");
+//		
+//		return batch;
+//	}
 
 	private String nullFix(Object o)
 	{
@@ -422,7 +422,8 @@ public class RefreshProcess extends Thread
 				 * SPID        KPID        DBID        ProcedureID PlanID      BatchID     ContextID   LineNumber  CpuTime     WaitTime    MemUsageKB  PhysicalReads LogicalReads PagesModified PacketsSent PacketsReceived NetworkPacketSize PlansAltered RowsAffected StartTime                      
 				 */
 				String extraCols = "";
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				{
 					extraCols = "  S.RowsAffected, \n";
 				}
@@ -702,7 +703,10 @@ public class RefreshProcess extends Thread
 				// Get current plan using sp_showplanfull 
 				// if user has sa_role
 				//------------------------------------
-				if (has_sa_role)
+				boolean doExecSpShowplanfull = Configuration.getCombinedConfiguration().getBooleanProperty(ProcessDetailFrame.PROPKEY_sample_spShowplanfull, ProcessDetailFrame.DEFAULT_sample_spShowplanfull);
+//System.out.println("has_sa_role='"+has_sa_role+"', doExecSpShowplanfull='"+doExecSpShowplanfull+"'.");
+
+				if (has_sa_role && doExecSpShowplanfull)
 				{
 					// if no showplan exists in currentBatch
 					// If the plan/object cant be found in compiledPlansCache
@@ -711,6 +715,7 @@ public class RefreshProcess extends Thread
 					_logger.debug("EXEC sp_showplanfull " + currentSpid);
 
 					String showplanSql = "sp_showplanfull " + currentSpid; 
+//System.out.println("EXEC: '"+showplanSql+"'.");
 					currentSql = showplanSql;
 					stmt.executeUpdate(showplanSql);
 
@@ -784,11 +789,13 @@ public class RefreshProcess extends Thread
 				//       in method: saveCapturedStatements
 
 				String extraCols = "";
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				{
 					extraCols = "       RowsAffected, ErrorStatus, \n";
 				}
-				if (_aseVersion >= 15030 )
+//				if (_aseVersion >= 15030 )
+				if (_aseVersion >= 1503000 )
 				{
 					extraCols += "      ProcNestLevel, StatementNumber, \n";
 				}
@@ -943,7 +950,7 @@ public class RefreshProcess extends Thread
 					// OK, new SQL statement found
 					if ( ! lastKey.equals(lKey) )
 					{
-						// Post priviously batches
+						// Post previously batches
 						if (batch != null)
 						{
 							addBatchHistory(batch);
@@ -1912,12 +1919,14 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    MemUsageKB         int             not null,\n");
 				tabWriter.write("    PhysicalReads      int             not null,\n");
 				tabWriter.write("    LogicalReads       int             not null,\n");
-				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
+				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				{
 				tabWriter.write("    RowsAffected       int             not null,\n");
 				tabWriter.write("    ErrorStatus        int             not null,\n");
 				}
-				if (_aseVersion >= 15030 )
+//				if (_aseVersion >= 15030 )
+				if (_aseVersion >= 1503000 )
 				{
 				tabWriter.write("    ProcNestLevel      int             not null,\n");
 				tabWriter.write("    StatementNumber    int             not null,\n");
@@ -2094,11 +2103,13 @@ public class RefreshProcess extends Thread
 //		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
 //		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
 //		cols3 = "";
-//		if (_aseVersion >= 12520)
+////		if (_aseVersion >= 12520)
+//		if (_aseVersion >= 1252000)
 //		{
 //			cols3 = ", TableSize";
 //		}
-//		if (_aseVersion >= 15000)
+////		if (_aseVersion >= 15000)
+//		if (_aseVersion >= 1500000)
 //		{
 //			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 //			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
@@ -2127,11 +2138,13 @@ public class RefreshProcess extends Thread
 				cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
 				cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
 				cols3 = "";
-				if (srvVersion >= 12520)
+//				if (srvVersion >= 12520)
+				if (srvVersion >= 1252000)
 				{
 					cols3 = ", TableSize";
 				}
-				if (srvVersion >= 15000)
+//				if (srvVersion >= 15000)
+				if (srvVersion >= 1500000)
 				{
 					cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 					cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
@@ -2159,7 +2172,8 @@ public class RefreshProcess extends Thread
 				pkCols.add("IndexID");
 				pkCols.add("OwnerUserID");
 
-				if (srvVersion >= 15000)
+//				if (srvVersion >= 15000)
+				if (srvVersion >= 1500000)
 					pkCols.add("PartitionID");
 
 				return pkCols;
@@ -2256,6 +2270,7 @@ public class RefreshProcess extends Thread
 				// If ASE is above 15.0.3 esd#1, and dbcc traceon(3604) is given && 'capture missing stats' is 
 				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
 				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
+				//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
 				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
 	
 				return msgHandler;
@@ -2269,7 +2284,8 @@ public class RefreshProcess extends Thread
 					"from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C \n" + 
 					"where W.WaitEventID=I.WaitEventID \n" + 
 					"  and I.WaitClassID=C.WaitClassID \n";
-				if (srvVersion >= 15700)
+//				if (srvVersion >= 15700)
+				if (srvVersion >= 1570000)
 				{
 					sql += "  and C.Language = 'en_US' \n";
 					sql += "  and I.Language = 'en_US' \n";
@@ -2371,11 +2387,13 @@ public class RefreshProcess extends Thread
 //		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
 //		cols2 = "";
 //		cols3 = "WaitTime, PageNumber, RowNumber";
-//		if (_aseVersion >= 15002)
+////		if (_aseVersion >= 15002)
+//		if (_aseVersion >= 1500020)
 //		{
 //			cols2 = "BlockedState, BlockedBy, ";  //
 //		}
-//		if (_aseVersion >= 15020)
+////		if (_aseVersion >= 15020)
+//		if (_aseVersion >= 1502000)
 //		{
 //			cols3 += ", SourceCodeID";  //
 //		}
@@ -2404,11 +2422,13 @@ public class RefreshProcess extends Thread
 						"LockState, LockType, LockLevel, ";
 				cols2 = "";
 				cols3 = "WaitTime, PageNumber, RowNumber";
-				if (srvVersion >= 15002)
+//				if (srvVersion >= 15002)
+				if (srvVersion >= 1500020)
 				{
 					cols2 = "BlockedState, BlockedBy, ";  //
 				}
-				if (srvVersion >= 15020)
+//				if (srvVersion >= 15020)
+				if (srvVersion >= 1502000)
 				{
 					cols3 += ", SourceCodeID";  //
 				}
@@ -2501,7 +2521,8 @@ public class RefreshProcess extends Thread
 
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-		if (aseVersion >= 15031)
+//		if (aseVersion >= 15031)
+		if (aseVersion >= 1503010)
 			AseConnectionUtils.setCompatibilityMode(conn, false);
 
 		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();

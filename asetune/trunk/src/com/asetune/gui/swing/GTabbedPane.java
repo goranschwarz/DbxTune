@@ -80,6 +80,7 @@ public class GTabbedPane
 	private Vector     _extEntry           = new Vector();
 	private int        _lastMouseClickAtTabIndex = -1;
 //	private GTabbedPane _thisGTabbedPane   = null;
+	private boolean    _restoreTabLayoutPolicy = true;
 
 	/** when we have passed Constructor initialization this would be true */
 	private boolean _initialized = false;
@@ -109,9 +110,10 @@ public class GTabbedPane
 		super(tabPlacement);
 		init();
 	}
-	public GTabbedPane(int tabPlacement, int tabLayoutPolicy) 
+	public GTabbedPane(int tabPlacement, int tabLayoutPolicy)
 	{
 		super(tabPlacement, tabLayoutPolicy);
+		_restoreTabLayoutPolicy = false;
 		init();
 	}
 	private synchronized void init()
@@ -123,6 +125,15 @@ public class GTabbedPane
 
 		setTabLayoutPolicy( super.getTabLayoutPolicy() );
 		setWatermarkAnchor(this);
+		
+		// restore setting (TabLayoutPolicy)
+		String name = getName();
+		if ( (! StringUtil.isNullOrBlank(name)) && _restoreTabLayoutPolicy )
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			setTabLayoutPolicy( conf.getIntProperty("GTabbedPane." + name + ".TabLayoutPolicy", getTabLayoutPolicy()) );
+		} // end: restore
+
 		_initialized = true;
 	}
 
@@ -999,10 +1010,14 @@ public class GTabbedPane
 
 	private TabExtendedEntry getExtendedEntry(String name)
 	{
+		return getExtendedEntry(this, name);
+	}
+	private static TabExtendedEntry getExtendedEntry(GTabbedPane tp, String name)
+	{
 		if (name == null)
 			return null;
 
-		for (Enumeration iter = _extEntry.elements(); iter.hasMoreElements();)
+		for (Enumeration iter = tp._extEntry.elements(); iter.hasMoreElements();)
         {
 			Object o = iter.nextElement();
 
@@ -1032,13 +1047,44 @@ public class GTabbedPane
 	**---------------------------------------------------
 	*/
 	/** if tab is un-docked, meaning it's in  it's own window */
-	public boolean isTabUnDocked(String name)
+//	public boolean isTabUnDocked(String name)
+//	{
+//		TabExtendedEntry xe = getExtendedEntry(name);
+//		if (xe == null)
+//			return false;
+//		return ! xe._isDocked;
+//	}
+	public boolean isTabUnDocked(String title)
 	{
-		TabExtendedEntry xe = getExtendedEntry(name);
-		if (xe == null)
-			return false;
-		return ! xe._isDocked;
+		return isTabUnDocked(this, title, true);
 	}
+	public boolean isTabUnDocked(String title, boolean doSubLevels)
+	{
+		return isTabUnDocked(this, title, doSubLevels);
+	}
+	private static boolean isTabUnDocked(GTabbedPane tp, String title, boolean doSubLevels)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				TabExtendedEntry xe = tp.getExtendedEntry(title);
+				if (xe == null)
+					return false;
+				return ! xe._isDocked;
+			}
+
+			if (comp instanceof GTabbedPane && doSubLevels)
+			{
+				return isTabUnDocked((GTabbedPane)comp, title, doSubLevels);
+			}
+		}
+		return false;
+	}
+
 	/** if tab is un-docked, meaning it's in  it's own window */
 	public boolean isTabUnDocked(int viewIndex)
 	{
@@ -1720,9 +1766,26 @@ public class GTabbedPane
 				Component comp      = tp.getComponentAt(t);
 				if (comp instanceof GTabbedPane)
 					setTabLayoutPolicy((GTabbedPane)comp, policy);
-			}		
+			}
 		}
-	}
+
+		// save setting
+		if (tp._initialized)
+		{
+			String name = tp.getName();
+			if ( ! StringUtil.isNullOrBlank(name) )
+			{
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if ( conf != null )
+				{
+					String base = "GTabbedPane." + name + ".";
+					conf.setProperty(base + "TabLayoutPolicy", policy);
+
+					conf.save();
+				}
+			}
+		} // end: save
+	} // end: method
 
 //	/**	  Adds a component with a tab title defaulting to the name of the component which is the result of calling component.getName. */
 //	public Component add(Component component)

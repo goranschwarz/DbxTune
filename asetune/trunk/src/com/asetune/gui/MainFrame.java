@@ -36,6 +36,7 @@ import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -177,11 +178,24 @@ public class MainFrame
 	public static final String    PROPKEY_doJavaGcAfterRefreshShowGui  = "do.java.gc.after.refresh.show.gui";	
 	public static final boolean   DEFAULT_doJavaGcAfterRefreshShowGui  = true;
 
+	public static final String    PROPKEY_summaryOperations_showAbs    = "MainFrame.summary.operations.show.abs";
+	public static final boolean   DEFAULT_summaryOperations_showAbs    = false;
+
+	public static final String    PROPKEY_summaryOperations_showDiff   = "MainFrame.summary.operations.show.diff";
+	public static final boolean   DEFAULT_summaryOperations_showDiff   = true;
+
+	public static final String    PROPKEY_summaryOperations_showRate   = "MainFrame.summary.operations.show.rate";
+	public static final boolean   DEFAULT_summaryOperations_showRate   = true;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_useTcpGroups,                DEFAULT_useTcpGroups);
 		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh);
 		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterRefreshShowGui, DEFAULT_doJavaGcAfterRefreshShowGui);
+
+		Configuration.registerDefaultValue(PROPKEY_summaryOperations_showAbs,   DEFAULT_summaryOperations_showAbs);
+		Configuration.registerDefaultValue(PROPKEY_summaryOperations_showDiff,  DEFAULT_summaryOperations_showDiff);
+		Configuration.registerDefaultValue(PROPKEY_summaryOperations_showRate,  DEFAULT_summaryOperations_showRate);
 	}
 
 	//-------------------------------------------------
@@ -197,6 +211,7 @@ public class MainFrame
 	public static final String ACTION_GROUP_TCP_IN_TAB_PANE             = "GROUP_TCP_IN_TAB_PANE";
 	public static final String ACTION_DO_JAVA_GC_AFTER_REFRESH          = "DO_JAVA_GC_AFTER_REFRESH";
 	public static final String ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI = "DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI";
+	public static final String ACTION_SUMMARY_OPERATIONS_TOGGLE         = "SUMMARY_OPERATIONS_TOGGLE";
 	public static final String ACTION_OPEN_REFRESH_RATE                 = "OPEN_REFRESH_RATE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW             = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW             = "OPEN_GRAPH_GRAPH_VIEW";
@@ -230,8 +245,11 @@ public class MainFrame
 	public static final String ACTION_SCREENSHOT                        = "SCREENSHOT";
 	public static final String ACTION_SAMPLING_PAUSE                    = "SAMPLING_PAUSE";
 	public static final String ACTION_SAMPLING_PLAY                     = "SAMPLING_PLAY";
+	public static final String ACTION_CHANGE_SAMPLE_INTERVAL            = "CHANGE_SAMPLE_INTERVAL";
 	
 	public static final String ACTION_TAB_SELECTOR                      = "TAB_SELECTOR";
+	public static final String ACTION_CM_NAVIGATOR_PREV                 = "CM_NAVIGATOR_PREV";
+	public static final String ACTION_CM_NAVIGATOR_NEXT                 = "CM_NAVIGATOR_NEXT";
 
 	public static final String ACTION_SLIDER_LEFT                       = "SLIDER_LEFT";
 	public static final String ACTION_SLIDER_RIGHT                      = "SLIDER_RIGHT";
@@ -240,8 +258,13 @@ public class MainFrame
 	public static final String ACTION_SLIDER_LEFT_NEXT                  = "SLIDER_LEFT_NEXT";
 	public static final String ACTION_SLIDER_RIGHT_NEXT                 = "SLIDER_RIGHT_NEXT";
 
+	private String _inActionCommand = null;
 	private PersistContainer _currentPc      = null;
 
+	private LinkedList<String> _cmNavigatorPrevStack  = new LinkedList<String>(); // last selected tab is first in the list.
+	private LinkedList<String> _cmNavigatorNextStack  = new LinkedList<String>(); // add an entry every time you press "prev" so we know where to go if "next" is pushed. Reset every time a "normal" tab selection is done 
+	private int                _cmNavigatorStackLevel = 0;
+	
 	//-------------------------------------------------
 	// Menus / toolbar
 
@@ -279,6 +302,9 @@ public class MainFrame
 	private JCheckBoxMenuItem   _groupTcpInTabPane_mi          = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
 	private JCheckBoxMenuItem   _optDoGcAfterRefresh_mi        = new JCheckBoxMenuItem("Do Java Garbage Collect, after counters has been refreshed", DEFAULT_doJavaGcAfterRefresh);
 	private JCheckBoxMenuItem   _optDoGcAfterRefreshShowGui_mi = new JCheckBoxMenuItem("Do Java Garbage Collect, after counters has been refreshed, Show GUI Dialog", DEFAULT_doJavaGcAfterRefreshShowGui);
+	private JCheckBoxMenuItem   _optSummaryOperShowAbs_mi      = new JCheckBoxMenuItem("Show Absolute Counters for Summary Operations",   DEFAULT_summaryOperations_showAbs);
+	private JCheckBoxMenuItem   _optSummaryOperShowDiff_mi     = new JCheckBoxMenuItem("Show Difference Counters for Summary Operations", DEFAULT_summaryOperations_showDiff);
+	private JCheckBoxMenuItem   _optSummaryOperShowRate_mi     = new JCheckBoxMenuItem("Show Rate Counters for Summary Operations",       DEFAULT_summaryOperations_showRate);
 	private JMenuItem           _aseConfigView_mi              = new JMenuItem("View ASE Configuration...");
 	private JMenuItem           _tcpSettingsConf_mi            = new JMenuItem("Change 'Performance Counter' Options...");
 	private JMenuItem           _counterTabView_mi             = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
@@ -315,6 +341,7 @@ public class MainFrame
 	private JButton                   _refreshNow_but            = new JButton();
 	private JButton                   _samplePause_but           = new JButton();
 	private JButton                   _samplePlay_but            = new JButton();
+	private JComboBox                 _sampleInterval_cbx        = new JComboBox(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 120});
 	private JButton                   _gcNow_but                 = new JButton();
 	private static JLabel             _statusStatus              = new JLabel(ST_DEFAULT_STATUS_FIELD);
 	private static JLabel             _statusStatus2             = new JLabel(ST_DEFAULT_STATUS2_FIELD);
@@ -333,6 +360,8 @@ public class MainFrame
 	private JButton                   _screenshotTb_but          = null;
 	private JButton                   _samplePauseTb_but         = new JButton();
 	private JButton                   _samplePlayTb_but          = new JButton();
+	private JButton                   _prevCmNavigator_but       = null;
+	private JButton                   _nextCmNavigator_but       = null;
 
 	//-------------------------------------------------
 	// Other members
@@ -367,6 +396,8 @@ public class MainFrame
 	/** DDL Viewer GUI */
 	private DdlViewer _ddlViewer = null;
 	
+	/** set to true at the end of initialization */
+	private boolean _initialized = false;
 	//-------------------------------------------------
 
 	public static boolean useTcpGroups()
@@ -414,6 +445,8 @@ public class MainFrame
 
 		// ADD this to the out of memory listener, which is started in AseTune.java
 		Memory.addMemoryListener(this);
+		
+		_initialized = true;
 	}
 
 //	static
@@ -583,6 +616,10 @@ public class MainFrame
 			_preferences_m.add(_groupTcpInTabPane_mi);
 			_preferences_m.add(_optDoGcAfterRefresh_mi);
 			_preferences_m.add(_optDoGcAfterRefreshShowGui_mi);
+			_preferences_m.add(new JSeparator());
+			_preferences_m.add(_optSummaryOperShowAbs_mi);
+			_preferences_m.add(_optSummaryOperShowDiff_mi);
+			_preferences_m.add(_optSummaryOperShowRate_mi);
 		_view_m.add(_aseConfigView_mi);
 		_view_m.add(_tcpSettingsConf_mi);
 		_view_m.add(_counterTabView_mi);
@@ -618,6 +655,9 @@ public class MainFrame
 		_groupTcpInTabPane_mi         .setActionCommand(ACTION_GROUP_TCP_IN_TAB_PANE);
 		_optDoGcAfterRefresh_mi       .setActionCommand(ACTION_DO_JAVA_GC_AFTER_REFRESH);
 		_optDoGcAfterRefreshShowGui_mi.setActionCommand(ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI);
+		_optSummaryOperShowAbs_mi     .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
+		_optSummaryOperShowDiff_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
+		_optSummaryOperShowRate_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
 		_refreshRate_mi               .setActionCommand(ACTION_OPEN_REFRESH_RATE);
 		_aseConfigView_mi             .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
 		_tcpSettingsConf_mi           .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
@@ -651,6 +691,9 @@ public class MainFrame
 		_groupTcpInTabPane_mi         .addActionListener(this);
 		_optDoGcAfterRefresh_mi       .addActionListener(this);
 		_optDoGcAfterRefreshShowGui_mi.addActionListener(this);
+		_optSummaryOperShowAbs_mi     .addActionListener(this);
+		_optSummaryOperShowDiff_mi    .addActionListener(this);
+		_optSummaryOperShowRate_mi    .addActionListener(this);
 		_refreshRate_mi               .addActionListener(this);
 		_aseConfigView_mi             .addActionListener(this);
 		_tcpSettingsConf_mi           .addActionListener(this);
@@ -711,6 +754,12 @@ public class MainFrame
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_LEFT_NEXT,   leftNextSample,   JComponent.WHEN_IN_FOCUSED_WINDOW);
 		contentPane.registerKeyboardAction(this, ACTION_SLIDER_RIGHT_NEXT,  rightNextSample,  JComponent.WHEN_IN_FOCUSED_WINDOW);
 
+		KeyStroke cmNavigatorPrev  = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT,  ActionEvent.ALT_MASK);
+		KeyStroke cmNavigatorNext  = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, ActionEvent.ALT_MASK);
+
+		contentPane.registerKeyboardAction(this, ACTION_CM_NAVIGATOR_PREV, cmNavigatorPrev,   JComponent.WHEN_IN_FOCUSED_WINDOW);
+		contentPane.registerKeyboardAction(this, ACTION_CM_NAVIGATOR_NEXT, cmNavigatorNext,   JComponent.WHEN_IN_FOCUSED_WINDOW);
+
 		//--------------------------
 		// TOOLBAR
 		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
@@ -733,42 +782,7 @@ public class MainFrame
 				// remove all old items (if any)
 				tabSelectorNoSortPopupMenu.removeAll();
 
-//				// Get all titles into a list
-//				ArrayList<String> tabStrList = new ArrayList<String>();
-//				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
-//					tabStrList.add(_mainTabbedPane.getTitleAt(t));
-//
-//				// Sort the list
-//				//Collections.sort(tabStrList);
-//
-//				// Now create menu items in the correct order
-//				for (String name : tabStrList)
-//				{
-//					int tabIndex = _mainTabbedPane.indexOfTab(name);
-//
-//					JMenuItem mi = new JMenuItem();
-//					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
-//					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
-//					mi.addActionListener(new ActionListener()
-//					{
-//						@Override
-//						public void actionPerformed(ActionEvent e)
-//						{
-//							Object o = e.getSource();
-//							if (o instanceof JMenuItem)
-//							{
-//								JMenuItem mi = (JMenuItem) o;
-//								String tabName = mi.getText();
-//								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
-//								_mainTabbedPane.setSelectedIndex(tabIndex);
-//							}
-//						}
-//					});
-//
-//					tabSelectorNoSortPopupMenu.add(mi);
-//				}
 				// Get all titles into a list
-//				List<String> tabStrList = _mainTabbedPane.getAllTitles();
 				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
 
 				// Sort the list
@@ -827,43 +841,7 @@ public class MainFrame
 				// remove all old items (if any)
 				tabSelectorSortedPopupMenu.removeAll();
 
-//				// Get all titles into a list
-//				ArrayList<String> tabStrList = new ArrayList<String>();
-//				for (int t=0; t<_mainTabbedPane.getTabCount(); t++)
-//					tabStrList.add(_mainTabbedPane.getTitleAt(t));
-//
-//				// Sort the list
-//				Collections.sort(tabStrList);
-//
-//				// Now create menu items in the correct order
-//				for (String name : tabStrList)
-//				{
-//					int tabIndex = _mainTabbedPane.indexOfTab(name);
-//
-//					JMenuItem mi = new JMenuItem();
-//					mi.setText(_mainTabbedPane.getTitleAt(tabIndex));
-//					mi.setIcon(_mainTabbedPane.getIconAt(tabIndex));
-//					mi.addActionListener(new ActionListener()
-//					{
-//						@Override
-//						public void actionPerformed(ActionEvent e)
-//						{
-//							Object o = e.getSource();
-//							if (o instanceof JMenuItem)
-//							{
-//								JMenuItem mi = (JMenuItem) o;
-//								String tabName = mi.getText();
-//								int tabIndex = _mainTabbedPane.indexOfTab(tabName);
-//								_mainTabbedPane.setSelectedIndex(tabIndex);
-//							}
-//						}
-//					});
-//
-//					tabSelectorSortedPopupMenu.add(mi);
-//				}
 				// Get all titles into a list
-//				List<String> tabStrList = _mainTabbedPane.getAllTitles();
-//				List<String> tabStrList = _mainTabbedPane.getAllTitles("<html><b>${TAB_NAME}</b> - ${GROUP_NAME}</html>");
 				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
 
 				// Sort the list
@@ -903,6 +881,114 @@ public class MainFrame
 			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
 		});
 
+
+		// NAVIGATOR: PREVIOUS
+		_prevCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "prev_cm.png", ACTION_CM_NAVIGATOR_PREV, this, "<html>Goto <i>previously</i> used Performance Counter Tab<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-left</html>", "Previous Tab");
+		final JPopupMenu prevCmNavigatorPopupMenu = new JPopupMenu();
+		prevCmNavigatorPopupMenu.add(new JMenuItem("Empty"));
+		_prevCmNavigator_but.setComponentPopupMenu(prevCmNavigatorPopupMenu);
+		prevCmNavigatorPopupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				// remove all old items (if any)
+				prevCmNavigatorPopupMenu.removeAll();
+
+				// Get all titles into a list
+//				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
+				List<String> tabStrList = _cmNavigatorPrevStack;
+
+				// Now create menu items in the correct order
+				for (String name : tabStrList)
+				{
+					final String[] sa = name.split(";");
+					final String tabName   = sa[0];
+					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
+					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+
+					JMenuItem mi = new JMenuItem();
+					mi.setText(menuText);
+					mi.setIcon(_mainTabbedPane.getIconAtTitle(tabName));
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JMenuItem)
+							{
+								//JMenuItem mi = (JMenuItem) o;
+								//String tabName = mi.getText();
+								_mainTabbedPane.setSelectedTitle(tabName);
+							}
+						}
+					});
+
+					prevCmNavigatorPopupMenu.add(mi);
+				}
+			}
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
+		});
+
+		// NAVIGATOR: NEXT
+		_nextCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "next_cm.png", ACTION_CM_NAVIGATOR_NEXT, this, "<html>Goto <i>next</i> used Performance Counter Tab, in the usage stack<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-right</html>", "Next Tab");
+		final JPopupMenu nextCmNavigatorPopupMenu = new JPopupMenu();
+		nextCmNavigatorPopupMenu.add(new JMenuItem("Empty"));
+		_nextCmNavigator_but.setComponentPopupMenu(nextCmNavigatorPopupMenu);
+		nextCmNavigatorPopupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				// remove all old items (if any)
+				nextCmNavigatorPopupMenu.removeAll();
+
+				// Get all titles into a list
+//				List<String> tabStrList = _mainTabbedPane.getAllTitles("${TAB_NAME};${GROUP_NAME}");
+				List<String> tabStrList = _cmNavigatorNextStack;
+
+				// Now create menu items in the correct order
+				for (String name : tabStrList)
+				{
+					final String[] sa = name.split(";");
+					final String tabName   = sa[0];
+					final String groupName = sa.length > 1 ? "<i>"+sa[1]+"</i> - " : "";
+					final String menuText = "<html>"+groupName+"<b>"+tabName+"</b></html>";
+
+					JMenuItem mi = new JMenuItem();
+					mi.setText(menuText);
+					mi.setIcon(_mainTabbedPane.getIconAtTitle(tabName));
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JMenuItem)
+							{
+								//JMenuItem mi = (JMenuItem) o;
+								//String tabName = mi.getText();
+								_mainTabbedPane.setSelectedTitle(tabName);
+							}
+						}
+					});
+
+					nextCmNavigatorPopupMenu.add(mi);
+				}
+			}
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
+		});
+//		_prevCm_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/prev_cm.png"));
+//		_nextCm_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/next_cm.png"));
+
+
 		_viewStorage_chk .setIcon(        SwingUtils.readImageIcon(Version.class, "images/read_storage.png"));
 		_viewStorage_chk .setSelectedIcon(SwingUtils.readImageIcon(Version.class, "images/read_storage_minus.png"));
 		_viewStorage_chk .setToolTipText("View Counters that are stored in memory for a while...");
@@ -915,6 +1001,8 @@ public class MainFrame
 		_toolbar.add(_samplePlayTb_but,  "hidemode 3");
 		_toolbar.add(tabSelectorNoSort);
 		_toolbar.add(tabSelectorSorted);
+		_toolbar.add(_prevCmNavigator_but);
+		_toolbar.add(_nextCmNavigator_but);
 
 		_workspace_cbx.addItem("ASE");
 //		_workspace_cbx.addItem("ASE-CE");
@@ -1000,6 +1088,7 @@ public class MainFrame
 		_refreshNow_but       .setToolTipText("Abort the \"sleep for next refresh\" and make a new refresh of data NOW (shortcut Alt+r).");
 		_samplePause_but      .setToolTipText("Pause ALL sampling activity.");
 		_samplePlay_but       .setToolTipText("Continue to sample counters again.");
+		_sampleInterval_cbx   .setToolTipText("Sleep time between Data Collection");
 		_gcNow_but            .setToolTipText("Do Java Garbage Collection.");
 		_statusStatus         .setToolTipText("What are we doing or waiting for.");
 		_statusStatus2        .setToolTipText("What are we doing or waiting for.");
@@ -1069,7 +1158,10 @@ public class MainFrame
 		_samplePlay_but.setActionCommand(ACTION_SAMPLING_PLAY);
 		_samplePlay_but.setVisible(false);
 
-				
+		_sampleInterval_cbx.setBackground(_statusPanel.getBackground());
+		_sampleInterval_cbx.addActionListener(this);
+		_sampleInterval_cbx.setActionCommand(ACTION_CHANGE_SAMPLE_INTERVAL);
+		
 		// GC now butt
 		_gcNow_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/gc_now.png"));
 		_gcNow_but.setText(null);
@@ -1084,6 +1176,7 @@ public class MainFrame
 		_statusPanel.add(_refreshNow_but,                         "");
 		_statusPanel.add(_samplePause_but,                        "hidemode 3");
 		_statusPanel.add(_samplePlay_but,                         "hidemode 3");
+		_statusPanel.add(_sampleInterval_cbx,                     "");
 		_statusPanel.add(_blockAlert_but,                         "hidemode 3");
 		_statusPanel.add(_fullTranlogAlert_but,                   "hidemode 3");
 		_statusPanel.add(_oldestOpenTran_but,                     "hidemode 3");
@@ -1113,7 +1206,8 @@ public class MainFrame
 		
 		//--------------------------
 		// Tab
-		_mainTabbedPane.setTabLayoutPolicy(JTabbedPane.WRAP_TAB_LAYOUT);
+//		_mainTabbedPane.setTabLayoutPolicy(JTabbedPane.WRAP_TAB_LAYOUT);
+		_mainTabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		_mainTabbedPane.addChangeListener(this);
 		_mainTabbedPane.setTabOrderAndVisibilityListener(this);
 
@@ -1334,6 +1428,7 @@ public class MainFrame
 	{
 		Object source    = e.getSource();
 		String actionCmd = e.getActionCommand();
+		_inActionCommand = actionCmd;
 
 		_logger.debug("ACTION '"+actionCmd+"'.");
 
@@ -1369,6 +1464,12 @@ public class MainFrame
 		if (ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI.equals(actionCmd))
 			action_toggleDoJavaGcAfterRefreshShowGui(e);
 
+		if (ACTION_SUMMARY_OPERATIONS_TOGGLE.equals(actionCmd))
+		{
+			saveProps();
+			CounterController.getSummaryPanel().setComponentProperties();
+		}
+		
 		if (ACTION_OPEN_REFRESH_RATE.equals(actionCmd))
 			action_refreshRate(e);
 
@@ -1395,7 +1496,8 @@ public class MainFrame
 			String servername    = MonTablesDictionary.getInstance().getAseServerName();
 			String aseVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
 			int    aseVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
-			if (aseVersionNum >= 15020)
+//			if (aseVersionNum >= 15020)
+			if (aseVersionNum >= 1502000)
 			{
 				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
 				apptrace.setVisible(true);
@@ -1769,6 +1871,13 @@ public class MainFrame
 		{
 			setPauseSampling(false);
 		}
+		
+		if (ACTION_CHANGE_SAMPLE_INTERVAL.equals(actionCmd))
+		{
+			_refreshInterval = ((Number)_sampleInterval_cbx.getSelectedItem()).intValue();
+
+			saveProps();
+		}
 
 		if (ACTION_TAB_SELECTOR.equals(actionCmd))
 		{
@@ -1782,6 +1891,42 @@ public class MainFrame
 			}
 		}
 
+		if (ACTION_CM_NAVIGATOR_PREV.equals(actionCmd))
+		{
+			_cmNavigatorStackLevel++;
+			if (_cmNavigatorStackLevel < _cmNavigatorPrevStack.size())
+			{
+				String currentTabName = _mainTabbedPane.getSelectedTitle(true);
+				String toTabName      = _cmNavigatorPrevStack.get(_cmNavigatorStackLevel);
+	
+				_cmNavigatorNextStack.remove(currentTabName);
+				_cmNavigatorNextStack.addFirst(currentTabName);
+	
+				_mainTabbedPane.setSelectedTitle(toTabName);
+
+				// disable button, if we are at the end...
+				_prevCmNavigator_but.setEnabled( _cmNavigatorStackLevel + 1 < _cmNavigatorPrevStack.size() );
+			}
+			else
+				_cmNavigatorStackLevel = _cmNavigatorPrevStack.size() - 1;
+				
+
+//			System.out.println("ACTION_CM_NAVIGATOR_PREV: _cmNavigatorStackLevel="+_cmNavigatorStackLevel+", _cmNavigatorNextStack="+_cmNavigatorNextStack+", _cmNavigatorPrevStack='"+_cmNavigatorPrevStack+"'.");
+		}
+		if (ACTION_CM_NAVIGATOR_NEXT.equals(actionCmd))
+		{
+			_cmNavigatorStackLevel--;
+			if (_cmNavigatorStackLevel < 0)
+				_cmNavigatorStackLevel = 0;
+			if ( ! _cmNavigatorNextStack.isEmpty() )
+			{
+				String toTabName = _cmNavigatorNextStack.getFirst();
+				_cmNavigatorNextStack.removeFirst();
+				_mainTabbedPane.setSelectedTitle(toTabName);
+			}
+//			System.out.println("ACTION_CM_NAVIGATOR_NEXT: _cmNavigatorStackLevel="+_cmNavigatorStackLevel+", _cmNavigatorNextStack="+_cmNavigatorNextStack+", _cmNavigatorPrevStack='"+_cmNavigatorPrevStack+"'.");
+		}
+
 		if (ACTION_SLIDER_LEFT       .equals(actionCmd)) action_sliderKeyLeft(e);
 		if (ACTION_SLIDER_RIGHT      .equals(actionCmd)) action_sliderKeyRight(e);
 		if (ACTION_SLIDER_LEFT_LEFT  .equals(actionCmd)) action_sliderKeyLeftLeft(e);
@@ -1789,6 +1934,7 @@ public class MainFrame
 		if (ACTION_SLIDER_LEFT_NEXT  .equals(actionCmd)) action_sliderKeyLeftNext(e);
 		if (ACTION_SLIDER_RIGHT_NEXT .equals(actionCmd)) action_sliderKeyRightNext(e);
 
+		_inActionCommand = null;
 	}
 
 	/*---------------------------------------------------
@@ -1806,6 +1952,21 @@ public class MainFrame
 	{
 		Object source = e.getSource();
 
+		// Visibility for navigator buttons.
+		_nextCmNavigator_but.setEnabled( ! _cmNavigatorNextStack.isEmpty() );
+		_prevCmNavigator_but.setEnabled( _cmNavigatorStackLevel < _cmNavigatorPrevStack.size() );
+		if (ACTION_CM_NAVIGATOR_PREV.equals(_inActionCommand) || ACTION_CM_NAVIGATOR_NEXT.equals(_inActionCommand))
+		{
+			// do nothing
+		}
+		else
+		{
+			// a tab was pressed, but not from the "prev/next" buttons, then reset the stack level, and emty the "next" stack
+			_cmNavigatorStackLevel = 0;
+			while (_cmNavigatorNextStack.size() > 0)
+				_cmNavigatorNextStack.removeLast();
+		}
+
 		//------------------------------------------------------
 		// TabPane changes
 		//------------------------------------------------------
@@ -1814,6 +1975,12 @@ public class MainFrame
 			String selectedTabTitle = _mainTabbedPane.getSelectedTitle(true);
 			if (selectedTabTitle == null)
 				return;	
+//System.out.println("stateChanged:_mainTabbedPane:toTitle='"+selectedTabTitle+"'.");
+_cmNavigatorPrevStack.remove(selectedTabTitle);
+_cmNavigatorPrevStack.addFirst(selectedTabTitle);
+
+//new Exception("DUMMY").printStackTrace();
+
 	
 			// LOOP all TabularCntrPanel to check which is the current one...
 			// if it should be done
@@ -2328,12 +2495,14 @@ public class MainFrame
 						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_AA_NW_PACKET,       true);
 						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_OLDEST_TRAN_IN_SEC, true);
 
-						if (aseVersion >= 15033 && hasMonRole)
+//						if (aseVersion >= 15033 && hasMonRole)
+						if (aseVersion >= 1503030 && hasMonRole)
 							cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_TRANSACTION,    true);
 					}
 
 					// GRAPHS in SYSLOAD
-					if (aseVersion >= 15500 && hasMonRole)
+//					if (aseVersion >= 15500 && hasMonRole)
+					if (aseVersion >= 1550000 && hasMonRole)
 					{
 						cm = GetCounters.getInstance().getCmByName(CmSysLoad.CM_NAME);
 						if (cm != null)
@@ -2341,7 +2510,8 @@ public class MainFrame
 					}
 
 					// GRAPHS in PROC_CACHE_MODULE_USAGE
-					if (aseVersion >= 15010 && hasMonRole)
+//					if (aseVersion >= 15010 && hasMonRole)
+					if (aseVersion >= 1501000 && hasMonRole)
 					{
 						cm = GetCounters.getInstance().getCmByName(CmPCacheModuleUsage.CM_NAME);
 						if (cm != null)
@@ -3298,7 +3468,8 @@ public class MainFrame
 		//----- sp_spaceused2.sql -----
 		systmp.setProperty("system.predefined.sql.07.name",                        "sp_spaceused2 - List space and row used by each table in the current database");
 		systmp.setProperty("system.predefined.sql.07.execute",                     "exec sp_spaceused2");
-		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "15000");
+//		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "15000");
+		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "1500000");
 		systmp.setProperty("system.predefined.sql.07.install.dbname",              "sybsystemprocs");
 		systmp.setProperty("system.predefined.sql.07.install.procName",            "sp_spaceused2");
 		systmp.setProperty("system.predefined.sql.07.install.procDateThreshold",   VersionInfo.SP_SPACEUSED2_CR_STR);
@@ -4185,16 +4356,31 @@ public class MainFrame
 		// Make a default for some COLUMNS if they was not found in the USER DEFINED MAP
 		if (sql == null)
 		{
-			if (    "SPID"          .equalsIgnoreCase(colName)
-				 || "OldestTranSpid".equalsIgnoreCase(colName)
+			if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
+			     || "OldestTranSpid".equalsIgnoreCase(colName) // from CmOpenDatabases
+			     || "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+			     || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+			     || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
 			   )
 			{
 				String monWaitEventInfoWhere = "";
 				if (MonTablesDictionary.hasInstance())
 				{
-					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
+//					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
+					if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
 						monWaitEventInfoWhere = " and W.Language = 'en_US'";
 				}
+
+				// Determine the COLUMN name to be used in the search
+				String whereColName = "MP.SPID";
+				if (    "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+					 || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+					 || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
+				   )
+				{
+					whereColName = "MP.KPID";
+				}
+
 				sql = 
 					"select " +
 					" MP.SPID, " +
@@ -4213,7 +4399,7 @@ public class MainFrame
 					" MP.BlockingXLOID, " +
 					" MP.MasterTransactionID" +
 					" from monProcess MP " +
-					" where MP.SPID = ? ";
+					" where "+whereColName+" = ? ";
 			}
 		}
 		
@@ -4320,6 +4506,10 @@ public class MainFrame
 
 	private void saveProps()
 	{
+		// do not save stuff during initialization
+		if ( ! _initialized )
+			return;
+
 		//_logger.debug("xxxxx: " + e.getWindow().getSize());
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 
@@ -4332,7 +4522,11 @@ public class MainFrame
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterRefresh,                  _optDoGcAfterRefresh_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterRefreshShowGui,           _optDoGcAfterRefreshShowGui_mi.isSelected());
 
-		tmpConf.setProperty("mainTabbedPane.tabLayoutPolicy", _mainTabbedPane.getTabLayoutPolicy());
+		tmpConf.setProperty(PROPKEY_summaryOperations_showAbs,             _optSummaryOperShowAbs_mi .isSelected());
+		tmpConf.setProperty(PROPKEY_summaryOperations_showDiff,            _optSummaryOperShowDiff_mi.isSelected());
+		tmpConf.setProperty(PROPKEY_summaryOperations_showRate,            _optSummaryOperShowRate_mi.isSelected());
+
+//		tmpConf.setProperty("mainTabbedPane.tabLayoutPolicy", _mainTabbedPane.getTabLayoutPolicy());
 
 		tmpConf.setProperty("window.width",  getSize().width);
 		tmpConf.setProperty("window.height", getSize().height);
@@ -4393,9 +4587,23 @@ public class MainFrame
 		// 
 		_refreshInterval      = tmpConf.getIntProperty("main.refresh.interval", _refreshInterval);
 		_refreshNoGuiInterval = tmpConf.getIntProperty("nogui.sleepTime",       _refreshNoGuiInterval);
+		
+//		_sampleInterval_cbx.getModel().setSelectedItem( _refreshInterval );
+		boolean foundRefreshRate = false;
+		for (int i=0; i<_sampleInterval_cbx.getItemCount(); i++)
+		{
+			if (_sampleInterval_cbx.getItemAt(i).equals(_refreshInterval))
+			{
+				foundRefreshRate = true;
+				_sampleInterval_cbx.setSelectedIndex(i);
+			}
+		}
+		if ( ! foundRefreshRate )
+			_sampleInterval_cbx.addItem(_refreshInterval);
+			
 
-		int tabLayoutPolicy = tmpConf.getIntProperty("mainTabbedPane.tabLayoutPolicy", JTabbedPane.WRAP_TAB_LAYOUT);
-		_mainTabbedPane.setTabLayoutPolicy(tabLayoutPolicy);
+//		int tabLayoutPolicy = tmpConf.getIntProperty("mainTabbedPane.tabLayoutPolicy", JTabbedPane.WRAP_TAB_LAYOUT);
+//		_mainTabbedPane.setTabLayoutPolicy(tabLayoutPolicy);
 
 		boolean bool; 
 		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
@@ -4407,6 +4615,10 @@ public class MainFrame
 		_groupTcpInTabPane_mi         .setSelected(tmpConf.getBooleanProperty(PROPKEY_useTcpGroups,                DEFAULT_useTcpGroups));
 		_optDoGcAfterRefresh_mi       .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh));
 		_optDoGcAfterRefreshShowGui_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefreshShowGui, DEFAULT_doJavaGcAfterRefreshShowGui));
+
+		_optSummaryOperShowAbs_mi .setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showAbs,  DEFAULT_summaryOperations_showAbs));
+		_optSummaryOperShowDiff_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showDiff, DEFAULT_summaryOperations_showDiff));
+		_optSummaryOperShowRate_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showRate, DEFAULT_summaryOperations_showRate));
 	}
 	/*---------------------------------------------------
 	** END: private helper methods

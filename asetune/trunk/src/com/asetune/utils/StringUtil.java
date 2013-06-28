@@ -8,6 +8,7 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -29,6 +30,16 @@ import org.apache.log4j.Logger;
 public class StringUtil
 {
 	private static Logger _logger = Logger.getLogger(StringUtil.class);
+
+	public static String toCommaStr(boolean[] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(byte   [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(char   [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(double [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(float  [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(int    [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(long   [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+//	public static String toCommaStr(Object [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
+	public static String toCommaStr(short  [] array) { return Arrays.toString(array).replace("[", "").replace("]", ""); }
 
 	public static <T> String toCommaStr(Collection<T> list)
 	{
@@ -851,6 +862,21 @@ public class StringUtil
 		return str;
 	}
 	
+	public static String removeLastNewLine(String str)
+	{
+		if (str == null)
+			return null;
+
+		str = str.trim();
+
+		if (str.endsWith("\n"))
+			str = str.substring(0, str.length()-1);
+		if (str.endsWith("\r"))
+			str = str.substring(0, str.length()-1);
+
+		return str;
+	}
+
 	/**
 	 * Count number of matching characters in the string
 	 * @param str

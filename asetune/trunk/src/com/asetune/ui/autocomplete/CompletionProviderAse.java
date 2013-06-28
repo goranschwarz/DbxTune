@@ -38,7 +38,7 @@ extends CompletionProviderAbstractSql
 //		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
-		AutoCompletion ac = new AutoCompletion(acProvider);
+		AutoCompletion ac = new SqlAutoCompletion(acProvider);
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
 //		ac.setChoicesWindowSize(600, 600);
@@ -203,7 +203,8 @@ extends CompletionProviderAbstractSql
 
 			_aseMonTableDesc = new HashMap<String, String>();
 			String sql = "select TableName, Description from master.dbo.monTables ";
-			if (aseVersionNum >= 15700)
+//			if (aseVersionNum >= 15700)
+			if (aseVersionNum >= 1570000)
 				sql += " where Language = 'en_US' ";
 
 			try
@@ -441,7 +442,8 @@ extends CompletionProviderAbstractSql
 				waitDialog.setState("Getting MDA Column Descriptions.");
 				
 				String sql = "select TableName, ColumnName, Description from master.dbo.monTableColumns ";
-				if (aseVersionNum >= 15700)
+//				if (aseVersionNum >= 15700)
+				if (aseVersionNum >= 1570000)
 					sql += " where Language = 'en_US' ";
 
 				try

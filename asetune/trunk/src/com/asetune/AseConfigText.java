@@ -30,7 +30,7 @@ import com.asetune.utils.SwingUtils;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseLicenseInfo, AseClusterInfo/*, AseConfigFile*/};
+	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo/*, AseConfigFile*/};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -113,6 +113,10 @@ public abstract class AseConfigText
 
 		case AseMonitorConfig:
 			aseConfigText = new AseConfigText.MonitorConfig();
+			break;
+
+		case AseHelpSort:
+			aseConfigText = new AseConfigText.HelpSort();
 			break;
 
 		case AseLicenseInfo:
@@ -478,7 +482,8 @@ public abstract class AseConfigText
 				"exec sp_cacheconfig \n" +
 				"\n"; 
 			
-			if (aseVersion >= 15700)
+//			if (aseVersion >= 15700)
+			if (aseVersion >= 1570000)
 			{
 				sql += 
 					"\n" +
@@ -510,7 +515,8 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monThreadPool"; }
-		@Override public    int        needVersion()                       { return 15700; }
+//		@Override public    int        needVersion()                       { return 15700; }
+		@Override public    int        needVersion()                       { return 1570000; }
 	}
 
 	public static class HelpDb extends AseConfigText
@@ -535,7 +541,8 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
-		@Override public    int        needVersion()                       { return 15700; }
+//		@Override public    int        needVersion()                       { return 15700; }
+		@Override public    int        needVersion()                       { return 1570000; }
 	}
 
 	public static class HelpServer extends AseConfigText
@@ -563,7 +570,8 @@ public abstract class AseConfigText
 		protected String getSqlCurrentConfig(int aseVersion) 
 		{
 			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
+//			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
+			if (aseVersion >= 1502000 || (aseVersion >= 1254020 && aseVersion < 1500000) )
 				return "show switch"; 
 			else
 				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 
@@ -668,7 +676,8 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_version"; }
-		@Override public    int        needVersion()                       { return 12540; }
+//		@Override public    int        needVersion()                       { return 12540; }
+		@Override public    int        needVersion()                       { return 1254000; }
 	}
 
 	public static class ShmDumpConfig extends AseConfigText
@@ -683,25 +692,34 @@ public abstract class AseConfigText
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_monitorconfig 'all'"; }
 	}
 	
+	public static class HelpSort extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpSort; }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpsort"; }
+	}
+
 	public static class LicenceInfo extends AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monLicense"; }
-		@Override public    int        needVersion()                       { return 15000; }
+//		@Override public    int        needVersion()                       { return 15000; }
+		@Override public    int        needVersion()                       { return 1500000; }
 	}
 	
 	public static class ClusterInfo extends AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
-		@Override public    int        needVersion()                       { return 15020; }
+//		@Override public    int        needVersion()                       { return 15020; }
+		@Override public    int        needVersion()                       { return 1502000; }
 		@Override public    boolean    needCluster()                       { return true; }
 	}
 	
 //	public static class ConfigFile extends AseConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
-//		@Override public    int        needVersion()                       { return 15000; }
+////		@Override public    int        needVersion()                       { return 15000; }
+//		@Override public    int        needVersion()                       { return 1500000; }
 //		@Override public    List<String> needRole()
 //		{ 
 //			List<String> list = new ArrayList<String>();
@@ -804,6 +822,10 @@ public abstract class AseConfigText
 			c = AseConfigText.getInstance(ConfigType.AseMonitorConfig);
 			c.initialize(conn, true, false, null);
 			System.out.println("AseConfigText(AseMonitorConfig).getConfig()=\n"+c.getConfig());
+
+			c = AseConfigText.getInstance(ConfigType.AseHelpSort);
+			c.initialize(conn, true, false, null);
+			System.out.println("AseConfigText(AseHelpSort).getConfig()=\n"+c.getConfig());
 
 			c = AseConfigText.getInstance(ConfigType.AseLicenseInfo);
 			c.initialize(conn, true, false, null);

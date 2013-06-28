@@ -20,6 +20,8 @@ public class CountersModelUserDefined
 
 	/** a Map<Integer, String> that holds a Version and a specific SQL statement */
 	private Map<Integer,String> _sqlVerStr = null;
+	
+	private String _sqlInitial = null;
 
 
 	public CountersModelUserDefined
@@ -41,7 +43,8 @@ public class CountersModelUserDefined
 	{
 		super(name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
 		
-		_sqlVerStr = sqlVerStr;
+		_sqlVerStr  = sqlVerStr;
+		_sqlInitial = sql;
 	}
 
 	@Override
@@ -63,9 +66,10 @@ public class CountersModelUserDefined
 				// connected aseVersion, go and get the highest/closest sql version string 
 				if (srvVersion >= sqlVersionNumInKey)
 				{
-					if (sqlVersionNumInKey < 12503)
+//					if (sqlVersionNumInKey < 12503)
+					if (sqlVersionNumInKey < 1250030)
 					{
-						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is 12503 (which is Ase Version 12.5.0.3 in a numbered format), disregarding this entry.");
+						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is 1250030 (which is Ase Version 12.5.0.3 in a numbered format, (1250030 is new to be able to support ServicePackage, so for version '15.7.0 SP100'=1570100, '15.7.0 ESD#4'=1570040, '15.7.0 ESD#4.2'=1570042) ), disregarding this entry.");
 					}
 					else
 					{
@@ -84,7 +88,7 @@ public class CountersModelUserDefined
 				return val;
 			}
 		}
-		return getSql();
+		return _sqlInitial;
 	}
 
 //	@Override

@@ -110,7 +110,8 @@ extends CountersModelAppend
 		cols1 = "*";
 		cols2 = "";
 		cols3 = "";
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 		}
 

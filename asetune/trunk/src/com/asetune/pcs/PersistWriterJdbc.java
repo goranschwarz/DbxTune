@@ -946,7 +946,8 @@ public class PersistWriterJdbc
 
 				// only 15.0 or above is supported
 				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
-				if (aseVersion < 15000)
+//				if (aseVersion < 15000)
+				if (aseVersion < 1500000)
 				{
 					String msg = "The PCS storage is ASE Version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
 					_logger.error(msg);
@@ -979,7 +980,8 @@ public class PersistWriterJdbc
 					throw ex;
 				}
 
-				if (aseVersion >= 15000)
+//				if (aseVersion >= 15000)
+				if (aseVersion >= 1500000)
 				{
 					_logger.debug("Connected to ASE (above 15.0), do some specific settings 'set delayed_commit on'.");
 					dbExecSetting("set delayed_commit on ");
@@ -1586,17 +1588,22 @@ public class PersistWriterJdbc
 	 * Return a SQL safe string
 	 * <p>
 	 * if str is null, "NULL" will be returned<br>
-	 * else all "'" chars will be translated into "''"
+	 * else all "'" chars will be translated into "''" 
+	 * AND ' will be appended at the start/end of the string 
 	 * @param str
-	 * @return
+	 * @return  input="it's a string" output="'it''s a string'"
 	 */
 	public static String safeStr(String str)
 	{
 		if (str == null)
 			return "NULL";
+
 		StringBuilder sb = new StringBuilder();
+
+		// add ' around the string...
+		// and replace all ' into ''
 		sb.append("'");
-		sb.append(str.replaceAll("'", "''"));
+		sb.append(str.replace("'", "''"));
 		sb.append("'");
 		return sb.toString();
 	}
@@ -1944,14 +1951,17 @@ public class PersistWriterJdbc
 			sbSql.append(" values('").append(sessionStartTime).append("'");
 			sbSql.append(", '").append(sessionSampleTime).append("'");
 			sbSql.append(", '").append(cm.getName()).append("'");
-			sbSql.append(", ").append(counterType);
-			sbSql.append(", ").append(graphCount);
-			sbSql.append(", ").append(absRows);
-			sbSql.append(", ").append(diffRows);
-			sbSql.append(", ").append(rateRows);
-			sbSql.append(", ").append(cm.getSqlRefreshTime());
-			sbSql.append(", ").append(cm.getGuiRefreshTime());
-			sbSql.append(", ").append(cm.getLcRefreshTime());
+			sbSql.append(", ") .append(counterType);
+			sbSql.append(", ") .append(graphCount);
+			sbSql.append(", ") .append(absRows);
+			sbSql.append(", ") .append(diffRows);
+			sbSql.append(", ") .append(rateRows);
+			sbSql.append(", ") .append(cm.getSqlRefreshTime());
+			sbSql.append(", ") .append(cm.getGuiRefreshTime());
+			sbSql.append(", ") .append(cm.getLcRefreshTime());
+			sbSql.append(", ") .append(cm.hasNonConfiguredMonitoringHappened() ? 1 : 0);
+			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMissingParams()));
+			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMessage(false)));
 			sbSql.append(")");
 
 			dbExec(sbSql.toString());

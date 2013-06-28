@@ -113,7 +113,8 @@ extends CountersModelAppend
 		cols1 = "Time, "+instanceId+"SPID, KPID, FamilyID, EngineNumber, ErrorNumber, Severity, ";
 		cols2 = "";
 		cols3 = "ErrorMessage";
-		if (aseVersion >= 12510)
+//		if (aseVersion >= 12510)
+		if (aseVersion >= 1251000)
 		{
 			cols2 = "State, ";
 		}

@@ -46,6 +46,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.LineNumberedPaper;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -104,16 +105,17 @@ public class ProcessDetailFrame extends JFrame
 	public    JTextArea        planTextArea                 = new JTextArea();
 	private   JLabel           kpidLbl                      = new JLabel();
 	private   XYLayout         xYLayout2                    = new XYLayout();
-	private   JPanel           capturedStatementPan         = new JPanel();
-	private   JPanel           captureWhereSqlPanel         = new JPanel();
+	private   GPanel           capturedStatementPan         = new GPanel();
+	private   GPanel           captureWhereSqlPanel         = new GPanel();
 	private   JLabel           label_captureWhereSql        = new JLabel(" Restrict to: WHERE");
 	protected JComboBox        comboBox_captureWhereSql     = new JComboBox();
 	private   JButton          buttom_captureWhereSql       = new JButton("Remove from template");
-	private   JCheckBox        discardPreOpenStmntsCheckbox = new JCheckBox("Discard captured statements that happened before the dialouge was opened.", true);
+	private   JCheckBox        discardPreOpenStmntsCheckbox = new JCheckBox("Discard captured statements that happened before the dialogue was opened.", true);
 
 	private   JPanel           planPanel                    = new JPanel();
 	private   JPanel           batchPanel                   = new JPanel();
 	private   JCheckBox        planShowEnableCheckbox       = new JCheckBox("Sample showplan text", false);
+	private   JCheckBox        doExecSpShowplanfull_cbx     = new JCheckBox("<html>Exec: sp_showplanfull <i>SPID</i>, on <i>first</i> row of <b>active</b> statements, in the table below.</html>", true);
 	private   JCheckBox        batchShowEnableCheckbox      = new JCheckBox("Sample SQL batch text", true);
 	protected JCheckBox        sqlTextShowProcSrcCheckbox   = new JCheckBox("Show Stored Procedure source code in Batch text window", true);
 
@@ -122,7 +124,7 @@ public class ProcessDetailFrame extends JFrame
 	private   TitledBorder     titledBorderCapture;
 	public    TitledBorder     titledBorderBatch;
 //	private   JScrollPane      currentStatementsPan         = new JScrollPane();
-	private   JPanel           currentStatementsPan         = new JPanel();
+	private   GPanel           currentStatementsPan         = new GPanel();
 	private   BorderLayout     borderLayout3                = new BorderLayout();
 	protected JTextField       kpidFld                      = new JTextField();
 	protected JTextField       spidFld                      = new JTextField();
@@ -501,7 +503,7 @@ public class ProcessDetailFrame extends JFrame
 		mainTabbedPanel.setPreferredSize(new Dimension(1024, 520));
 		capturedStatementScrollPan.getViewport().setBackground(new Color(230, 230, 230));
 		capturedStatementScrollPan.setBorder(titledBorderCapture);
-		capturedStatementScrollPan.setPreferredSize(new Dimension(454, 200));
+		capturedStatementScrollPan.setPreferredSize(new Dimension(454, 500));
 		processDetailScroll.setBorder(BorderFactory.createLoweredBevelBorder());
 		kpidLbl.setText("KPID :");
 		northPan.setPreferredSize(new Dimension(10, 90));
@@ -1074,10 +1076,14 @@ public class ProcessDetailFrame extends JFrame
 
 		// SQL BATCH
 		batchPlanSplitPan.add(batchPanel, JSplitPane.LEFT);
-		batchPanel.setLayout(new BorderLayout());
-		batchPanel.add(batchShowEnableCheckbox, BorderLayout.NORTH);
-batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
-		batchPanel.add(batchScrollPan, BorderLayout.CENTER);
+//		batchPanel.setLayout(new BorderLayout());
+//		batchPanel.add(batchShowEnableCheckbox, BorderLayout.NORTH);
+//batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
+//		batchPanel.add(batchScrollPan, BorderLayout.CENTER);
+		batchPanel.setLayout(new MigLayout("insets 0"));
+		batchPanel.add(batchShowEnableCheckbox,    "");
+		batchPanel.add(sqlTextShowProcSrcCheckbox, "wrap");
+		batchPanel.add(batchScrollPan,             "span, grow, push");
 		batchScrollPan.getViewport().add(batchTextArea, null);
 		batchShowEnableCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
@@ -1100,9 +1106,13 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 
 		// PLAN
 		batchPlanSplitPan.add(planPanel, JSplitPane.RIGHT);
-		planPanel.setLayout(new BorderLayout());
-		planPanel.add(planShowEnableCheckbox, BorderLayout.NORTH);
-		planPanel.add(planScrollPan, BorderLayout.CENTER);
+//		planPanel.setLayout(new BorderLayout());
+//		planPanel.add(planShowEnableCheckbox, BorderLayout.NORTH);
+//		planPanel.add(planScrollPan, BorderLayout.CENTER);
+		planPanel.setLayout(new MigLayout("insets 0 0 0 0"));
+		planPanel.add(planShowEnableCheckbox,   "wrap");
+//		planPanel.add(doExecSpShowplanfull_cbx, "wrap");
+		planPanel.add(planScrollPan, "span, push, grow");
 		planScrollPan.getViewport().add(planTextArea, null);
 		planShowEnableCheckbox.addActionListener(new java.awt.event.ActionListener()
 		{
@@ -1111,6 +1121,14 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 			{
 				if (refressProcess != null)
 					refressProcess.setPlanTextSample( planShowEnableCheckbox.isSelected() );
+				saveProps();
+			}
+		});
+		doExecSpShowplanfull_cbx.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
 				saveProps();
 			}
 		});
@@ -1175,21 +1193,23 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 			}
 		});
 
-		JPanel xxx = new JPanel(new MigLayout("insets 0 0 0 0", "[][grow]", ""));
-		xxx.add(_currentStmntSqlWhereClause_lbl,  "gap 5");
-//		xxx.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
-		xxx.add(_currentStmntSqlWhereClause_cbx,  "split, growx");
-		xxx.add(_currentStmntSqlWhereClause_but,  "gap 5 5, wrap");
+		JPanel xxx = new JPanel(new MigLayout("insets 0 0 0 0"));
+		xxx.add(doExecSpShowplanfull_cbx,         "gap 5, span 3, wrap");
+		
+		xxx.add(_currentStmntSqlWhereClause_lbl,  "gap 5 5 0 0");
+		xxx.add(_currentStmntSqlWhereClause_cbx,  "growx, pushx");
+		xxx.add(_currentStmntSqlWhereClause_but,  "gap 5 5 0 0, wrap");
 
-		xxx.add(_currentStmntSqlOrderBy_lbl,      "gap 5");
-//		xxx.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
-		xxx.add(_currentStmntSqlOrderBy_cbx,      "split, growx");
-		xxx.add(_currentStmntSqlOrderBy_but,      "gap 5 5, wrap");
-		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, wrap");
+		xxx.add(_currentStmntSqlOrderBy_lbl,      "gap 5 5 0 0");
+		xxx.add(_currentStmntSqlOrderBy_cbx,      "growx, pushx");
+		xxx.add(_currentStmntSqlOrderBy_but,      "gap 5 5 0 0, wrap");
+
+//		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, wrap");
 //		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, width 100%, height 100%, wrap");
 		
 		currentStatementsPan.setLayout(new BorderLayout());
-		currentStatementsPan.add(xxx, BorderLayout.CENTER);
+		currentStatementsPan.add(xxx, BorderLayout.NORTH);
+		currentStatementsPan.add(new JScrollPane(currentStatementTable), BorderLayout.CENTER);
 //		currentStatementsPan.getViewport().add(xxx, null);
 //		currentStatementsPan.getViewport().add(currentStatementTable, null);
 		capturedStatementScrollPan.getViewport().add(capturedStatementsTable, null);
@@ -1205,11 +1225,18 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 		capturedStatementPan.add(captureWhereSqlPanel, BorderLayout.NORTH);
 		capturedStatementPan.add(capturedStatementScrollPan, BorderLayout.CENTER);
 
-		captureWhereSqlPanel.setLayout(new BorderLayout());
-		captureWhereSqlPanel.add(label_captureWhereSql, BorderLayout.WEST);
-		captureWhereSqlPanel.add(comboBox_captureWhereSql, BorderLayout.CENTER);
-		captureWhereSqlPanel.add(buttom_captureWhereSql, BorderLayout.EAST);
-		captureWhereSqlPanel.add(discardPreOpenStmntsCheckbox, BorderLayout.SOUTH);
+//		captureWhereSqlPanel.setLayout(new BorderLayout());
+//		captureWhereSqlPanel.add(label_captureWhereSql,        BorderLayout.WEST);
+//		captureWhereSqlPanel.add(comboBox_captureWhereSql,     BorderLayout.CENTER);
+//		captureWhereSqlPanel.add(buttom_captureWhereSql,       BorderLayout.EAST);
+//		captureWhereSqlPanel.add(discardPreOpenStmntsCheckbox, BorderLayout.SOUTH);
+		captureWhereSqlPanel.setLayout(new MigLayout("insets 0 0 0 0"));
+		captureWhereSqlPanel.add(discardPreOpenStmntsCheckbox, "gap 5, span 3, wrap");
+		captureWhereSqlPanel.add(label_captureWhereSql,        "gap 5 5 0 0");
+		captureWhereSqlPanel.add(comboBox_captureWhereSql,     "pushx, growx");
+		captureWhereSqlPanel.add(buttom_captureWhereSql,       "gap 5 5 0 0");
+		captureWhereSqlPanel.setToolTipText("SQL Text for 'historical' SQL Statements will be showed here.");
+		
 
 		comboBox_captureWhereSql.setToolTipText("Add your extra where clauses on the monSysStatement table. make sure that only columns in theat table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
 		comboBox_captureWhereSql.setEditable(true);
@@ -1686,6 +1713,8 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 	}
 
 
+	public static final String  PROPKEY_sample_spShowplanfull = "processDetailFrame.spid.sample.SpShowplanfull";
+	public static final boolean DEFAULT_sample_spShowplanfull = true;
 
 	private void saveProps()
   	{
@@ -1720,6 +1749,8 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 			tmpConf.setProperty(base + "plan.width", planScrollPan.getSize().width);
 			tmpConf.setProperty(base + "plan.height", planScrollPan.getSize().height);
 			tmpConf.setProperty(base + "plan.sample", planShowEnableCheckbox.isSelected());
+			
+			tmpConf.setProperty(PROPKEY_sample_spShowplanfull, doExecSpShowplanfull_cbx.isSelected());
 
 //			tmpConf.setProperty(base + "objects.window.active", processObjectsFrame.isVisible());
 //			tmpConf.setProperty(base + "objects.window.width",  processObjectsFrame.getSize().width);
@@ -1909,6 +1940,9 @@ batchPanel.add(sqlTextShowProcSrcCheckbox, BorderLayout.SOUTH);
 			planScrollPan.setPreferredSize(new Dimension(width, height));
 		}
 		planShowEnableCheckbox.setSelected(checkBox1);
+		
+		doExecSpShowplanfull_cbx.setSelected(props.getBooleanProperty(PROPKEY_sample_spShowplanfull, DEFAULT_sample_spShowplanfull));
+
 
 		// processObjects
 		winActive = props.getBooleanProperty(base + "objects.window.active", false);

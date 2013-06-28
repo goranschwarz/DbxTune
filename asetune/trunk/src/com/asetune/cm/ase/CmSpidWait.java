@@ -184,7 +184,8 @@ extends CountersModel
 		if (isClusterEnabled)
 			InstanceID = "W.InstanceID, ";
 
-		if (aseVersion >= 15056)
+//		if (aseVersion >= 15056)
+		if (aseVersion >= 1505060)
 			UserName = "UserName = suser_name(W.ServerUserID), ";
 
 		cols = InstanceID + "W.SPID, W.KPID, " + UserName + "\n" +

@@ -127,8 +127,13 @@ public class AseTune
 		// Are we in GUI mode or not
 		_gui = true;
 		if (cmd.hasOption("noGui"))
+		{
 			_gui = false;
-		System.setProperty("application.gui", Boolean.toString(_gui)); // used in AseConnectionFactory
+			// Should we set this to headless... so that we throws "headless exception" if accessing GUI parts
+			System.setProperty("java.awt.headless", "true");
+		}
+		Configuration.setGui(_gui);
+//		System.setProperty(Configuration.HAS_GUI, Boolean.toString(_gui)); // used in AseConnectionFactory
 
 		// -----------------------------------------------------------------
 		// CHECK JAVA JVM VERSION
@@ -666,6 +671,13 @@ public class AseTune
 		{
 			_logger.info("Starting "+Version.getAppName()+" in NO-GUI mode, counters will be sampled into a database.");
 
+			//---------------------------------
+			// Go and check for updates, before continuing (timeout 10 seconds)
+			//---------------------------------
+			_logger.info("Checking for new release...");
+			CheckForUpdates.blockCheck(10*1000);
+
+			//---------------------------------
 			// Create and Start the "collector" thread
 			getCnt = new GetCountersNoGui();
 			CounterController.setInstance(getCnt);
@@ -673,10 +685,18 @@ public class AseTune
 			getCnt.start();
 
 			//---------------------------------
-			// Go and check for updates as well.
-			//---------------------------------
-			_logger.info("Checking for new release...");
-			CheckForUpdates.noBlockCheck(null, false, false);
+			// Install shutdown hook
+			Runtime.getRuntime().addShutdownHook(new Thread()
+			{
+				@Override
+				public void run()
+				{
+					_logger.debug("----Start Shutdown Hook");
+					CheckForUpdates.sendCounterUsageInfo(true);
+					_logger.debug("----End Shutdown Hook");
+				}
+			});
+
 		}
 		else
 		{

@@ -142,7 +142,8 @@ extends CountersModel
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 			pkCols.add("PartitionID");
 
 		// NOTE: PK is NOT unique, so therefore 'dupMergeCount' column is added to the SQL Query
@@ -167,10 +168,12 @@ extends CountersModel
 		if (isClusterEnabled)
 			InstanceID = "InstanceID, ";
 
-		if (aseVersion >= 12520)
+//		if (aseVersion >= 12520)
+		if (aseVersion >= 1252000)
 			TableSize = "TableSize, \n";
 
-		if (aseVersion >= 15000)
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 		{
 			TableSize = "";
 			PartitionName = "PartitionName, ";
@@ -178,7 +181,8 @@ extends CountersModel
 			PartitionID   = ", PartitionID";
 		}
 
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
 				        "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
@@ -197,7 +201,8 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "SPID != @@spid";
-		if (aseVersion < 15000)
+//		if (aseVersion < 15000)
+		if (aseVersion < 1500000)
 		{
 			whereSpidNotMe = "SPID != convert(int,@@spid)";
 		}

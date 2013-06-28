@@ -66,7 +66,8 @@ extends CountersModel
 		"ClusterPageWrites", "SharedLockWaitTime", "ExclusiveLockWaitTime", "UpdateLockWaitTime", 
 		"HkgcRequestsDcomp", "HkgcOverflowsDcomp", 
 		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages", 
-		"PRSSelectCount", "PRSRewriteCount"};
+		"PRSSelectCount", "PRSRewriteCount",
+		"NumLevel0Waiters"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -260,10 +261,17 @@ extends CountersModel
 		String ObjectCacheDate       = "";
 		String ase15700_nl           = ""; // NL for this section
 
-		if (aseVersion >= 15000)
+		// ASE 15.7 SP100
+		String NumLevel0Waiters    = "";
+		String AvgLevel0WaitTime   = "";
+		String ase1570_SP100_nl    = ""; // NL for this section
+
+//		if (aseVersion >= 15000)
+		if (aseVersion >= 1500000)
 			bigint = "bigint";
 
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+getName()+".TabRowCount=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+getName()+".TabRowCount=false\n";
@@ -291,7 +299,8 @@ extends CountersModel
 				_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			SharedLockWaitTime    = "SharedLockWaitTime, ";
 			ExclusiveLockWaitTime = "ExclusiveLockWaitTime, ";
@@ -301,12 +310,21 @@ extends CountersModel
 			ase15700_nl           = "\n"; // NL for this section
 		}
 
+		if (aseVersion >= 1570100)
+		{
+			NumLevel0Waiters    = "NumLevel0Waiters, ";
+			AvgLevel0WaitTime   = "AvgLevel0WaitTime, ";
+
+			ase1570_SP100_nl    = "\n"; // NL for this section
+		}
+
 		// ASE 15.7.0 ESD#1
 		String HkgcRequestsDcomp  = "";
 		String HkgcPendingDcomp   = "";
 		String HkgcOverflowsDcomp = "";
 		String nl_15701           = ""; // NL for this section
-		if (aseVersion >= 15701)
+//		if (aseVersion >= 15701)
+		if (aseVersion >= 1570010)
 		{
 			HkgcRequestsDcomp  = "HkgcRequestsDcomp, ";
 			HkgcPendingDcomp   = "HkgcPendingDcomp, ";
@@ -324,7 +342,8 @@ extends CountersModel
 		String PRSRewriteCount    = ""; // Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String nl_15702           = ""; // NL for this section
-		if (aseVersion >= 15702)
+//		if (aseVersion >= 15702)
+		if (aseVersion >= 1570020)
 		{
 			IOSize1Page        = "IOSize1Page, ";        // DO DIFF CALC
 			IOSize2Pages       = "IOSize2Pages, ";       // DO DIFF CALC
@@ -357,6 +376,7 @@ extends CountersModel
 		         "                   ELSE convert(numeric(10,1), 0.0) \n" +
 		         "              END, \n" +
 		         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + ase15700_nl +
+		         NumLevel0Waiters + AvgLevel0WaitTime + ase1570_SP100_nl +
 		         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
 		         IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 		         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
@@ -370,15 +390,18 @@ extends CountersModel
 		cols3 += ObjectCacheDate + "LastOptSelectDate, LastUsedDate";
 	//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 	// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 		{
 			cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
 		}
-		if (aseVersion >= 15701)
+//		if (aseVersion >= 15701)
+		if (aseVersion >= 1570010)
 		{
 			cols2 += HkgcRequestsDcomp + HkgcPendingDcomp + HkgcOverflowsDcomp + nl_15701;
 		}
-		if (aseVersion >= 15702)
+//		if (aseVersion >= 15702)
+		if (aseVersion >= 1570020)
 		{
 			cols2 += PRSSelectCount + LastPRSSelectDate + PRSRewriteCount + LastPRSRewriteDate + nl_15702;
 		}
@@ -421,7 +444,8 @@ extends CountersModel
 		String MaxDowngradeServiceTime   = "";
 		String ase15501_ce_nl            = ""; // NL for this section
 
-		if ( aseVersion >= 15030 && isClusterEnabled )
+//		if ( aseVersion >= 15030 && isClusterEnabled )
+		if ( aseVersion >= 1503000 && isClusterEnabled )
 		{
 			PhysicalLocks             = "PhysicalLocks, ";
 			PhysicalLocksRetained     = "PhysicalLocksRetained, ";
@@ -443,7 +467,8 @@ extends CountersModel
 			AvgDowngradeServiceTime   = "AvgDowngradeServiceTime, ";
 			ase15030_ce_nl            = "\n";
 		}
-		if ( aseVersion >= 15501 && isClusterEnabled )
+//		if ( aseVersion >= 15501 && isClusterEnabled )
+		if ( aseVersion >= 1550010 && isClusterEnabled )
 		{
 			MaxPhysicalLockWaitTime   = "MaxPhysicalLockWaitTime, ";
 			MaxTransferReqWaitTime    = "MaxTransferReqWaitTime, ";

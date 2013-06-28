@@ -110,7 +110,8 @@ extends CountersModel
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		if (srvVersion >= 15700)
+//		if (srvVersion >= 15700)
+		if (srvVersion >= 1570000)
 			return NEED_CONFIG;
 
 		return new String[] {"enable monitoring=1"};
@@ -143,9 +144,12 @@ extends CountersModel
 		String ase1570_nl     = "";
 
 		if (isClusterEnabled)    InstanceID      = "InstanceID, ";
-		if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
-		if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
+		if (aseVersion >= 1253000) LineNumber      = "LineNumber, ";
+//		if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
+		if (aseVersion >= 1502050) StatementNumber = "StatementNumber, ";
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			ExecutionCount = "ExecutionCount, ";
 			CPUTime        = "CPUTime, ";

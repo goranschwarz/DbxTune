@@ -41,11 +41,13 @@ import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmCachePools;
 import com.asetune.cm.ase.CmCachedObjects;
 import com.asetune.cm.ase.CmCachedProcs;
+import com.asetune.cm.ase.CmCachedProcsSum;
 import com.asetune.cm.ase.CmDataCaches;
 import com.asetune.cm.ase.CmDeadlock;
 import com.asetune.cm.ase.CmDeviceIo;
 import com.asetune.cm.ase.CmEngines;
 import com.asetune.cm.ase.CmErrolog;
+import com.asetune.cm.ase.CmExecutionTime;
 import com.asetune.cm.ase.CmIoControllers;
 import com.asetune.cm.ase.CmIoQueue;
 import com.asetune.cm.ase.CmIoQueueSum;
@@ -462,14 +464,17 @@ implements ICounterController
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
 
 		// Get some specific configurations
-		if (aseVersion >= 15031)
+//		if (aseVersion >= 15031)
+		if (aseVersion >= 1503010)
 			_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
 
-		if (aseVersion >= 15020)
+//		if (aseVersion >= 15020)
+		if (aseVersion >= 1502000)
 			_config_enableMetricsCapture = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable metrics capture");
 
 		_config_threadedKernelMode = false;
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			String kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
 			_config_threadedKernelMode = "threaded".equals(kernelMode);
@@ -478,7 +483,8 @@ implements ICounterController
 		
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-		if (aseVersion >= 15031)
+//		if (aseVersion >= 15031)
+		if (aseVersion >= 1503010)
 			AseConnectionUtils.setCompatibilityMode(conn, false);
 
 		// initialize all the CM's
@@ -594,7 +600,8 @@ implements ICounterController
 //			if (    aseVersion >= 15031 && aseVersion <= 15033
 //				 || aseVersion >= 15500 && aseVersion <= 15501
 //			   )
-			if ( aseVersion >= 15031 && aseVersion < 16000 )
+//			if ( aseVersion >= 15031 && aseVersion < 16000 )
+			if ( aseVersion >= 1503010 && aseVersion < 1600000 )
 			{
 				if (_config_captureMissingStatistics || _config_enableMetricsCapture)
 				{
@@ -676,7 +683,7 @@ implements ICounterController
 		_logger.info("Creating ALL CM Objects.");
 
 		GetCounters counterController = this;
-		MainFrame   guiController     = MainFrame.getInstance();
+		MainFrame   guiController     = Configuration.hasGui() ? MainFrame.getInstance() : null;
 
 		CmSummary          .create(counterController, guiController);
 
@@ -687,6 +694,7 @@ implements ICounterController
 		CmOpenDatabases    .create(counterController, guiController);
 		CmTempdbActivity   .create(counterController, guiController);
 		CmSysWaits         .create(counterController, guiController);
+		CmExecutionTime    .create(counterController, guiController);
 		CmEngines          .create(counterController, guiController);
 		CmThreads          .create(counterController, guiController);
 		CmSysLoad          .create(counterController, guiController);
@@ -708,6 +716,7 @@ implements ICounterController
 //		CmRaSqlMisses      .create(counterController, guiController);
 		CmRaSysmon         .create(counterController, guiController);
 		CmCachedProcs      .create(counterController, guiController);
+		CmCachedProcsSum   .create(counterController, guiController);
 		CmProcCacheLoad    .create(counterController, guiController);
 		CmProcCallStack    .create(counterController, guiController);
 		CmCachedObjects    .create(counterController, guiController);
@@ -1636,7 +1645,8 @@ implements ICounterController
 		{
 			//DEBUG: System.out.println("    DO: isClosed");
 			// jConnect issues RPC: sp_mda 0, 7 on isClosed()
-			if (_conn.isClosed())
+//			if (_conn.isClosed()) // hmmm this might block if done from 2 places at the same time... which happend when SQL Timeout occurs.
+			if (isClosed(_conn))  // so lets use our own implementation... which does 'select 1' with a timeout
 			{
 				if (closeConnOnFailure)
 					closeMonConnection();
@@ -1650,6 +1660,35 @@ implements ICounterController
 
 		_lastIsClosedCheck = System.currentTimeMillis();
 		return true;
+	}
+	// Simulate the _conn.isClosed() functionality, but add a query timeout...
+	// it looks like jConnect isClosed() could hang if you call many simultaneously
+	private boolean isClosed(Connection conn)
+	throws SQLException
+	{
+		try
+		{
+			Statement stmnt   = conn.createStatement();
+			ResultSet rs      = stmnt.executeQuery("select 'AseTune-check:isClosed(conn)'");
+
+			stmnt.setQueryTimeout(5);
+			while (rs.next())
+			{
+				rs.getString(1);
+			}
+			rs.close();
+			stmnt.close();
+
+			// false = connection is alive, NOT Closed
+			return false;
+		}
+		catch (SQLException e)
+		{
+			if ( ! "JZ0C0".equals(e.getSQLState()) ) // connection is already closed...
+					_logger.warn("isClosed(conn) had problems", e);
+
+			throw e;
+		}
 	}
 
 	/**

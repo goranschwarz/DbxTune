@@ -185,7 +185,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -197,7 +198,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
@@ -289,11 +291,13 @@ extends CountersModel
 //		if (aseVersion > 15000) 
 //			TotalIOs = "TotalIOs = (convert(bigint,Reads) + convert(bigint,Writes))";
 		String TotalIOs = "(Reads + Writes)";
-		if (aseVersion > 15000) 
+//		if (aseVersion > 15000) 
+		if (aseVersion > 1500000) 
 			TotalIOs = "(convert(bigint,Reads) + convert(bigint,Writes))";
 
 		String DeviceType = "";
-		if (aseVersion >= 15020) 
+//		if (aseVersion >= 15020) 
+		if (aseVersion >= 1502000) 
 		{
 			DeviceType = 
 				"DeviceType = CASE \n" +
@@ -310,7 +314,8 @@ extends CountersModel
 		String ReadServiceTimeMs  = ""; // CALCULATED
 		String WriteServiceTimeMs = ""; // CALCULATED
 //		String nl_15702           = ""; // NL for this section
-		if (aseVersion >= 15702)
+//		if (aseVersion >= 15702)
+		if (aseVersion >= 1570020)
 		{
 			ReadTime           = "ReadTime, ";  // DO DIFF CALC
 			WriteTime          = "WriteTime, "; // DO DIFF CALC
@@ -350,7 +355,8 @@ extends CountersModel
 				 ReadServiceTimeMs +
 				 WriteServiceTimeMs;
 		cols3 += DeviceType+" PhysicalName";
-		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
+		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		{
 		}
 
@@ -445,7 +451,8 @@ extends CountersModel
 				tranPos = getCounterDataAbs().findColumn("ReadServiceTimeMs");
 	
 			// Only available in 15.7.0 esd#2 and above 
-			if ( aseVersion < 15702 || tranPos == -1 )
+//			if ( aseVersion < 15702 || tranPos == -1 )
+			if ( aseVersion < 1570020 || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_R_SERVICE_TIME);
@@ -481,7 +488,8 @@ extends CountersModel
 				tranPos = getCounterDataAbs().findColumn("WriteServiceTimeMs");
 	
 			// Only available in 15.7.0 esd#2 and above 
-			if ( aseVersion < 15702 || tranPos == -1 )
+//			if ( aseVersion < 15702 || tranPos == -1 )
+			if ( aseVersion < 1570020 || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_W_SERVICE_TIME);

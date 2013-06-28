@@ -362,13 +362,13 @@ implements ActionListener, TableModelListener
 			// and will be used for User Defined Counter checking...
 			putWizardData( "to-be-discarded" + "." + cmName, cmName);
 
-			putWizardData( cmName+"."+CountersModel.PROP_queryTimeout,         timeout.toString());
-			putWizardData( cmName+"."+CountersModel.PROP_postponeTime,         postpone.toString());
+			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
+			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
 
-			putWizardData( cmName+"."+CountersModel.PROP_persistCounters,      storePcs  +"");
-			putWizardData( cmName+"."+CountersModel.PROP_persistCounters_abs,  storeAbs  +"");
-			putWizardData( cmName+"."+CountersModel.PROP_persistCounters_diff, storeDiff +"");
-			putWizardData( cmName+"."+CountersModel.PROP_persistCounters_rate, storeRate +"");
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters,      storePcs  +"");
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_abs,  storeAbs  +"");
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
+			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
 
 			CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
 			if (cm != null)

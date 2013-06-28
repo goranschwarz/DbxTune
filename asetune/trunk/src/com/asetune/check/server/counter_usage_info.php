@@ -1,33 +1,35 @@
 <?php
-	//----------------------------------------
-	// FUNCTION: get params from POST or GET
-	//----------------------------------------
-	function getUrlParam($param)
-	{
-		if(!empty($_POST))
-		{
-			return $_POST[$param];
-		}
-		else if(!empty($_GET))
-		{
-			return urldecode($_GET[$param]);
-		}
-	}
-	//----------------------------------------
-	// FUNCTION: get POST or GET
-	//----------------------------------------
-	function getDataArray()
-	{
-		if(!empty($_POST))
-		{
-			return $_POST;
-		}
-		else if(!empty($_GET))
-		{
-			return $_GET;
-		}
-		return array();
-	}
+	require("gorans_functions.php");
+
+//	//----------------------------------------
+//	// FUNCTION: get params from POST or GET
+//	//----------------------------------------
+//	function getUrlParam($param)
+//	{
+//		if(!empty($_POST))
+//		{
+//			return $_POST[$param];
+//		}
+//		else if(!empty($_GET))
+//		{
+//			return urldecode($_GET[$param]);
+//		}
+//	}
+//	//----------------------------------------
+//	// FUNCTION: get POST or GET
+//	//----------------------------------------
+//	function getDataArray()
+//	{
+//		if(!empty($_POST))
+//		{
+//			return $_POST;
+//		}
+//		else if(!empty($_GET))
+//		{
+//			return $_GET;
+//		}
+//		return array();
+//	}
 
 
 	//------------------------------------------

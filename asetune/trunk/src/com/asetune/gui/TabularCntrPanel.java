@@ -12,6 +12,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.MouseInfo;
 import java.awt.Shape;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -37,6 +38,7 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
@@ -59,6 +61,8 @@ import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.event.RowSorterEvent;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -146,6 +150,8 @@ implements
 	private static final String[]	FILTER_OP_STR_ARR					= { "==, Equal", "!=, Not Equal", ">, Greater Than", "<, Less Than" };
 	private static final String[]	FILTER_OP_STR_ARR_SHORT				= { "EQ", "NE", "GT", "LT" };
 
+	private JPanel					_topPanel;
+
 	private JPanel					_filterPanel;
 	private JLabel					_filterColumn_lbl					= new JLabel("Column");
 	private JComboBox				_filterColumn_cb					= new JComboBox();
@@ -205,6 +211,7 @@ implements
 	private JCheckBox				_optionNegativeDiffCntToZero_chk	= new JCheckBox("Reset negative Delta and Rate counters to zero");
 	private JLabel					_optionQueryTimeout_lbl             = new JLabel("Query Timeout");
 	private JTextField				_optionQueryTimeout_txt             = new JTextField();
+	private JButton                 _optionsExtra_but                   = new JButton();
 
 	private JSplitPane              _mainSplitPane     = null;
 	private JPanel                  _dataPanel         = null;
@@ -224,6 +231,12 @@ implements
 	private long					_lastColWithRefresh					= 0;
 	private long					_colWithRefreshSec					= 60;
 
+	/** remember last tooltip so it can be changed upon errors and restored later on */ 
+	private String                  _lastKnownTooltip                   = null;
+
+	/** Color to be used when NON_CONFIGURED_MONITORING is used */
+	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
+	
 	// -------------------------------------------------
 
 	/*---------------------------------------------------
@@ -762,6 +775,21 @@ implements
 		return _displayName;
 	}
 
+	@Override
+	public void setToolTipText(String tooltip)
+	{
+		_lastKnownTooltip = tooltip;
+		super.setToolTipText(tooltip);
+	}
+	public void setErrorToolTipText(String tooltip)
+	{
+		super.setToolTipText(tooltip);
+	}
+	public void restoreOriginalToolTipText()
+	{
+		super.setToolTipText(_lastKnownTooltip);
+	}
+
 	public void setEnableBgPollingCheckbox(boolean b)
 	{
 		_optionEnableBgPolling_chk.setEnabled(b);
@@ -887,6 +915,7 @@ implements
 	{
 		setTimeInfo(null, null, null, 0);
 		resetCm(); // set it to tail mode (as it is when initializing the panel)
+		_topPanel.setBackground(_filterPanel.getBackground());
 	}
 
 	public void putTableClientProperty(Object key, Object value)
@@ -916,6 +945,7 @@ implements
 		// setLayout(layout);
 		setLayout(new BorderLayout());
 
+		_topPanel          = createTopPanel();
 		_mainSplitPane     = new JSplitPane();
 		_dataPanel         = createTablePanel();
 		_extendedInfoPanel = createExtendedInfoPanel();
@@ -924,7 +954,7 @@ implements
 
 		// add(createTopPanel(), "wrap");
 		// add(_mainSplitPan, "");
-		add(createTopPanel(), BorderLayout.NORTH);
+		add(_topPanel,      BorderLayout.NORTH);
 		add(_mainSplitPane, BorderLayout.CENTER);
 
 		_tablePopupMenu = createDataTablePopupMenu();
@@ -1843,6 +1873,9 @@ implements
 		// Fix up the _optionTrendGraphs_but
 		TrendGraph.createGraphAccessButton(_optionTrendGraphs_but, _displayName);
 
+		// Create a button for all options that are considdered as "extra" and not changed that often
+		_optionsExtra_but = createExtraOptionsButton(_optionsExtra_but);
+
 		// Always have the has some stuff disabled...
 		_optionHasActiveGraphs_lbl.setVisible(false);
 		_optionTrendGraphs_but    .setVisible(false);
@@ -1857,10 +1890,112 @@ implements
 		panel.add(_optionPersistCountersAbs_chk,    "");
 		panel.add(_optionPersistCountersDiff_chk,   "");
 		panel.add(_optionPersistCountersRate_chk,   "wrap");
-		panel.add(_optionNegativeDiffCntToZero_chk, "wrap");
+		panel.add(_optionNegativeDiffCntToZero_chk, "pushx, growx, left, split");
+		panel.add(_optionsExtra_but,                "wrap");
 
 		return panel;
 	}
+
+	/*----------------------------------------------------------------------
+	** BEGIN: Create Extra Option Button
+	**----------------------------------------------------------------------*/ 
+	protected JPopupMenu createExtraOptionsPopupMenu()
+	{
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
+
+		popupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				// remove all old items (if any)
+				popupMenu.removeAll();
+
+				JCheckBoxMenuItem mi;
+
+				final CountersModel cm = getCm();
+				if (cm != null)
+				{
+					// ALLOW NON CONFIGURED ASE MONITORING
+					mi = new JCheckBoxMenuItem();
+					mi.setText("<html>Allow collection of Performance Counters even if Server is not configured for this ("+StringUtil.toCommaStr(cm.getDependsOnConfig())+") - <i>Counters should <b>not</b> be trusted.</i> </html>");
+					mi.setSelected(cm.isNonConfiguredMonitoringAllowed());
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JCheckBoxMenuItem)
+							{
+								boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+								cm.setNonConfiguredMonitoringAllowed(toValue, true); // calls saveProps() on the CM
+								cm.setActive(true, null); // set to active if anothing has in-activated it
+								cm.setSql(null);          // make the CM reinitialize it's SQL, check config etc...
+
+								_logger.info("Setting 'Allow non-configured ASE Monitoring' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+							}
+						}
+					});
+
+					popupMenu.add(mi);
+				}
+			}
+			
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
+		});
+		
+		return popupMenu;
+	}
+
+	/**
+	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
+	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
+	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
+	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
+	 */
+	protected JButton createExtraOptionsButton(JButton button)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setToolTipText("Show some extra options...");
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings.png"));
+//		button.setText("Extra Options");
+		button.setText(null);
+		button.setContentAreaFilled(false);
+		button.setMargin( new Insets(0,0,0,0) );
+
+		JPopupMenu popupMenu = createExtraOptionsPopupMenu();
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	/*----------------------------------------------------------------------
+	** BEGIN: Create Extra Option Button
+	**----------------------------------------------------------------------*/ 
 
 	protected JPanel createLocalOptionsPanel()
 	{
@@ -3724,8 +3859,45 @@ implements
 				else
 					setWatermarkText("Reading offline data...");
 			}
+			else if (_offlineCm != null && _offlineCm.hasNonConfiguredMonitoringHappened())
+			{
+				CountersModel cm = _offlineCm;
+				String msg = 
+					"WARNING: Counters may not be trusted\n" +
+					"Some ASE Configuration has been disabled, which data relies on.\n" + 
+					"\n" + 
+					"Missing config(s): " + _offlineCm.getNonConfiguredMonitoringMissingParams();
+
+				setWatermarkText(msg);
+
+				 // Change to WARNING color
+				if ( ! _topPanel.getBackground().equals(NON_CONFIGURED_MONITORING_COLOR) )
+				{
+					_topPanel.setBackground(NON_CONFIGURED_MONITORING_COLOR);
+					msg = "<html>WARNING: Counters may not be trusted<br>" +
+				      "Some ASE Configuration has been disabled, which data relies on.<br>" + 
+				      "Missing config(s): <b>"+cm.getNonConfiguredMonitoringMissingParams()+"</b><br>";
+					if (cm.getNonConfiguedMonitoringMessageList() != null)
+					{
+						msg += "<br>";
+						msg += "Server Message(s)<br>";
+						msg += "<ul>";
+						for (String srvMsg : cm.getNonConfiguedMonitoringMessageList())
+							msg += "<li>" + srvMsg + "</li>";
+						msg += "</ul>";
+					}
+				    msg += "</html>";
+					setErrorToolTipText(msg);
+				}
+			}
 			else
 			{
+				// Change back to NORMAL color
+				if ( ! _topPanel.getBackground().equals(_filterPanel.getBackground()) )
+				{
+					_topPanel.setBackground(_filterPanel.getBackground());
+					restoreOriginalToolTipText();
+				}
 				setWatermarkText("O f f l i n e  - D a t a");
 			}
 		}
@@ -3810,8 +3982,43 @@ implements
 			{
 				setWatermarkText("No visible rows in the table... Is filtering on?");
 			}
+			else if (_cm.hasNonConfiguredMonitoringHappened())
+			{
+				CountersModel cm = _cm;
+
+				String msg = 
+					"WARNING: Counters may not be trusted\n" +
+					"Some ASE Configuration has been disabled, which data relies on.\n" + 
+					"\n" + 
+					"Missing config(s): " + cm.getNonConfiguredMonitoringMissingParams();
+
+				setWatermarkText(msg);
+
+				 // Change to WARNING color
+				_topPanel.setBackground(NON_CONFIGURED_MONITORING_COLOR);
+				msg = "<html>WARNING: Counters may not be trusted<br>" +
+			      "Some ASE Configuration has been disabled, which data relies on.<br>" + 
+			      "Missing config(s): <b>"+cm.getNonConfiguredMonitoringMissingParams()+"</b><br>";
+				if (cm.getNonConfiguedMonitoringMessageList() != null)
+				{
+					msg += "<br>";
+					msg += "Server Message(s)<br>";
+					msg += "<ul>";
+					for (String srvMsg : cm.getNonConfiguedMonitoringMessageList())
+						msg += "<li>" + srvMsg + "</li>";
+					msg += "</ul>";
+				}
+			    msg += "</html>";
+				setErrorToolTipText(msg);
+			}
 			else
 			{
+				// Change back to NORMAL color
+				if ( ! _topPanel.getBackground().equals(_filterPanel.getBackground()) )
+				{
+					_topPanel.setBackground(_filterPanel.getBackground());
+					restoreOriginalToolTipText();
+				}
 				setWatermarkText(null);
 			}
 		}

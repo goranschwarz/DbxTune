@@ -299,6 +299,24 @@ public class CheckForUpdates
 	 */
 	public static void noBlockCheck(final Component owner, final boolean showNoUpgrade, final boolean showFailure)
 	{
+		checkForUpdate(owner, showNoUpgrade, showFailure, DEFAULT_TIMEOUT, false);
+	}
+	/**
+	 * Check for a later version of the software, in a blocking manner
+	 * @param number of milliseconds to wait
+	 */
+	public static void blockCheck(final int timeout)
+	{
+		checkForUpdate(null, false, false, DEFAULT_TIMEOUT, true);
+	}
+
+	/**
+	 * Check for a later version of the software
+	 * @param owner A JFrame or similar
+	 * @param showNoUpgrade Even if no upgrade is available, show info about that in a GUI message.
+	 */
+	private static void checkForUpdate(final Component owner, final boolean showNoUpgrade, final boolean showFailure, final int timeout, boolean blockWhileCheckinh)
+	{
 		Runnable checkLater = new Runnable()
 		{
 			@Override
@@ -307,7 +325,7 @@ public class CheckForUpdates
 				CheckForUpdates chk = new CheckForUpdates();
 
 				// Go and check
-				chk.check();
+				chk.check(timeout);
 
 				if (! chk.checkSucceed())
 				{
@@ -352,16 +370,23 @@ public class CheckForUpdates
 				}
 			}
 		};
-		Thread checkThread = new Thread(checkLater);
-		checkThread.setName("checkForUpdates");
-		checkThread.setDaemon(true);
-		checkThread.start();
+		if (blockWhileCheckinh)
+		{
+			checkLater.run();
+		}
+		else
+		{
+			Thread checkThread = new Thread(checkLater);
+			checkThread.setName("checkForUpdates");
+			checkThread.setDaemon(true);
+			checkThread.start();
+		}
 	}
 
 	/**
 	 * Go and check for updates
 	 */
-	public void check()
+	public void check(int timeout)
 	{
 		// URS to use
 		String urlStr = ASETUNE_CHECK_UPDATE_URL;
@@ -432,9 +457,9 @@ public class CheckForUpdates
 			// SEND OFF THE REQUEST
 			InputStream in;
 			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams);
+				in = sendHttpPost(urlStr, urlParams, timeout);
 			else
-				in = sendHttpParams(urlStr, urlParams);
+				in = sendHttpParams(urlStr, urlParams, timeout);
 
 			//----------------------------------------------
 			// This is how a response would look like
@@ -1444,22 +1469,26 @@ public class CheckForUpdates
 			// monTables
 			String sql_monTables_rowCount = 
 				"select count(*) from master.dbo.monTables \n" +
-				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTables = 
 				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
 			    "from master.dbo.monTables t \n" +
-				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
 
 			// monTableColumns
 			String sql_monTableColumns_rowCount = 
 				"select count(*) from master.dbo.monTableColumns \n" +
-				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTableColumns = 
 				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
 			    "from master.dbo.monTableColumns c " +
-				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
 			
 			// monTableParameters
 			String sql_monTableParameters_rowCount = 
@@ -2596,7 +2625,7 @@ public class CheckForUpdates
 		CheckForUpdates check = new CheckForUpdates();
 
 		System.out.println("-- DO CHECK");
-		check.check();
+		check.check(DEFAULT_TIMEOUT);
 		if ( check.checkSucceed() )
 		{
 			if (check.hasUpgrade())

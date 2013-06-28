@@ -110,14 +110,23 @@ IF NOT DEFINED ASETUNE_HOME GOTO no_asetunehome
 rem IF NOT DEFINED JAVA_HOME GOTO no_javahome
 
 
+rem ------------------------------------------------------------------------
+rem --- remove the SPLASH if -n or -noGui command line switch is specified
+rem --- You got to "love" DOS for being CRYPTICAL... or NOT...
+rem ------------------------------------------------------------------------
+for %%c in (%*) do (
+	echo(%%c|findstr /r /c:"^-n.*"      >nul && ( set SPLASH= )
+	echo(%%c|findstr /r /c:"^--noGui.*" >nul && ( set SPLASH= )
+)
+
 
 rem ------------------------------------------------------------------------
 rem --- setup the CLASSPATH
 rem ------------------------------------------------------------------------
 set classpath=%ASETUNE_HOME%\classes
 set classpath=%classpath%;%ASETUNE_HOME%\lib\asetune.jar
-set classpath=%classpath%;%ASETUNE_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jconn4.jar
+set classpath=%classpath%;%ASETUNE_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\jtds-1.2.7.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%ASETUNE_HOME%\lib\log4j-1.2.17.jar

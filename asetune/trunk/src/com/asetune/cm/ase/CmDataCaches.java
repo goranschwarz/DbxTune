@@ -186,7 +186,8 @@ extends CountersModel
 		String APFReads            = "";
 		String Overhead            = "";
 
-		if (aseVersion >= 15700)
+//		if (aseVersion >= 15700)
+		if (aseVersion >= 1570000)
 		{
 			Status              = "Status, ";
 			Type                = "Type, ";

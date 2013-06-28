@@ -1,57 +1,59 @@
 <?php
-	//----------------------------------------
-	// FUNCTION: get params from POST or GET
-	//----------------------------------------
-	function getUrlParam($param)
-	{
-		if(!empty($_POST))
-		{
-			return $_POST[$param];
-		}
-		else if(!empty($_GET))
-		{
-			return urldecode($_GET[$param]);
-		}
+	require("gorans_functions.php");
 
-	}
-	//----------------------------------------
-	// FUNCTION: get params from POST or GET
-	//           if first param is not set, try secondary param
-	//           if none was found return the default value.
-	//----------------------------------------
-	function getUrlParam2($param, $altParam)
-	{
-		$val = getUrlParam($param);
-		if (!empty($val))
-			return $val;
-
-		$val = getUrlParam($altParam);
-		if (!empty($val))
-			return $val;
-
-		return $val;
-	}
-
-	//----------------------------------------
-	// FUNCTION: get "callers" IP address
-	//----------------------------------------
-	function get_ip_address()
-	{
-		foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key)
-		{
-			if (array_key_exists($key, $_SERVER) === true)
-			{
-				foreach (explode(',', $_SERVER[$key]) as $ip)
-				{
-					if (filter_var($ip, FILTER_VALIDATE_IP) !== false)
-					{
-						return $ip;
-					}
-				}
-			}
-		}
-	}
-	//$callerIpAddress = get_ip_address();
+//	//----------------------------------------
+//	// FUNCTION: get params from POST or GET
+//	//----------------------------------------
+//	function getUrlParam($param)
+//	{
+//		if(!empty($_POST))
+//		{
+//			return $_POST[$param];
+//		}
+//		else if(!empty($_GET))
+//		{
+//			return urldecode($_GET[$param]);
+//		}
+//
+//	}
+//	//----------------------------------------
+//	// FUNCTION: get params from POST or GET
+//	//           if first param is not set, try secondary param
+//	//           if none was found return the default value.
+//	//----------------------------------------
+//	function getUrlParam2($param, $altParam)
+//	{
+//		$val = getUrlParam($param);
+//		if (!empty($val))
+//			return $val;
+//
+//		$val = getUrlParam($altParam);
+//		if (!empty($val))
+//			return $val;
+//
+//		return $val;
+//	}
+//
+//	//----------------------------------------
+//	// FUNCTION: get "callers" IP address
+//	//----------------------------------------
+//	function get_ip_address()
+//	{
+//		foreach (array('HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR') as $key)
+//		{
+//			if (array_key_exists($key, $_SERVER) === true)
+//			{
+//				foreach (explode(',', $_SERVER[$key]) as $ip)
+//				{
+//					if (filter_var($ip, FILTER_VALIDATE_IP) !== false)
+//					{
+//						return $ip;
+//					}
+//				}
+//			}
+//		}
+//	}
+//	//$callerIpAddress = get_ip_address();
 
 
 	//------------------------------------------

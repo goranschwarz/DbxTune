@@ -32,7 +32,8 @@ extends SQLWindow
 		// Should we install Procs
 		try
 		{
-			if (aseVersion >= 15700)
+//			if (aseVersion >= 15700)
+			if (aseVersion >= 1570000)
 			{
 				// do not install
 				// but replace use 'sp_showoptstats' instead of 'sp__optdiag'
@@ -57,10 +58,14 @@ extends SQLWindow
 //					"    exec "+entry.getDbname()+"..sp__optdiag '"+entry.getOwner()+"."+entry.getObjectName()+"' \n" +
 //					"";
 
-				if (aseVersion >= 15000)
-					AseConnectionUtils.checkCreateStoredProc(conn, 15000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				if (aseVersion >= 15000)
+//					AseConnectionUtils.checkCreateStoredProc(conn, 15000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				else
+//					AseConnectionUtils.checkCreateStoredProc(conn, 12503, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+				if (aseVersion >= 1500000)
+					AseConnectionUtils.checkCreateStoredProc(conn, 1500000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
 				else
-					AseConnectionUtils.checkCreateStoredProc(conn, 12503, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+					AseConnectionUtils.checkCreateStoredProc(conn, 1250300, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
 			}
 		}
 		catch (Exception e)
