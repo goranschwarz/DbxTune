@@ -22,7 +22,275 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2012-03-03</H2>
+<H2>2013-06-28</H2>
+<UL>
+	<LI>
+	<b>Support for ASE 15.7 SP100, or SAP version string, based on Service Pack or SP</b><br>
+	From now on ASE will be using SAP Version strings, which means no more ESD#<br>
+	Now it's called SP (Service Pack) instead of ESD#<br>
+	AseTune internal parsing of the @@version string to an integer was previously 5 numbers (15034 = 15.0.3 ESD#4), 
+	the new internal representation is an integer that consists of 7 numbers (1570042 = 15.7.0 ESD#4.2, 1570100 = 15.7 SP100, 1570101 = 15.7 SP101)<br> 
+	</LI>
+
+	<LI>
+	<b>New: tab 'Execution Time' in the group 'Server'</b><br>
+	In ASE 15.7 SP100 a table monSysExecutionTime was introduced, where Execution Count/Time per ASE subsystem is presented.<br>
+	</LI>
+
+	<LI>
+	<b>New: tab 'Cached Procedures Sum' in the group 'Cache'</b><br>
+	More or less same as 'Cached Procedures' but it's only one row for each procedure, so it's easier to get a summary of what procedure that is executed the most.<br>
+	If you want to dig into the details of each Instance of the Compiled Procedure, use 'Cached Procedures'.<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Summary Panel' for ASE 15.7.0 SP100</b><br>
+	<ul>
+	   <li><code>Rollbacks     </code> - Total number of transactions that have been rolled back on the server.</li>
+	   <li><code>Selects       </code> - Total number of select operations that have been executed on the server.</li>
+	   <li><code>Updates       </code> - Total number of update operations that have been executed on the server.</li>
+	   <li><code>Inserts       </code> - Total number of insert operations that have been executed on the server.</li>
+	   <li><code>Deletes       </code> - Total number of delete operations that have been executed on the server.</li>
+	   <li><code>Merges        </code> - Total number of merge operations that have been executed on the server.</li>
+	   <li><code>TableAccesses </code> - Number of pages where data was retrieved without an index on the server.</li>
+	   <li><code>IndexAccesses </code> - Number of pages where data was retrieved using an index on the server.</li>
+	   <li><code>TempDbObjects </code> - Total number of temporary tables created on the server.</li>
+	   <li><code>WorkTables    </code> - Total number of work tables created on the server.</li>
+	   <li><code>ULCFlushes    </code> - Total number of times the User Log Cache was flushed.</li>
+	   <li><code>ULCFlushFull  </code> - Number of times the User Log Cache was flushed because it was full.</li>
+	   <li><code>ULCKBWritten  </code> - Number of kilobytes written to the user log cache.</li>
+	   <li><code>PagesRead     </code> - Number of pages read on server wide.</li>
+	   <li><code>PagesWritten  </code> - Number of pages written on server wide.</li>
+	   <li><code>PhysicalReads </code> - Number of buffers read from the disk.</li>
+	   <li><code>PhysicalWrites</code> - Number of buffers written to the disk.</li>
+	   <li><code>LogicalReads  </code> - Number of buffers read from cache.</li>
+	</ul>
+	If you connect to a server with a lower version that ASE 15.7 SP100, these fields will not be displayed<br>
+	ASE 15.7 SP100 also needs sp_configure 'enable monitoring' for these fields to be populated. <br>
+	If you connect to ASE 15.7 SP100 and 'enable monitoring' is off, these fields will be marked as yellow, meaning they are not to be trusted. <br>
+	This behaviour is for backward compatibility with earlier version where you can view "some" counters without monitoring enabled.<br>
+	</LI>
+
+	<LI>
+	<b>New: Graphs in the Summary Panel</b><br>
+	<ul>
+		<li>'ASE SubSystem Operations - Execution Count (15.7 SP100 or above)'</li>
+		<li>'ASE SubSystem Operations - Execution Time, in Micro Seconds (15.7 SP100 or above)'</li>
+		<li>'ASE SubSystem Operations - Execution Time, in Micro Seconds per Count (15.7 SP100 or above)'</li>
+		<li>'Transaction per second - Number of Transaction per Second (15.0.3 esd#3 or above)' - label 'Rollbacks is new in 15.7 SP100'</li>
+		<li>'CRUD per second - Number of Sel/Upd/Ins/Del/Merge per Second (15.7 SP100 or above)'</li>
+		<li>'Table/Index Access per second - Number of Table/Index Access per Second (15.7 SP100 or above)'</li>
+		<li>'Tempdb Object, Work Tables per second - Number of Tempdb Objects and Work Tables per Second (15.7 SP100 or above)'</li>
+		<li>'User Log Cache per second - User Log Cache Information per Second (15.7 SP100 or above)'</li>
+		<li>'IO's per second - Number of IO's per Second (15.7 SP100 or above)'</li>
+		<li>'Logical Reads per second - Number of Logical Reads per Second (15.7 SP100 or above)'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Summary Panel - Enhancement</b><br>
+	<ul>
+	  <li><code>fullTranslogCount</code> - Checking if any database transaction logs are full, using <code>lct_admin('logfull', dbid)</code> was to expensive, or time consuming.<br>
+	      This was replaced with checking the <code>monOpenDatabases.TransactionLogFull</code> column, this is only done if the user has <code>mon_role</code> granted and configuration <code>enable monitoring</code> is enabled.
+	      If the above is not true, we fall back and use the old <code>lct_admin('logfull', dbid)</code> check.</li>
+	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold' 
+	      when trying to get oldest open transaction. If you are not authorized to select on syslogshold, a static value of -99 will be used instead.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Main Frame GUI - Enhancement</b><br>
+	<ul>
+	  <li>Tab Panel Navigation "next" and "previous" buttons in toolbar at the top. This is a "stack" of visited "performance tabs", which makes it easier to go "back" to the previously used performance counter(s).</li>
+	  <li>Sleep time between samples - can now also easily be changed via a ComboBox in the status panel (at the bottom left hand side)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Objects' for ASE 15.7.0 SP100</b><br>
+	<ul>
+	   <li><code>NumLevel0Waiters </code> - Number of times Level0 Scan start had to wait due to Utilities that requested us to wait</li>
+	   <li><code>AvgLevel0WaitTime</code> - Average time waited, if waited to get Level0 access (ms)</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Spinlock Activity' for ASE 15.7.0 SP100</b><br>
+	<ul>
+	   <li><code>SpinlockSlotID</code> - ID for this spinlock in the spinlock memory pool</li>
+	</ul>
+	Also keeping the old behaviour to summarize/collapse all Spinlocks that have multiple instances into one row.<br>
+	This collapse option is implemented as a checkbox in the "local options panel"<br>
+	Tooltip or Hover over any cell for the columns <code>OwnerPID, LastOwnerPID</code> will show a tooltip that basically 
+	  displays "select * from master..sysprocesses where kpid = ${LastOwnerPID|OwnerPID}" which makes it easier to discover 
+	  what user/application that was holding the spinlock.<br>
+	</LI>
+
+	<LI>
+	<b>New: Column in in tab 'Cached Procedures' for ASE 15.7.0</b><br>
+	<ul>
+	   <li><code>CompileAgeInSec   </code> - Formula: datediff(ss, CompileDate, getdate())</li>
+	   <li><code>AvgCPUTime        </code> - Formula: CPUTime / ExecutionCount</li>
+	   <li><code>AvgExecutionTime  </code> - Formula: AvgExecutionTime / ExecutionCount</li>
+	   <li><code>AvgPhysicalReads  </code> - Formula: AvgPhysicalReads / ExecutionCount</li>
+	   <li><code>AvgLogicalReads   </code> - Formula: AvgLogicalReads / ExecutionCount</li>
+	   <li><code>AvgPhysicalWrites </code> - Formula: AvgPhysicalWrites / ExecutionCount</li>
+	   <li><code>AvgPagesWritten   </code> - Formula: AvgPagesWritten / ExecutionCount</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Performance Counter 'Threads' - missing records</b><br>
+	This problem has only been seen if ASE runs on the Windows platform.<br>
+	To few records in the Performance Counter. This was due to a bad join from monThread to monTask<br>
+	The join towards monTask is only to distinguage syb_system_pool:NetController and syb_system_pool:DiskController<br>
+	Now using a outer join to get records that doesn't have a record in monTask<br>
+	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads 
+	but the rest of the "engine" threads has no matching entry in monTask, because they are not executing anything.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancements to Graphs attached to the Performance Counter 'Threads'</b><br>
+	The labels for the '<i>CPU Thread BusyTicksPct Average per Pool Type</i>' now contains how many threads it averages on.<br>
+	The labels for the '<i>CPU Thread BusyTicksPct Usage per Thread</i>' now reflects the "thread number" within the <code>ThreadPoolNameType</code> instead of the <code>ThreadID</code> this makes it a bit more readable I hope.<br>
+	</LI>
+
+	<LI>
+	<b>New tool - Stacktrace analyzer</b><br>
+	This tool can be used in strange circumstances to analyze in what code path the ASE Server is in.<br>
+	The tool will just <i>read</i> a stacktrace file produced by the ASE Server using a special mode on the server (called sybmon)
+	a small shell script <i>template</i> is also available. But the shell script has to be created executed by <i>you</i>.
+	Then FTP the output and read the file using this tool.<br>
+	If this tool will be used a lot, then I will need to implement a SSH execution of the script and grab the output back to
+	the local machine so you don't need to do all the above. Then the tool would be a bit more <i>automatic</i> if you <b>really</b>
+	need that functionality, let me know and I will see what I can do!<br>
+	</LI>
+
+	<LI>
+	<b>New: In 'ASE Configuration' view</b><br>
+	<ul>
+	   <li>A new tab which shows information from sp_helpsort </li>
+	   <li>Tab Layout Policy is now 'scroll' by default.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Change - The default behaviour of "change to tab" </b><br>
+	When any blocking locks or long running transactions appears in the system a "popup" will become visible
+	that asks you what you want to do "stay in current tab" or "change to tab ???". <br>
+	The default was previously to: "Always show this dialog when this happens" and "Change focus to tab '???'"<br>
+	The new defaults are: "Stay in <b>current</b> tab, or simply, do nothing" and "Remember the above choice until the application restarts"<br>
+	</LI>
+
+	<LI>
+	<b>Change - Most JTables now has a "right click" pupup menu on the column headings</b><br>
+	Most JTables you can now choose what columns to be visible, simply by "right click" on the column header and pupup menu will be visible with some options.
+	</LI>
+
+	<LI>
+	<b>SQL Window - Enhancements</b><br>
+	<ul>
+	   <li>Better error handling if connection is aborted/killed in the ASE Server while processing</li>
+	   <li>Added some static text to the ASE code completion 'alter thread pool...'</li>
+	   <li>Command history, which is persisted and shared between different Concurrent SQL Windows instances</li>
+	   <li>Favorite SQL/RCL button now has the ability to add/change/remove your own SQL Favorites using a small dialog</li>
+	   <li>If you want to connect to a JDBC source where the driver is <b>not</b> in the current classpath, a dialog has been created so you can add JDBC driver to the system without having to change the bat or shell file that started the SQL Window tool.</li>
+	   <li>Open a new SQL Window tool, with that is connected to the same server. Use 'Clone Connect' in the menu.</li>
+	   <li>Using Icons instead of text for the "Exec" and "GUI Showplan Exec"</li>
+	   <li>Query Options has been put under a button/popup called "options", this to save some space.</li>
+	   <li>in ASE 15.7 SP100 - HTML showplan has been added to the "Set" button and the HTML will be displayed as rendered a HTML page/output</li>
+	   <li>Use "Drag and Drop" on the buttons "Exec" and "GUI Showplan Exec" to execute a SQL Statement. This will be usable from the <b>History window</b>, that is if you have two SQL Windows opened. But only one History Window... Then you can do "Drag" from the History Table and "Drop" on the SQL Windows "exec button" where you want it to be executed.</li>
+	   <li>Simple '<b>grep</b>' functionality. do: <code>exec sp_who&lt;NL&gt;go | grep 'sa'</code> will do grep for 'sa' in the output from the resultset(s)</li>
+	   <li>Simple '<b>bcp</b>' functionality. do: <code>select * from t1 where c1='x'&lt;NL&gt;go | bcp dbname.owner.desttab -Usa -Pxxx -STO_SRV </code> will try to BCP values into the table in the destination server.</li>
+	   <li>Simple '<b>rpc</b>' functionality. do: <code>\exec|rpc sp_who ? :( string = '2' )</code> will try to do a RPC call to ASE using a JDBC CallableStatement to execute the procedure. In this example we call sp_who with a <i>string</i> parameter of value "2". This is also the only way to check return code and output parameters from a stored procedure.</li>
+	   <li>to get help on <i>go</i> commands do: <code>go | ?</code> </li>
+	   <li>Bug fix: In some cases a <i>error popup</i> window was displayed to early, then it was hard to figgure out if the command was still running or not. This is fixed.</li>
+	   <li>Bug fix: SSH tunneling had problems when reconnecting to same server, or when the connection was lost due to inactivity.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Log Tail - Enhancements</b><br>
+	<ul>
+	   <li>Removed some bug: In some cases a whole line were not treated as one line...</li>
+	   <li>Added: how many "old" rows that should be included in the tail.</li>
+	   <li>Added: Start from the beginning of a file..</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>New jConnect driver</b><br>
+	From jConnect 6.05 to jConnect 7.07 SP100<br>
+	</LI>
+
+	<LI>
+	<b>Large Icons</b><br>
+	For some windows and dialogs, a set of 32*32 pixel icons was created. Works better for Windows7 and MacOS<br>
+	</LI>
+
+	<LI>
+	<b>Loading Recorded Session - Enhancements</b><br>
+	<ul>
+	   <li>When connecting to the data store, show a GUI Dialog what you are connecting to.<br>
+	       This to help determinate if we are actually doing something... or if the GUI is blocked in some way.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Offline DDL View - Enhancements</b><br>
+	<ul>
+	   <li>Double click on a row will show the content (same as: rightClick -&gt; Show)</li>
+	   <li>Arrow Keys: up/down, after stop moving, wait for 350ms, then 'show content'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Query Timeout</b><br>
+	The GUI was locking itself up in a strange way after a Query had been running past the query timeout.<br>
+	Hopefully this is fixed now, <b>please</b> report the kind of behaviour if you find/see them, this so I can fix it.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: NO GUI mode</b><br>
+	Headless machines did not work - Removed some restrictions, and now AstTune -noGui mode works when started on a headless machine<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: User Defined Counters</b><br>
+	After a re-connect User Defined Counters SQL Statements was set to NULL or "blank", which is now fixed.<br>
+	</LI>
+
+	<LI>
+	<b>NO GUI mode - sleep interval enhancement - experimental</b><br>
+	By using the property 'offline.script.waitForNextSample' you can add a Java Script that can decide when we want to do a new "refresh".<br>
+	Example:<br>
+	<pre>
+		offline.script.waitForNextSample=function waitForNextSample(waitStartDate) \
+		{ \
+			var nowDate = new Date(); \
+			var secOnTheMinute = nowDate.getSeconds(); \
+			if (secOnTheMinute == 1) \
+				return 0; \
+			else \
+				return 1000; \
+		} \
+		waitForNextSample(new Date(waitStartedAtTime));
+	</pre>
+	The above script returns 0 when clock has passed 1 second after each whole minute<br>
+	If not just, return 1000, which means: let AseTune sleep for 1000 ms, then call this Java Script again.<br>
+	Note: the variable <code>waitStartedAtTime</code> is set by AseTune to indicate what the time was after a complete refresh of counters.<br>
+	<ul>
+	   <li>return 0 = go and do refresh of counters</li>
+	   <li>return a number = Tell AseTune to sleep for this amount of milliseconds before it will call the script again.</li>
+	   <li>return anything else, like a string or nothing means: use the ordinary sleep time.</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2013-03-03</H2>
 <UL>
 	<LI>
 	<b>Bug fix: Performance Counters initialized with wrong ASE release</b><br>
@@ -136,7 +404,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</p>
 	<p>
 	   Please let me know if you still have memory issues.<br>
-	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script.
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script. 
 	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
 	</p>
 	Also new default values for Java memory:
@@ -174,7 +442,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
 	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
 	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
-	as you enter various commands.<br>
+	as you enter various commands.<br> 
 	</LI>
 
 	<LI>
@@ -211,8 +479,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
 	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
 	<p>
-	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br>
-	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread.
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br> 
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread. 
 	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
 	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
 	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
@@ -337,9 +605,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
 	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
-	Also the field_name 'fglockspins' can optionally be discarded.
+	Also the field_name 'fglockspins' can optionally be discarded. 
 	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
-	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.)
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.) 
 	</LI>
 
 	<LI>
@@ -419,8 +687,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<ul>
 	   <li>Early initialization of the encryption package, makes the connection dialog open faster.</li>
 	   <li>Capture SQL tool, could overflow on datediff when calculating execution times.</li>
-	   <li>when ASE is in 'SHUTDOWN mode', skip writing some warning messages...</li>
 	   <li>Re-initialize Performance Counters on errors 10353 and 12052 (config was changed)</li>
+	   <li>when ASE is in 'SHUTDOWN mode', skip writing some warning messages...</li>
 	   <li>Tab 'SPID Activity' had some issues when highlighting SPID's</li>
 	   <li>GTable had null pointer exceptions in some cases when saving currently selected row</li>
 	   <li>SQL Statements was in some cases faulty generated for ASE 15.0.0, regarding pssinfo</li>
