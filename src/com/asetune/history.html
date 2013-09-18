@@ -22,14 +22,26 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2013-xx-xx</H2>
+<UL>
+	<LI>
+	<b>Bug fix: 'Cached Procedures Sum' in the group 'Cache'</b><br>
+	Error 3606: Arithmetic overflow occurred.<br>
+	Now convert the integers to bigint before doing the sum() aggregates<br>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2013-06-28</H2>
 <UL>
 	<LI>
 	<b>Support for ASE 15.7 SP100, or SAP version string, based on Service Pack or SP</b><br>
 	From now on ASE will be using SAP Version strings, which means no more ESD#<br>
 	Now it's called SP (Service Pack) instead of ESD#<br>
-	AseTune internal parsing of the @@version string to an integer was previously 5 numbers (15034 = 15.0.3 ESD#4), 
-	the new internal representation is an integer that consists of 7 numbers (1570042 = 15.7.0 ESD#4.2, 1570100 = 15.7 SP100, 1570101 = 15.7 SP101)<br> 
+	AseTune internal parsing of the @@version string to an integer was previously 5 numbers (15034 = 15.0.3 ESD#4),
+	the new internal representation is an integer that consists of 7 numbers (1570042 = 15.7.0 ESD#4.2, 1570100 = 15.7 SP100, 1570101 = 15.7 SP101)<br>
 	</LI>
 
 	<LI>
@@ -93,7 +105,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	  <li><code>fullTranslogCount</code> - Checking if any database transaction logs are full, using <code>lct_admin('logfull', dbid)</code> was to expensive, or time consuming.<br>
 	      This was replaced with checking the <code>monOpenDatabases.TransactionLogFull</code> column, this is only done if the user has <code>mon_role</code> granted and configuration <code>enable monitoring</code> is enabled.
 	      If the above is not true, we fall back and use the old <code>lct_admin('logfull', dbid)</code> check.</li>
-	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold' 
+	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold'
 	      when trying to get oldest open transaction. If you are not authorized to select on syslogshold, a static value of -99 will be used instead.</li>
 	</ul>
 	</LI>
@@ -121,8 +133,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</ul>
 	Also keeping the old behaviour to summarize/collapse all Spinlocks that have multiple instances into one row.<br>
 	This collapse option is implemented as a checkbox in the "local options panel"<br>
-	Tooltip or Hover over any cell for the columns <code>OwnerPID, LastOwnerPID</code> will show a tooltip that basically 
-	  displays "select * from master..sysprocesses where kpid = ${LastOwnerPID|OwnerPID}" which makes it easier to discover 
+	Tooltip or Hover over any cell for the columns <code>OwnerPID, LastOwnerPID</code> will show a tooltip that basically
+	  displays "select * from master..sysprocesses where kpid = ${LastOwnerPID|OwnerPID}" which makes it easier to discover
 	  what user/application that was holding the spinlock.<br>
 	</LI>
 
@@ -145,7 +157,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	To few records in the Performance Counter. This was due to a bad join from monThread to monTask<br>
 	The join towards monTask is only to distinguage syb_system_pool:NetController and syb_system_pool:DiskController<br>
 	Now using a outer join to get records that doesn't have a record in monTask<br>
-	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads 
+	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads
 	but the rest of the "engine" threads has no matching entry in monTask, because they are not executing anything.<br>
 	</LI>
 
@@ -404,7 +416,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</p>
 	<p>
 	   Please let me know if you still have memory issues.<br>
-	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script. 
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script.
 	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
 	</p>
 	Also new default values for Java memory:
@@ -442,7 +454,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
 	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
 	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
-	as you enter various commands.<br> 
+	as you enter various commands.<br>
 	</LI>
 
 	<LI>
@@ -479,8 +491,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
 	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
 	<p>
-	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br> 
-	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread. 
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br>
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread.
 	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
 	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
 	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
@@ -605,9 +617,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
 	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
-	Also the field_name 'fglockspins' can optionally be discarded. 
+	Also the field_name 'fglockspins' can optionally be discarded.
 	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
-	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.) 
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.)
 	</LI>
 
 	<LI>
