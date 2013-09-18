@@ -185,28 +185,34 @@ extends CountersModel
 
 		if (aseVersion >= 1570000)
 		{
-			SumExecutionCount = "SumExecutionCount = sum(ExecutionCount), \n";
-			SumCPUTime        = "SumCPUTime        = sum(CPUTime), \n";
-			SumExecutionTime  = "SumExecutionTime  = sum(ExecutionTime), \n";
-			SumPhysicalReads  = "SumPhysicalReads  = sum(PhysicalReads), \n";
-			SumLogicalReads   = "SumLogicalReads   = sum(LogicalReads), \n";
-			SumPhysicalWrites = "SumPhysicalWrites = sum(PhysicalWrites), \n";
-			SumPagesWritten   = "SumPagesWritten   = sum(PagesWritten), \n";
+			SumExecutionCount = "  SumExecutionCount     = sum(convert(bigint,ExecutionCount)), \n";
+			SumCPUTime        = "  SumCPUTime            = sum(convert(bigint,CPUTime)), \n";
+			SumExecutionTime  = "  SumExecutionTime      = sum(convert(bigint,ExecutionTime)), \n";
+			SumPhysicalReads  = "  SumPhysicalReads      = sum(convert(bigint,PhysicalReads)), \n";
+			SumLogicalReads   = "  SumLogicalReads       = sum(convert(bigint,LogicalReads)), \n";
+			SumPhysicalWrites = "  SumPhysicalWrites     = sum(convert(bigint,PhysicalWrites)), \n";
+			SumPagesWritten   = "  SumPagesWritten       = sum(convert(bigint,PagesWritten)), \n";
 
-			AvgCPUTime        = "AvgCPUTime        = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(CPUTime       ) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
-			AvgExecutionTime  = "AvgExecutionTime  = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(ExecutionTime ) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
-			AvgPhysicalReads  = "AvgPhysicalReads  = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(PhysicalReads ) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
-			AvgLogicalReads   = "AvgLogicalReads   = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(LogicalReads  ) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
-			AvgPhysicalWrites = "AvgPhysicalWrites = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(PhysicalWrites) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
-			AvgPagesWritten   = "AvgPagesWritten   = CASE WHEN sum(ExecutionCount) > 0 THEN convert(numeric(16,1), (sum(PagesWritten  ) + 0.0) / (sum(ExecutionCount) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgCPUTime        = "  AvgCPUTime            = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,CPUTime       )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgExecutionTime  = "  AvgExecutionTime      = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,ExecutionTime )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPhysicalReads  = "  AvgPhysicalReads      = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,PhysicalReads )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgLogicalReads   = "  AvgLogicalReads       = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,LogicalReads  )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPhysicalWrites = "  AvgPhysicalWrites     = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,PhysicalWrites)) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgPagesWritten   = "  AvgPagesWritten       = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,PagesWritten  )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
 		}
 		
 		cols = 
-			"DBName, ObjectName, ObjectType, NumberOfPlanesInCache=count(*), \n" +
-			"SumMemUsageKB=sum(MemUsageKB), \n" +
-			"MaxCompileDate=max(CompileDate), MinCompileAgeInSec=datediff(ss, max(CompileDate), getdate()), \n" +
-			"SumRequestCnt=sum(RequestCnt), SumRequestCntDiff = sum(RequestCnt), \n" +
-			"SumTempdbRemapCnt=sum(TempdbRemapCnt), MaxAvgTempdbRemapTime=max(AvgTempdbRemapTime), \n" +
+			"  DBName, \n" +
+			"  ObjectName, \n" +
+			"  ObjectType, \n" +
+			"  NumberOfPlanesInCache = count(*), \n" +
+			"  SumMemUsageKB         = sum(convert(bigint,MemUsageKB)), \n" +
+			"  MaxCompileDate        = max(CompileDate), \n" +
+			"  MinCompileAgeInSec    = datediff(ss, max(CompileDate), getdate()), \n" +
+			"  SumRequestCnt         = sum(convert(bigint,RequestCnt)), \n" +
+			"  SumRequestCntDiff     = sum(convert(bigint,RequestCnt)), \n" +
+			"  SumTempdbRemapCnt     = sum(convert(bigint,TempdbRemapCnt)), \n" +
+			"  MaxAvgTempdbRemapTime = max(AvgTempdbRemapTime), \n" +
 			SumExecutionCount +   
 			AvgCPUTime + 
 			AvgExecutionTime + 
