@@ -46,7 +46,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "object lockwait timing=1", "per object statistics active=1"};
 
-	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct"};
+	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct", "LockContPct", "CatLockContPct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"AppendLogRequests", "AppendLogWaits", "LogicalReads", "PhysicalReads", 
 		"APFReads", "PagesRead", "PhysicalWrites", "PagesWritten", "LockRequests", 
@@ -139,6 +139,14 @@ extends CountersModel
 			                                                             "Log Semaphore Contention in percent.<br> " +
 			                                                             "<b>Formula</b>: Pct = (AppendLogWaits / AppendLogRequests) * 100<br>" +
 			                                                        "</html>");
+			mtd.addColumn("monTempdbActivity", "LockContPct",       "<html>" +
+			                                                             "Lock Contention in percent.<br> " +
+			                                                             "<b>Formula</b>: Pct = (LockWaits / LockRequests) * 100<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monTempdbActivity", "CatLockContPct",    "<html>" +
+			                                                             "Catalog Lock Contention in percent.<br> " +
+			                                                             "<b>Formula</b>: Pct = (CatLockWaits / CatLockRequests) * 100<br>" +
+			                                                        "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -178,7 +186,18 @@ extends CountersModel
 		         "LogicalReads, PhysicalReads, APFReads, \n" +
 		         "PagesRead, PhysicalWrites, PagesWritten, \n" +
 		         "LockRequests, LockWaits, \n" +
-		         "CatLockRequests, CatLockWaits, AssignedCnt ";
+		         "LockContPct      = CASE \n" +
+		         "                       WHEN LockRequests > 0 \n" +
+		         "                       THEN convert(numeric(10,2), ((LockWaits+0.0)/LockRequests)*100.0) \n" +
+		         "                       ELSE convert(numeric(10,2), 0.0) \n" +
+		         "                   END, \n" +
+		         "CatLockRequests, CatLockWaits, \n" +
+		         "CatLockContPct   = CASE \n" +
+		         "                       WHEN CatLockRequests > 0 \n" +
+		         "                       THEN convert(numeric(10,2), ((CatLockWaits+0.0)/CatLockRequests)*100.0) \n" +
+		         "                       ELSE convert(numeric(10,2), 0.0) \n" +
+		         "                   END, \n" +
+		         "AssignedCnt ";
 		cols2 += "";
 		cols3 += "";
 
@@ -196,11 +215,17 @@ extends CountersModel
 	@Override
 	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
 	{
-		int AppendLogRequests,        AppendLogWaits;
-		int AppendLogRequestsId = -1, AppendLogWaitsId = -1;
+		int AppendLogRequests,          AppendLogWaits;
+		int AppendLogRequests_pos = -1, AppendLogWaits_pos = -1;
+		int AppendLogContPct_pos = -1;
 
-		double calcAppendLogContPct;
-		int AppendLogContPctId = -1;
+		int LockRequests,               LockWaits;
+		int LockRequests_pos = -1,      LockWaits_pos = -1;
+		int LockContPct_pos = -1;
+
+		int CatLockRequests,            CatLockWaits;
+		int CatLockRequests_pos = -1,   CatLockWaits_pos = -1;
+		int CatLockContPct_pos = -1;
 
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -210,28 +235,69 @@ extends CountersModel
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
 			String colName = colNames.get(colId);
-			if      (colName.equals("AppendLogContPct"))  AppendLogContPctId  = colId;
-			else if (colName.equals("AppendLogRequests")) AppendLogRequestsId = colId;
-			else if (colName.equals("AppendLogWaits"))    AppendLogWaitsId    = colId;
+			if      (colName.equals("AppendLogContPct"))  AppendLogContPct_pos  = colId;
+			else if (colName.equals("AppendLogRequests")) AppendLogRequests_pos = colId;
+			else if (colName.equals("AppendLogWaits"))    AppendLogWaits_pos    = colId;
+			else if (colName.equals("LockContPct"))       LockContPct_pos       = colId;
+			else if (colName.equals("LockRequests"))      LockRequests_pos      = colId;
+			else if (colName.equals("LockWaits"))         LockWaits_pos         = colId;
+			else if (colName.equals("CatLockContPct"))    CatLockContPct_pos    = colId;
+			else if (colName.equals("CatLockRequests"))   CatLockRequests_pos   = colId;
+			else if (colName.equals("CatLockWaits"))      CatLockWaits_pos      = colId;
 		}
 
+		int colPos;
 		// Loop on all DIFF DATA rows
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
-			AppendLogRequests = ((Number)diffData.getValueAt(rowId, AppendLogRequestsId)).intValue();
-			AppendLogWaits    = ((Number)diffData.getValueAt(rowId, AppendLogWaitsId   )).intValue();
+			AppendLogRequests = ((Number)diffData.getValueAt(rowId, AppendLogRequests_pos)).intValue();
+			AppendLogWaits    = ((Number)diffData.getValueAt(rowId, AppendLogWaits_pos   )).intValue();
 
+			LockRequests      = ((Number)diffData.getValueAt(rowId, LockRequests_pos     )).intValue();
+			LockWaits         = ((Number)diffData.getValueAt(rowId, LockWaits_pos        )).intValue();
+
+			CatLockRequests   = ((Number)diffData.getValueAt(rowId, CatLockRequests_pos  )).intValue();
+			CatLockWaits      = ((Number)diffData.getValueAt(rowId, CatLockWaits_pos     )).intValue();
+
+			//------------------------------
+			// CALC: AppendLogContPct_pos
 			// int totIo = Reads + APFReads + Writes;
+			colPos = AppendLogContPct_pos;
 			if (AppendLogRequests > 0)
 			{
-				// WaitTimePerWait = WaitTime / Waits;
-				calcAppendLogContPct = ((AppendLogWaits + 0.0) / AppendLogRequests) * 100.0;
+				double calc = ((AppendLogWaits + 0.0) / AppendLogRequests) * 100.0;
 
-				BigDecimal newVal = new BigDecimal(calcAppendLogContPct).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-				diffData.setValueAt(newVal, rowId, AppendLogContPctId);
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, colPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, AppendLogContPctId);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+
+			//------------------------------
+			// CALC: LockContPct
+			colPos = LockContPct_pos;
+			if (LockRequests > 0)
+			{
+				double calc = ((LockWaits+0.0) / (LockRequests+0.0)) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, colPos);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+
+			//------------------------------
+			// CALC: CatLockContPct
+			colPos = CatLockContPct_pos;
+			if (CatLockRequests > 0)
+			{
+				double calc = ((CatLockWaits+0.0) / (CatLockRequests+0.0)) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, colPos);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
 		}
 	}
 
