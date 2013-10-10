@@ -331,7 +331,7 @@ extends CountersModel
 		if (getServerVersion() < 1550000)
 			return null;
 
-		String[] sa = {"RequestCntDiff"};
+		String[] sa = {"SumRequestCntDiff"};
 		return sa;
 	}
 }

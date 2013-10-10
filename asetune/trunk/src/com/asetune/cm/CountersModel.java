@@ -3882,7 +3882,7 @@ implements Cloneable, ITableTooltip
 			final int colPos = diffData.findColumn(column);
 			if (colPos == -1)
 			{
-				_logger.error("sendDdlDetailsRequest() sortDescOnColumns='"+StringUtil.toCommaStr(sortDescOnColumns)+"', but column '"+column+"' can't be found in diffValues, trying with next column.");
+				_logger.error("sendDdlDetailsRequest() cmName='"+diffData.getName()+"', sortDescOnColumns='"+StringUtil.toCommaStr(sortDescOnColumns)+"', but column '"+column+"' can't be found in diffValues (known cols="+StringUtil.toCommaStr(diffData.getColNames())+"), trying with next column.");
 				continue;
 			}
 

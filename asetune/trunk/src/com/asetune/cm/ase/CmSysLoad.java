@@ -99,14 +99,21 @@ extends CountersModel
 	
 	public static final String   GRAPH_NAME_AVG_RUN_QUEUE_LENTH    = "AvgRunQLengthGraph";    //String x=GetCounters.CM_GRAPH_NAME__SYS_LOAD__AVG_RUN_QUEUE_LENTH;
 	public static final String   GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH = "EngineRunQLengthGraph"; //String x=GetCounters.CM_GRAPH_NAME__SYS_LOAD__ENGINE_RUN_QUEUE_LENTH;
+	public static final String   GRAPH_NAME_SUM_OUTSTAND_IO        = "SumOutstandIoGraph";
+	public static final String   GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO = "EngineNowOutstandIo";  
+	public static final String   GRAPH_NAME_ENGINE_1M_OUTSTAND_IO  = "Engine1MinOutstandIo";  
 
 	private void addTrendGraphs()
 	{
 		String[] avgLabels = new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" };
+		String[] sumLabels = new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" };
 		String[] engLabels = new String[] { "-runtime-replaced-" };
 		
 		addTrendGraphData(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    new TrendGraphDataPoint(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    avgLabels));
 		addTrendGraphData(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, engLabels));
+		addTrendGraphData(GRAPH_NAME_SUM_OUTSTAND_IO,        new TrendGraphDataPoint(GRAPH_NAME_SUM_OUTSTAND_IO,        sumLabels));
+		addTrendGraphData(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, engLabels));
+		addTrendGraphData(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  new TrendGraphDataPoint(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  engLabels));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -131,6 +138,39 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
+				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
+				"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
+				"Outstanding IO's, Summary for all instances (only in 15.5 and later)", // Label 
+				sumLabels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
+				"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
+				"Outstanding IO's, When the refresh happened, Per Engine (only in 15.5 and later)", // Label 
+				engLabels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
+				"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
+				"Outstanding IO's, Average over last minute, Per Engine (only in 15.5 and later)", // Label 
+				engLabels, 
+				false, // is Percent Graph
+				this, 
+				true, // visible at start
 				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -224,7 +264,7 @@ extends CountersModel
 					arr[2] = this.getAbsValueAvg(rqRows, "Avg_5min");
 					arr[3] = this.getAbsValueAvg(rqRows, "Max_1min");
 					arr[4] = this.getAbsValueAvg(rqRows, "Max_5min");
-					_logger.debug("updateGraphData(AvgRunQLengthGraph): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
+					_logger.debug("updateGraphData("+GRAPH_NAME_AVG_RUN_QUEUE_LENTH+"): Sample='"+arr[0]+"', Avg_1min='"+arr[1]+"', Avg_5min='"+arr[2]+"', Max_1min='"+arr[3]+"', Max_5min='"+arr[4]+"'.");
 
 					// Set the values
 					tgdp.setDate(this.getTimestamp());
@@ -282,7 +322,7 @@ extends CountersModel
 						String debugStr = "";
 						for (int i=0; i<data.length; i++)
 							debugStr += label[i] + "='"+data[i]+"', ";
-						_logger.debug("updateGraphData(EngineRunQLengthGraph): "+debugStr);
+						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH+"): "+debugStr);
 					}
 
 					// Set the values
@@ -292,5 +332,160 @@ extends CountersModel
 				}
 			}
 		} // end: GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH
+
+		if (GRAPH_NAME_SUM_OUTSTAND_IO.equals(tgdp.getName()))
+		{
+//			if (aseVersion < 15500)
+			if (aseVersion < 1550000)
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
+				if (rqRows == null)
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+				else
+				{
+					Double[] arr = new Double[4];
+					arr[0] = this.getAbsValueSum(rqRows, "Sample");
+					arr[1] = this.getAbsValueSum(rqRows, "Avg_1min");
+					arr[2] = this.getAbsValueSum(rqRows, "Avg_5min");
+					arr[3] = this.getAbsValueSum(rqRows, "Avg_15min");
+					_logger.debug("updateGraphData("+GRAPH_NAME_SUM_OUTSTAND_IO+"): Sample='"+arr[0]+"', Sum_1min='"+arr[1]+"', Sum_5min='"+arr[2]+"', Sum_15min='"+arr[3]+"'.");
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setData(arr);
+				}
+			}
+		} // end: GRAPH_NAME_AVG_RUN_QUEUE_LENTH
+
+		if (GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO.equals(tgdp.getName()))
+		{
+//			if (aseVersion < 15500)
+			if (aseVersion < 1550000)
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
+				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
+				if (rqRows == null)
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+				else
+				{
+					Double[] data  = new Double[rqRows.length];
+					String[] label = new String[rqRows.length];
+					for (int i=0; i<rqRows.length; i++)
+					{
+						int rowId = rqRows[i];
+
+						// get LABEL
+						String instanceId   = null;
+						if (isClusterEnabled())
+							instanceId = this.getAbsString(rowId, "InstanceID");
+						String engineNumber = this.getAbsString(rowId, "EngineNumber");
+
+						// in Cluster Edition the labels will look like 'eng-{InstanceId}:{EngineNumber}'
+						// in ASE SMP Version the labels will look like 'eng-{EngineNumber}'
+						if (instanceId == null)
+							label[i] = "eng-" + engineNumber;
+						else
+							label[i] = "eng-" + instanceId + ":" + engineNumber;
+
+						// get DATA
+						data[i]  = this.getAbsValueAsDouble(rowId, "Sample");
+					}
+					if (_logger.isDebugEnabled())
+					{
+						String debugStr = "";
+						for (int i=0; i<data.length; i++)
+							debugStr += label[i] + "='"+data[i]+"', ";
+						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO+"): "+debugStr);
+					}
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(label);
+					tgdp.setData(data);
+				}
+			}
+		} // end: GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO
+
+		if (GRAPH_NAME_ENGINE_1M_OUTSTAND_IO.equals(tgdp.getName()))
+		{
+//			if (aseVersion < 15500)
+			if (aseVersion < 1550000)
+			{
+				// disable the graph checkbox...
+				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO);
+				if (tg != null)
+				{
+					JCheckBoxMenuItem menuItem = tg.getViewMenuItem();
+					if (menuItem.isSelected())
+						menuItem.doClick();
+				}
+			}
+			else
+			{
+				// Get a array of rowId's where the column 'Statistic' has the value 'run queue length'
+				int[] rqRows = this.getAbsRowIdsWhere("Statistic", "outstanding disk i/os");
+				if (rqRows == null)
+					_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Statistic', 'outstanding disk i/os'), retuned null, so I can't do more here.");
+				else
+				{
+					Double[] data  = new Double[rqRows.length];
+					String[] label = new String[rqRows.length];
+					for (int i=0; i<rqRows.length; i++)
+					{
+						int rowId = rqRows[i];
+
+						// get LABEL
+						String instanceId   = null;
+						if (isClusterEnabled())
+							instanceId = this.getAbsString(rowId, "InstanceID");
+						String engineNumber = this.getAbsString(rowId, "EngineNumber");
+
+						// in Cluster Edition the labels will look like 'eng-{InstanceId}:{EngineNumber}'
+						// in ASE SMP Version the labels will look like 'eng-{EngineNumber}'
+						if (instanceId == null)
+							label[i] = "eng-" + engineNumber;
+						else
+							label[i] = "eng-" + instanceId + ":" + engineNumber;
+
+						// get DATA
+						data[i]  = this.getAbsValueAsDouble(rowId, "Avg_1min");
+					}
+					if (_logger.isDebugEnabled())
+					{
+						String debugStr = "";
+						for (int i=0; i<data.length; i++)
+							debugStr += label[i] + "='"+data[i]+"', ";
+						_logger.debug("updateGraphData("+GRAPH_NAME_ENGINE_1M_OUTSTAND_IO+"): "+debugStr);
+					}
+
+					// Set the values
+					tgdp.setDate(this.getTimestamp());
+					tgdp.setLabel(label);
+					tgdp.setData(data);
+				}
+			}
+		} // end: GRAPH_NAME_ENGINE_1M_OUTSTAND_IO
 	}
 }

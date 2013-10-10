@@ -78,6 +78,9 @@ CREATE TABLE asemon_connect_info
 	srvVersionStr           varchar(150),
 	srvSortOrderId          varchar(5),
 	srvSortOrderName        varchar(30),
+	srvCharsetId            varchar(5),
+	srvCharsetName          varchar(30),
+	srvSapSystemInfo        varchar(40),
 	
 	usePcs                  varchar(5),
 	pcsConfig               varchar(400),

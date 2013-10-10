@@ -30,6 +30,75 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	Now convert the integers to bigint before doing the sum() aggregates<br>
 	</LI>
 
+	<LI>
+	<b>Bug fix: SQL Window</b><br>
+	<code>(script row #)</code> in ASE Error massages does now reflect the correct row in the script even if a "selection" is executed.<br>
+	ASE Error messages has the output:<br>
+	<code>Msg 99999, Level 16, State 1:</code><br>
+	<code>Server 'GORAN_1570_DS', Line 1 (script row 12), Status 0, TranState 1:</code><br>
+	<code>Dummy Error message, just to test</code><br>
+	Which means; row 1 in the current SQL Batch, but row 12 in the editor.<br>
+	This makes it <b>a lot</b> easier to find errors in the editor when executing/debugging stuff.<br> 
+	</LI>
+
+	<LI>
+	<b>Enhanced Dialog: Warning - Use a Local drive for recordings</b><br>
+	This dialog now has an option to discard the warning for future attempts.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: PCS - Recording functionality</b><br>
+	<ul>
+	   <li>CmCachedProcSum - DDL Storage was made of faulty column changed from 'RequestCntDiff' to 'SumRequestCntDiff'</li>
+	   <li>The 'label_#' column in tables that stores Summary Graphs was previously varchar(30), this is now changed to varchar(60). It was already done in the 'create table', but in the 'alter table add label_#' it was missing.'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Active Statements</b><br>
+	Columns 'Command' and 'Application' was placed in the wrong order in the output for 'BLOCKER' section.<br>
+	Simply moved the columns to match the 'ACTIVE' section of the select statement.<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Cached Procedure Sum</b><br>
+	Recording of DDL for procedures was using 'RequestCntDiff' which was faulty, use 'RequestCntDiff' instead<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Threads</b><br>
+	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
+	</LI>
+
+	<LI>
+	<b>Enhancement: System Load</b><br>
+	Three new graphs
+	<ul>
+	   <li>Outstanding IO's, When the refresh happened, Per Engine</li> 
+	   <li>Outstanding IO's, Average over last minute, Per Engine</li> 
+	   <li>Outstanding IO's, Summary for all instances</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+	   <li>Option: How long does a SQL Statement takes from the clients perspective.<br>
+	       Client Exec Time: %MM:%SS.%ms (sqlExec=%MM:%SS.%ms, readResults=%MM:%SS.%ms)</li>
+	   <li>Added sub command 'wait #ms' to the 'go' terminator.<br>
+	       <b>Example:</b> <code>go 10 wait 100</code> will execute the SQL batch 10 times, and wait 100 ms after each SQL batch has been sent.</li>
+	   <li>The progress dialog, now updates 'SQL Batch' timing when you use multi execution 'go 20'</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>PerfDemo application: Enhancements</b><br>
+	<ul>
+	   <li>Timestamp in the log window</li>
+	   <li>Now handles/discards any produced ResultSets from the Consumer Procedures.</li>
+	</ul>
+	</LI>
+
 </UL>
 
 

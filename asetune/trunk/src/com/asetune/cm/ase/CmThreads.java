@@ -190,7 +190,7 @@ extends CountersModel
 //			"     VoluntaryCtxtSwitches, NonVoluntaryCtxtSwitches \n" +
 //			"from master..monThread \n" +
 //			"";
-		String sql = 
+		String sql = preDropTmpTables +
 			"select \n" +
 			"     th.InstanceID, th.ThreadPoolID, th.ThreadPoolName, \n" +
 			"     ThreadType = CASE WHEN ta.Name like 'KPID %' THEN convert(varchar(30),'Engine') \n" +
