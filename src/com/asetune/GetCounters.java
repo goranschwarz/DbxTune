@@ -97,6 +97,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
 
 
 /*
@@ -1607,6 +1608,17 @@ implements ICounterController
 	/** If controller want's to disconnect/stop collecting after a specific time */
 	private Date _stopMonConnectTime = null;
 
+//	/**
+//	 * Override this if any implementers wont allow isClosed() check...<br>
+//	 * For example in GUI mode the Event Dispath Thread we do not want to do it...<br>
+//	 * NOTE: This is a BIG workaround, which should be implemented in another way
+//	 * 
+//	 * @return true if allowed
+//	 */
+//	protected boolean allowNonCachedIsClosedCheck()
+//	{
+//		return true;
+//	}
 
 	/**
 	 * Do we have a connection to the database?
@@ -1618,6 +1630,8 @@ implements ICounterController
 //		return isMonConnected(false, false);
 		return isMonConnected(false, true);
 	}
+	private boolean _lastIsMonConnectedReturned = false;
+
 	/**
 	 * Do we have a connection to the database?
 	 * @return true or false
@@ -1626,7 +1640,10 @@ implements ICounterController
 	public boolean isMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
 	{
 		if (_conn == null) 
+		{
+			_lastIsMonConnectedReturned = false;
 			return false;
+		}
 
 		//DEBUG: System.out.print("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+")");
 		// Cache the last call for X ms (default 1200 ms)
@@ -1636,8 +1653,22 @@ implements ICounterController
 			if ( diff < _lastIsClosedRefreshTime)
 			{
 				//DEBUG: System.out.println("    <<--- isMonConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
+				_lastIsMonConnectedReturned = true;
 				return true;
 			}
+
+//			if ( ! allowNonCachedIsClosedCheck() )
+//			{
+//				if (_logger.isDebugEnabled())
+//				{
+////					long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+//					_logger.debug("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
+//				}
+////	long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+//	System.out.println("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") <--return-("+_lastIsMonConnectedReturned+"). Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
+//				return _lastIsMonConnectedReturned;
+//			}
+
 		}
 
 		// check the connection itself
@@ -1650,15 +1681,19 @@ implements ICounterController
 			{
 				if (closeConnOnFailure)
 					closeMonConnection();
+
+				_lastIsMonConnectedReturned = false;
 				return false;
 			}
 		}
 		catch (SQLException e)
 		{
+			_lastIsMonConnectedReturned = false;
 			return false;
 		}
 
 		_lastIsClosedCheck = System.currentTimeMillis();
+		_lastIsMonConnectedReturned = true;
 		return true;
 	}
 	// Simulate the _conn.isClosed() functionality, but add a query timeout...

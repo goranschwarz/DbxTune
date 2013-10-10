@@ -160,17 +160,47 @@ public class GetCountersGui
 			_thread.interrupt();
 	}
 
+//	/**
+//	 * Override this if any implementers wont allow isClosed() check...<br>
+//	 * For example in GUI mode the Event Dispath Thread we do not want to do it...<br>
+//	 * NOTE: This is a BIG workaround, which should be implemented in another way
+//	 * 
+//	 * @return true if allowed
+//	 */
+//	@Override
+//	protected boolean allowNonCachedIsClosedCheck()
+//	{
+//		// If this is called from the SWING Event Dispath Thread
+//		if (SwingUtils.isEventQueueThread())
+//		{
+//			if (_isMonConnectedWatchDog != null)
+//			{
+//				long diff = System.currentTimeMillis() - _isMonConnectedWatchDogLastCheck;
+//				if (diff > 1100)
+//				{
+//					_logger.info("Connection watchdog has not done it's job... what should we do now... Last check was made: "+TimeUtils.msToTimeStr(diff));
+//				}
+//			}
+////			long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+////			_logger.info("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+"): Called from SWING Dispatch Thread. Last check was made: "+TimeUtils.msToTimeStr(diff));
+//			return false;
+//		}
+//		return true;
+//	}
+
 	/**
 	 * This will hopefully help, the GUI a bit, meaning it wont "freeze" for short periods<br>
 	 * The isMonConnected will just return, with the "cached" value...
 	 */
+	private Thread _isMonConnectedWatchDog = null;
+	private long   _isMonConnectedWatchDogLastCheck = 0;
 	private void startIsMonConnectedWatchDog()
 	{
 		boolean startIsMonConnectedWatchDog = Configuration.getCombinedConfiguration().getBooleanProperty("startIsMonConnectedWatchDog", true);
 //		boolean startIsMonConnectedWatchDog = true;
 		if (startIsMonConnectedWatchDog)
 		{
-			Thread isMonConnectedWatchDog = new Thread()
+			_isMonConnectedWatchDog = new Thread()
 			{
 				@Override
 				public void run() 
@@ -187,6 +217,7 @@ public class GetCountersGui
 							if ( ! isRefreshing() )
 								isMonConnected(true, true);
 
+							_isMonConnectedWatchDogLastCheck = System.currentTimeMillis();
 							Thread.sleep(1000);
 						}
 						catch(Throwable t)
@@ -197,10 +228,10 @@ public class GetCountersGui
 				};
 			};
 			
-			isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
-			isMonConnectedWatchDog.setDaemon(true);
+			_isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
+			_isMonConnectedWatchDog.setDaemon(true);
 	
-			isMonConnectedWatchDog.start();
+			_isMonConnectedWatchDog.start();
 		}
 		else
 		{

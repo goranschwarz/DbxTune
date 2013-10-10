@@ -42,6 +42,7 @@ public class AseSqlScriptReader
 	private boolean        _execWithoutGoAtTheEnd = false;
 
 	private int            _multiExecCount        = 0;
+	private int            _multiExecWait         = 0;
 	private PipeCommand    _pipeCommand           = null;
 	private int            _batchStartLine        = -1;
 	private int            _batchNumber           = -1;
@@ -302,6 +303,18 @@ public class AseSqlScriptReader
 	}
 
 	/**
+	 * When we have a 'go 10 wait 600', we need to exec this 10 times and wait 600ms after each execution.<br>
+	 * So this just return the wait period in milliseconds between each SQL Execution<br>
+	 * If the 'go' terminator doesn't have wait option, then 0 will be returned.
+	 * 
+	 * @return 
+	 */
+	public int getMultiExecWait()
+	{
+		return _multiExecWait;
+	}
+
+	/**
 	 * When we have a 'go | someSubCommand', we needs to apply some filter.
 	 * 
 	 * @return the pipe command, meaning everything after the '|' character (with a trim() applied on it)
@@ -315,7 +328,7 @@ public class AseSqlScriptReader
 	 * @return SQL Commands in Current batch, no more batches returns null
 	 */
 	public String getSqlBatchString()
-	throws IOException, PipeCommandException
+	throws IOException, PipeCommandException, GoSyntaxException
 	{
 		_multiExecCount = 1;
 		_pipeCommand    = null;
@@ -334,9 +347,10 @@ public class AseSqlScriptReader
 //			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") )
 			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
 			{
-				// Format of the 'go' could be: 'go[ #][|pipeCmd]' or in other words
+				// Format of the 'go' could be: 'go[ # [wait ###]][|pipeCmd]' or in other words
 				// go
 				// go 10
+				// go 10 wait 1000
 				// go 10|pipeCmd
 				// go 10 |pipeCmd
 				// go 10 | pipeCmd
@@ -346,25 +360,70 @@ public class AseSqlScriptReader
 				if (row.length() > 3)
 				{
 					int pipePos = row.indexOf('|');
-					String goNumberStr = null;
-					String goPipeStr   = null;
+					String goCmdStr  = null;
+					String goPipeStr = null;
 					
 					if (pipePos > -1)
 					{
-						goNumberStr = row.substring(2, pipePos).trim();
-						goPipeStr   = row.substring(pipePos + 1).trim();;
+						goCmdStr  = row.substring(2, pipePos).trim();
+						goPipeStr = row.substring(pipePos + 1).trim();;
 					}
 					else
 					{
-						goNumberStr = row.substring(2).trim();
+						goCmdStr = row.substring(2).trim();
 					}
 
-					// Get go ## 
-					if ( ! StringUtil.isNullOrBlank(goNumberStr) )
+					// Get go ## [wait ###]
+					if ( ! StringUtil.isNullOrBlank(goCmdStr) )
 					{
-						// get how many 
-						try { _multiExecCount = Integer.parseInt( goNumberStr ); }
+						String goExecCount     = "1";
+						String goCmdOptionStr1 = "";
+						String goCmdOptionStr2 = "";
+
+						// goExecCount
+						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
+						{
+							int endPos = goCmdStr.indexOf(" ") >= 0 ? goCmdStr.indexOf(" ") : goCmdStr.length();
+
+							goExecCount = goCmdStr.substring(0, endPos).trim();
+							goCmdStr    = goCmdStr.substring(   endPos).trim();
+						}
+
+						// goCmdOptionStr1
+						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
+						{
+							int endPos = goCmdStr.indexOf(" ") >= 0 ? goCmdStr.indexOf(" ") : goCmdStr.length();
+
+							goCmdOptionStr1 = goCmdStr.substring(0, endPos).trim();
+							goCmdStr        = goCmdStr.substring(   endPos).trim();
+						}
+
+						// goCmdOptionStr2
+						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
+						{
+							int endPos = goCmdStr.indexOf(" ") >= 0 ? goCmdStr.indexOf(" ") : goCmdStr.length();
+
+							goCmdOptionStr2 = goCmdStr.substring(0, endPos).trim();
+							goCmdStr        = goCmdStr.substring(   endPos).trim();
+						}
+
+						// get how many executions
+						try { _multiExecCount = Integer.parseInt( goExecCount ); }
 						catch (NumberFormatException ignore) {}
+
+						// get wait/sleep time
+						if ( ! StringUtil.isNullOrBlank(goCmdOptionStr1) )
+						{
+							if ("wait".equalsIgnoreCase(goCmdOptionStr1))
+							{
+								try { _multiExecWait = Integer.parseInt( goCmdOptionStr2 ); }
+								catch (NumberFormatException ignore) {}
+							}
+							else
+							{
+								throw new GoSyntaxException("Unknown sub command '"+goCmdOptionStr1+"'. \nSyntax is 'go #1 [wait #2]'\n\n#1 = Number of times to repeat the command\n#2 = Ms to sleep after each batch execution.\n");
+							}
+						}
 					}
 
 					// Get go | pipeCmd
@@ -431,8 +490,6 @@ public class AseSqlScriptReader
 		super.finalize();
 	}
 
-	
-	
 	
 	public static void main(String[] args)
 	{
@@ -508,6 +565,10 @@ public class AseSqlScriptReader
 			e.printStackTrace();
 		}
 		catch(PipeCommandException e)
+		{
+			e.printStackTrace();
+		}
+		catch(GoSyntaxException e)
 		{
 			e.printStackTrace();
 		}

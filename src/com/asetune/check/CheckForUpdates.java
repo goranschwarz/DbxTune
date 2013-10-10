@@ -1233,6 +1233,8 @@ public class CheckForUpdates
 		String srvVersionStr    = "";
 		String srvSortOrderId   = "";
 		String srvSortOrderName = "";
+		String srvCharsetId     = "";
+		String srvCharsetName   = "";
 		String srvSapSystemInfo = "";
 		String sshTunnelInfoStr = "";
 
@@ -1252,6 +1254,8 @@ public class CheckForUpdates
 			srvVersionStr    = mtd.getAseExecutableVersionStr();
 			srvSortOrderId   = mtd.getAseSortId() + "";
 			srvSortOrderName = mtd.getAseSortName();
+			srvCharsetId     = mtd.getAseCharsetId() + "";
+			srvCharsetName   = mtd.getAseCharsetName();
 			srvSapSystemInfo = mtd.getSapSystemInfo();
 
 			if (sshTunnelInfo != null)
@@ -1287,6 +1291,8 @@ public class CheckForUpdates
 			srvVersionStr    = "offline-read";
 			srvSortOrderId   = "offline-read";
 			srvSortOrderName = "offline-read";
+			srvCharsetId     = "offline-read";
+			srvCharsetName   = "offline-read";
 			srvSapSystemInfo = "offline-read";
 			sshTunnelInfoStr = "offline-read";
 
@@ -1323,6 +1329,8 @@ public class CheckForUpdates
 		urlParams.add("srvVersionStr",       srvVersionStr);
 		urlParams.add("srvSortOrderId",      srvSortOrderId);
 		urlParams.add("srvSortOrderName",    srvSortOrderName);
+		urlParams.add("srvCharsetId",        srvCharsetId);
+		urlParams.add("srvCharsetName",      srvCharsetName);
 		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
 		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
 

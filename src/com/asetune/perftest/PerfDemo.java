@@ -11,9 +11,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -868,6 +871,9 @@ implements ActionListener
 		if (str != null && ! str.endsWith("\n"))
 			str += "\n";
 
+		String nowStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+		str = nowStr + " - " + str;
+		
 		JTextPane screen = _logArea;
 		Document doc = screen.getDocument();
 		try
@@ -1126,17 +1132,82 @@ implements ActionListener
 
 				String exitStatus = null;
 				String sql = "exec qConsumer "+_qConsParams;
+//				try
+//				{
+//					Statement stmnt = _conn.createStatement();
+//					ResultSet rs = stmnt.executeQuery(sql);
+//
+//					while(rs.next())
+//					{
+//						exitStatus = rs.getString(1);
+//					}
+//					rs.close();
+//					stmnt.close();
+//				}
+//				catch (SQLException e)
+//				{
+//					_logger.error("refreshQStatInfo(): problems exec sql '"+sql+"'. Caught "+e);
+//				}
 				try
 				{
-					Statement stmnt = _conn.createStatement();
-					ResultSet rs = stmnt.executeQuery(sql);
+					Statement         stmnt = _conn.createStatement();
+					ResultSetMetaData rsmd;
+					ResultSet         rs;
 
-					while(rs.next())
+					boolean hasResults = stmnt.execute(sql);
+					int rsnum = 0;
+					int rowsAffected = 0;
+					do
 					{
-						exitStatus = rs.getString(1);
+						if (hasResults)
+						{
+							rsnum++;
+							rs = stmnt.getResultSet();
+							rsmd = rs.getMetaData();
+
+							int    numColumns   = rsmd.getColumnCount();
+							String firstColName = rsmd.getColumnName(1);
+
+							int numRows = 0;
+							while(rs.next())
+							{
+								numRows++;
+								for (int c=1; c<=numColumns; c++)
+								{
+									// exitType is a special thing for the consumer...
+									// If not that, just read the row/cols and skip it
+									if (numColumns == 1 && "exitType".equals(firstColName))
+									{
+										exitStatus = rs.getString(1);
+									}
+									else
+									{
+										// Read the object just as a dummy
+										rs.getObject(c);
+									}
+								}
+							}
+
+							// jConnect will return #Rows selected at
+							// the end of a result set and before the
+							// next getMoreResults call.
+							int rowsSelected = stmnt.getUpdateCount();
+//							if (rowsSelected >= 0)
+//							{
+//								System.out.println(rowsSelected + " rows Affected.");
+//							}
+						}
+						else
+						{
+							rowsAffected = stmnt.getUpdateCount();
+//							if (rowsAffected >= 0)
+//							{
+//								System.out.println(rowsAffected + " rows Affected.");
+//							}
+						}
+						hasResults = stmnt.getMoreResults();
 					}
-					rs.close();
-					stmnt.close();
+					while (hasResults || rowsAffected != -1);
 				}
 				catch (SQLException e)
 				{

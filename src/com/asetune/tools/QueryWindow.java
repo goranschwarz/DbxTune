@@ -95,6 +95,7 @@ import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.table.JTableHeader;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -154,6 +155,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
+import com.asetune.utils.GoSyntaxException;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
 import com.asetune.utils.PlatformUtils;
@@ -175,7 +177,8 @@ import com.sybase.jdbcx.SybMessageHandler;
 public class QueryWindow
 //	extends JFrame
 //	extends JDialog
-	implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
+//implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
+	implements ActionListener, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
 	private static final long serialVersionUID = 1L;
@@ -190,6 +193,9 @@ public class QueryWindow
 	
 	public final static String  PROPKEY_showRowCount        = PROPKEY_APP_PREFIX + "showRowCount";
 	public final static boolean DEFAULT_showRowCount        = true;
+	
+	public final static String  PROPKEY_clientTiming        = PROPKEY_APP_PREFIX + "clientTiming";
+	public final static boolean DEFAULT_clientTiming        = false;
 	
 	public final static String  PROPKEY_lastFileNameSaveMax = "LastFileList.saveSize";
 	public final static int     DEFAULT_lastFileNameSaveMax = 20;
@@ -257,6 +263,7 @@ public class QueryWindow
 	private JCheckBox   _rsInTabs        = new JCheckBox("In Tabbed Panel", false);
 	private JCheckBox   _asPlainText     = new JCheckBox("As Plain Text", DEFAULT_asPlainText);
 	private JCheckBox   _showRowCount    = new JCheckBox("Row Count", DEFAULT_showRowCount);
+	private JCheckBox   _clientTiming_chk = new JCheckBox("Time SQL Statement", DEFAULT_clientTiming);
 	private JButton     _appOptions      = new JButton("Options");
 	private JComboBox   _dbnames_cbx     = new JComboBox();
 	private JPanel      _resPanel        = new JPanel();
@@ -957,6 +964,7 @@ public class QueryWindow
 		                             "<br>" +
 		                             "That's why this option is visible, so you can turn this on/off as you which!" +
 		                             "</html>");
+		_clientTiming_chk.setToolTipText("<html>Time how long the SQL Statement takes, from the client side.<br>Clock starts when sending the SQL, clock stops when client receives first answer back from the server</html>");
 		_copy        .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 //		_query       .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
@@ -1129,7 +1137,7 @@ public class QueryWindow
 		{
 			_query.setText(sql);
 			if (_conn != null)
-				displayQueryResults(sql, false);
+				displayQueryResults(sql, 0, false);
 		}
 		_query.setDirty(false);
 		_statusBar.setFilename(_query.getFileFullPath());
@@ -1182,8 +1190,9 @@ public class QueryWindow
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
 		_lastFileNameSaveMax = conf.getIntProperty(PROPKEY_lastFileNameSaveMax,  DEFAULT_lastFileNameSaveMax);
-		_asPlainText .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,  DEFAULT_asPlainText) );
-		_showRowCount.setSelected( conf.getBooleanProperty(PROPKEY_showRowCount, DEFAULT_showRowCount) );
+		_asPlainText     .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,  DEFAULT_asPlainText) );
+		_showRowCount    .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount, DEFAULT_showRowCount) );
+		_clientTiming_chk.setSelected( conf.getBooleanProperty(PROPKEY_clientTiming, DEFAULT_clientTiming) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
 		_favoriteCmdFilenameSql = conf.getProperty(PROPKEY_favoriteCmdFileNameSql, DEFAULT_favoriteCmdFileNameSql);
@@ -1202,8 +1211,9 @@ public class QueryWindow
 			return;
 			
 		conf.setProperty(PROPKEY_lastFileNameSaveMax, _lastFileNameSaveMax);
-		conf.setProperty(PROPKEY_asPlainText,         _asPlainText .isSelected());
-		conf.setProperty(PROPKEY_showRowCount,        _showRowCount.isSelected());
+		conf.setProperty(PROPKEY_asPlainText,         _asPlainText     .isSelected());
+		conf.setProperty(PROPKEY_showRowCount,        _showRowCount    .isSelected());
+		conf.setProperty(PROPKEY_clientTiming,        _clientTiming_chk.isSelected());
 		
 		conf.setProperty(PROPKEY_historyFileName,        _cmdHistoryFilename);
 		conf.setProperty(PROPKEY_favoriteCmdFileNameSql, _favoriteCmdFilenameSql);
@@ -1620,22 +1630,23 @@ public class QueryWindow
 //		if (_conn == null)
 		if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
 		{
-			_connect_mi     .setEnabled(true);
-			_connect_but    .setEnabled(true);
-			_disconnect_mi  .setEnabled(false);
-			_disconnect_but .setEnabled(false);
-			_cloneConnect_mi.setEnabled(false);
+			_connect_mi      .setEnabled(true);
+			_connect_but     .setEnabled(true);
+			_disconnect_mi   .setEnabled(false);
+			_disconnect_but  .setEnabled(false);
+			_cloneConnect_mi .setEnabled(false);
 			
-			_viewLogFile_but.setEnabled(false);
-			_viewLogFile_mi .setEnabled(false);
+			_viewLogFile_but .setEnabled(false);
+			_viewLogFile_mi  .setEnabled(false);
 
-			_dbnames_cbx    .setEnabled(false);
-			_exec           .setEnabled(false);
-			_rsInTabs       .setEnabled(false);
-			_asPlainText    .setEnabled(false);
-			_showRowCount   .setEnabled(false);
-			_setAseOptions  .setEnabled(false);
-			_execGuiShowplan.setEnabled(false);
+			_dbnames_cbx     .setEnabled(false);
+			_exec            .setEnabled(false);
+			_rsInTabs        .setEnabled(false);
+			_asPlainText     .setEnabled(false);
+			_showRowCount    .setEnabled(false);
+			_clientTiming_chk.setEnabled(false);
+			_setAseOptions   .setEnabled(false);
+			_execGuiShowplan .setEnabled(false);
 			
 			setSrvInTitle("not connected");
 			_statusBar.setNotConnected();
@@ -1669,14 +1680,15 @@ public class QueryWindow
 				_ase_viewConfig_mi     .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
 				_cmdSql_but            .setVisible(true);
 
-				_dbnames_cbx    .setEnabled(true);
-				_exec           .setEnabled(true);
-				_rsInTabs       .setEnabled(true);
-				_asPlainText    .setEnabled(true);
-				_showRowCount   .setEnabled(true);
-				_setAseOptions  .setEnabled(true);
-//				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
-				_execGuiShowplan.setEnabled( (_aseVersion >= 1500000) );
+				_dbnames_cbx     .setEnabled(true);
+				_exec            .setEnabled(true);
+				_rsInTabs        .setEnabled(true);
+				_asPlainText     .setEnabled(true);
+				_showRowCount    .setEnabled(true);
+				_clientTiming_chk.setEnabled(true);
+				_setAseOptions   .setEnabled(true);
+//				_execGuiShowplan .setEnabled( (_aseVersion >= 15000) );
+				_execGuiShowplan .setEnabled( (_aseVersion >= 1500000) );
 			}
 			else if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
 			{
@@ -1692,6 +1704,7 @@ public class QueryWindow
 				_rsInTabs              .setEnabled(true);
 				_asPlainText           .setEnabled(true);
 				_showRowCount          .setEnabled(true);
+				_clientTiming_chk      .setEnabled(true);
 				_setAseOptions         .setEnabled(false);
 				_execGuiShowplan       .setEnabled(false);
 			}
@@ -1699,13 +1712,14 @@ public class QueryWindow
 
 		if ( _connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_dbnames_cbx    .setEnabled(false);
-			_exec           .setEnabled(true);
-			_rsInTabs       .setEnabled(true);
-			_asPlainText    .setEnabled(true);
-			_showRowCount   .setEnabled(true);
-			_setAseOptions  .setEnabled(false);
-			_execGuiShowplan.setEnabled(false);
+			_dbnames_cbx     .setEnabled(false);
+			_exec            .setEnabled(true);
+			_rsInTabs        .setEnabled(true);
+			_asPlainText     .setEnabled(true);
+			_showRowCount    .setEnabled(true);
+			_clientTiming_chk.setEnabled(true);
+			_setAseOptions   .setEnabled(false);
+			_execGuiShowplan .setEnabled(false);
 
 			setSrvInTitle(_conn.toString());
 			_statusBar.setServerName(_conn.toString(), _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners);
@@ -1713,13 +1727,14 @@ public class QueryWindow
 
 		if ( _connType == ConnectionDialog.JDBC_CONN)
 		{
-			_dbnames_cbx    .setEnabled(false);
-			_exec           .setEnabled(true);
-			_rsInTabs       .setEnabled(true);
-			_asPlainText    .setEnabled(true);
-			_showRowCount   .setEnabled(true);
-			_setAseOptions  .setEnabled(false);
-			_execGuiShowplan.setEnabled(false);
+			_dbnames_cbx     .setEnabled(false);
+			_exec            .setEnabled(true);
+			_rsInTabs        .setEnabled(true);
+			_asPlainText     .setEnabled(true);
+			_showRowCount    .setEnabled(true);
+			_clientTiming_chk.setEnabled(true);
+			_setAseOptions   .setEnabled(false);
+			_execGuiShowplan .setEnabled(false);
 
 			setSrvInTitle(_connectedWithUrl);
 			_statusBar.setServerName(_connectedWithUrl, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners);
@@ -1749,17 +1764,18 @@ public class QueryWindow
 				_conn = null;
 				_connType = -1;
 
-				_rsWhoIsDown_but.setVisible(false);
-				_viewLogFile_but.setEnabled(false);
-				_viewLogFile_mi .setEnabled(false);
+				_rsWhoIsDown_but .setVisible(false);
+				_viewLogFile_but .setEnabled(false);
+				_viewLogFile_mi  .setEnabled(false);
 
-				_dbnames_cbx    .setEnabled(false);
-				_exec           .setEnabled(false);
-				_rsInTabs       .setEnabled(false);
-				_asPlainText    .setEnabled(false);
-				_showRowCount   .setEnabled(false);
-				_setAseOptions  .setEnabled(false);
-				_execGuiShowplan.setEnabled(false);
+				_dbnames_cbx     .setEnabled(false);
+				_exec            .setEnabled(false);
+				_rsInTabs        .setEnabled(false);
+				_asPlainText     .setEnabled(false);
+				_showRowCount    .setEnabled(false);
+				_clientTiming_chk.setEnabled(false);
+				_setAseOptions   .setEnabled(false);
+				_execGuiShowplan .setEnabled(false);
 
 				setSrvInTitle(null);
 				_statusBar.setNotConnected();
@@ -2335,7 +2351,7 @@ public class QueryWindow
 		displayQueryResults(
 			"admin health       \n" +
 			"admin who_is_down  \n", 
-			false);
+			0, false);
 	}
 
 	private void action_viewCmdHistory(ActionEvent e)
@@ -2360,7 +2376,7 @@ public class QueryWindow
 	@Override
 	public void historyExecute(String cmd)
 	{
-		displayQueryResults(cmd, false);
+		displayQueryResults(cmd, 0, false);
 	}
 	@Override
 	public void saveHistoryFilename(String filename)
@@ -2402,9 +2418,16 @@ public class QueryWindow
 		// Get the user's query and pass to displayQueryResults()
 		String q = _query.getSelectedText();
 		if ( q != null && !q.equals(""))
-			displayQueryResults(q, guiShowplanExec);
+		{
+			// Get the line number where the selection started
+			int selectedTextStartAtRow = 0;
+			try { selectedTextStartAtRow = _query.getLineOfOffset(_query.getSelectionStart()); }
+			catch (BadLocationException ignore) {}
+
+			displayQueryResults(q, selectedTextStartAtRow, guiShowplanExec);
+		}
 		else
-			displayQueryResults(_query.getText(), guiShowplanExec);
+			displayQueryResults(_query.getText(), 0, guiShowplanExec);
 	}
 	
 	private void actionCopy(ActionEvent e)
@@ -2871,7 +2894,7 @@ public class QueryWindow
 			return popup;
 	}
 
-	public void displayQueryResults(final String sql, final boolean guiShowplanExec)
+	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec)
 	{
 		if (_conn == null)
 		{
@@ -2914,7 +2937,7 @@ public class QueryWindow
 					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.");
 					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
 
-					displayQueryResults(_conn, sql, progress, false);
+					displayQueryResults(_conn, sql, startRowInSelection, progress, false);
 				}
 				return null;
 			}
@@ -3003,26 +3026,26 @@ public class QueryWindow
 	}
 
 	
-	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
 	{
 		if (rs == null)
 			return;
 		try
 		{
-			putSqlWarningMsgs(rs.getWarnings(), resultCompList, debugStr, batchStartRow);
+			putSqlWarningMsgs(rs.getWarnings(), resultCompList, debugStr, batchStartRow, startRowInSelection);
 			rs.clearWarnings();
 		}
 		catch (SQLException e)
 		{
 		}
 	}
-	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
 	{
 		if (stmnt == null)
 			return;
 		try
 		{
-			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, debugStr, batchStartRow);
+			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, debugStr, batchStartRow, startRowInSelection);
 			stmnt.clearWarnings();
 		}
 		catch (SQLException e)
@@ -3030,8 +3053,11 @@ public class QueryWindow
 		}
 	}
 
-	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow)
+	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
 	{
+		if (startRowInSelection < 0)
+			startRowInSelection = 0;
+
 		while (sqe != null)
 		{
 			int    msgNum      = sqe.getErrorCode();
@@ -3063,7 +3089,7 @@ public class QueryWindow
 						firstOnLine = false;
 					}
 					sb.append( (firstOnLine ? "" : ", ") +
-							"Line " + eedi.getLineNumber() + (batchStartRow >= 0 ? " (script row "+(batchStartRow+eedi.getLineNumber())+")" : "") +
+							"Line " + eedi.getLineNumber() + (batchStartRow >= 0 ? " (script row "+(startRowInSelection + batchStartRow + eedi.getLineNumber())+")" : "") +
 							", Status " + eedi.getStatus() + 
 							", TranState " + eedi.getTranState() + ":\n");
 				}
@@ -3110,7 +3136,7 @@ public class QueryWindow
 	 * the results of the database query.  It passes that TableModel to the
 	 * JTable component for display.
 	 **/
-	private void displayQueryResults(Connection conn, String goSql, final SqlProgressDialog progress, boolean guiShowErrors)
+	private void displayQueryResults(Connection conn, String goSql, int startRowInSelection, final SqlProgressDialog progress, boolean guiShowErrors)
 	throws Exception
 	{
 		// If we've called close(), then we can't call this method
@@ -3195,10 +3221,10 @@ public class QueryWindow
 				if ( StringUtil.isNullOrBlank(sql) )
 					continue;
 
-				progress.setCurrentSqlText(sql, batchCount > 1);
+				progress.setCurrentSqlText(sql, batchCount > 1, sr.getMultiExecCount());
 
 				// if 'go 10' we need to execute this 10 times
-				for (int cmd=0; cmd<sr.getMultiExecCount(); cmd++)
+				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
 				{
 					int rowsAffected = 0;
 					boolean useCallableStatement = false;
@@ -3350,6 +3376,10 @@ public class QueryWindow
 						stmnt = _conn.createStatement();
 					}
 
+					// remember the start time
+					long execStartTime = System.currentTimeMillis();
+
+					progress.setCurrentBatchStartTime(execCnt);
 
 					// Execute the SQL
 					// Use CallableStaement or the Statement depending on what it is.
@@ -3365,6 +3395,9 @@ public class QueryWindow
 					else
 						hasRs = stmnt.execute(sql);
 
+					// calculate the execution time
+					long execStopTime = System.currentTimeMillis();
+
 //					// Execute
 //					_logger.debug("Executing SQL statement: "+sql);
 //					boolean hasRs = stmnt.execute(sql);
@@ -3378,7 +3411,7 @@ public class QueryWindow
 					do
 					{
 						// Append, messages and Warnings to _resultCompList, if any
-						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine());
+						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection);
 
 						if(hasRs)
 						{
@@ -3390,8 +3423,8 @@ public class QueryWindow
 							rs = stmnt.getResultSet();
 		
 							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine());
-							putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine());
+							putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection);
+							putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine(), startRowInSelection);
 
 							// Check for BCP pipe command
 							PipeCommand pipeCmd = sr.getPipeCmd();
@@ -3405,7 +3438,7 @@ public class QueryWindow
 								{
 									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
 									for (SQLWarning sqlw : tm.getSQLWarningList())
-										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
+										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection);
 									
 									_resultCompList.add(new JPlainResultSet(tm));
 									// FIXME: use a callback interface instead
@@ -3415,7 +3448,7 @@ public class QueryWindow
 									// Convert the ResultSet into a TableModel, which fits on a JTable
 									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
 									for (SQLWarning sqlw : tm.getSQLWarningList())
-										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine());
+										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection);
 				
 									// Create the JTable, using the just created TableModel/ResultSet
 									JXTable tab = new JXTable(tm);
@@ -3445,7 +3478,7 @@ public class QueryWindow
 							}
 		
 							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-", sr.getSqlBatchStartLine());
+							putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection);
 
 							// Close it
 							rs.close();
@@ -3497,14 +3530,24 @@ public class QueryWindow
 								}
 							}
 						}
-
 					}
 
 					// Append, messages and Warnings to _resultCompList, if any
-					putSqlWarningMsgs(stmnt, _resultCompList, "-before-stmnt.close()-", sr.getSqlBatchStartLine());
+					putSqlWarningMsgs(stmnt, _resultCompList, "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection);
 					
 					// Close the statement
 					stmnt.close();
+
+					long execFinnishTime = System.currentTimeMillis();
+					
+					if (_clientTiming_chk.isSelected())
+						_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime));
+					
+					if (sr.getMultiExecWait() > 0)
+					{
+						//System.out.println("WAITING for multi exec sleep: "+sr.getMultiExecWait());
+						Thread.sleep(sr.getMultiExecWait());
+					}
 
 				} // end: 'go 10'
 				
@@ -3872,6 +3915,15 @@ public class QueryWindow
 			}
 			throw ex;
 		}
+		catch (GoSyntaxException ex)
+		{
+			_logger.warn("Problems parsing the 'go'. Caught: "+ex, ex);
+			if (guiShowErrors)
+			{
+				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
+			}
+			throw ex;
+		}
 		finally
 		{
 			// restore old message handler
@@ -3951,7 +4003,12 @@ public class QueryWindow
 						SwingUtils.showInfoMessage(_window, "Nothing to execute", "You need to select/mark some text that you want to execute.");
 						return;
 					}
-					displayQueryResults(cmd, false);
+					// Get the line number where the selection started
+					int selectedTextStartAtRow = 0;
+					try { selectedTextStartAtRow = textArea.getLineOfOffset(textArea.getSelectionStart()); }
+					catch (BadLocationException ignore) {}
+
+					displayQueryResults(cmd, selectedTextStartAtRow, false);
 				}
 			});
 			menu.insert(mi, 0);
@@ -3974,18 +4031,22 @@ public class QueryWindow
 		return count;
 	}
 
-	@Override
-	public SQLException messageHandler(SQLException sqe)
-	{
-		// Pass Warning on...
-		if (sqe instanceof SQLWarning)
-			return sqe;
-
-		// Discard SQLExceptions... but first send them to the _resultCompList
-		// This is a bit ugly...
-		putSqlWarningMsgs(sqe, _resultCompList, "-from-messageHandler()-", -1);
-		return null;
-	}
+//	@Override
+//	public SQLException messageHandler(SQLException sqe)
+//	{
+//		// FIXME: I WONDER IF THEIS MESSAGE HANDLER IS EVER USED???????
+//		//        Maybe we can delete it????
+//
+//		// Pass Warning on...
+//		if (sqe instanceof SQLWarning)
+//			return sqe;
+//
+//		// Discard SQLExceptions... but first send them to the _resultCompList
+//		// This is a bit ugly...
+//		putSqlWarningMsgs(sqe, _resultCompList, "-from-messageHandler()-", -1, -1);
+//
+//		return null;
+//	}
 
 
 	/*----------------------------------------------------------------------
@@ -4144,6 +4205,36 @@ public class QueryWindow
 		}
 	}
 
+	private class JClientExecTime 
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		private long _execStartTime;
+		private long _execStopTime;
+		private long _execFinnishTime;
+
+		public JClientExecTime(final long execStartTime, final long execStopTime, final long execFinnishTime)
+		{
+			super("Client Exec Time: " + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStartTime) 
+					+ " (sqlExec="     + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execStopTime    - execStartTime)
+					+ ", readResults=" + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStopTime)
+					+ ")" );
+
+			_execStartTime   = execStartTime;
+			_execStopTime    = execStopTime;
+			_execFinnishTime = execFinnishTime;
+
+			init();
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+		
+		@SuppressWarnings("unused") public Object getExecStartTime()   { return _execStartTime; }
+		@SuppressWarnings("unused") public Object getExecStopTime()    { return _execStopTime; }
+		@SuppressWarnings("unused") public Object getExecFinnishTime() { return _execFinnishTime; }
+	}
+
 	private class JPlainResultSet 
 	extends JTextArea
 	{
@@ -4218,6 +4309,8 @@ public class QueryWindow
 		private boolean          _firstExec             = true;
 		private long             _totalExecStartTime    = 0;
 		private long             _batchExecStartTime    = 0;
+		private int              _currentExecCounter    = 0;
+		private int              _totalExecCount        = 0;
 		private JLabel           _totalExecTimeDesc_lbl = new JLabel("Total Exec Time: ");
 		private JLabel           _totalExecTimeVal_lbl  = new JLabel("-");
 		private JLabel           _batchExecTimeDesc_lbl = new JLabel("Batch Exec Time: ");
@@ -4296,9 +4389,10 @@ public class QueryWindow
 			setLocationRelativeTo(owner);
 		}
 		
-		public void setCurrentSqlText(String sql, boolean markSql)
+		public void setCurrentSqlText(String sql, boolean markSql, int totalExecCount)
 		{
 //System.out.println(">>>>>>: setCurrentSqlText(): sql="+sql);
+			_totalExecCount = totalExecCount;
 			_markSql = markSql;
 			if (_firstExec)
 			{
@@ -4306,12 +4400,19 @@ public class QueryWindow
 				_totalExecStartTime = System.currentTimeMillis();
 				_execSqlTimer.start();
 			}
-			_batchExecStartTime = System.currentTimeMillis();
+			//_batchExecStartTime = System.currentTimeMillis();
+			setCurrentBatchStartTime(0);
 			_currentExecSql = sql;
 			_execSqlTimer.restart(); // dont kick off the times to early...
 
 			// Update of WHAT SQL that is currently executed, is done by the deferredSetCurrentSqlText()
 			// othetwise RSyntaxTextArea will have problems every now and then (if the scroll has moved and it needs to parse/update the visible rect)
+		}
+
+		public void setCurrentBatchStartTime(int currentBatchNumber)
+		{
+			_batchExecStartTime = System.currentTimeMillis();
+			_currentExecCounter = currentBatchNumber;
 		}
 
 		/** 
@@ -4329,7 +4430,10 @@ public class QueryWindow
 
 //			_execSqlTimer.stop();
 			_totalExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _totalExecStartTime) );
-			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
+			if (_totalExecCount > 1)
+				_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # "+(_currentExecCounter+1)+" of "+_totalExecCount+")");
+			else
+				_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
 
 			_currentExecSql = null;
 			if (StringUtil.isNullOrBlank(sql) && _msgList.size() > 0)
@@ -4871,12 +4975,14 @@ public class QueryWindow
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText .setText("<html><b>As Plain Text</b>     - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
-		_showRowCount.setText("<html><b>Row Count</b>         - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
-		_rsInTabs    .setText("<html><b>Resultset in Tabs</b> - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_asPlainText     .setText("<html><b>As Plain Text</b>     - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
+		_showRowCount    .setText("<html><b>Row Count</b>         - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
+		_clientTiming_chk.setText("<html><b>Client Timing</b>     - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
+		_rsInTabs        .setText("<html><b>Resultset in Tabs</b> - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
 
 		popupMenu.add(_asPlainText);
 		popupMenu.add(_showRowCount);
+		popupMenu.add(_clientTiming_chk);
 		popupMenu.add(_rsInTabs);
 
 		return popupMenu;
@@ -5274,7 +5380,7 @@ public class QueryWindow
 					}
 					cmd = replaceTemplateStringForCommandButton("${selectedText}", cmd);
 					if (cmd != null)
-						displayQueryResults(cmd, false);
+						displayQueryResults(cmd, 0, false);
 				}
 			});
 			menu.add(mi);
@@ -5557,7 +5663,7 @@ public class QueryWindow
 						showGuiExecPlan = true;
 				}
 
-				displayQueryResults(data, showGuiExecPlan);
+				displayQueryResults(data, 0, showGuiExecPlan);
 
 				return true;
 			}

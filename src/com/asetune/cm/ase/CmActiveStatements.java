@@ -291,8 +291,8 @@ extends CountersModel
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "P.BatchID, P.LineNumber, \n" +
 		         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
-		         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
 		         "P.Command, P.Application, \n" +
+		         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
 		         "CpuTime=-1, WaitTime=-1, \n" +
 		         "ExecTimeInMs    = -1, \n" +
 		         "UsefullExecTime = -1, \n" +

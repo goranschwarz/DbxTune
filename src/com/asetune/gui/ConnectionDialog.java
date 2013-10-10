@@ -114,6 +114,9 @@ public class ConnectionDialog
 	public  static final String  PROPKEY_CONN_SSH_TUNNEL        = "conn.ssh.tunnel";
 	public  static final boolean DEFAULT_CONN_SSH_TUNNEL        = false;
 
+	public static final String   PROPKEY_showDialogOnNoLocalPcsDrive = "ConnectionDialog.showDialog.pcs.noLocalDrive";
+	public static final boolean  DEFAULT_showDialogOnNoLocalPcsDrive = true;
+	
 	static
 	{
 //		Configuration.registerDefaultValue(CONF_OPTION_RECONNECT_ON_FAILURE, DEFAULT_xxx); // FIXME
@@ -4842,7 +4845,11 @@ public class ConnectionDialog
 
 							if (systemType != null)
 							{
-								if ( systemType.toLowerCase().indexOf("local") > 1 )
+								if ( systemType.toLowerCase().indexOf("local") > 0 )
+									networkDrive = false;
+
+								// Finish Localization: 
+								if ( systemType.toLowerCase().indexOf("paikallinen levy") > 0 )
 									networkDrive = false;
 							}
 						}
@@ -4850,23 +4857,45 @@ public class ConnectionDialog
 
 						if (networkDrive)
 						{
-							String htmlStr = 
-								"<html>" +
-								"The selected storage file is '"+filename+"'.<br>" +
-								"Is this <b>really</b> a local drive?<br>" +
-								"<br>" +
-								"Using a network drive will be <b>much</b> slower.<br>" +
-								"The recomendation is to use a local drive as the database storage!<br>" +
-								"<br>" +
-								"The localized System Type Description from the Operating System, is '<b>"+systemType+"</b>'.<br>" +
-								"If this string doesn't contain 'local', then it's considdered as a netork drive.<br>" +
-								"<br>" +
-								"Note: If the localized type '<b>"+systemType+"</b>' containes 'local' in you'r localization, please email me at goran_schwarz@hotmail.com the localized string.<br>" +
-								"<br>" +
-								"This is just a warning message, but be aware that the storage thread might not keep up...<br>" +
-								"</html>";
-							SwingUtils.showWarnMessage(this, "Local drive?", htmlStr, null);
-						}
+							boolean showDialog = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showDialogOnNoLocalPcsDrive, DEFAULT_showDialogOnNoLocalPcsDrive);
+							if (showDialog)
+							{
+								// Create a check box that will be passed to the message
+								JCheckBox chk = new JCheckBox("Show this information next time.", showDialog);
+								chk.addActionListener(new ActionListener()
+								{
+									@Override
+									public void actionPerformed(ActionEvent e)
+									{
+										Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+										if (conf == null)
+											return;
+										conf.setProperty(PROPKEY_showDialogOnNoLocalPcsDrive, ((JCheckBox)e.getSource()).isSelected());
+										conf.save();
+									}
+								});
+
+								String htmlStr = 
+									"<html>" +
+									"<h2>Warning - Use a Local drive for recordings</h2>" +
+									"Using a network drive for recordings will be <b>much</b> slower.<br>" +
+									"The recomendation is to use a local drive as the database storage!<br>" +
+									"<br>" +
+									"The selected storage file is '"+filename+"'.<br>" +
+									"Is this on a local drive?<br>" +
+									"<br>" +
+									"The localized System Type Description from the Operating System, is '<b>"+systemType+"</b>'.<br>" +
+									"If this string doesn't contain 'local', then it's considdered as a network drive.<br>" +
+									"<br>" +
+									"Note: If the localized type '<b>"+systemType+"</b>' containes 'local' in you'r localization, please email me at goran_schwarz@hotmail.com the localized string.<br>" +
+									"<br>" +
+									"This is just a warning message, but be aware that the storage thread might not keep up...<br>" +
+									"</html>";
+
+//								SwingUtils.showWarnMessage(this, "Local drive?", htmlStr, null);
+								SwingUtils.showWarnMessageExt(this, "Local drive?", htmlStr, chk, (JPanel)null);
+							} // end: showDialog 
+						} // end: networkDrive
 					} // end: not 'c:'
 				} // end: filename containes something
 			} // end: PlatformUtils.Platform_WIN

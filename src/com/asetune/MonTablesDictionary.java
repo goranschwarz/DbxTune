@@ -85,6 +85,10 @@ public class MonTablesDictionary
 	private int     _aseSortId     = -1;
 	/** ASE Sort Order Name */
 	private String  _aseSortName   = "";
+	/** ASE Charset ID */
+	private int     _aseCharsetId     = -1;
+	/** ASE Charset Name */
+	private String  _aseCharsetName   = "";
 	/** just a guess if this is a SAP system, if the user 'sapsa' exists as a login, if db 'saptools' exists */
 	private String  _sapSystemInfo = "";
 
@@ -134,6 +138,8 @@ public class MonTablesDictionary
 
 	public int     getAseSortId()                  { return _aseSortId; }
 	public String  getAseSortName()                { return _aseSortName; }
+	public int     getAseCharsetId()               { return _aseCharsetId; }
+	public String  getAseCharsetName()             { return _aseCharsetName; }
 	public String  getSapSystemInfo()              { return _sapSystemInfo; }
 	
 	public class MonTableEntry
@@ -425,16 +431,31 @@ public class MonTablesDictionary
 				"select @sortid = value from master..syscurconfigs where config = 123 \n" +
 				"select @charid = value from master..syscurconfigs where config = 131  \n" +
 				"\n" +
-				"select id, name \n" +
+				"select 'sortorder', id, name \n" +
 				"from master.dbo.syscharsets \n" + 
-				"where id = @sortid and csid = @charid \n";
+				"where id = @sortid and csid = @charid \n" +
+				"\n" +
+				"UNION ALL \n" +
+				"\n" +
+				"select 'charset', id, name \n" +
+				"from master.dbo.syscharsets \n" + 
+				"where id = @charid \n";
 			
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				_aseSortId   = rs.getInt   (1);
-				_aseSortName = rs.getString(2);
+				String type = rs.getString(1);
+				if ("sortorder".equals(type))
+				{
+					_aseSortId   = rs.getInt   (2);
+					_aseSortName = rs.getString(3);
+				}
+				if ("charset".equals(type))
+				{
+					_aseCharsetId   = rs.getInt   (2);
+					_aseCharsetName = rs.getString(3);
+				}
 			}
 			rs.close();
 			stmt.close();
@@ -623,16 +644,31 @@ public class MonTablesDictionary
 				"select @sortid = value from master..syscurconfigs where config = 123 \n" +
 				"select @charid = value from master..syscurconfigs where config = 131  \n" +
 				"\n" +
-				"select id, name \n" +
+				"select 'sortorder', id, name \n" +
 				"from master.dbo.syscharsets \n" + 
-				"where id = @sortid and csid = @charid \n";
+				"where id = @sortid and csid = @charid \n" +
+				"\n" +
+				"UNION ALL \n" +
+				"\n" +
+				"select 'charset', id, name \n" +
+				"from master.dbo.syscharsets \n" + 
+				"where id = @charid \n";
 			
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				_aseSortId   = rs.getInt   (1);
-				_aseSortName = rs.getString(2);
+				String type = rs.getString(1);
+				if ("sortorder".equals(type))
+				{
+					_aseSortId   = rs.getInt   (2);
+					_aseSortName = rs.getString(3);
+				}
+				if ("charset".equals(type))
+				{
+					_aseCharsetId   = rs.getInt   (2);
+					_aseCharsetName = rs.getString(3);
+				}
 			}
 			rs.close();
 			stmt.close();
