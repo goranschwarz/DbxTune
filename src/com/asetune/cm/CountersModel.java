@@ -3351,6 +3351,13 @@ implements Cloneable, ITableTooltip
 		{
 			setValidSampleData(false);
 			setSampleException(e);
+			
+			// If we got an exception, go and check if we are still connected
+//			if (getCounterController().isMonConnected(true, true)) // forceConnectionCheck=true, closeConnOnFailure=true
+//			{
+//				xxx
+//			}
+
 			throw e;
 		}
 		finally
