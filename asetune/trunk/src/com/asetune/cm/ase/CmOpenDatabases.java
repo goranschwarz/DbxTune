@@ -61,12 +61,13 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
-	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct", "LogSizeUsedPct"};
+	public static final String[] PCT_COLUMNS      = new String[] {"AppendLogContPct", "LogSizeUsedPct", "DataSizeUsedPct"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"AppendLogRequests", "AppendLogWaits", 
-		"PRSUpdateCount", "PRSSelectCount", "PRSRewriteCount"};
+		"PRSUpdateCount", "PRSSelectCount", "PRSRewriteCount",
+		"LogSizeFreeInMbDiff", "DataSizeFreeInMbDiff"};
 
-	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
 	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
@@ -217,10 +218,26 @@ extends CountersModel
 			                                                             "<b>Note 1</b>: This is the same formula as sp_helpdb 'dbname' uses to calculate space left.<br>" +
 			                                                             "<b>Note 2</b>: This might not work correct for databases with mixed data and log.<br>" +
 			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "LogSizeFreeInMbDiff","<html>Same as column 'LogSizeFreeInMb', but just show the difference from previous sample.</html>");
 			mtd.addColumn("monOpenDatabases", "LogSizeUsedPct",     "<html>" +
 			                                                            "How many percent have we <b>used</b> of the transaction log. near 100% = Full<br> " +
 			                                                            "<b>Formula</b>: Pct = 100.0 - ((oval_LogSizeFreeInMb / oval_LogSizeInMb) * 100.0)<br>" +
 			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "DataSizeInMb",       "<html>" +
+			                                                            "Size in MB of the Data Portion in the database. <br>" +
+			                                                            "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & 2) = 2<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "DataSizeFreeInMb",   "<html>" +
+			                                                            "How many MB have we got left in the Data Portion.<br> " +
+			                                                            "<b>Formula</b>: (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024*1024/@@maxpagesize)<br>" +
+			                                                            "<b>Note 1</b>: This is the same formula as sp_helpdb 'dbname' uses to calculate space left.<br>" +
+			                                                            "<b>Note 2</b>: This might not work correct for databases with mixed data and log.<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "DataSizeFreeInMbDiff","<html>Same as column 'DataSizeFreeInMb', but just show the difference from previous sample.</html>");
+			mtd.addColumn("monOpenDatabases", "DataSizeUsedPct",     "<html>" +
+			                                                            "How many percent have we <b>used</b> of the Data Portion. near 100% = Full<br> " +
+			                                                            "<b>Formula</b>: Pct = 100.0 - ((oval_DataSizeFreeInMb / oval_DataSizeInMb) * 100.0)<br>" +
+			                                                         "</html>");
 			mtd.addColumn("monOpenDatabases", "OldestTranStartTime","<html>" +
 			                                                            "Start time of the oldest open transaction in this database.<br> " +
 			                                                            "<b>Formula</b>: OldestTranStartTime = column: master.dbo.syslogshold.starttime<br>" +
@@ -309,11 +326,18 @@ extends CountersModel
 		// select  @pgsPerMb           = 1024*1024 / @@maxpagesize
 		// select @pgsPerMb   : 512=2K, 256=4K, 128=8K, 64=16K 
 		// select mbUsed = pagesUsed / @pgsPerMb
+		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID)                                  / (1024*1024/@@maxpagesize), \n";
 
-		String DbSizeInMb      = "DbSizeInMb      = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID)                                  / (1024*1024/@@maxpagesize), \n";
-		String LogSizeInMb     = "LogSizeInMb     = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4)           / (1024*1024/@@maxpagesize), \n";
-		String LogSizeFreeInMb = "LogSizeFreeInMb = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
-		String LogSizeUsedPct  = "LogSizeUsedPct  = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+		String LogSizeInMb          = "LogSizeInMb          = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4)           / (1024*1024/@@maxpagesize), \n";
+		String LogSizeFreeInMb      = "LogSizeFreeInMb      = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String LogSizeFreeInMbDiff  = "LogSizeFreeInMbDiff  = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String LogSizeUsedPct       = "LogSizeUsedPct       = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+
+		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)           / (1024*1024/@@maxpagesize), \n";
+		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+
 
 		cols1 += "od.DBName, od.DBID, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
 		         "AppendLogContPct = CASE \n" +
@@ -321,7 +345,10 @@ extends CountersModel
 		         "                      THEN convert(numeric(10,2), ((od.AppendLogWaits+0.0)/od.AppendLogRequests)*100.0) \n" +
 		         "                      ELSE convert(numeric(10,2), 0.0) \n" +
 		         "                   END, \n" +
-		         DbSizeInMb + LogSizeInMb + LogSizeFreeInMb + LogSizeUsedPct + 
+		         DbSizeInMb + 
+		         LogSizeInMb  + LogSizeFreeInMb  + LogSizeFreeInMbDiff  +  
+		         LogSizeUsedPct + DataSizeUsedPct +
+		         DataSizeInMb + DataSizeFreeInMb + DataSizeFreeInMbDiff + 
 		         "od.TransactionLogFull, " + SuspendedProcesses + "\n" +
 		         "OldestTranStartTime = h.starttime, \n" + 
 		         "OldestTranInSeconds = CASE WHEN datediff(day, h.starttime, getdate()) > 20 THEN -1 ELSE  datediff(ss, h.starttime, getdate()) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
@@ -379,6 +406,13 @@ extends CountersModel
 		int pos_LogSizeFreeInMb = -1;
 		int pos_LogSizeUsedPct  = -1;
 
+		int    oval_DataSizeInMb;
+		double oval_DataSizeFreeInMb;
+		double calc_DataSizeUsedPct;
+		int pos_DataSizeInMb     = -1;
+		int pos_DataSizeFreeInMb = -1;
+		int pos_DataSizeUsedPct  = -1;
+
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
 		if (colNames == null)
@@ -393,6 +427,9 @@ extends CountersModel
 			else if (colName.equals("LogSizeInMb"))        pos_LogSizeInMb      = colId;
 			else if (colName.equals("LogSizeFreeInMb"))    pos_LogSizeFreeInMb  = colId;
 			else if (colName.equals("LogSizeUsedPct"))     pos_LogSizeUsedPct   = colId;
+			else if (colName.equals("DataSizeInMb"))       pos_DataSizeInMb     = colId;
+			else if (colName.equals("DataSizeFreeInMb"))   pos_DataSizeFreeInMb = colId;
+			else if (colName.equals("DataSizeUsedPct"))    pos_DataSizeUsedPct  = colId;
 //			else if (colName.equals("TransactionLogFull")) TransactionLogFullId = colId;
 //			else if (colName.equals("SuspendedProcesses")) SuspendedProcessesId = colId;
 		}
@@ -400,10 +437,12 @@ extends CountersModel
 		// Loop on all diffData rows
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
-			AppendLogRequests    = ((Number)diffData.getValueAt(rowId, AppendLogRequestsId)).intValue();
-			AppendLogWaits       = ((Number)diffData.getValueAt(rowId, AppendLogWaitsId   )).intValue();
-			oval_LogSizeInMb     = ((Number)diffData.getValueAt(rowId, pos_LogSizeInMb    )).intValue();
-			oval_LogSizeFreeInMb = ((Number)diffData.getValueAt(rowId, pos_LogSizeFreeInMb)).doubleValue();
+			AppendLogRequests     = ((Number)diffData.getValueAt(rowId, AppendLogRequestsId )).intValue();
+			AppendLogWaits        = ((Number)diffData.getValueAt(rowId, AppendLogWaitsId    )).intValue();
+			oval_LogSizeInMb      = ((Number)diffData.getValueAt(rowId, pos_LogSizeInMb     )).intValue();
+			oval_LogSizeFreeInMb  = ((Number)diffData.getValueAt(rowId, pos_LogSizeFreeInMb )).doubleValue();
+			oval_DataSizeInMb     = ((Number)diffData.getValueAt(rowId, pos_DataSizeInMb    )).intValue();
+			oval_DataSizeFreeInMb = ((Number)diffData.getValueAt(rowId, pos_DataSizeFreeInMb)).doubleValue();
 
 			// COLUMN: AppendLogContPct
 			if (AppendLogRequests > 0)
@@ -430,6 +469,20 @@ extends CountersModel
 			}
 			else
 				diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, pos_LogSizeUsedPct);
+
+			// COLUMN: DataSizeUsedPct
+			if (oval_DataSizeInMb > 0) // I doubt that oval_DataSizeInMb can be 0
+			{
+				// Formula: 
+				calc_DataSizeUsedPct = 100.0 - (((oval_DataSizeFreeInMb + 0.0) / oval_DataSizeInMb) * 100.0);
+				if (calc_DataSizeUsedPct < 0.0)
+					calc_DataSizeUsedPct = 0.0;
+
+				BigDecimal newVal = new BigDecimal(calc_DataSizeUsedPct).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, pos_DataSizeUsedPct);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, pos_DataSizeUsedPct);
 		}
 	}
 
