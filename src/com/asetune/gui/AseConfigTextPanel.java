@@ -73,6 +73,9 @@ extends JPanel
 
 		// refresh when the configuration was taken.
 		_textConfig.setText( aseConfigText.getConfig() );
+
+		// and set input to "top" so it's a bit more readable if it's a long text
+		_textConfig.setCaretPosition(0);
 	}
 
 	private void init()
@@ -81,6 +84,9 @@ extends JPanel
 		if ( aseConfigText.isInitialized() )
 		{
 			_textConfig.setText( aseConfigText.getConfig() );
+
+			// and set input to "top" so it's a bit more readable if it's a long text
+			_textConfig.setCaretPosition(0);
 		}
 		else
 		{

@@ -1,0 +1,116 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE doc [
+<!ENTITY sqlwCommands SYSTEM "sqlwCommands_tooltip_provider.xml">
+]>
+
+<!-- 
+==============================================================================================
+== BEGIN: README =============================================================================
+==============================================================================================
+If you add or change content of this file, please send the file or the changed/added entries to goran_schwarz@hotmail.com
+If you do, it will be part of the next release...
+
+Note 1: You can use HTML tabs in any of the tags if you think the output will look nicer.
+Note 2: Please also use <![CDATA[]]> tag in <Syntax> and the <Example> tag, otherwise the parser will look for tags in the Syntax and Example tags.
+
+Example: <Syntax><![CDATA[<pre>Some syntax description</pre>]]></Syntax>
+
+
+Description of tags:
+=======================================================
+<Entry>
+    <CmdName>     Used to match the current word against                                               </CmdName>
+    <Module>      Just a description of what "section" this belongs to (choose a prober section)       </Module>
+    <FromVersion> In what version was this command introduced                                          </FromVersion>   OPTIONAL
+    <Description> Descriptive text of what the command does                                            </Description>
+    <Syntax>      The Syntax the command can have                                                      </Syntax>
+    <Example>     If you want to provide a small example, or several ones...                           </Example>       OPTIONAL
+    <SeeAlso>     References to other commands                                                         </SeeAlso>       OPTIONAL
+</Entry>
+
+
+
+Example:
+=======================================================
+<Entry>
+    <CmdName>selectxxx</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>Get information from a table</Description>
+    <Syntax><![CDATA[<pre>select [all|distinct] select_list [from]...</pre>]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: <I>selects all columns from tab1 with <B>no</B> restrictions of the rows returned</I><BR>
+       <CODE>select * from tab1</CODE>
+   </LI>
+   <LI>
+       <B>Example 2</B>: <I>selects distinct values of column 'c1' from tab1 with restrictions in rows</I><BR>
+       <CODE>select distinct c1 from tab1 where c2 = 'val'</CODE>
+   </LI>
+   <LI>
+       <B>Example 3</B>: <I><FONT COLOR="green">Some other description, but in color green this time</FONT> then black again...</I><BR>
+       <CODE>select 'dummy value' as dummyColOne</CODE>
+   </LI>
+</UL>
+]]>
+    </Example>
+</Entry>
+
+==============================================================================================
+== END: README ===============================================================================
+==============================================================================================
+-->
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == START: ENTRIES ========================================================================== -->
+<!-- ============================================================================================ -->
+<Entries>
+
+
+<!-- ============================================================================================ -->
+<!-- == include: SQL Window Commands ============================================================ -->
+<!-- ============================================================================================ -->
+&sqlwCommands;
+
+
+<!-- ============================================================================================ -->
+<!-- == SECTION 1 =============================================================================== -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>dummy</CmdName>
+    <Module>SECTION 1</Module>
+    <Description>dummy - just a dummy placeholder</Description>
+    <Syntax><![CDATA[<pre>
+  DUMMY 1...
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == SECTION 2 =============================================================================== -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>dummy</CmdName>
+    <Module>SECTION 2</Module>
+    <Description>dummy - just a dummy placeholder</Description>
+    <Syntax><![CDATA[<pre>
+  DUMMY 2...
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+</Entries>
+<!-- ============================================================================================ -->
+<!-- == END: ENTRIES ============================================================================ -->
+<!-- ============================================================================================ -->

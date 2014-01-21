@@ -209,8 +209,17 @@
 				if ( $colname == "sybUserName" )
 					echo "<td nowrap><A HREF=\"http://syberspase.sybase.com/compdir/mainMenu.do?keyword=$cell&submit=Go\" target=\"_blank\">$cell</A></td>";
 
-				else if ( $colname == "sapUserName" )
+				else if ( $colname == "sapUserNameXXXXX" )
 					echo "<td nowrap><A HREF=\"https://sapneth2.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=SEARCH&UserID=" . $cell . "\">$cell</A></td>";
+
+//				else if ( $colname == "sapUserName" )
+//					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?userName=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "sapUserName" )
+					echo "<td nowrap><A HREF=\"https://sapneth1.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=DISPLAY&00200682500000002187=" . $cell . "\" target=\"_blank\">$cell</A></td>";
+
+//				else if ( $colname == "user_name" )
+//					echo "<td nowrap><A HREF=\"https://sapneth1.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=DISPLAY&00200682500000002187=" . $cell . "\" target=\"_blank\">$cell</A></td>";
 
 				else if ( $colname == "userNameUsage" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
@@ -223,6 +232,9 @@
 
 				else if ( $colname == "checkId" || $colname == "rowid")
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "sqlwCheckId" || $colname == "sqlwRowId")
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "showLogId" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";

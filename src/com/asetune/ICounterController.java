@@ -21,6 +21,17 @@ public interface ICounterController
 	public Connection getMonConnection();
 
 	/**
+	 * Do we have a connection to the database?<br>
+	 * <b>NOTE:</b> Do NOT call the database to check it, just use the last information we got.
+	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>
+	 * On SQLExceptions, we should check if the database connection is still open/valid.
+	 * <p>
+	 * This is probably called from GUI places where we dont want a fast answer.
+	 * @return true or false
+	 */
+	public boolean isMonConnectedStatus();
+
+	/**
 	 * Do we have a connection to the database?
 	 * This one probably calls the isMonConnected(false, true)
 	 * @return true or false

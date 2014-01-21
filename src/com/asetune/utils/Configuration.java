@@ -47,6 +47,8 @@ extends Properties
 	public static final String USER_CONF   = "USER_CONF"; 
 	public static final String USER_TEMP   = "USER_TEMP"; 
 	public static final String PCS         = "PCS"; 
+
+	public static final String TAIL_TEMP   = "TAIL_TEMP"; 
 	
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(Configuration.class);
@@ -594,6 +596,32 @@ extends Properties
 		return val;
 	}
 
+	
+	
+	/** Get a String value for property, just use the Properties.getProperty (no str.trim(), no nothing ) */
+	public String getMandatoryPropertyRawVal(String propName)
+	throws MandatoryPropertyException
+	{
+		String val = getPropertyRawVal(propName);
+		if (val == null)
+			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+		return val;
+	}
+
+	/** Get a String value for property, just use the Properties.getProperty (no str.trim(), no nothing ) */
+	public String getPropertyRawVal(String propName)
+	{
+		return super.getProperty(propName);
+	}
+
+	/** Get a String value for property, just use the Properties.getProperty (no str.trim(), no nothing ) */
+	public String getPropertyRawVal(String propName, String defaultValue)
+	{
+		String val = getPropertyRawVal(propName);
+		return val != null ? val : defaultValue;
+	}
+
+	
 	/** 
 	 * Encrypt a property value, most possibly a password.
 	 * 
@@ -803,6 +831,7 @@ extends Properties
 //				return ""; 
 //				//return null;
 		}
+
 		return value;
 	}
 
@@ -1449,13 +1478,22 @@ extends Properties
 				Configuration conf = Configuration.getInstance(instName);
 				if (conf != null)
 				{
+					// In the combined props, we need to check if the prop *exists*
+					// Because the Configuration.getProperty(propName) will return the
+					// registered default value if prop was not found...
+					// so val will contain the default value, and we want to check other configs
+					// in the search order to get value...
+					if ( ! conf.containsKey(propName) )
+						continue;
+
 					String val = conf.getProperty(propName);
 					if (val != null)
 						return val;
 				}
 			}
-			return null;
+			return getRegisteredDefaultValue(propName);
 		}
+
 
 		/** Get a String value for property */
 		@Override
@@ -1503,6 +1541,45 @@ extends Properties
 		public String getPropertyRaw(String propName, String defaultValue)
 		{
 			String val = getPropertyRaw(propName);
+			return val != null ? val : defaultValue;
+		}
+
+		//---------------------------------------------------------------
+		// RAWRAW String methods
+		//---------------------------------------------------------------
+		/** Get a String value for property */
+		@Override
+		public String getMandatoryPropertyRawVal(String propName)
+		throws MandatoryPropertyException
+		{
+			String val = getPropertyRawVal(propName);
+			if (val == null)
+				throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+			return val;
+		}
+
+		/** Get a String value for property */
+		@Override
+		public String getPropertyRawVal(String propName)
+		{
+			for (String instName : _searchOrder)
+			{
+				Configuration conf = Configuration.getInstance(instName);
+				if (conf != null)
+				{
+					String val = conf.getPropertyRawVal(propName);
+					if (val != null)
+						return val;
+				}
+			}
+			return null;
+		}
+
+		/** Get a String value for property */
+		@Override
+		public String getPropertyRawVal(String propName, String defaultValue)
+		{
+			String val = getPropertyRawVal(propName);
 			return val != null ? val : defaultValue;
 		}
 	}

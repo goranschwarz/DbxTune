@@ -43,6 +43,8 @@ public class GetCountersGui
 	private static Logger _logger          = Logger.getLogger(GetCountersGui.class);
 	private boolean       _running = true;
 
+	private long _lastJavaGcWasDoneAt = System.currentTimeMillis();
+
 	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.low_on_memory.mb"; 
 	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = 130; 
 
@@ -193,7 +195,7 @@ public class GetCountersGui
 	 * The isMonConnected will just return, with the "cached" value...
 	 */
 	private Thread _isMonConnectedWatchDog = null;
-	private long   _isMonConnectedWatchDogLastCheck = 0;
+//	private long   _isMonConnectedWatchDogLastCheck = 0;
 	private void startIsMonConnectedWatchDog()
 	{
 		boolean startIsMonConnectedWatchDog = Configuration.getCombinedConfiguration().getBooleanProperty("startIsMonConnectedWatchDog", true);
@@ -215,9 +217,11 @@ public class GetCountersGui
 							// It might cause blocking things if _conn.isClosed() is called
 							// but right now, I'm doing 'select 1' in my own isClosed(conn) check...
 							if ( ! isRefreshing() )
+							{
 								isMonConnected(true, true);
+//								_isMonConnectedWatchDogLastCheck = System.currentTimeMillis();
+							}
 
-							_isMonConnectedWatchDogLastCheck = System.currentTimeMillis();
 							Thread.sleep(1000);
 						}
 						catch(Throwable t)
@@ -296,6 +300,7 @@ public class GetCountersGui
 		//---------------------------
 		// NOW LOOP
 		//---------------------------
+		_lastJavaGcWasDoneAt = System.currentTimeMillis();
 		while (_running)
 		{
 			MainFrame.setStatus(MainFrame.ST_MEMORY);
@@ -407,14 +412,36 @@ public class GetCountersGui
 				// Sleep (if not first loop)
 				if ( ! firstLoopAfterConnect )
 				{
+					boolean doJavaGcAfterXMinutes       = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterXMinutes,       MainFrame.DEFAULT_doJavaGcAfterXMinutes);
 					boolean doJavaGcAfterRefresh        = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefresh,        MainFrame.DEFAULT_doJavaGcAfterRefresh);
 					boolean doJavaGcAfterRefreshShowGui = Configuration.getCombinedConfiguration().getBooleanProperty(MainFrame.PROPKEY_doJavaGcAfterRefreshShowGui, MainFrame.DEFAULT_doJavaGcAfterRefreshShowGui);
 
+					int doJavaGcAfterXMinutesValue      = Configuration.getCombinedConfiguration().getIntProperty(    MainFrame.PROPKEY_doJavaGcAfterXMinutesValue,  MainFrame.DEFAULT_doJavaGcAfterXMinutesValue);
+					
+					// If the GUI is NOT active, no need to show a progress window...
+					// The progress window makes the "current" window to behave strange
+					if ( ! MainFrame.getInstance().isActive() )
+						doJavaGcAfterRefreshShowGui = false;
+						
 					int sleepTime = MainFrame.getRefreshInterval();
 					for (int i=sleepTime; i>0; i--)
-					{
-						// Do Java Garbage Collection?
+					{						
+						boolean doJavaGc = false;
 						if (doJavaGcAfterRefresh && (i == sleepTime-1)) // sleep first second before try do GC
+							doJavaGc = true;
+
+						if (doJavaGcAfterXMinutes)
+						{
+							long lastJavaGcTimeDiff = System.currentTimeMillis() - _lastJavaGcWasDoneAt;
+							if (lastJavaGcTimeDiff > (doJavaGcAfterXMinutesValue*60*1000) )
+								doJavaGc = true;
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("lastJavaGcTimeDiff="+lastJavaGcTimeDiff+", Timeout is "+doJavaGcAfterXMinutesValue*60*1000+", doJavaGc="+doJavaGc);
+						}
+
+						// Do Java Garbage Collection?
+						if (doJavaGc)
 						{
 							setWaitEvent("Doing Java Garbage Collection.");
 							MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Doing Java Garbage Collection.");
@@ -432,16 +459,23 @@ public class GetCountersGui
 										try {Thread.sleep(10);}
 										catch(InterruptedException ignore) {}
 	
+										long gcStartAt = System.currentTimeMillis();
 										System.gc();
-										
+										_lastJavaGcWasDoneAt = System.currentTimeMillis();
+
+										_logger.debug("Just called: System.gc() and took "+(_lastJavaGcWasDoneAt - gcStartAt)+" ms. GUI progress was DISPLAYED.");
 										return null;
 									}
 								};
-								execWait.execAndWait(doWork, 0);
+								execWait.execAndWait(doWork, 200); // pupup if exec time is more than 200ms
 							}
 							else
 							{
+								long gcStartAt = System.currentTimeMillis();
 								System.gc();
+								_lastJavaGcWasDoneAt = System.currentTimeMillis();
+
+								_logger.debug("Just called: System.gc() and took "+(_lastJavaGcWasDoneAt - gcStartAt)+" ms. NO gui progress...");
 							}
 
 							setWaitEvent("next sample period...");
@@ -466,9 +500,14 @@ public class GetCountersGui
 						}
 
 						// Now SLEEP, return true on success, false on interrupted.
-						boolean ok = sleep(1000);
-						if (!ok)
-							break;
+						if (MainFrame.isSamplingPaused()) // just stop update 'next sample is in x seconds', and use label 'Paused'
+							break; // Sleep loop
+						else
+						{
+							boolean ok = sleep(1000);
+							if (!ok)
+								break; // Sleep loop
+						}
 
 						MainFrame.setStatus(MainFrame.ST_MEMORY);
 
@@ -478,10 +517,12 @@ public class GetCountersGui
 
 
 				// Are we PAUSED, just sleep here
-				while (MainFrame.isSamplingPaused())
+				while (MainFrame.isSamplingPaused() && MainFrame.isForcedRefresh()==false)
 				{
-					MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "PAUSED the data sampling. Press |> to continue...");
-					sleep(10000);
+					MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "PAUSED the data sampling. Press |> to continue... (or F5 / 'refresh' button to the left)");
+					MainFrame.setStatus(MainFrame.ST_MEMORY);
+					sleep(1000); // changed to 1000 so that memory usage is updated more often
+//					sleep(10000);
 //					try { Thread.sleep(10000); }
 //					catch (InterruptedException ignore)	{}
 
@@ -489,6 +530,8 @@ public class GetCountersGui
 					//ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_OUT_OF_MEMORY);
 					//MainFrame.getInstance().actionPerformed(doGcEvent);
 				}
+				// Reset any forced refresh request
+				MainFrame.setForcedRefresh(false);
 
 
 				if ( ! isRefreshEnabled() )
@@ -547,13 +590,8 @@ public class GetCountersGui
 					}
 				}
 
-				//----------------------
-				// In some versions we need to check if the transaction log is full to some reasons
-				// If it is full it will be truncated.
-				//----------------------
-				checkForFullTransLogInMaster(getMonConnection());
-
 				setInRefresh(true);
+
 				//Component comp = MainFrame.getActiveTab();
 				MainFrame.setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");
 
@@ -591,7 +629,7 @@ public class GetCountersGui
 
 				try
 				{
-					if ( ! isMonConnected() )
+					if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 						continue; // goto: while (_running)
 						
 					Statement stmt = getMonConnection().createStatement();
@@ -663,6 +701,12 @@ public class GetCountersGui
 					counterClearTime = new Timestamp(0);
 				}
 				
+				//----------------------
+				// In some versions we need to check if the transaction log is full to some reasons
+				// If it is full it will be truncated.
+				//----------------------
+				checkForFullTransLogInMaster(getMonConnection());
+
 				// PCS
 				PersistContainer pc = null;
 				if (pcs != null || imch != null)

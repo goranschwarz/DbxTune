@@ -22,9 +22,14 @@ extends XmenuActionBase
 	@Override 
 	public void doWork() 
 	{
-		String kpidStr  = getParamValue(0);
-		int    kpid     = Integer.parseInt(kpidStr);
+//		String kpidStr  = getParamValue(0);
+//		int    kpid     = Integer.parseInt(kpidStr);
+//
+//		new ProcessDetailFrame(kpid);
 
-		new ProcessDetailFrame(kpid);
+		String spidStr  = getParamValue(0);
+		int    spid     = Integer.parseInt(spidStr);
+
+		new ProcessDetailFrame(spid, -1);
 	}
 }

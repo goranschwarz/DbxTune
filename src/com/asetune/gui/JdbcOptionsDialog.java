@@ -5,6 +5,8 @@ import java.awt.Dialog;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
@@ -16,13 +18,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
@@ -38,6 +43,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
+import org.jdesktop.swingx.sort.RowFilters;
 import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.GetCounters;
@@ -70,6 +76,9 @@ implements ActionListener, TableModelListener
 	private Map<String,String>     _inValues        = null;
 	private Map<String,String>     _outValues       = null;
 
+	private JLabel                 _optionsFilter_lbl = new JLabel("Filter");
+	private JTextField             _optionsFilter_txt = new JTextField();
+	
 	private static final String DIALOG_TITLE = "Options for the JDBC Driver";
 
 	/*---------------------------------------------------
@@ -122,9 +131,9 @@ implements ActionListener, TableModelListener
 		//panel.setLayout(new MigLayout("debug, insets 0 0 0 0, wrap 1","",""));   // insets Top Left Bottom Right
 		panel.setLayout(new MigLayout("insets 0, wrap 1","",""));   // insets Top Left Bottom Right
 
-//		panel.add(createTopPanel(),      "grow, push");
+		panel.add(createTopPanel(),      "growx, pushx");
 		panel.add(createTablePanel(),    "grow, push, height 100%");
-		panel.add(createOkCancelPanel(), "bottom, right, push");
+		panel.add(createOkCancelPanel(), "bottom, right, pushx");
 
 		loadProps();
 
@@ -133,12 +142,29 @@ implements ActionListener, TableModelListener
 		initComponentActions();
 	}
 
-//	private JPanel createTopPanel()
-//	{
-//		JPanel panel = SwingUtils.createPanel("Top", false);
-//
-//		return panel;
-//	}
+	private JPanel createTopPanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Filter", false);
+		panel.setLayout(new MigLayout("","",""));
+
+		panel.add(_optionsFilter_lbl, "");
+		panel.add(_optionsFilter_txt, "pushx, growx");
+
+		_optionsFilter_txt.addActionListener(this);
+		_optionsFilter_txt.addKeyListener(new KeyListener()
+		{
+			@Override
+			public void keyTyped(KeyEvent e)
+			{
+				applyOptionFilter();
+			}
+			
+			@Override public void keyReleased(KeyEvent e) {}
+			@Override public void keyPressed(KeyEvent e) {}
+		});
+		
+		return panel;
+	}
 
 	private JPanel createOkCancelPanel()
 	{
@@ -228,8 +254,22 @@ implements ActionListener, TableModelListener
 //			doApply();
 //			saveProps();
 //		}
+
+		// --- FILTER ---
+		if (_optionsFilter_txt.equals(source))
+		{
+			applyOptionFilter();
+		}
     }
 
+	private void applyOptionFilter()
+	{
+        String searchString = _optionsFilter_txt.getText().trim();
+        if ( searchString.length() > 0 ) 
+        	_table.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString));
+        else 
+        	_table.setRowFilter(null);
+	}
 	@Override
 	public void tableChanged(TableModelEvent e)
 	{
@@ -615,7 +655,30 @@ implements ActionListener, TableModelListener
 			}
 			catch (Exception e)
 			{
-				e.printStackTrace();
+				String extraInfo = "";
+				if (e.getMessage().indexOf("No suitable driver") >= 0)
+				{
+					extraInfo += "<br>";
+					extraInfo += "<hr>";
+					extraInfo += "<b>Tip:</b> No suitable driver<br>";
+					extraInfo += "The selected Driver cannot handle the specified Database URL. <br>";
+					extraInfo += "The most common reason for this error is that the database <b>URL contains a syntax error</b> preventing the driver from accepting it. <br>";
+					extraInfo += "The error also occurs when trying to connect to a database with the wrong driver. Correct this and try again.";
+					
+				}
+				
+				SwingUtils.showErrorMessage(JdbcOptionsDialog.this, "Problems getting Connection Properties", 
+						"<html>" +
+						"<h2>Some problem when getting Connection Properties</h2>" +
+						"<b>Driver</b>: " + _driverClassName + "<br>" +
+						"<b>URL</b>: " + _urlTemplate + "<br>" +
+						"<br>" +
+						"<b>Message</b>: " + e.getMessage() + "<br>" +
+						extraInfo +
+						"</html>",
+						e);
+				_logger.warn("Problems getting Connection Properties for driver='"+_driverClassName+"', URL='"+_urlTemplate+"'.", e);
+//				e.printStackTrace();
 				return;
 			}
 			

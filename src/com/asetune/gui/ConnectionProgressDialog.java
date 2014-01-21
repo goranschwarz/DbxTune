@@ -58,6 +58,7 @@ import com.asetune.ssh.SshTunnelManager;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.SwingWorker;
@@ -83,6 +84,7 @@ implements ActionListener, ConnectionProgressCallback
 	private static final String HIDE_DETAILS_STR = "<< Details";
 	private static final String SHOW_DETAILS_STR = "Details >>";
 
+	private boolean _atWork = true;
 //	private ConnectionProgressDialog _thisDialog      = this;
 	private SwingWorker              _doConnectWorker = null;
 
@@ -91,6 +93,9 @@ implements ActionListener, ConnectionProgressCallback
 
 	/** If the connected Product Name must be a certain string, this is it */
 	private String       _desiredProductName = null;
+
+	/** Do some SQL Initialization */
+	private String       _sqlInit = null;
 
 	/** SSH Connection made in background */
 	private SshConnection   _sshConnection = null;
@@ -139,6 +144,8 @@ implements ActionListener, ConnectionProgressCallback
 	private static final String EXTRA_TASK_INIT_COUNTER_COLLECTOR = "Init Counter Collector";
 	private boolean      _doExtraTasks     = true;
 
+	private static final String TASK_SQL_INIT = "Executing SQL Initialization String";
+
 	/** Timer used to move the progress bar every X ms */
 	private Timer              _progressTimer             = null;
 
@@ -157,22 +164,22 @@ implements ActionListener, ConnectionProgressCallback
 	private static String     _fixme_jdbcDriver = null;
 	private static String     _fixme_rawUrl     = null;
 	private static Properties _fixme_props      = null;
-	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
+	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
 	throws Exception
 	{
 		_fixme_jdbcDriver = driver;
 		_fixme_rawUrl     = rawUrl;
 		_fixme_props      = props;
-		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
+		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
 	}
 //	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
-	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
+	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
 	throws Exception
 	{
 		ConnectionProgressDialog cpd = null;
 
-		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
-		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
+		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
+		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
 		else throw new IllegalAccessException("owner parameter can only be of the object types 'Dialog' or 'Frame'.");
 
 		// kick off connect.
@@ -182,7 +189,7 @@ implements ActionListener, ConnectionProgressCallback
 		// If NOT, make the Progress dialog visible
 		try { Thread.sleep(200); }
 		catch (InterruptedException ignore) {}
-		if (cpd._connection == null)
+		if (cpd._atWork)
 			cpd.setVisible(true);
 
 		_logger.debug("hasConnection="+(cpd._connection!=null)+", hasException="+(cpd._exception!=null));
@@ -196,17 +203,17 @@ implements ActionListener, ConnectionProgressCallback
 		return null;
 	}
 	
-	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
+	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
+		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
 	}
-	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
+	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName);
+		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
 	}
-	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName)
+	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
 	{
 		_urlStr = urlStr;
 		_doExtraTasks = doExtraTasks;
@@ -221,6 +228,9 @@ implements ActionListener, ConnectionProgressCallback
 
 		// If the connection NEEDS to be of a specific product name
 		_desiredProductName = desiredDbProductName;
+
+		// If the connection NEEDS to be of a specific product name
+		_sqlInit = sqlInit;
 
 		//	AseConnectionUtils.checkForMonitorOptions(conn, _user_txt.getText(), true, this);
 		//	MonTablesDictionary.getInstance().initialize(conn);
@@ -278,6 +288,12 @@ implements ActionListener, ConnectionProgressCallback
 				//-------------------------------------------
 				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
 				addTask(_urlHelper.getHostPortArr());
+			}
+
+			if (StringUtil.hasValue(_sqlInit))
+			{
+				// add SQL Init task
+				addTask(TASK_SQL_INIT);
 			}
 
 			//-------------------------------------------
@@ -968,6 +984,8 @@ implements ActionListener, ConnectionProgressCallback
 				Thread.currentThread().setName("ConnectionProgressDialog");
 				try
 				{
+					_atWork = true;
+
 					//-------------------------
 					// DO: Host Monitor, connect to SSH remote host
 					//-------------------------
@@ -1168,6 +1186,39 @@ implements ActionListener, ConnectionProgressCallback
 						}
 						_connection = conn; 
 					}
+
+					// SQL INIT string
+					if (_connection != null && StringUtil.hasValue(_sqlInit))
+					{
+						setTaskStatus(TASK_SQL_INIT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						try
+						{
+							String[] sa =  _sqlInit.split(";");
+							for (String sql : sa)
+							{
+								sql = sql.trim();
+								if ("".equals(sql))
+									continue;
+								_logger.info("Sending SQL Initialization str: "+sql);
+								DbUtils.exec(_connection, sql);
+							}
+							setTaskStatus(TASK_SQL_INIT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						}
+						catch (SQLException ex)
+						{
+							setTaskStatus(TASK_SQL_INIT, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+							ex.setNextException( new SQLException(
+									"<html>" + // OK: a bit dodgy to have HTML in here, but what the...
+									"<h2>SQL Initialization Failed</h2>" +
+									"Full SQL Init String '"+ _sqlInit + "'<br>" +
+									"<br>" +
+									"<b>SQL State:     </b>" + ex.getSQLState()  + "<br>" +
+									"<b>Error number:  </b>" + ex.getErrorCode() + "<br>" +
+									"<b>Error Message: </b>" + ex.getMessage()   + "<br>" +
+									"</html>"));
+							throw ex;
+						}
+					}
 					
 					return _connection;
 				}
@@ -1184,6 +1235,10 @@ implements ActionListener, ConnectionProgressCallback
 
 					_exception = e;
 					return e;
+				}
+				finally
+				{
+					_atWork = false;
 				}
 			}
 
@@ -1348,7 +1403,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			try
 			{
-				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null, null);
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null, null, null);
 				System.out.println("Connection returned. conn="+conn);
 			}
 			catch (Exception e)

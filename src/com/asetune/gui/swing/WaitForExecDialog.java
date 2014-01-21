@@ -288,6 +288,7 @@ implements PropertyChangeListener, ActionListener
 	 * @param execClass
 	 * @param graceTime  if the executions takes less than X ms, then the GUI wont be showed.
 	 */
+	// FIXME: add method execAndWaitWithThrow or similar, that throws Exception or Throwable
 	public Object execAndWait(final BgExecutor execClass, int graceTime)
 	{
 		_execClass = execClass;
@@ -302,11 +303,16 @@ implements PropertyChangeListener, ActionListener
 				try 
 				{
 					_execClass.setBgThread(Thread.currentThread());
-					return _execClass.doWork();
+					Object retObject = _execClass.doWork();
+					if (_execClass.hasException())
+						_logger.info("WaitForExecDialog:(at try block) has problems when doing it's work.", _execClass.getException());
+						
+					return retObject;
 				} 
 				catch (Throwable t) 
 				{
-					_logger.debug("WaitForExecDialog: has problems when doing it's work.", t);
+					_logger.info("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
+//					_logger.debug("WaitForExecDialog:(at catch block) has problems when doing it's work.", t);
 				}
 				return null;
 			}

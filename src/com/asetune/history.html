@@ -25,9 +25,163 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H2>2013-xx-xx</H2>
 <UL>
 	<LI>
+	<b>Enhancement: System Load</b><br>
+	Three new graphs
+	<ul>
+	   <li>Outstanding IO's, When the refresh happened, Per Engine</li> 
+	   <li>Outstanding IO's, Average over last minute, Per Engine</li> 
+	   <li>Outstanding IO's, Summary for all instances</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Databases</b><br>
+	Some new columns
+	<ul>
+	   <li>LogSizeFreeInMbDiff  - Same as LogSizeFreeInMb, but the difference from previous sample</li> 
+	   <li>DataSizeInMb         - How much Data is allocated in MB for this database</li> 
+	   <li>DataSizeFreeInMb     - How much Data are we NOT using in MB</li> 
+	   <li>DataSizeFreeInMbDiff - Same as DataSizeFreeInMbDiff, but the difference from previous sample</li> 
+	   <li>DataSizeUsedPct      - How much Data are we using in Percent</li> 
+	   <li>SPID                 - duplicate of OldestTranSpid, to enable table right click menu</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Temp Db</b><br>
+	Some new columns
+	<ul>
+	   <li>LockContPct    - Percent Calculation of Lock Contention</li> 
+	   <li>CatLockContPct - Percent Calculation of Catalog Lock Contention</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Summary Panel</b><br>
+	New field 'UTC Time Diff', which just prints out the time difference in minutes to UTC Data<br>
+	</LI>
+
+	<LI>
+	<b>Java Garbage Collection: Enhancements</b><br>
+	<ul>
+	    <li>Make Java Garbage Collection every X minute, the default is set to 10 minutes<br>
+	        This can be enabled/disabled from view-&gt;Preferences, the interval can also be changed from here.</li>
+	    <li>Do not show "GUI progress" if the AseTune window is not activated<br>
+            This means: the user is not "disturbed" if he are working in another window</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: pause/refresh button</b><br>
+	If you are in paused mode, F5 or the "refresh" button will still work<br>
+	So if you want to do "refresh" to capture a specific user event, this is now a bit easier.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement to tool: SQL Capture</b><br>
+	The tool can now be reached from all the JTable right click menus that has SPID columns in it.<br>
+	Previously this was only enabled when KPID was available.<br>
+	</LI>
+
+	<LI>
+	<b>NEW Standalone tool: tailw</b><br>
+	This is the same tool as within AeTune and SqlWindow, but now as a standalone utility.<br>
+	Start it using 'tailw.bat' or 'tailw.sh'<br>
+	With the tool you can tail any file, local or remote.<br>
+	When using the remote tail, SSH connection is used to read/stream to the client side, which probably is on windows.<br> 
+	</LI>
+
+	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+    Started to work on 'Connection Profile', this will make it a bit easier to connect...<br>
+    The idea is to remember a lot more information about this specific server<br>
+    The connection dialog will be used for both the AseTune and SqlWindow applications<br>
+    But it's a lot of work before this is complete<br>
+    To get a preview how it might look like, there are two buttons on the bottom left corner 
+    to enable/disable a tree view (which is static for the moment)<br> 
+	</LI>
+
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+	   <li>Option: How long does a SQL Statement takes from the clients perspective.<br>
+	       Client Exec Time: %MM:%SS.%ms (sqlExec=%MM:%SS.%ms, readResults=%MM:%SS.%ms)</li>
+	   <li>Added sub command 'wait #ms' to the 'go' terminator.<br>
+	       <b>Example:</b> <code>go 10 wait 100</code> will execute the SQL batch 10 times, and wait 100 ms after each SQL batch has been sent.</li>
+	   <li>The progress dialog, now updates 'SQL Batch' timing when you use multi execution 'go 20'</li>
+	   <li>Code completion works a bit better, especially for dbname.dbo.&lt;ctrl-space&gt; (cross database lookups,
+           but there are still <b>more</b> to do with code completion, I would like to parse the SQL to figure out "where"
+           we are located in the SQL Statement, and from there decide more about what to display... anyone that has a good parser for this...)</li>
+       <li>Tooltip Supplier: Some support for ASE/HANA = "hover" over a function or other SQL Statement, if there
+           are help for it a tooltip will popup with some help (I need to do RepServer here, but it’s just
+           a XML file with textual description...<br>
+           and also on the "todo" list is to display table/column help... hover over a tablename = get column descriptions for that table)</li>
+       <li>Error hint: On any error messages, try to <b>mark</b> them with red underline + "red cross" on the
+           left hand side (at the line number) + red snivel to the right of the scrollbar
+           (this is <b>really</b> usefull when coding multiple functions/procedures in the same file,
+           Usually you have to "guess" what line in the file the error is at, multiple 'go' will cause the location problem)</li>
+       <li>ASE variable/identifier "marker" = put cursor on a identifier/variable = all other vars/tables/cols/etc with the same name will be "highlighted"</li>
+       <li>More information about the connected database in the status bar (especially when using the "generic" JDBC connection)</li>
+       <li>If you edit a file and another application changes the file, a popup will ask if you want to "reload" the file (cooperate with another editor)</li>
+       <li>Option to save the file before sending the SQL to the server. (good if you want to cooperate with another editor)</li>
+       <li>Option to restore the window size/location based on the connected server name. (after connect the window will be moved/resized)</li>
+       <li>In the status bar (bottom right corner) show what line and column the cursor is located at.</li>
+       <li>Copy Results button: right click to choose format you want to copy it as (if you just press the button, last used method will be used)</li>
+       <li>JTable: in the right click menu: "Execute content of selected rows" (hover of it = will show the SQL that will be executed):
+           good for generating SQL and execute it…. Ex: select "select tabName='"+name+"', rowc=count(*) from "+name from sysobjects where type = 'U'</li>
+       <li>\call, \exec and \rpc now works a bit better (for ASE, IQ, SA, RS, MS-SQL) The return code is automatically fetched
+           the CallableStament will be like '{?=call procname(params)}' for others it will be '{call procname(params)}'.<br>
+           This makes it possible to receive output parameters for variables that vendors that does not have the return code.<br>
+           Example of calling a stored proc with output params is HANA "\call procname('in-a', ?) :(string=null out)"</li>
+       <li>More command line switches example(-Uuser -Ppasswd -ujdbc:sap://host.acme.com:30115)</li>
+       <li>send 'sql init' string when you connect</li>
+       <li>More options in the "Options" button (to the right of "exec" button)</li>
+       <ul>
+           <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>
+           <li>Show sent SQL (more or less same as –e in isql)</li>
+           <li>Print ResultSet info (print out what JDBC think it will receive, java.sql.Types.VARCHAR, varchar(30), makes it easier to verify some stuff)</li>
+           <li>Client timing (how long did the query take from the client side, SQL Execution, Read ResultSet), tooltip will show the SQL that was executed.</li>
+           <li>Send using ‘;’ (good if you are used to Oracle, this is a bit limited, or not 100% compatible with sqlPlus)</li>
+           <li>If connected to Oracle: enable/reads the dbms_output subsystem</li>
+           <li>On errors within stored procedures, get the SP Text and mark the "error" row with red. The text is displayed in the tooltip of the error.</li>
+           <li>Code Completion: Finer control of what to get/refresh</li>
+       </ul>
+       <li>Probably a bunch of more stuff that I have forgot</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>PerfDemo application: Enhancements</b><br>
+	<ul>
+	   <li>Timestamp in the log window</li>
+	   <li>Now handles/discards any produced ResultSets from the Consumer Procedures.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: ASE Version parsing, now handles SP50 (or SP with less that 3 digits)</b><br>
+	ASE 15.7.0 SP50 was previously detected as 15.7.0, this is now fixed.<br>
+	</LI>
+
+	<LI>
 	<b>Bug fix: 'Cached Procedures Sum' in the group 'Cache'</b><br>
 	Error 3606: Arithmetic overflow occurred.<br>
 	Now convert the integers to bigint before doing the sum() aggregates<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Sometimes the GUI freezes</b><br>
+	Changes to check if the connection is alive has been changed, this is the second attempts at this, hope it's solved this time.<br>
+	If you see problems with this:<br>
+	Please do the following:
+	<ul>
+	   <li>Open a command prompt, and do the following:</li>
+	   <li><code>jps</code></li>
+	   <li><code>jstack <i>on-the-pid-for-AseTune</i></code></li>
+	   <li>Send the output to: goran_schwarz@hotmail.com</li>
+	   <li>Also send the c:\Users\&lt;userName&gt;\.asetune\AseTune.log and try to describe what you where doing...</li>
+	</ul>
+	Note: <code>jps</code> and <code>jstack</code> is located under the JDK installation $JAVA_HOME/bin (possible c:\Program Files\Java\jdk*\bin)<br>
 	</LI>
 
 	<LI>
@@ -68,56 +222,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Threads</b><br>
 	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
-	</LI>
-
-	<LI>
-	<b>Enhancement: System Load</b><br>
-	Three new graphs
-	<ul>
-	   <li>Outstanding IO's, When the refresh happened, Per Engine</li> 
-	   <li>Outstanding IO's, Average over last minute, Per Engine</li> 
-	   <li>Outstanding IO's, Summary for all instances</li> 
-	</ul>
-	</LI>
-
-	<LI>
-	<b>Enhancement: Databases</b><br>
-	Some new columns
-	<ul>
-	   <li>LogSizeFreeInMbDiff  - Same as LogSizeFreeInMb, but the difference from previous sample</li> 
-	   <li>DataSizeInMb         - How much Data is allocated in MB for this database</li> 
-	   <li>DataSizeFreeInMb     - How much Data are we NOT using in MB</li> 
-	   <li>DataSizeFreeInMbDiff - Same as DataSizeFreeInMbDiff, but the difference from previous sample</li> 
-	   <li>DataSizeUsedPct      - How much Data are we using in Percent</li> 
-	</ul>
-	</LI>
-
-	<LI>
-	<b>Enhancement: Temp Db</b><br>
-	Some new columns
-	<ul>
-	   <li>LockContPct    - Percent Calculation of Lock Contention</li> 
-	   <li>CatLockContPct - Percent Calculation of Catalog Lock Contention</li> 
-	</ul>
-	</LI>
-
-	<LI>
-	<b>SQL Window: Enhancements</b><br>
-	<ul>
-	   <li>Option: How long does a SQL Statement takes from the clients perspective.<br>
-	       Client Exec Time: %MM:%SS.%ms (sqlExec=%MM:%SS.%ms, readResults=%MM:%SS.%ms)</li>
-	   <li>Added sub command 'wait #ms' to the 'go' terminator.<br>
-	       <b>Example:</b> <code>go 10 wait 100</code> will execute the SQL batch 10 times, and wait 100 ms after each SQL batch has been sent.</li>
-	   <li>The progress dialog, now updates 'SQL Batch' timing when you use multi execution 'go 20'</li>
-	</ul>
-	</LI>
-
-	<LI>
-	<b>PerfDemo application: Enhancements</b><br>
-	<ul>
-	   <li>Timestamp in the log window</li>
-	   <li>Now handles/discards any produced ResultSets from the Consumer Procedures.</li>
-	</ul>
 	</LI>
 
 </UL>

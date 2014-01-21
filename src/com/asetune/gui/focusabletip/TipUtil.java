@@ -34,6 +34,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JEditorPane;
 import javax.swing.UIManager;
 import javax.swing.plaf.ColorUIResource;
+import javax.swing.text.Document;
 import javax.swing.text.html.HTMLDocument;
 
 
@@ -138,11 +139,15 @@ class TipUtil {
 		if (font == null) { // Try to make a sensible default
 			font = new Font("SansSerif", Font.PLAIN, 12);
 		}
-		HTMLDocument doc = (HTMLDocument) textArea.getDocument();
-		doc.getStyleSheet().addRule(
+		Document doc = textArea.getDocument();
+//System.out.println("TipUtil: tweakTipEditorPane(). doc.getClass().getName()="+doc.getClass().getName());
+		if (doc instanceof HTMLDocument)
+		{
+			HTMLDocument htmlDoc = (HTMLDocument) textArea.getDocument();
+			htmlDoc.getStyleSheet().addRule(
 				"body { font-family: " + font.getFamily() + "; font-size: "
 						+ font.getSize() + "pt; }");
-
+		}
 	}
 
 

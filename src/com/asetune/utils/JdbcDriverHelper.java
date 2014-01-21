@@ -1,5 +1,7 @@
 package com.asetune.utils;
 
+import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -9,8 +11,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -57,6 +61,8 @@ public class JdbcDriverHelper
 	private static Logger _logger = Logger.getLogger(JdbcDriverHelper.class);
 	public final static String  DEFAULT_DriversFileName = Version.APP_STORE_DIR + File.separator + "JdbcDrivers.xml";
 
+	public static final String JDBC_DRIVER_DOWNLOAD_URL = "http://www.asetune.com/jdbc_drivers_download.php";
+
 	private static JdbcDriverTableModel _jdbcDriverModel = null;
 	private static String               _filename        = DEFAULT_DriversFileName;
 	
@@ -68,6 +74,25 @@ public class JdbcDriverHelper
 		return _jdbcDriverModel;
 	}
 
+	/**
+	 * Get a list of available JDBC classes that is in the classpath or the XML File, which describes JDBC Drivers 
+	 * @return
+	 */
+	public static List<String> getAvailableDriverList()
+	{
+		ArrayList<String> list = new ArrayList<String>();
+
+		JdbcDriverTableModel model = getModel();
+		for (DriverInfoEntry e : model.getEntries(true))
+			list.add(e.getClassName());
+
+		return list;
+	}
+	/**
+	 * Get URL Templates for a specific driver
+	 * @param driverName
+	 * @return
+	 */
 	public static List<String> getUrlTemplateList(String driverName)
 	{
 		JdbcDriverTableModel model = getModel();
@@ -100,9 +125,9 @@ public class JdbcDriverHelper
 		}
 		else if ("net.sourceforge.jtds.jdbc.Driver".equals(driverName))
 		{
-			templates.add("jdbc:jtds:<server_type>://<host>[:<port>][/<database>][;<property>=<value>[;...]]");
-			templates.add("jdbc:jtds:<sybase>://<host>[:<port>][/<database>][;<property>=<value>[;...]]");
-			templates.add("jdbc:jtds:<sqlserver>://<host>[:<port>][/<database>][;<property>=<value>[;...]]");
+			templates.add("jdbc:jtds:<server_type>://<host>[:<port>][/<db>][;<prop>=<val>[;...]]");
+			templates.add("jdbc:jtds:sybase://<host>[:<port>][/<db>][;<prop>=<val>[;...]]");
+			templates.add("jdbc:jtds:sqlserver://<host>[:<port>][/<db>][;<prop>=<val>[;...]]");
 		}
 		else if ("org.h2.Driver".equals(driverName))
 		{
@@ -120,8 +145,10 @@ public class JdbcDriverHelper
 		}
 		else if ("com.sap.db.jdbc.Driver".equals(driverName)) 
 		{
-			templates.add("jdbc:sap//<host>:<port>");
-			templates.add("jdbc:sap//<host>:30015");
+			templates.add("jdbc:sap://<host>:<port>");
+			templates.add("jdbc:sap://<host>:3##15");
+			templates.add("jdbc:sap://<host>:3##15 (replace## with instance_number)");
+			templates.add("jdbc:sap://<host>:30015");
 		}
 		else if ("oracle.jdbc.OracleDriver".equals(driverName)) 
 		{
@@ -548,6 +575,7 @@ public class JdbcDriverHelper
 		private JdbcDriverTableModel _tm            = null;
 		private JLabel               _xmlFile       = new JLabel(getFileName());
 		private JButton              _reload_but    = new JButton("Reload");
+		private JButton              _download_but  = new JButton("Download");
 		private JButton              _addDriver_but = new JButton("Add/Change Driver");
 		private JButton              _delDriver_but = new JButton("Delete Driver");
 
@@ -555,8 +583,26 @@ public class JdbcDriverHelper
 		{
 			init();
 		}
+		private String getDriversPath()
+		{
+			File driversDir = new File(Version.APP_STORE_DIR + File.separator + "jdbc_drivers");
+			if ( ! driversDir.exists() )
+			{
+				if (driversDir.mkdir())
+					_logger.info("Creating directory '"+driversDir+"' to hold JDBC Driver files for "+Version.getAppName());
+			}
+			
+			return driversDir.toString();
+		}
 		private void init()
 		{
+			String driversDir = getDriversPath();
+			_xmlFile      .setToolTipText("This is where JDBC Drivers not included in the classpath will be described.");
+			_reload_but   .setToolTipText("Reload JDBC Drivers from the above XML file");
+			_download_but .setToolTipText("<html>Download various JDBC drivers<br>"+Version.getAppName()+" can't distribute a lot of JDBC Drivers, so you need to download them yourself.<br><br>This will just open a web page that has a collection of various JDBC Drivers that can be downloaded.<br>Put them in the directory <code>"+driversDir+"</code> and restart "+Version.getAppName()+".</html>");
+			_addDriver_but.setToolTipText("Open a Dialog to add a JDBC Driver");
+			_delDriver_but.setToolTipText("Delete the selected Driver in the list");
+
 			JScrollPane scroll = new JScrollPane();
 			scroll.setViewportView(_table);
 
@@ -568,6 +614,9 @@ public class JdbcDriverHelper
 			_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 			_table.setColumnControlVisible(true);
 			_table.packAll();
+			
+			// make this low, otherwise it will grow to much because of any outer JScrollPane
+			_table.setPreferredScrollableViewportSize(new Dimension(400, 100));
 
 			setLayout(new MigLayout("insets 0 0 0 0"));   // insets Top Left Bottom Right
 
@@ -575,6 +624,7 @@ public class JdbcDriverHelper
 			add(_xmlFile,        "span, pushx, growx, wrap");
 			add(_reload_but,     "");
 			add(new JLabel(),    "span, split, growx, pushx"); // dummy ...
+			add(_download_but,   "");
 			add(_addDriver_but,  "");
 			add(_delDriver_but,  "wrap");
 
@@ -588,6 +638,31 @@ public class JdbcDriverHelper
 				{
 					_tm.reload();
 					_table.packAll();
+				}
+			});
+
+			_download_but.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					if (Desktop.isDesktopSupported())
+					{
+						Desktop desktop = Desktop.getDesktop();
+						if ( desktop.isSupported(Desktop.Action.BROWSE) )
+						{
+							_logger.info("You clicked on Download Drivers '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Browser will be opened.");  
+
+							try
+							{
+								desktop.browse(new URI(JDBC_DRIVER_DOWNLOAD_URL+"?toLocation="+URLEncoder.encode(getDriversPath(), "UTF-8")));
+							}
+							catch (Exception ex)
+							{
+								_logger.error("Problems when open the URL '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Caught: "+ex);
+							}
+						}
+					}
 				}
 			});
 

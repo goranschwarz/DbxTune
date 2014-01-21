@@ -45,6 +45,7 @@ import com.asetune.sql.PreparedStatementCache;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -160,7 +161,7 @@ public class PersistWriterJdbc
 			_logger.debug("isSevereProblem(): execptionLevel='"+exLevel+"', sqlState='"+sqlState+"', error='"+error+"', msgStr='"+msgStr+"'.");
 
 			// H2 Messages
-			if ( DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
 			{
 				// database is full: 
 				//   NO_DISK_SPACE_AVAILABLE = 90100
@@ -175,7 +176,7 @@ public class PersistWriterJdbc
 			}
 	
 			// ASE messages
-			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 			{
 				// 1105: Can't allocate space for object '%.*s' in database '%.*s' because '%.*s' segment is full/has no free extents. If you ran out of space in syslogs, dump the transaction log. Otherwise, use ALTER DATABASE to increase the size of the segment.
 				if (error == 1105 || (msgStr != null && msgStr.startsWith("Can't allocate space for object")) )
@@ -799,7 +800,7 @@ public class PersistWriterJdbc
 
 			// if H2
 			// Set some specific stuff
-			if ( DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
 			{
 				_logger.info("Do H2 Specific settings for the database.");
 				// Sets the size of the cache in KB (each KB being 1024 bytes) for the current database. 
@@ -884,7 +885,7 @@ public class PersistWriterJdbc
 
 			// if ASE, turn off error message like: Scale error during implicit conversion of NUMERIC value '1.2920528650283813' to a NUMERIC field.
 			// or fix the actual values to be more correct when creating graph data etc.
-			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 			{
 				// for Better/other Performance: lets reconnect, using an alternate URL
 				// DYNAMIC_PREPARE=true  or  ENABLE_BULK_LOAD=true

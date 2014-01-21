@@ -51,7 +51,7 @@ import com.asetune.pcs.PersistReader.SampleCmCounterInfo;
 import com.asetune.pcs.PersistReader.SessionInfo;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.tools.QueryWindow;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
@@ -100,6 +100,7 @@ public class CheckForUpdates
 	private   static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
 
 	private   static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
+	private   static final String SQLWIN_CONNECT_INFO_URL        = "http://www.asetune.com/sqlw_connect_info.php";
 
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
@@ -922,7 +923,7 @@ public class CheckForUpdates
 			_whatsNewUrl   = DEFAULT_WHATSNEW_URL;
 
 			// Set default values for some stuff (which normally is for AseTune)
-			_sendConnectInfo      = false;
+			_sendConnectInfo      = true;
 			_sendMdaInfo          = false;
 			_sendMdaInfoBatchSize = 20;
 			_sendUdcInfo          = false;
@@ -1128,7 +1129,7 @@ public class CheckForUpdates
 
 
 	/**
-	 * @param connType ConnectionDialog.ASE_CONN | ConnectionDialog.OFFLINE_CONN
+	 * @param connType ConnectionDialog.TDS_CONN | ConnectionDialog.OFFLINE_CONN
 	 * @param sshTunnelInfo 
 	 */
 	public static void sendConnectInfoNoBlock(final int connType, final SshTunnelInfo sshTunnelInfo)
@@ -1207,9 +1208,9 @@ public class CheckForUpdates
 			return;
 		}
 		
-		if (connType != ConnectionDialog.ASE_CONN && connType != ConnectionDialog.OFFLINE_CONN)
+		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
 		{
-			_logger.warn("ConnectInfo: Connection type must be ASE_CONN | OFFLINE_CONN");
+			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
 			return;
 		}
 		
@@ -1242,7 +1243,7 @@ public class CheckForUpdates
 		String pcsConfig        = "";
 
 		
-		if (connType == ConnectionDialog.ASE_CONN)
+		if (connType == ConnectionDialog.TDS_CONN)
 		{
 			srvVersion       = mtd.getAseExecutableVersionNum() + "";
 			isClusterEnabled = mtd.isClusterEnabled() + "";
@@ -1378,6 +1379,206 @@ public class CheckForUpdates
 	}
 
 
+
+
+
+
+	/**
+	 * @param connType ConnectionDialog.TDS_CONN | ConnectionDialog.OFFLINE_CONN
+	 * @param sshTunnelInfo 
+	 */
+	public static void sendSqlwConnectInfoNoBlock(final SqlwConnectInfo sqlwConnInfo)
+	{
+		if ( ! _sendConnectInfo )
+		{
+			_logger.debug("Send 'Connect info' has been disabled.");
+			return;
+		}
+
+		Runnable doLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				CheckForUpdates connInfo = new CheckForUpdates();
+				connInfo.sendSqlwConnectInfo(sqlwConnInfo);
+
+				CheckForUpdates udcInfo = new CheckForUpdates();
+				udcInfo.sendUdcInfo();
+			}
+		};
+		Thread checkThread = new Thread(doLater);
+		checkThread.setName("sendConnectInfo");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Send info on connection
+	 * @param sshTunnelInfo 
+	 */
+	public void sendSqlwConnectInfo(final SqlwConnectInfo sqlwConnInfo)
+	{
+		// URL TO USE
+		String urlStr = SQLWIN_CONNECT_INFO_URL;
+
+		if ( sqlwConnInfo == null )
+		{
+			_logger.error("Send 'SQLW Connect info' the input can't be null.");
+			return;
+		}
+
+		if ( ! _sendConnectInfo )
+		{
+			_logger.debug("Send 'Connect info' has been disabled.");
+			return;
+		}
+
+		if (_checkIdSqlW < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
+			return;
+		}
+
+		int connType = sqlwConnInfo._connType;
+		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN && connType != ConnectionDialog.JDBC_CONN)
+		{
+			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN | JDBC_CONN");
+			return;
+		}
+		
+		_connectCount++;
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId          = _checkIdSqlW + "";
+		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
+
+		urlParams.add("connectId",           _connectCount+"");
+		urlParams.add("connectType",         sqlwConnInfo.getConnTypeStr());
+
+		urlParams.add("prodName",            sqlwConnInfo.getProdName());
+		urlParams.add("prodVersionStr",      sqlwConnInfo.getProdVersionStr());
+
+		urlParams.add("jdbcDriverName",      sqlwConnInfo.getJdbcDriverName());
+		urlParams.add("jdbcDriverVersion",   sqlwConnInfo.getJdbcDriverVersion());
+		urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
+		urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
+
+		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
+		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
+		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
+		urlParams.add("srvCharsetName",      sqlwConnInfo.getSrvCharset());
+		urlParams.add("srvSortOrderName",    sqlwConnInfo.getSrvSortorder());
+
+		urlParams.add("sshTunnelInfo",       sqlwConnInfo.getSshTunnelInfoStr());
+
+		try
+		{
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
+
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.warn("When doing connection info 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("DONE:"))
+				{
+				}
+				if (line.startsWith("SEND_MDA_INFO:"))
+				{
+					_logger.info("Received info to collect MDA Information.");
+					sendMdaInfoNoBlock();
+				}
+			}
+			in.close();
+			_responseString = responseLines;
+
+//			_checkSucceed = true;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("when trying to send connection info, we had problems", ex);
+		}
+	}
+
+	public static class SqlwConnectInfo
+	{
+		private final int           _connType; 
+		private final String        _connTypeStr;
+		private       String        _prodName          = "";
+		private       String        _prodVersionStr    = ""; // from jdbc metadata
+		private       String        _jdbcDriverName    = "";
+		private       String        _jdbcDriverVersion = "";
+		private       String        _jdbcDriver        = "";
+		private       String        _jdbcUrl           = "";
+		private       int           _srvVersionInt     = 0;
+		private       String        _srvName           = "";
+		private       String        _srvUser           = "";
+		private       String        _srvCharset        = "";
+		private       String        _srvSortorder      = "";
+		private       SshTunnelInfo _sshInfo           = null;
+
+		public SqlwConnectInfo(int connType)
+		{
+			_connType = connType;
+			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
+			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
+			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
+			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
+			
+		}
+		public int           getConnTypeInt      () { return _connType; }
+		public String        getConnTypeStr      () { return _connTypeStr       == null ? "UNKNOWN" : _connTypeStr; }
+		
+		public String        getProdName         () { return _prodName          == null ? "" : _prodName         .trim(); }
+		public String        getProdVersionStr   () { return _prodVersionStr    == null ? "" : _prodVersionStr   .trim(); }
+		public String        getJdbcDriverName   () { return _jdbcDriverName    == null ? "" : _jdbcDriverName   .trim(); }
+		public String        getJdbcDriverVersion() { return _jdbcDriverVersion == null ? "" : _jdbcDriverVersion.trim(); }
+		public String        getJdbcDriver       () { return _jdbcDriver        == null ? "" : _jdbcDriver       .trim(); }
+		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
+		public int           getSrvVersionInt    () { return _srvVersionInt; }
+		public String        getSrvName          () { return _srvName           == null ? "" : _srvName          .trim(); }
+		public String        getSrvUser          () { return _srvUser           == null ? "" : _srvUser          .trim(); }
+		public String        getSrvCharset       () { return _srvCharset        == null ? "" : _srvCharset       .trim(); }
+		public String        getSrvSortorder     () { return _srvSortorder      == null ? "" : _srvSortorder     .trim(); }
+		public SshTunnelInfo getSshTunnelInfo    () { return _sshInfo; }
+		public String        getSshTunnelInfoStr () { return _sshInfo           == null ? "" : _sshInfo.getInfoString(); }
+
+		public void setProdName         (String str)            { _prodName          = str; }
+		public void setProdVersionStr   (String str)            { _prodVersionStr    = str; }
+		public void setJdbcDriverName   (String str)            { _jdbcDriverName    = str; }
+		public void setJdbcDriverVersion(String str)            { _jdbcDriverVersion = str; }
+		public void setJdbcDriver       (String str)            { _jdbcDriver        = str; }
+		public void setJdbcUrl          (String str)            { _jdbcUrl           = str; }
+		public void setSrvVersionInt    (int    ver)            { _srvVersionInt     = ver; }
+		public void setSrvName          (String str)            { _srvName           = str; }
+		public void setSrvUser          (String str)            { _srvUser           = str; }
+		public void setSrvCharset       (String str)            { _srvCharset        = str; }
+		public void setSrvSortorder     (String str)            { _srvSortorder      = str; }
+		public void setSshTunnelInfo    (SshTunnelInfo sshInfo) { _sshInfo           = sshInfo; }
+	}
 
 
 

@@ -41,7 +41,7 @@ public class TablePopupFactory
 
 	public static final String OPTIONAL_PARAM = ":optional:";
 
-	private static Component getPopupMenuInvoker(JMenuItem mi)
+	public static Component getPopupMenuInvoker(JMenuItem mi)
 	{
 		Component invoker = null;
 		JPopupMenu popmenu = null; 
@@ -101,9 +101,9 @@ public class TablePopupFactory
 				if (invoker instanceof JTable)
 				{
 					JTable table = (JTable)invoker;
-					int selectedRow = table.getSelectedRow();
+					int[] selectedRows = table.getSelectedRows();
 //					String selection = SwingUtils.tableToString(table.getModel(), selectedRow);
-					String selection = SwingUtils.tableToString(table, selectedRow);
+					String selection = SwingUtils.tableToString(table, selectedRows);
 
 					StringSelection data = new StringSelection(selection);
 					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();

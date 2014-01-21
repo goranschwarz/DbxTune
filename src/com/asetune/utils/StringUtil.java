@@ -473,6 +473,10 @@ public class StringUtil
 	}
 
 	/**
+	 * get word in string
+	 * @param str input string
+	 * @param number what word to extract (starts at 0)
+	 * @return the exctacted word
 	 */
 	public static String word(String str, int number)
 	{
@@ -664,8 +668,10 @@ public class StringUtil
 			return null;
 
 //		return in.replaceAll("\\<.*?\\>", "");   // STRIP ALL HTML Tags from the description. hmmm this stips off '<>' also, which is the same as "not equal" or !=, which is NOT a html tag
-		return in.replaceAll("<[^>]+>", "");   // STRIP ALL HTML Tags from the description.
+//		return in.replaceAll("<[^>]+>", "");   // STRIP ALL HTML Tags from the description.
+		return HTML_TAG_PATTERN.matcher(in).replaceAll("");
 	}
+	private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 
 	/**
 	 * Remove any trailing white spaces and newlines
@@ -800,7 +806,19 @@ public class StringUtil
 		if (str.equals(""))
 			return true;
 
-		return str.trim().equals("");
+		// Strange, this seemed to mess up a Scanner reading each line (removing empty lines at start/end of the string...
+		// but Strings should be immutable
+//		return str.trim().equals("");
+
+		// OK, lets loop the string until we find any string that is not a whitespace
+		int len = str.length();
+		for (int i=0; i<len; i++)
+		{
+//			if ( str.charAt(i) > ' ' ) // trim() does: (char <= ' ') == space, so lets do that to and not the isWhitespace
+			if ( ! Character.isWhitespace(str.charAt(i)) )
+				return false;
+		}
+		return true;
 	}
 	/**
 	 * if NOT null or NOT empty, simply do: return ! isNullOrBlank(str)
@@ -878,6 +896,63 @@ public class StringUtil
 	}
 
 	/**
+	 * Check if last character is a ';'<br>
+	 * <pre>
+	 * null                     returns false
+	 * ""                       returns false
+	 * "abc"                    returns false
+	 * "abc;"                   returns true
+	 * "abc;   "                returns true
+	 * "abc;--comment"          returns false
+	 * "abc --comment ; "       returns true
+	 * "abc --comment ; \t \n"  returns true
+	 * </pre>
+	 * @param row the string to check
+	 * @return if last character is ';'  
+	 */
+	public static boolean hasSemicolonAtEnd(String row)
+	{
+		if (StringUtil.isNullOrBlank(row))
+			return false;
+		
+		if (row.endsWith(";"))
+			return true;
+		
+		for (int i=row.length()-1; i>0; i--)
+		{
+			char ch = row.charAt(i);
+			if (Character.isWhitespace(ch))
+				continue;
+			return ch == ';';
+		}
+		return false;
+	}
+
+	/**
+	 * remove everything after last ';', including the ';'<br>
+	 * Uses <code>hasSemicolonAtEnd</code> to check if it has a semicolon at the end
+	 * <pre>
+	 * null                     returns null
+	 * ""                       returns ""
+	 * "abc"                    returns "abc"
+	 * "abc;"                   returns "abc"
+	 * "abc;   "                returns "abc"
+	 * "abc;--comment"          returns "abc;--comment"
+	 * "abc --comment ; "       returns "abc --comment "
+	 * "abc --comment ; \t \n"  returns ""abc --comment "
+	 * </pre>
+	 * @param row the string to check
+	 * @return if last character is ';'  
+	 */
+	public static String removeSemicolonAtEnd(String row)
+	{
+		if (hasSemicolonAtEnd(row))
+			return row.substring(0, row.lastIndexOf(';'));
+
+		return row;
+	}
+
+	/**
 	 * Count number of matching characters in the string
 	 * @param str
 	 * @param ch
@@ -892,6 +967,34 @@ public class StringUtil
 				count++;
 		}
 		return count;
+	}
+
+	/**
+	 * 
+	 * @param str
+	 * @return number of rows/lines in the string 1 = one row
+	 */
+	public static int countLines(String str)
+	{
+		if (str == null || str.length() == 0)
+			return 0;
+		int lines = 1;
+		int len = str.length();
+		for( int pos = 0; pos < len; pos++) 
+		{
+			char c = str.charAt(pos);
+			if( c == '\r' ) 
+			{
+				lines++;
+				if ( pos+1 < len && str.charAt(pos+1) == '\n' )
+					pos++;
+			} 
+			else if( c == '\n' ) 
+			{
+				lines++;
+			}
+		}
+		return lines;
 	}
 
 	/**
@@ -953,6 +1056,115 @@ public class StringUtil
 		return inStr;
 	}
 
+	/**
+	 * if input string has \t, \f, \n or \r they will be escaped into \\t, \\f, \\n, \\r
+	 */
+	public static String escapeControlChars(String str)
+	{
+		if (str == null)
+			return null;
+		
+		str = str.replace("\t", "\\t");
+		str = str.replace("\f", "\\f");
+		str = str.replace("\n", "\\n");
+		str = str.replace("\r", "\\r");
+
+		return str;
+	}
+	/**
+	 * if input string has \\t, \\f, \\n or \\r they will be escaped into \t, \f, \n \r
+	 */
+	public static String unEscapeControlChars(String str)
+	{
+		if (str == null)
+			return null;
+		
+		str = str.replace("\\t", "\t");
+		str = str.replace("\\f", "\f");
+		str = str.replace("\\n", "\n");
+		str = str.replace("\\r", "\r");
+
+		return str;
+	}
+
+	/**
+	 * Format a (function or procedure text) or any line of text
+	 * 
+	 * @param text the object text (if null, null will be returned)
+	 * @param line line number to be marked
+	 * @param markUsingHtml mark it using HTML font red
+	 * @return the objectText with 'line#> text'
+	 */
+	public static String markTextAtLine(String text, int line, boolean markUsingHtml)
+	{
+		if (text == null || line <= 0)
+			return text;
+
+		StringBuilder sb = new StringBuilder();
+
+		// Walk the lines, add row numbers (and mark the correct line)
+		Scanner scanner = new Scanner(text);
+		int rowNumber = 0;
+		while (scanner.hasNextLine()) 
+		{
+			rowNumber++;
+			String lineStr = scanner.nextLine();
+
+			if (line == rowNumber)
+			{
+				if (markUsingHtml)
+					sb.append("<b><font color=\"red\">").append(rowNumber).append("> ").append(lineStr).append("</font></b>");
+				else
+					sb.append("**** ").append(rowNumber).append("> ").append(lineStr);
+			}
+			else
+				sb.append(rowNumber).append("> ").append(lineStr);
+			
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+
+//	/**
+//	 * Emulates String.indexOf(char)<br>
+//	 * But takes multiple chars as input, and returns the first position in any of the chars
+//	 * 
+//	 * @param str the string to search
+//	 * @param charsToLookfor the characters to look for
+//	 * @return -1 if not found
+//	 */
+//	public static int indexOf(String str, char... charsToLookfor)
+//	{
+//		return indexOf(str, 0, charsToLookfor);
+//	}
+
+	/**
+	 * Emulates String.indexOf(char, fromIndex)<br>
+	 * But takes multiple chars as input, and returns the first position in any of the chars
+	 * 
+	 * @param str
+	 * @param fromIndex
+	 * @param charsToLookfor
+	 * @return
+	 */
+	public static int indexOf(String str, int fromIndex, char... charsToLookfor)
+	{
+		if (str == null)
+			return -1;
+
+		int len = str.length();
+		for (int i=fromIndex; i<len; i++)
+		{
+			char c = str.charAt(i);
+			for (int j=0; j<charsToLookfor.length; j++)
+			{
+				if (c == charsToLookfor[j])
+					return i;
+			}
+		}
+		return -1;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -961,6 +1173,11 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		
+		System.out.println("countLines():" + StringUtil.countLines("one") );
+		System.out.println("countLines():" + StringUtil.countLines("1 \n 2 \r\n 3 \r 4 \n 5") );
+		System.exit(0);
+
 		System.out.println("TEST 1-1: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ) xxx",   0, ')') == -1 ? "OK" : "FAIL"));
 		System.out.println("TEST 1-2: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ) xxx",   5, ')') != -1 ? "OK" : "FAIL"));
 		System.out.println("TEST 1-3: " + (indexOfEndBrace("abc ( 123 4 5 6 7 ] xxx",   5, ')') == -1 ? "OK" : "FAIL"));

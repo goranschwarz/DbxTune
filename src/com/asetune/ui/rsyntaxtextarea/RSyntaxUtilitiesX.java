@@ -438,11 +438,13 @@ public class RSyntaxUtilitiesX
 	{
 
 		Document doc = textArea.getDocument();
-		int endOffs = textArea.getLineEndOffsetOfCurrentLine();
+//		int endOffs = textArea.getLineEndOffsetOfCurrentLine();
+		int endOffs = textArea.getLineEndOffset(textArea.getLineOfOffset(offs));
 		int lineEnd = Math.min(endOffs, doc.getLength());
 		if (offs == lineEnd)  // End of the line.
 			return offs;
 
+//System.out.println("getWordEnd(): lineEnd="+lineEnd+", offs="+offs+" (lineEnd-offs)="+(lineEnd-offs));
 		if (allowChars == null)
 			allowChars = "";
 //System.out.println("X: getWordEnd(): allowChars='"+allowChars+"'.");
@@ -545,7 +547,8 @@ public class RSyntaxUtilitiesX
 	{
 
 		Document doc = textArea.getDocument();
-		int endOffs = textArea.getLineEndOffsetOfCurrentLine();
+//		int endOffs = textArea.getLineEndOffsetOfCurrentLine();
+		int endOffs = textArea.getLineEndOffset(textArea.getLineOfOffset(offs));
 		int lineEnd = Math.min(endOffs, doc.getLength());
 		if (offs == lineEnd)  // End of the line.
 			return offs;
@@ -713,7 +716,7 @@ public class RSyntaxUtilitiesX
 		}
 		catch (BadLocationException ble)
 		{
-//			ble.printStackTrace();
+			ble.printStackTrace();
 			return EMPTY_STRING;
 		}
 	}

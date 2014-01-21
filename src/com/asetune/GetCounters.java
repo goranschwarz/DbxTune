@@ -97,7 +97,6 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
-import com.asetune.utils.TimeUtils;
 
 
 /*
@@ -1621,6 +1620,24 @@ implements ICounterController
 //	}
 
 	/**
+	 * Do we have a connection to the database?<br>
+	 * <b>NOTE:</b> Do NOT call the database to check it, just use the last information we got.
+	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>
+	 * On SQLExceptions, we should check if the database connection is still open/valid.
+	 * <p>
+	 * This is probably called from GUI places where we dont want a fast answer.
+	 * @return true or false
+	 */
+	@Override
+	public boolean isMonConnectedStatus()
+	{
+		if (_lastIsMonConnectedReturned < 0)
+			isMonConnected();
+		
+		return _lastIsMonConnectedReturned > 0;
+	}
+
+	/**
 	 * Do we have a connection to the database?
 	 * @return true or false
 	 */
@@ -1630,7 +1647,8 @@ implements ICounterController
 //		return isMonConnected(false, false);
 		return isMonConnected(false, true);
 	}
-	private boolean _lastIsMonConnectedReturned = false;
+	/** remember the status of last call to isMonConnected() -1=notInitialized, 0=false, 1=true*/
+	private int _lastIsMonConnectedReturned = -1;
 
 	/**
 	 * Do we have a connection to the database?
@@ -1641,7 +1659,7 @@ implements ICounterController
 	{
 		if (_conn == null) 
 		{
-			_lastIsMonConnectedReturned = false;
+			_lastIsMonConnectedReturned = 0; //false;
 			return false;
 		}
 
@@ -1653,7 +1671,7 @@ implements ICounterController
 			if ( diff < _lastIsClosedRefreshTime)
 			{
 				//DEBUG: System.out.println("    <<--- isMonConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
-				_lastIsMonConnectedReturned = true;
+				_lastIsMonConnectedReturned = 1; //true;
 				return true;
 			}
 
@@ -1682,18 +1700,18 @@ implements ICounterController
 				if (closeConnOnFailure)
 					closeMonConnection();
 
-				_lastIsMonConnectedReturned = false;
+				_lastIsMonConnectedReturned = 0; //false;
 				return false;
 			}
 		}
 		catch (SQLException e)
 		{
-			_lastIsMonConnectedReturned = false;
+			_lastIsMonConnectedReturned = 0; //false;
 			return false;
 		}
 
 		_lastIsClosedCheck = System.currentTimeMillis();
-		_lastIsMonConnectedReturned = true;
+		_lastIsMonConnectedReturned = 1; //true;
 		return true;
 	}
 	// Simulate the _conn.isClosed() functionality, but add a query timeout...

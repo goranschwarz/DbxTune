@@ -26,8 +26,8 @@ import javax.swing.JTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
-import com.asetune.tools.QueryWindow;
 import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionUtils;

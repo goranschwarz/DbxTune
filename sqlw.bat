@@ -51,6 +51,7 @@ rem --->nul reg add "hkcu\console\%title%" /v ScreenBufferSize /t REG_DWORD /d "
 rem ------------------------------------------------------------------------
 rem --- set some default environment variables
 rem ------------------------------------------------------------------------
+set APPL_HOME=%SQLW_HOME%
 set SQLW_SAVE_DIR=%SQLW_HOME%\data
 
 rem set JAVA_HOME=%SYBASE_JRE%
@@ -119,6 +120,9 @@ set classpath=%classpath%;%SQLW_HOME%\lib\gsp.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 
+set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
+set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
+
 rem --- echo %CLASSPATH%
 
 
@@ -126,7 +130,7 @@ rem --- echo %CLASSPATH%
 rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
-set PATH=%JAVA_HOME%\bin;%PATH%
+set PATH=%SQLW_JAVA_HOME%\bin;%ASETUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 
 
 
@@ -144,7 +148,7 @@ rem ------------------------------------------------------------------------
 cd %SQLW_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.QueryWindow %*
+java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_sqlw

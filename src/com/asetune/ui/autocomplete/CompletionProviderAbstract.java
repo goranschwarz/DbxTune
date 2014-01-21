@@ -15,13 +15,57 @@ import org.fife.ui.autocomplete.Util;
 import org.fife.ui.rtextarea.RTextArea;
 
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 
 public abstract class CompletionProviderAbstract
 extends DefaultCompletionProvider
 {
+	public static String  PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = "code.completion.lookup.static.cmds.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_MISC_INFO                     = "code.completion.lookup.misc.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO                 = "code.completion.lookup.database.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = "code.completion.lookup.table.name.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = "code.completion.lookup.table.columns.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = "code.completion.lookup.procedure.name.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = "code.completion.lookup.procedure.columns.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = "code.completion.lookup.system.procedure.name.info";
+	public static String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = "code.completion.lookup.system.procedure.columns.info";
+
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_MISC_INFO                     = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO                 = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = true;
+	public static boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = true;
+
+	public boolean isLookupStaticCmds()             { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO,              DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO); }
+	public boolean isLookupMisc()                   { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_MISC_INFO,                     DEFAULT_CODE_COMP_LOOKUP_MISC_INFO); }
+	public boolean isLookupDb()                     { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO,                 DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO); }
+	public boolean isLookupTableName()              { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_TABLE_NAME_INFO,               DEFAULT_CODE_COMP_LOOKUP_TABLE_NAME_INFO); }
+	public boolean isLookupTableColumns()           { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO,            DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO); }
+	public boolean isLookupProcedureName()          { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO,           DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO); }
+	public boolean isLookupProcedureColumns()       { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO,        DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO); }
+	public boolean isLookupSystemProcedureName()    { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO,    DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO); }
+	public boolean isLookupSystemProcedureColumns() { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO, DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO); }
+
+	public void    setLookupStaticCmds            (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO,              val); tmp.save(); } }
+	public void    setLookupMisc                  (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_MISC_INFO,                     val); tmp.save(); } }
+	public void    setLookupDb                    (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO,                 val); tmp.save(); } }
+	public void    setLookupTableName             (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_TABLE_NAME_INFO,               val); tmp.save(); } }
+	public void    setLookupTableColumns          (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO,            val); tmp.save(); } }
+	public void    setLookupProcedureName         (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO,           val); tmp.save(); } }
+	public void    setLookupProcedureColumns      (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO,        val); tmp.save(); } }
+	public void    setLookupSystemProcedureName   (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO,    val); tmp.save(); } }
+	public void    setLookupSystemProcedureColumns(boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO, val); tmp.save(); } }
+
 	/** if the back-end values for completion is needed to be refreshed or not */
 	private boolean _needRefresh = true;
+
+	/** if the back-end values for completion is needed to be refreshed or not */
+	private boolean _needRefreshSystemInfo = true;
 
 	/** GUI Owner, can be null */
 	protected Window _guiOwner = null;
@@ -33,20 +77,30 @@ extends DefaultCompletionProvider
 		_guiOwner           = owner;
 		_connectionProvider = connectionProvider;
 	}
-
+	
 //	/** Save completions that is added, since it's reseted if _needRefres */
 //	protected List<Completion> _savedComplitionList = new ArrayList<Completion>();
 	
 	/** Static completions that will be used as a "fallback" */
-	protected List<Completion> _staticCompletionList = new ArrayList<Completion>();
+	private List<Completion> _staticCompletionList = new ArrayList<Completion>();
 
+	public void resetStaticCompletion()
+	{
+		_staticCompletionList = new ArrayList<Completion>();
+	}
 	public void addStaticCompletion(Completion c)
 	{
+		if (_staticCompletionList == null)
+			_staticCompletionList = new ArrayList<Completion>();
+		
 		_staticCompletionList.add(c);
 //		super.addCompletion(c);
 	}
 	public List<Completion> getStaticCompletions()
 	{
+		if (_staticCompletionList == null)
+			_staticCompletionList = new ArrayList<Completion>();
+		
 		return _staticCompletionList;
 	}
 
@@ -70,6 +124,22 @@ extends DefaultCompletionProvider
 	public boolean needRefresh()
 	{
 		return _needRefresh;
+	}
+
+	/**
+	 * Mark this provider, to do refresh next time it's used
+	 */
+	public void setNeedRefreshSystemInfo(boolean needRefresh)
+	{
+		_needRefreshSystemInfo = needRefresh;
+		resetStaticCompletion();
+	}
+	/**
+	 * @return true if we need to refresh the back-end completion
+	 */
+	public boolean needRefreshSystemInfo()
+	{
+		return _needRefreshSystemInfo;
 	}
 
 
@@ -152,11 +222,21 @@ extends DefaultCompletionProvider
 		if ( text == null )
 			return retList;
 
+		boolean useRegExp = text.indexOf('*') >= 0;
+
 		// search
 		for (Completion c : completions)
 		{
-			if (Util.startsWithIgnoreCase(c.getInputText(), text))
-				retList.add(c);
+			if (useRegExp)
+			{
+				if (startsWithIgnoreCaseOrRegExp(c.getInputText(), text))
+					retList.add(c);
+			}
+			else
+			{
+				if (Util.startsWithIgnoreCase(c.getInputText(), text))
+					retList.add(c);
+			}
 		}
 
 		return retList;
@@ -236,6 +316,11 @@ extends DefaultCompletionProvider
 			// (?i) = case-insensitive after this char.
 			// and replace '*' with '.*'
 			String regexp = "(?i)" + start.replace("*", ".*");
+
+			// Add "any" wild card search at the end.
+			if  ( ! regexp.endsWith(".*") )
+				regexp += ".*";
+					
 			return str.matches(regexp);
 		}
 		int startLen = start.length();

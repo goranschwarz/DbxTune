@@ -2,16 +2,21 @@ package com.asetune.ui.rsyntaxtextarea;
 
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 
 import javax.swing.ActionMap;
 import javax.swing.JComponent;
+import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.event.HyperlinkListener;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
 
+import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.NextWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
@@ -179,4 +184,78 @@ extends RSyntaxTextArea
 //		
 //		return superToolTip;
 //	}
+
+	private ToolTipHyperlinkResolver _hyperlinkResolver = null;
+	/**
+	 * Sets the ToolTipHyperlinkResolver where you can decide what to do when a link is pressed within the ToolTip window
+	 * @param hyperlinkResolver
+	 */
+	public void setToolTipHyperlinkResolver(ToolTipHyperlinkResolver hyperlinkResolver)
+	{
+		_hyperlinkResolver = hyperlinkResolver;
+	}
+	/**
+	 * Get the installed ToolTipHyperlinkResolver
+	 * @return null if not installed, otherwise the Resolver installed
+	 */
+	public ToolTipHyperlinkResolver getToolTipHyperlinkResolver()
+	{
+		return _hyperlinkResolver;
+	}
+	
+	private FocusableTip _focusableTip = null;
+	/**
+	 * Create your own Focusable ToolTip
+	 * 
+	 * @param textArea The JTextArea
+	 * @param listener if you want to replace the HyperlinkListener in the FocusableToolTip window. Note: all the default functionality will be replaced.
+	 * 
+	 * @return The instance to be used by RSyntaxTextArea
+	 */
+	public FocusableTip createFocusableTip(JTextArea textArea, HyperlinkListener listener)
+	{
+		FocusableTip ft = new FocusableTip(textArea, listener, getToolTipHyperlinkResolver());
+System.out.println("###############:createFocusableTip() created: ft="+ft);
+		return ft;
+	}
+
+	/**
+	 * Try to make our own focusableTip, which can handle http links
+	 * @param e The mouse event.
+	 */
+	@Override
+	public String getToolTipText(MouseEvent e) 
+	{
+super.setUseFocusableTips(false);
+		String text = super.getToolTipText(e);
+		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: getUseFocusableTips()="+getUseFocusableTips()+"super.text="+text);
+
+		// Do we want to use "focusable" tips?
+//		if (getUseFocusableTips()) 
+		if (true) 
+		{
+			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: _focusableTip="+_focusableTip);
+
+			if (text!=null) 
+			{
+				if (_focusableTip == null) 
+					_focusableTip = createFocusableTip(this, null);
+
+//				_focusableTip.setImageBase(imageBase);
+				_focusableTip.toolTipRequested(e, text);
+			}
+			// No tool tip text at new location - hide tip window if one is
+			// currently visible
+			else if (_focusableTip != null) 
+			{
+				_focusableTip.possiblyDisposeOfTipWindow();
+			}
+			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: after getUseFocusableTips(): returns null");
+			return null;
+		}
+
+		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: at the end, returns text="+text);
+		return text;
+	}
+	
 }

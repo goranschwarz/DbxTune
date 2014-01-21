@@ -798,6 +798,143 @@ public class AseConnectionUtils
 		}
 	}
 
+	public static String getAseCharset(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = 
+				"declare @charid tinyint \n" +
+				"select @charid = value from master..syscurconfigs where config = 131 \n" +
+				"" +
+				"select charset_name = name  from master..syscharsets   where id = @charid \n";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE charset, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getAseSortorder(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = 
+				"declare @sortid tinyint, @charid tinyint \n" +
+				"select @sortid = value from master..syscurconfigs where config = 123 \n" +
+				"select @charid = value from master..syscurconfigs where config = 131 \n" +
+				"" +
+				"select sortorder_name= name  from master..syscharsets   where id = @sortid and csid = @charid \n";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE sortorder, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getAsaCharset(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select * from syscollation";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(2).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE charset, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getAsaSortorder(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select * from syscollation";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(3).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE charset, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
 	/** Check if a connection is ok or not, no GUI error, just return true or false */
 	public static boolean isConnectionOk(Connection conn)
 	{
@@ -976,13 +1113,21 @@ public class AseConnectionUtils
 			}
 			else if (servicePack < 100)
 			{
-				int mainEsd = servicePack / 10;
-				int subEsd  = servicePack % 10;
-				String esdStr = Integer.toString(mainEsd);
-				if (subEsd > 0)
-					esdStr = mainEsd + "." + subEsd;
-				
-				return major + "." + minor + "." + maintenance + " ESD#" + esdStr;
+				// ASE 15.7 (and above): if SP 50 and above write SP instead of ESD#x.y 
+				if (major >= 15 && minor >= 7 && servicePack >= 50)
+				{
+					return major + "." + minor + "." + maintenance + " SP" + servicePack;
+				}
+				else
+				{
+					int mainEsd = servicePack / 10;
+					int subEsd  = servicePack % 10;
+					String esdStr = Integer.toString(mainEsd);
+					if (subEsd > 0)
+						esdStr = mainEsd + "." + subEsd;
+					
+					return major + "." + minor + "." + maintenance + " ESD#" + esdStr;
+				}
 			}
 			else
 			{
@@ -1110,8 +1255,14 @@ public class AseConnectionUtils
 					aseEsdStrArrayPos = i;
 				}
 
-				// Check for "SAP Service Pack"
+				// Check for "SAP Service Pack, with three numbers SP100, SP110, etc"
 				if ( aseVersionParts[i].matches(".* SP[0-9][0-9][0-9].*") && servivePackStr == null)
+				{
+					servivePackStr         = aseVersionParts[i];
+					servivePackStrArrayPos = i;
+				}
+				// Check for "SAP Service Pack, with three numbers SP50, SP51, etc"
+				if ( aseVersionParts[i].matches(".* SP[0-9][0-9].*") && servivePackStr == null)
 				{
 					servivePackStr         = aseVersionParts[i];
 					servivePackStrArrayPos = i;
@@ -1573,7 +1724,7 @@ public class AseConnectionUtils
 			}
 			rs.close();
 
-			if ( ! aseVersionStr.startsWith("Adaptive Server Enterprise") )
+			if ( ! aseVersionStr.startsWith(DbUtils.DB_PROD_NAME_SYBASE_ASE) )
 			{
 				String msg = "This doesn't look like an ASE server. @@version='"+aseVersionStr+"'.";
 				_logger.error(msg);
@@ -3198,7 +3349,7 @@ public class AseConnectionUtils
 	 * Get (procedure) text about an object
 	 * 
 	 * @param conn       Connection to the database
-	 * @param dbname     Name of the database
+	 * @param dbname     Name of the database (if null, current db will be used)
 	 * @param objectName Name of the procedure/view/trigger...
 	 * @param owner      Name of the owner, if null is passed, it will be set to 'dbo'
 	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
@@ -3356,11 +3507,17 @@ public class AseConnectionUtils
 		}
 		else
 		{
+			String dbnameStr = dbname;
+			if (dbnameStr == null)
+				dbnameStr = "";
+			else
+				dbnameStr = dbname + ".dbo.";
+				
 			//--------------------------------------------
 			// GET OBJECT TEXT
 			String sql;
 			sql = " select c.text "
-				+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c, "+dbname+"..sysusers u \n"
+				+ " from "+dbnameStr+"sysobjects o, "+dbnameStr+"syscomments c, "+dbnameStr+"sysusers u \n"
 				+ " where o.name = '"+objectName+"' \n"
 				+ "   and u.name = '"+owner+"' \n" 
 				+ "   and o.id   = c.id \n"
@@ -3381,7 +3538,8 @@ public class AseConnectionUtils
 				rs.close();
 				statement.close();
 
-				returnText = sb.toString();
+				if (sb.length() > 0)
+					returnText = sb.toString();
 			}
 			catch (SQLException e)
 			{
@@ -3610,6 +3768,12 @@ public class AseConnectionUtils
 		version = 1570042; System.out.println(version + " = "+ versionIntToStr(version));
 		version = 1570000; System.out.println(version + " = "+ versionIntToStr(version));
 		version = 1570100; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570120; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570150; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570160; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570050; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570051; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1570060; System.out.println(version + " = "+ versionIntToStr(version));
 
 		testVersion(1250011, "12.5.0 ESD#1.1");
 		testVersion(1250030, "Adaptive Server Enterprise/12.5.0.3/EBF 11449 ESD#4/...");
@@ -3631,6 +3795,9 @@ public class AseConnectionUtils
 		testVersion(1570200, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP200 /P/x86_64/...");   
 		testVersion(1570999, "Adaptive Server Enterprise/15.7/EBF 16748 SMP SP2000 /P/x86_64/...");  
 		testVersion(1571100, "Adaptive Server Enterprise/15.7.1/EBF 16748 SMP SP100 /P/x86_64/...");   
+
+		testVersion(1570050, "Adaptive Server Enterprise/15.7.0/EBF 21207 SMP SP50 /P/Solaris AMD64/...");
+		testVersion(1570051, "Adaptive Server Enterprise/15.7.0/EBF 21757 SMP SP51 /P/x86_64/Enterprise Linux/...");
 	}
 	
 	private static boolean testVersion(int expectedIntVer, String verStr)

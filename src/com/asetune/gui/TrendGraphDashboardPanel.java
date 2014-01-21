@@ -157,7 +157,9 @@ extends JPanel
 		// Create a separate Panel for the things to position at the top...
 		JPanel topPanel = new JPanel(new MigLayout("insets 0 0 0 0", "", ""));
 
-		topPanel.add(_maxChartHistoryInMinutes_lbl, "split 7, center, gaptop 10");
+		topPanel.add(new JLabel(""),                "span 8, align center, gaptop 10, pushx"); // Dummy to fill up space
+		topPanel.add(_maxChartHistoryInMinutes_lbl, "");
+//		topPanel.add(_maxChartHistoryInMinutes_lbl, "split 7, align center, gaptop 10");
 		topPanel.add(_maxChartHistoryInMinutes_sp,  "");
 
 		topPanel.add(_maxInMemHistoryEnabled_chk,   "gap 10");

@@ -4,7 +4,7 @@
 
 package com.asetune.gui;
 
-import java.awt.Frame;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -21,6 +21,8 @@ import javax.swing.UIManager;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.asetune.utils.StringUtil;
+
 public class ParameterDialog
 	extends JDialog
 	implements ActionListener
@@ -36,9 +38,10 @@ public class ParameterDialog
 	private JButton                 _apply          = new JButton("Apply");
 	private boolean                 _showApply      = true;
 
-	private ParameterDialog(Frame owner, String title, LinkedHashMap<String, String> input, boolean showApply)
+	private ParameterDialog(Window owner, String title, LinkedHashMap<String, String> input, boolean showApply)
 	{
-		super(owner, title, true);
+		super(owner, title);
+		setModal(true);
 		_showApply = showApply;
 		_inputMap = input;
 		initComponents();
@@ -46,7 +49,7 @@ public class ParameterDialog
 	}
 
 
-	public static Map<String, String> showParameterDialog(Frame owner, String title, LinkedHashMap<String, String> input, boolean showApply)
+	public static Map<String, String> showParameterDialog(Window owner, String title, LinkedHashMap<String, String> input, boolean showApply)
 	{
 		ParameterDialog params = new ParameterDialog(owner, title, input, showApply);
 		params.setLocationRelativeTo(owner);
@@ -73,7 +76,7 @@ public class ParameterDialog
 			String value = entry.getValue();
 
 			JLabel     label = new JLabel(key);
-			JTextField comp  = new JTextField(value);
+			JTextField comp  = new JTextField(StringUtil.escapeControlChars(value));
 			
 			// Listen for "return" and any other "key pressing"
 			// This simply enables/disable the "apply" button if anything was changed.
@@ -120,7 +123,7 @@ public class ParameterDialog
 			JTextField value = entry.getValue();
 			//System.out.println("key="+key+", value="+value);
 
-			_outputMap.put(key, value.getText());
+			_outputMap.put(key, StringUtil.unEscapeControlChars(value.getText()));
 		}
 	}
 

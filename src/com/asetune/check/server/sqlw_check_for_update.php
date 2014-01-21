@@ -64,7 +64,7 @@
 	$SQLW_LATEST_VERSION_STR = "2013-06-28";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL            = "www.asetune.com/history.html";
-	$SEND_OPTIONS            = "sendConnectInfo=false, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
+	$SEND_OPTIONS            = "sendConnectInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
 //	$FEEDBACK_URL            = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL            = "";
 //	$PROBLEM_URL             = "2012-06-01:www.asemon.se/asetune_problem.html";

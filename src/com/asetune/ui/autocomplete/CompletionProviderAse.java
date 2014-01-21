@@ -17,12 +17,15 @@ import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
+import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.parser.QueryWindowMessageParser;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.StringUtil;
 
 public class CompletionProviderAse
 extends CompletionProviderAbstractSql
@@ -31,7 +34,7 @@ extends CompletionProviderAbstractSql
 
 	protected Map<String, String> _aseMonTableDesc = new HashMap<String, String>();
 
-	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
+	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
 		_logger.info("Installing Syntax and AutoCompleation for Sybase ASE ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL+").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
@@ -44,9 +47,13 @@ extends CompletionProviderAbstractSql
 //		ac.setChoicesWindowSize(600, 600);
 		ac.setDescriptionWindowSize(600, 600);
 
-//		textPane.addParser(new SybaseAseParser());
-//		// enable the ErrorStripe ????
-//		errorStrip.setVisible(true);
+		textPane.addParser(new QueryWindowMessageParser(scroll));
+		
+		// enable the ErrorStripe ????
+		errorStrip.setVisible(true);
+		
+		// enable the "icon" area on the left side
+		scroll.setIconRowHeaderEnabled(true);
 
 		return acProvider;
 	}
@@ -98,37 +105,51 @@ extends CompletionProviderAbstractSql
 		// language semantics. It simply checks the text entered up to the
 		// caret position for a match against known completions. This is all
 		// that is needed in the majority of cases.
-		CompletionProviderAbstract provider = new CompletionProviderAse(window, connectionProvider);
+		CompletionProviderAse provider = new CompletionProviderAse(window, connectionProvider);
+		
+		provider.refreshCompletionForStaticCmds();
 		
 //String template = "for (int ${i} = 0; ${i} < ${array}.length; ${i}++) {\n\t${cursor}\n}";
 //TemplateCompletion tc = new TemplateCompletion(provider, "for", "for-loop", template);
 //provider.addStaticCompletion(tc);
 
+		return provider;
+	}
+
+
+	//##############################################################################
+	//##############################################################################
+	//##############################################################################
+	@Override
+	protected void refreshCompletionForStaticCmds()
+	{
+		resetStaticCompletion();
+
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		provider.addStaticCompletion(new BasicCompletion(provider, "SELECT * FROM "));
-		provider.addStaticCompletion(new BasicCompletion(provider, "SELECT row_count(db_id()), object_id('') "));
-		provider.addStaticCompletion(new BasicCompletion(provider, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
-		provider.addStaticCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTables ORDER BY TableName"));
-		provider.addStaticCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
+		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM "));
+		addStaticCompletion(new BasicCompletion(this, "SELECT row_count(db_id()), object_id('') "));
+		addStaticCompletion(new BasicCompletion(this, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
+		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM master..monTables ORDER BY TableName"));
+		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
 
 		// Add a couple of "shorthand" completions. These completions don't
 		// require the input text to be the same thing as the replacement text.
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_helptext",        "exec sp_helptext 'procname', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_helptext",        "exec sp_helptext 'procname', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
+		addStaticCompletion(new ShorthandCompletion(this, "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",
+		addStaticCompletion(new ShorthandCompletion(this, "sp_cacheconfig",
 				"/*  \n" +
 				"** Below is commands/instructions to setup a log cache on a 2K server \n" +
 				"** If you have another server page size, values needs to be changed \n" +
@@ -153,32 +174,26 @@ extends CompletionProviderAbstractSql
 				"",
 				"Create a 'log cache' and bind database(s) to it."));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		addStaticCompletion(new ShorthandCompletion(this, "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		addStaticCompletion(new ShorthandCompletion(this, "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		addStaticCompletion(new ShorthandCompletion(this, "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
 
 		// monTables
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"monTables",  
 				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
 				"Get monitor tables in this system."));
 		// monColumns
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"monColumns", 
 				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
 		
 		// \exec  and \rpc templates
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		
-		return provider;
+		addStaticCompletion(new ShorthandCompletion(this, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		addStaticCompletion(new ShorthandCompletion(this, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
 	}
 
-
-	//##############################################################################
-	//##############################################################################
-	//##############################################################################
 	/**
 	 * REFRESH miscellaneous
 	 */
@@ -189,6 +204,9 @@ extends CompletionProviderAbstractSql
 //System.out.println("ASE: refreshCompletionForMisc()");
 		if (waitDialog.wasCancelPressed())
 			return;
+
+		// get some basic things
+		super.refreshCompletionForMisc(conn, waitDialog);
 
 		// Obtain a DatabaseMetaData object from our current connection        
 //		DatabaseMetaData dbmd = conn.getMetaData();
@@ -259,7 +277,7 @@ extends CompletionProviderAbstractSql
 			rs.close();
 			stmnt.close();
 
-			// If Count number of databases hasn't change, then we dont need to refresh this again.
+			// If Count number of databases hasn't change, then we don't need to refresh this again.
 			if (dbCount == _dbInfoList.size())
 				return _dbInfoList;
 		}
@@ -297,6 +315,55 @@ extends CompletionProviderAbstractSql
 		stmnt.close();
 
 		return dbInfoList;
+	}
+
+
+	//##############################################################################
+	//##############################################################################
+	//##############################################################################
+	/**
+	 * REFRESH schema list
+	 */
+	@Override
+	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
+	throws SQLException
+	{
+		final String stateMsg = "Getting Schema information";
+		waitDialog.setState(stateMsg);
+
+		ArrayList<SchemaInfo> schemaInfoList = new ArrayList<SchemaInfo>();
+
+		String catalog = "";
+		if (catalogName != null)
+			catalog = catalogName + ".dbo.";
+		
+		if (schemaName != null)
+		{
+			schemaName = schemaName.replace('*', '%').trim();
+			if ( ! schemaName.endsWith("%") )
+				schemaName += "%";
+		}
+
+		String sql = "select name from "+catalog+"sysusers where suid > 0 and name like '"+schemaName+"'";
+
+		Statement stmnt = conn.createStatement();
+		ResultSet rs = stmnt.executeQuery(sql);
+		while(rs.next())
+		{
+			SchemaInfo si = new SchemaInfo();
+
+			si._cat  = StringUtil.isNullOrBlank(catalogName) ? _currentCatalog :  catalogName;
+			si._name = rs.getString(1);
+
+			schemaInfoList.add(si);
+
+			if (waitDialog.wasCancelPressed())
+				return schemaInfoList;
+		}
+		rs.close();
+		stmnt.close();
+
+		return schemaInfoList;
 	}
 
 	//##############################################################################
@@ -340,20 +407,24 @@ extends CompletionProviderAbstractSql
 	 * REFRESH table columns list
 	 */
 	@Override
-	protected void refreshCompletionForTableColumns(Connection conn, WaitForExecDialog waitDialog, List<TableInfo> tableInfoList)
+	protected void refreshCompletionForTableColumns(Connection conn, WaitForExecDialog waitDialog, List<TableInfo> tableInfoList, boolean bulkGetColumns)
 	throws SQLException
 	{
-		boolean doLocalRefresh = true;
-		
-		if ( ! doLocalRefresh )
+		boolean letSuperDoMostWork = true;
+
+		if ( letSuperDoMostWork )
 		{
+//System.out.println("ASE:refreshCompletionForTableColumns(): letSuperDoMostWork=TRUE");
 			// Let the SUPER do most of the job
-			super.refreshCompletionForTableColumns(conn, waitDialog, tableInfoList);
+			super.refreshCompletionForTableColumns(conn, waitDialog, tableInfoList, bulkGetColumns);
 		}
 		else
 		{
+//System.out.println("ASE:refreshCompletionForTableColumns(): tableInfoList.size()="+tableInfoList.size()+", bulkGetColumns="+bulkGetColumns);
 			waitDialog.setState("Getting ASE Table Column information");
-	
+
+			// FIXME: loop all tableInfoList to get databases, add the database names to a list, loop the db.list and execute below SQL.
+			//        but below SQL also needs to be changed to be prefixed with the database names.
 			String sql =
 				"select \n" +
 				"    objectName = o.name,     \n" +
@@ -495,12 +566,49 @@ extends CompletionProviderAbstractSql
 	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
+		return refreshCompletionForProcedures(conn, waitDialog, null, null, null);
+	}
+	@Override
+	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)
+	throws SQLException
+	{
 //System.out.println("ASE: refreshCompletionForProcedures()");
 		waitDialog.setState("Getting Procedure information");
 
 		ArrayList<ProcedureInfo> procInfoList = new ArrayList<ProcedureInfo>();
 
-		String sql = "select db_name(), user_name(uid), name from sysobjects where type = 'P'";
+		String catColSql = "db_name()";
+		if (catalogName == null)
+			catalogName = "";
+		else
+		{
+			catColSql = "'"+catalogName+"'"; // simply use the input parameter as the result
+			catalogName += "..";
+		}
+		
+		String schColSql = "user_name(uid)";
+		if (schemaName == null)
+			schemaName = "";
+		else
+		{
+			schColSql = "'"+schemaName+"'"; // simply use the input parameter as the result
+//			schemaName = " and uid = user_id('"+schemaName+"')";
+			schemaName = " and uid = (select uid from "+catalogName+"sysusers where name = '"+schemaName+"')";
+		}
+		
+		if (procName == null)
+			procName = "";
+		else
+		{
+			procName = procName.replace('*', '%').trim();
+			if ( ! procName.endsWith("%") )
+				procName += "%";
+			procName = " and name like '"+procName+"'";
+		}
+
+//		String sql = "select db_name(), user_name(uid), name from "+catalogName+"sysobjects where type in('P', 'SF') " + procName; // SF = Function
+		String sql = "select "+catColSql+", "+schColSql+", name from "+catalogName+"sysobjects where type in('P') " + procName + schemaName;
+//System.out.println("ASE: refreshCompletionForProcedures() SQL: "+sql);
 
 		Statement stmnt = conn.createStatement();
 		ResultSet rs = stmnt.executeQuery(sql);
@@ -532,82 +640,94 @@ extends CompletionProviderAbstractSql
 	 * REFRESH procedure parameters
 	 */
 	@Override
-	protected void refreshCompletionForProcedureParameters(Connection conn, WaitForExecDialog waitDialog, List<ProcedureInfo> procedureInfoList)
+	protected void refreshCompletionForProcedureParameters(Connection conn, WaitForExecDialog waitDialog, List<ProcedureInfo> procedureInfoList, boolean bulkMode)
 	throws SQLException
 	{
-//System.out.println("ASE: refreshCompletionForProcedureParameters()");
-		waitDialog.setState("Getting Procedure Parameter information");
+		boolean letSuperDoMostWork = true;
 
-		String sql =
-			"select \n" +
-			"    objectName = o.name,     \n" +
-			"    colName    = c.name,     \n" +
-			"    colPos     = c.colid,    \n" +
-			"    colType    = t.name,     \n" +
-//			"    colType2   = d.type_name,\n" +
-			"    length     = c.length,   \n" +
-			"    scale      = c.scale,    \n" +
-			"    nullable   = convert(smallint, convert(bit, c.status & 8)),  \n" +
-			"    xxx        = 'END'       \n" +
-//			"from sysobjects o, syscolumns c, systypes t, sybsystemprocs.dbo.spt_datatype_info d  \n" +
-			"from sysobjects o, syscolumns c, systypes t  \n" +
-			"where 1=1  \n" +
-			"  and o.type     = 'P'  \n" +
-			"  and o.id       = c.id \n" +
-			"  and c.usertype = t.usertype  \n" +
-//			"  and t.type     = d.ss_dtype  \n" +
-			"order by 1, 3";
-
-		String prevProcName = "";
-		ProcedureInfo procInfo = null;
-
-		Statement stmnt = conn.createStatement();
-		ResultSet rs = stmnt.executeQuery(sql);
-		while(rs.next())
+		if ( letSuperDoMostWork )
 		{
-			int c=1;
-			String procName = rs.getString(c++);
-
-			ProcedureParameterInfo pi = new ProcedureParameterInfo();
-			pi._paramName       = rs.getString(c++);
-			pi._paramPos        = rs.getInt   (c++);
-			pi._paramType       = rs.getString(c++);
-//			pi._paramType2      = rs.getString(c++);
-			pi._paramLength     = rs.getInt   (c++);
-			pi._paramScale      = rs.getInt   (c++);
-			pi._paramIsNullable = rs.getInt   (c++);
-//			pi._paramRemark     = rs.getString();
-//			pi._paramDefault    = rs.getString();
-
-//			// Get "real" datatype (if it was a user defined type)
-//			if ( ! pi._paramType.equals(pi._paramType2) )
-//				pi._paramType = pi._paramType + " ("+pi._paramType2+")";
-
-			if ( ! prevProcName.equals(procName) )
-			{
-				prevProcName = procName;
-				procInfo = getProcedureInfo(procName);
-			}
-			if (procInfo == null)
-				continue;
-
-			procInfo.addParameter(pi);
-
-			if (waitDialog.wasCancelPressed())
-				return;
+//System.out.println("ASE:refreshCompletionForProcedureParameters(): letSuperDoMostWork=TRUE");
+			// Let the SUPER do most of the job
+			super.refreshCompletionForProcedureParameters(conn, waitDialog, procedureInfoList, bulkMode);
 		}
-		rs.close();
-		stmnt.close();
-
-		return;
-//		// ADD Column information
-//		for (ProcedureInfo pi : procedureInfoList)
-//		{
-//			if (waitDialog.wasCancelPressed())
-//				return;
-//
-//			waitDialog.setState("Getting Parameter information for Procedure '"+pi._procName+"'.");
-//		}
+		else
+		{
+//System.out.println("ASE: refreshCompletionForProcedureParameters()");
+//System.out.println("refreshCompletionForProcedureParameters(): procedureInfoList.size()="+procedureInfoList.size()+", bulkMode="+bulkMode);
+			waitDialog.setState("Getting Procedure Parameter information");
+	
+			String sql =
+				"select \n" +
+				"    objectName = o.name,     \n" +
+				"    colName    = c.name,     \n" +
+				"    colPos     = c.colid,    \n" +
+				"    colType    = t.name,     \n" +
+//				"    colType2   = d.type_name,\n" +
+				"    length     = c.length,   \n" +
+				"    scale      = c.scale,    \n" +
+				"    nullable   = convert(smallint, convert(bit, c.status & 8)),  \n" +
+				"    xxx        = 'END'       \n" +
+//				"from sysobjects o, syscolumns c, systypes t, sybsystemprocs.dbo.spt_datatype_info d  \n" +
+				"from sysobjects o, syscolumns c, systypes t  \n" +
+				"where 1=1  \n" +
+				"  and o.type     = 'P'  \n" +
+				"  and o.id       = c.id \n" +
+				"  and c.usertype = t.usertype  \n" +
+//				"  and t.type     = d.ss_dtype  \n" +
+				"order by 1, 3";
+	
+			String prevProcName = "";
+			ProcedureInfo procInfo = null;
+	
+			Statement stmnt = conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+			while(rs.next())
+			{
+				int c=1;
+				String procName = rs.getString(c++);
+	
+				ProcedureParameterInfo pi = new ProcedureParameterInfo();
+				pi._paramName       = rs.getString(c++);
+				pi._paramPos        = rs.getInt   (c++);
+				pi._paramType       = rs.getString(c++);
+//				pi._paramType2      = rs.getString(c++);
+				pi._paramLength     = rs.getInt   (c++);
+				pi._paramScale      = rs.getInt   (c++);
+				pi._paramIsNullable = rs.getInt   (c++);
+//				pi._paramRemark     = rs.getString();
+//				pi._paramDefault    = rs.getString();
+	
+//				// Get "real" datatype (if it was a user defined type)
+//				if ( ! pi._paramType.equals(pi._paramType2) )
+//					pi._paramType = pi._paramType + " ("+pi._paramType2+")";
+	
+				if ( ! prevProcName.equals(procName) )
+				{
+					prevProcName = procName;
+					procInfo = getProcedureInfo(procName);
+				}
+				if (procInfo == null)
+					continue;
+	
+				procInfo.addParameter(pi);
+	
+				if (waitDialog.wasCancelPressed())
+					return;
+			}
+			rs.close();
+			stmnt.close();
+	
+			return;
+//			// ADD Column information
+//			for (ProcedureInfo pi : procedureInfoList)
+//			{
+//				if (waitDialog.wasCancelPressed())
+//					return;
+//	
+//				waitDialog.setState("Getting Parameter information for Procedure '"+pi._procName+"'.");
+//			}
+		}
 	}
 
 	//##############################################################################

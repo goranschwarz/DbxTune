@@ -1,4 +1,4 @@
-package com.asetune.tools;
+package com.asetune.tools.sqlw;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -77,13 +77,16 @@ import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
-import com.asetune.tools.RsLastcommit.OriginNotFoundException;
+import com.asetune.tools.NormalExitException;
+import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlw.RsLastcommit.OriginNotFoundException;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
 import com.asetune.utils.JavaVersion;
@@ -1439,14 +1442,14 @@ implements ActionListener
 				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
 		}
 		
-		if ( connType == ConnectionDialog.ASE_CONN)
+		if ( connType == ConnectionDialog.TDS_CONN)
 		{
 			_conn = connDialog.getAseConn();
 
 //			if (_conn != null)
 			if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
 			{
-				if (connDialog.isDatabaseProduct(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
+				if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
 				{
 					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
 					_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
@@ -1711,7 +1714,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 //			_disconnect_but .setEnabled(true);
 //		}
 //
-////		if ( _connType == ConnectionDialog.ASE_CONN)
+////		if ( _connType == ConnectionDialog.TDS_CONN)
 ////		{
 ////			// Set server name in windows - title
 ////			String aseSrv      = AseConnectionFactory.getServer();
@@ -1768,7 +1771,8 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 //				_asPlainText    .setEnabled(false);
 
 				setSrvInTitle(null);
-				_statusBar.setServerName(null, null, null, null, null, null, null);
+//				_statusBar.setServerName(null, null, null, null, null, null, null);
+				_statusBar.setNotConnected();
 			}
 			catch (SQLException ex)
 			{

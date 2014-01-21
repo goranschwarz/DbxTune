@@ -261,7 +261,8 @@ extends CountersModel
 			+ "  WaitEventDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
 			+ "  MP.SecondsWaiting, MP.BlockingSPID, MP.Command, \n"
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
-			+ "  procName = object_name(SP.id, SP.dbid), SP.stmtnum, SP.linenum, \n"
+			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
+			+ "  SP.stmtnum, SP.linenum, \n"
 			+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
 			+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"

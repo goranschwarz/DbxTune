@@ -956,6 +956,9 @@ public class MonTablesDictionary
 	 */
 	public void addTable(String tabName, String desc)
 	{
+		if (_monTables == null)
+			throw new NullPointerException("Dictionary is not initialized or valid. (_monTables is null)");
+
 		MonTableEntry entry = new MonTableEntry();
 
 		entry._tableName    = tabName;
@@ -978,6 +981,9 @@ public class MonTablesDictionary
 	public void addColumn(String tabName, String colName, String desc)
 	throws NameNotFoundException
 	{
+		if (_monTables == null)
+			throw new NullPointerException("Dictionary is not initialized or valid. (_monTables is null)");
+
 		MonTableEntry monTableEntry = _monTables.get(tabName);
 		
 		if (monTableEntry == null)
@@ -1024,6 +1030,9 @@ public class MonTablesDictionary
 	public void setColumn(String tabName, String colName, String desc)
 	throws NameNotFoundException
 	{
+		if (_monTables == null)
+			throw new NullPointerException("Dictionary is not initialized. (_monTables is null)");
+
 		MonTableEntry monTableEntry = _monTables.get(tabName);
 		
 		if (monTableEntry == null)

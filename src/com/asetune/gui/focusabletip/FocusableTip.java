@@ -62,6 +62,7 @@ public class FocusableTip {
 	private URL imageBase;
 	private TextAreaListener textAreaListener;
 	private HyperlinkListener hyperlinkListener;
+	private ToolTipHyperlinkResolver hyperlinkResolver;
 	private String lastText;
 
 	/**
@@ -93,19 +94,19 @@ public class FocusableTip {
 //		textAreaListener = new TextAreaListener();
 //		tipVisibleBounds = new Rectangle();
 //	}
-	public FocusableTip(JComponent comp, HyperlinkListener listener) {
+	public FocusableTip(JComponent comp, HyperlinkListener listener, ToolTipHyperlinkResolver hyperlinkResolver) {
 //		setTextArea(comp);
 		setComponentArea(comp);
 		this.hyperlinkListener = listener;
+		this.hyperlinkResolver = hyperlinkResolver;
 		textAreaListener = new TextAreaListener();
 		tipVisibleBounds = new Rectangle();
 	}
+	public FocusableTip(JComponent comp, HyperlinkListener listener) {
+		this(comp, listener, null);
+	}
 	public FocusableTip(JComponent comp) {
-//		setTextArea(comp);
-		setComponentArea(comp);
-		this.hyperlinkListener = null;
-		textAreaListener = new TextAreaListener();
-		tipVisibleBounds = new Rectangle();
+		this(comp, null, null);
 	}
 
 	/**
@@ -129,6 +130,7 @@ public class FocusableTip {
 		Window owner = SwingUtilities.getWindowAncestor(_comp);
 		tipWindow = new TipWindow(owner, this, text);
 		tipWindow.setHyperlinkListener(hyperlinkListener);
+		tipWindow.setHyperlinkResolver(hyperlinkResolver);
 
 		// Give apps a chance to decorate us with drop shadows, etc.
 //		PopupWindowDecorator decorator = PopupWindowDecorator.get();

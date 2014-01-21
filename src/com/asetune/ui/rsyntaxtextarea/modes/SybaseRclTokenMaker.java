@@ -31,8 +31,8 @@ import java.io.IOException;
 import javax.swing.text.Segment;
 
 import org.fife.ui.rsyntaxtextarea.AbstractJFlexTokenMaker;
-import org.fife.ui.rsyntaxtextarea.DefaultToken;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenImpl;
 
 
 /**
@@ -1151,6 +1151,7 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
 	 * @param startOffset The offset in the document at which this token
 	 *                    occurs.
 	 */
+	@Override
 	public void addToken(char[] array, int start, int end, int tokenType, int startOffset) {
 		super.addToken(array, start,end, tokenType, startOffset);
 		zzStartRead = zzMarkedPos;
@@ -1164,6 +1165,7 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
 	 * @return The start and end strings to add to a line to "comment"
 	 *         it out.
 	 */
+	@Override
 	public String[] getLineCommentStartAndEnd() {
 		return new String[] { "--", null };
 	}
@@ -1181,6 +1183,7 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
 	 * @return The first <code>Token</code> in a linked list representing
 	 *         the syntax highlighted text.
 	 */
+	@Override
 	public Token getTokenList(Segment text, int initialTokenType, int startOffset) {
 
 		resetTokenList();
@@ -1212,7 +1215,8 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
 			return yylex();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			return new DefaultToken();
+//			return new DefaultToken();
+			return new TokenImpl();
 		}
 
 	}
@@ -1402,7 +1406,8 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
    *
    * @param newState the new lexical state
    */
-  public final void yybegin(int newState) {
+  @Override
+public final void yybegin(int newState) {
     zzLexicalState = newState;
   }
 

@@ -73,7 +73,7 @@ implements ActionListener
 			return;
 
 		// Now
-		// - instansiate the class
+		// - Instantiate the class
 		// - set properties at it
 		// - Execute the thing
 
@@ -206,6 +206,7 @@ implements ActionListener
 				}
 			}
 		}
+		_logger.debug("PopupMenuAction: getParamValues() returns: "+paramValues);
 		return paramValues;
 	}
 

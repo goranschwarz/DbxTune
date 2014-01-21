@@ -24,8 +24,10 @@ import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextArea;
+import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.parser.QueryWindowMessageParser;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.ConnectionProvider;
@@ -42,7 +44,7 @@ extends CompletionProviderAbstract
 	
 	private ArrayList<RsCompletion> _rsdbList = new ArrayList<RsCompletion>();
 
-	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
+	public static CompletionProviderAbstract installAutoCompletion(TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connectionProvider)
 	{
 		_logger.info("Installing Syntax and AutoCompleation for Sybase Replication Server ("+AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL+").");
 		textPane.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL);
@@ -55,6 +57,14 @@ extends CompletionProviderAbstract
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
 //		ac.setChoicesWindowSize(600, 600);
 		ac.setDescriptionWindowSize(600, 600);
+
+		textPane.addParser(new QueryWindowMessageParser(scroll));
+
+		// enable the ErrorStripe ????
+		errorStrip.setVisible(true);
+		
+		// enable the "icon" area on the left side
+		scroll.setIconRowHeaderEnabled(true);
 
 		return acProvider;
 	}
@@ -132,16 +142,25 @@ extends CompletionProviderAbstract
 		// that is needed in the majority of cases.
 		CompletionProviderRepServer provider = new CompletionProviderRepServer(window, connectionProvider);
 
+		provider.refreshCompletionForStaticCmds();
+
+		return provider;
+	}
+
+	protected void refreshCompletionForStaticCmds()
+	{
+		resetStaticCompletion();
+
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		provider.addCompletion(new BasicCompletion(provider, "admin health"));
-		provider.addCompletion(new BasicCompletion(provider, "admin who_is_down"));
-		provider.addCompletion(new BasicCompletion(provider, "resume connection to "));
-		provider.addCompletion(new BasicCompletion(provider, "suspend connection to "));
+		addStaticCompletion(new BasicCompletion(this, "admin health"));
+		addStaticCompletion(new BasicCompletion(this, "admin who_is_down"));
+		addStaticCompletion(new BasicCompletion(this, "resume connection to "));
+		addStaticCompletion(new BasicCompletion(this, "suspend connection to "));
 
 		// Add a couple of "shorthand" completions. These completions don't
 		// require the input text to be the same thing as the replacement text.
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"resume connection",  
 					"resume connection to <srv.db>\n" +
 					"\t--skip transaction \n" +
@@ -149,18 +168,18 @@ extends CompletionProviderAbstract
 					"\t--execute transaction /* executes system transaction */\n", 
 				"Full syntax of the resume connection"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"suspend connection",  
 					"suspend connection to <srv.db>\n" +
 					"\t--with nowait /* suspends the connection without waiting for current DSI tran to complete */\n",
 				"Full syntax of the suspend connection"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"sysadmin dump_queue",  
 					"sysadmin dump_queue, <dbid>, 0, -1, -2, -1, client\n",
 				"Dump first queue block, for an outbound queue."));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"connect rssd",  
 					"connect rssd\n" +
 					"go\n" +
@@ -170,7 +189,7 @@ extends CompletionProviderAbstract
 					"go\n", 
 				"Connect to RSSD, SQL Statement, disconnect."));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"create connection ",  
 					"create connection to \"ACTIVE_ASE\".\"dbname\"\n" +
 					"\tset error class to \"rs_sqlserver_error_class\" \n" +
@@ -182,7 +201,7 @@ extends CompletionProviderAbstract
 					"\tas active for <lsrv.db> \n", 
 				"Create ACTIVE WS Connection"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"create connection ",  
 					"create connection to \"STANDBY_ASE\".\"dbname\"\n" +
 					"\tset error class to \"rs_sqlserver_error_class\" \n" +
@@ -195,17 +214,16 @@ extends CompletionProviderAbstract
 					"\tuse dump marker \n", 
 				"Create STANDBY WS Connection"));
 
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"trace dsi_buf_dump on ",  
 				"trace 'on', 'dsi', 'dsi_buf_dump'",
 				"Turn ON: Write SQL statements executed by the DSI Threads to the RS log"));
-		provider.addStaticCompletion(new ShorthandCompletion(provider, 
+		addStaticCompletion(new ShorthandCompletion(this, 
 				"trace dsi_buf_dump off ",  
 				"trace 'off', 'dsi', 'dsi_buf_dump'",
 				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
 
-//		provider.addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
-		return provider;
+//		addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
 	}
 
 	private static class ShorthandCompletionHtml
@@ -231,9 +249,14 @@ extends CompletionProviderAbstract
 	{
 		super.addCompletion(c);
 	}
+//	public void addRsCompletions(List<RsCompletion> list)
+//	{
+//		super.addCompletions(list);
+//	}
 	public void addRsCompletions(List<RsCompletion> list)
 	{
-		super.addCompletions(list);
+		for (RsCompletion c : list)
+			super.addCompletion(c);
 	}
 
 	@Override
@@ -272,6 +295,9 @@ extends CompletionProviderAbstract
 		{
 			// Clear old completions
 			clear();
+
+			if (getStaticCompletions().size() == 0)
+				refreshCompletionForStaticCmds();
 
 			// Restore the "saved" completions
 //			super.addCompletions(_savedComplitionList);

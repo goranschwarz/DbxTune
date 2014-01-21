@@ -83,7 +83,7 @@ extends TabularCntrPanel
 			public void actionPerformed(ActionEvent e)
 			{
 				String sql = "sp_asetune_qp_metrics 'drop'";
-				if ( ! getCm().getCounterController().isMonConnected() )
+				if ( ! getCm().isConnected() )
 				{
 					SwingUtils.showInfoMessage("Not Connected", "Sorry not connected to the database.");
 					return;
@@ -97,7 +97,7 @@ extends TabularCntrPanel
 				}
 				catch (SQLException ex)
 				{
-					SwingUtils.showErrorMessage("Problems", "Problems when dropping/purging the Query Plab Metrics", ex);
+					SwingUtils.showErrorMessage("Problems", "Problems when dropping/purging the Query Plan Metrics", ex);
 					_logger.warn("Problems execute SQL '"+sql+"', Caught: " + e.toString() );
 				}
 			}

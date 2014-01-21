@@ -11,6 +11,7 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Point;
@@ -493,9 +494,21 @@ public class SwingUtils
 				ErrorInfo info = new ErrorInfo(title, msg, null, category, exception, errorLevel, null);
 				errorPane.setErrorInfo(info);
 //				info.addHyperlinkListener(this); // the JXErrorPane/ErrorInfo doesn't support Hyperlinks
-				JDialog dialog = JXErrorPane.createDialog(finalOwner, errorPane);
+				final JDialog dialog = JXErrorPane.createDialog(finalOwner, errorPane);
 				dialog.pack();
 				dialog.setTitle(title);
+
+				// Try to set focus on the "Close" button, execute this *after* the window is visible
+				Runnable grabFocus = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						dialog.requestFocusInWindow();
+					}
+				};
+				SwingUtilities.invokeLater(grabFocus);
+				
 				dialog.setVisible(true);
 			}
 		};
@@ -925,17 +938,23 @@ public class SwingUtils
 		throw new ParseException("Color string '"+colorStr+"' can't be parsed. I tried 'int' & 'r,g,b[,a]|r.g.b[.a]' & '#rrggbb[aa]|0xrrggbb[aa]' & 'java colors' (out of parser implementations).", -1);
 	}
 
+	public static String tableToString(JTable jtable, int[] justRowNumbers)
+	{
+		int firstRow = justRowNumbers[0];
+		int lastRow  = justRowNumbers[justRowNumbers.length-1] + 1;
+		return tableToString(jtable, false, null, null, firstRow, lastRow, justRowNumbers);
+	}
 	public static String tableToString(JTable jtable, int justRowNumber)
 	{
-		return tableToString(jtable, false, null, null, justRowNumber, justRowNumber+1);
+		return tableToString(jtable, false, null, null, justRowNumber, justRowNumber+1, null);
 	}
 	public static String tableToString(JTable jtable)
 	{
-		return tableToString(jtable, false, null, null, -1, -1);
+		return tableToString(jtable, false, null, null, -1, -1, null);
 	}
 	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData)
 	{
-		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1);
+		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1, null);
 	}
 	/**
 	 * Turn a JTable's TableModel into a String table, can be used for putting into the copy/paste buffer.
@@ -966,7 +985,7 @@ public class SwingUtils
 //	private static String REGEXP_NEW_LINE = "[\\r\\n]+";
 //	private static String REGEXP_NEW_LINE = "[\\n\\x0B\\f\\r]+";
 
-	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow)
+	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers)
 	{
 		String colSepOther = "+";
 		String colSepData  = "|";
@@ -1008,6 +1027,21 @@ public class SwingUtils
 		//------------------------------------
 		for (int r=firstRow; r<lastRow; r++)
 		{
+			if (justRowNumbers != null)
+			{
+				boolean addThisRow = false;
+				for (int a=0; a<justRowNumbers.length; a++)
+				{
+					if ( r == justRowNumbers[a] )
+					{
+						addThisRow = true;
+						break;
+					}
+				}
+				if ( ! addThisRow )
+					continue;
+			}
+
 			ArrayList<Object> row = new ArrayList<Object>();
 			if (doPrefix)
 				for (int c=0; c<prefixColData.length; c++)
@@ -1225,6 +1259,82 @@ public class SwingUtils
 		return sb.toString();
 	}
 
+	public static String tableToHtmlString(JTable table)
+	{
+		StringBuilder sb = new StringBuilder();
+		int rows = table.getRowCount();
+		int cols = table.getColumnCount();
+
+		sb.append("<TABLE>\n");
+
+		// Headers
+		sb.append("  <TR>");
+		for (int c=0; c<cols; c++) 
+			sb.append(" <TH>").append(table.getColumnName(c)).append("</TH>");
+		sb.append(" </TR>\n");
+
+		// Rows
+		for (int r=0; r<rows; r++) 
+		{
+			sb.append("  <TR>");
+			for (int c=0; c<cols; c++) 
+				sb.append(" <TD>").append(table.getValueAt(r, c)).append("</TD>");
+			sb.append(" </TR>\n");
+		}
+		sb.append("</TABLE>\n");
+
+		return sb.toString();
+	}
+	public static String tableToCsvString(JTable table, boolean headers, String colSep, String rowSep, String tabNullValue, String outNullvalue)
+	{
+		StringBuilder sb = new StringBuilder();
+		int rows = table.getRowCount();
+		int cols = table.getColumnCount();
+
+		// Headers
+		if (headers)
+		{
+			for (int c=0; c<cols; c++) 
+			{
+				sb.append(table.getColumnName(c));
+
+				// Add column separator, but not for last column
+				if (c+1 < cols)
+					sb.append(colSep);
+			}
+			sb.append(rowSep);
+		}
+
+		// Rows
+		for (int r=0; r<rows; r++) 
+		{
+			for (int c=0; c<cols; c++) 
+			{
+				// FIXME: We would probably do something like:
+				// - get Object, + toString
+				// - escape any "new-line" characters
+				Object obj = table.getValueAt(r, c);
+				if (obj == null)
+				{
+					obj = outNullvalue;
+				}
+				else
+				{
+					if (obj.equals(tabNullValue))
+						obj = outNullvalue;
+				}
+				sb.append(obj);
+				
+				// Add column separator, but not for last column
+				if (c+1 < cols)
+					sb.append(colSep);
+			}
+			sb.append(rowSep);
+		}
+
+		return sb.toString();
+	}
+
 	/**
 	 * Convenience method to detect dataChanged table event type.
 	 * 
@@ -1299,6 +1409,18 @@ public class SwingUtils
 		return newModel;
 	}
 
+	/**
+	 * Get current screen resulution as a String
+	 * @return For example "1024x768"
+	 */
+	public static String getScreenResulutionAsString()
+	{
+		GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+		int width = gd.getDisplayMode().getWidth();
+		int height = gd.getDisplayMode().getHeight();
+		
+		return width + "x" + height;
+	}
 	/**
 	 * If the input parameters are smaller than the screen size then they will be used<br>
 	 * Otherwise the screen size will be used

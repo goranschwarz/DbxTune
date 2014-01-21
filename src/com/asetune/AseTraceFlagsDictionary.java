@@ -1015,6 +1015,7 @@ public class AseTraceFlagsDictionary
 		set(755   , "Validate the last prochdr setting by scanning all the sub prochdr to determine the lastphdr. This validation is only done in diagserver.");
 		set(756   , "In dataserver, print last chance cleanup information for procedure cache. The print is always on in diagserver.");
 		set(757   , "Reduce scale down for large allocation auto tune by replacing a procedure before scaling down. This is expected to reduce a performance drop in an ASE with a large procedure cache when it is almost full.");
+		set(758   , "Enable large ELC (4k, 8k and 16k pages) feature introduced under CR 652106-2 (splinlock contention for Resource->rproccache_spin is huge due to large memory allocation tuning.)");
 		set(800   , "Print err msg if buffer keep for already kept bp");
 		set(801   , "Print buf info every time buffer cleaned");
 		set(802   , "Print buf info for every read");

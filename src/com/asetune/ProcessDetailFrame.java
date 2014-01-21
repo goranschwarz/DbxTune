@@ -74,6 +74,7 @@ public class ProcessDetailFrame extends JFrame
 	protected JComboBox        _currentStmntSqlOrderBy_cbx     = new JComboBox();
 	protected JButton          _currentStmntSqlOrderBy_but     = new JButton("Remove from template");
 
+	private   int              spid;
 	private   int              kpid;
 	public    int              processRefreshInterv         = 1;
 	private   BorderLayout     borderLayout1                = new BorderLayout();
@@ -422,11 +423,12 @@ public class ProcessDetailFrame extends JFrame
 //	private Image        frameIcon;
 
 //	public ProcessDetailFrame(int k, int in_spid)
-	public ProcessDetailFrame(int KPID)
+	public ProcessDetailFrame(int SPID, int KPID)
 	{
 //		pdf = this;
 		try
 		{
+			spid = SPID;
 			kpid = KPID;
 			jbInit();
 		}
@@ -1004,7 +1006,7 @@ public class ProcessDetailFrame extends JFrame
 		this.getContentPane().add(statusPanel, BorderLayout.SOUTH);
 		this.getContentPane().add(mainTabbedPanel, BorderLayout.CENTER);
 
-		if (kpid > 0)
+		if (spid > 0 || kpid > 0)
 		{
 			mainTabbedPanel.add(processDetailScroll, "Summary");
 			mainTabbedPanel.add(statementsPan,       "Statements");
@@ -1216,6 +1218,7 @@ public class ProcessDetailFrame extends JFrame
 
 		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
 
+		spidFld.setText(Integer.toString(spid));
 		kpidFld.setText(Integer.toString(kpid));
 
 		// statementsPan.add(northPan, BorderLayout.NORTH);
@@ -1462,7 +1465,7 @@ public class ProcessDetailFrame extends JFrame
 		// Start refreshing this frame
 		if (cnx != null)
 		{
-			refressProcess = new RefreshProcess(this, cnx, kpid);
+			refressProcess = new RefreshProcess(this, cnx, spid, kpid);
 
 			refressProcess.setSqlTextSample( batchShowEnableCheckbox.isSelected() );
 			refressProcess.setPlanTextSample( planShowEnableCheckbox.isSelected() );

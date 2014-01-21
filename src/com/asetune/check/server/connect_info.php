@@ -41,6 +41,8 @@
 	$srvVersionStr      = getUrlParam('srvVersionStr');
 	$srvSortOrderId     = getUrlParam('srvSortOrderId');
 	$srvSortOrderName   = getUrlParam('srvSortOrderName');
+	$srvCharsetId       = getUrlParam('srvCharsetId');
+	$srvCharsetName     = getUrlParam('srvCharsetName');
 	$srvSapSystemInfo   = getUrlParam('srvSapSystemInfo');
 
 	$usePcs             = getUrlParam('usePcs');
@@ -84,6 +86,8 @@
 		srvVersionStr,
 		srvSortOrderId,
 		srvSortOrderName,
+		srvCharsetId,
+		srvCharsetName,
 		srvSapSystemInfo,
 
 		usePcs,
@@ -108,6 +112,8 @@
 		'$srvVersionStr',
 		'$srvSortOrderId',
 		'$srvSortOrderName',
+		'$srvCharsetId',
+		'$srvCharsetName',
 		'$srvSapSystemInfo',
 
 		'$usePcs',
