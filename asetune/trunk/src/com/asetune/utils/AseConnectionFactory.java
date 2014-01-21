@@ -1506,7 +1506,7 @@ public class AseConnectionFactory
 			if (dbmd != null)
 			{
 				String productName = dbmd.getDatabaseProductName();
-				if ("Adaptive Server Enterprise".equals(productName))
+				if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName))
 				{
 					// If this is not set to 'off', things like (print "any string") wont work
 					conn.createStatement().execute("set quoted_identifier off");

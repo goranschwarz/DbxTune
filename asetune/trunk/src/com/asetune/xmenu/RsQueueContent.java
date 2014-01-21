@@ -2,8 +2,8 @@ package com.asetune.xmenu;
 
 import java.sql.Connection;
 
-import com.asetune.tools.RsDumpQueueDialog;
 import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlw.RsDumpQueueDialog;
 import com.asetune.utils.SwingUtils;
 
 public class RsQueueContent

@@ -1,4 +1,4 @@
-package com.asetune.tools;
+package com.asetune.tools.sqlw;
 
 import java.sql.Connection;
 import java.sql.ResultSet;

@@ -1054,7 +1054,7 @@ implements Cloneable, ITableTooltip
 
 			// If we are not connected anymore, do not try to refresh
 			if (refresh)
-				refresh = getCounterController().isMonConnected(false, true);
+				refresh = isConnected();
 
 			if ( ! refresh)
 				setValidSampleData(false);
@@ -1512,7 +1512,7 @@ implements Cloneable, ITableTooltip
 			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
 
 			// If we reading an offline database, go there to fetch data...
-			if ( sql != null && ! getCounterController().isMonConnected() )
+			if ( sql != null && ! isConnected() )
 			{
 				// IF SPID, get values from JTable in OFFLINE MODE
 				if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
@@ -2456,7 +2456,7 @@ implements Cloneable, ITableTooltip
 	{
 		if (isInitialized())
 		{
-			if (getCounterController().isMonConnected())
+			if (isConnected())
 				doSqlClose();
 		}
 	}
@@ -3005,6 +3005,13 @@ implements Cloneable, ITableTooltip
 	 */
 	public boolean isConnected()
 	{
+		// If it's the GUI thread - AWT Event Dipatch Thread
+		// Get the "cached" or last known status, maintaned by getCounterController().isMonConnected()
+		// So never access the server to check if the connection is alive...
+		if (SwingUtils.isEventQueueThread())
+			return getCounterController().isMonConnectedStatus();
+
+		// else 
 		return getCounterController().isMonConnected();
 	}
 
@@ -3064,9 +3071,11 @@ implements Cloneable, ITableTooltip
 		if (e != null)
 		{
 			if (e instanceof DependsOnCmPostponeException)
-				_logger.info(e.toString()); // do not pass the "stacktrace" in the errorlog
+				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof SQLException)
+				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
 			else
-				_logger.info(e.toString(), e);
+				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
 		}
 	}
 
@@ -3353,10 +3362,12 @@ implements Cloneable, ITableTooltip
 			setSampleException(e);
 			
 			// If we got an exception, go and check if we are still connected
-//			if (getCounterController().isMonConnected(true, true)) // forceConnectionCheck=true, closeConnOnFailure=true
-//			{
-//				xxx
-//			}
+			// NOTE: refreshGetData(conn) above doesnt throw SQLException on problems...
+			//       so any implemeters of refreshGetData(conn) need to think a bit...
+			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+			{
+				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
+			}
 
 			throw e;
 		}
@@ -3466,6 +3477,7 @@ implements Cloneable, ITableTooltip
 			{
 				String msg = e.getMessage();
 				setSampleException(e);
+
 				// maybe use property change listeners instead: firePropChanged("status", "refreshing");
 				tabPanel.setWatermarkText(msg);
 			}
@@ -3475,6 +3487,13 @@ implements Cloneable, ITableTooltip
 			_newSample = null;
 			_diffData  = null;
 			_rateData  = null;
+
+			// If we got an exception, go and check if we are still connected
+			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+			{
+				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
+				//return -1;
+			}
 
 			// Msg 10353:               You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
 			// Msg 12052:               Collection of monitoring data for table '%.*s' requires that the %s configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
@@ -3569,8 +3588,12 @@ implements Cloneable, ITableTooltip
 				handleTimeoutException();
 			}
 
+			// throw the exception to caller
+			// Think more about this...
+			//throw e;
+
 			return -1;
-		}
+		} // end: SQLException
 		finally
 		{
 			// Stop the timer.

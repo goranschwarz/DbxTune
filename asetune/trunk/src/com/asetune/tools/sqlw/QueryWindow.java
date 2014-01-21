@@ -1,7 +1,7 @@
 /**
  * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
  */
-package com.asetune.tools;
+package com.asetune.tools.sqlw;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -11,12 +11,12 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.MouseInfo;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
@@ -30,16 +30,17 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -47,19 +48,23 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Types;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Scanner;
+import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -74,6 +79,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
@@ -82,19 +88,22 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
-import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
-import javax.swing.SwingWorker.StateValue;
-import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLEditorKit;
@@ -115,9 +124,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
-import org.fife.ui.rtextarea.SearchContext;
-import org.fife.ui.rtextarea.SearchEngine;
 import org.jdesktop.swingx.JXTable;
+import org.jdesktop.swingx.JXTableHeader;
 import org.jfree.chart.ChartColor;
 
 import com.asetune.AseConfig;
@@ -126,6 +134,7 @@ import com.asetune.AseConfigText.ConfigType;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdates.SqlwConnectInfo;
 import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
@@ -133,12 +142,20 @@ import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.FavoriteCommandDialog;
 import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.parser.ParserProperties;
+import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandException;
+import com.asetune.sql.pipe.PipeCommandGrep;
+import com.asetune.tools.NormalExitException;
+import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlw.StatusBar.ServerInfo;
+import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.ui.autocomplete.CompletionProviderAse;
@@ -148,11 +165,23 @@ import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAsa;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAse;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierH2;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierHana;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierIq;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierJdbc;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierMsSql;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierOracle;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierRepServer;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierTester;
+import com.asetune.ui.tooltip.suppliers.TtpEntryCompletionProvider;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScriptReader;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
 import com.asetune.utils.GoSyntaxException;
@@ -164,6 +193,7 @@ import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.WatchdogIsFileChanged;
 import com.asetune.xmenu.TablePopupFactory;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -178,27 +208,50 @@ public class QueryWindow
 //	extends JFrame
 //	extends JDialog
 //implements ActionListener, SybMessageHandler, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
-	implements ActionListener, ConnectionProvider, CaretListener, CommandHistoryDialog.HistoryExecutor
+	implements ActionListener, ConnectionProvider, CaretListener, DocumentListener, CommandHistoryDialog.HistoryExecutor, WatchdogIsFileChanged.WatchdogIsFileChangedChecker
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
 	private static final long serialVersionUID = 1L;
 	private static final String LOCAL_JVM = ManagementFactory.getRuntimeMXBean().getName();
-
-	public final static String  APP_NAME                    = "SqlWindow";
-
-	public final static String  PROPKEY_APP_PREFIX          = "QueryWindow.";
-
-	public final static String  PROPKEY_asPlainText         = PROPKEY_APP_PREFIX + "asPlainText";
-	public final static boolean DEFAULT_asPlainText         = false;
 	
-	public final static String  PROPKEY_showRowCount        = PROPKEY_APP_PREFIX + "showRowCount";
-	public final static boolean DEFAULT_showRowCount        = true;
+	private final static String NOT_CONNECTED_STR              = "not connected";
+
+	public final static String  APP_NAME                       = "SqlWindow";
+
+	public final static String  PROPKEY_APP_PREFIX             = "QueryWindow.";
+
+	public final static String  PROPKEY_saveBeforeExecute      = PROPKEY_APP_PREFIX + "saveBeforeExecute";
+	public final static boolean DEFAULT_saveBeforeExecute      = true;
 	
-	public final static String  PROPKEY_clientTiming        = PROPKEY_APP_PREFIX + "clientTiming";
-	public final static boolean DEFAULT_clientTiming        = false;
+	public final static String  PROPKEY_asPlainText            = PROPKEY_APP_PREFIX + "asPlainText";
+	public final static boolean DEFAULT_asPlainText            = false;
 	
-	public final static String  PROPKEY_lastFileNameSaveMax = "LastFileList.saveSize";
-	public final static int     DEFAULT_lastFileNameSaveMax = 20;
+	public final static String  PROPKEY_showRowCount           = PROPKEY_APP_PREFIX + "showRowCount";
+	public final static boolean DEFAULT_showRowCount           = true;
+	
+	public final static String  PROPKEY_showSentSql            = PROPKEY_APP_PREFIX + "showSentSql";
+	public final static boolean DEFAULT_showSentSql            = false;
+	
+	public final static String  PROPKEY_printRsInfo            = PROPKEY_APP_PREFIX + "printRsInfo";
+	public final static boolean DEFAULT_printRsInfo            = false;
+	
+	public final static String  PROPKEY_clientTiming           = PROPKEY_APP_PREFIX + "clientTiming";
+	public final static boolean DEFAULT_clientTiming           = false;
+	
+	public final static String  PROPKEY_useSemicolonHack       = PROPKEY_APP_PREFIX + "useSemicolonHack";
+	public final static boolean DEFAULT_useSemicolonHack       = false;
+	
+	public final static String  PROPKEY_oracleEnableDbmsOutput = PROPKEY_APP_PREFIX + "oracleEnableDbmsOutput";
+	public final static boolean DEFAULT_oracleEnableDbmsOutput = false;
+	
+	public final static String  PROPKEY_getObjectTextOnError   = PROPKEY_APP_PREFIX + "getObjectTextOnError";
+	public final static boolean DEFAULT_getObjectTextOnError   = true;
+	
+	public final static String  PROPKEY_appendResults          = PROPKEY_APP_PREFIX + "appendResults";
+	public final static boolean DEFAULT_appendResults          = false;
+	
+	public final static String  PROPKEY_lastFileNameSaveMax    = "LastFileList.saveSize";
+	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
 	public final static String  PROPKEY_historyFileName        = PROPKEY_APP_PREFIX + "CommandHistory.filename";
 	public final static String  DEFAULT_historyFileName        = Version.APP_STORE_DIR + File.separator + APP_NAME + ".command.history.xml";
@@ -209,6 +262,9 @@ public class QueryWindow
 	public final static String  PROPKEY_favoriteCmdFileNameRcl = PROPKEY_APP_PREFIX + "FavoritCommands.filename.rcl";
 	public final static String  DEFAULT_favoriteCmdFileNameRcl = Version.APP_STORE_DIR + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
 
+	public final static String  PROPKEY_restoreWinSizeForConn  = PROPKEY_APP_PREFIX + "restoreWinSizeForConn";
+	public final static boolean DEFAULT_restoreWinSizeForConn  = true;
+	
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_asPlainText,         DEFAULT_asPlainText);
@@ -246,27 +302,35 @@ public class QueryWindow
 
 	private Connection  _conn            = null;
 	private int         _connType        = -1;
-	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo = null;
+	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo  = null;
+	private DbUtils.JdbcConnectionStateInfo        _jdbcConnectionStateInfo = null;
 	
 
-//	private JTextArea	_query           = new JTextArea();           // A field to enter a query in
-//	private RSyntaxTextArea	_query       = new RSyntaxTextArea();     // A field to enter a query in
-	private TextEditorPane	_query       = new TextEditorPane();    // A field to enter a query in
-	private RTextScrollPane _queryScroll = new RTextScrollPane(_query, true);
-	private ErrorStrip      _queryErrStrip = new ErrorStrip(_query);
-	private RSyntaxTextArea	_resultText  = null;
-	private JButton     _exec            = new ExecButton("Exec");       // Execute the
-	private JButton     _execGuiShowplan = new ExecButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
-	private JButton     _setAseOptions   = new JButton("Set");        // Do various set ... options
-	private JButton     _copy            = new JButton("Copy Res");    // Copy All resultsets to clipboard
-//	private JCheckBox   _showplan        = new JCheckBox("GUI Showplan", false);
-	private JCheckBox   _rsInTabs        = new JCheckBox("In Tabbed Panel", false);
-	private JCheckBox   _asPlainText     = new JCheckBox("As Plain Text", DEFAULT_asPlainText);
-	private JCheckBox   _showRowCount    = new JCheckBox("Row Count", DEFAULT_showRowCount);
-	private JCheckBox   _clientTiming_chk = new JCheckBox("Time SQL Statement", DEFAULT_clientTiming);
-	private JButton     _appOptions      = new JButton("Options");
+//	private JTextArea	      _query_txt                  = new JTextArea();           // A field to enter a query in
+//	private RSyntaxTextArea	  _query_txt                  = new RSyntaxTextArea();     // A field to enter a query in
+	private TextEditorPane	  _query_txt                  = new TextEditorPane();    // A field to enter a query in
+	private RTextScrollPane   _queryScroll                = new RTextScrollPane(_query_txt, true);
+	private ErrorStrip        _queryErrStrip              = new ErrorStrip(_query_txt);
+	private RSyntaxTextAreaX  _result_txt                 = null;
+	private JButton           _exec_but                   = new ExecButton("Exec");       // Execute the
+	private JButton           _execGuiShowplan_but        = new ExecButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
+	private JButton           _setAseOptions_but          = new JButton("Set");        // Do various set ... options
+	private JButton           _copy_but                   = new JButton("Copy Res");    // Copy All resultsets to clipboard
+
+	private JCheckBoxMenuItem _rsInTabs_chk               = new JCheckBoxMenuItem("In Tabbed Panel", false);
+	private JCheckBoxMenuItem _asPlainText_chk            = new JCheckBoxMenuItem("As Plain Text", DEFAULT_asPlainText);
+	private JCheckBoxMenuItem _showRowCount_chk           = new JCheckBoxMenuItem("Row Count", DEFAULT_showRowCount);
+	private JCheckBoxMenuItem _showSentSql_chk            = new JCheckBoxMenuItem("Show Sent SQL", DEFAULT_showSentSql);
+	private JCheckBoxMenuItem _printRsInfo_chk            = new JCheckBoxMenuItem("Print ResultSet Info", DEFAULT_printRsInfo);
+	private JCheckBoxMenuItem _clientTiming_chk           = new JCheckBoxMenuItem("Time SQL Statement", DEFAULT_clientTiming);
+	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
+	private JCheckBoxMenuItem _oracleEnableDbmsOutput_chk = new JCheckBoxMenuItem("Oracle Enable DBMS Output", DEFAULT_oracleEnableDbmsOutput);
+	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
+	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
+
+	private JButton     _appOptions_but  = new JButton("Options");
 	private JComboBox   _dbnames_cbx     = new JComboBox();
-	private JPanel      _resPanel        = new JPanel();
+	private JPanel      _resPanel        = new JPanel( new MigLayout("insets 0 0 0 0, gap 0 0, wrap") );
 	private JScrollPane _resPanelScroll  = new JScrollPane(_resPanel);
 	private RTextScrollPane _resPanelTextScroll  = new RTextScrollPane();
 //	private JLabel	    _msgline         = new JLabel("");	     // For displaying messages
@@ -274,18 +338,23 @@ public class QueryWindow
 	private JSplitPane  _splitPane       = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 	private int         _lastTabIndex    = -1;
 	private boolean     _closeConnOnExit = true;
-	private Font        _aseMsgFont      = null;
+	private static Font _aseMsgFont      = null;
 	private ArrayList<JComponent> _resultCompList  = null;
 	
-	private int         _aseVersion                = 0;
+	private int         _srvVersion                = 0;
+	private String      _connectedDriverName       = null;
+	private String      _connectedDriverVersion    = null;
 	private String      _connectedToProductName    = null;
 	private String      _connectedToProductVersion = null;
 	private String      _connectedToServerName     = null;
 	private String      _connectedToSysListeners   = null;
+	private String      _connectedSrvCharset       = null;
+	private String      _connectedSrvSortorder     = null;
 	private String      _connectedAsUser           = null;
 	private String      _connectedWithUrl          = null;
 	
 	private String      _currentDbName             = null; // probably only maintained for ASE
+	private boolean     _oracleDbmsOutputIsEnabled = false; // only maintained for Oracle
 
 	/** if DB returns a error message, stop executions */
 	private boolean     _abortOnDbMessages         = false;
@@ -299,6 +368,7 @@ public class QueryWindow
 	private JFrame      _jframe          = null;
 	private JDialog     _jdialog         = null;
 	private String      _titlePrefix     = null;
+	private String      _titleSrvStr     = null;
 	private WindowType  _windowType      = null;
 
 	private JButton     _connect_but     = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
@@ -335,6 +405,7 @@ public class QueryWindow
 	private JMenuItem           _fOpen_mi               = new JMenuItem("Open File...");
 //	private JMenuItem           _fClose_mi              = new JMenuItem("Close");
 	private JMenuItem           _fSave_mi               = new JMenuItem("Save");
+	private JCheckBoxMenuItem   _fSaveBeforeExec_mi     = new JCheckBoxMenuItem("Save Before Execute");
 	private JMenuItem           _fSaveAs_mi             = new JMenuItem("Save As...");
 	private JMenu               _fHistory_m             = new JMenu("Last Used Files");
 	private JMenuItem           _exit_mi                = new JMenuItem("Exit");
@@ -348,6 +419,9 @@ public class QueryWindow
 	private JMenuItem           _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
 	private JMenuItem           _rs_dumpQueue_mi        = new JMenuItem("View Stable Queue Content...");
 	private JMenuItem           _rsWhoIsDown_mi         = new JMenuItem("Admin who_is_down");
+
+	private JMenu               _preferences_m          = new JMenu("Preferences");
+	private JCheckBoxMenuItem   _prefWinOnConnect_mi    = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
 	//---------------------------------------
 
 	// Tools
@@ -380,7 +454,6 @@ public class QueryWindow
 				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
 		}
 
-		
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
@@ -392,6 +465,7 @@ public class QueryWindow
 		String defaultPropsFile     = (SQLW_HOME             != null) ? SQLW_HOME             + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
 		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
 		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
 		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
@@ -401,6 +475,7 @@ public class QueryWindow
 		String propFile        = cmd.getOptionValue("config",     defaultPropsFile);
 		String userPropFile    = cmd.getOptionValue("userConfig", defaultUserPropsFile);
 		String tmpPropFile     = cmd.getOptionValue("tmpConfig",  defaultTmpPropsFile);
+		String tailPropFile    = cmd.getOptionValue("tailConfig", defaultTailPropsFile);
 
 		// Check if the configuration file exists
 		if ( ! (new File(propFile)).exists() )
@@ -424,6 +499,10 @@ public class QueryWindow
 			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
 		}
 
+		// The SAVE Properties for shared Tail
+		Configuration tailSaveProps = new Configuration(tailPropFile);
+		Configuration.setInstance(Configuration.TAIL_TEMP, tailSaveProps);
+
 		// The SAVE Properties...
 		Configuration appSaveProps = new Configuration(tmpPropFile);
 		Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
@@ -438,25 +517,36 @@ public class QueryWindow
 
 		// Set the Configuration search order when using the: Configuration.getCombinedConfiguration()
 		Configuration.setSearchOrder(
-			Configuration.USER_TEMP,    // First
-			Configuration.USER_CONF,    // second
-			Configuration.SYSTEM_CONF); // Third
+			Configuration.TAIL_TEMP,    // First
+			Configuration.USER_TEMP,    // Second
+			Configuration.USER_CONF,    // Third
+			Configuration.SYSTEM_CONF); // Forth
 
 		//---------------------------------------------------------------
 		// OK, lets get ASE user/passwd/server/dbname
 		//---------------------------------------------------------------
-		String aseUsername = System.getProperty("user.name"); 
-		String asePassword = null;
-		String aseServer   = System.getenv("DSQUERY");
-		String aseDbname   = "";
-		String sqlQuery    = "";
-		String sqlFile     = "";
-		if (cmd.hasOption('U'))	aseUsername = cmd.getOptionValue('U');
-		if (cmd.hasOption('P'))	asePassword = cmd.getOptionValue('P');
-		if (cmd.hasOption('S'))	aseServer   = cmd.getOptionValue('S');
-		if (cmd.hasOption('D'))	aseDbname   = cmd.getOptionValue('D');
-		if (cmd.hasOption('q'))	sqlQuery    = cmd.getOptionValue('q');
-		if (cmd.hasOption('i'))	sqlFile     = cmd.getOptionValue('i');
+		String aseUsername  = System.getProperty("user.name"); 
+		String asePassword  = null;
+		String aseServer    = System.getenv("DSQUERY");
+		String aseDbname    = "";
+		String jdbcUsername = System.getProperty("user.name");
+		String jdbcPassword = null;
+		String jdbcUrl      = "";
+		String jdbcDriver   = "";
+		String connProfile  = "";
+		String sqlQuery     = "";
+		String sqlFile      = "";
+		if (cmd.hasOption('U'))	aseUsername  = cmd.getOptionValue('U');
+		if (cmd.hasOption('P'))	asePassword  = cmd.getOptionValue('P');
+		if (cmd.hasOption('S'))	aseServer    = cmd.getOptionValue('S');
+		if (cmd.hasOption('D'))	aseDbname    = cmd.getOptionValue('D');
+		if (cmd.hasOption('q'))	sqlQuery     = cmd.getOptionValue('q');
+		if (cmd.hasOption('U'))	jdbcUsername = cmd.getOptionValue('U');
+		if (cmd.hasOption('P'))	jdbcPassword = cmd.getOptionValue('P');
+		if (cmd.hasOption('u'))	jdbcUrl      = cmd.getOptionValue('u');
+		if (cmd.hasOption('d'))	jdbcDriver   = cmd.getOptionValue('d');
+		if (cmd.hasOption('p'))	connProfile  = cmd.getOptionValue('p');
+		if (cmd.hasOption('i'))	sqlFile      = cmd.getOptionValue('i');
 
 		if (aseServer == null)
 			aseServer = "SYBASE";
@@ -562,12 +652,20 @@ public class QueryWindow
 			if (!cmd.hasOption('P') && asePassword == null)
 				asePassword = ConnectionDialog.getPasswordForServer(hostPortStr);
 
-			final String ppeStr = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP + 
-				"={aseUsername="+ aseUsername + 
-				",asePassword=" + asePassword + 
-				",aseServer="   + aseServer + 
-				",aseDbname="   + aseDbname + 
-				"}";
+			String tmpStr = "";
+			if (cmd.hasOption('U'))	tmpStr += ",aseUsername="  + aseUsername;
+			if (cmd.hasOption('P'))	tmpStr += ",asePassword="  + asePassword;
+			if (cmd.hasOption('S'))	tmpStr += ",aseServer="    + aseServer;
+			if (cmd.hasOption('D'))	tmpStr += ",aseDbname="    + aseDbname;
+			if (cmd.hasOption('U'))	tmpStr += ",jdbcUsername=" + jdbcUsername;
+			if (cmd.hasOption('P'))	tmpStr += ",jdbcPassword=" + jdbcPassword;
+			if (cmd.hasOption('u'))	tmpStr += ",jdbcUrl="      + jdbcUrl;
+			if (cmd.hasOption('d'))	tmpStr += ",jdbcDriver="   + jdbcDriver;
+			if (cmd.hasOption('p'))	tmpStr += ",connProfile="  + connProfile;
+			// remove first comma
+			tmpStr = tmpStr.substring(1);
+
+			final String ppeStr = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP + "={" + tmpStr + "}"; 
 
 			Runnable deferedAction = new Runnable()
 			{
@@ -664,6 +762,7 @@ public class QueryWindow
 //			_file_m.add(_fClose_mi);
 //			_file_m.addSeparator();
 			_file_m.add(_fSave_mi);
+			_file_m.add(_fSaveBeforeExec_mi);
 			_file_m.add(_fSaveAs_mi);
 			_file_m.addSeparator();
 			_file_m.add(_exit_mi);
@@ -678,6 +777,9 @@ public class QueryWindow
 			_view_m.add(_rs_configAllDdl_mi);   
 			_view_m.add(_rs_dumpQueue_mi);
 			_view_m.add(_rsWhoIsDown_mi);
+
+			_view_m.add(_preferences_m);
+			_preferences_m.add(_prefWinOnConnect_mi);
 			
 			_ase_viewConfig_mi     .setVisible(false);
 			_rs_configChangedDdl_mi.setVisible(false);
@@ -702,7 +804,10 @@ public class QueryWindow
 			_fNew_mi           .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 			_fOpen_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 			_fSave_mi          .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+//			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+// reserve Ctrl+Shift+s for when we have "multiple editor tabs"
+//			_fSaveAll_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
+			
 
 			_rsWhoIsDown_mi    .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 
@@ -849,11 +954,14 @@ public class QueryWindow
 			@Override
 			public void windowClosing(WindowEvent e)
 			{
+				saveProps();
+				saveWinProps();
+				
 				if (_closeConnOnExit)
 					close();
 
-				File f = new File(_query.getFileFullPath());
-				if (f.exists() && _query.isDirty())
+				File f = new File(_query_txt.getFileFullPath());
+				if (f.exists() && _query_txt.isDirty())
 				{
 					Object[] buttons = {"Save File", "Discard changes"};
 					int answer = JOptionPane.showOptionDialog(_window, 
@@ -869,9 +977,13 @@ public class QueryWindow
 					{
 						try
 						{
-							_query.save();
-							_statusBar.setFilename(_query.getFileFullPath());
-							_statusBar.setFilenameDirty(_query.isDirty());
+							_query_txt.save();
+							_statusBar.setFilename(_query_txt.getFileFullPath());
+							_statusBar.setFilenameDirty(_query_txt.isDirty());
+
+							// No need since we are shuting down
+							if (_watchdogIsFileChanged != null)
+								_watchdogIsFileChanged.setFile(_query_txt.getFileFullPath());
 						}
 						catch (IOException ex)
 						{
@@ -880,8 +992,30 @@ public class QueryWindow
 					}
 				}
 
-				saveProps();
-				saveWinProps();
+				// This will stop the thread (in a couple of seconds)
+				if (_watchdogIsFileChanged != null)
+					_watchdogIsFileChanged.shutdown();
+			}
+			
+			@Override
+			public void windowActivated(WindowEvent e)
+			{
+				super.windowActivated(e);
+				
+//				checkIfCurrentFileIsUpdated();
+
+				// If the window is ACTIVE check for file changes
+				if (_watchdogIsFileChanged != null)
+					_watchdogIsFileChanged.setPaused(false);
+			}
+			@Override
+			public void windowDeactivated(WindowEvent e)
+			{
+				super.windowDeactivated(e);
+
+				// If the window is NOT active we don't need to check for file changes
+				if (_watchdogIsFileChanged != null)
+					_watchdogIsFileChanged.setPaused(true);
 			}
 		});
 
@@ -894,9 +1028,9 @@ public class QueryWindow
 			{
 				// Setup a message handler
 		//		((SybConnection)_conn).setSybMessageHandler(this);
-				_aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+				_srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 				
-				_connType = ConnectionDialog.ASE_CONN;
+				_connType = ConnectionDialog.TDS_CONN;
 			}
 			else
 			{
@@ -906,14 +1040,14 @@ public class QueryWindow
 		}
 
 		// Set icons for some buttons
-		_exec           .setIcon(SwingUtils.readImageIcon(Version.class, "images/exec.png"));
-		_execGuiShowplan.setIcon(SwingUtils.readImageIcon(Version.class, "images/exec_with_plan.png"));
-		_exec           .setText(null);
-		_execGuiShowplan.setText(null);
+		_exec_but           .setIcon(SwingUtils.readImageIcon(Version.class, "images/exec.png"));
+		_execGuiShowplan_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/exec_with_plan.png"));
+		_exec_but           .setText(null);
+		_execGuiShowplan_but.setText(null);
 		
 		
 		// Set various components
-		_exec.setToolTipText(
+		_exec_but.setToolTipText(
 			"<html>" +
 			"<b>Execute</b><br>" +
 			"<br>" +
@@ -926,9 +1060,9 @@ public class QueryWindow
 			"<code>print 'Execute the whole thing... Well I didnt think so...'</code><br>" +
 			"<code>exit</code><br>" +
 			"</html>"); 
-		_exec.setMnemonic('e');
+		_exec_but.setMnemonic('e');
 
-		_execGuiShowplan.setToolTipText(
+		_execGuiShowplan_but.setToolTipText(
 			"<html>" +
 			"<b>Execute with GUI Showplan</b><br>" +
 			"<br>" +
@@ -941,20 +1075,36 @@ public class QueryWindow
 			"<code>print 'Execute the whole thing... Well I didnt think so...'</code><br>" +
 			"<code>exit</code><br>" +
 			"</html>"); 
-		_execGuiShowplan.setMnemonic('E');
+		_execGuiShowplan_but.setMnemonic('E');
 
-		try {_appOptions = createAppOptionButton(null);}
+		_fSaveBeforeExec_mi.setToolTipText(
+			"<html>" +
+			"Save current working file before sending SQL to server<br>" +
+			"<b>Note</b>: If no file is assigned (only temporary text), then do <b>not</b> save.<br>" +
+			"<b>Usage</b>: For example if you share a file between two or more "+Version.getAppName()+" instances, then you want the other instance to reload any changes you make. This so you don't have conflicting edits in the different editors.<br>" +
+			"</html>");
+		
+		_prefWinOnConnect_mi.setToolTipText(
+			"<html>" +
+			"Restore Window size and position, based on the connected server name.<br>" +
+			"This simply means, when a new connection is made, the last known Window Properties will be restored for that connection name.<br>" +
+			"</html>");
+
+		try {_appOptions_but = createAppOptionButton(null);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'Application Options' button.",ex);}
 
-		try {_setAseOptions = createSetAseOptionButton(null, _aseVersion);}
+		try {_setAseOptions_but = createSetAseOptionButton(null, _srvVersion);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'set options' button.",ex);}
+
+		try {_copy_but = createCopyResultsButton(null);}
+		catch (Throwable ex) {_logger.error("Problems creating the 'Copy results' button.",ex);}
 
 //		_showplan.setToolTipText("<html>Show Graphical showplan for the sql statement (work with ASE 15.x).</html>");
 		
-		_dbnames_cbx .setToolTipText("<html>Change database context.</html>");
-		_rsInTabs    .setToolTipText("<html>Check this if you want to have multiple result sets in individual tabs.</html>");
-		_asPlainText .setToolTipText("<html>No fancy output, just write the output as 'plan text'.</html>");
-		_showRowCount.setToolTipText("<html>" +
+		_dbnames_cbx     .setToolTipText("<html>Change database context.</html>");
+		_rsInTabs_chk    .setToolTipText("<html>Check this if you want to have multiple result sets in individual tabs.</html>");
+		_asPlainText_chk .setToolTipText("<html>No fancy output, just write the output as 'plan text'.</html>");
+		_showRowCount_chk.setToolTipText("<html>" +
 		                             "Show Row Count after each executes SQL Statement<br>" +
 		                             "<br>" +
 		                             "One problem with this is if/when you execute a Stored Procedure.<br>" +
@@ -964,47 +1114,120 @@ public class QueryWindow
 		                             "<br>" +
 		                             "That's why this option is visible, so you can turn this on/off as you which!" +
 		                             "</html>");
+		_showSentSql_chk.setToolTipText("<html>Include the sent/executed SQL Statement in the output.<br></html>");
+		_printRsInfo_chk.setToolTipText("<html>Print Information about the ResultSet in the output.<br></html>");
 		_clientTiming_chk.setToolTipText("<html>Time how long the SQL Statement takes, from the client side.<br>Clock starts when sending the SQL, clock stops when client receives first answer back from the server</html>");
-		_copy        .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
-//		_query       .setToolTipText("<html>" +
+		_useSemicolonHack_chk.setToolTipText(
+				"<html>" +
+				"Send SQL Statement to server whenever a semicolon character ';' is at the end of a line.<br>" +
+				"This emulates Oracle SQL*plus to a certain point<br>" +
+				"It do <b>not</b> take into consideration if we are in inside a <code>create <i>something</i></code> it will still just send the SQL.<br>" +
+				"Example:" +
+				"<table border=1 cellspacing=1 cellpadding=1>" +
+				"<tr> <th>Statement</th> <th>Description</th> </tr>" +
+				"<tr> <td> <code>select * from tab;                     </code> </td> <td> Simply sends the SQL to the server                                         </td> </tr>" +
+				"<tr> <td> <code>select * from tab; --some comment      </code> </td> <td> This does <b>not</b> send the query to the server. No semicolon at the end </td> </tr>" +
+				"<tr> <td> <code>select * from tab --some comment;      </code> </td> <td> This is ok, since the last character on the line is ';'.                   </td> </tr>" +
+				"<tr> <td> <code>select * <br>from tab<br>where id = 99;</code> </td> <td> This is ok, since the last character on the line is ';'.                   </td> </tr>" +
+//				"<tr> <td> " + // BEGIN complex row
+//				"<pre>" +
+//				"declare \n" +
+//				"   l_sum number; \n" +
+//				"begin \n" +
+//				"   l_sum := 10 + 20; \n" +
+//				"end; \n" +
+//				"</pre> " +
+//				"</td> " +
+//				"<td> " +
+//				"This is <b>not</b> ok, it will try to send the statement after <code>l_sum number;</code/><br>" +
+//				"<b>disable</b> this option and use 'go' to send the statement. <br>" +
+//				"Example: (where 'go' is the <i>terminator</i> which means, send the <i>SQL batch</i> to the server)<br>" +
+//				"<pre>" +
+//				"declare \n" +
+//				"   l_sum number; \n" +
+//				"begin \n" +
+//				"   l_sum := 10 + 20; \n" +
+//				"end; \n" +
+//				"go \n" +
+//				"</pre> " +
+//				"</td> " +
+//				"</tr>" +// END complex row
+				"<tr> <td> " + // BEGIN complex row
+				"<pre>" +
+				"declare l_sum number; \n" +
+				"begin \n" +
+				"   l_sum := 10 + 20; \n" +
+				"end; \n" +
+				"</pre> " +
+				"</td> " +
+				"<td> " +
+				"This is also ok. It will try to figgure out if the first SQL Statement in<br>" +
+				"the \"batch\" is one of the following words <code>(begin|declare|create|alter)</code>.<br>" +
+				"If that is the case send on Semicolon is disabled until next \"batch\".<br>" +
+				"Send will then happen at next \"send terminator\", which usually is 'go' or '/'<br>" +
+				"<br>" +
+				"<b>NOTE</b> If the above SqlPlus simulation logic doesn't work...<br>" +
+				"Just <b>disable</b> this option and use 'go' to send the statement. <br>" +
+				"</td> " +
+				"</tr>" +// END complex row
+				"</table>" +
+				"</html>");
+		_oracleEnableDbmsOutput_chk.setToolTipText(
+				"<html>" +
+				"Enable DBMS OUTPUT trace statements to be received at the client.<br>" +
+				"At start we will execute: <code>sys.dbms_output.enable(1000000)</code><br>" +
+				"For each SQL 'batch' sent, we will execute: <code>sys.dbms_output.get_line</code><br>" +
+				"</html>");
+		_appendResults_chk.setToolTipText(
+				"<html>" +
+				"Do <b>not</b> clear results from previous executions.<br>" +
+				"Instead append all results to the and of the results panel." +
+				"</html>");
+		_getObjectTextOnError_chk.setToolTipText(
+				"<html>" +
+				"On errors when you execute a procedure, get the Object Text and mark the line in the text.<br>" +
+				"This makes debugging easier.<br>" +
+				"<b>NOTE</b> This is <b>not</b> supported for all vendors...<br>" +
+				"The Error Messaage will have to be parsed to figure out what object to display." +
+				"</html>");
+//		_copy_but    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
+//		_query_txt   .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
 //									"If you select text and press 'exec' only the highlighted text will be sent to the ASE.<br>" +
 //									"<br>" +
 //									"Note: <b>Ctrl+Space</b> Brings up code completion. This is <b>not</b> working good for the moment, but it will be enhanced.<br>" +
 //									"<br>" +
 //								"</html>");
-//		_query.setUseFocusableTips(false);
+//		_query_txt.setUseFocusableTips(false);
 		
-		_query.addCaretListener(this);
+		_query_txt.addCaretListener(this);
+		_query_txt.getDocument().addDocumentListener(this);
 
+		ToolTipManager.sharedInstance().registerComponent(_query_txt);
+
+		_query_txt.setMarkOccurrences(true);
+//		_query_txt.setMarkOccurrencesColor(color)
+		
 		// To set all RSyntaxTextAreaX components to use "_"
 		RSyntaxUtilitiesX.setCharsAllowedInWords("_");
-		// To set all _query components to use "_", this since it's of TextEditorPane, which extends RSyntaxTextArea
-		RSyntaxUtilitiesX.setCharsAllowedInWords(_query, "_");
+		// To set all _query_txt components to use "_", this since it's of TextEditorPane, which extends RSyntaxTextArea
+		RSyntaxUtilitiesX.setCharsAllowedInWords(_query_txt, "_");
 
 		_queryScroll.setLineNumbersEnabled(true);
+		_queryScroll.setIconRowHeaderEnabled(true);
 		
 		// Install some extra Syntax Highlighting for RCL and TSQL
 		AsetuneTokenMaker.init();  
 
-		// Setup Auto-Completion for SQL
-		_compleationProviderAbstract = CompletionProviderAbstractSql.installAutoCompletion(conn, _query, _queryErrStrip, _window, this);
-//		_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _window, this);
-//		_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query, _window, this);
-//		_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query, _window, this);
-//		CompletionProvider acProvider = createCompletionProvider();
-//		AutoCompletion ac = new AutoCompletion(acProvider);
-//		ac.install(_query);
-//		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
-////		ac.setChoicesWindowSize(600, 600);
-//		ac.setDescriptionWindowSize(600, 600);
+		// Setup Auto-Completion for SQL and install error "Parser"
+		_compleationProviderAbstract = CompletionProviderAbstractSql.installAutoCompletion(conn, _query_txt, _queryScroll, _queryErrStrip, _window, this);
 
 		// add stuff to the right click menu of the text area 
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(_queryScroll, _window);
 
-		// FIXME: new JScrollPane(_query)
+		// FIXME: new JScrollPane(_query_txt)
 		// But this is not working as I want it
-		// It disables the "auto grow" of the _query window, which is problematic
+		// It disables the "auto grow" of the _query_txt window, which is problematic
 		// maybe add a JSplitPane or simular...
 
 		// Place the components within this window
@@ -1031,42 +1254,42 @@ public class QueryWindow
 //		top.add(_queryErrStrip, BorderLayout.LINE_START);
 		top.setMinimumSize(new Dimension(300, 100));
 
-		_queryErrStrip.setVisible(false);
+//		_queryErrStrip.setVisible(false);
+		_queryErrStrip.setVisible(true);
 		
-		bottom.add(_dbnames_cbx,    "split 6, hidemode 2");
-		bottom.add(_exec,           "");
-		bottom.add(_execGuiShowplan,"");
-//		bottom.add(_rsInTabs,       "hidemode 2");
-//		bottom.add(_asPlainText,    "");
-//		bottom.add(_showRowCount,   "");
-		bottom.add(_appOptions,     "gap 30");
-		bottom.add(_setAseOptions,  "");
-//		bottom.add(_showplan,       "");
-		bottom.add(new JLabel(),    "growx, pushx"); // dummy label to "grow" the _copy to the right side
-		bottom.add(_copy,           "wrap");
+		bottom.add(_dbnames_cbx,        "split 6, hidemode 2");
+		bottom.add(_exec_but,           "");
+		bottom.add(_execGuiShowplan_but,"");
+//		bottom.add(_rsInTabs,           "hidemode 2");
+//		bottom.add(_asPlainText,        "");
+//		bottom.add(_showRowCount,       "");
+		bottom.add(_appOptions_but,     "gap 30");
+		bottom.add(_setAseOptions_but,  "");
+//		bottom.add(_showplan,           "");
+		bottom.add(new JLabel(),        "growx, pushx"); // dummy label to "grow" the _copy to the right side
+		bottom.add(_copy_but,           "wrap");
 		bottom.add(_resPanelScroll,     "span 4, width 100%, height 100%, hidemode 3");
 		bottom.add(_resPanelTextScroll, "span 4, width 100%, height 100%, hidemode 3");
-//		bottom.add(_msgline, "dock south");
-		bottom.add(_statusBar, "dock south");
+//		bottom.add(_msgline,            "dock south");
+		bottom.add(_statusBar,          "dock south");
 
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
 
 		_resPanelScroll    .setVisible(true);
 		_resPanelTextScroll.setVisible(false);
-		
 
 		// ADD Ctrl+e, F5, F9
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE);
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), ACTION_EXECUTE);
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), ACTION_EXECUTE);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), ACTION_EXECUTE);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), ACTION_EXECUTE);
 
 		// ADD Ctrl+Shift+e, Shift+F5, Shift+F9
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE_GUI_SHOWPLAN);
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
-		_query.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  InputEvent.SHIFT_DOWN_MASK | Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE_GUI_SHOWPLAN);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
+		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, InputEvent.SHIFT_DOWN_MASK), ACTION_EXECUTE_GUI_SHOWPLAN);
 
-		_query.getActionMap().put(ACTION_EXECUTE, new AbstractAction(ACTION_EXECUTE)
+		_query_txt.getActionMap().put(ACTION_EXECUTE, new AbstractAction(ACTION_EXECUTE)
 		{
 			private static final long serialVersionUID = 1L;
 			@Override
@@ -1083,30 +1306,29 @@ public class QueryWindow
 				
 				if ( ! isConnected )
 					action_connect(null);
-				_exec.doClick();
+				_exec_but.doClick();
 			}
 		});
-		_query.getActionMap().put(ACTION_EXECUTE_GUI_SHOWPLAN, new AbstractAction(ACTION_EXECUTE_GUI_SHOWPLAN)
+		_query_txt.getActionMap().put(ACTION_EXECUTE_GUI_SHOWPLAN, new AbstractAction(ACTION_EXECUTE_GUI_SHOWPLAN)
 		{
 			private static final long serialVersionUID = 1L;
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				_execGuiShowplan.doClick();
+				_execGuiShowplan_but.doClick();
 			}
 		});
 
 
-		_exec           .addActionListener(this);
-		_execGuiShowplan.addActionListener(this);
-		_dbnames_cbx    .addActionListener(this);
-		_copy           .addActionListener(this);
+		_exec_but           .addActionListener(this);
+		_execGuiShowplan_but.addActionListener(this);
+		_dbnames_cbx        .addActionListener(this);
 
-		_exec           .setActionCommand(ACTION_EXECUTE);
-		_execGuiShowplan.setActionCommand(ACTION_EXECUTE_GUI_SHOWPLAN);
+		_exec_but           .setActionCommand(ACTION_EXECUTE);
+		_execGuiShowplan_but.setActionCommand(ACTION_EXECUTE_GUI_SHOWPLAN);
 		
 		// Refresh the database list (if ASE)
-		if (_conn != null && _connType == ConnectionDialog.ASE_CONN)
+		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
 			setDbNames();
 
 		// Write some initial text, and mark it
@@ -1121,13 +1343,13 @@ public class QueryWindow
 					@Override
 					public void run()
 					{
-						_query.requestFocus();
+						_query_txt.requestFocus();
 
 						String helper = "Write your SQL query here";
-						_query.setText(helper);
-						_query.setSelectionStart(0);
-						_query.setSelectionEnd(helper.length());
-						_query.setDirty(false);
+						_query_txt.setText(helper);
+						_query_txt.setSelectionStart(0);
+						_query_txt.setSelectionEnd(helper.length());
+						_query_txt.setDirty(false);
 					}
 				};
 				SwingUtilities.invokeLater(doLater);
@@ -1135,12 +1357,12 @@ public class QueryWindow
 		}
 		else
 		{
-			_query.setText(sql);
+			_query_txt.setText(sql);
 			if (_conn != null)
 				displayQueryResults(sql, 0, false);
 		}
-		_query.setDirty(false);
-		_statusBar.setFilename(_query.getFileFullPath());
+		_query_txt.setDirty(false);
+		_statusBar.setFilename(_query_txt.getFileFullPath());
 
 		// Try to load the input file.
 		if ( ! StringUtil.isNullOrBlank(inputFile) )
@@ -1152,16 +1374,17 @@ public class QueryWindow
 			}
 			else
 			{
-				try
-				{
-					FileLocation loc = FileLocation.create(f);
-					_query.load(loc, null);
-					_statusBar.setFilename(_query.getFileFullPath());
-				}
-				catch (IOException ex)
-				{
-					SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
-				}
+//				try
+//				{
+//					FileLocation loc = FileLocation.create(f);
+//					_query_txt.load(loc, null);
+//					_statusBar.setFilename(_query_txt.getFileFullPath());
+//				}
+//				catch (IOException ex)
+//				{
+//					SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
+//				}
+				openFile(f);
 			}
 		}
 
@@ -1182,17 +1405,38 @@ public class QueryWindow
 		{
 			_logger.info("Checking for new release...");
 			CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+
+			// Only start the watchdog if started from cmd line
+			_watchdogIsFileChanged = createWatchdogIsFileChanged();
 		}
+	}
+
+	/** Watchdog to check if files are changed */
+	protected WatchdogIsFileChanged _watchdogIsFileChanged = null;
+	protected WatchdogIsFileChanged createWatchdogIsFileChanged()
+	{
+		WatchdogIsFileChanged watchdog = new WatchdogIsFileChanged(this, 5000);
+		watchdog.start();
+
+		return watchdog;
 	}
 
 	private void loadProps()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
-		_lastFileNameSaveMax = conf.getIntProperty(PROPKEY_lastFileNameSaveMax,  DEFAULT_lastFileNameSaveMax);
-		_asPlainText     .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,  DEFAULT_asPlainText) );
-		_showRowCount    .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount, DEFAULT_showRowCount) );
-		_clientTiming_chk.setSelected( conf.getBooleanProperty(PROPKEY_clientTiming, DEFAULT_clientTiming) );
+		_lastFileNameSaveMax =                   conf.getIntProperty(    PROPKEY_lastFileNameSaveMax,    DEFAULT_lastFileNameSaveMax);
+		_fSaveBeforeExec_mi        .setSelected( conf.getBooleanProperty(PROPKEY_saveBeforeExecute,      DEFAULT_saveBeforeExecute) );
+		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,  DEFAULT_restoreWinSizeForConn) );
+		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,            DEFAULT_asPlainText) );
+		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,           DEFAULT_showRowCount) );
+		_showSentSql_chk           .setSelected( conf.getBooleanProperty(PROPKEY_showSentSql,            DEFAULT_showSentSql) );
+		_printRsInfo_chk           .setSelected( conf.getBooleanProperty(PROPKEY_printRsInfo,            DEFAULT_printRsInfo) );
+		_clientTiming_chk          .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,           DEFAULT_clientTiming) );
+		_useSemicolonHack_chk      .setSelected( conf.getBooleanProperty(PROPKEY_useSemicolonHack,       DEFAULT_useSemicolonHack) );
+		_oracleEnableDbmsOutput_chk.setSelected( conf.getBooleanProperty(PROPKEY_oracleEnableDbmsOutput, DEFAULT_oracleEnableDbmsOutput) );
+		_appendResults_chk         .setSelected( conf.getBooleanProperty(PROPKEY_appendResults,          DEFAULT_appendResults) );
+		_getObjectTextOnError_chk  .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,   DEFAULT_getObjectTextOnError) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
 		_favoriteCmdFilenameSql = conf.getProperty(PROPKEY_favoriteCmdFileNameSql, DEFAULT_favoriteCmdFileNameSql);
@@ -1210,10 +1454,18 @@ public class QueryWindow
 		if (_windowType == null || ( _windowType != null && _windowType != WindowType.CMDLINE_JFRAME) )
 			return;
 			
-		conf.setProperty(PROPKEY_lastFileNameSaveMax, _lastFileNameSaveMax);
-		conf.setProperty(PROPKEY_asPlainText,         _asPlainText     .isSelected());
-		conf.setProperty(PROPKEY_showRowCount,        _showRowCount    .isSelected());
-		conf.setProperty(PROPKEY_clientTiming,        _clientTiming_chk.isSelected());
+		conf.setProperty(PROPKEY_lastFileNameSaveMax,    _lastFileNameSaveMax);
+		conf.setProperty(PROPKEY_saveBeforeExecute,      _fSaveBeforeExec_mi        .isSelected());
+		conf.setProperty(PROPKEY_restoreWinSizeForConn,  _prefWinOnConnect_mi       .isSelected());
+		conf.setProperty(PROPKEY_asPlainText,            _asPlainText_chk           .isSelected());
+		conf.setProperty(PROPKEY_showRowCount,           _showRowCount_chk          .isSelected());
+		conf.setProperty(PROPKEY_showSentSql,            _showSentSql_chk           .isSelected());
+		conf.setProperty(PROPKEY_printRsInfo,            _printRsInfo_chk           .isSelected());
+		conf.setProperty(PROPKEY_clientTiming,           _clientTiming_chk          .isSelected());
+		conf.setProperty(PROPKEY_useSemicolonHack,       _useSemicolonHack_chk      .isSelected());
+		conf.setProperty(PROPKEY_oracleEnableDbmsOutput, _oracleEnableDbmsOutput_chk.isSelected());
+		conf.setProperty(PROPKEY_appendResults,          _appendResults_chk         .isSelected());
+		conf.setProperty(PROPKEY_getObjectTextOnError,   _getObjectTextOnError_chk  .isSelected());
 		
 		conf.setProperty(PROPKEY_historyFileName,        _cmdHistoryFilename);
 		conf.setProperty(PROPKEY_favoriteCmdFileNameSql, _favoriteCmdFilenameSql);
@@ -1236,24 +1488,104 @@ public class QueryWindow
 		if (_window == null)
 			return;
 
-		conf.setProperty("QueryWindow.size.width",         _window.getSize().width);
-		conf.setProperty("QueryWindow.size.height",        _window.getSize().height);
+		String screenResStr = SwingUtils.getScreenResulutionAsString();
+		String srvStr       = _titleSrvStr;
+		boolean saveWinPropsForConn = _prefWinOnConnect_mi.isSelected() && srvStr != null && _conn != null;
 
-		conf.setProperty("QueryWindow.splitPane.location", _splitPane.getDividerLocation());
-
-		if (_window.isVisible())
+		// Save Window ScreenSize/ScreenPosition/divierLocation based on the what server we are connected to
+		// or just simply save ScreenSize/ScreenPosition/divierLocation
+		if (saveWinPropsForConn)
 		{
-			conf.setProperty("QueryWindow.size.pos.x",  _window.getLocationOnScreen().x);
-			conf.setProperty("QueryWindow.size.pos.y",  _window.getLocationOnScreen().y);
+			conf.setProperty("QueryWindow."+screenResStr+"."+srvStr+".size.width",         _window.getSize().width);
+			conf.setProperty("QueryWindow."+screenResStr+"."+srvStr+".size.height",        _window.getSize().height);
+			conf.setProperty("QueryWindow."+screenResStr+"."+srvStr+".splitPane.location", _splitPane.getDividerLocation());
+		}
+		else
+		{
+			conf.setProperty("QueryWindow.size.width",         _window.getSize().width);
+			conf.setProperty("QueryWindow.size.height",        _window.getSize().height);
+			conf.setProperty("QueryWindow.splitPane.location", _splitPane.getDividerLocation());
+	
+			conf.setProperty("QueryWindow."+screenResStr+".size.width",         _window.getSize().width);
+			conf.setProperty("QueryWindow."+screenResStr+".size.height",        _window.getSize().height);
+			conf.setProperty("QueryWindow."+screenResStr+".splitPane.location", _splitPane.getDividerLocation());
 		}
 		
-		File f = new File(_query.getFileFullPath());
+		if (_window.isVisible())
+		{
+			if (saveWinPropsForConn)
+			{
+				conf.setProperty("QueryWindow."+screenResStr+"."+srvStr+".size.pos.x",  _window.getLocationOnScreen().x);
+				conf.setProperty("QueryWindow."+screenResStr+"."+srvStr+".size.pos.y",  _window.getLocationOnScreen().y);
+			}
+			else
+			{
+				conf.setProperty("QueryWindow.size.pos.x",  _window.getLocationOnScreen().x);
+				conf.setProperty("QueryWindow.size.pos.y",  _window.getLocationOnScreen().y);
+	
+				conf.setProperty("QueryWindow."+screenResStr+".size.pos.x",  _window.getLocationOnScreen().x);
+				conf.setProperty("QueryWindow."+screenResStr+".size.pos.y",  _window.getLocationOnScreen().y);
+			}
+		}
+		
+		File f = new File(_query_txt.getFileFullPath());
 		if (f.exists())
 			conf.setProperty("QueryWindow.lastFileName", f.toString());
 		else
 			conf.remove("QueryWindow.lastFileName");
 		
 		conf.save();
+	}
+	private void loadWinPropsForSrv(String srvStr)
+	{
+		if (srvStr == null)                   return;
+		if (NOT_CONNECTED_STR.equals(srvStr)) return;
+
+		// Return if this is NOT enabled
+		if ( ! _prefWinOnConnect_mi.isSelected() )
+			return;
+
+		Configuration conf  = Configuration.getCombinedConfiguration();
+		String screenResStr = SwingUtils.getScreenResulutionAsString();
+
+		int width   = 600;
+		int height  = 400;
+		int winPosX = -1;
+		int winPosY = -1;
+		int divLoc  = -1;
+
+//		width   = conf.getIntProperty("QueryWindow.size.width",         width);
+//		height  = conf.getIntProperty("QueryWindow.size.height",        height);
+//		winPosX = conf.getIntProperty("QueryWindow.size.pos.x",         winPosX);
+//		winPosY = conf.getIntProperty("QueryWindow.size.pos.y",         winPosY);
+//		divLoc  = conf.getIntProperty("QueryWindow.splitPane.location", divLoc);
+//
+//		width   = conf.getIntProperty("QueryWindow."+screenResStr+".size.width",         width);
+//		height  = conf.getIntProperty("QueryWindow."+screenResStr+".size.height",        height);
+//		winPosX = conf.getIntProperty("QueryWindow."+screenResStr+".size.pos.x",         winPosX);
+//		winPosY = conf.getIntProperty("QueryWindow."+screenResStr+".size.pos.y",         winPosY);
+//		divLoc  = conf.getIntProperty("QueryWindow."+screenResStr+".splitPane.location", divLoc);
+
+		width   = conf.getIntProperty("QueryWindow."+screenResStr+"."+srvStr+".size.width",         width);
+		height  = conf.getIntProperty("QueryWindow."+screenResStr+"."+srvStr+".size.height",        height);
+		winPosX = conf.getIntProperty("QueryWindow."+screenResStr+"."+srvStr+".size.pos.x",         winPosX);
+		winPosY = conf.getIntProperty("QueryWindow."+screenResStr+"."+srvStr+".size.pos.y",         winPosY);
+		divLoc  = conf.getIntProperty("QueryWindow."+screenResStr+"."+srvStr+".splitPane.location", divLoc);
+		
+		// Set size
+		if (width >= 0 && height >= 0)
+			_window.setSize(width, height);
+
+		// Set to last known position
+		if ( ! SwingUtils.isOutOfScreen(winPosX, winPosY, width, height) )
+		{
+			_logger.debug("Open main window in last known position.");
+			_window.setLocation(winPosX, winPosY);
+		}
+		
+		// Set the split pane location
+		if (divLoc >= 0)
+			_splitPane.setDividerLocation(divLoc);
 	}
 
 	/**
@@ -1349,12 +1681,10 @@ public class QueryWindow
 			action_viewLogTail(e);
 
 		// ACTION for "exec"
-//		if (_exec.equals(source))
 		if (ACTION_EXECUTE.equals(actionCmd))
 			actionExecute(e, false);
 
 		// ACTION for "GUI exec"
-//		if (_execGuiShowplan.equals(source))
 		if (ACTION_EXECUTE_GUI_SHOWPLAN.equals(actionCmd))
 			actionExecute(e, true);
 
@@ -1368,9 +1698,9 @@ public class QueryWindow
 				_compleationProviderAbstract.setNeedRefresh(true);
 		}
 		
-		// ACTION for "copy"
-		if (_copy.equals(source))
-			actionCopy(e);
+//		// ACTION for "copy"
+//		if (_copy_but.equals(source))
+//			actionCopy(e);
 
 
 		setComponentVisibility();
@@ -1389,14 +1719,46 @@ public class QueryWindow
 	@Override
 	public void caretUpdate(CaretEvent e)
 	{
-		boolean isDirty = _query.isDirty();
+		boolean isDirty = _query_txt.isDirty();
 		_statusBar.setFilenameDirty(isDirty);
 
 		_fSave_mi  .setEnabled(isDirty);
 		_fSaveAs_mi.setEnabled(isDirty);
+		
+		_statusBar.setEditorPos(_query_txt.getCaretLineNumber(), _query_txt.getCaretOffsetFromLineStart());
 	}
 	/*---------------------------------------------------
 	** END: implementing CaretListener
+	**--------------------------------------------------*/
+
+
+	/*---------------------------------------------------
+	** END: implementing DocumentListener
+	**--------------------------------------------------*/
+	@Override
+	public void insertUpdate(DocumentEvent e)
+	{
+		resetParserDbMessages();
+	}
+	@Override
+	public void removeUpdate(DocumentEvent e)
+	{
+		resetParserDbMessages();
+	}
+	@Override
+	public void changedUpdate(DocumentEvent e)
+	{
+		resetParserDbMessages();
+	}
+	/**
+	 * Reset the Messages in the Document, next time the parser is executing red lines will be gone/disabled
+	 */
+	private void resetParserDbMessages()
+	{
+		_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, null);
+	}
+	/*---------------------------------------------------
+	** END: implementing DocumentListener
 	**--------------------------------------------------*/
 
 
@@ -1406,6 +1768,7 @@ public class QueryWindow
 	 */
 	private void setSrvInTitle(String srvStr)
 	{
+		_titleSrvStr = srvStr;
 		String title = _titlePrefix;
 		if (srvStr != null)
 			title += " - " + srvStr;
@@ -1442,14 +1805,19 @@ public class QueryWindow
 		boolean showOfflineTab = true;
 		boolean showJdbcTab    = true;
 
+		_connectedDriverName       = null;
+		_connectedDriverVersion    = null;
 		_connectedToProductName    = null;
 		_connectedToProductVersion = null;
 		_connectedToServerName     = null;
 		_connectedToSysListeners   = null;
+		_connectedSrvCharset       = null;
+		_connectedSrvSortorder     = null;
 		_connectedAsUser           = null;
 		_connectedWithUrl          = null;
 		
 		_currentDbName             = null;
+		_oracleDbmsOutputIsEnabled = false; // I don't think you need to disable it, hopefully it will be disabled when diconnecting
 
 		// mark code completion for refresh
 		if (_compleationProviderAbstract != null)
@@ -1478,17 +1846,37 @@ public class QueryWindow
 					PropPropEntry ppe = new PropPropEntry(action);
 					String key = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP;
 
-					if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
-					if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
-					if (!isNull(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
+					// ASE Connect
+					if ( ! isNull(ppe.getProperty(key, "aseServer")) )
+					{
+						connDialog.setSelectedTab(ConnectionDialog.TDS_CONN);
+						if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
+						if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
+						if (!isNull(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
+						if (!isNull(ppe.getProperty(key, "aseDbname"))  ) aseDbname = ppe.getProperty(key, "aseDbname");
+	
+	
+	//					if (!isNull(ppe.getProperty(key, "sshUsername"))) connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
+	//					if (!isNull(ppe.getProperty(key, "sshPassword"))) connDialog.setSshPassword(ppe.getProperty(key, "sshPassword"));
+	//					if (!isNull(ppe.getProperty(key, "sshHostname"))) connDialog.setSshHostname(ppe.getProperty(key, "sshHostname"));
+	//					if (!isNull(ppe.getProperty(key, "sshPort"))    ) connDialog.setSshPort    (ppe.getProperty(key, "sshPort"));
+					}
 
-//					if (!isNull(ppe.getProperty(key, "sshUsername"))) connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
-//					if (!isNull(ppe.getProperty(key, "sshPassword"))) connDialog.setSshPassword(ppe.getProperty(key, "sshPassword"));
-//					if (!isNull(ppe.getProperty(key, "sshHostname"))) connDialog.setSshHostname(ppe.getProperty(key, "sshHostname"));
-//					if (!isNull(ppe.getProperty(key, "sshPort"))    ) connDialog.setSshPort    (ppe.getProperty(key, "sshPort"));
+					// JDBC Connect
+					if ( ! isNull(ppe.getProperty(key, "jdbcUrl")) )
+					{
+						connDialog.setSelectedTab(ConnectionDialog.JDBC_CONN);
+						if (!isNull(ppe.getProperty(key, "jdbcUrl")))      connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
+						if (!isNull(ppe.getProperty(key, "jdbcDriver")))   connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver"));
+						if (!isNull(ppe.getProperty(key, "jdbcUsername"))) connDialog.setJdbcUsername(ppe.getProperty(key, "jdbcUsername"));
+						if (!isNull(ppe.getProperty(key, "jdbcPassword"))) connDialog.setJdbcPassword(ppe.getProperty(key, "jdbcPassword"));
+					}
 
-					if (!isNull(ppe.getProperty(key, "aseDbname"))) 
-						aseDbname = ppe.getProperty(key, "aseDbname");
+					// Connection Profile
+					if ( ! isNull(ppe.getProperty(key, "connProfile")) )
+					{
+						connDialog.setConnProfileName(ppe.getProperty(key, "connProfile"));
+					}
 
 					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
 				}
@@ -1514,14 +1902,18 @@ public class QueryWindow
 		// Get product info
 		try	
 		{
+			_connectedDriverName       = connDialog.getDriverName();
+			_connectedDriverVersion    = connDialog.getDriverVersion();
 			_connectedToProductName    = connDialog.getDatabaseProductName(); 
 			_connectedToProductVersion = connDialog.getDatabaseProductVersion(); 
 			_connectedToServerName     = connDialog.getDatabaseServerName();
 			_connectedToSysListeners   = null;
+			_connectedSrvCharset       = null;
+			_connectedSrvSortorder     = null;
 			_connectedAsUser           = connDialog.getUsername();
 			_connectedWithUrl          = connDialog.getUrl();
 
-			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"'.");
+			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
 		} 
 		catch (Throwable ex) 
 		{
@@ -1531,77 +1923,271 @@ public class QueryWindow
 				_logger.warn("Problems getting DatabaseProductName, DatabaseProductVersion, DatabaseServerName or Username. Caught: "+ex);
 		}
 		
-		if ( connType == ConnectionDialog.ASE_CONN)
+		if ( connType == ConnectionDialog.TDS_CONN)
 		{
 			_conn = connDialog.getAseConn();
 
 //			if (_conn != null)
 			if (AseConnectionUtils.isConnectionOk(_conn, true, _jframe))
 			{
-				_connType = ConnectionDialog.ASE_CONN;
+				_connType = ConnectionDialog.TDS_CONN;
 
-				if (connDialog.isDatabaseProduct(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
+				if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
 				{
 					if (aseDbname != null)
 						AseConnectionUtils.useDbname(_conn, aseDbname);
 
 					setDbNames();
 
-					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query, _queryErrStrip, _window, this);
+					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_query_txt.setToolTipSupplier(new ToolTipSupplierAse(_window, this));
 
-					_aseVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
+					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
 
 					// Only SA_ROLE can get listeners
 					_connectedToSysListeners = "Sorry you need 'sa_role' to query master..syslisteners";
 					if (AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE))
 						_connectedToSysListeners = AseConnectionUtils.getListeners(_conn, false, false, _window);
 
+					// Sortorder & charset
+					_connectedSrvCharset   = AseConnectionUtils.getAseCharset(_conn);
+					_connectedSrvSortorder = AseConnectionUtils.getAseSortorder(_conn);
+
 					// Also get "various statuses" like if we are in a transaction or not
 					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
 					_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 					setWatermark();
 				}
-				else if (connDialog.isDatabaseProduct(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
+				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
 				{
-					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query, _queryErrStrip, _window, this);
+					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_query_txt.setToolTipSupplier(new ToolTipSupplierRepServer(_window, this));
 
-					_aseVersion = AseConnectionUtils.getRsVersionNumber(_conn);
-					_logger.info("Connected to Replication Server version '"+_aseVersion+"'.");
+					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
+
+					// Sortorder & charset
+					//_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
+					//_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
+
+					// JDBC Specific statuses DO NOT TDO THIS FOR REPSERVER
+					//_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+					//_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+					
+					_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
+				}
+				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
+				{
+					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_query_txt.setToolTipSupplier(new ToolTipSupplierAsa(_window, this));
+
+//					_aseVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
+
+					// Sortorder & charset
+					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
+					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
+
+					// JDBC Specific statuses
+					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+					
+					_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
+				}
+				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_IQ))
+				{
+					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_query_txt.setToolTipSupplier(new ToolTipSupplierIq(_window, this));
+
+//					_aseVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
+
+					// Sortorder & charset
+					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
+					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
+
+					// JDBC Specific statuses
+					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+					
+					_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
 				}
 				else
 				{
-					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
+					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
 
 					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
 				}
 
-				_setAseOptions.setComponentPopupMenu( createSetOptionButtonPopupMenu(_aseVersion) );
+				_setAseOptions_but.setComponentPopupMenu( createSetOptionButtonPopupMenu(_srvVersion) );
 
-				setComponentVisibility();
+
+				// Load Windown Props for this server
+				String aseSrv      = AseConnectionFactory.getServer();
+				String aseHostPort = AseConnectionFactory.getHostPortStr();
+				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
+				loadWinPropsForSrv(srvStr);
+
+
+				// Send connection info
+				SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+				connInfo.setProdName         (_connectedToProductName);
+				connInfo.setProdVersionStr   (_connectedToProductVersion);
+				connInfo.setJdbcDriverName   (_connectedDriverName);
+				connInfo.setJdbcDriverVersion(_connectedDriverVersion);
+				connInfo.setJdbcDriver       (AseConnectionFactory.getDriver());
+				connInfo.setJdbcUrl          (_connectedWithUrl); 
+				connInfo.setSrvVersionInt    (_srvVersion);
+				connInfo.setSrvName          (_connectedToServerName); 
+				connInfo.setSrvUser          (_connectedAsUser); 
+				connInfo.setSrvCharset       (_connectedSrvCharset); 
+				connInfo.setSrvSortorder     (_connectedSrvSortorder); 
+				connInfo.setSshTunnelInfo    (connDialog.getAseSshTunnelInfo());
+
+				CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+				
+			} // end: connectionIsOk
+			else
+			{
 			}
 		}
 		else if ( connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
-
 			_conn = connDialog.getOfflineConn();
 			_connType = ConnectionDialog.OFFLINE_CONN;
 
-			_aseVersion = -1;
+			_srvVersion = -1;
 
-			setComponentVisibility();
+			// Code Completion 
+			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+			// Tooltip supplier
+			if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+				_query_txt.setToolTipSupplier(new ToolTipSupplierH2(_window, this));
+			else
+				_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
+
+			// JDBC Specific statuses
+			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+
+			// Load Windown Props for this server
+			loadWinPropsForSrv(_conn.toString());
+
+			// Send connection info
+			SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			connInfo.setProdName         (_connectedToProductName);
+			connInfo.setProdVersionStr   (_connectedToProductVersion);
+			connInfo.setJdbcDriverName   (_connectedDriverName);
+			connInfo.setJdbcDriverVersion(_connectedDriverVersion);
+			connInfo.setJdbcDriver       (connDialog.getOfflineJdbcDriver());
+			connInfo.setJdbcUrl          (_connectedWithUrl); 
+			connInfo.setSrvVersionInt    (0);
+			connInfo.setSrvName          (_connectedToServerName); 
+			connInfo.setSrvUser          (_connectedAsUser); 
+			connInfo.setSrvCharset       (_connectedSrvCharset); 
+			connInfo.setSrvSortorder     (_connectedSrvSortorder); 
+//			connInfo.setSshTunnelInfo    (connDialog.getOfflineSshTunnelInfo());
+
+			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 		}
 		else if ( connType == ConnectionDialog.JDBC_CONN)
 		{
-			_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query, _queryErrStrip, _window, this);
-
 			_conn = connDialog.getJdbcConn();
 			_connType = ConnectionDialog.JDBC_CONN;
 
-			_aseVersion = -1;
+			_srvVersion = -1;
 
-			setComponentVisibility();
+			//---------------------------------------------------
+			// Get specific stuff for various products
+			
+			// H2
+			if (DbUtils.DB_PROD_NAME_H2.equals(_connectedToProductName))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Tooltip supplier
+				_query_txt.setToolTipSupplier(new ToolTipSupplierH2(_window, this));
+			}
+			// HANA
+			else if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Sortorder & charset
+				_connectedSrvCharset   = "UTF8";
+				_connectedSrvSortorder = "BINARY";
+
+				// Tooltip supplier
+				_query_txt.setToolTipSupplier(new ToolTipSupplierHana(_window, this));
+			}
+			// ORACLE
+			else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Sortorder & charset
+				_connectedSrvCharset   = DbUtils.getOracleCharset(_conn);
+				_connectedSrvSortorder = DbUtils.getOracleSortorder(_conn);
+
+				// Tooltip supplier
+				_query_txt.setToolTipSupplier(new ToolTipSupplierOracle(_window, this));
+			}
+			// MS-SQL
+			else if (DbUtils.DB_PROD_NAME_MS.equals(_connectedToProductName))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Sortorder & charset
+				//_connectedSrvCharset   = DbUtils.getMsSqlCharset(_conn);
+				//_connectedSrvSortorder = DbUtils.getMsSqlSortorder(_conn);
+
+				// Tooltip supplier
+				_query_txt.setToolTipSupplier(new ToolTipSupplierMsSql(_window, this));
+			}
+			else
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Tooltip supplier
+				_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
+			}
+			
+
+			//---------------------------------------------------
+			// JDBC Specific status - refreshed after each execution
+			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+
+			// Load Windown Props for this server
+			loadWinPropsForSrv(_connectedWithUrl);
+
+			// Send connection info
+			SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			connInfo.setProdName         (_connectedToProductName);
+			connInfo.setProdVersionStr   (_connectedToProductVersion);
+			connInfo.setJdbcDriverName   (_connectedDriverName);
+			connInfo.setJdbcDriverVersion(_connectedDriverVersion);
+			connInfo.setJdbcDriver       (connDialog.getJdbcDriver());
+			connInfo.setJdbcUrl          (_connectedWithUrl); 
+			connInfo.setSrvVersionInt    (0);
+			connInfo.setSrvName          (_connectedToServerName); 
+			connInfo.setSrvUser          (_connectedAsUser); 
+			connInfo.setSrvCharset       (_connectedSrvCharset); 
+			connInfo.setSrvSortorder     (_connectedSrvSortorder); 
+//			connInfo.setSshTunnelInfo    (connDialog.getJdbcSshTunnelInfo());
+
+			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 		}
+		
+		// What Components should be enabled/visible
+		setComponentVisibility();
+
+		// Finally update the watermark
+		setWatermark();
 	}
 	private void setComponentVisibility()
 	{
@@ -1630,25 +2216,31 @@ public class QueryWindow
 //		if (_conn == null)
 		if ( ! AseConnectionUtils.isConnectionOk(_conn, false, null) )
 		{
-			_connect_mi      .setEnabled(true);
-			_connect_but     .setEnabled(true);
-			_disconnect_mi   .setEnabled(false);
-			_disconnect_but  .setEnabled(false);
-			_cloneConnect_mi .setEnabled(false);
+			_connect_mi                .setEnabled(true);
+			_connect_but               .setEnabled(true);
+			_disconnect_mi             .setEnabled(false);
+			_disconnect_but            .setEnabled(false);
+			_cloneConnect_mi           .setEnabled(false);
 			
-			_viewLogFile_but .setEnabled(false);
-			_viewLogFile_mi  .setEnabled(false);
+			_viewLogFile_but           .setEnabled(false);
+			_viewLogFile_mi            .setEnabled(false);
 
-			_dbnames_cbx     .setEnabled(false);
-			_exec            .setEnabled(false);
-			_rsInTabs        .setEnabled(false);
-			_asPlainText     .setEnabled(false);
-			_showRowCount    .setEnabled(false);
-			_clientTiming_chk.setEnabled(false);
-			_setAseOptions   .setEnabled(false);
-			_execGuiShowplan .setEnabled(false);
+			_dbnames_cbx               .setEnabled(false);
+			_exec_but                  .setEnabled(false);
+			_rsInTabs_chk              .setEnabled(false);
+			_asPlainText_chk           .setEnabled(false);
+			_showRowCount_chk          .setEnabled(false);
+			_showSentSql_chk           .setEnabled(false);
+			_printRsInfo_chk           .setEnabled(false);
+			_clientTiming_chk          .setEnabled(false);
+			_useSemicolonHack_chk      .setEnabled(false);
+			_oracleEnableDbmsOutput_chk.setEnabled(false);
+			_appendResults_chk         .setEnabled(false);
+			_getObjectTextOnError_chk  .setEnabled(false);
+			_setAseOptions_but         .setEnabled(false);
+			_execGuiShowplan_but       .setEnabled(false);
 			
-			setSrvInTitle("not connected");
+			setSrvInTitle(NOT_CONNECTED_STR);
 			_statusBar.setNotConnected();
 
 			return;
@@ -1665,7 +2257,7 @@ public class QueryWindow
 			_viewLogFile_mi .setEnabled(true);
 		}
 
-		if ( _connType == ConnectionDialog.ASE_CONN)
+		if ( _connType == ConnectionDialog.TDS_CONN)
 		{
 			// Set server name in windows - title
 			String aseSrv      = AseConnectionFactory.getServer();
@@ -1673,73 +2265,128 @@ public class QueryWindow
 			String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
 
 			setSrvInTitle(srvStr);
-			_statusBar.setServerName(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			_statusBar.setServerInfo(srvInfo);
 			
-			if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
+			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
 			{
-				_ase_viewConfig_mi     .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
-				_cmdSql_but            .setVisible(true);
+				_ase_viewConfig_mi         .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
+				_cmdSql_but                .setVisible(true);
 
-				_dbnames_cbx     .setEnabled(true);
-				_exec            .setEnabled(true);
-				_rsInTabs        .setEnabled(true);
-				_asPlainText     .setEnabled(true);
-				_showRowCount    .setEnabled(true);
-				_clientTiming_chk.setEnabled(true);
-				_setAseOptions   .setEnabled(true);
-//				_execGuiShowplan .setEnabled( (_aseVersion >= 15000) );
-				_execGuiShowplan .setEnabled( (_aseVersion >= 1500000) );
+				_dbnames_cbx               .setEnabled(true);
+				_exec_but                  .setEnabled(true);
+				_rsInTabs_chk              .setEnabled(true);
+				_asPlainText_chk           .setEnabled(true);
+				_showRowCount_chk          .setEnabled(true);
+				_showSentSql_chk           .setEnabled(true);
+				_printRsInfo_chk           .setEnabled(true);
+				_clientTiming_chk          .setEnabled(true);
+				_useSemicolonHack_chk      .setEnabled(true);
+				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_appendResults_chk         .setEnabled(true);
+				_getObjectTextOnError_chk  .setEnabled(true);
+				_setAseOptions_but         .setEnabled(true);
+//				_execGuiShowplan_but       .setEnabled( (_aseVersion >= 15000) );
+				_execGuiShowplan_but       .setEnabled( (_srvVersion >= 1500000) );
 			}
-			else if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
+			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
 			{
-				_rs_configChangedDdl_mi.setVisible(true);
-				_rs_configAllDdl_mi    .setVisible(true);
-				_cmdRcl_but            .setVisible(true);
-				_rs_dumpQueue_mi       .setVisible(true);
-				_rsWhoIsDown_but       .setVisible(true);
-				_rsWhoIsDown_mi        .setVisible(true);
+				_rs_configChangedDdl_mi    .setVisible(true);
+				_rs_configAllDdl_mi        .setVisible(true);
+				_cmdRcl_but                .setVisible(true);
+				_rs_dumpQueue_mi           .setVisible(true);
+				_rsWhoIsDown_but           .setVisible(true);
+				_rsWhoIsDown_mi            .setVisible(true);
 
-				_dbnames_cbx           .setVisible(false);
-				_exec                  .setEnabled(true);
-				_rsInTabs              .setEnabled(true);
-				_asPlainText           .setEnabled(true);
-				_showRowCount          .setEnabled(true);
-				_clientTiming_chk      .setEnabled(true);
-				_setAseOptions         .setEnabled(false);
-				_execGuiShowplan       .setEnabled(false);
+				_dbnames_cbx               .setVisible(false);
+				_exec_but                  .setEnabled(true);
+				_rsInTabs_chk              .setEnabled(true);
+				_asPlainText_chk           .setEnabled(true);
+				_showRowCount_chk          .setEnabled(true);
+				_showSentSql_chk           .setEnabled(true);
+				_printRsInfo_chk           .setEnabled(true);
+				_clientTiming_chk          .setEnabled(true);
+				_useSemicolonHack_chk      .setEnabled(true);
+				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_appendResults_chk         .setEnabled(true);
+				_getObjectTextOnError_chk  .setEnabled(true);
+				_setAseOptions_but         .setEnabled(false);
+				_execGuiShowplan_but       .setEnabled(false);
+			}
+			else // Probably IQ, SQL Anywhere or some other TDS implementation like OpenServer or jTDS
+			{
+//				_logger.info("Connected to the Sybase TDS service with product name '"+_connectedToProductName+"', only esential functionality is enabled.");
+
+				_dbnames_cbx               .setVisible(false);
+				_exec_but                  .setEnabled(true);
+				_rsInTabs_chk              .setEnabled(true);
+				_asPlainText_chk           .setEnabled(true);
+				_showRowCount_chk          .setEnabled(true);
+				_showSentSql_chk           .setEnabled(true);
+				_printRsInfo_chk           .setEnabled(true);
+				_clientTiming_chk          .setEnabled(true);
+				_useSemicolonHack_chk      .setEnabled(true);
+				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_appendResults_chk         .setEnabled(true);
+				_getObjectTextOnError_chk  .setEnabled(true);
+				_setAseOptions_but         .setEnabled(false);
+				_execGuiShowplan_but       .setEnabled(false);
 			}
 		}
 
 		if ( _connType == ConnectionDialog.OFFLINE_CONN)
 		{
-			_dbnames_cbx     .setEnabled(false);
-			_exec            .setEnabled(true);
-			_rsInTabs        .setEnabled(true);
-			_asPlainText     .setEnabled(true);
-			_showRowCount    .setEnabled(true);
-			_clientTiming_chk.setEnabled(true);
-			_setAseOptions   .setEnabled(false);
-			_execGuiShowplan .setEnabled(false);
+			_dbnames_cbx               .setEnabled(false);
+			_exec_but                  .setEnabled(true);
+			_rsInTabs_chk              .setEnabled(true);
+			_asPlainText_chk           .setEnabled(true);
+			_showRowCount_chk          .setEnabled(true);
+			_showSentSql_chk           .setEnabled(true);
+			_printRsInfo_chk           .setEnabled(true);
+			_clientTiming_chk          .setEnabled(true);
+			_useSemicolonHack_chk      .setEnabled(true);
+			_oracleEnableDbmsOutput_chk.setEnabled(true);
+			_appendResults_chk         .setEnabled(true);
+			_getObjectTextOnError_chk  .setEnabled(true);
+			_setAseOptions_but         .setEnabled(false);
+			_execGuiShowplan_but       .setEnabled(false);
 
 			setSrvInTitle(_conn.toString());
-			_statusBar.setServerName(_conn.toString(), _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners);
+			ServerInfo srvInfo = new ServerInfo(_conn.toString(), _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			_statusBar.setServerInfo(srvInfo);
 		}
 
 		if ( _connType == ConnectionDialog.JDBC_CONN)
 		{
-			_dbnames_cbx     .setEnabled(false);
-			_exec            .setEnabled(true);
-			_rsInTabs        .setEnabled(true);
-			_asPlainText     .setEnabled(true);
-			_showRowCount    .setEnabled(true);
-			_clientTiming_chk.setEnabled(true);
-			_setAseOptions   .setEnabled(false);
-			_execGuiShowplan .setEnabled(false);
+			_dbnames_cbx               .setEnabled(false);
+			_exec_but                  .setEnabled(true);
+			_rsInTabs_chk              .setEnabled(true);
+			_asPlainText_chk           .setEnabled(true);
+			_showRowCount_chk          .setEnabled(true);
+			_showSentSql_chk           .setEnabled(true);
+			_printRsInfo_chk           .setEnabled(true);
+			_clientTiming_chk          .setEnabled(true);
+			_useSemicolonHack_chk      .setEnabled(true);
+			_oracleEnableDbmsOutput_chk.setEnabled(true);
+			_appendResults_chk         .setEnabled(true);
+			_getObjectTextOnError_chk  .setEnabled(true);
+			_setAseOptions_but         .setEnabled(false);
+			_execGuiShowplan_but       .setEnabled(false);
 
 			setSrvInTitle(_connectedWithUrl);
-			_statusBar.setServerName(_connectedWithUrl, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners);
+			ServerInfo srvInfo = new ServerInfo(_connectedWithUrl, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			_statusBar.setServerInfo(srvInfo);
 		}
 		
+		if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_ORACLE))
+		{
+			_oracleEnableDbmsOutput_chk.setVisible(true);
+		}
+		else
+		{
+			_oracleEnableDbmsOutput_chk.setVisible(false);
+		}
+
 		// view and tools menu might be empty...
 		// if so hide the main menu entry as well
 		SwingUtils.hideMenuIfNoneIsVisible(_view_m);
@@ -1748,37 +2395,54 @@ public class QueryWindow
 
 	private void action_disconnect(ActionEvent e)
 	{
+		saveWinProps();
+
+		_connectedDriverName       = null;
+		_connectedDriverVersion    = null;
 		_connectedToProductName    = null;
 		_connectedToProductVersion = null;
 		_connectedToServerName     = null;
 		_connectedAsUser           = null;
 		_connectedWithUrl          = null;
+		_connectedToSysListeners   = null;
+		_connectedSrvCharset       = null;
+		_connectedSrvSortorder     = null;
 
 		_currentDbName             = null;
-		
+		_oracleDbmsOutputIsEnabled = false; // Mark this as false, it will be marked as true when executing...
+
 		if (_conn != null)
 		{
 			try
 			{
-				_conn.close();
-				_conn = null;
-				_connType = -1;
+				_rsWhoIsDown_but           .setVisible(false);
+				_viewLogFile_but           .setEnabled(false);
+				_viewLogFile_mi            .setEnabled(false);
 
-				_rsWhoIsDown_but .setVisible(false);
-				_viewLogFile_but .setEnabled(false);
-				_viewLogFile_mi  .setEnabled(false);
-
-				_dbnames_cbx     .setEnabled(false);
-				_exec            .setEnabled(false);
-				_rsInTabs        .setEnabled(false);
-				_asPlainText     .setEnabled(false);
-				_showRowCount    .setEnabled(false);
-				_clientTiming_chk.setEnabled(false);
-				_setAseOptions   .setEnabled(false);
-				_execGuiShowplan .setEnabled(false);
+				_dbnames_cbx               .setEnabled(false);
+				_exec_but                  .setEnabled(false);
+				_rsInTabs_chk              .setEnabled(false);
+				_asPlainText_chk           .setEnabled(false);
+				_showRowCount_chk          .setEnabled(false);
+				_showSentSql_chk           .setEnabled(false);
+				_printRsInfo_chk           .setEnabled(false);
+				_clientTiming_chk          .setEnabled(false);
+				_useSemicolonHack_chk      .setEnabled(false);
+				_oracleEnableDbmsOutput_chk.setEnabled(false);
+				_appendResults_chk         .setEnabled(false);
+				_getObjectTextOnError_chk  .setEnabled(false);
+				_setAseOptions_but         .setEnabled(false);
+				_execGuiShowplan_but       .setEnabled(false);
 
 				setSrvInTitle(null);
 				_statusBar.setNotConnected();
+
+				// close the connection "at the end" of the method, if it causes an exception
+				Connection tmpConn = _conn;
+				_conn = null;
+				_connType = -1;
+
+				tmpConn.close();
 			}
 			catch (SQLException ex)
 			{
@@ -1885,13 +2549,13 @@ public class QueryWindow
 //System.out.println("action_fileNew");
 
 		boolean tryToSaveFile = false;
-		if (_query.isDirty())
+		if (_query_txt.isDirty())
 		{
 			tryToSaveFile = true;
 
-			File f = new File(_query.getFileFullPath());
+			File f = new File(_query_txt.getFileFullPath());
 			
-			Object[] buttons = {"Save File", "Save As new file", "Discard changes"};
+			Object[] buttons = {"Save File", "Save As new file", "Discard changes", "Cancel"};
 			int answer = JOptionPane.showOptionDialog(_window, 
 					"The File '"+f+"' has not been saved.",
 					"Save file?", 
@@ -1905,14 +2569,17 @@ public class QueryWindow
 			{
 				action_fileSave(e);
 				tryToSaveFile = true;
-				return;
 			}
 			// Save As
 			else if (answer == 1) 
 			{
 				action_fileSaveAs(e);
 				tryToSaveFile = true;
-				return;
+			}
+			// CANCEL, continue to work on current file
+			else if (answer == 3) 
+			{
+				return;  // <<<<<<<---------- RETURN ---------------
 			}
 			// Discard
 			else
@@ -1921,7 +2588,7 @@ public class QueryWindow
 			}
 		}
 
-		if (tryToSaveFile && _query.isDirty())
+		if (tryToSaveFile && _query_txt.isDirty())
 		{
 			SwingUtils.showInfoMessage("New File", "Sorry the file couldn't be saved. Can't continue open another file.");
 		}
@@ -1930,9 +2597,9 @@ public class QueryWindow
 		SwingUtils.showInfoMessage("New File", "Sorry not fully implemented yet.");
 
 		// hmm do I need to do...
-//		_query = new TextEditorPane();
-//		...and then install all the "stuff" on _query
-//		or probably a new method that does it all..._query like...
+//		_query_txt = new TextEditorPane();
+//		...and then install all the "stuff" on _query_txt
+//		or probably a new method that does it all..._query_txt like...
 //		public TextEditorPane createNewEditor()
 //		{
 //			TextEditorPane text = new TextEditorPane();
@@ -1945,9 +2612,9 @@ public class QueryWindow
 //		try
 //		{
 //			FileLocation loc = FileLocation.create(file);
-//			_query.load(loc, null);
-//			_statusBar.setFilename(_query.getFileFullPath());
-//			_statusBar.setFilenameDirty(_query.isDirty());
+//			_query_txt.load(loc, null);
+//			_statusBar.setFilename(_query_txt.getFileFullPath());
+//			_statusBar.setFilenameDirty(_query_txt.isDirty());
 //		}
 //		catch (IOException ex)
 //		{
@@ -1960,13 +2627,13 @@ public class QueryWindow
 //System.out.println("action_fileOpen");
 
 		boolean tryToSaveFile = false;
-		if (_query.isDirty())
+		if (_query_txt.isDirty())
 		{
 			tryToSaveFile = true;
 
-			File f = new File(_query.getFileFullPath());
+			File f = new File(_query_txt.getFileFullPath());
 			
-			Object[] buttons = {"Save File", "Save As new file", "Discard changes"};
+			Object[] buttons = {"Save File", "Save As new file", "Discard changes", "Cancel"};
 			int answer = JOptionPane.showOptionDialog(_window, 
 					"The File '"+f+"' has not been saved.",
 					"Save file?", 
@@ -1980,14 +2647,17 @@ public class QueryWindow
 			{
 				action_fileSave(e);
 				tryToSaveFile = true;
-				return;
 			}
 			// Save As
 			else if (answer == 1) 
 			{
 				action_fileSaveAs(e);
 				tryToSaveFile = true;
-				return;
+			}
+			// CANCEL, continue to work on current file
+			else if (answer == 3) 
+			{
+				return;  // <<<<<<<---------- RETURN ---------------
 			}
 			// Discard
 			else
@@ -1996,7 +2666,7 @@ public class QueryWindow
 			}
 		}
 
-		if (tryToSaveFile && _query.isDirty())
+		if (tryToSaveFile && _query_txt.isDirty())
 		{
 			SwingUtils.showInfoMessage("Open File", "Sorry the file couldn't be saved. Can't continue open another file.");
 		}
@@ -2005,89 +2675,110 @@ public class QueryWindow
 		// Open a file chooser
 		if (fileToOpen == null)
 		{
-			File currentFilePath = new File(_query.getFileFullPath()).getParentFile();
-			JFileChooser fc = new JFileChooser(currentFilePath);
+			JFileChooser fc = new JFileChooser(getDefaultFilePath());
 			fc.setDialogType(JFileChooser.OPEN_DIALOG);
-	
-	//		if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-	//			fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
 	
 			int returnVal = fc.showOpenDialog(_window);
 			if (returnVal == JFileChooser.APPROVE_OPTION) 
-	        {
-				File file = fc.getSelectedFile();
-	
-				//This is where a real application would open the file.
-	//			String filename = file.getAbsolutePath();
-	
-	//			SwingUtils.showInfoMessage("action_fileOpen: Not yet implemented", "action_fileOpen("+filename+"): Not yet implemented");
-				try
-				{
-					FileLocation loc = FileLocation.create(file);
-					_query.load(loc, null);
-					_statusBar.setFilename(_query.getFileFullPath());
-					_statusBar.setFilenameDirty(_query.isDirty());
-					
-					addFileHistory(file);
-				}
-				catch (IOException ex)
-				{
-					SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
-				}
-	        }		
+			{
+				openFile(fc.getSelectedFile());
+			}
 		}
 		else
 		{
-			File file = new File(fileToOpen);
-			try
-			{
-				FileLocation loc = FileLocation.create(file);
-				_query.load(loc, null);
-				_statusBar.setFilename(_query.getFileFullPath());
-				_statusBar.setFilenameDirty(_query.isDirty());
-				
-				addFileHistory(file);
-			}
-			catch (IOException ex)
-			{
-				SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
-			}
+			openFile(fileToOpen);
 		}
 	}
 
-
-//	private void action_fileClose(ActionEvent e)
-//	{
-//		SwingUtils.showInfoMessage("action_fileClose:Not yet implemented", "action_fileClose:Not yet implemented");
-//		System.out.println("action_fileClose");
-//		_statusBar.setFilename(_query.getFileFullPath());
-//		_statusBar.setFilenameDirty(_query.isDirty());
-//	}
-
-
-	private void action_fileSave(ActionEvent e)
+	private void checkOpenedFileType()
 	{
-//System.out.println("action_fileSave");
-		String fp = _query.getFileFullPath();
-		String fn = _query.getFileName();
-//System.out.println("action_fileSave: fp='"+fp+"', fn='"+fn+"'.");
-		File f = new File(fp);
-		if ("Untitled.txt".equals(fn) & !f.exists())
+		String filename = _query_txt.getFileFullPath();
+		
+		// make special this here...
+		if (filename != null && filename.endsWith("_tooltip_provider.xml"))
 		{
-			action_fileSaveAs(e);
-			return;
-		}
+			// install a special ToolTipProvider
+			_query_txt.setToolTipSupplier(new ToolTipSupplierTester(_window, this));
 
+			// Install XML Syntax Higligtning and CodeCompletion for ToolTipProviderEntry
+			TtpEntryCompletionProvider.installAutoCompletion(_query_txt);
+		}
+	}
+
+	private void openFile(String filename)
+	{
+		openFile( new File(filename) );
+	}
+	private void openFile(File file)
+	{
 		try
 		{
-			_query.save();
-			_statusBar.setFilename(_query.getFileFullPath());
-			_statusBar.setFilenameDirty(_query.isDirty());
+			FileLocation loc = FileLocation.create(file);
+			_query_txt.load(loc, null);
+			_statusBar.setFilename(_query_txt.getFileFullPath());
+			_statusBar.setFilenameDirty(_query_txt.isDirty());
+			checkOpenedFileType();
+			
+			addFileHistory(file);
+			
+			if (_watchdogIsFileChanged != null)
+				_watchdogIsFileChanged.setFile(_query_txt.getFileFullPath());
+		}
+		catch (IOException ex)
+		{
+			SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
+		}
+	}
+
+	private void saveFile()
+	{
+		try
+		{
+			_query_txt.save();
+			_statusBar.setFilename(_query_txt.getFileFullPath());
+			_statusBar.setFilenameDirty(_query_txt.isDirty());
+
+			if (_watchdogIsFileChanged != null)
+				_watchdogIsFileChanged.setFile(_query_txt.getFileFullPath());
+
 		}
 		catch (IOException ex)
 		{
 			SwingUtils.showErrorMessage("Problems Saving file", "Problems saving file", ex);
 		}
+	}
+
+		
+//	private void action_fileClose(ActionEvent e)
+//	{
+//		SwingUtils.showInfoMessage("action_fileClose:Not yet implemented", "action_fileClose:Not yet implemented");
+//		System.out.println("action_fileClose");
+//		_statusBar.setFilename(_query_txt.getFileFullPath());
+//		_statusBar.setFilenameDirty(_query_txt.isDirty());
+//	}
+
+	private boolean isFileUntitled()
+	{
+		String fp = _query_txt.getFileFullPath();
+		String fn = _query_txt.getFileName();
+
+		File f = new File(fp);
+		if ("Untitled.txt".equals(fn) & !f.exists())
+			return true;
+
+		return false;
+	}
+
+	private void action_fileSave(ActionEvent e)
+	{
+//System.out.println("action_fileSave");
+		if (isFileUntitled())
+		{
+			action_fileSaveAs(e);
+			return;
+		}
+
+		saveFile();
 	}
 
 
@@ -2169,12 +2860,32 @@ public class QueryWindow
 //		return false;
 //	}
 
+	/**
+	 * If current file working file is under the Application "HOME", open another dir as the default. 
+	 */
+	private File getDefaultFilePath()
+	{
+		File currentFilePath = new File(_query_txt.getFileFullPath()).getParentFile();
+
+		// If currentFilePath points to "HOME", then bring up the default save place at $HOME/.asetune/saved_files
+		final String SQLW_HOME = System.getProperty("SQLW_HOME", "");
+		if (currentFilePath != null && currentFilePath.toString().equals(SQLW_HOME))
+		{
+			File defaultSaveAsDir = new File(Version.APP_STORE_DIR + File.separator + "saved_files");
+			if ( ! defaultSaveAsDir.exists() )
+			{
+				if (defaultSaveAsDir.mkdir())
+					_logger.info("Creating directory '"+defaultSaveAsDir+"' to hold various files for "+Version.getAppName());
+			}
+			currentFilePath = defaultSaveAsDir;
+		}
+		
+		return currentFilePath;
+	}
+
 	private void action_fileSaveAs(ActionEvent e)
 	{
-//System.out.println("action_fileSaveAs");
-
-		File currentFilePath = new File(_query.getFileFullPath()).getParentFile();
-		JFileChooser fc = new JFileChooser(currentFilePath);
+		JFileChooser fc = new JFileChooser(getDefaultFilePath());
 		fc.setDialogType(JFileChooser.SAVE_DIALOG);
 //		fc.setDialogType(JFileChooser.CUSTOM_DIALOG);
 //		fc.setApproveButtonText("Save As");
@@ -2206,11 +2917,14 @@ public class QueryWindow
 			FileLocation loc = FileLocation.create(filename);
 			try
 			{
-				_query.saveAs(loc);
-				_statusBar.setFilename(_query.getFileFullPath());
-				_statusBar.setFilenameDirty(_query.isDirty());
+				_query_txt.saveAs(loc);
+				_statusBar.setFilename(_query_txt.getFileFullPath());
+				_statusBar.setFilenameDirty(_query_txt.isDirty());
 
-				addFileHistory(_query.getFileFullPath());
+				addFileHistory(_query_txt.getFileFullPath());
+
+				if (_watchdogIsFileChanged != null)
+					_watchdogIsFileChanged.setFile(_query_txt.getFileFullPath());
 			}
 			catch (IOException ex)
 			{
@@ -2415,131 +3129,43 @@ public class QueryWindow
 			}
 		}
 
+		// is "save before execute" enabled, save file
+		if ( _query_txt.isDirty() && _fSaveBeforeExec_mi.isSelected() )
+		{
+			// Only save if we have an *assigned* and valid file
+			if ( ! isFileUntitled() )
+				saveFile();
+		}
+
 		// Get the user's query and pass to displayQueryResults()
-		String q = _query.getSelectedText();
+		String q = _query_txt.getSelectedText();
 		if ( q != null && !q.equals(""))
 		{
 			// Get the line number where the selection started
 			int selectedTextStartAtRow = 0;
-			try { selectedTextStartAtRow = _query.getLineOfOffset(_query.getSelectionStart()); }
+			try { selectedTextStartAtRow = _query_txt.getLineOfOffset(_query_txt.getSelectionStart()); }
 			catch (BadLocationException ignore) {}
 
 			displayQueryResults(q, selectedTextStartAtRow, guiShowplanExec);
 		}
 		else
-			displayQueryResults(_query.getText(), 0, guiShowplanExec);
+			displayQueryResults(_query_txt.getText(), 0, guiShowplanExec);
 	}
 	
-	private void actionCopy(ActionEvent e)
-	{
-//		System.out.println("-------COPY---------");
-		StringBuilder sb = getResultPanelAsText(_resPanel);
+//	private void actionCopy(ActionEvent e)
+//	{
+////		System.out.println("-------COPY---------");
+//		StringBuilder sb = getResultPanelAsText(_resPanel);
+//
+//		if (sb != null)
+//		{
+//			StringSelection data = new StringSelection(sb.toString());
+//			Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+//			clipboard.setContents(data, data);
+//		}
+//	}
 
-		if (sb != null)
-		{
-			StringSelection data = new StringSelection(sb.toString());
-			Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-			clipboard.setContents(data, data);
-		}
-	}
 
-	private StringBuilder getResultPanelAsText(JComponent panel)
-	{
-		StringBuilder sb = new StringBuilder();
-//		String terminatorStr = "\n";
-//		String terminatorStr = "----------------------------------------------------------------------------\n";
-
-		for (int i=0; i<panel.getComponentCount(); i++)
-		{
-			Component comp = (Component) panel.getComponent(i);
-			if (comp instanceof JPanel)
-			{
-//				JPanel p = (JPanel) comp;
-//				String title = "";
-//				Border border = p.getBorder();
-//				if (border instanceof TitledBorder)
-//				{
-//					TitledBorder tb = (TitledBorder) border;
-//					title = tb.getTitle();
-//				}
-//				sb.append("\n");
-//				sb.append("#################################################################\n");
-//				sb.append("## ").append(title).append("\n");
-//				sb.append("#################################################################\n");
-				sb.append( getResultPanelAsText( (JPanel)comp ) );
-			}
-			else if (comp instanceof JTabbedPane)
-			{
-				JTabbedPane tp = (JTabbedPane) comp;
-				for (int t=0; t<tp.getTabCount(); t++)
-				{
-//					sb.append("\n");
-//					sb.append("#################################################################\n");
-//					sb.append("## ").append(tp.getTitleAt(t)).append("\n");
-//					sb.append("#################################################################\n");
-					Component tabComp = tp.getComponentAt(t);
-					if (tabComp instanceof JComponent)
-						sb.append( getResultPanelAsText((JComponent)tabComp) );
-				}
-			}
-			else if (comp instanceof JTable)
-			{
-				JTable table = (JTable)comp;
-//				String textTable = SwingUtils.tableToString(table.getModel());
-				String textTable = SwingUtils.tableToString(table);
-				sb.append( textTable );
-				if ( ! textTable.endsWith("\n") )
-					sb.append("\n");
-				//sb.append(terminatorStr);
-			}
-			else if (comp instanceof JEditorPane)
-			{
-				JEditorPane text = (JEditorPane)comp;
-//				sb.append( StringUtil.stripHtml(text.getText()) );
-
-				// text.getText(), will get the actual HTML content and we just want the text
-				// so lets copy the stuff into the clipboard and get it from there :)
-				// Striping the HTML is an alternative, but that lead to other problems
-				text.selectAll();
-				text.copy();
-				text.select(0, 0);
-
-				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-				Transferable clipData = clipboard.getContents(this);
-				String strFromClipboard;
-				try { strFromClipboard = (String) clipData.getTransferData(DataFlavor.stringFlavor); } 
-				catch (Exception ee) { strFromClipboard = ee.toString(); }
-
-				sb.append( strFromClipboard );
-				if ( ! strFromClipboard.endsWith("\n") )
-					sb.append("\n");
-				//sb.append(terminatorStr);
-			}
-			else if (comp instanceof JTextArea)  // JAseMessage extends JTextArea
-			{
-				JTextArea text = (JTextArea)comp;
-				String str = text.getText();
-				sb.append( str );
-				if ( ! str.endsWith("\n") )
-					sb.append("\n");
-				//sb.append(terminatorStr);
-			}
-			else if (comp instanceof JTableHeader)
-			{
-				// discard the table header, we get that info in JTable
-			}
-			else
-			{
-				String str = comp.toString();
-				sb.append( str );
-				if ( ! str.endsWith("\n") )
-					sb.append("\n");
-				//sb.append(terminatorStr);
-			}
-		}
-		return sb;
-	}
-	
 //	public void openTheWindow()
 //	{
 //		Configuration conf = Configuration.getCombinedConfiguration();
@@ -2555,11 +3181,25 @@ public class QueryWindow
 		if (_window == null)
 			return;
 
-		int width   = conf.getIntProperty("QueryWindow.size.width",         600);
-		int height  = conf.getIntProperty("QueryWindow.size.height",        400);
-		int winPosX = conf.getIntProperty("QueryWindow.size.pos.x",         -1);
-		int winPosY = conf.getIntProperty("QueryWindow.size.pos.y",         -1);
-		int divLoc  = conf.getIntProperty("QueryWindow.splitPane.location", -1);
+		String screenResStr = SwingUtils.getScreenResulutionAsString();
+
+		int width   = 600;
+		int height  = 400;
+		int winPosX = -1;
+		int winPosY = -1;
+		int divLoc  = -1;
+
+		width   = conf.getIntProperty("QueryWindow.size.width",         width);
+		height  = conf.getIntProperty("QueryWindow.size.height",        height);
+		winPosX = conf.getIntProperty("QueryWindow.size.pos.x",         winPosX);
+		winPosY = conf.getIntProperty("QueryWindow.size.pos.y",         winPosY);
+		divLoc  = conf.getIntProperty("QueryWindow.splitPane.location", divLoc);
+
+		width   = conf.getIntProperty("QueryWindow."+screenResStr+".size.width",         width);
+		height  = conf.getIntProperty("QueryWindow."+screenResStr+".size.height",        height);
+		winPosX = conf.getIntProperty("QueryWindow."+screenResStr+".size.pos.x",         winPosX);
+		winPosY = conf.getIntProperty("QueryWindow."+screenResStr+".size.pos.y",         winPosY);
+		divLoc  = conf.getIntProperty("QueryWindow."+screenResStr+".splitPane.location", divLoc);
 
 		// If this window is a "cloned" window...
 		// Or if other SQL Windows processes is started FIXME: implement this
@@ -2639,11 +3279,11 @@ public class QueryWindow
 
 	public void setSql(String sql)
 	{
-		_query.setText(sql);
+		_query_txt.setText(sql);
 	}
 	public String getSql()
 	{
-		return _query.getText();
+		return _query_txt.getText();
 	}
 	
 	
@@ -2711,6 +3351,11 @@ public class QueryWindow
 
 		try
 		{
+// Just for test purposes
+//System.out.println("useDb(dbname='"+dbname+"'): PreparedStatement");
+//PreparedStatement ps = _conn.prepareStatement("use ?");
+//ps.setString(1, dbname);
+//ps.execute();
 			_conn.createStatement().execute("use "+dbname);
 			_currentDbName = dbname;
 			return true;
@@ -2859,17 +3504,103 @@ public class QueryWindow
 
 		JPopupMenu popup = new JPopupMenu();
 
+		// FIXME: Create 'execute selected Cells'
+		
+		// Create COPY entries
 		TablePopupFactory.createCopyTable(popup);
+
+		// Create EXEC entries
+		JMenuItem menuItem = null;
+		menuItem = new JMenuItem("Execute Content in Column of Selected Row(s)")
+		{
+			private static final long	serialVersionUID	= 1L;
+
+			@Override
+			public String getToolTipText(MouseEvent event) 
+			{
+				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)event.getSource());
+				if (invoker instanceof ResultSetJXTable)
+				{
+					ResultSetJXTable table = (ResultSetJXTable)invoker;
+					int atCol = table.columnAtPoint(table.getLastMouseClickPoint());
+					if (atCol < 0)
+						atCol = 0;
+					int[] selRows = table.getSelectedRows();
+					StringBuilder sb = new StringBuilder("<html><b>The following SQL will be executed:</b><pre>");
+					for (int r : selRows)
+					{
+						String val = table.getValueAt(r, atCol) + "";
+						sb.append(val).append("<br>").append("go").append("<br>");
+					}
+					if (selRows.length > 0)
+					{
+						sb.append("</pre></html>");
+						return sb.toString();
+					}
+				}
+				return invoker.toString();
+			}
+		};
+		ToolTipManager.sharedInstance().registerComponent(menuItem); // register the component with tooltip...
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ROW_IS_SELECTED);
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override 
+			public void actionPerformed(ActionEvent e)
+			{
+				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)e.getSource());
+				if (invoker instanceof ResultSetJXTable)
+				{
+					ResultSetJXTable table = (ResultSetJXTable)invoker;
+					int atCol = table.columnAtPoint(table.getLastMouseClickPoint());
+					if (atCol < 0)
+						atCol = 0;
+					int[] selRows = table.getSelectedRows();
+					StringBuilder sb = new StringBuilder();
+					for (int r : selRows)
+					{
+						String val = table.getValueAt(r, atCol) + "";
+						sb.append(val).append("\n").append("go").append("\n");
+					}
+					if (selRows.length > 0)
+					{
+						displayQueryResults(sb.toString(), 0, false);
+					}
+				}
+			}
+		});
+		popup.add(menuItem);
+
 
 		// create pupup depending on what we are connected to
 		String propPostfix = "";
-		if (ConnectionDialog.DB_PROD_NAME_SYBASE_ASE.equals(_connectedToProductName))
+		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_connectedToProductName))
 		{
 			propPostfix = "ase.";
 		}
-		else if (ConnectionDialog.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
 		{
 			propPostfix = "rs.";
+		}
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName))
+		{
+			propPostfix = "asa.";
+		}
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(_connectedToProductName))
+		{
+			propPostfix = "iq.";
+		}
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+		{
+			propPostfix = "hana.";
+		}
+		else if (DbUtils.DB_PROD_NAME_MS.equals(_connectedToProductName))
+		{
+			propPostfix = "mssql.";
+		}
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+		{
+			propPostfix = "ora.";
 		}
 		else
 		{
@@ -2892,6 +3623,59 @@ public class QueryWindow
 			return null;
 		else
 			return popup;
+	}
+
+	private void resetResultsetPanel()
+	{
+		if ( _appendResults_chk.isSelected() )
+		{
+			String dateTimeNowStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+			String appenModeStr   = 
+				"#######################################################\n" +
+				"## "+dateTimeNowStr+" - Append Mode is ON.\n" +
+				"#######################################################";
+
+			if (_asPlainText_chk.isSelected())
+			{
+				if (_result_txt == null)
+				{
+					RSyntaxTextAreaX out = new RSyntaxTextAreaX();
+					RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+					installResultTextExtraMenuEntries(out);
+					_resPanelTextScroll.setViewportView(out);
+					_resPanelTextScroll.setLineNumbersEnabled(true);
+
+					// set this globaly as well
+					_result_txt = out;
+				}
+				_result_txt.append("\n");
+				_result_txt.append(appenModeStr);
+				_result_txt.append("\n\n");
+			}
+			else
+			{
+				JAseMessage noRsMsg = new JAseMessage(appenModeStr, null);
+				JButton clear = new JButton("Clear all results");
+				clear.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						_resPanel.removeAll();
+						_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+						_resPanel.repaint();
+					}
+				});
+	
+				_resPanel.add(clear,   "gapy 1");
+				_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
+			}
+		}
+		else
+		{
+			_resPanel.removeAll();
+			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+		}
 	}
 
 	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec)
@@ -2918,12 +3702,16 @@ public class QueryWindow
 			@Override
 			protected String doInBackground() throws Exception
 			{
+				// reset the error information, before execute otherwise there will be "haning" errors that are not "real"
+				resetParserDbMessages();
+				// Should we notify the Error Parser that something has changed???
+				// It's done in the end, but if we raise an exception then the "red" lines will not be removed...
+
 				if (guiShowplanExec)
 				{
-					_resPanel.removeAll();
-					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					resetResultsetPanel();
 					
-					JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
+					JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.", null);
 					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
 
 					AsePlanViewer pv = new AsePlanViewer(_conn, sql);
@@ -2931,10 +3719,9 @@ public class QueryWindow
 				}
 				else
 				{
-					_resPanel.removeAll();
-					_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					resetResultsetPanel();
 					
-					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.");
+					JAseMessage noRsMsg = new JAseMessage("Sending Query to server.", null);
 					_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
 
 					displayQueryResults(_conn, sql, startRowInSelection, progress, false);
@@ -2973,26 +3760,33 @@ public class QueryWindow
 			_resPanelTextScroll.setLineNumbersEnabled(true);
 
 			// set this globaly as well
-			_resultText = out;
+			_result_txt = out;
 
 			// add exception text to OUTPUT TEXT
 			out.setText(ex.toString());
 
 			// DO POPUP
-			SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
+//			if ( ! (ex instanceof SQLException) )
+//			{
+			// TODO: maybe add a "dont show this message again... only show it in the output window"
+				SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
 					"<html>" +
 					"<h2>Problems when executing Statement</h2>" +
 					ex.getMessage() +
 					"</html>", 
 					ex);
+//			}
 		}
 
 		if (guiShowplanExec)
 		{
-			_resPanel.removeAll();
-			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+			if ( ! _appendResults_chk.isSelected() )
+			{
+				_resPanel.removeAll();
+				_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+			}
 			
-			JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.");
+			JAseMessage noRsMsg = new JAseMessage("No result sets will be displayed in GUI exec mode.", null);
 			_resPanel.add(noRsMsg, "gapy 1, growx, pushx");
 		}
 		
@@ -3003,7 +3797,7 @@ public class QueryWindow
 			_conn.isClosed(); 
 
 			// if ASE, refresh the database list and currect working database
-			if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE))
+			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
 			{
 				// issue 'select 1' to check if the connection is valid
 				doDummySelect();
@@ -3016,6 +3810,15 @@ public class QueryWindow
 				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
 				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 			}
+			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
+			{
+				// Do nothing
+			}
+			else
+			{
+				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+			}
 		}
 		catch (SQLException e) 
 		{
@@ -3026,34 +3829,47 @@ public class QueryWindow
 	}
 
 	
-	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
+	private void putSqlWarningMsgs(ResultSet rs, ArrayList<JComponent> resultCompList, PipeCommand pipeCommand, String debugStr, int batchStartRow, int startRowInSelection, String currentSql)
 	{
 		if (rs == null)
 			return;
 		try
 		{
-			putSqlWarningMsgs(rs.getWarnings(), resultCompList, debugStr, batchStartRow, startRowInSelection);
+			putSqlWarningMsgs(rs.getWarnings(), resultCompList, pipeCommand, debugStr, batchStartRow, startRowInSelection, currentSql);
 			rs.clearWarnings();
 		}
 		catch (SQLException e)
 		{
 		}
 	}
-	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
+	private void putSqlWarningMsgs(Statement stmnt, ArrayList<JComponent> resultCompList, PipeCommand pipeCommand, String debugStr, int batchStartRow, int startRowInSelection, String currentSql)
 	{
 		if (stmnt == null)
 			return;
 		try
 		{
-			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, debugStr, batchStartRow, startRowInSelection);
+			putSqlWarningMsgs(stmnt.getWarnings(), resultCompList, pipeCommand, debugStr, batchStartRow, startRowInSelection, currentSql);
 			stmnt.clearWarnings();
 		}
 		catch (SQLException e)
 		{
 		}
 	}
+	private void putSqlWarningMsgs(Connection conn, ArrayList<JComponent> resultCompList, PipeCommand pipeCommand, String debugStr, int batchStartRow, int startRowInSelection, String currentSql)
+	{
+		if (conn == null)
+			return;
+		try
+		{
+			putSqlWarningMsgs(conn.getWarnings(), resultCompList, pipeCommand, debugStr, batchStartRow, startRowInSelection, currentSql);
+			conn.clearWarnings();
+		}
+		catch (SQLException e)
+		{
+		}
+	}
 
-	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, String debugStr, int batchStartRow, int startRowInSelection)
+	private void putSqlWarningMsgs(SQLException sqe, ArrayList<JComponent> resultCompList, PipeCommand pipeCommand, String debugStr, int batchStartRow, int startRowInSelection, String currentSql)
 	{
 		if (startRowInSelection < 0)
 			startRowInSelection = 0;
@@ -3061,10 +3877,12 @@ public class QueryWindow
 		while (sqe != null)
 		{
 			int    msgNum      = sqe.getErrorCode();
-			String msgText     = sqe.getMessage();
+			String msgText     = StringUtil.removeLastNewLine(sqe.getMessage());
 			int    msgSeverity = -1;
+			String objectText  = null;
 			
 			StringBuilder sb = new StringBuilder();
+			int scriptRow = -1;
 			if(sqe instanceof EedInfo)
 			{
 				// Error is using the addtional TDS error data.
@@ -3088,8 +3906,71 @@ public class QueryWindow
 								"Procedure '" + eedi.getProcedureName() + "'");
 						firstOnLine = false;
 					}
+
+					// Try to figgure out what we should write out in the 'script row'
+					// Normally it's *nice* to print out *where* in the "whole" document the error happened, especially syntax errors etc (and not just "within" the SQL batch, because you would have several in a file)
+					// BUT: if we *call* a stored procedure, and that stored procedure produces errors, then we want to write from what "script line" (or where) the procedure was called at
+					// BUT: if we are developing creating procedures/functions etc we would want *where* in the "script line" (within the prcedure text) the error is produced (easier to find syntax errors, faulty @var names, table nemaes etc...)
+					int lineNumber = eedi.getLineNumber();
+					int lineNumberAdjust = 0;
+
+					// for some product LineNumber starts at 0, so lets just adjust for this in the calculated (script row ###)
+					if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName)) lineNumberAdjust = 1;
+					if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(_connectedToProductName)) lineNumberAdjust = 1;
+					String extraDesc  = "";
+
+					if ( StringUtil.hasValue(eedi.getProcedureName()) )
+					{
+						String regex    = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
+						Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+
+						// SQL has create proc etc in it... figgure out the line number...
+						if (pattern.matcher(currentSql).find())
+						{
+							// Keep current scriptRow (line number in the procedure)
+							lineNumber = eedi.getLineNumber();
+							extraDesc  = "";
+						}
+						// we are only executing the procedure, so take another approach
+						// lets line number for first occurance of the procname in current SQL... 
+						else 
+						{
+							String searchForName = eedi.getProcedureName();
+
+							// also try to get the procedure text, which will be added to the message
+							// but not for print statement
+							if (_getObjectTextOnError_chk.isSelected() && eedi.getSeverity() > 10)
+							{
+								objectText = AseConnectionUtils.getObjectText(_conn, null, searchForName, null, _srvVersion);
+								if (objectText == null && searchForName.startsWith("sp_"))
+									objectText = AseConnectionUtils.getObjectText(_conn, "sybsystemprocs", searchForName, null, _srvVersion);
+								objectText = StringUtil.markTextAtLine(objectText, lineNumber, true);
+							}
+
+							// loop the sql and find the first row that matches the procedure text
+							String procRegex = searchForName + "[^a-z,^A-Z,^0-9]";
+							Pattern procPat  = Pattern.compile(procRegex);
+
+							Scanner scanner = new Scanner(currentSql);
+							int rowNumber = 0;
+							while (scanner.hasNextLine()) 
+							{
+								rowNumber++;
+								String line = scanner.nextLine();
+								// stop at first match
+								if (procPat.matcher(line).find())
+									break;
+							}
+
+							lineNumber = rowNumber;
+							extraDesc  = "Called from ";
+						}
+					}
+					scriptRow = startRowInSelection + batchStartRow + lineNumber + lineNumberAdjust;
+					String scriptRowStr = (batchStartRow >= 0 ? " ("+extraDesc+"script row "+scriptRow+")" : "");
+
 					sb.append( (firstOnLine ? "" : ", ") +
-							"Line " + eedi.getLineNumber() + (batchStartRow >= 0 ? " (script row "+(startRowInSelection + batchStartRow + eedi.getLineNumber())+")" : "") +
+							"Line " + eedi.getLineNumber() + scriptRowStr +
 							", Status " + eedi.getStatus() + 
 							", TranState " + eedi.getTranState() + ":\n");
 				}
@@ -3099,16 +3980,35 @@ public class QueryWindow
 					sb.append(msg);
 				else
 					sb.append(msg+"\n");
-			}
+
+			} // end: if(sqe instanceof EedInfo)
 			else
 			{
-				// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
-				if ( ! sqe.getSQLState().equals("010P4") )
+				// jConnect: SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
+				if ( "010P4".equals(sqe.getSQLState()) )
 				{
-					sb.append("Unexpected exception : " +
-							"SqlState: " + sqe.getSQLState()  +
-							" " + sqe.toString() +
-							", ErrorCode: " + sqe.getErrorCode() + "\n");
+					// Simply ignore: 010P4: An output parameter was received and ignored.
+					// This is when a Stored Procedure return code is returned, which is Output Parameter 1
+				}
+				else if ( "010SL".equals(sqe.getSQLState()) )
+				{
+					// IGNORE: 010SL: Out-of-date metadata accessor information was found on this database.  Ask your database administrator to load the latest scripts.
+				}
+				// OK, jTDS drivers etc, will have warnings etc in print statements
+				// Lets try to see if it's one of those.
+				else if (sqe.getErrorCode() == 0 && sqe instanceof SQLWarning)
+				{
+					if (StringUtil.isNullOrBlank(msgText))
+						sb.append(" ");
+					else
+						sb.append(msgText);
+				}
+				else
+				{
+					String msg = "Unexpected SQLException: " +
+						_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
+						+ sqe.getMessage();
+					sb.append(msg);
 				}
 			}
 			
@@ -3120,7 +4020,50 @@ public class QueryWindow
 					sb.deleteCharAt(sb.length()-1);
 
 				String aseMsg = sb.toString();
-				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity) );
+
+				// Grep on individual rows in the Message
+				if (pipeCommand != null && pipeCommand.isGrep())
+				{
+					PipeCommandGrep grep = (PipeCommandGrep)pipeCommand.getCmd();
+					// If VALID for Message
+					if ( grep.isValidForType(PipeCommandGrep.TYPE_MSG) )
+					{
+						String regexpStr = ".*" + grep.getConfig() + ".*";
+						String newMessage = "";
+				
+						Scanner scanner = new Scanner(aseMsg);
+						while (scanner.hasNextLine()) 
+						{
+							String line = scanner.nextLine();
+				
+							boolean aMatch = line.matches(regexpStr);
+							System.out.println(">>>>> aMatch="+aMatch+", isOptV="+grep.isOptV()+", regexp='"+regexpStr+"'.");
+							if (grep.isOptV())
+								aMatch = !aMatch;
+							if (aMatch)
+								newMessage += line + "\n";
+						}
+
+						aseMsg = StringUtil.removeLastNewLine(newMessage);
+					}
+				}
+				
+				
+				// Dummy to just KEEP the text message, and strip off Msg, Severity etc...
+				// but only if Msg > 20000 and Severity == 16
+				if (pipeCommand != null && pipeCommand.isGrep())
+				{
+					PipeCommandGrep grep = (PipeCommandGrep)pipeCommand.getCmd();
+					// X option, mage the message a "one line"
+					if ( grep.isOptX() )
+					{
+//						if (msgNum > 20000 && msgSeverity == 16)
+							aseMsg = "Msg "+msgNum+": " + msgText;
+					}
+				}
+
+//				if ( ! StringUtil.isNullOrBlank(aseMsg))
+				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity, scriptRow, currentSql, objectText) );
 
 				if (_logger.isTraceEnabled())
 					_logger.trace("ASE Msg("+debugStr+"): "+aseMsg);
@@ -3129,6 +4072,274 @@ public class QueryWindow
 			sqe = sqe.getNextException();
 		}
 	}
+
+	/*----------------------------------------------------------------------
+	** BEGIN: class SqlStatementInfo, RpcParam
+	**----------------------------------------------------------------------*/ 
+	private static class SqlStatementInfo
+	{
+		private boolean                         _useCallableStatement = false;
+		private ArrayList<QueryWindow.RpcParam> _rpcParams = null;
+		private String                          _sql       = null;
+		private boolean                         _doReturnCode = false;
+
+		// Used when SQL String do NOT start with "exec "
+		// Used during ResultSet loop
+		private Statement _stmnt = null;
+
+		// Used when SQL String starts with "exec "
+		private CallableStatement _cstmnt = null;
+
+		public Statement getStatement()
+		{
+			return (_useCallableStatement) ? _cstmnt : _stmnt;  
+		}
+		
+		public boolean execute() 
+		throws SQLException
+		{
+			return (_useCallableStatement) ? _cstmnt.execute() : _stmnt.execute(_sql);
+		}
+		
+		public SqlStatementInfo(Connection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList)
+		throws SQLException
+		{
+			_useCallableStatement = false;
+			_sql = sql;
+			
+			// Should we try to make a RPC call to the server
+			if ( _sql.startsWith("\\exec ") || _sql.startsWith("\\rpc ") || _sql.startsWith("\\call ") )
+			{
+				// Initialize this to be empty at start
+				_rpcParams = new ArrayList<QueryWindow.RpcParam>();
+
+				// If we are connected to a server that has return codes
+				if (DbUtils.isProductName(dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_RS, DbUtils.DB_PROD_NAME_MS))
+					_doReturnCode = true;
+
+				boolean forceRpc = false;
+				if (_sql.startsWith("\\rpc "))
+					forceRpc = true;
+
+				// Flag that this is officially a CallableStatement now
+				_useCallableStatement = true;
+
+				String procName = "";
+				String parameters = "";
+
+				String rpcParamsStr = null;
+				int rpcParamsBeginIdx = _sql.indexOf(":(");
+				int rpcParamsEndIdx   = StringUtil.indexOfEndBrace(_sql, rpcParamsBeginIdx + 2, ')');
+
+				int firstSpace = _sql.indexOf(" ");
+				firstSpace++;
+				int secondSpace = StringUtil.indexOf(_sql, firstSpace, ' ', '(');
+				
+				//System.out.println("firstSpace="+firstSpace+", secondSpace="+secondSpace);
+
+				if (secondSpace > firstSpace)
+				{
+					procName = _sql.substring(firstSpace, secondSpace);
+					secondSpace++; // move one char to right to get parameters
+					_logger.debug("procName: |"+procName+"|.");
+
+					if (rpcParamsBeginIdx == -1)
+						parameters = _sql.substring(secondSpace).trim();
+					else
+						parameters = _sql.substring(secondSpace, rpcParamsBeginIdx).trim();
+					
+					// remove any trailing ')' if the SQL looks like: \call name(?,?)
+					if ( parameters.endsWith(")") )
+						parameters = parameters.substring(0, parameters.length()-1);
+					_logger.debug("parameters: |"+parameters+"|.");
+
+					if (rpcParamsBeginIdx != -1)
+					{
+						rpcParamsBeginIdx += 2;
+						rpcParamsStr = _sql.substring(rpcParamsBeginIdx, rpcParamsEndIdx);
+						_logger.debug("rpcParamsStr: |"+rpcParamsStr+"|.");
+					}
+				}
+				else
+				{
+					procName = _sql.substring(firstSpace);
+					parameters = "";
+				}
+
+				// RPC Parameters spec ':({int|string}=val[ out][,...])'
+				// \exec procname ?, ?, ? :(int=3,string=val, int=99)
+				if (rpcParamsStr != null)
+				{
+					_rpcParams = RpcParam.parse(rpcParamsStr);
+				}
+
+				if (_doReturnCode)
+					_sql = "{?=call "+procName+"("+parameters+")}";
+				else
+					_sql = "{call "+procName+"("+parameters+")}";
+
+				_logger.debug("NEW PROC SQL: |"+_sql+"|.");
+
+				int questionMarkCount = StringUtil.charCount(parameters, '?');
+				if (questionMarkCount == 0 && parameters.length() > 0)
+				{
+					String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
+					String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
+					String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
+					
+					String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
+					             "Trying to execute a stored procedure via RPC method. The parameter list dosn't contain any Question Marks('?') This will probably *force* the JDBC driver to deliver the call as a 'language' statament to the server. \n" +
+					             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
+					             "If you want it to be sent as a RPC to the server, you needs to use Question Marks(?) for the parameter(s), and a parameter specification (se below) so that the JDBC driver can issue the call in an aproperiate way. \n" +
+					             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
+					             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
+					             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+
+					// if issued by '\rpc' then throw an exception
+					// otherwise just write a warning message and continue
+					if (forceRpc)
+						throw new SQLException(msg);
+
+					// logg... but remove all NewLines
+					_logger.warn(msg.replace("\n", ""));
+
+					// Add WARNING Message to the result
+					resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg, _sql));
+				}
+				if (questionMarkCount != _rpcParams.size())
+				{
+					String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
+					String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
+					String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
+					
+					String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
+					             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the paramete specification count (QuestionMarkCount="+questionMarkCount+", paramSpecCount="+_rpcParams.size()+"). \n" +
+					             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
+					             "ParameterSpecification looks like '"+rpcParamsStr+"'. \n" +
+					             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
+					             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
+					             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
+					throw new SQLException(msg);
+				}
+			} // end: exec or call
+
+			// Get a Statement or a CallableStatement
+			if (_useCallableStatement)
+			{
+				// Get a CallableStatement...
+				_cstmnt = conn.prepareCall(_sql);
+
+				// Register the return-status
+				_cstmnt.registerOutParameter(1, Types.INTEGER);
+
+				// Set RPC Parameters
+				if (_rpcParams != null)
+				{
+					int pos = _doReturnCode ? 1 : 0;
+					for (RpcParam param : _rpcParams)
+					{
+						pos++; // first pos will be 2, since #1 is used as return status
+						_cstmnt.setObject(pos, param._val, param._sqlType);
+
+						if (param._isOutput)
+							_cstmnt.registerOutParameter(pos, param._sqlType);
+					}
+				}
+			}
+			else
+			{
+				// Get a "regular" Statement...
+				_stmnt = conn.createStatement();
+			}
+		}
+
+		public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList) 
+		throws SQLException
+		{
+			if (_useCallableStatement)
+			{
+				if (_doReturnCode)
+				{
+					int returnStatus = _cstmnt.getInt(1);
+					resultCompList.add( new JAseProcRetCode(returnStatus, _sql) );
+				}
+				
+				// Set RPC Parameters
+				if (_rpcParams != null)
+				{
+					int pos       = _doReturnCode ? 1 : 0;
+					int posAdjust = _doReturnCode ? 1 : 0;
+					for (RpcParam param : _rpcParams)
+					{
+						pos++;
+						
+						if (param._isOutput)
+						{
+							Object outParamVal = _cstmnt.getObject(pos);
+							resultCompList.add( new JAseProcRetParam(pos-posAdjust, outParamVal, param._sqlType, _sql) );
+						}
+					}
+				}
+			}
+		}
+	} // end: class SqlStatementInfo
+
+	
+	private static class RpcParam
+	{
+		private int     _sqlType  = Types.OTHER;
+		private Object  _val      = null;
+		private boolean _isOutput = false;
+		
+		public static RpcParam parseEntry(String entry)
+		{
+			int eqPos   = entry.indexOf('=');
+			if (eqPos == -1)
+				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', no equal char is found. Expecting: int|string = value");
+			String type = entry.substring(0, eqPos).trim();
+			String val  = entry.substring(eqPos+1).trim();
+			
+			RpcParam p = new RpcParam();
+
+			if (val.endsWith(" out") || val.endsWith(" OUT") )
+			{
+				p._isOutput = true;
+				val = val.substring(0, val.length() - " out".length()).trim();
+			}
+			if ( (val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("'") && val.endsWith("'")) )
+			{
+				val = val.substring(1, val.length() - 1);
+			}
+
+			if      ("int"   .equals(type)) {p._sqlType = Types.INTEGER; p._val = new Integer(val); }
+			else if ("string".equals(type)) {p._sqlType = Types.VARCHAR; p._val = new String(val); }
+			else throw new RuntimeException("Unknown RPC Datatype '"+type+"'.");
+
+			return p;
+		}
+		public static ArrayList<RpcParam> parse(String rpcParamsStr)
+		{
+			ArrayList<RpcParam> retList = new ArrayList<RpcParam>();
+
+			String[] tmp = rpcParamsStr.split(",");
+			if ( tmp.length == 1 && StringUtil.isNullOrBlank(tmp[0]) )
+				throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: int|string = value");
+
+			for (int i=0; i<tmp.length; i++)
+			{
+				String entry = tmp[i].trim();
+				RpcParam p = parseEntry(entry);
+				if (_logger.isDebugEnabled())
+					_logger.debug("RPC PARAM "+i+": '"+entry+"'. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
+				retList.add(p);
+			}
+			return retList;
+		}
+	}
+	/*----------------------------------------------------------------------
+	** END: class SqlStatementInfo, RpcParam
+	**----------------------------------------------------------------------*/ 
+
 
 	/**
 	 * This method uses the supplied SQL query string, and the
@@ -3164,7 +4375,7 @@ public class QueryWindow
 					// Msg 32, Level 12, State 0:
 					// Server 'GORAN_1_RS', Line 0, Status 0, TranState 0:
 					// Unknown rpc received.
-					if (ConnectionDialog.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
+					if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
 					{
 						if (sqle.getErrorCode() == 32)
 						{
@@ -3177,441 +4388,486 @@ public class QueryWindow
 					// Add it to the progress dialog
 					progress.addMessage(sqle);
 
-					// If we want to STOP if we get any errors that is a SQLError (not SQLWarnings)
+					// If we want to STOP if we get any errors...
+					// Then we should return the origin Exception
+					// SQLException will abort current SQL Batch, while SQLWarnings will continue to execute
 					if (_abortOnDbMessages)
 						return sqle;
 
-					// Downgrade ALL messages to warnings, so executions wont be interuppted.
+					// Downgrade ALL messages to SQLWarnings, so executions wont be interuppted.
 					return AseConnectionUtils.sqlExceptionToWarning(sqle);
 				}
 			});
 		}
 
+		// Vendor specific setting before we start to execute
+		enableOrDisableVendorSpecifics(conn);
+
+
+		// The script reader might throw Exception that we want to abort the whole executions on
 		try
 		{
-//			Statement  stmnt = conn.createStatement();
-//			ResultSet  rs    = null;
-//			int rowsAffected = 0;
-
 			// a linked list where to "store" result sets or messages
 			// before "displaying" them
 			_resultCompList = new ArrayList<JComponent>();
 
 			String sql = "";
+
 			// treat each 'go' rows as a individual execution
 			// readCommand(), does the job
-//			int batchCount = AseSqlScript.countSqlGoBatches(goSql);
-//			int cmdCount = 0;
-//			BufferedReader br = new BufferedReader( new StringReader(goSql) );
-//			for(String s1=AseSqlScript.readCommand(br); s1!=null; s1=AseSqlScript.readCommand(br))
-//			{
 			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true);
+			if (_useSemicolonHack_chk.isSelected())
+				sr.setSemiColonHack(true);
+
+			// Set a Vendor specific SQL Execution string (default is null, Oracle & HANA: it's "/"
+			sr.setAlternativeGoTerminator(getVendorSpecificSqlExecTerminatorString(_connectedToProductName));
+
 			int batchCount = sr.getSqlTotalBatchCount();
+
+			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
-				// FIXME: create a Reader, 
-				//        that has batchStartRow, 
-				//        goExecutionsNumber(go 20)
-				//        can read "exit"/"quit"/"reset" and other isql commands
-				// The reader or (batchStartRow) should be passed to putSqlWarningMsgs() (probably NOT to ConnectionMessageHandler)
-//				int cmdCount = sr.getSqlBatchNumber();
 				progress.setState("Sending SQL to ASE for statement " + sr.getSqlBatchNumber());
 
 				// This can't be part of the for loop, then it just stops if empty row
 				if ( StringUtil.isNullOrBlank(sql) )
 					continue;
 
-				progress.setCurrentSqlText(sql, batchCount > 1, sr.getMultiExecCount());
+				progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
 
 				// if 'go 10' we need to execute this 10 times
 				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
 				{
-					int rowsAffected = 0;
-					boolean useCallableStatement = false;
-
-//--------------------------------------------
-// for RPC executions...
-// see: C:\old_pc\dell_d810\c\projects\ericsson\oss\pm\nws_from_cvs\nws\source\com\ericsson\nws\sql\DbConnection.java
-//--------------------------------------------
-					// Used when SQL String do NOT start with "exec "
-					// Used during ResultSet loop
-					Statement	stmnt = null;
-
-					// Used when SQL String starts with "exec "
-					CallableStatement cstmnt = null;
-
-					// Any result sets
-					ResultSet rs = null;
-
-					// RPC handling if the text starts with '\exec '
-					// Lets use CallableStatements instead
-					// If the SQL Statement starts with "exec ", transform it into a
-					// CallableStamenet instead.
-					// The for of this would be: {?=call procName(parameters)}
-					ArrayList<RpcParam> rpcParams = null;
-					if ( sql.startsWith("\\exec ") || sql.startsWith("\\rpc ") )
+					try
 					{
-						boolean forceRpc = false;
-						if (sql.startsWith("\\rpc "))
-							forceRpc = true;
+						int rowsAffected = 0;							
 
-						// Flag that this is officially a CallableStatement now
-						useCallableStatement = true;
-
-						// Initialize this to be empty at start
-						rpcParams = new ArrayList<QueryWindow.RpcParam>();
-
-						String procName = "";
-						String parameters = "";
-
-						String rpcParamsStr = null;
-						int rpcParamsBeginIdx = sql.indexOf(":(");
-						int rpcParamsEndIdx   = StringUtil.indexOfEndBrace(sql, rpcParamsBeginIdx + 2, ')');
-
-						int firstSpace = sql.indexOf(" ");
-						firstSpace++;
-						int secondSpace = sql.indexOf(" ", firstSpace);
-						secondSpace++;
-						
-						//System.out.println("sqlStatement=|"+sqlStatement+"|, firstSpace="+firstSpace+", secondSpace="+secondSpace);
-
-						if (secondSpace > firstSpace)
-						{
-							procName = sql.substring(firstSpace, secondSpace);
-							if (rpcParamsBeginIdx == -1)
-								parameters = sql.substring(secondSpace).trim();
-							else
-								parameters = sql.substring(secondSpace, rpcParamsBeginIdx).trim();
-
-							if (rpcParamsBeginIdx != -1)
-							{
-								rpcParamsBeginIdx += 2;
-								rpcParamsStr = sql.substring(rpcParamsBeginIdx, rpcParamsEndIdx);
-							}
-						}
-						else
-						{
-							procName = sql.substring(firstSpace);
-							parameters = "";
-						}
-
-						// RPC Parameters spec ':({int|string}=val[ out][,...])'
-						// \exec procname ?, ?, ? :(int=3,string=val, int=99)
-						if (rpcParamsStr != null)
-						{
-							rpcParams = RpcParam.parse(rpcParamsStr);
-						}
-
-						sql = "{?=call "+procName+"("+parameters+")}";
-//System.out.println("NEW PROC SQL: |"+sql+"|.");
-
-						int questionMarkCount = StringUtil.charCount(parameters, '?');
-						if (questionMarkCount == 0 && parameters.length() > 0)
-						{
-							String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
-							String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
-							String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
-							
-							String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
-							             "Trying to execute a stored procedure via RPC method. The parameter list dosn't contain any Question Marks('?') This will probably *force* the JDBC driver to deliver the call as a 'language' statament to the server. \n" +
-							             "Current CallableStatement sql looks like '"+sql+"'. \n" +
-							             "If you want it to be sent as a RPC to the server, you needs to use Question Marks(?) for the parameter(s), and a parameter specification (se below) so that the JDBC driver can issue the call in an aproperiate way. \n" +
-							             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-							             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-							             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
-
-							// if issued by '\rpc' then throw an exception
-							// otherwise just write a warning message and continue
-							if (forceRpc)
-								throw new SQLException(msg);
-
-							// logg... but remove all NewLines
-							_logger.warn(msg.replace("\n", ""));
-
-							// Add WARNING Message to the result
-							_resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg));
-						}
-						if (questionMarkCount != rpcParams.size())
-						{
-							String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
-							String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
-							String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
-							
-							String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
-							             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the paramete specification count (QuestionMarkCount="+questionMarkCount+", paramSpecCount="+rpcParams.size()+"). \n" +
-							             "Current CallableStatement sql looks like '"+sql+"'. \n" +
-							             "ParameterSpecification looks like '"+rpcParamsStr+"'. \n" +
-							             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-							             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-							             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
-							throw new SQLException(msg);
-						}
-					}
-
-					// Get a Statement or a CallableStatement
-					if (useCallableStatement)
-					{
-						// Get a CallableStatement...
-						cstmnt = _conn.prepareCall(sql);
-
-						// Set RPC Parameters
-						if (rpcParams != null)
-						{
-							int pos = 1;
-							for (RpcParam param : rpcParams)
-							{
-								pos++;
-								cstmnt.setObject(pos, param._val, param._sqlType);
+						// Used during ResultSet loop
+						Statement	stmnt = null;
 	
-								if (param._isOutput)
-									cstmnt.registerOutParameter(pos, param._sqlType);
-							}
-						}
-						// Register the return-status
-						cstmnt.registerOutParameter(1, Types.INTEGER);
-					}
-					else
-					{
-						// Get a "regular" Statement...
-						stmnt = _conn.createStatement();
-					}
+						// Any result sets
+						ResultSet rs = null;
+	
+						// RPC handling if the text starts with '\exec '
+						// The for of this would be: {?=call procName(parameters)}
+						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
 
-					// remember the start time
-					long execStartTime = System.currentTimeMillis();
+						if (_showSentSql_chk.isSelected())
+							_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
-					progress.setCurrentBatchStartTime(execCnt);
+						// remember the start time
+						long execStartTime = System.currentTimeMillis();
+						progress.setCurrentBatchStartTime(execCnt);
 
-					// Execute the SQL
-					// Use CallableStaement or the Statement depending on what it is.
-					boolean hasRs;
-					if (useCallableStatement)
-					{
-						hasRs = cstmnt.execute();
+						// Get the Statement used for execution, which is used below when reading resultsets etc
+						stmnt = sqlStmntInfo.getStatement();
+						progress.setSqlStatement(stmnt); // Used to cancel() on the statement level
 
-						// From this point we can use the Statement reference variable (in most cases)
-						// This since CallableStatement is extended from Statement
-						stmnt = cstmnt;
-					}
-					else
-						hasRs = stmnt.execute(sql);
-
-					// calculate the execution time
-					long execStopTime = System.currentTimeMillis();
-
-//					// Execute
-//					_logger.debug("Executing SQL statement: "+sql);
-//					boolean hasRs = stmnt.execute(sql);
-		
-					progress.setState("Waiting for ASE to deliver resultset.");
-//					_msgline.setText("Waiting for ASE to deliver resultset.");
-					_statusBar.setMsg("Waiting for ASE to deliver resultset.");
-		
-					// iterate through each result set
-					int rsCount = 0;
-					do
-					{
-						// Append, messages and Warnings to _resultCompList, if any
-						putSqlWarningMsgs(stmnt, _resultCompList, "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection);
-
-						if(hasRs)
+						// Execute the SQL
+						boolean hasRs = sqlStmntInfo.execute();
+	
+						// calculate the execution time
+						long execStopTime = System.currentTimeMillis();
+	
+						progress.setState("Waiting for ASE to deliver resultset.");
+						_statusBar.setMsg("Waiting for ASE to deliver resultset.");
+			
+						// iterate through each result set
+						int rsCount = 0;
+						do
 						{
-							rsCount++;
-//							_msgline.setText("Reading resultset "+rsCount+".");
-							_statusBar.setMsg("Reading resultset "+rsCount+".");
-		
-							// Get next resultset to work with
-							rs = stmnt.getResultSet();
-		
 							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection);
-							putSqlWarningMsgs(rs,    _resultCompList, "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine(), startRowInSelection);
-
-							// Check for BCP pipe command
-							PipeCommand pipeCmd = sr.getPipeCmd();
-							if (pipeCmd != null && pipeCmd.isBcp())
+							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+	
+							if(hasRs)
 							{
-								pipeCmd.getCmd().doEndPoint(rs);
-							}
-							else
-							{
-								if (_asPlainText.isSelected())
+								rsCount++;
+								_statusBar.setMsg("Reading resultset "+rsCount+".");
+								progress.setState("Reading resultset "+rsCount+".");
+			
+								// Get next resultset to work with
+								rs = stmnt.getResultSet();
+			
+								// Append, messages and Warnings to _resultCompList, if any
+								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+								putSqlWarningMsgs(rs,    _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-ResultSet-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+	
+								// Check for BCP pipe command
+								PipeCommand pipeCmd = sr.getPipeCmd();
+								if (pipeCmd != null && pipeCmd.isBcp())
 								{
-									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
-									for (SQLWarning sqlw : tm.getSQLWarningList())
-										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection);
-									
-									_resultCompList.add(new JPlainResultSet(tm));
-									// FIXME: use a callback interface instead
+									pipeCmd.getCmd().doEndPoint(rs);
 								}
 								else
 								{
-									// Convert the ResultSet into a TableModel, which fits on a JTable
-									ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd());
-									for (SQLWarning sqlw : tm.getSQLWarningList())
-										putSqlWarningMsgs(sqlw, _resultCompList, "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection);
-				
-									// Create the JTable, using the just created TableModel/ResultSet
-									JXTable tab = new JXTable(tm);
-									tab.setSortable(true);
-									tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-									tab.packAll(); // set size so that all content in all cells are visible
-									tab.setColumnControlVisible(true);
-									tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-									tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-	//								SwingUtils.calcColumnWidths(tab);
-	
-									// Add a popup menu
-									tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
-	
-	//								for(int i=0; i<tm.getColumnCount(); i++)
-	//								{
-	//									Object o = tm.getValueAt(0, i);
-	//									if (o!=null)
-	//										System.out.println("Col="+i+", Class="+o.getClass()+", Comparable="+((o instanceof Comparable)?"true":"false"));
-	//									else
-	//										System.out.println("Col="+i+", ---NULL--");
-	//								}
-									// Add the JTable to a list for later use
-									_resultCompList.add(tab);
-									// FIXME: use a callback interface instead
-								}
-							}
-		
-							// Append, messages and Warnings to _resultCompList, if any
-							putSqlWarningMsgs(stmnt, _resultCompList, "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection);
+									if (_asPlainText_chk.isSelected())
+									{
+										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd(), progress);
+										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+										
+										if (_printRsInfo_chk.isSelected())
+											_resultCompList.add( new JResultSetInfo(tm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
-							// Close it
-							rs.close();
-						}
+										_resultCompList.add(new JPlainResultSet(tm));
+										// FIXME: use a callback interface instead
+										
+										if (tm.isCancelled())
+											_resultCompList.add(new JAseCancelledResultSet(sql));
+									}
+									else
+									{
+										// Convert the ResultSet into a TableModel, which fits on a JTable
+										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd(), progress);
+										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+					
+										// Create the JTable, using the just created TableModel/ResultSet
+										JXTable tab = new ResultSetJXTable(tm);
+										tab.setSortable(true);
+										tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+										tab.packAll(); // set size so that all content in all cells are visible
+										tab.setColumnControlVisible(true);
+//										tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+										tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		
-						// Treat update/row count(s)
-						rowsAffected = stmnt.getUpdateCount();
-						if (rowsAffected >= 0)
-						{
-//							rso.add(rowsAffected);
+										// Add a popup menu
+										tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
+		
+										if (_printRsInfo_chk.isSelected())
+											_resultCompList.add( new JResultSetInfo(tm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+
+										// Add the JTable to a list for later use
+										_resultCompList.add(tab);
+										// FIXME: use a callback interface instead
+										
+										if (tm.isCancelled())
+											_resultCompList.add(new JAseCancelledResultSet(sql));
+									}
+								}
+			
+								// Append, messages and Warnings to _resultCompList, if any
+								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+	
+								// Close it
+								rs.close();
+
+							} // end: hasResultSets 
+			
+							// Treat update/row count(s)
+							rowsAffected = stmnt.getUpdateCount();
+							if (rowsAffected >= 0)
+							{
 //System.out.println("hasRs="+hasRs+", rowsAffected="+rowsAffected);
-							if (_showRowCount.isSelected())
-							{
-//								System.out.println("(" + rowsAffected + " rows affected)\n");
-//								_resultCompList.add( new JAseMessage("(" + rowsAffected + " rows affected)") );
-								_resultCompList.add( new JAseRowCount(rowsAffected) );
-							}
-						}
-		
-						// Check if we have more resultsets
-						// If any SQLWarnings has not been found above, it will throw one here
-						// so catch raiserrors or other stuff that is not SQLWarnings.
-						hasRs = stmnt.getMoreResults();
-		
-						if (_logger.isTraceEnabled())
-							_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
-					}
-					while (hasRs || rowsAffected != -1);
-		
-					// get the return status from the stored procedure
-					// Also try to get OUTput parameters
-					if (useCallableStatement)
-					{
-						int returnStatus = cstmnt.getInt(1);
-						_resultCompList.add( new JAseProcRetCode(returnStatus) );
-						
-						// Set RPC Parameters
-						if (rpcParams != null)
-						{
-							int pos = 1;
-							for (RpcParam param : rpcParams)
-							{
-								pos++;
-								
-								if (param._isOutput)
+								if (_showRowCount_chk.isSelected())
 								{
-									Object outParamVal = cstmnt.getObject(pos);
-									_resultCompList.add( new JAseProcRetParam(pos-1, outParamVal, param._sqlType) );
+//System.out.println("(" + rowsAffected + " rows affected)\n");
+									_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
 								}
 							}
+							// Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+			
+							// Check if we have more resultsets
+							// If any SQLWarnings has not been found above, it will throw one here
+							// so catch raiserrors or other stuff that is not SQLWarnings.
+							hasRs = stmnt.getMoreResults();
+			
+							// Append, messages and Warnings to _resultCompList, if any
+							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+
+							if (_logger.isTraceEnabled())
+								_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
 						}
+						while (hasRs || rowsAffected != -1);
+			
+						progress.setState("No more results for this batch");
+	
+						// Read RPC returnCode and output parameters, if it was a RPC and any retCode and/or params exists
+						sqlStmntInfo.readRpcReturnCodeAndOutputParameters(_resultCompList);
+	
+						// Append, messages and Warnings to _resultCompList, if any
+						putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+						
+						// Close the statement
+						stmnt.close();
+						progress.setSqlStatement(null);
+
+						// Connection level WARNINGS, Append, messages and Warnings to _resultCompList, if any
+						putSqlWarningMsgs(_conn, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+	
+						// How long did it take
+						long execFinnishTime = System.currentTimeMillis();
+						if (_clientTiming_chk.isSelected())
+							_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime, startRowInSelection + sr.getSqlBatchStartLine() + 1, sql));
+	
+						// Sleep for a while, if that's enabled
+						if (sr.getMultiExecWait() > 0)
+						{
+							//System.out.println("WAITING for multi exec sleep: "+sr.getMultiExecWait());
+							Thread.sleep(sr.getMultiExecWait());
+						}
+
+						// Read some extra stuff
+						readVendorSpecificResults(conn, progress, sql);
 					}
-
-					// Append, messages and Warnings to _resultCompList, if any
-					putSqlWarningMsgs(stmnt, _resultCompList, "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection);
-					
-					// Close the statement
-					stmnt.close();
-
-					long execFinnishTime = System.currentTimeMillis();
-					
-					if (_clientTiming_chk.isSelected())
-						_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime));
-					
-					if (sr.getMultiExecWait() > 0)
+					catch (SQLException ex)
 					{
-						//System.out.println("WAITING for multi exec sleep: "+sr.getMultiExecWait());
-						Thread.sleep(sr.getMultiExecWait());
+						progress.setSqlStatement(null);
+
+						// If something goes wrong, clear the message line
+						_statusBar.setMsg("Error: "+ex.getMessage());
+
+						// when NOT using jConnect, I can't downgrade a SQLException to a SQLWarning
+						// so we will always end up here (for the moment)
+						// Try to read the SQLException and figgure out on whet line it happened + mark that line with an error
+						errorReportingVendorSqlException(ex, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
+
+						// Add the information to the output window
+						// This is done in: errorReportingVendorSqlException()
 					}
 
 				} // end: 'go 10'
 				
 			} // end: read batches
-			
-//			br.close();
+
+			// Close the script reader
 			sr.close();
 
-//			// Close the statement
-//			stmnt.close();
 
 			
 			progress.setState("Add data to GUI result");
 
+			// Finally, add all the results to the output
+			addToResultsetPanel(_resultCompList, _appendResults_chk.isSelected());
 
-			//-----------------------------
-			// Add data... to panel(s) in various ways
-			// - one result set, just add it
-			// - many result sets
-			//        - Add to JTabbedPane
-			//        - OR: append the result sets as named panels
-			//-----------------------------
+
+			//---------------------------------------
+			// Mark DB Messages in the editor (red underline on the row)
+			//---------------------------------------
+			@SuppressWarnings("unchecked")
+			ArrayList<JAseMessage> errorInfo = (ArrayList<JAseMessage>) _query_txt.getDocument().getProperty(ParserProperties.DB_MESSAGES);
+
+			if (errorInfo == null)
+				errorInfo = new ArrayList<JAseMessage>();
+
+			for (JComponent jcomp: _resultCompList)
+			{
+				if (jcomp instanceof JSQLExceptionMessage)
+				{
+					// this is already added, in method: errorReportingVendorSqlException()
+					continue;
+				}
+				if (jcomp instanceof JAseMessage)
+				{
+					JAseMessage msg = (JAseMessage) jcomp;
+					if (msg._scriptRow >= 0)
+						errorInfo.add(msg);
+				}
+			}
+			_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, errorInfo);
+			for (int p=0; p<_query_txt.getParserCount(); p++)
+				_query_txt.forceReparsing(p);
+
+			// We're done, so clear the feedback message
+			//_msgline.setText(" ");
+		}
+//		catch (SQLException ex)
+//		{
+//			// If something goes wrong, clear the message line
+//			_statusBar.setMsg("Error: "+ex.getMessage());
+//
+//			// Then display the error in a dialog box
+//			if (guiShowErrors)
+//			{
+//				JOptionPane.showMessageDialog(
+//					_window, 
+//					new String[] { // Display a 2-line message
+//							ex.getClass().getName() + ": ", 
+//							ex.getMessage() },
+//					"Error", JOptionPane.ERROR_MESSAGE);
+//			}
+//			throw ex;
+//		}
+		catch (IOException ex)
+		{
+			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			throw ex;
+		}
+		catch (PipeCommandException ex)
+		{
+			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: "+ex, ex);
+			if (guiShowErrors)
+			{
+				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
+			}
+			throw ex;
+		}
+		catch (GoSyntaxException ex)
+		{
+			_logger.warn("Problems parsing the 'go'. Caught: "+ex, ex);
+			if (guiShowErrors)
+			{
+				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
+			}
+			throw ex;
+		}
+		finally
+		{
+			// restore old message handler
+			if (curMsgHandler != null)
+			{
+				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
+			}
+		}
+		
+		// In some cases, some of the area in not repainted
+		// example: when no RS, but only messages has been displayed
+		_resPanel.repaint();
+	}
+
+	/** Add components to output */
+	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append)
+	{
+		//-----------------------------
+		// Add data... to panel(s) in various ways
+		// - one result set, just add it
+		// - many result sets
+		//        - Add to JTabbedPane
+		//        - OR: append the result sets as named panels
+		//-----------------------------
+//		if ( ! _appendResults_chk.isSelected() )
+		if ( ! append )
+		{
 			_resPanel.removeAll();
 			_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
 			// Release this, if '_asPlainText' is enabled it will be set at the end... 
-			_resultText = null;
+			_result_txt = null;
+		}
 
+		// Remember where we started so we can move to that position if is's append mode
+		final int lastComponentBeforeAddInfo = _resPanel.getComponentCount() - 3;
 
-			boolean inHtmlMessage = false;
-			StringBuilder htmlMessageBuffer = new StringBuilder();
+		
+		boolean inHtmlMessage = false;
+		StringBuilder htmlMessageBuffer = new StringBuilder();
 
-			int numOfTables = countTables(_resultCompList);
-			if (numOfTables == 1)
+		int numOfTables = countTables(compList);
+		if (numOfTables == 1)
+		{
+			_resPanelScroll    .setVisible(true);
+			_resPanelTextScroll.setVisible(false);
+
+			int msgCount = 0;
+			int rowCount = 0;
+			if (_logger.isTraceEnabled())
+				_logger.trace("Only 1 RS");
+
+			// Add ResultSet  
+			for (JComponent jcomp: compList)
 			{
-				_resPanelScroll    .setVisible(true);
-				_resPanelTextScroll.setVisible(false);
+				if (jcomp instanceof JTable)
+				{
+					JTable tab = (JTable) jcomp;
 
-				int msgCount = 0;
-				int rowCount = 0;
+					JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+					if (doConvertToXmlTextPane(tab))
+						p.add(createXmlTextPane(tab), "wrap");
+					else
+					{
+						// JScrollPane is on _resPanel
+						// So we need to display the table header ourself
+						p.add(tab.getTableHeader(), "wrap");
+						p.add(tab,                  "wrap");
+					}
+
+					if (_logger.isTraceEnabled())
+						_logger.trace("1-RS: add: JTable");
+					_resPanel.add(p, "");
+
+					rowCount = tab.getRowCount();
+				}
+				else if (jcomp instanceof JAseMessage)
+				{
+					JAseMessage msg = (JAseMessage) jcomp;
+					if (msg.hasHtmlStartTag())
+						inHtmlMessage = true;
+
+					// Add it to buffer if HTML, otherwise add the message directly
+					if (inHtmlMessage)
+						htmlMessageBuffer.append(msg._msgText);
+					else
+					{
+						if (_logger.isTraceEnabled())
+							_logger.trace("1-RS: JAseMessage: "+msg.getText());
+						_resPanel.add(msg, "gapy 1, growx, pushx");
+
+						msgCount++;
+					}
+
+					// On HTML end tag, create a HTML Message and add it
+					if (msg.hasHtmlEndTag())
+					{
+						inHtmlMessage = false;
+						_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+
+						msgCount++;
+					}
+				}
+			}
+//			_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
+			_statusBar.setMsg(" "+rowCount+" rows, and "+msgCount+" messages.");
+		}
+		else if (numOfTables > 1)
+		{
+			_resPanelScroll    .setVisible(true);
+			_resPanelTextScroll.setVisible(false);
+
+			int msgCount = 0;
+			int rowCount = 0;
+			if (_logger.isTraceEnabled())
+				_logger.trace("Several RS: "+compList.size());
+			
+			if (_rsInTabs_chk.isSelected())
+			{
+				// Add Result sets to individual tabs, on a JTabbedPane 
+				JTabbedPane tabPane = new JTabbedPane();
 				if (_logger.isTraceEnabled())
-					_logger.trace("Only 1 RS");
+					_logger.trace("JTabbedPane: add: JTabbedPane");
+				_resPanel.add(tabPane, "");
 
-				// Add ResultSet  
-				for (JComponent jcomp: _resultCompList)
+				int i = 1;
+				for (JComponent jcomp: compList)
 				{
 					if (jcomp instanceof JTable)
 					{
 						JTable tab = (JTable) jcomp;
 
-						// JScrollPane is on _resPanel
-						// So we need to display the table header ourself
 						JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
-						p.add(tab.getTableHeader(), "wrap");
-						p.add(tab,                  "wrap");
+						if (doConvertToXmlTextPane(tab))
+							p.add(createXmlTextPane(tab), "wrap");
+						else
+						{
+							// JScrollPane is on _resPanel
+							// So we need to display the table header ourself
+							p.add(tab.getTableHeader(), "wrap");
+							p.add(tab,                  "wrap");
+						}
 
 						if (_logger.isTraceEnabled())
-							_logger.trace("1-RS: add: JTable");
-						_resPanel.add(p, "");
+							_logger.trace("JTabbedPane: add: JTable("+i+")");
+						tabPane.addTab("Result "+(i++), p);
 
-						rowCount = tab.getRowCount();
+						rowCount += tab.getRowCount();
 					}
 					else if (jcomp instanceof JAseMessage)
 					{
+//						// FIXME: this probably not work if we want to have the associated messages in the correct tab
+//						JAseMessage msg = (JAseMessage) jcomp;
+//						_resPanel.add(msg, "gapy 1, growx, pushx");
+//						if (_logger.isTraceEnabled())
+//							_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
+//
+//						msgCount++;
 						JAseMessage msg = (JAseMessage) jcomp;
 						if (msg.hasHtmlStartTag())
 							inHtmlMessage = true;
@@ -3638,177 +4894,119 @@ public class QueryWindow
 						}
 					}
 				}
-//				_msgline.setText(" "+rowCount+" rows, and "+msgCount+" messages.");
-				_statusBar.setMsg(" "+rowCount+" rows, and "+msgCount+" messages.");
+				if (_lastTabIndex > 0)
+				{
+					if (_lastTabIndex < tabPane.getTabCount())
+					{
+						tabPane.setSelectedIndex(_lastTabIndex);
+						if (_logger.isTraceEnabled())
+							_logger.trace("Restore last tab index pos to "+_lastTabIndex);
+					}
+				}
+//				_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 			}
-			else if (numOfTables > 1)
+			else
 			{
-				_resPanelScroll    .setVisible(true);
-				_resPanelTextScroll.setVisible(false);
-
-				int msgCount = 0;
-				int rowCount = 0;
-				if (_logger.isTraceEnabled())
-					_logger.trace("Several RS: "+_resultCompList.size());
-				
-				if (_rsInTabs.isSelected())
+				// Add Result sets to individual panels, which are 
+				// appended to the result panel
+				int i = 1;
+				for (JComponent jcomp: compList)
 				{
-					// Add Result sets to individual tabs, on a JTabbedPane 
-					JTabbedPane tabPane = new JTabbedPane();
-					if (_logger.isTraceEnabled())
-						_logger.trace("JTabbedPane: add: JTabbedPane");
-					_resPanel.add(tabPane, "");
-
-					int i = 1;
-					for (JComponent jcomp: _resultCompList)
+					if (jcomp instanceof JTable)
 					{
-						if (jcomp instanceof JTable)
-						{
-							JTable tab = (JTable) jcomp;
+						JTable tab = (JTable) jcomp;
 
+						JPanel p = new JPanel(new MigLayout("insets 0 0, gap 0 0"));
+						Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
+						p.setBorder(border);
+						if (doConvertToXmlTextPane(tab))
+							p.add(createXmlTextPane(tab), "wrap");
+						else
+						{
 							// JScrollPane is on _resPanel
 							// So we need to display the table header ourself
-							JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 							p.add(tab.getTableHeader(), "wrap");
 							p.add(tab,                  "wrap");
-
-							if (_logger.isTraceEnabled())
-								_logger.trace("JTabbedPane: add: JTable("+i+")");
-							tabPane.addTab("Result "+(i++), p);
-
-							rowCount += tab.getRowCount();
 						}
-						else if (jcomp instanceof JAseMessage)
-						{
-//							// FIXME: this probably not work if we want to have the associated messages in the correct tab
-//							JAseMessage msg = (JAseMessage) jcomp;
-//							_resPanel.add(msg, "gapy 1, growx, pushx");
-//							if (_logger.isTraceEnabled())
-//								_logger.trace("JTabbedPane: JAseMessage: "+msg.getText());
-//
-//							msgCount++;
-							JAseMessage msg = (JAseMessage) jcomp;
-							if (msg.hasHtmlStartTag())
-								inHtmlMessage = true;
+						if (_logger.isTraceEnabled())
+							_logger.trace("JPane: add: JTable("+i+")");
+						_resPanel.add(p, "");
 
-							// Add it to buffer if HTML, otherwise add the message directly
-							if (inHtmlMessage)
-								htmlMessageBuffer.append(msg._msgText);
-							else
-							{
-								if (_logger.isTraceEnabled())
-									_logger.trace("1-RS: JAseMessage: "+msg.getText());
-								_resPanel.add(msg, "gapy 1, growx, pushx");
-
-								msgCount++;
-							}
-
-							// On HTML end tag, create a HTML Message and add it
-							if (msg.hasHtmlEndTag())
-							{
-								inHtmlMessage = false;
-								_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
-
-								msgCount++;
-							}
-						}
+						rowCount += tab.getRowCount();
 					}
-					if (_lastTabIndex > 0)
+					else if (jcomp instanceof JAseMessage)
 					{
-						if (_lastTabIndex < tabPane.getTabCount())
-						{
-							tabPane.setSelectedIndex(_lastTabIndex);
-							if (_logger.isTraceEnabled())
-								_logger.trace("Restore last tab index pos to "+_lastTabIndex);
-						}
-					}
-//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-				}
-				else
-				{
-					// Add Result sets to individual panels, which are 
-					// appended to the result panel
-					int i = 1;
-					for (JComponent jcomp: _resultCompList)
-					{
-						if (jcomp instanceof JTable)
-						{
-							JTable tab = (JTable) jcomp;
-
-							// JScrollPane is on _resPanel
-							// So we need to display the table header ourself
-							JPanel p = new JPanel(new MigLayout("insets 0 0, gap 0 0"));
-							Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
-							p.setBorder(border);
-							p.add(tab.getTableHeader(), "wrap");
-							p.add(tab,                  "wrap");
-							if (_logger.isTraceEnabled())
-								_logger.trace("JPane: add: JTable("+i+")");
-							_resPanel.add(p, "");
-
-							rowCount += tab.getRowCount();
-						}
-						else if (jcomp instanceof JAseMessage)
-						{
-//							JAseMessage msg = (JAseMessage) jcomp;
-//							if (_logger.isTraceEnabled())
-//								_logger.trace("JPane: JAseMessage: "+msg.getText());
-//							_resPanel.add(msg, "gapy 1, growx, pushx");
+//						JAseMessage msg = (JAseMessage) jcomp;
+//						if (_logger.isTraceEnabled())
+//							_logger.trace("JPane: JAseMessage: "+msg.getText());
+//						_resPanel.add(msg, "gapy 1, growx, pushx");
 //
-//							msgCount++;
-							JAseMessage msg = (JAseMessage) jcomp;
-							if (msg.hasHtmlStartTag())
-								inHtmlMessage = true;
+//						msgCount++;
+						JAseMessage msg = (JAseMessage) jcomp;
+						if (msg.hasHtmlStartTag())
+							inHtmlMessage = true;
 
-							// Add it to buffer if HTML, otherwise add the message directly
-							if (inHtmlMessage)
-								htmlMessageBuffer.append(msg._msgText);
-							else
-							{
-								if (_logger.isTraceEnabled())
-									_logger.trace("1-RS: JAseMessage: "+msg.getText());
-								_resPanel.add(msg, "gapy 1, growx, pushx");
+						// Add it to buffer if HTML, otherwise add the message directly
+						if (inHtmlMessage)
+							htmlMessageBuffer.append(msg._msgText);
+						else
+						{
+							if (_logger.isTraceEnabled())
+								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+							_resPanel.add(msg, "gapy 1, growx, pushx");
 
-								msgCount++;
-							}
+							msgCount++;
+						}
 
-							// On HTML end tag, create a HTML Message and add it
-							if (msg.hasHtmlEndTag())
-							{
-								inHtmlMessage = false;
-								_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+						// On HTML end tag, create a HTML Message and add it
+						if (msg.hasHtmlEndTag())
+						{
+							inHtmlMessage = false;
+							_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
 
-								msgCount++;
-							}
+							msgCount++;
 						}
 					}
-//					_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-					_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 				}
+//				_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
+				_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 			}
-			else // NO table output, only messages etc.
+		}
+		else // NO table output, only messages etc.
+		{
+			int msgCount = 0;
+
+			if (_asPlainText_chk.isSelected())
 			{
 				_resPanelScroll    .setVisible(false);
 				_resPanelTextScroll.setVisible(true);
 
 				if (_logger.isTraceEnabled())
-					_logger.trace("NO RS: "+_resultCompList.size());
-				int msgCount = 0;
+					_logger.trace("NO RS: "+compList.size());
 
-				RSyntaxTextAreaX out = new RSyntaxTextAreaX();
-				RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
-				installResultTextExtraMenuEntries(out);
-				_resPanelTextScroll.setViewportView(out);
-				_resPanelTextScroll.setLineNumbersEnabled(true);
+				RSyntaxTextAreaX out = null;
+//				if ( _result_txt == null || ! _appendResults_chk.isSelected() )
+				if ( _result_txt == null || ! append )
+				{
+					out = new RSyntaxTextAreaX();
+					RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+					installResultTextExtraMenuEntries(out);
+					_resPanelTextScroll.setViewportView(out);
+					_resPanelTextScroll.setLineNumbersEnabled(true);
 
-				// set this globaly as well
-				_resultText = out;
+					// set this globaly as well
+					_result_txt = out;
+				}
+				out = _result_txt;
 
 				// Copy results to the output. 
 				boolean prevComponentWasResultSet = false;
 
-				for (JComponent jcomp: _resultCompList)
+				// remember where to position cursor 
+				final int lastLineBeforeAddInfo = _result_txt.getLineCount() - 5;
+
+				for (JComponent jcomp: compList)
 				{
 					if (jcomp instanceof JPlainResultSet)
 					{
@@ -3817,7 +5015,7 @@ public class QueryWindow
 						
 						// if _showRowCount is selected, the "(### rows affected)"
 						// is genereated at an earlier stage, so then we do NOT need to add it once more here
-						if ( ! _showRowCount.isSelected() )
+						if ( ! _showRowCount_chk.isSelected() )
 						{
 							out.append("\n");
 //							out.append("(" + prs.getRowCount() + " rows affected)\n");
@@ -3874,70 +5072,310 @@ public class QueryWindow
 					out.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
 				}
 
-//				_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
-				_statusBar.setMsg("NO ResultSet, but "+msgCount+" messages.");
-			}
-			
-			// We're done, so clear the feedback message
-			//_msgline.setText(" ");
-		}
-		catch (SQLException ex)
-		{
-			// If something goes wrong, clear the message line
-//			_msgline.setText("Error: "+ex.getMessage());
-			_statusBar.setMsg("Error: "+ex.getMessage());
-//			ex.printStackTrace();
+				// Move "near" END-OF-TEXT or where the append started.
+//				if (_appendResults_chk.isSelected())
+				if (append)
+				{
+					try
+					{
+						// Move cursor to END-OF-TEXT
+						int line = _result_txt.getLineCount() - 1;
+						int pos  = _result_txt.getLineStartOffset(line);
+						_result_txt.setCaretPosition( pos );
 
-			// Then display the error in a dialog box
-			if (guiShowErrors)
+						// Move to the position where we started to to inserts
+						// but do it defferred, so above position take place first
+						Runnable doLater = new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								try 
+								{
+									int pos  = _result_txt.getLineStartOffset(lastLineBeforeAddInfo);
+									_result_txt.setCaretPosition( pos );
+								} 
+								catch (BadLocationException ble) {/*ignore*/}
+							}
+						};
+						SwingUtilities.invokeLater(doLater);
+					}
+					catch (BadLocationException ble) { /* ignore */ }
+				}
+
+
+			} // end asPlainText
+			else
 			{
-				JOptionPane.showMessageDialog(
-//					QueryWindow.this, 
-					_window, 
-					new String[] { // Display a 2-line message
-							ex.getClass().getName() + ": ", 
-							ex.getMessage() },
-					"Error", JOptionPane.ERROR_MESSAGE);
+				_resPanelScroll    .setVisible(true);
+				_resPanelTextScroll.setVisible(false);
+
+				// Add Result sets to individual panels, which are 
+				// appended to the result panel
+				for (JComponent jcomp: compList)
+				{
+					if (jcomp instanceof JAseMessage)
+					{
+						JAseMessage msg = (JAseMessage) jcomp;
+						if (msg.hasHtmlStartTag())
+							inHtmlMessage = true;
+
+						// Add it to buffer if HTML, otherwise add the message directly
+						if (inHtmlMessage)
+							htmlMessageBuffer.append(msg._msgText);
+						else
+						{
+							if (_logger.isTraceEnabled())
+								_logger.trace("1-RS: JAseMessage: "+msg.getText());
+							_resPanel.add(msg, "gapy 1, growx, pushx");
+
+							msgCount++;
+						}
+
+						// On HTML end tag, create a HTML Message and add it
+						if (msg.hasHtmlEndTag())
+						{
+							inHtmlMessage = false;
+							_resPanel.add(createHtmlMessage(htmlMessageBuffer, true), "gapy 1, growx, pushx");
+
+							msgCount++;
+						}
+					}
+				}
 			}
-			throw ex;
+
+
+//			_msgline.setText("NO ResultSet, but "+msgCount+" messages.");
+			_statusBar.setMsg("NO ResultSet, but "+msgCount+" messages.");
 		}
-		catch (IOException ex)
+
+		// Move scroll so that first commponent (Clear Button) that was appended will be visible
+//		if (_appendResults_chk.isSelected() && lastComponentBeforeAddInfo > 0)
+		if (append && lastComponentBeforeAddInfo > 0)
 		{
-			_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
-			throw ex;
-		}
-		catch (PipeCommandException ex)
-		{
-			_logger.warn("Problems creating the 'go | pipeCommand'. Caught: "+ex, ex);
-			if (guiShowErrors)
+			// Make the move after it has been displayed, otherwise comp.getY() will show 0 or some faulty value
+			Runnable doLater = new Runnable()
 			{
-				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
-			}
-			throw ex;
+				@Override
+				public void run()
+				{
+					Component comp   = _resPanel.getComponent(lastComponentBeforeAddInfo);
+					_resPanelScroll.getVerticalScrollBar().setValue(comp.getY());
+				}
+			};
+			SwingUtilities.invokeLater(doLater);
 		}
-		catch (GoSyntaxException ex)
-		{
-			_logger.warn("Problems parsing the 'go'. Caught: "+ex, ex);
-			if (guiShowErrors)
-			{
-				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
-			}
-			throw ex;
-		}
-		finally
-		{
-			// restore old message handler
-			if (curMsgHandler != null)
-			{
-				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
-			}
-		}
-		
-		// In some cases, some of the area in not repainted
-		// example: when no RS, but only messages has been displayed
-		_resPanel.repaint();
 	}
-	
+
+
+	/** Get alternative 'go' terminator strings */
+	private String getVendorSpecificSqlExecTerminatorString(String productName)
+	{
+//		if ( _useAltExecTermStr_chk.isSelected() )
+//		{
+			if (DbUtils.DB_PROD_NAME_HANA  .equals(productName)) return "/";
+			if (DbUtils.DB_PROD_NAME_ORACLE.equals(productName)) return "/";
+//		}
+		return null;
+	}
+
+
+	/** Enable or disable Vendor specific settings and functionality */
+	private void enableOrDisableVendorSpecifics(Connection conn)
+	{
+		// Setup Oracle specific stuff
+		if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+		{
+			if ( _oracleEnableDbmsOutput_chk.isSelected() )
+			{
+				if ( ! _oracleDbmsOutputIsEnabled )
+				{
+					try
+					{
+						CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.enable(?) }");
+						stmt.setInt(1, 1000000);
+						stmt.execute();
+
+						_logger.info("Enabling Oracle DBMS_OUTPUT, suceeded");
+						_oracleDbmsOutputIsEnabled = true;
+					}
+					catch (Exception e)
+					{
+						_logger.warn("Problem occurred while trying to enable Oracle DBMS_OUTPUT. Caught:" + e);
+					}
+				}
+			}
+			else // not selected, check if it has been disabled otherwise do it
+			{
+				if ( _oracleDbmsOutputIsEnabled )
+				{
+					try
+					{
+						CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.disable }");
+						stmt.execute();
+
+						_logger.info("Disabling Oracle DBMS_OUTPUT, suceeded");
+						_oracleDbmsOutputIsEnabled = false;
+					}
+					catch (Exception e)
+					{
+						_logger.warn("Problem occurred while trying to disable Oracle DBMS_OUTPUT. Caught:" + e);
+					}
+				}
+			}
+		}
+	}
+
+	/** Read vendor specific results */
+	private void readVendorSpecificResults(Connection conn, SqlProgressDialog progress, String sql)
+	{
+		// Get Oracle specific DBMS_OUTPUT  messages
+		if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName) && _oracleEnableDbmsOutput_chk.isSelected())
+		{
+			progress.setState("Getting Oracle: DBMS_OUTPUT");
+
+			try
+			{
+				CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.get_line(?,?)}");
+				stmt.registerOutParameter(1, java.sql.Types.VARCHAR);
+				stmt.registerOutParameter(2, java.sql.Types.NUMERIC);
+				int status = 0;
+				do
+				{
+					stmt.execute();
+					String msg = stmt.getString(1);
+					status = stmt.getInt(2);
+
+					_logger.debug("Oracle DBMS_OUTPUT.GET_LINE: status=" + status + ", msg='" + msg + "'.");
+					if (msg != null)
+						_resultCompList.add(new JOracleDbmsOuputMessage(msg, sql));
+
+				} while (status == 0);
+				_logger.debug("End of Oracle DBMS_OUTPUT!");
+				stmt.close();
+			}
+			catch (Exception e)
+			{
+				_logger.warn("Problem occurred during dump of Oracle DBMS_OUTPUT. Caught: " + e);
+			}
+		} // end: Getting Oracle: DBMS_OUTPUT
+
+	}
+
+	/** Handle Exceptions from various Vendors to do MARK UP ERRORS 
+	 * @param resultCompList */
+	private void errorReportingVendorSqlException(SQLException ex, ArrayList<JComponent> resultCompList, int startRowInSelection, int scriptReaderSqlBatchStartLine, String originSql)
+	{
+		@SuppressWarnings("unchecked")
+		ArrayList<JAseMessage> errorInfo = (ArrayList<JAseMessage>) _query_txt.getDocument().getProperty(ParserProperties.DB_MESSAGES);
+
+		if (errorInfo == null)
+			errorInfo = new ArrayList<JAseMessage>();
+
+		// HANA
+		if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+		{
+			int    line       = -1;
+			int    col        = -1;
+			String objectName = null;
+			String objectText = null;
+
+			String msg = ex.getMessage();
+			int linePos = msg.indexOf(" line ");
+			if (linePos > 0)
+			{
+				// parse the line number in catch block, it might fail.
+				try
+				{
+					// Not sure how to parse/get the proc name
+					//String procName = null;
+
+					String tmp = msg.substring(linePos + " line ".length());
+					line = Integer.parseInt( StringUtil.word(tmp, 0) );
+					col  = Integer.parseInt( StringUtil.word(tmp, 2) );
+
+					// If the message string points to a line, but the number of lines
+					// in the SQL text, then this is most probably a procedure/function call
+					// Alternative aproach is to "parse" the SQL statement to figure out if it's a create proc
+					// which is done in the ASE CASE (see method putSqlWarningMsgs())
+					// So lets reset the line/col information
+					if ( line > StringUtil.countLines(originSql) )
+					{
+						// Ok, maybe parse the input to figgure out the procedure name, then download
+						//proc source and attach that to the tooltip (indicating the line with red font...
+						if (_getObjectTextOnError_chk.isSelected())
+						{
+							objectName = DbUtils.parseHanaMessageForProcName(msg);
+							objectText = DbUtils.getHanaObjectText(_conn, objectName);
+							objectText = StringUtil.markTextAtLine(objectText, line, true);
+						}
+
+						// Reset the line, "first" row will be marked instead.
+						line = -1;
+						col  = -1;
+					}
+
+					// Finally, add the position in the file 
+					if ( line > 0 )
+						line = line + startRowInSelection + scriptReaderSqlBatchStartLine;
+					if (col > 0)
+						col = col - 1;
+				}
+				catch (NumberFormatException nfe)
+				{
+					_logger.error("Problems extracting line/column from a HANA Exception", nfe);
+				}
+			}
+			if (line < 0)
+				line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, col, originSql, objectText); 
+
+			errorInfo.add(exMsg);
+			resultCompList.add(exMsg);
+		}
+		else
+		{
+			int line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, -1, originSql, null);
+
+			errorInfo.add(exMsg);
+			resultCompList.add(exMsg);
+		}
+
+		_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, errorInfo);
+		for (int p=0; p<_query_txt.getParserCount(); p++)
+			_query_txt.forceReparsing(p);
+	}
+
+
+	private boolean doConvertToXmlTextPane(JTable jtable)
+	{
+		if (jtable == null)               return false;
+		if (jtable.getColumnCount() != 1) return false;
+		if (jtable.getRowCount()    != 1) return false;
+		
+		Object val = jtable.getValueAt(0, 0);
+		if ( val == null )               return false;
+		if ( ! (val instanceof String) ) return false;
+
+		return ((String)val).startsWith("<?xml ") || ((String)val).startsWith("<?XML ");
+	}
+	private RSyntaxTextArea createXmlTextPane(JTable jtable)
+	{
+		RSyntaxTextAreaX out = new RSyntaxTextAreaX();
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
+		installResultTextExtraMenuEntries(out);
+
+		out.setCodeFoldingEnabled(true);
+		out.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+
+		Object val = jtable.getValueAt(0, 0);
+		
+		out.append("" + val);
+		
+		return out;
+	}
+
 	private JEditorPane createHtmlMessage(StringBuilder sb, boolean resetStringBuilder)
 	{
 		JEditorPane editorPane = new JEditorPane();
@@ -4031,29 +5469,10 @@ public class QueryWindow
 		return count;
 	}
 
-//	@Override
-//	public SQLException messageHandler(SQLException sqe)
-//	{
-//		// FIXME: I WONDER IF THEIS MESSAGE HANDLER IS EVER USED???????
-//		//        Maybe we can delete it????
-//
-//		// Pass Warning on...
-//		if (sqe instanceof SQLWarning)
-//			return sqe;
-//
-//		// Discard SQLExceptions... but first send them to the _resultCompList
-//		// This is a bit ugly...
-//		putSqlWarningMsgs(sqe, _resultCompList, "-from-messageHandler()-", -1, -1);
-//
-//		return null;
-//	}
-
-
 	/*----------------------------------------------------------------------
 	** BEGIN: various output classes
 	**----------------------------------------------------------------------*/ 
-	@SuppressWarnings("unused")
-	private class JAseMessage 
+	public static class JAseMessage 
 	extends JTextArea
 	{
 		private static final long serialVersionUID = 1L;
@@ -4061,24 +5480,48 @@ public class QueryWindow
 		private int    _msgNum      = -1;
 		private String _msgText     = null;
 		private int    _msgSeverity = -1;
+		private int    _scriptRow   = -1;
+		private int    _scriptCol   = -1;
+		private String _originSql   = null;
+		private String _objectText  = null; // IF stored procedure/function is passed
 
 //		public JAseMessage()
 //		{
 //			_init();
 //		}
 
-		public JAseMessage(final String aseMsg)
+		public JAseMessage(final String aseMsg, String originSql)
 		{
 			super(aseMsg);
+			_originSql   = originSql;
 			init();
 		}
 
-		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity)
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql)
+		{
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, null);
+		}
+
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, String objectText)
+		{
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, objectText);
+		}
+
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql)
+		{
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, scriptCol, originSql, null);
+		}
+
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, String objectText)
 		{
 			super(aseMsg);
 			_msgNum      = msgNum;
 			_msgText     = msgText;
 			_msgSeverity = msgSeverity;
+			_scriptRow   = scriptRow; // can be used to draw an red underline in the TextArea
+			_scriptCol   = scriptCol; // can be used to draw an red underline in the TextArea
+			_originSql   = originSql;
+			_objectText  = objectText;
 			init();
 //System.out.println("JAseMessage: msgNum="+msgNum+", msgSeverity="+msgSeverity+", msgText='"+msgText+"', aseMsg='"+aseMsg+"'.");
 		}
@@ -4086,6 +5529,9 @@ public class QueryWindow
 		protected void init()
 		{
 			super.setEditable(false);
+
+			if (StringUtil.hasValue(_originSql))
+				ToolTipManager.sharedInstance().registerComponent(this);
 
 			if (_aseMsgFont == null)
 				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
@@ -4098,7 +5544,29 @@ public class QueryWindow
 			setWrapStyleWord(true);
 //			setOpaque(false); // Transparent
 		}
-		
+
+		@Override
+		public String getToolTipText()
+		{
+			if (StringUtil.isNullOrBlank(_originSql))
+				return null;
+
+			StringBuilder sb = new StringBuilder();
+			sb.append("<html>");
+			sb.append("<pre>");
+			sb.append(getOriginSql()); // Show Origin SQL, on tooltip
+			sb.append("</pre>");
+			if (_objectText != null)
+			{
+				sb.append("<b>Procedure/Function Definition</b> Trying to mark error line in red.<br>");
+				sb.append("<pre>");
+				sb.append(getObjectText());
+				sb.append("</pre>");
+			}
+			sb.append("<html>");
+			return sb.toString();
+		}
+
 		protected boolean hasHtmlStartTag()
 		{
 			// Actually it looks like Msg=6248 is used as a message number for this messages... but lets keep this below login (ordinary set showplan etc uses the same message)
@@ -4111,29 +5579,71 @@ public class QueryWindow
 			return _msgSeverity <= 10 && _msgText != null && _msgText.indexOf("</HTML>") > 0;
 		}
 
-//		public boolean isFocusable()
-//		{
-//			return false;
-//		}
-//
-//		public boolean isRequestFocusEnabled()
-//		{
-//			return false;
-//		}
+		public String getFullMsgText() { return super.getText(); }
+		public String getMsgText()     { return _msgText; }
+		public int    getMsgNum()      { return _msgNum; }
+		public int    getMsgSeverity() { return _msgSeverity; }
+		public int    getScriptRow()   { return _scriptRow; }
+		public int    getScriptCol()   { return _scriptCol; }
+		public String getOriginSql()   { return _originSql; }
+		public String getObjectText()  { return _objectText; }
+
+		public void   setOriginSql (String sql) { _originSql  = sql; }
+		public void   setObjectText(String str) { _objectText = str; }
+
+		public String getFullMsgTextHtml()
+		{
+			StringBuilder sb = new StringBuilder();
+			
+			sb.append("<html>");
+			
+			sb.append("<pre>");
+			sb.append(getFullMsgText());
+			sb.append("</pre>");
+			sb.append("<br>");
+			sb.append("<b>Note:</b> The marked red lines will disappear as soon as you change the text in the editor.");
+			
+			if (_objectText != null)
+			{
+				sb.append("<br><br>");
+				sb.append("<b>Procedure/Function Definition</b> Trying to mark error line in red.<br>");
+				sb.append("<pre>");
+				sb.append(getObjectText());
+				sb.append("</pre>");
+			}
+
+			sb.append("</html>");
+			
+			return sb.toString();
+		}
 	}
 
-	private class JAseRowCount 
+	private static class JAseCancelledResultSet
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		public JAseCancelledResultSet(String originSql)
+		{
+			super("SQL was cancelled while reading the ResultSet", originSql);
+//			init();
+			
+			setForeground(ChartColor.DARK_RED);
+		}
+	}
+
+	private static class JAseRowCount 
 	extends JAseMessage
 	{
 		private static final long serialVersionUID = 1L;
 
 		private int _rowCount;
 
-		public JAseRowCount(final int rowCount)
+		public JAseRowCount(final int rowCount, String originSql)
 		{
-			super("(" + rowCount + " rows affected)");
+			super("(" + rowCount + " rows affected)", originSql);
 			_rowCount = rowCount;
-			init();
+//			init();
 			
 			setForeground(ChartColor.VERY_DARK_GREEN);
 		}
@@ -4145,18 +5655,18 @@ public class QueryWindow
 		}
 	}
 
-	private class JAseProcRetCode 
+	private static class JAseProcRetCode 
 	extends JAseMessage
 	{
 		private static final long serialVersionUID = 1L;
 
 		private int _returnCode;
 
-		public JAseProcRetCode(final int returnCode)
+		public JAseProcRetCode(final int returnCode, String originSql)
 		{
-			super("(return status = "+returnCode+")");
+			super("(return status = "+returnCode+")", originSql);
 			_returnCode = returnCode;
-			init();
+//			init();
 			
 			setForeground(ChartColor.VERY_DARK_GREEN);
 		}
@@ -4168,7 +5678,7 @@ public class QueryWindow
 		}
 	}
 
-	private class JAseProcRetParam 
+	private static class JAseProcRetParam 
 	extends JAseMessage
 	{
 		private static final long serialVersionUID = 1L;
@@ -4177,13 +5687,23 @@ public class QueryWindow
 		private Object _val;
 		private int    _sqlType; // java.sql.Types
 
-		public JAseProcRetParam(final int pos, final Object val, final int type)
+		private static String toValue(Object val)
 		{
-			super("RPC Return parameter: pos="+pos+", value="+val);
+			if (val == null)
+				return ResultSetTableModel.DEFAULT_NULL_REPLACE; // ResultSetTableModel.NULL_REPLACE;
+			
+			if (val instanceof String)
+				return "'" + val + "'";
+
+			return val + "";
+		}
+		public JAseProcRetParam(final int pos, final Object val, final int type, String originSql)
+		{
+			super("RPC Return parameter: pos="+pos+", value="+toValue(val), originSql);
 			_pos     = pos;
 			_val     = val;
 			_sqlType = type;
-			init();
+//			init();
 			
 			setForeground(ChartColor.VERY_DARK_GREEN);
 		}
@@ -4205,7 +5725,7 @@ public class QueryWindow
 		}
 	}
 
-	private class JClientExecTime 
+	private static class JClientExecTime 
 	extends JAseMessage
 	{
 		private static final long serialVersionUID = 1L;
@@ -4214,18 +5734,18 @@ public class QueryWindow
 		private long _execStopTime;
 		private long _execFinnishTime;
 
-		public JClientExecTime(final long execStartTime, final long execStopTime, final long execFinnishTime)
+		public JClientExecTime(final long execStartTime, final long execStopTime, final long execFinnishTime, int atLine, String originSql)
 		{
 			super("Client Exec Time: " + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStartTime) 
 					+ " (sqlExec="     + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execStopTime    - execStartTime)
 					+ ", readResults=" + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStopTime)
-					+ ")" );
+					+ "), for SQL starting at Line "+atLine, originSql );
 
 			_execStartTime   = execStartTime;
 			_execStopTime    = execStopTime;
 			_execFinnishTime = execFinnishTime;
 
-			init();
+//			init();
 			
 			setForeground(ChartColor.VERY_DARK_GREEN);
 		}
@@ -4235,6 +5755,96 @@ public class QueryWindow
 		@SuppressWarnings("unused") public Object getExecFinnishTime() { return _execFinnishTime; }
 	}
 
+	private static class JOracleDbmsOuputMessage
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		public JOracleDbmsOuputMessage(String message, String originSql)
+		{
+			super("Oracle DBMS_OUTPUT: "+message, originSql);
+
+			setForeground(ChartColor.VERY_DARK_BLUE);
+		}
+	}
+
+	private static class JSQLExceptionMessage
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static String createMsg(SQLException ex, String productName)
+		{
+			String prodName = productName; 
+			if (DbUtils.DB_PROD_NAME_HANA.equals(productName)) prodName = "HANA";
+			
+			return prodName + ": ErrorCode "+ex.getErrorCode()+", SQLState "+ex.getSQLState()+", ExceptionClass: " + ex.getClass().getName() + "\n"
+//				+ "("+Version.getAppName()+": The SQL Batch was aborted due to a thrown SQLException)\n"
+				+ ex.getMessage();
+		}
+		public JSQLExceptionMessage(SQLException ex, String productName, int line, int col, String originSql, String objectText)
+		{
+			super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql);
+			setObjectText(objectText);
+			setForeground(ChartColor.RED);
+		}
+	}
+
+	private static class JSentSqlStatement 
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		@SuppressWarnings("unused")
+		private int _scriptRow;
+
+		private static String createStr(String sql)
+		{
+			StringBuilder sb = new StringBuilder();
+			Scanner scanner = new Scanner(sql);
+			int row = 0;
+			while (scanner.hasNextLine()) 
+			{
+				String str = scanner.nextLine();
+				row++;
+				sb.append(row).append("> ").append(str);
+				if (scanner.hasNextLine())
+					sb.append("\n");
+			}
+			return sb.toString();
+		}
+
+		public JSentSqlStatement(String sql, int scriptRow)
+		{
+			super(createStr(sql), sql);
+			_scriptRow = scriptRow;
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+	}
+
+	private static class JResultSetInfo
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		@SuppressWarnings("unused")
+		private int _scriptRow;
+
+		private static String createStr(ResultSetTableModel rstm)
+		{
+			return rstm.getResultSetInfo();
+		}
+
+		public JResultSetInfo(ResultSetTableModel rstm, String sql, int scriptRow)
+		{
+			super(createStr(rstm), sql);
+			_scriptRow = scriptRow;
+			
+			setForeground(ChartColor.VERY_DARK_GREEN);
+		}
+	}
+	
 	private class JPlainResultSet 
 	extends JTextArea
 	{
@@ -4283,379 +5893,444 @@ public class QueryWindow
 
 
 	/*----------------------------------------------------------------------
-	** BEGIN: SqlProgressDialog
+	** BEGIN: 'COPY RESULTS' Button
 	**----------------------------------------------------------------------*/ 
-	private static class SqlProgressDialog
-	extends JDialog
-	implements PropertyChangeListener, ActionListener
+	public final static String  PROPKEY_COPY_RESULTS_ASCII           = PROPKEY_APP_PREFIX + "results.copy.as.ascii";
+	public final static boolean DEFAULT_COPY_RESULTS_ASCII           = true;
+	
+	public final static String  PROPKEY_COPY_RESULTS_HTML            = PROPKEY_APP_PREFIX + "results.copy.as.html";
+	public final static boolean DEFAULT_COPY_RESULTS_HTML            = false;
+	
+	public final static String  PROPKEY_COPY_RESULTS_CSV             = PROPKEY_APP_PREFIX + "results.copy.as.csv";
+	public final static boolean DEFAULT_COPY_RESULTS_CSV             = false;
+
+	
+	public final static String  PROPKEY_COPY_RESULTS_CSV_HEADERS     = PROPKEY_APP_PREFIX + "results.copy.as.csv.headers";
+	public final static boolean DEFAULT_COPY_RESULTS_CSV_HEADERS     = true;
+
+	public final static String  PROPKEY_COPY_RESULTS_CSV_MESSAGES    = PROPKEY_APP_PREFIX + "results.copy.as.csv.messages";
+	public final static boolean DEFAULT_COPY_RESULTS_CSV_MESSAGES    = false;
+
+	public final static String  PROPKEY_COPY_RESULTS_CSV_COL_SEP     = PROPKEY_APP_PREFIX + "results.copy.as.csv.col.sep";
+	public final static String  DEFAULT_COPY_RESULTS_CSV_COL_SEP     = ",";
+
+	public final static String  PROPKEY_COPY_RESULTS_CSV_ROW_SEP     = PROPKEY_APP_PREFIX + "results.copy.as.csv.row.sep";
+	public final static String  DEFAULT_COPY_RESULTS_CSV_ROW_SEP     = "\n";
+	
+	public final static String  PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT = PROPKEY_APP_PREFIX + "results.copy.as.csv.replaceNullWithValue";
+	public final static String  DEFAULT_COPY_RESULTS_CSV_NULL_OUTPUT = "";
+
+	
+	public final static String  PROPKEY_COPY_RESULTS_EXCEL           = PROPKEY_APP_PREFIX + "results.copy.as.excel";
+	public final static boolean DEFAULT_COPY_RESULTS_EXCEL           = false;
+
+
+	private JPopupMenu createCopyResultsPopupMenu(final JButton button)
 	{
-		private static final long serialVersionUID = 1L;
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
 
-		private JLabel           _allSql_lbl            = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
-		private JLabel           _msg_lbl               = new JLabel("Messages for current SQL Batch", JLabel.CENTER);
-
-		private Connection       _conn                  = null;
-		private JLabel           _state_lbl             = new JLabel();
-		private boolean          _markSql               = false; // mark/move to current SQL in _allSql_txt 
-		private RSyntaxTextAreaX _allSql_txt            = new RSyntaxTextAreaX();
-		private RTextScrollPane  _allSql_sroll          = new RTextScrollPane(_allSql_txt);
-		private RSyntaxTextAreaX _msg_txt               = new RSyntaxTextAreaX();
-		private RTextScrollPane  _msg_sroll             = new RTextScrollPane(_msg_txt);
-		private JButton          _cancel                = new JButton("Cancel");
-
-		private Timer            _execSqlTimer          = new Timer(100, new ExecSqlTimerAction());
-		private String           _currentExecSql        = null; 
-
-		private boolean          _firstExec             = true;
-		private long             _totalExecStartTime    = 0;
-		private long             _batchExecStartTime    = 0;
-		private int              _currentExecCounter    = 0;
-		private int              _totalExecCount        = 0;
-		private JLabel           _totalExecTimeDesc_lbl = new JLabel("Total Exec Time: ");
-		private JLabel           _totalExecTimeVal_lbl  = new JLabel("-");
-		private JLabel           _batchExecTimeDesc_lbl = new JLabel("Batch Exec Time: ");
-		private JLabel           _batchExecTimeVal_lbl  = new JLabel("-");
-
-		private boolean          _firstMsgWasReceived   = false;
-		private List<SQLException> _msgList             = new ArrayList<SQLException>();
-
-//		private SwingWorker<String, Object>	_swingWorker = null;
-
-		/**
-		 * This timer is started just before we execute the SQL ststement that refreshes the data
-		 * And it's stopped when the execution is finnished
-		 * If X ms has elipsed in the database... show some info to any GUI that we are still in refresh... 
-		 */
-		private class ExecSqlTimerAction implements ActionListener
+		popupMenu.addPopupMenuListener(new PopupMenuListener()
 		{
 			@Override
-			public void actionPerformed(ActionEvent actionevent)
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
 			{
-				deferredTimerAction(_currentExecSql);
-			}
-		}
+				final Configuration conf    = Configuration.getCombinedConfiguration();
+				final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		public SqlProgressDialog(Window owner, Connection conn, String sql)
-		{
-			super((Frame)null, "Waiting for server...", true);
-			setLayout(new MigLayout());
+				// remove all old items (if any)
+				popupMenu.removeAll();
 
-			_conn = conn;
+				final JMenuItem ascii_mi  = new JRadioButtonMenuItem("<html><b>ASCII</b>          - <i><font color=\"green\">Tables will be copied into ascii format         </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII));
+				final JMenuItem html_mi   = new JRadioButtonMenuItem("<html><b>HTML</b>           - <i><font color=\"green\">Copy as HTML Tags                               </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML));
+				final JMenuItem excel_mi  = new JRadioButtonMenuItem("<html><b>Excel</b>          - <i><font color=\"green\">Write to a Excel file                           </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL));
+				final JMenuItem csv_mi    = new JRadioButtonMenuItem("<html><b>CSV</b>            - <i><font color=\"green\">Commas Separated Values Format                  </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV));
+				final JMenuItem csvCfg_mi = new JMenuItem           ("<html><b>CSV, Config...</b> - <i><font color=\"green\">Opens a Dialog, where you can set separators etc</font></i></html>");
 
-			Font f = _totalExecTimeDesc_lbl.getFont();
-			_allSql_lbl          .setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
-			_totalExecTimeVal_lbl.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
-			_batchExecTimeVal_lbl.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+				ButtonGroup group = new ButtonGroup();
+				group.add(ascii_mi);
+				group.add(html_mi);
+				group.add(excel_mi);
+				group.add(csv_mi);
 
-			_cancel.setToolTipText("Send a CANCEL request to the server.");
-
-			_allSql_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
-//			_allSql_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
-			_allSql_txt.setHighlightCurrentLine(true);
-			//_sql_txt.setLineWrap(true);
-			//_sql_sroll.setLineNumbersEnabled(true);
-//			RSyntaxUtilitiesX.installRightClickMenuExtentions(_allSql_txt, this);
-			_allSql_txt.setText(sql);
-			_allSql_txt.setCaretPosition(0);
-			_allSql_txt.setEditable(false);
-
-//			_msg_txt.setText(sql);
-//			_msg_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
-			_msg_txt.setHighlightCurrentLine(false);
-			//_msg_txt.setLineWrap(true);
-			//_msg_txt.setLineNumbersEnabled(true);
-//			RSyntaxUtilitiesX.installRightClickMenuExtentions(_msg_txt, this);
-			_msg_txt.setEditable(false);
-			
-			add(_allSql_lbl,            "pushx, growx, wrap");
-			add(_state_lbl,             "wrap");
-			add(_totalExecTimeDesc_lbl, "split, width 85");
-			add(_totalExecTimeVal_lbl,  "wrap");
-			add(_batchExecTimeDesc_lbl, "split, width 85");
-			add(_batchExecTimeVal_lbl,  "wrap");
-			add(_allSql_sroll,          "push, grow, wrap");
-			add(_msg_lbl,               "pushx, growx, wrap, hidemode 3");
-			add(_msg_sroll,             "hmin 150, push, grow, wrap, hidemode 3");
-			add(_cancel,                "center");
-
-			_msg_lbl.setVisible(false);
-			_msg_sroll.setVisible(false);
-
-			_cancel.addActionListener(this);
-
-			pack();
-			setSize( getSize().width + 100, getSize().height + 70);
-			SwingUtils.setSizeWithingScreenLimit(this, 200);
-			setLocationRelativeTo(owner);
-		}
-		
-		public void setCurrentSqlText(String sql, boolean markSql, int totalExecCount)
-		{
-//System.out.println(">>>>>>: setCurrentSqlText(): sql="+sql);
-			_totalExecCount = totalExecCount;
-			_markSql = markSql;
-			if (_firstExec)
-			{
-				_firstExec = false;
-				_totalExecStartTime = System.currentTimeMillis();
-				_execSqlTimer.start();
-			}
-			//_batchExecStartTime = System.currentTimeMillis();
-			setCurrentBatchStartTime(0);
-			_currentExecSql = sql;
-			_execSqlTimer.restart(); // dont kick off the times to early...
-
-			// Update of WHAT SQL that is currently executed, is done by the deferredSetCurrentSqlText()
-			// othetwise RSyntaxTextArea will have problems every now and then (if the scroll has moved and it needs to parse/update the visible rect)
-		}
-
-		public void setCurrentBatchStartTime(int currentBatchNumber)
-		{
-			_batchExecStartTime = System.currentTimeMillis();
-			_currentExecCounter = currentBatchNumber;
-		}
-
-		/** 
-		 * Executed by the Timer, which kicks of every X ms
-		 * Updates, Total and Batch execution time...
-		 * If a new SQL statement is executed, move to current executes SQL Statement
-		 * 
-		 * @param sql SQL Statement to move to in the dialog.
-		 */
-		private void deferredTimerAction(String sql)
-		{
-//			// 
-//			if ( ! isVisible() && (_swingWorker != null && !_swingWorker.isDone()) )
-//				setVisible(true);
-
-//			_execSqlTimer.stop();
-			_totalExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _totalExecStartTime) );
-			if (_totalExecCount > 1)
-				_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # "+(_currentExecCounter+1)+" of "+_totalExecCount+")");
-			else
-				_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
-
-			_currentExecSql = null;
-			if (StringUtil.isNullOrBlank(sql) && _msgList.size() > 0)
-				return;
-
-//System.out.println("XXXXXX: deferredTimerAction(): sql = " + sql);
-//System.out.println("XXXXXX: deferredTimerAction(): _msgList.size() = " + _msgList.size());
-
-			if ( ! StringUtil.isNullOrBlank(sql) )
-			{
-				if (_markSql)
+				// Actions
+				ActionListener groupActionListener = new ActionListener()
 				{
-					// RSyntaxTextArea seems to have problems doing the blow, so make sure to catch problems
-					try
+					@Override
+					public void actionPerformed(ActionEvent e)
 					{
-						// Reset messages
-						_msg_txt.setText("");
-		
-						// Mark current SQL
-						SearchContext sc = new SearchContext();
-						sc.setSearchFor(sql);
-						sc.setMatchCase(true);
-						sc.setWholeWord(false);
-						sc.setRegularExpression(false);
-		
-						// Position in text...
-						SearchEngine.find(_allSql_txt, sc);
-		
-						// Mark it
-						//_allSql_txt.markAll(sql, sc.getMatchCase(), sc.getWholeWord(), sc.isRegularExpression());
+						tmpConf.setProperty(PROPKEY_COPY_RESULTS_ASCII, ascii_mi.isSelected());
+						tmpConf.setProperty(PROPKEY_COPY_RESULTS_HTML,  html_mi .isSelected());
+						tmpConf.setProperty(PROPKEY_COPY_RESULTS_EXCEL, excel_mi.isSelected());
+						tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV,   csv_mi  .isSelected());
+						saveProps();
+						
+						button.doClick();
 					}
-					catch (Throwable t) 
-					{
-						_logger.warn("Problems updating current executing SQL Statement, but will continue anyway...", t);
-					}
-				}
-			} // end: _markSql
-			
-			// add Messages
-			if (_msgList.size() > 0)
-			{
-				// Copy the list and make a new one (if new messages are appended as we process them
-				List<SQLException> oldMsgList = new ArrayList<SQLException>(_msgList);
-				_msgList = new ArrayList<SQLException>();
+				};
+				ascii_mi .addActionListener(groupActionListener);
+				html_mi  .addActionListener(groupActionListener);
+				excel_mi .addActionListener(groupActionListener);
+				csv_mi   .addActionListener(groupActionListener);
 
-				// Process messages
-				for (SQLException sqle : oldMsgList)
+				// Action for CSV Config
+				csvCfg_mi.addActionListener(new ActionListener()
 				{
-					// if RSyntaxTextArea has problem with this, catch it...
-					try
+					@Override
+					public void actionPerformed(ActionEvent e)
 					{
-						// First time make the window a bit larger
-						if (_firstMsgWasReceived == false)
+						String key1 = "Column Separator";
+						String key2 = "Row Separator";
+						String key3 = "NULL Value Replacement";
+						String key4 = "Copy Headers";
+						String key5 = "Copy Messages, etc";
+
+						LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+						in.put(key1, Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_COL_SEP,     DEFAULT_COPY_RESULTS_CSV_COL_SEP));
+						in.put(key2, Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_ROW_SEP,     DEFAULT_COPY_RESULTS_CSV_ROW_SEP));
+						in.put(key3, Configuration.getCombinedConfiguration().getProperty(       PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT, DEFAULT_COPY_RESULTS_CSV_NULL_OUTPUT));
+						in.put(key4, Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_HEADERS,     DEFAULT_COPY_RESULTS_CSV_HEADERS)  + "");
+						in.put(key5, Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_MESSAGES,    DEFAULT_COPY_RESULTS_CSV_MESSAGES) + "");
+
+						Map<String,String> results = ParameterDialog.showParameterDialog(_window, "CSV Separators", in, false);
+
+						if (results != null)
 						{
-							Dimension dimW = getSize();
-							dimW.height += 150;
-							setSize(dimW);
-		
-							SwingUtils.setSizeWithingScreenLimit(this, 0);
+							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_COL_SEP,     results.get(key1));
+							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_ROW_SEP,     results.get(key2));
+							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT, results.get(key3));
+							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_HEADERS,     results.get(key4));
+							tmpConf.setProperty(PROPKEY_COPY_RESULTS_CSV_MESSAGES,    results.get(key5));
+							
+							saveProps();
 						}
-		
-						_firstMsgWasReceived = true;
-						_msg_lbl.setVisible(true);
-						_msg_sroll.setVisible(true);
-		
-						String msg = AseConnectionUtils.getSqlWarningMsgs(sqle);
-						_msg_txt.append(msg);
-		
-						_msg_txt.setCaretPosition(_msg_txt.getText().length());
-		
-//						SearchContext sc = new SearchContext();
-//						sc.setSearchFor(msg);
-//						sc.setMatchCase(true);
-//						sc.setWholeWord(false);
-//						sc.setRegularExpression(false);
-
-//						// Position in text...
-//						SearchEngine.find(_msg_txt, sc);
-		
 					}
-					catch (Throwable t) 
-					{
-						_logger.warn("Problems adding a message to the progress dialog, but will continue anyway...", t);
-					}
-				}
+				});
+
+				// Add it to the Code Completion popup menu
+				popupMenu.add(ascii_mi);
+				popupMenu.add(html_mi);
+				popupMenu.add(excel_mi);
+				popupMenu.add(csv_mi);
+				popupMenu.add(csvCfg_mi);
 			}
-		}
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+		});
+		return popupMenu;
+	}
 
-		public void setState(String string)
-		{
-			_state_lbl.setText(string);
-		}
-		
-		public void addMessage(SQLException sqle)
-		{
-			_msgList.add(sqle);
-		}
-//		public void addMessage(SQLException sqle)
-//		{
-//			// if RSyntaxTextArea has problem with this, catch it...
-//			try
-//			{
-//				// First time make the window a bit larger
-//				if (_firstMsgWasReceived == false)
-//				{
-////					Dimension dimS = _msg_sroll.getSize();
-////					dimS.height += 150;
-////					_msg_sroll.setSize(dimS);
-//
-//					Dimension dimW = getSize();
-//					dimW.height += 150;
-//					setSize(dimW);
-//
-//					SwingUtils.setSizeWithingScreenLimit(this, 0);
-//				}
-//
-//				_firstMsgWasReceived = true;
-//				_msg_lbl.setVisible(true);
-//				_msg_sroll.setVisible(true);
-//
-//				String msg = AseConnectionUtils.getSqlWarningMsgs(sqle);
-//				_msg_txt.append(msg);
-//
-//				_msg_txt.setCaretPosition(_msg_txt.getText().length());
-//
-////				SearchContext sc = new SearchContext();
-////				sc.setSearchFor(msg);
-////				sc.setMatchCase(true);
-////				sc.setWholeWord(false);
-////				sc.setRegularExpression(false);
-////
-////				// Position in text...
-////				SearchEngine.find(_msg_txt, sc);
-//
-//			}
-//			catch (Throwable t) 
-//			{
-//				_logger.warn("Problems adding a message to the progress dialog, but will continue anyway...", t);
-//			}
-//		}
+	/**
+	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
+	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
+	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
+	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
+	 */
+	private JButton createCopyResultsButton(JButton button)
+	{
+		if (button == null)
+			button = new JButton();
 
-		/**
-		 * Called by SwingWorker on completion<br>
-		 * Note: need to register on the SwingWorker using: workerThread.addPropertyChangeListener( "this SqlProgressDialog" );
-		 */
-		@Override
-		public void propertyChange(PropertyChangeEvent event) 
+//		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/copy_results.png"));
+		button.setToolTipText(
+				"<html>" +
+				"Copy All resultsets to clipboard.<br>" +
+				"<b>Note</b>: Right click to choose copy <i>format</i>." +
+				"</html>");
+		button.setText("Copy Res");
+
+		JPopupMenu popupMenu = createCopyResultsPopupMenu(button);
+		button.setComponentPopupMenu(popupMenu);
+
+		// Action for COPY
+		button.addActionListener(new ActionListener()
 		{
-			// Close this window when the Swing worker has completed
-			if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
+			@Override
+			public void actionPerformed(ActionEvent e)
 			{
-				setVisible(false);
-				dispose();
-			}
-		}
+				boolean asAscii = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII);
+				boolean asHtml  = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML);
+				boolean asExcel = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL);
+				boolean asCsv   = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV);
 
-		@Override
-		public void actionPerformed(ActionEvent e)
-		{
-			Object source = e.getSource();
-			
-			if (_cancel.equals(source))
-			{
-				if (_conn != null && _conn instanceof SybConnection)
+				// Check what type we should copy (ASCII is the default)
+				StringBuilder sb;
+				if      (asAscii) sb = getResultPanelAsAscii(_resPanel);
+				else if (asHtml)  sb = getResultPanelAsHtml (_resPanel);
+				else if (asExcel) sb = getResultPanelAsExcel(_resPanel);
+				else if (asCsv)   sb = getResultPanelAsCsv  (_resPanel);
+				else              sb = getResultPanelAsAscii(_resPanel);
+
+				if (sb != null)
 				{
-					try
-					{
-						((SybConnection)_conn).cancel();
-					}
-					catch(SQLException ex)
-					{
-						SwingUtils.showErrorMessage("Cancel", "Problems sending cancel to ASE: "+ex, ex);
-					}
+					StringSelection data = new StringSelection(sb.toString());
+					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+					clipboard.setContents(data, data);
+				}
+			}
+		});
+		
+		return button;
+	}
+
+	private StringBuilder getResultPanelAsAscii(JComponent panel)
+	{
+		StringBuilder sb = new StringBuilder();
+//		String terminatorStr = "\n";
+//		String terminatorStr = "----------------------------------------------------------------------------\n";
+
+		for (int i=0; i<panel.getComponentCount(); i++)
+		{
+			Component comp = (Component) panel.getComponent(i);
+			if (comp instanceof JPanel)
+			{
+				sb.append( getResultPanelAsAscii( (JPanel)comp ) );
+			}
+			else if (comp instanceof JTabbedPane)
+			{
+				JTabbedPane tp = (JTabbedPane) comp;
+				for (int t=0; t<tp.getTabCount(); t++)
+				{
+					Component tabComp = tp.getComponentAt(t);
+					if (tabComp instanceof JComponent)
+						sb.append( getResultPanelAsAscii((JComponent)tabComp) );
+				}
+			}
+			else if (comp instanceof JTable)
+			{
+				JTable table = (JTable)comp;
+				String textTable = SwingUtils.tableToString(table);
+				sb.append( textTable );
+				if ( ! textTable.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JEditorPane)
+			{
+				JEditorPane text = (JEditorPane)comp;
+//				sb.append( StringUtil.stripHtml(text.getText()) );
+
+				// text.getText(), will get the actual HTML content and we just want the text
+				// so lets copy the stuff into the clipboard and get it from there :)
+				// Striping the HTML is an alternative, but that lead to other problems
+				text.selectAll();
+				text.copy();
+				text.select(0, 0);
+
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				Transferable clipData = clipboard.getContents(this);
+				String strFromClipboard;
+				try { strFromClipboard = (String) clipData.getTransferData(DataFlavor.stringFlavor); } 
+				catch (Exception ee) { strFromClipboard = ee.toString(); }
+
+				sb.append( strFromClipboard );
+				if ( ! strFromClipboard.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JTextArea)  // JAseMessage extends JTextArea
+			{
+				JTextArea text = (JTextArea)comp;
+				String str = text.getText();
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+			else if (comp instanceof JTableHeader)
+			{
+				// discard the table header, we get that info in JTable
+			}
+			else
+			{
+				String str = comp.toString();
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				//sb.append(terminatorStr);
+			}
+		}
+		return sb;
+	}
+	private StringBuilder getResultPanelAsHtml(JComponent panel)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		for (int i=0; i<panel.getComponentCount(); i++)
+		{
+			Component comp = (Component) panel.getComponent(i);
+			if (comp instanceof JPanel)
+			{
+				sb.append( getResultPanelAsHtml( (JPanel)comp ) );
+			}
+			else if (comp instanceof JTabbedPane)
+			{
+				JTabbedPane tp = (JTabbedPane) comp;
+				for (int t=0; t<tp.getTabCount(); t++)
+				{
+					Component tabComp = tp.getComponentAt(t);
+					if (tabComp instanceof JComponent)
+						sb.append( getResultPanelAsHtml((JComponent)tabComp) );
+				}
+			}
+			else if (comp instanceof JTable)
+			{
+				JTable table = (JTable)comp;
+				String textTable = SwingUtils.tableToHtmlString(table);
+				sb.append( textTable );
+				if ( ! textTable.endsWith("\n") )
+					sb.append("\n");
+			}
+			else if (comp instanceof JEditorPane)
+			{
+				JEditorPane text = (JEditorPane)comp;
+
+				// text.getText(), will get the actual HTML content (NOTE, there is most possible <html></html> tags in there)
+				// TODO: Should we try to *remove* some of the content and just copy the <body></body> part????
+				sb.append( text.getText() );
+			}
+//			else if (comp instanceof JAseMessage)
+//			{
+//				JAseMessage msg = (JAseMessage)comp;
+//				sb.append( msg.toHtml() ); // toHtml doesnt exists... so let below section (JTextArea) just copy the text for now
+//			}
+			else if (comp instanceof JTextArea)  // JAseMessage extends JTextArea
+			{
+				JTextArea text = (JTextArea)comp;
+				String str = text.getText();
+				sb.append( "<pre>\n" );
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				sb.append( "</pre>\n" );
+				sb.append( "<BR>\n" );
+			}
+			else if (comp instanceof JTableHeader)
+			{
+				// discard the table header, we get that info in JTable
+			}
+			else
+			{
+				String str = comp.toString();
+				sb.append( "<pre>\n" );
+				sb.append( str );
+				if ( ! str.endsWith("\n") )
+					sb.append("\n");
+				sb.append( "</pre>\n" );
+				sb.append( "<BR>\n" );
+			}
+		}
+		return sb;
+	}
+
+	private StringBuilder getResultPanelAsExcel(JComponent panel)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("Copy to Excel is not yet implemented.");
+
+		SwingUtils.showInfoMessage(_window, sb.toString(), sb.toString());
+		
+		return sb;
+	}
+
+	private StringBuilder getResultPanelAsCsv(JComponent panel)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		boolean headers      = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_HEADERS,         DEFAULT_COPY_RESULTS_CSV_HEADERS);
+		boolean messages     = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_COPY_RESULTS_CSV_MESSAGES,        DEFAULT_COPY_RESULTS_CSV_MESSAGES);
+		String  colSep       = Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_COL_SEP,         DEFAULT_COPY_RESULTS_CSV_COL_SEP);
+		String  rowSep       = Configuration.getCombinedConfiguration().getPropertyRawVal( PROPKEY_COPY_RESULTS_CSV_ROW_SEP,         DEFAULT_COPY_RESULTS_CSV_ROW_SEP);
+		String  tabNullValue = Configuration.getCombinedConfiguration().getProperty(       ResultSetTableModel.PROPKEY_NULL_REPLACE, ResultSetTableModel.DEFAULT_NULL_REPLACE);
+		String  outNullValue = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_COPY_RESULTS_CSV_NULL_OUTPUT,     DEFAULT_COPY_RESULTS_CSV_NULL_OUTPUT);
+
+		for (int i=0; i<panel.getComponentCount(); i++)
+		{
+			Component comp = (Component) panel.getComponent(i);
+			if (comp instanceof JPanel)
+			{
+				sb.append( getResultPanelAsCsv( (JPanel)comp ) );
+			}
+			else if (comp instanceof JTabbedPane)
+			{
+				JTabbedPane tp = (JTabbedPane) comp;
+				for (int t=0; t<tp.getTabCount(); t++)
+				{
+					Component tabComp = tp.getComponentAt(t);
+					if (tabComp instanceof JComponent)
+						sb.append( getResultPanelAsCsv((JComponent)tabComp) );
+				}
+			}
+			else if (comp instanceof JTable)
+			{
+				JTable table = (JTable)comp;
+				String textTable = SwingUtils.tableToCsvString(table, headers, colSep, rowSep, tabNullValue, outNullValue);
+				sb.append( textTable );
+				sb.append( "\n" ); // append a newline after each resultset, this is good if we have more that one.
+			}
+			else if (comp instanceof JEditorPane)
+			{
+				if (messages) // Copy other stuff
+				{
+					JEditorPane text = (JEditorPane)comp;
+	//				sb.append( StringUtil.stripHtml(text.getText()) );
+	
+					// text.getText(), will get the actual HTML content and we just want the text
+					// so lets copy the stuff into the clipboard and get it from there :)
+					// Striping the HTML is an alternative, but that lead to other problems
+					text.selectAll();
+					text.copy();
+					text.select(0, 0);
+	
+					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+					Transferable clipData = clipboard.getContents(this);
+					String strFromClipboard;
+					try { strFromClipboard = (String) clipData.getTransferData(DataFlavor.stringFlavor); } 
+					catch (Exception ee) { strFromClipboard = ee.toString(); }
+	
+					sb.append( strFromClipboard );
+					if ( ! strFromClipboard.endsWith("\n") )
+						sb.append("\n");
+					//sb.append(terminatorStr);
+				}
+			}
+			else if (comp instanceof JTextArea)  // JAseMessage extends JTextArea
+			{
+				if (messages) // Copy other stuff
+				{
+					JTextArea text = (JTextArea)comp;
+					String str = text.getText();
+					sb.append( str );
+					if ( ! str.endsWith("\n") )
+						sb.append("\n");
+					//sb.append(terminatorStr);
+				}
+			}
+			else if (comp instanceof JTableHeader)
+			{
+				// discard the table header, we get that info in JTable
+			}
+			else
+			{
+				if (messages) // Copy other stuff
+				{
+					String str = comp.toString();
+					sb.append( str );
+					if ( ! str.endsWith("\n") )
+						sb.append("\n");
+					//sb.append(terminatorStr);
 				}
 			}
 		}
-
-//		@Override
-//		public void setVisible(boolean state) 
-//		{
-//			super.setVisible(state);
-//			if (state == false)
-//				_execSqlTimer.stop();
-//		}
-
-		/**
-		 * Wait for the background thread to execute before continue<br>
-		 * If the execution takes longer than <code>graceTime</code> ms, then a dialog will be visible.
-		 * 
-		 * @param doBgThread
-		 * @param graceTime wait this amount of ms until a dialog will be displayed.
-		 */
-		public void waitForExec(SwingWorker<String, Object> doBgThread, int graceTime)
-		{
-			_execSqlTimer.start();
-
-			long startTime = System.currentTimeMillis();
-			while (System.currentTimeMillis() - startTime < graceTime )
-			{
-				// if the bg job is done, get out of here
-				if ( doBgThread.isDone() )
-					break;
-
-				// Sleep for 10ms, get out of here if we are interrupted.
-				try { Thread.sleep(10); }
-				catch (InterruptedException ignore) { break; }
-			}
-
-			//the dialog will be visible until the SwingWorker is done
-			if ( ! doBgThread.isDone() )
-			{
-				setVisible(true);
-			}
-
-			_execSqlTimer.stop();
-		}
+		return sb;
 	}
 	/*----------------------------------------------------------------------
-	** END: SqlProgressDialog
+	** END: 'COPY RESULTS' Button
 	**----------------------------------------------------------------------*/ 
 
 
+	
 	/*----------------------------------------------------------------------
 	** BEGIN: set OPTIONS buttin stuff
 	**----------------------------------------------------------------------*/ 
@@ -4975,15 +6650,100 @@ public class QueryWindow
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText     .setText("<html><b>As Plain Text</b>     - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
-		_showRowCount    .setText("<html><b>Row Count</b>         - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
-		_clientTiming_chk.setText("<html><b>Client Timing</b>     - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
-		_rsInTabs        .setText("<html><b>Resultset in Tabs</b> - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_asPlainText_chk           .setText("<html><b>As Plain Text</b>             - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
+		_appendResults_chk         .setText("<html><b>Append Results</b>            - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i></html>");
+		_showRowCount_chk          .setText("<html><b>Row Count</b>                 - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
+		_showSentSql_chk           .setText("<html><b>Show Sent SQL Statement</b>   - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i></html>");
+		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>      - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i></html>");
+		_clientTiming_chk          .setText("<html><b>Client Timing</b>             - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
+		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>     - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
+		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b> - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
+		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>         - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>  - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
 
-		popupMenu.add(_asPlainText);
-		popupMenu.add(_showRowCount);
+		popupMenu.add(_asPlainText_chk);
+		popupMenu.add(_appendResults_chk);
+		popupMenu.add(_showRowCount_chk);
+		popupMenu.add(_showSentSql_chk);
+		popupMenu.add(_printRsInfo_chk);
 		popupMenu.add(_clientTiming_chk);
-		popupMenu.add(_rsInTabs);
+		popupMenu.add(_useSemicolonHack_chk);
+		popupMenu.add(_oracleEnableDbmsOutput_chk);
+		popupMenu.add(_rsInTabs_chk);
+		popupMenu.add(_getObjectTextOnError_chk);
+		
+		// Set default visibility
+		_oracleEnableDbmsOutput_chk.setVisible(false);
+
+		// Menu items for Code Completion
+		//---------------------------------------------------
+		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+		popupMenu.add(codeCompl_m);
+		
+		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
+		final JPopupMenu codeComplPopupMenu = codeCompl_m.getPopupMenu();
+		codeComplPopupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				// remove all old items (if any)
+				codeComplPopupMenu.removeAll();
+
+				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
+
+				JMenuItem cc_stat_mi  = new JCheckBoxMenuItem("<html><b>Static Commands</b>                   - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
+				JMenuItem cc_misc_mi  = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                      - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
+				JMenuItem cc_db_mi    = new JCheckBoxMenuItem("<html><b>Database Info x</b>                   - <i><font color=\"green\">Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
+				JMenuItem cc_tn_mi    = new JCheckBoxMenuItem("<html><b>Table Name Info x</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
+				JMenuItem cc_tc_mi    = new JCheckBoxMenuItem("<html><b>Table Column Info x</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
+				JMenuItem cc_pn_mi    = new JCheckBoxMenuItem("<html><b>Procedure Info x</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
+				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
+				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
+				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+
+				// Reset action
+				cc_reset_mi.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						// mark code completion for refresh
+						if (_compleationProviderAbstract != null)
+						{
+							_compleationProviderAbstract.setNeedRefresh(true);
+							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+						}
+					}
+				});
+
+				// All other actions
+				cc_stat_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupStaticCmds            (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_misc_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupMisc                  (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_db_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupDb                    (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_tn_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupTableName             (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_tc_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupTableColumns          (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_pn_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupProcedureName         (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_pp_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupProcedureColumns      (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_spn_mi  .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupSystemProcedureName   (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+				cc_spp_mi  .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupSystemProcedureColumns(((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+
+				// Add it to the Code Completion popup menu
+				codeComplPopupMenu.add(cc_reset_mi);
+				codeComplPopupMenu.add(new JSeparator());
+				codeComplPopupMenu.add(cc_stat_mi);
+				codeComplPopupMenu.add(cc_misc_mi);
+				codeComplPopupMenu.add(cc_db_mi);
+				codeComplPopupMenu.add(cc_tn_mi);
+				codeComplPopupMenu.add(cc_tc_mi);
+				codeComplPopupMenu.add(cc_pn_mi);
+				codeComplPopupMenu.add(cc_pp_mi);
+				codeComplPopupMenu.add(cc_spn_mi);
+				codeComplPopupMenu.add(cc_spp_mi);
+			}
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+		});
 
 		return popupMenu;
 	}
@@ -5401,11 +7161,11 @@ public class QueryWindow
 			boolean alreadyConfirmed = false;
 			
 			// First get it from the QUERY editor
-			String selectedText = _query.getSelectedText();
+			String selectedText = _query_txt.getSelectedText();
 
 			// Then try the RESULT output
-			if (selectedText == null && _resultText != null)
-				selectedText = _resultText.getSelectedText();
+			if (selectedText == null && _result_txt != null)
+				selectedText = _result_txt.getSelectedText();
 
 			// Finaly try the Copy/Past buffer
 			if (selectedText == null)
@@ -5674,60 +7434,6 @@ public class QueryWindow
 	**----------------------------------------------------------------------*/ 
 
 	
-	/*----------------------------------------------------------------------
-	** BEGIN: class RpcParam
-	**----------------------------------------------------------------------*/ 
-	private static class RpcParam
-	{
-		private int     _sqlType  = Types.OTHER;
-		private Object  _val      = null;
-		private boolean _isOutput = false;
-		
-		public static RpcParam parseEntry(String entry)
-		{
-			int eqPos   = entry.indexOf('=');
-			String type = entry.substring(0, eqPos).trim();
-			String val  = entry.substring(eqPos+1).trim();
-			
-			RpcParam p = new RpcParam();
-
-			if (val.endsWith(" out") || val.endsWith(" OUT") )
-			{
-				p._isOutput = true;
-				val = val.substring(0, val.length() - " out".length()).trim();
-			}
-			if ( (val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("'") && val.endsWith("'")) )
-			{
-				val = val.substring(1, val.length() - 1);
-			}
-
-			if      ("int"   .equals(type)) {p._sqlType = Types.INTEGER; p._val = new Integer(val); }
-			else if ("string".equals(type)) {p._sqlType = Types.VARCHAR; p._val = new String(val); }
-			else throw new RuntimeException("Unknown RPC Datatype '"+type+"'.");
-
-			return p;
-		}
-		public static ArrayList<RpcParam> parse(String rpcParamsStr)
-		{
-			ArrayList<RpcParam> retList = new ArrayList<RpcParam>();
-
-			String[] tmp = rpcParamsStr.split(",");
-			for (int i=0; i<tmp.length; i++)
-			{
-				String entry = tmp[i].trim();
-				RpcParam p = parseEntry(entry);
-//				System.out.println("RPC PARAM "+i+": '"+entry+"'. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
-				retList.add(p);
-			}
-			return retList;
-		}
-	}
-	/*----------------------------------------------------------------------
-	** END: class RpcParam
-	**----------------------------------------------------------------------*/ 
-	
-
-	
 	/*----------------------------------------------------
 	 ** BEGIN: Watermark stuff
 	 **---------------------------------------------------
@@ -5834,7 +7540,160 @@ public class QueryWindow
 	 **---------------------------------------------------
 	 */
 	
+
 	
+	/*----------------------------------------------------------------------
+	** BEGIN: implement WatchdogIsFileChanged
+	**----------------------------------------------------------------------*/ 
+	@Override
+	public void fileHasChanged(final File file)
+	{
+//		String changedFilename = file.toString();
+//		String filename = _statusBar.getFilename();
+
+		Runnable doRun = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				// remember the carret position so we can restore it when the file has been loaded
+				int saveAtRow      = _query_txt.getCaretLineNumber();
+				int saveAtCol      = _query_txt.getCaretOffsetFromLineStart();
+//				int caretPos = _query_txt.getCaretPosition();
+
+//				Object[] buttons = {"Load Changes", "Not now", "Not Ever"};
+				Object[] buttons = {"Load Changes", "Not now"};
+				int answer = JOptionPane.showOptionDialog(_window, 
+						"Another application has updated the file "+file+"\nReload it?.",
+						"Reload file", 
+						JOptionPane.DEFAULT_OPTION,
+						JOptionPane.QUESTION_MESSAGE,
+						null,
+						buttons,
+						buttons[0]);
+				// Reload
+				if (answer == 0) 
+				{
+//System.out.println("GO AND RELOAD THE FILE");
+//					openFile(_statusBar.getFilename());
+					openFile(file);
+
+					// Set back the carret position where you were before reloading the file
+					try	
+					{
+						// if new document is smaller (has less rows), simple set saveAtRow to maxValue
+						int newNumOfLines = _query_txt.getLineCount() - 1;
+						if (newNumOfLines < saveAtRow)
+							saveAtRow = newNumOfLines; 
+							
+						// if new column position, doesnt exist on the new row (new line is shorter)
+						// then set position to start of the line
+						int newLineStartOffs = _query_txt.getLineStartOffset(saveAtRow);
+						int newLineEndOffs   = _query_txt.getLineEndOffset(saveAtRow);
+						int restoreOffs      = newLineStartOffs + saveAtCol;
+						if (restoreOffs > newLineEndOffs)
+							restoreOffs = newLineStartOffs;
+						_query_txt.setCaretPosition(restoreOffs);
+					}
+					catch( BadLocationException     ignore ) { /* ignore */ }
+					catch( IllegalArgumentException ignore ) { /* ignore */ }
+				}
+				// CANCEL/not now
+				else
+				{
+//System.out.println("CANCEL: RELOAD THE FILE (not now was pressed)");
+					// Can this really be null, but why not
+					if (_watchdogIsFileChanged != null)
+						_watchdogIsFileChanged.setFile(file);
+
+					// NOT IMPLEMENTED: Not Ever
+					if (answer == 2)
+					{
+					}
+				}
+			}
+		};
+		if ( ! SwingUtilities.isEventDispatchThread() )
+		{
+			try	{ SwingUtilities.invokeAndWait(doRun); }
+			catch (InterruptedException e)      { /* ignore e.printStackTrace();*/ }
+			catch (InvocationTargetException e) { e.printStackTrace(); }
+		}
+		else
+			doRun.run();
+	}
+	/*----------------------------------------------------------------------
+	** END: implement WatchdogIsFileChanged
+	**----------------------------------------------------------------------*/ 
+
+	
+	
+	/*----------------------------------------------------------------------
+	** BEGIN: class ResultSetJXTable
+	**----------------------------------------------------------------------*/ 
+	private static class ResultSetJXTable
+	extends JXTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Point _lastMouseClick = null;
+
+		public Point getLastMouseClickPoint()
+		{
+			return _lastMouseClick;
+		}
+
+		public ResultSetJXTable(TableModel tm)
+		{
+			super(tm);
+			
+			addMouseListener(new MouseListener()
+			{
+				@Override public void mouseReleased(MouseEvent e) {}
+				@Override public void mousePressed(MouseEvent e) {}
+				@Override public void mouseExited(MouseEvent e) {}
+				@Override public void mouseEntered(MouseEvent e) {}
+				@Override
+				public void mouseClicked(MouseEvent e)
+				{
+					_lastMouseClick = e.getPoint();
+				}
+			});
+		}
+
+		// 
+		// TOOL TIP for: TABLE HEADERS
+		//
+		@Override
+		protected JTableHeader createDefaultTableHeader()
+		{
+			return new JXTableHeader(getColumnModel())
+			{
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public String getToolTipText(MouseEvent e)
+				{
+					// Now get the column name, which we point at
+					Point p = e.getPoint();
+					int index = getColumnModel().getColumnIndexAtX(p.x);
+					if ( index < 0 )
+						return null;
+					
+					TableModel tm = getModel();
+					if (tm instanceof ResultSetTableModel)
+					{
+						ResultSetTableModel rstm = (ResultSetTableModel) tm;
+						String tooltip = rstm.getToolTipTextForTableHeader(index);
+						return tooltip;
+					}
+					return null;
+				}
+			};
+		}
+	}
+	/*----------------------------------------------------------------------
+	** END: class ResultSetJXTable
+	**----------------------------------------------------------------------*/ 
 	
 	/**
 	 * This simple main method tests the class.  It expects four command-line
@@ -5937,6 +7796,7 @@ public class QueryWindow
 		}
 
 		pw.println("usage: sqlw [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
+		pw.println("            [-u <jdbcUrl>] [-d <jdbcDriver>]");
 		pw.println("            [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
 		pw.println("  ");
 		pw.println("options:");
@@ -5949,6 +7809,11 @@ public class QueryWindow
 		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
 		pw.println("  -S,--server <server>      Server to connect to.");
 		pw.println("  -D,--dbname <dbname>      Database to use when connecting");
+		pw.println("  -u,--jdbcUrl <url>        JDBC URL. if not a sybase/TDS server");
+		pw.println("  -d,--jdbcDriver <driver>  JDBC Driver. if not a sybase/TDS server");
+		pw.println("                            If the JDBC drivers is registered with the ");
+		pw.println("                            DriverManager, this is NOT needed");
+		pw.println("  -p,--connProfile <name>   Connect using an existing Connection Profile");
 		pw.println("  -q,--query <sqlStatement> SQL Statement to execute");
 		pw.println("  -i,--inputFile <filename> Input File to open in editor");
 		pw.println("");
@@ -5974,6 +7839,9 @@ public class QueryWindow
 		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
 		options.addOption( "S", "server",      true, "Server to connect to." );
 		options.addOption( "D", "dbname",      true, "Database use when connecting" );
+		options.addOption( "u", "jdbcUrl",     true, "JDBC URL. if not a sybase/TDS server" );
+		options.addOption( "d", "jdbcDriver",  true, "JDBC Driver. if not a sybase/TDS server. If the JDBC drivers is registered with the DriverManager, this is NOT needed." );
+		options.addOption( "p", "connProfile", true, "Connect using an existing Connection Profile");
 		options.addOption( "q", "sqlStatement",true, "SQL statement to execute" );
 		options.addOption( "i", "inputFile",   true, "Input File to open in editor" );
 
@@ -6008,11 +7876,34 @@ public class QueryWindow
 		return cmd;
 	}
 
+//	private static void jConnectEnableLogging()
+//	{
+////		java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("com.sybase.jdbc4.jdbc");
+//		java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("com.sybase.jdbc4.jdbc.SybConnection");
+//
+//		// To log class-specific log message, provide complete class name, for example:
+//		//Logger.getLogger("com.sybase.jdbc4.jdbc.SybConnection");
+//		//Get handle as per user's requirement 
+//		Handler handler = new ConsoleHandler();
+//
+//		//Set logging level
+////		handler.setLevel(java.util.logging.Level.ALL);
+//		handler.setLevel(java.util.logging.Level.FINEST);
+//
+//		//Added user specific handler to logger object
+//		LOG.addHandler(handler);
+//
+//		//Set logging level
+////		LOG.setLevel(java.util.logging.Level.ALL);
+//		LOG.setLevel(java.util.logging.Level.FINEST);
+//	}
 	//---------------------------------------------------
 	// MAIN
 	//---------------------------------------------------
 	public static void main(String[] args)
 	{
+//		jConnectEnableLogging();
+
 		Options options = buildCommandLineOptions();
 		try
 		{

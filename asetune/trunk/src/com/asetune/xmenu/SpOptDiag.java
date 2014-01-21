@@ -3,7 +3,7 @@ package com.asetune.xmenu;
 import java.sql.Connection;
 
 import com.asetune.cm.sql.VersionInfo;
-import com.asetune.tools.QueryWindow;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 

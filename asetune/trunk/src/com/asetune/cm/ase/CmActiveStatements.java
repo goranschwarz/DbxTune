@@ -219,7 +219,7 @@ extends CountersModel
 		         "P.SPID, P.KPID, \n" +
 		         "multiSampled=convert(varchar(10),''), \n" +
 		         "S.BatchID, S.LineNumber, \n" +
-		         dbNameCol+", procname=isnull(object_name(S.ProcedureID,S.DBID),''), linenum=S.LineNumber, \n" +
+		         dbNameCol+", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
 		         "S.CpuTime, S.WaitTime, \n" +

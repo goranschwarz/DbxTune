@@ -72,7 +72,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.14.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 
-export PATH=${JAVA_HOME}/bin:${PATH}
+export PATH=${ASETUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
 
 echo "================================================================"
@@ -82,6 +82,7 @@ echo SYBASE=${SYBASE}
 echo ${APPL_HOME_propName}=${APPL_HOME}
 echo ${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR}
 echo CLASSPATH=${CLASSPATH}
+echo ASETUNE_JAVA_HOME=${ASETUNE_JAVA_HOME}
 echo JAVA_HOME=${JAVA_HOME}
 
 #------------------------------------------------------------------------
@@ -150,7 +151,7 @@ echo "JVM_PARAMS=${JVM_PARAMS}"
 
 
 
-#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
-      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
 
 

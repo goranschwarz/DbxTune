@@ -6,6 +6,8 @@ package com.asetune;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -28,7 +30,9 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -53,6 +57,9 @@ import com.asetune.utils.TimeUtils;
 public class RefreshProcess extends Thread 
 {
 	private static Logger _logger          = Logger.getLogger(RefreshProcess.class);
+
+	private static final String  PROPKEY_showDialogMdaConfig = "CommandHistory.showDialogMdaConfig";
+	private static final boolean DEFAULT_showDialogMdaConfig = true;
 
 	private ProcessDetailFrame pdf;
 	private Connection	       _conn;
@@ -188,10 +195,11 @@ public class RefreshProcess extends Thread
 	}
 	
 
-	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int kpid) 
+	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int spid, int kpid) 
 	{
 		this.pdf = aPdf;
 		this._conn = conn;
+		this.spid = spid;
 		this.kpid = kpid;
 		refreshProcessFlag=true;
 		selectedStatement=-1;
@@ -314,13 +322,17 @@ public class RefreshProcess extends Thread
 		String currentSql = "";
 		try
 		{
-			if (kpid > 0)
+			if (spid > 0 || kpid > 0)
 			{
+				String whereSpidKpid = "";
+				if (spid > 0) whereSpidKpid += "  and P.spid=" + spid + "\n";
+				if (kpid > 0) whereSpidKpid += "  and P.kpid=" + kpid + "\n";
+				
 				// Refresh process information
 				currentSql = 
 					"select P.spid, P.enginenum, P.status, P.suid, suser_name(P.suid), P.hostname, P.hostprocess, P.cmd, P.cpu, \n" + 
 					"   P.physical_io, P.memusage, LocksHeld, P.blocked, P.dbid, db_name(P.dbid), P.uid, '' /*user_name(P.uid)*/, P.gid, \n" + 
-					"   P.tran_name, P.time_blocked, P.network_pktsz, P.fid, P.execlass, P.priority, P.affinity, P.id, object_name(P.id,P.dbid), \n" + 
+					"   P.tran_name, P.time_blocked, P.network_pktsz, P.fid, P.execlass, P.priority, P.affinity, P.id, isnull(object_name(P.id,P.dbid),object_name(P.id,2)), \n" + 
 					"   P.stmtnum, P.linenum, P.origsuid, P.block_xloid, P.clientname, P.clienthostname,  P.clientapplname, P.sys_id, \n" + 
 					"   P.ses_id, P.loggedindatetime, P.ipaddr,  program_name=convert(varchar,P.program_name), CPUTime, \n" + 
 					"   WaitTime, LogicalReads, PhysicalReads, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, \n" + 
@@ -330,7 +342,7 @@ public class RefreshProcess extends Thread
 					"from sysprocesses P , monProcessActivity A, monProcessNetIO N \n" + 
 					"where P.kpid=A.KPID \n" +
 					"  and N.KPID=P.kpid \n" +
-					"  and P.kpid=" + Integer.toString(kpid);
+					whereSpidKpid;
 				rs = stmt.executeQuery(currentSql);
 	
 				rs.next();
@@ -437,7 +449,7 @@ public class RefreshProcess extends Thread
 //				    + "from monProcessStatement \n";
 				String sql = 
 					"select  S.SPID, S.KPID, S.BatchID, S.LineNumber, \n"
-					+ "  dbname=db_name(S.DBID), procname=isnull(object_name(S.ProcedureID,S.DBID),''), \n"
+					+ "  dbname=db_name(S.DBID), procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), \n"
 					+ "  P.Command, S.CpuTime, S.WaitTime, \n"
 //					+ "  ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n"
 					+ "  ExecTimeInMs = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n"  // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
@@ -462,8 +474,11 @@ public class RefreshProcess extends Thread
 				if (StringUtil.isNullOrBlank(orderBy))
 					orderBy = "S.LogicalReads desc \n";
 
-				if (kpid > 0)
-					sql += "  and S.KPID = " + Integer.toString(kpid) + " \n";
+				if (spid > 0 || kpid > 0)
+				{
+					if (spid > 0) sql += "  and S.SPID = " + spid + "\n";
+					if (kpid > 0) sql += "  and S.KPID = " + kpid + "\n";
+				}
 				else
 					sql += "  and S.SPID != @@spid \n";
 				sql += "  and " + extraWhere + " \n";
@@ -804,7 +819,7 @@ public class RefreshProcess extends Thread
 				String sql =
 					"select SPID, KPID, BatchID, LineNumber, \n" +
 					"       dbname=db_name(DBID), \n" +
-					"       procname=isnull(object_name(ProcedureID,DBID),''), \n" +
+					"       procname=isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),''), \n" +
 //					"       Elapsed_ms=datediff(ms,StartTime, EndTime), \n" +
 					"       Elapsed_ms = CASE WHEN datediff(day, StartTime, EndTime) > 20 THEN -1 ELSE  datediff(ms, StartTime, EndTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 					"       CpuTime, WaitTime, MemUsageKB, PhysicalReads, LogicalReads, \n" +
@@ -817,14 +832,17 @@ public class RefreshProcess extends Thread
 					"where 1 = 1\n";
 
 				
-				if (kpid > 0)
-					sql += "and KPID = " + Integer.toString(kpid) + "\n";
+				if (spid > 0 || kpid > 0)
+				{
+					if (spid > 0) sql += "  and SPID = " + spid + "\n";
+					if (kpid > 0) sql += "  and KPID = " + kpid + "\n";
+				}
 				else
-					sql += "and SPID != @@spid\n";
+					sql += "  and SPID != @@spid\n";
 
 				if ( _captureRestrictions )
 				{
-					sql += "and (" + _captureRestrictionSql + ")\n";
+					sql += "  and (" + _captureRestrictionSql + ")\n";
 				}
 
 				// EMPTY monSysStatement on first execution.
@@ -910,8 +928,8 @@ public class RefreshProcess extends Thread
 					"from monSysSQLText \n" +
 					"where 1=1 \n";
 
-				if (kpid > 0)
-					sql += "and KPID=" + Integer.toString(kpid);
+				if (spid > 0) sql += "  and SPID = " + spid + "\n";
+				if (kpid > 0) sql += "  and KPID = " + kpid + "\n";
 
 				if ( _firstTimeSample && _discardPreOpenStmnts )
 				{
@@ -1000,8 +1018,8 @@ public class RefreshProcess extends Thread
 					"from monSysPlanText \n" +
 					"where 1=1 \n";
 
-				if (kpid > 0)
-					sql += " and KPID=" + Integer.toString(kpid);
+				if (spid > 0) sql += "  and SPID = " + spid;
+				if (kpid > 0) sql += "  and KPID = " + kpid;
 
 				if ( _firstTimeSample && _discardPreOpenStmnts )
 				{
@@ -1248,6 +1266,7 @@ public class RefreshProcess extends Thread
 			// Update panel
 			Runnable updatePanel_inSwingThread = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					updatePanel_code();
@@ -2077,6 +2096,11 @@ public class RefreshProcess extends Thread
 
 		String groupName = "RefreshProcess";
 
+		String whereSpidKpid = "";
+		if (spid > 0) whereSpidKpid += "  and SPID = " + spid + "\n";
+		if (kpid > 0) whereSpidKpid += "  and KPID = " + kpid + "\n";
+
+		
 		//------------------------------------
 		//------------------------------------
 		// Objects
@@ -2221,8 +2245,8 @@ public class RefreshProcess extends Thread
 
 		CMProcObjects.setTabPanel(pdf.processObjectsPanel);
 		
-		if (kpid > 0)
-			CMProcObjects.setSqlWhere(" and KPID = " + kpid);
+		if (spid > 0 || kpid > 0)
+			CMProcObjects.setSqlWhere(whereSpidKpid);
 
 		
 		//------------------------------------
@@ -2350,8 +2374,8 @@ public class RefreshProcess extends Thread
 
 		CMProcWaits.setTabPanel(pdf.processWaitsPanel);
 
-		if (kpid > 0)
-			CMProcWaits.setSqlWhere(" and KPID = " + kpid);
+		if (spid > 0 || kpid > 0)
+			CMProcWaits.setSqlWhere(whereSpidKpid);
 
 
 		//------------------------------------
@@ -2489,8 +2513,8 @@ public class RefreshProcess extends Thread
 
 		CMLocks.setTabPanel(pdf.processLocksPanel);
 
-		if (kpid > 0)
-			CMLocks.setSqlWhere(" and KPID = " + kpid);
+		if (spid > 0 || kpid > 0)
+			CMLocks.setSqlWhere(whereSpidKpid);
 	}
 
 	private List<String> _activeRoleList    = null;
@@ -2568,6 +2592,7 @@ public class RefreshProcess extends Thread
 	}
 
 	
+	@Override
 	public void run()
 	{
 		// Check configured options
@@ -2602,39 +2627,57 @@ public class RefreshProcess extends Thread
 
 		// Display warning if all configuration parameters are not set
 		StringBuffer              msg = new StringBuffer();
-		if (!stmtStat)            msg = msg.append("       'statement statistics active' to 1\n" );
-		if (!batchCapture)        msg = msg.append("       'SQL batch capture' to 1 \n");
-		if (!SQLTextMonitor)      msg = msg.append("       'max SQL text monitored' to a value greater than 0 (ex : 4096)\n");
+		if (!stmtStat)            msg = msg.append("<li>'statement statistics active' to 1 </li>" );
+		if (!batchCapture)        msg = msg.append("<li>'SQL batch capture' to 1 </li>");
+		if (!SQLTextMonitor)      msg = msg.append("<li>'max SQL text monitored' to a value greater than 0 (ex : 4096) </li>");
 		if (sqlTextSample)
 		{
-			if (!sqlTextPipe)     msg = msg.append("       'sql text pipe active' to 1\n");
-			if (!sqlTextPipeMsg)  msg = msg.append("       'sql text pipe max messages' to a value greater than 0\n");
+			if (!sqlTextPipe)     msg = msg.append("<li>'sql text pipe active' to 1 </li>");
+			if (!sqlTextPipeMsg)  msg = msg.append("<li>'sql text pipe max messages' to a value greater than 0 </li>");
 		}
-		if (!stmtPipe)            msg = msg.append("       'statement pipe active' to 1\n");
-		if (!stmtPipeMsg)         msg = msg.append("       'statement pipe max messages' to a value greater than 0\n");
+		if (!stmtPipe)            msg = msg.append("<li>'statement pipe active' to 1 </li>");
+		if (!stmtPipeMsg)         msg = msg.append("<li>'statement pipe max messages' to a value greater than 0 </li>");
 		if (planTextSample)
 		{
-			if (!planTextPipe)    msg = msg.append("       'plan text pipe active' to 1\n");
-			if (!planTextPipeMsg) msg = msg.append("       'plan text pipe max messages' to a value greater than 0\n");
+			if (!planTextPipe)    msg = msg.append("<li>'plan text pipe active' to 1 </li>");
+			if (!planTextPipeMsg) msg = msg.append("<li>'plan text pipe max messages' to a value greater than 0 </li>");
 		}
-		if (!procWaitEvents)      msg = msg.append("       'process wait events' to 1\n");
-		if (!has_sa_role) 
-		{
-			if (msg.length()>0) msg = msg.append(" and ");
-				msg = msg.append("user should have 'sa_role'");
-		}
+		if (!procWaitEvents)      msg = msg.append("<li>'process wait events' to 1 </li>");
+
+		if (!has_sa_role)         msg = msg.append("<li>user should have 'sa_role'</li>");
 
 		if (msg.length() > 0)
 		{
-			msg.insert(0, "RECOMMENDATION : for full features, configure the following parameters :\n\n");
-			msg = msg.append("\n\nConfigure the ASE and re-open the window.\n");
+			msg.insert(0, "<html><h3>RECOMMENDATION: for full features</h3>\n Configure the following parameters\n <ul>");
+			msg = msg.append("</ul><br>");
+			msg = msg.append("A window will be opened where you can configure the above parameters.");
+			msg = msg.append("</html>");
+//			msg = msg.append("\n\nConfigure the ASE and re-open the window.\n");
 
-			// MessageDialog msgDlg = new MessageDialog(pdf, "Warning",
-			// msg.toString());
-			// new MessageDialog(pdf, "Warning", msg.toString());
-			JOptionPane.showMessageDialog(pdf, msg.toString(), Version.getAppName()+" - SPID monitoring", JOptionPane.WARNING_MESSAGE);
+			// GUI popup with the error, AND a JCheckBox to "not show this message again"
+			boolean showInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showDialogMdaConfig, DEFAULT_showDialogMdaConfig);
+			if (showInfo)
+			{
+				// Create a check box that will be passed to the message
+				JCheckBox chk = new JCheckBox("Show this dialog in the future.", showInfo);
+				chk.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+						if (conf == null)
+							return;
+						conf.setProperty(PROPKEY_showDialogMdaConfig, ((JCheckBox)e.getSource()).isSelected());
+						conf.save();
+					}
+				});
 
-			AseConfigMonitoringDialog.showDialog(pdf, _conn, -1);
+				SwingUtils.showInfoMessageExt(pdf, Version.getAppName()+" - SPID monitoring",
+						msg.toString(), chk, (JPanel)null);
+
+				AseConfigMonitoringDialog.showDialog(pdf, _conn, -1);
+			}
 		}
 
 		// Check if "sp_showplanfull" exists
@@ -2687,7 +2730,7 @@ public class RefreshProcess extends Thread
 						"        select @contextid = @return_value   \n" +
 						"end   \n" +
 						"    \n" +
-						"select @procname=object_name(id, dbid), @procid=id, @dbid=dbid from master..sysprocesses where spid=@spid   \n" +
+						"select @procname=isnull(object_name(id,dbid), object_name(id,2)), @procid=id, @dbid=dbid from master..sysprocesses where spid=@spid   \n" +
 						"if @procid>0    \n" +
 						"begin   \n" +
 						"       print 'Plan for procedure : %1! (id=%2!, dbid=%3!)', @procname, @procid, @dbid   \n" +
@@ -2804,7 +2847,7 @@ public class RefreshProcess extends Thread
 			if (procWaitEvents) CMProcWaits  .getTabPanel().setWatermark();
 			if (true)           CMLocks      .getTabPanel().setWatermark();
 
-			if (kpid > 0)
+			if (spid > 0 || kpid > 0)
 			{
 				// Refresh process objects
 				if (CMProcObjects.isRefreshable())
@@ -2889,6 +2932,7 @@ public class RefreshProcess extends Thread
 			super(row, col);
 		}
 
+		@Override
 		public boolean isCellEditable(int row, int col)
 		{
 			return false;

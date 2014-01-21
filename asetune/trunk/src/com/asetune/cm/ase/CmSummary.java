@@ -392,6 +392,12 @@ extends CountersModel
 		}
 
 
+		String utcTimeDiff = "";
+		if (aseVersion >= 1254000)
+		{
+			utcTimeDiff = ", utcTimeDiff        = datediff(mi, getutcdate(), getdate()) \n";
+		}
+		
 		//
 		// Compose SQL for fullTranslogCount
 		// If user has 'mon_role' and 'enable monitoring' has been configured, get the value from monOpenDatabases
@@ -474,11 +480,14 @@ extends CountersModel
 			}
 		}
 
+		
+		
 		cols2 = ", aseVersion         = @@version \n" +
 				", atAtServerName     = @@servername \n" +
 				", clusterInstanceId  = " + (isClusterEnabled ? "convert(varchar(15),@@instanceid)"     : "'Not Enabled'") + " \n" + 
 				", clusterCoordId     = " + (isClusterEnabled ? "convert(varchar(3), @@clustercoordid)" : "'Not Enabled'") + " \n" +
 				", timeIsNow          = getdate() \n" +
+				utcTimeDiff +
 				", NetworkAddressInfo = " + nwAddrInfo + " \n" +
 				", asePageSize        = @@maxpagesize \n" +
 

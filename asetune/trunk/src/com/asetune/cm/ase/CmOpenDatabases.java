@@ -251,8 +251,13 @@ extends CountersModel
 			                                                            "<b>Formula</b>: OldestTranName = column: master.dbo.syslogshold.name<br>" +
 			                                                        "</html>");
 			mtd.addColumn("monOpenDatabases", "OldestTranSpid",     "<html>" +
-			                                                            "SPID, which is resopnsible for the oldest open transaction in this database<br> " +
+			                                                            "SPID, which is responsible for the oldest open transaction in this database<br> " +
 			                                                            "<b>Formula</b>: OldestTranSpid = column: master.dbo.syslogshold.spid<br>" +
+			                                                        "</html>");
+			mtd.addColumn("monOpenDatabases", "SPID",               "<html>" +
+			                                                            "<b>Note</b>: same column as <code>OldestTranSpid</code>, just as another label to enable right click menu in table<br>" +
+			                                                            "SPID, which is responsible for the oldest open transaction in this database<br> " +
+			                                                            "<b>Formula</b>: SPID = column: master.dbo.syslogshold.spid<br>" +
 			                                                        "</html>");
 			mtd.addColumn("monOpenDatabases", "OldestTranProg",     "<html>" +
 			                                                             "Application Name, which is resopnsible for the oldest open transaction in this database<br> " +
@@ -326,16 +331,28 @@ extends CountersModel
 		// select  @pgsPerMb           = 1024*1024 / @@maxpagesize
 		// select @pgsPerMb   : 512=2K, 256=4K, 128=8K, 64=16K 
 		// select mbUsed = pagesUsed / @pgsPerMb
-		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID)                                  / (1024*1024/@@maxpagesize), \n";
+//		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID)                                  / (1024*1024/@@maxpagesize), \n";
+//
+//		String LogSizeInMb          = "LogSizeInMb          = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4)           / (1024*1024/@@maxpagesize), \n";
+//		String LogSizeFreeInMb      = "LogSizeFreeInMb      = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+//		String LogSizeFreeInMbDiff  = "LogSizeFreeInMbDiff  = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
+//		String LogSizeUsedPct       = "LogSizeUsedPct       = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+//
+//		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)           / (1024*1024/@@maxpagesize), \n";
+//		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
+//		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
+//		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
-		String LogSizeInMb          = "LogSizeInMb          = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4)           / (1024*1024/@@maxpagesize), \n";
+		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID), \n";
+
+		String LogSizeInMb          = "LogSizeInMb          = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4), \n";
 		String LogSizeFreeInMb      = "LogSizeFreeInMb      = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
 		String LogSizeFreeInMbDiff  = "LogSizeFreeInMbDiff  = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
 		String LogSizeUsedPct       = "LogSizeUsedPct       = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
-		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)           / (1024*1024/@@maxpagesize), \n";
-		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
-		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
+		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2), \n";
+		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)), \n";
+		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)), \n";
 		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
 
@@ -354,6 +371,7 @@ extends CountersModel
 		         "OldestTranInSeconds = CASE WHEN datediff(day, h.starttime, getdate()) > 20 THEN -1 ELSE  datediff(ss, h.starttime, getdate()) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         "OldestTranName      = h.name, \n" + 
 		         "OldestTranSpid      = h.spid, \n" + 
+		         "SPID                = h.spid, \n" + 
 		         "OldestTranProg      = (select p.program_name from master..sysprocesses p where h.spid = p.spid), \n" + 
 		         "OldestTranPage      = h.page,\n" + 
 		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +

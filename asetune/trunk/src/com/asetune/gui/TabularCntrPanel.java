@@ -453,13 +453,17 @@ implements
 			_timeViewStored_lbl        .setVisible(true);
 			if (MainFrame.isOfflineConnected())
 			{
+				setEnableOptionsPanel(false);
+
 				_timeOfflineRewind_but     .setVisible(true);
 				_timeOfflineFastForward_but.setVisible(true);
 			}
+			else
+			{
+				setEnableOptionsPanel(true);
+			}
 			_optionQueryTimeout_lbl.setVisible(false);
 			_optionQueryTimeout_txt.setVisible(false);
-
-			setEnableOptionsPanel(false);
 
 			if ( _cmDisplay != null )
 			{

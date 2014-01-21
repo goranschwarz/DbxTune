@@ -4,7 +4,7 @@ setlocal
 set title=gtest-console
 title %title%
 
-set MAIN_CLASS=com.asetune.tools.QueryWindow
+set MAIN_CLASS=com.asetune.tools.sqlw.QueryWindow
 set MAIN_CLASS=com.asetune.utils.JdbcDriverHelper
 
 rem ------------------------------------------------------------------------

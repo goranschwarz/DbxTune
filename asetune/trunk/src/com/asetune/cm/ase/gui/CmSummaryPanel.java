@@ -112,6 +112,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _asePageSize_lbl              = new JLabel();
 	private JTextField       _lastSampleTime_txt           = new JTextField();
 	private JLabel           _lastSampleTime_lbl           = new JLabel();
+	private JTextField       _utcTimeDiff_txt              = new JTextField();
+	private JLabel           _utcTimeDiff_lbl              = new JLabel();
 
 	private JTextField       _startDate_txt                = new JTextField();
 	private JLabel           _startDate_lbl                = new JLabel();
@@ -588,6 +590,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lastSampleTime_txt   .setToolTipText(tooltip);
 		_lastSampleTime_txt   .setEditable(false);
 
+		tooltip = "UTC Time Difference in minutes (positive east of UK, negative west of UK).";
+		_utcTimeDiff_lbl      .setText("UTC Time Diff");
+		_utcTimeDiff_lbl      .setToolTipText(tooltip);
+		_utcTimeDiff_txt      .setToolTipText(tooltip);
+		_utcTimeDiff_txt      .setEditable(false);
+
 
 		
 		
@@ -1007,6 +1015,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		panel.add(_lastSampleTime_lbl,      "");
 		panel.add(_lastSampleTime_txt,      "growx, wrap");
+		
+		panel.add(_utcTimeDiff_lbl,         "");
+		panel.add(_utcTimeDiff_txt,         "growx, wrap");
 		
 
 
@@ -1487,6 +1498,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_aseVersion_txt        .setCaretPosition(0);
 		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
+		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
 
 		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
 		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
@@ -1696,6 +1708,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_aseVersion_txt         .setText("");
 		_asePageSize_txt        .setText("");
 		_lastSampleTime_txt     .setText("");
+		_utcTimeDiff_txt        .setText("");
 
 		_startDate_txt          .setText("");
 		_daysRunning_txt        .setText("");
@@ -1881,7 +1894,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			else
 				setWatermarkText(offlineSamplePeriod);
 		}
-		else if ( ! AseTune.hasCounterCollector() || ! AseTune.getCounterCollector().isMonConnected() )
+//		else if ( ! AseTune.hasCounterCollector() || ! AseTune.getCounterCollector().isMonConnected() )
+		else if ( ! AseTune.hasCounterCollector() || (_cm != null && ! _cm.isConnected()) )
 		{
 			setWatermarkText("Not Connected...");
 		}

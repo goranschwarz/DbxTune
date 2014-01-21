@@ -31,8 +31,8 @@ import java.io.IOException;
 import javax.swing.text.Segment;
 
 import org.fife.ui.rsyntaxtextarea.AbstractJFlexTokenMaker;
-import org.fife.ui.rsyntaxtextarea.DefaultToken;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenImpl;
 
 
 /**
@@ -2655,6 +2655,15 @@ public class SybaseTSqlTokenMaker extends AbstractJFlexTokenMaker {
 		return new String[] { "--", null };
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean getMarkOccurrencesOfTokenType(int type) {
+		return type==Token.FUNCTION || type==Token.VARIABLE || type==Token.IDENTIFIER;
+	}
+
+
 
 	/**
 	 * Returns the first token in the linked list of tokens generated
@@ -2700,7 +2709,8 @@ public class SybaseTSqlTokenMaker extends AbstractJFlexTokenMaker {
 			return yylex();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			return new DefaultToken();
+//			return new DefaultToken();
+			return new TokenImpl();
 		}
 
 	}

@@ -112,14 +112,15 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.AseStackTraceAnalyzer;
 import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
-import com.asetune.tools.LogTailWindow;
-import com.asetune.tools.QueryWindow;
+import com.asetune.tools.sqlw.QueryWindow;
+import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.tools.WindowType;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.JdbcUtils;
 import com.asetune.utils.Memory;
 import com.asetune.utils.PropPropEntry;
@@ -172,6 +173,12 @@ public class MainFrame
 	public static final String    PROPKEY_useTcpGroups                 = "MainFrame.useTcpGroups";
 	public static final boolean   DEFAULT_useTcpGroups                 = true;
 
+	public static final String    PROPKEY_doJavaGcAfterXMinutes        = "do.java.gc.after.x.minutes";	
+	public static final boolean   DEFAULT_doJavaGcAfterXMinutes        = true;
+
+	public static final String    PROPKEY_doJavaGcAfterXMinutesValue   = "do.java.gc.after.x.minutes.value";	
+	public static final int       DEFAULT_doJavaGcAfterXMinutesValue   = 10;
+
 	public static final String    PROPKEY_doJavaGcAfterRefresh         = "do.java.gc.after.refresh";	
 	public static final boolean   DEFAULT_doJavaGcAfterRefresh         = false;
 
@@ -190,6 +197,8 @@ public class MainFrame
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_useTcpGroups,                DEFAULT_useTcpGroups);
+		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterXMinutes,       DEFAULT_doJavaGcAfterXMinutes);
+		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterXMinutesValue,  DEFAULT_doJavaGcAfterXMinutesValue);
 		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh);
 		Configuration.registerDefaultValue(PROPKEY_doJavaGcAfterRefreshShowGui, DEFAULT_doJavaGcAfterRefreshShowGui);
 
@@ -209,6 +218,8 @@ public class MainFrame
 	public static final String ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES      = "TOGGLE_AUTO_RESIZE_PC_TABLES";
 	public static final String ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE = "TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE";
 	public static final String ACTION_GROUP_TCP_IN_TAB_PANE             = "GROUP_TCP_IN_TAB_PANE";
+	public static final String ACTION_DO_JAVA_GC_AFTER_X_MINUTES        = "DO_JAVA_GC_AFTER_X_MINUTES";
+	public static final String ACTION_DO_JAVA_GC_AFTER_X_MINUTES_VALUE  = "DO_JAVA_GC_AFTER_X_MINUTES_VALUE";
 	public static final String ACTION_DO_JAVA_GC_AFTER_REFRESH          = "DO_JAVA_GC_AFTER_REFRESH";
 	public static final String ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI = "DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI";
 	public static final String ACTION_SUMMARY_OPERATIONS_TOGGLE         = "SUMMARY_OPERATIONS_TOGGLE";
@@ -300,6 +311,9 @@ public class MainFrame
 	private JCheckBoxMenuItem   _autoResizePcTable_mi          = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
 	private JCheckBoxMenuItem   _autoRefreshOnTabChange_mi     = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
 	private JCheckBoxMenuItem   _groupTcpInTabPane_mi          = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
+	private JMenu               _optDoGc_m                     = new JMenu("Do Java Garbage Collect");
+	private JCheckBoxMenuItem   _optDoGcAfterXMinutes_mi       = new JCheckBoxMenuItem("Do Java Garbage Collect, every X Minutes", DEFAULT_doJavaGcAfterXMinutes);
+	private JMenuItem           _optDoGcAfterXMinutesValue_mi  = new JMenuItem        ("Do Java Garbage Collect, every X Minute, Change Interval...");
 	private JCheckBoxMenuItem   _optDoGcAfterRefresh_mi        = new JCheckBoxMenuItem("Do Java Garbage Collect, after counters has been refreshed", DEFAULT_doJavaGcAfterRefresh);
 	private JCheckBoxMenuItem   _optDoGcAfterRefreshShowGui_mi = new JCheckBoxMenuItem("Do Java Garbage Collect, after counters has been refreshed, Show GUI Dialog", DEFAULT_doJavaGcAfterRefreshShowGui);
 	private JCheckBoxMenuItem   _optSummaryOperShowAbs_mi      = new JCheckBoxMenuItem("Show Absolute Counters for Summary Operations",   DEFAULT_summaryOperations_showAbs);
@@ -381,6 +395,7 @@ public class MainFrame
 	private static String             _offlineSamplePeriod       = null;
 
 	private static boolean            _isSamplingPaused          = false;
+	private static boolean            _isForcedRefresh           = false;
 	
 	/** Keep a list of all TabularCntrPanel that you have initialized */
 	private static Map<String,TabularCntrPanel> _TcpMap           = new HashMap<String,TabularCntrPanel>();
@@ -570,8 +585,11 @@ public class MainFrame
 		_autoResizePcTable_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
 		_autoRefreshOnTabChange_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_on_tab_change.png"));
 		_groupTcpInTabPane_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/group_tcp_in_tab_pane.png"));
-		_optDoGcAfterRefresh_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
-		_optDoGcAfterRefreshShowGui_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+//		_optDoGcAfterXMinutes_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+//		_optDoGcAfterXMinutesValue_mi .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+//		_optDoGcAfterRefresh_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+//		_optDoGcAfterRefreshShowGui_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
 		_refreshRate_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
 		_aseConfigView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
 		_tcpSettingsConf_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
@@ -607,15 +625,17 @@ public class MainFrame
 		_file_m.add(_exit_mi);
 
 		_view_m.add(_logView_mi);
-		_view_m.add(_viewAseLogFile_mi);
 		_view_m.add(_offlineSessionsView_mi);
 		_view_m.add(_preferences_m);
 			_preferences_m.add(_autoResizePcTable_mi);
 			_preferences_m.add(_autoRefreshOnTabChange_mi);
 			_preferences_m.add(_refreshRate_mi);
 			_preferences_m.add(_groupTcpInTabPane_mi);
-			_preferences_m.add(_optDoGcAfterRefresh_mi);
-			_preferences_m.add(_optDoGcAfterRefreshShowGui_mi);
+			_preferences_m.add(_optDoGc_m);
+				_optDoGc_m.add(_optDoGcAfterXMinutes_mi);
+				_optDoGc_m.add(_optDoGcAfterXMinutesValue_mi);
+				_optDoGc_m.add(_optDoGcAfterRefresh_mi);
+				_optDoGc_m.add(_optDoGcAfterRefreshShowGui_mi);
 			_preferences_m.add(new JSeparator());
 			_preferences_m.add(_optSummaryOperShowAbs_mi);
 			_preferences_m.add(_optSummaryOperShowDiff_mi);
@@ -627,6 +647,7 @@ public class MainFrame
 		_view_m.add(_graphs_m);
 
 		_tools_m.add(_aseConfMon_mi);
+		_tools_m.add(_viewAseLogFile_mi);
 		_tools_m.add(_captureSql_mi);
 		_tools_m.add(_aseAppTrace_mi);
 		_tools_m.add(_aseStackTraceAnalyzer_mi);
@@ -653,6 +674,8 @@ public class MainFrame
 		_autoResizePcTable_mi         .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
 		_autoRefreshOnTabChange_mi    .setActionCommand(ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE);
 		_groupTcpInTabPane_mi         .setActionCommand(ACTION_GROUP_TCP_IN_TAB_PANE);
+		_optDoGcAfterXMinutes_mi      .setActionCommand(ACTION_DO_JAVA_GC_AFTER_X_MINUTES);
+		_optDoGcAfterXMinutesValue_mi .setActionCommand(ACTION_DO_JAVA_GC_AFTER_X_MINUTES_VALUE);
 		_optDoGcAfterRefresh_mi       .setActionCommand(ACTION_DO_JAVA_GC_AFTER_REFRESH);
 		_optDoGcAfterRefreshShowGui_mi.setActionCommand(ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI);
 		_optSummaryOperShowAbs_mi     .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
@@ -689,6 +712,8 @@ public class MainFrame
 		_autoResizePcTable_mi         .addActionListener(this);
 		_autoRefreshOnTabChange_mi    .addActionListener(this);
 		_groupTcpInTabPane_mi         .addActionListener(this);
+		_optDoGcAfterXMinutes_mi      .addActionListener(this);
+		_optDoGcAfterXMinutesValue_mi .addActionListener(this);
 		_optDoGcAfterRefresh_mi       .addActionListener(this);
 		_optDoGcAfterRefreshShowGui_mi.addActionListener(this);
 		_optSummaryOperShowAbs_mi     .addActionListener(this);
@@ -1458,6 +1483,12 @@ public class MainFrame
 		if (ACTION_GROUP_TCP_IN_TAB_PANE.equals(actionCmd))
 			action_toggleGroupTcpInTabPane(e);
 		
+		if (ACTION_DO_JAVA_GC_AFTER_X_MINUTES.equals(actionCmd))
+			action_toggleDoJavaGcAfterXMinutes(e);
+
+		if (ACTION_DO_JAVA_GC_AFTER_X_MINUTES_VALUE.equals(actionCmd))
+			action_toggleDoJavaGcAfterXMinutesValue(e);
+
 		if (ACTION_DO_JAVA_GC_AFTER_REFRESH.equals(actionCmd))
 			action_toggleDoJavaGcAfterRefresh(e);
 
@@ -1489,7 +1520,7 @@ public class MainFrame
 			TcpConfigDialog.showDialog(_instance);
 
 		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
-			new ProcessDetailFrame(-1);
+			new ProcessDetailFrame(-1, -1);
 
 		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 		{
@@ -1603,23 +1634,28 @@ public class MainFrame
 		if (ACTION_GARBAGE_COLLECT.equals(actionCmd))
 		{
 			// While doing GC show GUI
-			WaitForExecDialog execWait = new WaitForExecDialog(MainFrame.getInstance(), "Forcing Java Garbage Collection.");
-			execWait.setState("Note: This is requested by the user.");
-			BgExecutor doWork = new BgExecutor(execWait)
+			if (MainFrame.getInstance().isActive())
 			{
-				@Override
-				public Object doWork()
+				WaitForExecDialog execWait = new WaitForExecDialog(MainFrame.getInstance(), "Forcing Java Garbage Collection.");
+				execWait.setState("Note: This is requested by the user.");
+				BgExecutor doWork = new BgExecutor(execWait)
 				{
-					// just sleep 10ms, so the GUI will have a chance to become visible
-					try {Thread.sleep(10);}
-					catch(InterruptedException ignore) {}
-
-					System.gc();
-					
-					return null;
-				}
-			};
-			execWait.execAndWait(doWork, 0);
+					@Override
+					public Object doWork()
+					{
+						// just sleep 10ms, so the GUI will have a chance to become visible
+						try {Thread.sleep(10);}
+						catch(InterruptedException ignore) {}
+	
+						System.gc();
+						
+						return null;
+					}
+				};
+				execWait.execAndWait(doWork, 0);
+			}
+			else
+				System.gc();
 
 			setStatus(MainFrame.ST_MEMORY);
 		}
@@ -1681,6 +1717,8 @@ public class MainFrame
 		{
 			_logger.debug("called: ACTION_REFRESH_NOW");
 
+			setForcedRefresh(true);
+			
 			GetCounters getCnt = AseTune.getCounterCollector();
 			if (getCnt != null)
 				getCnt.doRefresh();
@@ -1719,23 +1757,28 @@ public class MainFrame
 			tgdp.setInMemHistoryEnable(false);
 
 			// While doing GC show GUI
-			WaitForExecDialog execWait = new WaitForExecDialog(MainFrame.getInstance(), "Forcing Java Garbage Collection.");
-			execWait.setState("Note: This is \"out of memory\" Garbage Collection, which can't be disabled.");
-			BgExecutor doWork = new BgExecutor(execWait)
+			if (MainFrame.getInstance().isActive())
 			{
-				@Override
-				public Object doWork()
+				WaitForExecDialog execWait = new WaitForExecDialog(MainFrame.getInstance(), "Forcing Java Garbage Collection.");
+				execWait.setState("Note: This is \"out of memory\" Garbage Collection, which can't be disabled.");
+				BgExecutor doWork = new BgExecutor(execWait)
 				{
-					// just sleep 10ms, so the GUI will have a chance to become visible
-					try {Thread.sleep(10);}
-					catch(InterruptedException ignore) {}
-
-					System.gc();
-					
-					return null;
-				}
-			};
-			execWait.execAndWait(doWork, 0);
+					@Override
+					public Object doWork()
+					{
+						// just sleep 10ms, so the GUI will have a chance to become visible
+						try {Thread.sleep(10);}
+						catch(InterruptedException ignore) {}
+	
+						System.gc();
+						
+						return null;
+					}
+				};
+				execWait.execAndWait(doWork, 0);
+			}
+			else
+				System.gc();
 
 			int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
 			int mbLeftAfterGc = Memory.getMemoryLeftInMB();
@@ -2006,7 +2049,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			}
 
 			// Automatically do "refresh" when tab is changed
-			if (AseTune.hasCounterCollector() && AseTune.getCounterCollector().isMonConnected())
+			if (AseTune.hasCounterCollector() && AseTune.getCounterCollector().isMonConnectedStatus())
 			{
 				if (_autoRefreshOnTabChange_mi.isSelected())
 				{
@@ -2401,7 +2444,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		else // Show the dialog and wait for response
 		{
-			connDialog.setDesiredProductName(ConnectionDialog.DB_PROD_NAME_SYBASE_ASE);
+			connDialog.setDesiredProductName(DbUtils.DB_PROD_NAME_SYBASE_ASE);
 			connDialog.setVisible(true);
 			connDialog.dispose();
 		}
@@ -2412,7 +2455,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		if ( connType == ConnectionDialog.CANCEL)
 			return;
 		
-		if ( connType == ConnectionDialog.ASE_CONN)
+		if ( connType == ConnectionDialog.TDS_CONN)
 		{
 			if (AseTune.hasDevVersionExpired())
 				throw new RuntimeException(Version.getAppName()+" DEV Version has expired, can't connect to a ASE. only 'PCS - Read mode' is available.");
@@ -2519,7 +2562,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					}
 				} // end: setMinimalGraphConfig
 			}
-		} // end: ASE_CONN
+		} // end: TDS_CONN
 
 		if ( connType == ConnectionDialog.OFFLINE_CONN)
 		{
@@ -2813,6 +2856,29 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			"Sorry for that..." +
 			"</html>");
 	}
+	private void action_toggleDoJavaGcAfterXMinutes(ActionEvent e)
+	{
+		saveProps();
+	}
+	private void action_toggleDoJavaGcAfterXMinutesValue(ActionEvent e)
+	{
+		String key1 = "Do Java Garbage Collect Every X Minute";
+
+		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+		in.put(key1, Integer.toString(Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_doJavaGcAfterXMinutesValue, DEFAULT_doJavaGcAfterXMinutesValue)));
+
+		Map<String,String> results = ParameterDialog.showParameterDialog(this, "Do Java Garbage Collect", in, false);
+
+		if (results != null)
+		{
+			Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+			int val = Integer.parseInt(results.get(key1));
+			tmpConf.setProperty(PROPKEY_doJavaGcAfterXMinutesValue, val);
+
+			saveProps();
+		}
+	}
 	private void action_toggleDoJavaGcAfterRefresh(ActionEvent e)
 	{
 		saveProps();
@@ -2903,7 +2969,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyLeft(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			moveSlider(_readSlider, -1);
 
 		else if (isOfflineConnected())
@@ -2912,7 +2978,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRight(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			moveSlider(_readSlider, 1);
 
 		else if (isOfflineConnected())
@@ -2921,7 +2987,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyLeftLeft(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			moveSlider(_readSlider, -10);
 
 		else if (isOfflineConnected())
@@ -2930,7 +2996,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRightRight(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			moveSlider(_readSlider, 10);
 
 		else if (isOfflineConnected())
@@ -2939,7 +3005,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyLeftNext(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			_logger.info("No action has been assigned 'Ctrl+Shift+left' in 'onlinde mode'");
 
 		else if (isOfflineConnected())
@@ -2951,7 +3017,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRightNext(ActionEvent e)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 			_logger.info("No action has been assigned 'Ctrl+Shift+right' in 'onlinde mode'");
 
 		else if (isOfflineConnected())
@@ -2963,7 +3029,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	public void action_openDdlViewer(String dbname, String objectname)
 	{
-		if (AseTune.getCounterCollector().isMonConnected())
+		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		{
 			SwingUtils.showInfoMessage("DDL Viewer", 
 				"<html>" +
@@ -3902,6 +3968,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
+			mf._optDoGc_m                    .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._aseConfigView_mi             .setEnabled(true);
@@ -3954,6 +4023,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
+			mf._optDoGc_m                    .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._aseConfigView_mi             .setEnabled(true);
@@ -4006,6 +4078,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
+			mf._optDoGc_m                    .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
+			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._aseConfigView_mi             .setEnabled(false);
@@ -4393,7 +4468,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					" MP.WaitEventID, " +
 					" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
 					" MP.BlockingSPID, " +
-					" procname = (select object_name(sp.id,sp.dbid) from master..sysprocesses sp where sp.spid = MP.SPID), " +
+					" procname = (select isnull(object_name(sp.id, sp.dbid), object_name(sp.id, 2)) from master..sysprocesses sp where sp.spid = MP.SPID), " +
 					" MP.BatchID, " +
 					" MP.LineNumber, " +
 					" MP.BlockingXLOID, " +
@@ -4409,6 +4484,18 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public static boolean isSamplingPaused()
 	{
 		return _isSamplingPaused;
+	}
+
+	/** Check if someone has hit F5, so we can "override" the PAUSED fuctionality */
+	public static boolean isForcedRefresh()
+	{
+		return _isForcedRefresh;
+	}
+
+	/** set this when hit F5, so we can "override" the PAUSED fuctionality */
+	public static void setForcedRefresh(boolean b)
+	{
+		_isForcedRefresh = b;
 	}
 
 	public static boolean isInMemoryViewOn()
@@ -4519,6 +4606,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
 		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_useTcpGroups,                          _groupTcpInTabPane_mi.isSelected());
+		tmpConf.setProperty(PROPKEY_doJavaGcAfterXMinutes,                 _optDoGcAfterXMinutes_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterRefresh,                  _optDoGcAfterRefresh_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterRefreshShowGui,           _optDoGcAfterRefreshShowGui_mi.isSelected());
 
@@ -4613,6 +4701,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		_autoRefreshOnTabChange_mi.setSelected(bool);
 
 		_groupTcpInTabPane_mi         .setSelected(tmpConf.getBooleanProperty(PROPKEY_useTcpGroups,                DEFAULT_useTcpGroups));
+		_optDoGcAfterXMinutes_mi      .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterXMinutes,       DEFAULT_doJavaGcAfterXMinutes));
 		_optDoGcAfterRefresh_mi       .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh));
 		_optDoGcAfterRefreshShowGui_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefreshShowGui, DEFAULT_doJavaGcAfterRefreshShowGui));
 

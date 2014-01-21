@@ -6,7 +6,7 @@ scriptPath="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 shortAppName=sqlw
 longAppName=SqlWindow
-javaMainClass=com.asetune.tools.QueryWindow
+javaMainClass=com.asetune.tools.sqlw.QueryWindow
 javaSplashScreen=lib/sqlw_splash.jpg
 
 #----------------------------------
@@ -67,7 +67,11 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.14.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 
-export PATH=${JAVA_HOME}/bin:${PATH}
+export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/jdbc_drivers/*
+export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}
+
+
+export PATH=${SQLW_JAVA_HOME}/bin:${ASETUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
 
 echo "================================================================"
@@ -77,7 +81,10 @@ echo SYBASE=${SYBASE}
 echo ${APPL_HOME_propName}=${APPL_HOME}
 echo ${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR}
 echo CLASSPATH=${CLASSPATH}
+echo SQLW_JAVA_HOME=${SQLW_JAVA_HOME}
+echo ASETUNE_JAVA_HOME=${ASETUNE_JAVA_HOME}
 echo JAVA_HOME=${JAVA_HOME}
+echo EXTRA_JDBC_DRIVERS=${EXTRA_JDBC_DRIVERS}
 
 #------------------------------------------------------------------------
 #--- CHECK current Java Version
@@ -129,7 +136,7 @@ fi
 
 
 
-#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_PARAMS} -Dsybase.home=${SYBASE} -DSYBASE=${SYBASE} -D${APPL_HOME_propName}=${APPL_HOME} -D${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR} ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
-      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_PARAMS} -Dsybase.home=${SYBASE} -DSYBASE=${SYBASE} -D${APPL_HOME_propName}=${APPL_HOME} -D${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR} ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_PARAMS} -Dsybase.home=${SYBASE} -DSYBASE=${SYBASE} -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}=${APPL_HOME} -D${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR} ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_PARAMS} -Dsybase.home=${SYBASE} -DSYBASE=${SYBASE} -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}=${APPL_HOME} -D${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR} ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
 
 

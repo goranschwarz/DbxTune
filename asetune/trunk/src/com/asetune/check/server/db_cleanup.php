@@ -137,6 +137,7 @@
 		doCleanup("delete from asemon_error_info         where userName  in('gorans', 'i063783') ");
 		doCleanup("delete from asemon_error_info2        where userName  in('gorans', 'i063783') ");
 		doCleanup("delete from sqlw_usage                where user_name in('gorans', 'i063783') ");
+		doCleanup("delete from sqlw_connect_info         where userName  in('gorans', 'i063783') ");
 
 		// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup("delete from asemon_udc_info");
@@ -193,6 +194,10 @@
 		//doCleanup("delete from asemon_error_info         where logMessage  like 'The DDL Storage queue has % entries. The persistent writer might not keep in pace.%' ");
 		//doCleanup("delete from asemon_error_info         where logMessage  like 'The persistent queue has % entries. The persistent writer might not keep in pace.%' ");
 
+		// Cleanup (ALL) error information
+		//doCleanup("delete from asemon_error_info");
+		//doCleanup("delete from asemon_error_info2");
+
 //USED FOR TEMPLATE
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
@@ -234,6 +239,8 @@
 
 		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSortOrderId   varchar(5)  AFTER srvVersionStr");
 		//doCleanup("ALTER TABLE asemon_connect_info ADD srvSortOrderName varchar(30) AFTER srvSortOrderId");
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvCharsetId   varchar(5)  AFTER srvSortOrderName");
+		//doCleanup("ALTER TABLE asemon_connect_info ADD srvCharsetName varchar(30) AFTER srvCharsetId");
 
 		//doCleanup("ALTER TABLE asemon_connect_info ADD srvUserRoles varchar(80)  AFTER srvUser");
 		//doCleanup("ALTER TABLE asemon_connect_info       MODIFY srvUserRoles varchar(160)");
@@ -264,9 +271,12 @@
 		//doCleanup("ALTER TABLE asemon_connect_info ADD sshTunnelInfo varchar(100)  AFTER srvIpPort");
 		//doCleanup("ALTER TABLE asemon_connect_info MODIFY srvIpPort varchar(100)");
 
+		doCleanup("ALTER TABLE sqlw_usage CHANGE sqlwCheckId sqlwCheckId int not null auto_increment");
+
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
 //");
+
 
 		// FIX VERSION for INT columns
 //		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 1000000 AND srvVersion > 0");
@@ -293,6 +303,7 @@
 		describe("asemon_error_info2");
 		describe("asemon_error_info_save");
 		describe("sqlw_usage");
+		describe("sqlw_connect_info");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

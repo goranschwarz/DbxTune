@@ -215,8 +215,8 @@ CREATE TABLE asemon_error_info_save
 
 CREATE TABLE sqlw_usage
 (
-	rowid                   int   not null   auto_increment    primary key,
-	
+	sqlwCheckId             int   not null   auto_increment    primary key,
+
 	serverAddTime           timestamp,
 	clientCheckTime         timestamp,
 	
@@ -250,5 +250,35 @@ CREATE TABLE sqlw_usage
 	os_name                 varchar(20),
 	os_version              varchar(20),
 	os_arch                 varchar(20)
+);
+
+CREATE TABLE sqlw_connect_info
+(
+	sqlwCheckId             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+	
+	connectId               int,
+	connTypeStr             varchar(30),
+	
+	prodName                varchar(30),
+	prodVersionStr          varchar(255),
+
+	jdbcDriver              varchar(60),
+	jdbcUrl                 varchar(255),
+	jdbcDriverName          varchar(255),
+	jdbcDriverVersion       varchar(255),
+
+	srvVersionInt           int,
+	srvName                 varchar(30),
+	srvUser                 varchar(30),
+	srvCharsetName          varchar(30),
+	srvSortOrderName        varchar(30),
+	
+	sshTunnelInfo           varchar(100),
+	
+	
+	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
 );
 

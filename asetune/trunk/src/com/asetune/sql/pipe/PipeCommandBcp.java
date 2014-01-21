@@ -198,15 +198,15 @@ extends PipeCommandAbstract
 			sb.append("\n");
 		}
 
-		sb.append("usage: bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-b]");
-		sb.append("  ");
-		sb.append("options:");
-		sb.append("  -U,--user <user>          Username when connecting to server.");
-		sb.append("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
-		sb.append("  -S,--server <server>      Server to connect to (SERVERNAME|host:port).");
-		sb.append("  -D,--dbname <dbname>      Database name in server.");
-		sb.append("  -b,--batchSize <num>      Batch size.");
-		sb.append("  ");
+		sb.append("usage: bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-b] \n");
+		sb.append("   \n");
+		sb.append("options: \n");
+		sb.append("  -U,--user <user>          Username when connecting to server. \n");
+		sb.append("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd \n");
+		sb.append("  -S,--server <server>      Server to connect to (SERVERNAME|host:port). \n");
+		sb.append("  -D,--dbname <dbname>      Database name in server. \n");
+		sb.append("  -b,--batchSize <num>      Batch size. \n");
+		sb.append("  \n");
 		
 		throw new PipeCommandException(sb.toString());
 	}

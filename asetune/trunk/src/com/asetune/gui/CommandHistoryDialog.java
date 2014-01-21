@@ -1196,7 +1196,8 @@ implements ChangeListener, ActionListener, FocusListener
 	{
 		try
 		{
-			RandomAccessFile raf = new RandomAccessFile(getFileName(), "rw");
+			_logger.warn("Writing a new history file '"+fileName+"'. Entries that will be written "+list.size()+".");
+			RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 			FileChannel channel = raf.getChannel();
 
 			try 

@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.regex.Pattern;
 
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandException;
@@ -33,25 +34,32 @@ import com.asetune.sql.pipe.PipeCommandException;
 public class AseSqlScriptReader
 {
 	/** sql in case of String input */
-	private String         _sqlStr                = null;
+	private String          _sqlStr                = null;
 
 	/** The file in case of a File input */
-	private File           _file                  = null;
+	private File            _file                  = null;
 
 	/** read sql after last 'go' executor */
-	private boolean        _execWithoutGoAtTheEnd = false;
+	private boolean         _execWithoutGoAtTheEnd = false;
 
-	private int            _multiExecCount        = 0;
-	private int            _multiExecWait         = 0;
-	private PipeCommand    _pipeCommand           = null;
-	private int            _batchStartLine        = -1;
-	private int            _batchNumber           = -1;
-	private int            _totalBatchCount       = -1;
+	/** send sql after a ';' is the last character at the end */
+	private boolean         _useSemiColonHack      = false;
+	private SemiColonHelper _semiColonHelper       = null;
+
+	/** Alternative 'go' teminator. for example HANA and Oracle uses '/' */
+	private String          _alternativeGoTerminator = null;
+
+	private int             _multiExecCount        = 0;
+	private int             _multiExecWait         = 0;
+	private PipeCommand     _pipeCommand           = null;
+	private int             _batchStartLine        = -1;
+	private int             _batchNumber           = -1;
+	private int             _totalBatchCount       = -1;
 
 	/** keep track of where in the file we are */
-	private int            _lineInReader          = 0;
-	private Reader         _reader                = null;
-	private BufferedReader _bReader               = null;
+	private int             _lineInReader          = 0;
+	private Reader          _reader                = null;
+	private BufferedReader  _bReader               = null;
 
 
 	public AseSqlScriptReader()
@@ -134,7 +142,49 @@ public class AseSqlScriptReader
 		_execWithoutGoAtTheEnd = execWithoutGoAtTheEnd;
 	}
 
+	/**
+	 * If the string or last part isn't 'go' terminated, execute it anyway.
+	 * @param sql
+	 */
+	public void setSemiColonHack(boolean useSemiColonHack)
+	{
+		_useSemiColonHack = useSemiColonHack;
+
+		if (_useSemiColonHack)
+			_semiColonHelper = new SemiColonHelper();
+		else
+			_semiColonHelper = null;
+	}
+
+	/**
+	 * Also use the specified string/character for executing a SQL Batch
+	 * 
+	 * @param alternativeGoTerminator The string to use, null resets the alternative terminator
+	 */
+	public void setAlternativeGoTerminator(String alternativeGoTerminator)
+	{
+		_alternativeGoTerminator = alternativeGoTerminator;
+	}
+
+	/**
+	 * Check what char/string we are using as alternative for executing a SQL Batch
+	 * 
+	 * @returns alternativeGoTerminator The string to use, null if not been set.
+	 */
+	public String getAlternativeGoTerminator()
+	{
+		return _alternativeGoTerminator;
+	}
+
 	public static boolean hasCommandTerminator(String sqlStr)
+	{
+		return hasCommandTerminator(sqlStr, false, null);
+	}
+	public static boolean hasCommandTerminator(String sqlStr, String alternativeGoTerminator)
+	{
+		return hasCommandTerminator(sqlStr, false, alternativeGoTerminator);
+	}
+	public static boolean hasCommandTerminator(String sqlStr, boolean useSemicolonHack, String alternativeGoTerminator)
 	{
 		Reader         reader;
 		BufferedReader bReader;
@@ -147,9 +197,14 @@ public class AseSqlScriptReader
 
 		boolean hasTerminator = false;
 
+		SemiColonHelper semiColonHelper = null;
+		if (useSemicolonHack)
+			semiColonHelper = new SemiColonHelper();
+
 		try
 		{
 			// Get lines from the reader
+			boolean hasSemicolon = false;
 			String lastRow = "";
 			String row;
 			for (row = bReader.readLine(); row != null; row = bReader.readLine())
@@ -157,6 +212,17 @@ public class AseSqlScriptReader
 				if (StringUtil.isNullOrBlank(row))
 					continue;
 				lastRow = row;
+				
+				if (useSemicolonHack)
+				{
+//					if (StringUtil.hasSemicolonAtEnd(row))
+//						 hasSemicolon = true;
+
+					semiColonHelper.processRow(row);
+					if (semiColonHelper.isCompleteStatement())
+						 hasSemicolon = true;
+				}
+					
 			}
 	
 			//---------------------------------
@@ -167,6 +233,19 @@ public class AseSqlScriptReader
 
 			// if end of batch 'go [###]'
 			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+			{
+				hasTerminator = true;
+			}
+
+			// Alternative GO Terminator
+			if (alternativeGoTerminator != null)
+			{
+				if (row.trim().equals(alternativeGoTerminator) )
+					hasTerminator = true;
+			}
+
+			// semicolon hack enabled
+			if (useSemicolonHack && hasSemicolon)
 			{
 				hasTerminator = true;
 			}
@@ -242,6 +321,32 @@ public class AseSqlScriptReader
 				{
 					totalBatchCount++;
 					rowsInLastBatch = 0;
+				}
+
+				// Alternative GO Terminator
+				if (_alternativeGoTerminator != null)
+				{
+					if (row.trim().equals(_alternativeGoTerminator) )
+					{
+						totalBatchCount++;
+						rowsInLastBatch = 0;
+					}
+				}
+
+				// if we use the "semicolon hack"
+				if (_useSemiColonHack)
+				{
+					_semiColonHelper.processRow(row);
+					if (_semiColonHelper.isCompleteStatement())
+					{
+						totalBatchCount++;
+						rowsInLastBatch = 0;
+					}
+//					if (StringUtil.hasSemicolonAtEnd(row))
+//					{
+//						totalBatchCount++;
+//						rowsInLastBatch = 0;
+//					}
 				}
 
 				// if end of batch 'reset'
@@ -335,6 +440,9 @@ public class AseSqlScriptReader
 		_batchNumber++;
 		_batchStartLine = _lineInReader;
 
+		if (_useSemiColonHack)
+			_semiColonHelper.reset();
+
 		StringBuilder batchBuffer = new StringBuilder();
 
 		// Get lines from the reader
@@ -342,6 +450,78 @@ public class AseSqlScriptReader
 		for (row = _bReader.readLine(); row != null; row = _bReader.readLine())
 		{
 			_lineInReader++;
+
+			//-------------------------------------------------------------------------------------
+			// If the "semicolon hack" is enabled it should really be capable of "emulating" Oracle SQL*Plus
+			// which means that if a "create " keyword shows up, then semicolon no longer means "send"
+			// the you should wait for "end of batch" with 'go' or '/' before the SQL is sent to server
+			// The SQL*Plus manual says this: http://docs.oracle.com/cd/B19306_01/server.102/b14357/ch4.htm
+			// 
+			// Running PL/SQL Blocks
+			// You can also use PL/SQL subprograms (called blocks) to manipulate data in the database. 
+			// SQL*Plus treats PL/SQL subprograms in the same manner as SQL commands, except that a 
+			// semicolon (;) or a blank line does not terminate and execute a block. 
+			// Terminate PL/SQL subprograms by entering a period (.) by itself on a new line. 
+			// You can also terminate and execute a PL/SQL subprogram by entering a slash (/) by itself on a new line.
+			// 
+			// You enter the mode for entering PL/SQL statements when:
+			// * You type DECLARE or BEGIN. After you enter PL/SQL mode in this way, type the remainder of your PL/SQL subprogram.
+			// * You type a SQL command (such as CREATE PROCEDURE) that creates a stored procedure. 
+			//   After you enter PL/SQL mode in this way, type the stored procedure you want to create.
+			// 
+			// SQL*Plus stores the subprograms you enter in the SQL buffer. Execute the current subprogram with a RUN or slash (/) command. 
+			// A semicolon (;) is treated as part of the PL/SQL subprogram and will not execute the command.
+			//
+			// You might enter and execute a PL/SQL subprogram as follows:
+			// declare a varchar2(8);
+			// begin
+			//    a := rawtohex('AB');
+			//    dbms_output.put_line(a);
+			//    select RAWTOHEX('AB') into a from dual;
+			//    dbms_output.put_line(a);
+			// end;
+			//
+			// Creating Stored Procedures
+			// Stored procedures are PL/SQL functions, packages, or procedures. 
+			// To create stored procedures, you use the following SQL CREATE commands:
+			// 	  * CREATE FUNCTION
+			// 	  * CREATE LIBRARY
+			// 	  * CREATE PACKAGE
+			// 	  * CREATE PACKAGE BODY
+			// 	  * CREATE PROCEDURE
+			// 	  * CREATE TRIGGER
+			// 	  * CREATE TYPE
+			// Entering any of these commands places you in PL/SQL mode, where you can enter your PL/SQL subprogram.
+			//-------------------------------------------------------------------------------------
+			//
+			// So what I will try to do is:
+			// "Strip of" all comments... start to look for the first word...
+			// if first word is 'declare'|'begin'|'create' then *disable* "send on semicolon"
+
+			// if we use the "semicolon hack"
+			if (_useSemiColonHack)
+			{
+				_semiColonHelper.processRow(row);
+				if (_semiColonHelper.isCompleteStatement())
+				{
+					batchBuffer.append(_semiColonHelper.getText());
+					return batchBuffer.toString();
+				}
+//				if (StringUtil.hasSemicolonAtEnd(row))
+//				{
+//					batchBuffer.append(StringUtil.removeSemicolonAtEnd(row));
+//					return batchBuffer.toString();
+//				}
+			}
+
+			// Alternative GO Terminator
+			if (_alternativeGoTerminator != null)
+			{
+				if (row.trim().equals(_alternativeGoTerminator) )
+				{
+					return batchBuffer.toString();
+				}
+			}
 
 			// if end of batch 'go [###]'
 //			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") )
@@ -490,6 +670,157 @@ public class AseSqlScriptReader
 		super.finalize();
 	}
 
+	/**
+	 * Help to decide what's a SQL Statement or not when semicolon are allowed as send-to-server-terminator 
+	 * or a SQL-Statement terminator within a SQL Block (stored procedure or similar)
+	 * 
+	 * @author gorans
+	 */
+	private static class SemiColonHelper
+	{
+		private int     _rowNumber          = 0;
+		private boolean _inMultiLineComment = false;
+		private boolean _inSqlBlock         = false;
+		private String  _currentRow         = null;
+
+//		private String  _regex              = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
+		private String  _regex              = "(begin|declare|create|alter)\\s+";
+		private Pattern _pattern            = Pattern.compile(_regex, Pattern.CASE_INSENSITIVE);
+
+		public SemiColonHelper()
+		{
+			reset();
+		}
+
+		/**
+		 * Resets the helper class so we can read another batch.
+		 */
+		public void reset()
+		{
+			_rowNumber          = 0;
+			_inMultiLineComment = false;
+			_inSqlBlock         = false;
+			_currentRow         = null;
+		}
+
+		/**
+		 * When reading a file (or other input) line by line...<br>
+		 * We need to parse the content and:
+		 * <ul>
+		 *    <li>disregard any leading comment comment</li>
+		 *    <li>if <b>first</b> string is 'begin|declare|create', the start a SQL Block that <b>can</b> contain semicolons ';'</li>
+		 * </ul>
+		 * @param row
+		 */
+		public void processRow(String inputRow)
+		{
+			_rowNumber++;
+			_currentRow = inputRow;
+			
+			String row = inputRow.trim();
+			//System.out.println(">>>> SemiColonHelper.processRow(): BEGIN: _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+			
+
+			// PARSE
+			// Multi line comments, this takes a bit processing
+			//------------------------------------------------
+
+			// simple comments: /* some text */
+			if (row.startsWith("/*") && row.endsWith("*/"))
+			{
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: SINGLE_LINE_COMMENT: _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return; // get next line
+			}
+
+			// hmm simple comments but something after comment: /* some text */ XXXX<-This is a Statement
+			// Just remove this part from the str, and continue parsing
+			if (row.startsWith("/*") && row.indexOf("*/") > 0)
+			{
+				row = row.substring(row.indexOf("*/")+2).trim();
+				//System.out.println("  << SemiColonHelper.processRow():      : SINGLE_LINE_-SPILL-: _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+			}
+
+			// Now try multiLine comment, START
+			if (row.startsWith("/*"))
+			{
+				_inMultiLineComment = true;
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: MLC_START          : _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return; // next row
+			}
+
+			// LAST of the row comment END: */
+			if (row.endsWith("*/"))
+			{
+				_inMultiLineComment = false;
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: MLC_-END-          : _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return; // next line
+			}
+
+			// Comment ENDS, but not at the end of the row: end of comment */ XXXX<-This is a Statement 
+			if (row.indexOf("*/") >= 0)
+			{
+				_inMultiLineComment = false;
+				row = row.substring(row.indexOf("*/")+2).trim();
+				//System.out.println("  << SemiColonHelper.processRow():      : MLC_-WITH_SPILL-   : _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+			}
+				
+			// If we are in Multi Line Comment, just read next row
+			if (_inMultiLineComment)
+			{
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: AT_MLC             : _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return;
+			}
+
+			// Nothing left in the string, get next line
+			if (row.equals(""))
+			{
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: BLANK_LINE         : _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return;
+			}
+
+			// The rest is comment, get next line
+			if (row.startsWith("--"))
+			{
+				//System.out.println("  << SemiColonHelper.processRow(): -RET-: --SINGLE_LINE_COMNT: _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"'.");
+				return;
+			}
+
+			// has begin|declare|create
+			// Then start a SQL Block
+			if ( ! _inSqlBlock && _pattern.matcher(row).find())
+			{
+				_inSqlBlock = true;
+			}
+			//System.out.println("  << SemiColonHelper.processRow(): -END-: _rowNumber="+_rowNumber+", _inMultiLineComment="+_inMultiLineComment+", _inSqlBlock="+_inSqlBlock+", row='"+row+"', _currentRow='"+_currentRow+"', getText()='"+getText()+"'.");
+		}
+
+		/**
+		 * This works on <b>just</b> the latest row sent to processRow()<br>
+		 * If we are not in a SQL Block, then the semicolon at the end will be stripped.<br>
+		 * But if we are in a SQL Block, the the same row processed with processRow will be returned.
+		 * 
+		 * @return str
+		 */
+		public Object getText()
+		{
+			if (_inSqlBlock)
+				return _currentRow;
+			else
+				return StringUtil.removeSemicolonAtEnd(_currentRow);
+		}
+
+		/**
+		 * Check if it's time to send the "sql batch" to the server 
+		 * @return
+		 */
+		public boolean isCompleteStatement()
+		{
+			if ( ! _inSqlBlock && StringUtil.hasSemicolonAtEnd(_currentRow) )
+				return true;
+			
+			return false;
+		}		
+	}
 	
 	public static void main(String[] args)
 	{
@@ -514,6 +845,8 @@ public class AseSqlScriptReader
 //			"select 3.1 \n" +
 //			"go 20 --make this 20 times";
 		
+		System.out.println("-START-: test case # 5");
+
 		String sql_5 = 
 			"select 5.1 \n" +
 			"go \n" +
@@ -572,6 +905,165 @@ public class AseSqlScriptReader
 		{
 			e.printStackTrace();
 		}
+
+		System.out.println("--END--: test case # 5");
+		System.out.println();
+
+
+		
+		System.out.println("-START-: test case # 6");
+
+		String sql_6 = 
+			"select 6.0;\n" +
+			
+			"select 6.1; \n" +
+			
+			"select 6.2    ;   \n" +
+			
+			"select 6.3.1 \n" +
+			"from 6.3.2; \n" +
+			
+			"select 'disregard this batch' \n" +
+			"reset \n" +
+			
+			"select 6.4 \n" +
+			"go" +
+			
+			"select 6.5 --- some OK comments ; \n" +
+			
+			"select 6.6 ; --- some comment, not in batch \n" +
+			
+			"-- so this should go on the same batch \n" +
+			"-- finaly terminator;\n" +
+			
+			"select 'do not show-exit' \n" +
+			"exit \n" +
+			
+			"select 'never, we should not reach here' \n" +
+			"go \n";
+		try
+		{
+			AseSqlScriptReader sr = new AseSqlScriptReader(sql_6);
+			sr.setSemiColonHack(true);
+			for (String sqlBatch = sr.getSqlBatchString(); sqlBatch != null; sqlBatch = sr.getSqlBatchString() )
+			{
+				System.out.println();
+				System.out.println("#######################################################");
+				System.out.println("getSqlTotalBatchCount: " + sr.getSqlTotalBatchCount());
+				System.out.println("getSqlBatchNumber    : " + sr.getSqlBatchNumber());
+				System.out.println("getSqlBatchStartLine : " + sr.getSqlBatchStartLine());
+				System.out.println("getMultiExecCount    : " + sr.getMultiExecCount());
+				System.out.println("getPipeCmd           : " + sr.getPipeCmd());
+				System.out.println("---- batch-begin --------------------------------------");
+				System.out.print(sqlBatch);
+				System.out.println("<enter-inserted-here-for-clarity>");
+				System.out.println("---- batch-end ----------------------------------------");
+			}
+			sr.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		catch(PipeCommandException e)
+		{
+			e.printStackTrace();
+		}
+		catch(GoSyntaxException e)
+		{
+			e.printStackTrace();
+		}
+
+		System.out.println("--END--: test case # 6");
+		System.out.println();
+
+		
+		System.out.println("-START-: test case # 7");
+
+		String sql_7 = 
+			"\n" +
+			"------\n" +
+			"select 7.1; \n" +
+			"select 7.2; \n" +
+			
+			"\n" +
+			"/* single line comment */\n" +
+			"select 7.2    ;   \n" +
+			
+			"/* \n" +
+			"** multi line comment \n" +
+			"*/ \n" +
+			"select 7.3.1 \n" +
+			"from 7.3.2; \n" +
+			
+			"select 'disregard this batch' \n" +
+			"reset \n" +
+			
+			"/* \n" +
+			"** multi line comment, start right after comment \n" +
+			"*/create proc xxx_7.4 \n" +
+			"as \n" +
+			"begin \n" +
+			"    select 7.4.1 from dual;\n" +
+			"    select 7.4.2 from dual;\n" +
+			"    select 7.4.3 from dual;\n" +
+			"    select 7.4.4 from dual;\n" +
+			"end; \n" +
+			"go \n" +
+			
+			"\n" +
+			"/* \n" +
+			"** multi line comment, start right after comment \n" +
+			"*/ \n" +
+			"create procedure xxxx \n" +
+			"as \n" +
+			"begin \n" +
+			"    select 7.5 from dual;\n" +
+			"end; \n" +
+			"go \n" +
+
+			"\n" +
+			"--- LAST LINE\n" +
+			"select 7.6;\n" +
+			
+			"\n";
+		try
+		{
+			AseSqlScriptReader sr = new AseSqlScriptReader(sql_7);
+			sr.setSemiColonHack(true);
+			for (String sqlBatch = sr.getSqlBatchString(); sqlBatch != null; sqlBatch = sr.getSqlBatchString() )
+			{
+				System.out.println();
+				System.out.println("#######################################################");
+				System.out.println("getSqlTotalBatchCount: " + sr.getSqlTotalBatchCount());
+				System.out.println("getSqlBatchNumber    : " + sr.getSqlBatchNumber());
+				System.out.println("getSqlBatchStartLine : " + sr.getSqlBatchStartLine());
+				System.out.println("getMultiExecCount    : " + sr.getMultiExecCount());
+				System.out.println("getPipeCmd           : " + sr.getPipeCmd());
+				System.out.println("---- batch-begin --------------------------------------");
+				System.out.print(sqlBatch);
+				System.out.println("<enter-inserted-here-for-clarity>");
+				System.out.println("---- batch-end ----------------------------------------");
+			}
+			sr.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+		catch(PipeCommandException e)
+		{
+			e.printStackTrace();
+		}
+		catch(GoSyntaxException e)
+		{
+			e.printStackTrace();
+		}
+
+		System.out.println("--END--: test case # 7");
+		System.out.println();
+
+		
 		System.out.println("STOP");
 	}
 }

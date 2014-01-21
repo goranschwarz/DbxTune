@@ -6,8 +6,8 @@ package com.asetune.xmenu;
 import java.sql.Connection;
 import java.util.HashMap;
 
-import com.asetune.tools.QueryWindow;
 import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 
@@ -82,6 +82,12 @@ extends XmenuActionBase
 		}
 		
 		sql = modifySql(sql);
+
+		// TODO: figure out if this was called from SQLWindow or from AseTune (or possible from what JTable sub type)
+		//       if called from AseTune   open new Window
+		//       if called from SQLWindow execute the statement in current window
+		// can we use a stacktrace to see from where it's called?
+		// or do we need to add some parameter ???
 
 		QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
 		qf.openTheWindow();

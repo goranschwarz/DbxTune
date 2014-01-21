@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.asetune.gui.swing.WaitForExecDialog;
-import com.asetune.tools.QueryWindow.RclViewer;
+import com.asetune.tools.sqlw.QueryWindow.RclViewer;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.RepServerUtils.ConfigEntry;
 import com.asetune.utils.StringUtil;

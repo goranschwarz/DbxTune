@@ -365,6 +365,9 @@ extends CountersModel
 			"from master..monDeviceIO\n" +
 			"order by LogicalName" + (isClusterEnabled ? ", InstanceID" : "") + "\n";
 
+		// Simulate a lost connection
+		//sql += "go\n waitfor delay '00:00:03' select syb_quit()";
+
 		return sql;
 	}
 

@@ -3,11 +3,13 @@
  */
 package com.asetune.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -25,6 +27,7 @@ import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ import java.util.Properties;
 import java.util.Vector;
 
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DropMode;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -46,9 +50,11 @@ import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -61,6 +67,10 @@ import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -78,8 +88,9 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTabbedPane;
-import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.gui.swing.TreeTransferHandler;
+import com.asetune.gui.swing.VerticalScrollPane;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.PersistReader;
@@ -93,6 +104,7 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.PlatformUtils;
@@ -117,6 +129,9 @@ public class ConnectionDialog
 	public static final String   PROPKEY_showDialogOnNoLocalPcsDrive = "ConnectionDialog.showDialog.pcs.noLocalDrive";
 	public static final boolean  DEFAULT_showDialogOnNoLocalPcsDrive = true;
 	
+	private static final boolean DEFAULT_CONN_PROFILE_PANEL_VISIBLE  = true;
+	private static final boolean DEFAULT_CONN_TABED_PANEL_VISIBLE    = true;
+
 	static
 	{
 //		Configuration.registerDefaultValue(CONF_OPTION_RECONNECT_ON_FAILURE, DEFAULT_xxx); // FIXME
@@ -125,7 +140,7 @@ public class ConnectionDialog
 	}
 	
 	public  static final int   CANCEL           = 0;
-	public  static final int   ASE_CONN         = 1; // remove this entry and replace it with TDS_CONN
+	public  static final int   TDS_CONN         = 1;
 	public  static final int   OFFLINE_CONN     = 2;
 //	public  static final int   TDS_CONN         = 3;
 	public  static final int   JDBC_CONN        = 4;
@@ -158,6 +173,8 @@ public class ConnectionDialog
 	private static final String TAB_TITLE_OFFLINE  = "Load Recorded Sessions";
 	private static final String TAB_TITLE_JDBC     = "JDBC";
 
+	private static final int    DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION = 150;
+	
 	//-------------------------------------------------
 	// Actions
 	public static final String ACTION_OK        = "OK";
@@ -165,10 +182,15 @@ public class ConnectionDialog
 
 	@SuppressWarnings("unused")
 	private Frame              _owner           = null;
-	
+
+	private int                _lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
+	private JSplitPane         _connSplitPane;
+	private JPanel             _connProfilePanel;
+	private JPanel             _connTabbedPanel;
 	private GTabbedPane        _tab;
-//	private JTabbedPane        _tab;
 	private JPanel             _okCancelPanel;
+	private JCheckBox          _connProfileVisible_chk = new JCheckBox("", DEFAULT_CONN_PROFILE_PANEL_VISIBLE);
+	private JCheckBox          _connTabbedVisible_chk  = new JCheckBox("", DEFAULT_CONN_TABED_PANEL_VISIBLE);
 
 	//---- ASE panel
 	private ImageIcon          _aseLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
@@ -214,6 +236,8 @@ public class ConnectionDialog
 	private JLabel             _aseSshTunnelDesc_lbl   = new JLabel();
 	private JButton            _aseSshTunnel_but       = new JButton("SSH Settings...");
 
+	private JLabel             _aseSqlInit_lbl         = new JLabel("SQL Init");
+	private JTextField         _aseSqlInit_txt         = new JTextField("");
 
 	private JCheckBox          _aseOptionSavePwd_chk            = new JCheckBox("Save password", true);
 	private JCheckBox          _aseOptionConnOnStart_chk        = new JCheckBox("Connect to this server on startup", false);
@@ -346,15 +370,21 @@ public class ConnectionDialog
 	private JTextField         _jdbcPassword_txt     = new JPasswordField();
 //	private JLabel             _jdbcTestConn_lbl     = new JLabel();
 	private JButton            _jdbcTestConn_but     = new JButton("Test Connection");
+	private JLabel             _jdbcSqlInit_lbl      = new JLabel("SQL Init");
+	private JTextField         _jdbcSqlInit_txt      = new JTextField("");
+	private JLabel             _jdbcUrlOptions_lbl   = new JLabel("URL Options");
+	private JTextField         _jdbcUrlOptions_txt   = new JTextField("");
+	private JButton            _jdbcUrlOptions_but   = new JButton("...");
+	
 	//---- JDBC Driver Info panel
 	@SuppressWarnings("unused")
 	private JPanel             _jdbcDriverInfoPanel      = null;
 	private ImageIcon          _jdbcDriverInfoImageIcon  = SwingUtils.readImageIcon(Version.class, "images/pcs_read_32.png"); // FIXME: get a icon for this
 	private JLabel             _jdbcDriverInfoIcon       = new JLabel(_jdbcDriverInfoImageIcon);
 	private MultiLineLabel     _jdbcDriverInfoHelp       = new MultiLineLabel();
-	private GTable             _jdbcDiTable              = new GTable();
-	private DefaultTableModel  _jdbcDiTableModel         = new DefaultTableModel();
-	private JButton            _jdbcDiAddDriver_but      = new JButton("Add Driver");
+//	private GTable             _jdbcDiTable              = new GTable();
+//	private DefaultTableModel  _jdbcDiTableModel         = new DefaultTableModel();
+//	private JButton            _jdbcDiAddDriver_but      = new JButton("Add Driver");
 
 	//---- Buttons at the bottom
 	private JLabel             _ok_lbl         = new JLabel(""); // Problem description if _ok is disabled
@@ -376,7 +406,7 @@ public class ConnectionDialog
 //		return _instance;
 //	}
 
-	public static Connection showAseOnlyConnectionDialog(Frame owner)
+	public static Connection showTdsOnlyConnectionDialog(Frame owner)
 	{
 		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, false, false, false, false, false);
 		connDialog.setVisible(true);
@@ -387,7 +417,7 @@ public class ConnectionDialog
 		if ( connType == ConnectionDialog.CANCEL)
 			return null;
 
-		if ( connType == ConnectionDialog.ASE_CONN)
+		if ( connType == ConnectionDialog.TDS_CONN)
 			return connDialog.getAseConn();
 
 		return null;
@@ -434,7 +464,23 @@ public class ConnectionDialog
 
 		getSavedWindowProps();
 
+// TEMP CHANGED: THIS SHOULD BE DELETED... when the ConnectionProfile Works
+if (_connProfileVisible_chk.isSelected())
+	_connProfileVisible_chk.doClick();
+
 		setFocus();
+	}
+
+	/**
+	 * Set what tab that should be active
+	 * @param jdbcConn
+	 */
+	public void setSelectedTab(int tabId)
+	{
+		if      (tabId == TDS_CONN    ) _tab.setSelectedTitle(TAB_TITLE_ASE);
+		else if (tabId == OFFLINE_CONN) _tab.setSelectedTitle(TAB_TITLE_OFFLINE);
+		else if (tabId == JDBC_CONN   ) _tab.setSelectedTitle(TAB_TITLE_JDBC);
+		else _logger.warn("setSelectedTab(tabId="+tabId+"): invalid tabId="+tabId);
 	}
 
 	/**
@@ -495,7 +541,7 @@ public class ConnectionDialog
 					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
-					return DB_PROD_NAME_SYBASE_RS;
+					return DbUtils.DB_PROD_NAME_SYBASE_RS;
 				}
 				catch(SQLException ignoreRsExceptions) {}
 			}
@@ -558,11 +604,6 @@ public class ConnectionDialog
 			throw e;
 		}
 	}
-	/** List some known DatabaseProductName that we can use here */
-	public static final String DB_PROD_NAME_SYBASE_ASE = "Adaptive Server Enterprise";
-	public static final String DB_PROD_NAME_SYBASE_ASA = "SQL Anywhere";
-	public static final String DB_PROD_NAME_SYBASE_RS  = "Replication Server";
-	public static final String DB_PROD_NAME_H2         = "H2";
 
 	/**
 	 * Check if current connected product name is equal to the input parameter
@@ -611,29 +652,101 @@ public class ConnectionDialog
 		String currentDbProductName = getDatabaseProductName(conn);
 
 		// ASE
-		if      (DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
 		{
 			serverName = AseConnectionUtils.getAseServername(conn);
 		}
 		// ASA SQL Anywhere
-		else if (DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+			serverName = AseConnectionUtils.getAseServername(conn);
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
 		{
 			serverName = AseConnectionUtils.getAseServername(conn);
 		}
 		// Replication Server
-		else if (DB_PROD_NAME_SYBASE_RS .equals(currentDbProductName))
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
 		{
 			serverName = RepServerUtils.getServerName(conn);
 		}
 		// H2
-		else if (DB_PROD_NAME_H2        .equals(currentDbProductName))
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
 		{
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+			serverName = DbUtils.getHanaServername(conn);
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+			serverName = DbUtils.getOracleServername(conn);
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MS.equals(currentDbProductName))
+		{
+			serverName = AseConnectionUtils.getAseServername(conn);
 		}
 		// UNKNOWN
 		else
 		{
 		}
 		return serverName;
+	}
+
+	/**
+	 * Get the connected DJBC Driver Name, simply call jdbc.getMetaData().getDriverName();
+	 * @return null if not connected else: Retrieves the name of this JDBC Driver.
+	 * @see java.sql.DatabaseMetaData.getDriverName
+	 */
+	public String getDriverName() 
+	throws SQLException
+	{
+		Connection conn = _aseConn;
+		if (conn == null)
+			conn = _offlineConn;
+		if (conn == null)
+			conn = _jdbcConn;
+		return getDriverName(conn);
+	}
+	public static String getDriverName(Connection conn) 
+	throws SQLException
+	{
+		if (conn == null)
+			return null;
+
+		String str = conn.getMetaData().getDriverName();
+		_logger.debug("getDriverName() returns: '"+str+"'.");
+		return str; 
+	}
+
+	/**
+	 * Get the connected DJBC Driver Name, simply call jdbc.getMetaData().getDriverName();
+	 * @return null if not connected else: Retrieves the name of this JDBC Driver.
+	 * @see java.sql.DatabaseMetaData.getDriverName
+	 */
+	public String getDriverVersion() 
+	throws SQLException
+	{
+		Connection conn = _aseConn;
+		if (conn == null)
+			conn = _offlineConn;
+		if (conn == null)
+			conn = _jdbcConn;
+		return getDriverVersion(conn);
+	}
+	public static String getDriverVersion(Connection conn) 
+	throws SQLException
+	{
+		if (conn == null)
+			return null;
+
+		String str = conn.getMetaData().getDriverVersion();
+		_logger.debug("getDriverVersion() returns: '"+str+"'.");
+		return str; 
 	}
 
 	public int                      getConnectionType() { return _connectionType; }
@@ -689,7 +802,7 @@ public class ConnectionDialog
 	 * @return null if not connected, else user name*/
 	public String getUsername() 
 	{ 
-		if (getConnectionType() == ASE_CONN)
+		if (getConnectionType() == TDS_CONN)
 			return _aseUser_txt.getText(); 
 
 		if (getConnectionType() == OFFLINE_CONN)
@@ -705,7 +818,7 @@ public class ConnectionDialog
 	 * @return null if not connected, else URL used when connecting */
 	public String getUrl() 
 	{ 
-		if (getConnectionType() == ASE_CONN)
+		if (getConnectionType() == TDS_CONN)
 			return _aseConnUrl_txt.getText();
 
 		if (getConnectionType() == OFFLINE_CONN)
@@ -737,6 +850,39 @@ public class ConnectionDialog
 	public String getJdbcUser()   { return _jdbcUsername_txt.getText(); }
 	public String getJdbcPasswd() { return _jdbcPassword_txt.getText(); }
 
+	public void setJdbcDriver  (String driver)   { addAndSelectItem(_jdbcDriver_cbx, driver); }
+	public void setJdbcUrl     (String url)      { addAndSelectItem(_jdbcUrl_cbx,    url); }
+	public void setJdbcUsername(String username) { _jdbcUsername_txt.setText(username); }
+	public void setJdbcPassword(String password) { _jdbcPassword_txt.setText(password); }
+
+	private void addAndSelectItem(JComboBox cbx, String item)
+	{
+		boolean exists = false;
+		for (int i=0; i<cbx.getItemCount(); i++)
+		{
+			Object obj = cbx.getItemAt(i);
+			if (obj.equals(item))
+			{
+				exists = true;
+				break;
+			}
+		}
+		if ( ! exists )
+			cbx.addItem(item);
+		
+		cbx.setSelectedItem(item);
+	}
+
+	/**
+	 * Set a Connection profile to use when connecting
+	 * @param name Name of the profile
+	 */
+	public void setConnProfileName(String name)
+	{
+		_logger.warn("setConnProfileName(name): NOT YET IMPLEMENTED");
+		throw new RuntimeException("setConnProfileName(name): NOT YET IMPLEMENTED");
+	}
+	
 //	public static Connection showConnectionDialog(Frame owner, Map input)
 //	public static Connection showConnectionDialog(Frame owner)
 //	{
@@ -756,6 +902,152 @@ public class ConnectionDialog
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 0 0 0 0, wrap 1", "", ""));   // insets Top Left Bottom Right
+
+		_connProfilePanel = createConnProfilePanel();
+		_connTabbedPanel  = createConnTabbedPanel();
+		_okCancelPanel    = createOkCancelPanel();
+
+		_connSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		_connSplitPane.setLeftComponent (_connProfilePanel);
+		_connSplitPane.setRightComponent(_connTabbedPanel);
+//		_connSplitPane.setDividerLocation(150);
+		
+		VerticalScrollPane scroll = new VerticalScrollPane(_connSplitPane);
+//		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+//		scroll.setVerticalScrollBarPolicy  (JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+		panel.add(scroll,           "grow, push, wrap");
+		panel.add(_okCancelPanel,   "pushx, growx, bottom, right");
+
+		loadProps();
+
+		// enable/disable DEFERRED fields...
+		aseDeferredConnectChkAction();
+		aseDeferredDisConnectChkAction();
+
+		setContentPane(panel);
+	}
+
+	private static class ConnProfileSrvType
+	{
+		public String _name;
+		public String _vendor;
+		public ConnProfileSrvType(String name, String vendor)
+		{
+			_name = name;
+			_vendor = vendor;
+		}
+	}
+	private JPanel createConnProfilePanel()
+	{
+		JPanel panel = new JPanel();
+		panel.setLayout(new MigLayout("insets 0 0 0 0, wrap 1", "", ""));   // insets Top Left Bottom Right
+
+//		panel.add( new JButton("Create a Profile"));
+//		panel.add( new JLabel("Connection Profiles"));
+		
+		DefaultMutableTreeNode root = new DefaultMutableTreeNode("All", true);
+//		DefaultMutableTreeNode root = new DefaultMutableTreeNode("Connection Profiles");
+
+		DefaultMutableTreeNode n1   = new DefaultMutableTreeNode("Production", true);
+		DefaultMutableTreeNode n1c1 = new DefaultMutableTreeNode(new ConnProfileSrvType("GORAN_1_DS", DbUtils.DB_PROD_NAME_SYBASE_ASE), false);
+		DefaultMutableTreeNode n1c2 = new DefaultMutableTreeNode(new ConnProfileSrvType("XXX_DS",     DbUtils.DB_PROD_NAME_SYBASE_ASE), false);
+		DefaultMutableTreeNode n1c3 = new DefaultMutableTreeNode(new ConnProfileSrvType("YYY_DS",     DbUtils.DB_PROD_NAME_SYBASE_ASE), false);
+		n1.add(n1c1);
+		n1.add(n1c2);
+		n1.add(n1c3);
+
+		DefaultMutableTreeNode n2   = new DefaultMutableTreeNode("Development", true);
+		DefaultMutableTreeNode n2c1 = new DefaultMutableTreeNode(new ConnProfileSrvType("DEV_SERVER_1", DbUtils.DB_PROD_NAME_SYBASE_IQ), false);
+		DefaultMutableTreeNode n2c2 = new DefaultMutableTreeNode(new ConnProfileSrvType("DEV_SERVER_2", DbUtils.DB_PROD_NAME_SYBASE_ASA), false);
+		DefaultMutableTreeNode n2c3 = new DefaultMutableTreeNode(new ConnProfileSrvType("DEV_SERVER_3", DbUtils.DB_PROD_NAME_SYBASE_ASE), false);
+		n2.add(n2c1);
+		n2.add(n2c2);
+		n2.add(n2c3);
+
+		DefaultMutableTreeNode n3   = new DefaultMutableTreeNode("Test", true);
+		DefaultMutableTreeNode n3c1 = new DefaultMutableTreeNode(new ConnProfileSrvType("TEST_1_RS",  DbUtils.DB_PROD_NAME_SYBASE_RS), false);
+		DefaultMutableTreeNode n3c2 = new DefaultMutableTreeNode(new ConnProfileSrvType("TEST_2_XX",  DbUtils.DB_PROD_NAME_HANA), false);
+		DefaultMutableTreeNode n3c3 = new DefaultMutableTreeNode(new ConnProfileSrvType("TEST_3_ORA", DbUtils.DB_PROD_NAME_ORACLE), false);
+		n3.add(n3c1);
+		n3.add(n3c2);
+		n3.add(n3c3);
+
+		DefaultMutableTreeNode n4   = new DefaultMutableTreeNode(new ConnProfileSrvType("Dummy", DbUtils.DB_PROD_NAME_H2), false);
+
+        root.add(n1);
+        root.add(n2);
+        root.add(n3);
+        root.add(n4);
+         
+		JTree connProfileTree = new JTree(root);
+		connProfileTree.setRootVisible(false);
+//		connProfileTree.expandRow(0);
+//		connProfileTree.expandRow(1);
+//		connProfileTree.expandRow(2);
+		connProfileTree.setDragEnabled(true);  
+		connProfileTree.setDropMode(DropMode.ON_OR_INSERT);
+		connProfileTree.setTransferHandler(new TreeTransferHandler());
+		connProfileTree.getSelectionModel().setSelectionMode(TreeSelectionModel.CONTIGUOUS_TREE_SELECTION);  
+		expandTree(connProfileTree);
+
+		connProfileTree.setCellRenderer(new DefaultTreeCellRenderer()
+		{
+			private static final long serialVersionUID = 1L;
+			@Override
+			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus)
+			{
+				Component comp = super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+
+				if (value instanceof DefaultMutableTreeNode)
+				{
+					Object o = ((DefaultMutableTreeNode) value).getUserObject();
+					if (o instanceof ConnProfileSrvType) 
+					{
+						if (comp instanceof JLabel)
+						{
+							JLabel l = (JLabel) comp;
+							ConnProfileSrvType t = (ConnProfileSrvType) o;
+							l.setIcon(ConnectionProfileManager.getIcon(t._vendor));
+							l.setText(t._name);
+
+							return l;
+						}
+					}
+				} 
+				return comp;
+			}
+		});
+		JLabel heading = new JLabel(" Connection Profiles ");
+		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, 14));
+
+		panel.add( heading );
+		panel.add( connProfileTree, "push, grow" );
+		panel.add( new JCheckBox("Add on Connect", true));
+		
+		return panel;
+	}
+
+	@SuppressWarnings("rawtypes")
+	private void expandTree(JTree tree)
+	{
+		DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+		Enumeration e = root.breadthFirstEnumeration();
+		while (e.hasMoreElements())
+		{
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+			if ( node.isLeaf() )
+				continue;
+			int row = tree.getRowForPath(new TreePath(node.getPath()));
+			tree.expandRow(row);
+		}
+	}
+
+	private JPanel createConnTabbedPanel()
+	{
+		JPanel panel = new JPanel();
+//		panel.setLayout(new MigLayout("insets 0 0 0 0, wrap 1", "", ""));   // insets Top Left Bottom Right
+		panel.setLayout(new BorderLayout());
 
 		String aseTabTip     = "Connect to an ASE to monitor performance.";
 		String hostmonTabTip = "Connect to Operating System host machine where ASE is hosted to monitor IO and or CPU performance.";
@@ -790,37 +1082,23 @@ public class ConnectionDialog
 			}
 		}
 
-		_okCancelPanel = createOkCancelPanel();
-
-		panel.add(_tab,           "height 100%, grow, push, wrap");
-		panel.add(_okCancelPanel, "bottom, right");
-
-//		panel.add(createUserPasswdPanel(),  "grow");
-//		panel.add(createServerPanel(),      "grow");
-//		panel.add(createOptionsPanel(),     "grow");
-//		panel.add(createPcsPanel(),         "grow, hidemode 3");
-//		panel.add(createOkCancelPanel(),    "bottom, right, push");
-
 		_tab.addChangeListener(this);
 
-		loadProps();
+//		panel.add(_tab);
+		panel.add(_tab, BorderLayout.CENTER);
 
-		// enable/disable DEFERRED fields...
-		aseDeferredConnectChkAction();
-		aseDeferredDisConnectChkAction();
-
-		setContentPane(panel);
+		return panel;
 	}
 
 	private JPanel createTabAse()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 		
-		panel.add(createAseUserPasswdPanel(),  "grow");
-		panel.add(createAseServerPanel(),      "grow");
+		panel.add(createAseUserPasswdPanel(),  "growx, pushx");
+		panel.add(createAseServerPanel(),      "growx, pushx");
 		if (_showAseOptions)
-			panel.add(createAseOptionsPanel(), "grow");
+			panel.add(createAseOptionsPanel(), "growx, pushx");
 //		panel.add(createPcsPanel(),         "grow, hidemode 3");
 		
 		return panel;
@@ -828,50 +1106,50 @@ public class ConnectionDialog
 	private JPanel createTabHostmon()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 		
-		panel.add(createHostmonUserPasswdPanel(), "grow");
-		panel.add(createHostmonServerPanel(),     "grow");
-		panel.add(createHostmonInfoPanel(),       "grow");
+		panel.add(createHostmonUserPasswdPanel(), "growx, pushx");
+		panel.add(createHostmonServerPanel(),     "growx, pushx");
+		panel.add(createHostmonInfoPanel(),       "growx, pushx");
 		
 		return panel;
 	}
 	private JPanel createTabPcs()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 		
-		panel.add(createPcsJdbcPanel(),              "grow, hidemode 3");
-		panel.add(createPcsDdlLookupAndStorePanel(), "grow");
-		panel.add(createPcsTablePanel(),             "grow");
+		panel.add(createPcsJdbcPanel(),              "growx, hidemode 3");
+		panel.add(createPcsDdlLookupAndStorePanel(), "growx");
+		panel.add(createPcsTablePanel(),             "grow, push");
 		
 		return panel;
 	}
 	private JPanel createTabOffline()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 
-		panel.add(createOfflineJdbcPanel(), "grow");
-		panel.add(createSendOfflinePanel(), "grow");
+		panel.add(createOfflineJdbcPanel(), "growx, pushx");
+		panel.add(createSendOfflinePanel(), "growx, pushx");
 
 		return panel;
 	}
 	private JPanel createTabJdbc()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("wrap 1","grow",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 
 		panel.add(new JLabel("NOT YET FULLY IMPLEMENTED AND TESTED"), "grow");
-		panel.add(createJdbcPanel(),           "grow");
-		panel.add(createJdbcDriverInfoPanel(), "grow");
-
+		panel.add(createJdbcPanel(),           "growx, pushx");
+		panel.add(createJdbcDriverInfoPanel(), "grow, push");
+		
 		return panel;
 	}
 	private JPanel createAseUserPasswdPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("User information", true);
-		panel.setLayout(new MigLayout("wrap 2","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
 
 		// Hide password or not...
 		if (_logger.isDebugEnabled())
@@ -910,7 +1188,7 @@ public class ConnectionDialog
 	private JPanel createAseServerPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Specify the server to connect to", true);
-		panel.setLayout(new MigLayout("wrap 2","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
 
 		// Initialize Interfaces fields
 		String iFile = AseConnectionFactory.getIFileName();
@@ -955,6 +1233,8 @@ public class ConnectionDialog
 			    "</ul>" +
 			    "Or just Google: 'ssh tunnel' or 'ssh port forwarding'.<br>" +
 			"</html>");
+		_aseSqlInit_lbl .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+		_aseSqlInit_txt .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
 
 		panel.add(_aseServerIcon,       "");
 		panel.add(_aseServerHelp,       "wmin 100, push, grow");
@@ -982,6 +1262,9 @@ public class ConnectionDialog
 		panel.add(_aseSshTunnel_but,     "wrap");
 		
 		panel.add(_aseSshTunnelDesc_lbl, "skip, wrap, hidemode 3");
+
+		panel.add(_aseSqlInit_lbl,       "");
+		panel.add(_aseSqlInit_txt,       "push, grow");
 
 		panel.add(_aseOptions_lbl,       "");
 		panel.add(_aseOptions_txt,       "push, grow, split");
@@ -1030,7 +1313,7 @@ public class ConnectionDialog
 	private JPanel createAseOptionsPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Options", true);
-		panel.setLayout(new MigLayout("wrap 1, gap 0","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1, gap 0", "", ""));   // insets Top Left Bottom Right
 
 //		_aseOptionSavePwd_chk        .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		_aseOptionConnOnStart_chk    .setToolTipText("When "+Version.getAppName()+" starts use the above ASE and connect automatically (if the below 'Persisten Counter Storage' is enabled, it will also be used at startup)");
@@ -1088,7 +1371,7 @@ public class ConnectionDialog
 	private JPanel createHostmonUserPasswdPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("User information", true);
-		panel.setLayout(new MigLayout("wrap 2","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
 
 		// Hide password or not...
 		if (_logger.isDebugEnabled())
@@ -1130,7 +1413,7 @@ public class ConnectionDialog
 	private JPanel createHostmonServerPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Specify the server to connect to", true);
-		panel.setLayout(new MigLayout("wrap 2","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 2", "", ""));   // insets Top Left Bottom Right
 
 		_hostmonHost_lbl   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
 		_hostmonHost_txt   .setToolTipText("<html>Hostname or IP address of the OS Host you are connecting to</html>");
@@ -1169,7 +1452,7 @@ public class ConnectionDialog
 	private JPanel createHostmonInfoPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Basic Host Monitoring Information", true);
-		panel.setLayout(new MigLayout("wrap 1, gap 0","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("wrap 1, gap 0", "", ""));   // insets Top Left Bottom Right
 
 		MultiLineLabel txt;
 		String s, t;
@@ -1333,7 +1616,7 @@ public class ConnectionDialog
 	private JPanel createPcsJdbcPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Counter Storage", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_pcsPanel = panel;
 
 		_pcsHelp.setText("What Counter Data should be stored in the Persistent Counter Storage\n" +
@@ -1467,7 +1750,7 @@ public class ConnectionDialog
 	private JPanel createPcsDdlLookupAndStorePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("DDL Lookup and Store", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 
 		_pcsDdl_doDdlLookupAndStore_chk            .setToolTipText("<html>If you want the most accessed objects, Stored procedures, views etc and active statements to be DDL information to be stored in the PCS.<br>You can view them with the tool 'DDL Viewer' when connected to a offline database.<html>");
 		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setToolTipText("Also do DDL Lookup and Storage of dependant objects. Simply does 'exec sp_depends tabname' and add dependant objects for lookup...");
@@ -1497,17 +1780,18 @@ public class ConnectionDialog
 	private JPanel createPcsTablePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("What Counter Data should be Persisted", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 
 		_pcsSessionTable = new PcsTable();
 
 		PcsTableModel tm = (PcsTableModel) _pcsSessionTable.getModel();
 		tm.addTableModelListener(this);
 
-		JScrollPane jScrollPane = new JScrollPane();
-		jScrollPane.setViewportView(_pcsSessionTable);
+		JScrollPane jScrollPane = new JScrollPane(_pcsSessionTable);
+//		jScrollPane.setViewportView(_pcsSessionTable);
 //		jScrollPane.setMaximumSize(new Dimension(10000, 10000));
-		panel.add(jScrollPane, "push, grow, height 100%, wrap");
+//		panel.add(jScrollPane, "push, grow, height 100%, wrap");
+		panel.add(jScrollPane, "push, grow, wrap");
 
 		panel.add(_pcsTabSelectAll_but,        "split");
 		panel.add(_pcsTabDeSelectAll_but,      "split");
@@ -1531,7 +1815,7 @@ public class ConnectionDialog
 	private JPanel createOfflineJdbcPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Counter Storage Read", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_offlinePanel = panel;
 		
 		_offlineHelp.setText("Read Stored Counter Data from an offline storage\n" +
@@ -1614,7 +1898,7 @@ public class ConnectionDialog
 	private JPanel createSendOfflinePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Send a Recorded Session for Analyze", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_sendOfflinePanel = panel;
 		
 		_sendOfflineHelp.setText("If you want a recorded session to be analyzed by a skilled person...\n" +
@@ -1659,21 +1943,26 @@ public class ConnectionDialog
 	private JPanel createJdbcPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("JDBC Connection Information", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_jdbcPanel = panel;
 		
 		_jdbcHelp.setText("Connect to any JDBC datasource\n\nNote: The JDBC Driver needs to be in the classpath\n");
 
-		_jdbcDriver_lbl  .setToolTipText("JDBC drivername to be used when creating the connection");
-		_jdbcDriver_cbx  .setToolTipText("JDBC drivername to be used when creating the connection");
-		_jdbcUrl_lbl     .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
-		_jdbcUrl_cbx     .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
-		_jdbcUrl_but     .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
-		_jdbcUsername_lbl.setToolTipText("User name to be used when creating the connection");
-		_jdbcUsername_txt.setToolTipText("User name to be used when creating the connection");
-		_jdbcPassword_lbl.setToolTipText("Password to be used when creating the connection");
-		_jdbcPassword_txt.setToolTipText("Password to be used when creating the connection");
-		_jdbcTestConn_but    .setToolTipText("Make a test connection to the above JDBC datastore");
+		_jdbcDriver_lbl    .setToolTipText("JDBC drivername to be used when creating the connection");
+		_jdbcDriver_cbx    .setToolTipText("JDBC drivername to be used when creating the connection");
+		_jdbcUrl_lbl       .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
+		_jdbcUrl_cbx       .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
+		_jdbcUrl_but       .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
+		_jdbcUsername_lbl  .setToolTipText("User name to be used when creating the connection");
+		_jdbcUsername_txt  .setToolTipText("User name to be used when creating the connection");
+		_jdbcPassword_lbl  .setToolTipText("Password to be used when creating the connection");
+		_jdbcPassword_txt  .setToolTipText("Password to be used when creating the connection");
+		_jdbcSqlInit_lbl   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+		_jdbcSqlInit_txt   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+		_jdbcUrlOptions_lbl.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
+		_jdbcUrlOptions_txt.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
+		_jdbcUrlOptions_but.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
+		_jdbcTestConn_but  .setToolTipText("Make a test connection to the above JDBC datastore");
 
 		panel.add(_jdbcIcon,  "");
 		panel.add(_jdbcHelp,  "wmin 100, push, grow, wrap 15");
@@ -1691,17 +1980,33 @@ public class ConnectionDialog
 		panel.add(_jdbcPassword_lbl, "");
 		panel.add(_jdbcPassword_txt, "push, grow, wrap");
 		
+		panel.add(_jdbcSqlInit_lbl, "");
+		panel.add(_jdbcSqlInit_txt, "push, grow, wrap");
+		
+		panel.add(_jdbcUrlOptions_lbl, "");
+		panel.add(_jdbcUrlOptions_txt, "push, grow, split");
+		panel.add(_jdbcUrlOptions_but, "wrap");
+
 //		panel.add(_jdbcTestConn_lbl, "skip, split, left");
 		panel.add(_jdbcTestConn_but, "skip, right, wrap");
 		
 		_jdbcDriver_cbx.setEditable(true);
 		_jdbcUrl_cbx   .setEditable(true);
-		
-		_jdbcDriver_cbx.addItem("org.h2.Driver");
-//		_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
-		_jdbcDriver_cbx.addItem("com.sybase.jdbc3.jdbc.SybDriver");
-		_jdbcDriver_cbx.addItem("com.sybase.jdbc4.jdbc.SybDriver");
-		_jdbcDriver_cbx.addItem("com.sap.db.jdbc.Driver");
+
+		List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+		if (driversList.size() > 0)
+		{
+			for (String str : driversList)
+				_jdbcDriver_cbx.addItem(str);
+		}
+		else
+		{
+			_jdbcDriver_cbx.addItem("org.h2.Driver");
+//			_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+			_jdbcDriver_cbx.addItem("com.sybase.jdbc3.jdbc.SybDriver");
+			_jdbcDriver_cbx.addItem("com.sybase.jdbc4.jdbc.SybDriver");
+			_jdbcDriver_cbx.addItem("com.sap.db.jdbc.Driver");
+		}
 
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
@@ -1716,12 +2021,13 @@ public class ConnectionDialog
 
 		
 		// ACTIONS
-		_jdbcDriver_cbx  .addActionListener(this);
-		_jdbcTestConn_but    .addActionListener(this);
-		_jdbcUrl_cbx     .getEditor().getEditorComponent().addKeyListener(this);
-		_jdbcUrl_cbx     .addActionListener(this);
-		_jdbcPassword_txt.addActionListener(this);
-		_jdbcUrl_but     .addActionListener(this);
+		_jdbcDriver_cbx    .addActionListener(this);
+		_jdbcTestConn_but  .addActionListener(this);
+		_jdbcUrl_cbx       .getEditor().getEditorComponent().addKeyListener(this);
+		_jdbcUrl_cbx       .addActionListener(this);
+		_jdbcPassword_txt  .addActionListener(this);
+		_jdbcUrl_but       .addActionListener(this);
+		_jdbcUrlOptions_but.addActionListener(this);
 
 		// ADD FOCUS LISTENERS
 //		xxx_txt.addFocusListener(this);
@@ -1733,7 +2039,7 @@ public class ConnectionDialog
 	private JPanel createJdbcDriverInfoPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("JDBC Driver Information", true);
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_jdbcDriverInfoPanel = panel;
 		
 		_jdbcDriverInfoHelp.setText(
@@ -1753,7 +2059,7 @@ public class ConnectionDialog
 //		_jdbcTestConn_but    .setToolTipText("Make a test connection to the above JDBC datastore");
 
 		panel.add(_jdbcDriverInfoIcon,  "");
-		panel.add(_jdbcDriverInfoHelp,  "wmin 100, push, grow, wrap 15");
+		panel.add(_jdbcDriverInfoHelp,  "wmin 100, pushx, growx, wrap 15");
 
 //		panel.add(new JLabel("NOT YET IMPLEMENTED"),   "wrap");
 		
@@ -1896,14 +2202,51 @@ public class ConnectionDialog
 	private JPanel createOkCancelPanel()
 	{
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
+
+		_connProfileVisible_chk.setToolTipText("Show/Hide the Connection Profile Panel");
+		_connProfileVisible_chk.setIcon(        SwingUtils.readImageIcon(Version.class, "images/layouts_unselect_sidebar.png"));
+		_connProfileVisible_chk.setSelectedIcon(SwingUtils.readImageIcon(Version.class, "images/layouts_select_sidebar.png"));
+		_connProfileVisible_chk.setText("");
+		_connProfileVisible_chk.setContentAreaFilled(false);
+		_connProfileVisible_chk.setMargin( new Insets(0,0,0,0) );
+//		_connProfileVisible_chk.addActionListener(this);
+//		_connProfileVisible_chk.setActionCommand(ACTION_XXX);
+		_connProfileVisible_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				actionPerformedProfileOrTabbedPane(e);
+			}
+		});
+
+		_connTabbedVisible_chk.setToolTipText("Show/Hide the Tabbed Connection Properties Panel");
+		_connTabbedVisible_chk.setIcon(        SwingUtils.readImageIcon(Version.class, "images/layouts_unselect_content.png"));
+		_connTabbedVisible_chk.setSelectedIcon(SwingUtils.readImageIcon(Version.class, "images/layouts_select_content.png"));
+		_connTabbedVisible_chk.setText("");
+		_connTabbedVisible_chk.setContentAreaFilled(false);
+		_connTabbedVisible_chk.setMargin( new Insets(0,0,0,0) );
+//		_connTabbedVisible_chk.addActionListener(this);
+//		_connTabbedVisible_chk.setActionCommand(ACTION_XXX);
+		_connTabbedVisible_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				actionPerformedProfileOrTabbedPane(e);
+			}
+		});
 
 		_ok_lbl.setForeground(Color.RED);
 		_ok_lbl.setFont( _ok_lbl.getFont().deriveFont(Font.BOLD) );
 		_ok_lbl.setText("");
 
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_ok_lbl, "left");
+		panel.add(_connProfileVisible_chk, "");
+		panel.add(_connTabbedVisible_chk,  "");
+		panel.add(new JLabel(), "pushx, growx"); // make a dummy label to "grow" the lefthand components with the righthand components
+		panel.add(_ok_lbl, "");
 		panel.add(_ok,     "tag ok, right");
 		panel.add(_cancel, "tag cancel");
 
@@ -1912,6 +2255,23 @@ public class ConnectionDialog
 		_cancel       .addActionListener(this);
 
 		return panel;
+	}
+	private void actionPerformedProfileOrTabbedPane(ActionEvent e)
+	{
+		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk.isSelected())
+		{
+			_connSplitPane.setDividerSize( 5 );
+			_connSplitPane.setDividerLocation( _lastKnownConnSplitPaneDividerLocation );
+		}
+		else
+		{
+			if (_connSplitPane.getDividerSize() > 0)
+				_lastKnownConnSplitPaneDividerLocation = _connSplitPane.getDividerLocation();
+			_connSplitPane.setDividerSize( 0 );
+		}
+
+		_connProfilePanel.setVisible( _connProfileVisible_chk.isSelected() );
+		_connTabbedPanel.setVisible(  _connTabbedVisible_chk .isSelected() );
 	}
 	/*---------------------------------------------------
 	** END: component initialization
@@ -1958,6 +2318,9 @@ public class ConnectionDialog
 			// Populate the table
 			refreshTable();
 			
+			// make this low, otherwise it will grow to much because of any outer JScrollPane
+			setPreferredScrollableViewportSize(new Dimension(400, 100));
+
 			// hide 'Group Name' if no child's are found
 			if ( ! MainFrame.getTabbedPane().hasChildPanels() )
 			{
@@ -2476,6 +2839,8 @@ public class ConnectionDialog
 	 */
 	private boolean aseConnect()
 	{
+		String sqlInit = _aseSqlInit_txt.getText();
+
 		// -------------------------------------------
 		// if RAW URL is used
 		// -------------------------------------------
@@ -2496,7 +2861,7 @@ public class ConnectionDialog
 			try
 			{
 				_logger.info("Connecting to ASE using RAW-URL username='"+username+"', URL='"+rawUrl+"'.");
-				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), rawUrl, props, _checkAseCfg, _sshConn, _aseSshTunnelInfo, _desiredProductName);
+				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), rawUrl, props, _checkAseCfg, _sshConn, _aseSshTunnelInfo, _desiredProductName, sqlInit);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
 				return true;
 			}
@@ -2579,7 +2944,7 @@ public class ConnectionDialog
 
 			String urlStr = AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr();
 //			String urlStr = "jdbc:sybase:Tds:" + AseConnectionFactory.getHostPortStr();
-			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, _aseSshTunnelInfo, _desiredProductName);
+			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, _aseSshTunnelInfo, _desiredProductName, sqlInit);
 //			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, _desiredProductName);
 //			_aseConn = AseConnectionFactory.getConnection();
 //String TDS_SSH_TUNNEL_CONNECTION  = _aseConn.getClientInfo("TDS_SSH_TUNNEL_CONNECTION");
@@ -2940,7 +3305,7 @@ public class ConnectionDialog
 
 			// if H2
 			// Set some specific stuff
-			if ( PersistWriterJdbc.DB_PROD_NAME_H2.equals(getDatabaseProductName) )
+			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName) )
 			{
 				String dbProdName = getDatabaseProductName;
 
@@ -3140,9 +3505,17 @@ public class ConnectionDialog
 				try
 				{
 					// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
-					Driver jdbcDriver = DriverManager.getDriver(url);
-					if (jdbcDriver == null)
-						Class.forName(driver).newInstance();
+					try
+					{
+						Driver jdbcDriver = DriverManager.getDriver(url);
+						if (jdbcDriver == null)
+							Class.forName(driver).newInstance();
+					}
+					catch (Exception ex)
+					{
+						_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
+						_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
+					}
 
 //					Class.forName(driver).newInstance();
 //					JdbcDriverHelper.newDriverInstance(driver);
@@ -3161,6 +3534,41 @@ public class ConnectionDialog
 					SwingUtils.setWindowMinSize(getWaitDialog());
 
 					Connection conn = DriverManager.getConnection(url, props);
+					
+					// Execute any SQL Init 
+					String sqlInit = _jdbcSqlInit_txt.getText();
+					if (StringUtil.hasValue(sqlInit))
+					{
+						try
+						{
+							String[] sa =  sqlInit.split(";");
+							for (String sql : sa)
+							{
+								sql = sql.trim();
+								if ("".equals(sql))
+									continue;
+								getWaitDialog().setState(
+										"<html>" +
+										"SQL Init: "+ sql + "<br>" +
+										"</html>");
+								DbUtils.exec(conn, sql);
+							}
+						}
+						catch (SQLException ex)
+						{
+							SwingUtils.showErrorMessage(ConnectionDialog.this, "SQL Initialization Failed", 
+									"<html>" +
+									"<h2>SQL Initialization Failed</h2>" +
+									"Full SQL Init String '"+ sqlInit + "'<br>" +
+									"<br>" +
+									"<b>SQL State:     </b>" + ex.getSQLState()  + "<br>" +
+									"<b>Error number:  </b>" + ex.getErrorCode() + "<br>" +
+									"<b>Error Message: </b>" + ex.getMessage()   + "<br>" +
+									"</html>",
+									ex);
+							throw ex;
+						}
+					}
 
 					return conn;
 				}
@@ -3171,7 +3579,14 @@ public class ConnectionDialog
 					while (eTmp != null)
 					{
 						sb.append( "\n" );
-						sb.append( eTmp.getMessage() );
+						sb.append( "ex.toString='").append( ex.toString()       ).append("', ");
+						sb.append( "Driver='"     ).append( driver              ).append("', ");
+						sb.append( "URL='"        ).append( url                 ).append("', ");
+						sb.append( "User='"       ).append( user                ).append("', ");
+						sb.append( "SQLState='"   ).append( eTmp.getSQLState()  ).append("', ");
+						sb.append( "ErrorCode="   ).append( eTmp.getErrorCode() ).append(", ");
+						sb.append( "Message='"    ).append( eTmp.getMessage()   ).append("', ");
+						sb.append( "classpath='"  ).append( System.getProperty("java.class.path") ).append("'.");
 						eTmp = eTmp.getNextException();
 					}
 					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+sb.toString());
@@ -3194,13 +3609,35 @@ public class ConnectionDialog
 			{
 				SQLException e = (SQLException) t;
 				StringBuffer sb = new StringBuffer();
+				sb.append("<html>");
+				sb.append("<h2>Problems During Connect (SQLException)</h2>");
+				boolean loadDriverProblem = false;
 				while (e != null)
 				{
-					sb.append( "\n" );
-					sb.append( e.getMessage() );
+					if (e.getMessage().indexOf("No suitable driver") >= 0)
+						loadDriverProblem = true;
+
+					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
+					sb.append( "<tr> <td><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
+					sb.append( "<tr> <td><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
+					sb.append( "</table>" );
 					e = e.getNextException();
 				}
-				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (SQLException) FAILED.\n\n"+sb.toString(), e);
+				if (loadDriverProblem)
+				{
+						sb.append("<h2>An error occurred while establishing the connection: </h2>");
+						sb.append("The selected Driver cannot handle the specified Database URL. <br>");
+						sb.append("The most common reason for this error is that the database <b>URL contains a syntax error</b> preventing the driver from accepting it. <br>");
+						sb.append("The error also occurs when trying to connect to a database with the wrong driver. Correct this and try again.");
+				}
+				sb.append("</html>");
+//				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (SQLException) FAILED.\n\n"+sb.toString(), e);
+				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", sb.toString(), e);
 			}
 			else if (t instanceof Exception)
 			{
@@ -3702,6 +4139,17 @@ public class ConnectionDialog
 					_jdbcPassword_txt.getText());
 		}
 
+		// --- ASE: jConnect Options BUTTON: "..."  (open dialig to choose available options)
+		if (_jdbcUrlOptions_but.equals(source))
+		{
+			Map<String,String> sendOpt = StringUtil.parseCommaStrToMap(_jdbcUrlOptions_txt.getText());
+			
+			Map<String,String> outOpt = JdbcOptionsDialog.showDialog(this, (String)_jdbcDriver_cbx.getSelectedItem(), (String)_jdbcUrl_cbx.getSelectedItem(), sendOpt);
+			// null == CANCEL
+			if (outOpt != null)
+				_jdbcUrlOptions_txt.setText(StringUtil.toCommaStr(outOpt));
+		}
+
 		// --- BUTTON: CANCEL ---
 		if (_cancel.equals(source) || ACTION_CANCEL.equals(action) )
 		{
@@ -3977,7 +4425,7 @@ public class ConnectionDialog
 				}
 
 				// SET CONNECTION TYP and "CLOSE" the dialog
-				_connectionType = ASE_CONN;
+				_connectionType = TDS_CONN;
 				setVisible(false);
 
 			} // END: ASE & PCS CONNECT
@@ -4321,6 +4769,12 @@ public class ConnectionDialog
 			return;
 		}
 
+		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk .isSelected())
+			conf.setProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
+		conf.setProperty("conn.panel.profile.visible",          _connProfileVisible_chk.isSelected());
+		conf.setProperty("conn.panel.tabed.visible",            _connTabbedVisible_chk .isSelected());
+
+
 		String hostPort = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
 
 		conf.setProperty("conn.interfaces",                     _aseIfile_txt.getText());
@@ -4344,8 +4798,11 @@ public class ConnectionDialog
 
 		conf.setProperty("conn.login.timeout",                  _aseLoginTimeout_txt.getText() );
 
-		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL,              _aseSshTunnel_chk.isSelected() );
-		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPort, _aseSshTunnel_chk.isSelected() );
+		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL,               _aseSshTunnel_chk.isSelected() );
+		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPort,  _aseSshTunnel_chk.isSelected() );
+
+		conf.setProperty("conn.login.sql.init",                 _aseSqlInit_txt.getText() );
+		conf.setProperty("conn.login.sql.init."+hostPort,       _aseSqlInit_txt.getText() );
 
 		conf.setProperty("conn.url.raw",                        _aseConnUrl_txt.getText() );
 		conf.setProperty("conn.url.raw.checkbox",               _aseConnUrl_chk.isSelected() );
@@ -4428,10 +4885,15 @@ public class ConnectionDialog
 		//----------------------------------
 		if ( true )
 		{
+			String urlStr = _jdbcUrl_cbx   .getEditor().getItem().toString();
+			
 			conf.setProperty("jdbc.jdbcDriver",          _jdbcDriver_cbx.getEditor().getItem().toString() );
 			conf.setProperty("jdbc.jdbcUrl",             _jdbcUrl_cbx   .getEditor().getItem().toString() );
 			conf.setProperty("jdbc.jdbcUser",            _jdbcUsername_txt.getText() );
 			conf.setProperty("jdbc.jdbcPasswd",          _jdbcPassword_txt.getText(), true );
+
+			conf.setProperty("jdbc.login.sql.init",         _jdbcSqlInit_txt.getText() );
+			conf.setProperty("jdbc.login.sql.init."+urlStr, _jdbcSqlInit_txt.getText() );
 		}
 
 		//------------------
@@ -4454,6 +4916,17 @@ public class ConnectionDialog
 			_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
 			return;
 		}
+
+		_lastKnownConnSplitPaneDividerLocation = conf.getIntProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
+		if (_lastKnownConnSplitPaneDividerLocation < 10)
+			_lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
+		_connSplitPane.setDividerLocation(_lastKnownConnSplitPaneDividerLocation);
+
+		if ( ! conf.getBooleanProperty("conn.panel.profile.visible", DEFAULT_CONN_PROFILE_PANEL_VISIBLE) )
+			_connProfileVisible_chk.doClick();
+
+		if ( ! conf.getBooleanProperty("conn.panel.tabed.visible", DEFAULT_CONN_TABED_PANEL_VISIBLE) )
+			_connTabbedVisible_chk.doClick();
 
 		String str = null;
 		boolean bol = false;
@@ -4482,6 +4955,10 @@ public class ConnectionDialog
 
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
 		_aseSshTunnel_chk.setSelected(bol);
+
+		str = conf.getProperty("conn.login.sql.init");
+		if (str != null)
+			_aseSqlInit_txt.setText(str);
 
 		str = conf.getProperty("conn.url.options");
 		if (str != null)
@@ -4648,6 +5125,10 @@ public class ConnectionDialog
 		if (str != null)
 			_jdbcPassword_txt.setText(str);
 
+//		String urlStr = conf.getProperty("jdbc.jdbcUrl");
+		_jdbcSqlInit_txt.setText(conf.getProperty("jdbc.login.sql.init", "" ));
+//		conf.getProperty("jdbc.login.sql.init."+urlStr, "" );
+
 	}
 	private void getSavedWindowProps()
 	{
@@ -4764,6 +5245,8 @@ public class ConnectionDialog
 		if (_aseSshTunnel_chk.isSelected())
 			_aseSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
 		updateSshTunnelDescription();
+
+		_aseSqlInit_txt.setText( conf.getProperty("conn.login.sql.init."+hostPortStr, ""));
 
 
 		//----------------------------------------
@@ -5021,7 +5504,6 @@ public class ConnectionDialog
 		
 	}	
 
-
 	//--------------------------------------------------
 	// TEST-CODE
 	//--------------------------------------------------
@@ -5056,9 +5538,9 @@ public class ConnectionDialog
 		Configuration conf2 = new Configuration(defaultPropsFile);
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
-		System.out.println("showAseOnlyConnectionDialog ...");
-		Connection conn = ConnectionDialog.showAseOnlyConnectionDialog(null);
-		System.out.println("showAseOnlyConnectionDialog, returned: conn="+conn);
+		System.out.println("showTdsOnlyConnectionDialog ...");
+		Connection conn = ConnectionDialog.showTdsOnlyConnectionDialog(null);
+		System.out.println("showTdsOnlyConnectionDialog, returned: conn="+conn);
 
 		// DO THE THING
 		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, true, false, false, false, true);
@@ -5072,7 +5554,7 @@ public class ConnectionDialog
 			System.out.println("---CANCEL...");
 		}
 
-		if ( connType == ConnectionDialog.ASE_CONN)
+		if ( connType == ConnectionDialog.TDS_CONN)
 		{
 			System.out.println("---ASE connection...");
 			Connection               aseConn   = connDialog.getAseConn();

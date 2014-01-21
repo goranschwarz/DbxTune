@@ -30,6 +30,7 @@ import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Debug;
@@ -87,6 +88,9 @@ public class AseTune
 	public void init(CommandLine cmd)
 	throws Exception
 	{
+//final org.h2.util.Profiler profiler = new org.h2.util.Profiler();
+//profiler.startCollecting();
+
 //		_cmdLine = cmd;
 
 		// Create store dir if it did not exists.
@@ -109,6 +113,7 @@ public class AseTune
 		String defaultPropsFile     = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
 		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
 		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
 		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
@@ -118,6 +123,7 @@ public class AseTune
 		String propFile        = cmd.getOptionValue("config",     defaultPropsFile);
 		String userPropFile    = cmd.getOptionValue("userConfig", defaultUserPropsFile);
 		String tmpPropFile     = cmd.getOptionValue("tmpConfig",  defaultTmpPropsFile);
+		String tailPropFile    = cmd.getOptionValue("tailConfig", defaultTailPropsFile);
 		String noGuiConfigFile = cmd.getOptionValue("noGui");
 
 		// Check if the configuration file exists
@@ -153,6 +159,10 @@ public class AseTune
 			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
 		}
 
+		// The SAVE Properties for shared Tail
+		Configuration tailSaveProps = new Configuration(tailPropFile);
+		Configuration.setInstance(Configuration.TAIL_TEMP, tailSaveProps);
+
 		// The SAVE Properties...
 		Configuration appSaveProps = new Configuration(tmpPropFile);
 		Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
@@ -171,9 +181,10 @@ public class AseTune
 
 		// Set the Configuration search order when using the: Configuration.getCombinedConfiguration()
 		Configuration.setSearchOrder(
-			Configuration.USER_TEMP,    // First
-			Configuration.USER_CONF,    // second
-			Configuration.SYSTEM_CONF); // Third
+			Configuration.TAIL_TEMP,    // First
+			Configuration.USER_TEMP,    // Second
+			Configuration.USER_CONF,    // Third
+			Configuration.SYSTEM_CONF); // Forth
 
 		
 		//-------------------------------
@@ -790,6 +801,9 @@ public class AseTune
 						tmpConf.setSaveEnable(true);
 						tmpConf.save();
 					}
+
+//System.out.println(profiler.getTop(4));
+//profiler.stopCollecting();
 
 					// FINALLY SHOW THE WINDOW
 					SplashWindow.drawProgress("Loading Main Window...");

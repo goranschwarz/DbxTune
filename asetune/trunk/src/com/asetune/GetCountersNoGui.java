@@ -703,7 +703,7 @@ public class GetCountersNoGui
 					}
 
 					// Do this later, when the MonTablesDictionary is initialized
-					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
+					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
 				}
 				catch (SQLException e)
 				{
@@ -901,7 +901,7 @@ public class GetCountersNoGui
 							mtd.getMdaVersion());
 
 					// Hopefully this is a better place to send connect info
-					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.ASE_CONN, null);
+					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
 				}
 
 				if (_CMList == null || (_CMList != null && _CMList.size() == 0))

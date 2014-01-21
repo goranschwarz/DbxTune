@@ -305,6 +305,34 @@ implements ActionListener
 		JPanel panel = SwingUtils.createPanel("Queue Producer Generator", true);
 		panel.setLayout(new MigLayout());
 		
+		_qProdGenType.setToolTipText(
+			"<html>" +
+				"The type is basically what procedure to execute when consuming a message<br>" +
+				"<ul>" +
+				"  <li>dest1 - does: <code>exec consumeDest1 'uuid', integer</code> </li>" +
+				"  <li>dest2 - does: <code>exec consumeDest2 'uuid', integer</code> </li>" +
+				"  <li>dest3 - does: <code>exec consumeDest3 'uuid', integer</code> </li>" +
+				"  <li>xxx   - does: <code>exec consumexxx 'uuid'</code> </li>" +
+				"  <li>test1 - does: <code>exec consumetest1 'uuid'</code> </li>" +
+				"  <li>Test2 - does: <code>exec consumeTest2 'uuid'</code> </li>" +
+				"</ul>" +
+				"<b>So if you want to create your own stress test, in ASE simply do:</b><br>" +
+				"<code>use perfdemo</code><br>" +
+				"<code>go</code><br>" +
+				"<code>CREATE PROCEDURE consumeStress1(@p1 varchar(30)) AS </code><br>" +
+				"<code>BEGIN </code><br>" +
+				"<code>    /*your SQL goes here*/ </code><br>" +
+				"<code>END</code><br>" +
+				"<code>go</code><br>" +
+				"<br>" +
+				"Now fill in 'Stress1' in <i>this</i> field<br>" +
+				"Push button 'Generate new values'<br>" +
+				"<i>There will now be 10000 rows in the table 'perfdemo.dbo.TestQueue'</i><br>" +
+				"<br>" +
+				"Then <b>to start the test</b> push 'Start a new Consumer' (the consumer thread will be visible in the 'Queue Consumer Info' table.)<br>" +
+				"To start more consumer threads, simply push 'Start a new Consumer' for how many consumer you would like. <br>" +
+			"</html>");
+		
 		panel.add(new JLabel("Type of entries to generate"));
 		panel.add(_qProdGenType, "pushx, growx, wrap");
 

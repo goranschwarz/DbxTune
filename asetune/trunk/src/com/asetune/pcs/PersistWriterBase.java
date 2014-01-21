@@ -24,6 +24,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.TimeUtils;
 
 
@@ -61,9 +62,9 @@ public abstract class PersistWriterBase
 	private String _databaseProductName = "";
 	
 	/** List some known DatabaseProductName that we can use here */
-	public static String DB_PROD_NAME_ASE = "Adaptive Server Enterprise";
-	public static String DB_PROD_NAME_ASA = "SQL Anywhere";
-	public static String DB_PROD_NAME_H2  = "H2";
+//	public static String DB_PROD_NAME_ASE = "Adaptive Server Enterprise";
+//	public static String DB_PROD_NAME_ASA = "SQL Anywhere";
+//	public static String DB_PROD_NAME_H2  = "H2";
 
 
 	/*---------------------------------------------------
@@ -969,7 +970,7 @@ public abstract class PersistWriterBase
 		else if (type == SESSION_SAMPLE_DETAILES)
 		{
 			String tabName = getTableName(type, null, false);
-			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 				return "create index " +     tabName+"_ix1"     + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
 			else
 				return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
@@ -999,7 +1000,7 @@ public abstract class PersistWriterBase
 			String tabName = getTableName(type, cm, false);
 //			return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SampleTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n";
 
-			if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 				return "create index " +     tabName+"_ix1"     + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
 			else
 				return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
@@ -1037,7 +1038,7 @@ public abstract class PersistWriterBase
 	public String getGraphIndexDdlString(String tabName, TrendGraphDataPoint tgdp)
 	{
 //		String sql = "create index " + qic+tgdp.getName()+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SampleTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n"; 
-		if ( DB_PROD_NAME_ASE.equals(getDatabaseProductName()) )
+		if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 			return "create index " +     tgdp.getName()+"_ix1"     + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
 		else
 			return "create index " + qic+tgdp.getName()+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
