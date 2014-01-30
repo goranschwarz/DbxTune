@@ -1415,6 +1415,9 @@ public class RefreshProcess extends Thread
 
 	public void displayProcInBatchWindow(String dbname, String procName, int procLine)
 	{
+		if (_logger.isDebugEnabled())
+			_logger.debug("displayProcInBatchWindow(dbname='"+dbname+"', procName='"+procName+"', procLine="+procLine+").");
+
 		String sqlStatement = null;
 		StringBuffer procTextSb  = null;
 		String       procTextStr = null;

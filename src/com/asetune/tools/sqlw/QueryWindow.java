@@ -126,7 +126,6 @@ import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
-import org.jfree.chart.ChartColor;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
@@ -165,6 +164,7 @@ import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAbstract;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAsa;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierAse;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierH2;
@@ -179,6 +179,7 @@ import com.asetune.ui.tooltip.suppliers.TtpEntryCompletionProvider;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScriptReader;
+import com.asetune.utils.ColorUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
@@ -250,6 +251,12 @@ public class QueryWindow
 	public final static String  PROPKEY_appendResults          = PROPKEY_APP_PREFIX + "appendResults";
 	public final static boolean DEFAULT_appendResults          = false;
 	
+	public final static String  PROPKEY_jdbcAutoCommit         = PROPKEY_APP_PREFIX + "jdbc.autoCommit";
+	public final static boolean DEFAULT_jdbcAutoCommit         = true;
+	
+	public final static String  PROPKEY_jdbcAutoCommitShow     = PROPKEY_APP_PREFIX + "jdbc.autoCommit.show";
+	public final static boolean DEFAULT_jdbcAutoCommitShow     = false;
+	
 	public final static String  PROPKEY_lastFileNameSaveMax    = "LastFileList.saveSize";
 	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
@@ -273,6 +280,7 @@ public class QueryWindow
 	
 	/** Completion Provider for RSyntaxTextArea */
 	private CompletionProviderAbstract _compleationProviderAbstract = null;
+	private ToolTipSupplierAbstract    _tooltipProviderAbstract     = null;
 
 	//-------------------------------------------------
 	// Actions
@@ -327,6 +335,7 @@ public class QueryWindow
 	private JCheckBoxMenuItem _oracleEnableDbmsOutput_chk = new JCheckBoxMenuItem("Oracle Enable DBMS Output", DEFAULT_oracleEnableDbmsOutput);
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
 	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
+	private JCheckBoxMenuItem _jdbcAutoCommit_chk         = new JCheckBoxMenuItem("JDBC AutoCommit", DEFAULT_jdbcAutoCommit);
 
 	private JButton     _appOptions_but  = new JButton("Options");
 	private JComboBox   _dbnames_cbx     = new JComboBox();
@@ -1190,6 +1199,10 @@ public class QueryWindow
 				"<b>NOTE</b> This is <b>not</b> supported for all vendors...<br>" +
 				"The Error Messaage will have to be parsed to figure out what object to display." +
 				"</html>");
+		_jdbcAutoCommit_chk.setToolTipText(
+				"<html>" +
+				"JDBC AutoCommit settings.<br>" +
+				"</html>");
 //		_copy_but    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 //		_query_txt   .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
@@ -1437,6 +1450,8 @@ public class QueryWindow
 		_oracleEnableDbmsOutput_chk.setSelected( conf.getBooleanProperty(PROPKEY_oracleEnableDbmsOutput, DEFAULT_oracleEnableDbmsOutput) );
 		_appendResults_chk         .setSelected( conf.getBooleanProperty(PROPKEY_appendResults,          DEFAULT_appendResults) );
 		_getObjectTextOnError_chk  .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,   DEFAULT_getObjectTextOnError) );
+		_jdbcAutoCommit_chk        .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,         DEFAULT_jdbcAutoCommit) );
+		_jdbcAutoCommit_chk        .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,     DEFAULT_jdbcAutoCommitShow) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
 		_favoriteCmdFilenameSql = conf.getProperty(PROPKEY_favoriteCmdFileNameSql, DEFAULT_favoriteCmdFileNameSql);
@@ -1466,6 +1481,8 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_oracleEnableDbmsOutput, _oracleEnableDbmsOutput_chk.isSelected());
 		conf.setProperty(PROPKEY_appendResults,          _appendResults_chk         .isSelected());
 		conf.setProperty(PROPKEY_getObjectTextOnError,   _getObjectTextOnError_chk  .isSelected());
+		conf.setProperty(PROPKEY_jdbcAutoCommit,         _jdbcAutoCommit_chk        .isSelected());
+		conf.setProperty(PROPKEY_jdbcAutoCommitShow,     _jdbcAutoCommit_chk        .isVisible());
 		
 		conf.setProperty(PROPKEY_historyFileName,        _cmdHistoryFilename);
 		conf.setProperty(PROPKEY_favoriteCmdFileNameSql, _favoriteCmdFilenameSql);
@@ -1940,7 +1957,8 @@ public class QueryWindow
 					setDbNames();
 
 					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_query_txt.setToolTipSupplier(new ToolTipSupplierAse(_window, this));
+					_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
 
@@ -1961,7 +1979,8 @@ public class QueryWindow
 				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
 				{
 					_compleationProviderAbstract = CompletionProviderRepServer.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_query_txt.setToolTipSupplier(new ToolTipSupplierRepServer(_window, this));
+					_tooltipProviderAbstract     = new ToolTipSupplierRepServer(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
 
@@ -1978,7 +1997,8 @@ public class QueryWindow
 				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
 				{
 					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_query_txt.setToolTipSupplier(new ToolTipSupplierAsa(_window, this));
+					_tooltipProviderAbstract     = new ToolTipSupplierAsa(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 //					_aseVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
 
@@ -1995,7 +2015,8 @@ public class QueryWindow
 				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_IQ))
 				{
 					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_query_txt.setToolTipSupplier(new ToolTipSupplierIq(_window, this));
+					_tooltipProviderAbstract     = new ToolTipSupplierIq(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 //					_aseVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
 
@@ -2012,7 +2033,8 @@ public class QueryWindow
 				else
 				{
 					_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
-					_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
+					_tooltipProviderAbstract     = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 					_logger.info("Connected to 'other' Sybase TDS server with product name'"+_connectedToProductName+"'.");
 				}
@@ -2061,9 +2083,10 @@ public class QueryWindow
 
 			// Tooltip supplier
 			if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
-				_query_txt.setToolTipSupplier(new ToolTipSupplierH2(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, this);
 			else
-				_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
+			_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 			// JDBC Specific statuses
 			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
@@ -2106,7 +2129,8 @@ public class QueryWindow
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
 
 				// Tooltip supplier
-				_query_txt.setToolTipSupplier(new ToolTipSupplierH2(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierH2(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// HANA
 			else if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
@@ -2119,7 +2143,8 @@ public class QueryWindow
 				_connectedSrvSortorder = "BINARY";
 
 				// Tooltip supplier
-				_query_txt.setToolTipSupplier(new ToolTipSupplierHana(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// ORACLE
 			else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
@@ -2132,7 +2157,8 @@ public class QueryWindow
 				_connectedSrvSortorder = DbUtils.getOracleSortorder(_conn);
 
 				// Tooltip supplier
-				_query_txt.setToolTipSupplier(new ToolTipSupplierOracle(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierOracle(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// MS-SQL
 			else if (DbUtils.DB_PROD_NAME_MS.equals(_connectedToProductName))
@@ -2145,7 +2171,8 @@ public class QueryWindow
 				//_connectedSrvSortorder = DbUtils.getMsSqlSortorder(_conn);
 
 				// Tooltip supplier
-				_query_txt.setToolTipSupplier(new ToolTipSupplierMsSql(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierMsSql(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			else
 			{
@@ -2153,7 +2180,8 @@ public class QueryWindow
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
 
 				// Tooltip supplier
-				_query_txt.setToolTipSupplier(new ToolTipSupplierJdbc(_window, this));
+				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			
 
@@ -2237,6 +2265,7 @@ public class QueryWindow
 			_oracleEnableDbmsOutput_chk.setEnabled(false);
 			_appendResults_chk         .setEnabled(false);
 			_getObjectTextOnError_chk  .setEnabled(false);
+			_jdbcAutoCommit_chk        .setEnabled(false);
 			_setAseOptions_but         .setEnabled(false);
 			_execGuiShowplan_but       .setEnabled(false);
 			
@@ -2285,6 +2314,7 @@ public class QueryWindow
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
+				_jdbcAutoCommit_chk        .setEnabled(true);
 				_setAseOptions_but         .setEnabled(true);
 //				_execGuiShowplan_but       .setEnabled( (_aseVersion >= 15000) );
 				_execGuiShowplan_but       .setEnabled( (_srvVersion >= 1500000) );
@@ -2310,6 +2340,7 @@ public class QueryWindow
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
+				_jdbcAutoCommit_chk        .setEnabled(true);
 				_setAseOptions_but         .setEnabled(false);
 				_execGuiShowplan_but       .setEnabled(false);
 			}
@@ -2329,6 +2360,7 @@ public class QueryWindow
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
+				_jdbcAutoCommit_chk        .setEnabled(true);
 				_setAseOptions_but         .setEnabled(false);
 				_execGuiShowplan_but       .setEnabled(false);
 			}
@@ -2348,6 +2380,7 @@ public class QueryWindow
 			_oracleEnableDbmsOutput_chk.setEnabled(true);
 			_appendResults_chk         .setEnabled(true);
 			_getObjectTextOnError_chk  .setEnabled(true);
+			_jdbcAutoCommit_chk        .setEnabled(true);
 			_setAseOptions_but         .setEnabled(false);
 			_execGuiShowplan_but       .setEnabled(false);
 
@@ -2370,6 +2403,7 @@ public class QueryWindow
 			_oracleEnableDbmsOutput_chk.setEnabled(true);
 			_appendResults_chk         .setEnabled(true);
 			_getObjectTextOnError_chk  .setEnabled(true);
+			_jdbcAutoCommit_chk        .setEnabled(true);
 			_setAseOptions_but         .setEnabled(false);
 			_execGuiShowplan_but       .setEnabled(false);
 
@@ -2431,6 +2465,7 @@ public class QueryWindow
 				_oracleEnableDbmsOutput_chk.setEnabled(false);
 				_appendResults_chk         .setEnabled(false);
 				_getObjectTextOnError_chk  .setEnabled(false);
+				_jdbcAutoCommit_chk        .setEnabled(false);
 				_setAseOptions_but         .setEnabled(false);
 				_execGuiShowplan_but       .setEnabled(false);
 
@@ -2698,7 +2733,8 @@ public class QueryWindow
 		if (filename != null && filename.endsWith("_tooltip_provider.xml"))
 		{
 			// install a special ToolTipProvider
-			_query_txt.setToolTipSupplier(new ToolTipSupplierTester(_window, this));
+			_tooltipProviderAbstract = new ToolTipSupplierTester(_window, this);
+			_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 			// Install XML Syntax Higligtning and CodeCompletion for ToolTipProviderEntry
 			TtpEntryCompletionProvider.installAutoCompletion(_query_txt);
@@ -3706,6 +3742,17 @@ public class QueryWindow
 				resetParserDbMessages();
 				// Should we notify the Error Parser that something has changed???
 				// It's done in the end, but if we raise an exception then the "red" lines will not be removed...
+
+				// Check/set JDBC AutoCommit...
+				if (_jdbcAutoCommit_chk.isVisible())
+				{
+					boolean isAutoCommit = _conn.getAutoCommit();
+					if (isAutoCommit != _jdbcAutoCommit_chk.isSelected())
+					{
+						_logger.info("Setting JDBC AutoCommit to: " + _jdbcAutoCommit_chk.isSelected());
+						_conn.setAutoCommit(_jdbcAutoCommit_chk.isSelected());
+					}
+				}
 
 				if (guiShowplanExec)
 				{
@@ -5538,7 +5585,7 @@ public class QueryWindow
 			setFont(_aseMsgFont);
 
 			if (_msgSeverity >= 16)
-				setForeground(ChartColor.DARK_RED);
+				setForeground(ColorUtils.DARK_RED);
 
 			setLineWrap(true);
 			setWrapStyleWord(true);
@@ -5628,7 +5675,7 @@ public class QueryWindow
 			super("SQL was cancelled while reading the ResultSet", originSql);
 //			init();
 			
-			setForeground(ChartColor.DARK_RED);
+			setForeground(ColorUtils.DARK_RED);
 		}
 	}
 
@@ -5645,7 +5692,7 @@ public class QueryWindow
 			_rowCount = rowCount;
 //			init();
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 		
 		@SuppressWarnings("unused")
@@ -5668,7 +5715,7 @@ public class QueryWindow
 			_returnCode = returnCode;
 //			init();
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 		
 		@SuppressWarnings("unused")
@@ -5705,7 +5752,7 @@ public class QueryWindow
 			_sqlType = type;
 //			init();
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 		
 		@SuppressWarnings("unused")
@@ -5747,7 +5794,7 @@ public class QueryWindow
 
 //			init();
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 		
 		@SuppressWarnings("unused") public Object getExecStartTime()   { return _execStartTime; }
@@ -5764,7 +5811,7 @@ public class QueryWindow
 		{
 			super("Oracle DBMS_OUTPUT: "+message, originSql);
 
-			setForeground(ChartColor.VERY_DARK_BLUE);
+			setForeground(ColorUtils.VERY_DARK_BLUE);
 		}
 	}
 
@@ -5786,7 +5833,7 @@ public class QueryWindow
 		{
 			super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql);
 			setObjectText(objectText);
-			setForeground(ChartColor.RED);
+			setForeground(ColorUtils.RED);
 		}
 	}
 
@@ -5819,7 +5866,7 @@ public class QueryWindow
 			super(createStr(sql), sql);
 			_scriptRow = scriptRow;
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 	}
 
@@ -5841,7 +5888,7 @@ public class QueryWindow
 			super(createStr(rstm), sql);
 			_scriptRow = scriptRow;
 			
-			setForeground(ChartColor.VERY_DARK_GREEN);
+			setForeground(ColorUtils.VERY_DARK_GREEN);
 		}
 	}
 	
@@ -6660,6 +6707,7 @@ public class QueryWindow
 		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b> - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
 		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>         - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
 		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>  - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
+		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>           - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
 
 		popupMenu.add(_asPlainText_chk);
 		popupMenu.add(_appendResults_chk);
@@ -6671,6 +6719,8 @@ public class QueryWindow
 		popupMenu.add(_oracleEnableDbmsOutput_chk);
 		popupMenu.add(_rsInTabs_chk);
 		popupMenu.add(_getObjectTextOnError_chk);
+		popupMenu.add(_jdbcAutoCommit_chk);
+		popupMenu.add(new JSeparator());
 		
 		// Set default visibility
 		_oracleEnableDbmsOutput_chk.setVisible(false);
@@ -6740,6 +6790,55 @@ public class QueryWindow
 				codeComplPopupMenu.add(cc_pp_mi);
 				codeComplPopupMenu.add(cc_spn_mi);
 				codeComplPopupMenu.add(cc_spp_mi);
+			}
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+		});
+
+		// Menu items for Code Completion
+		//---------------------------------------------------
+		JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+		popupMenu.add(ttProvider_m);
+		
+		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
+		final JPopupMenu ttProviderPopupMenu = ttProvider_m.getPopupMenu();
+		ttProviderPopupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				// remove all old items (if any)
+				ttProviderPopupMenu.removeAll();
+
+				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
+
+				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color=\"green\">Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
+//				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color=\"green\">describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
+
+				// Reset action
+				cc_reset_mi.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						// mark code completion for refresh
+						if (_compleationProviderAbstract != null)
+						{
+							_compleationProviderAbstract.setNeedRefresh(true);
+							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+						}
+					}
+				});
+
+				// All other actions
+				cc_show_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { if (_tooltipProviderAbstract != null) _tooltipProviderAbstract.setShowTableInformation(((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_xxxx_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { if (_tooltipProviderAbstract != null) _tooltipProviderAbstract.setSomeMethodName      (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+
+				// Add it to the Code Completion popup menu
+				ttProviderPopupMenu.add(cc_reset_mi);
+				ttProviderPopupMenu.add(new JSeparator());
+				ttProviderPopupMenu.add(cc_show_mi);
+//				ttProviderPopupMenu.add(cc_xxxx_mi);
 			}
 			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
 			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}

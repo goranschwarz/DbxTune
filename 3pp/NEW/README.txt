@@ -24,8 +24,8 @@ H2: http://www.h2database.com/html/download.html
 --------------------------------------------------------------------
 CHART: 
 - jchart2d-x.x.x.jar       http://jchart2d.sourceforge.net/download.shtml
-- jfreechart-1.0.14.jar    http://sourceforge.net/projects/jfreechart/
-- jcommon-1.0.17.jar       http://www.jfree.org/jcommon/ (part of jfreeshart)
+- jfreechart-1.0.17.jar    http://sourceforge.net/projects/jfreechart/
+- jcommon-1.0.21.jar       http://www.jfree.org/jcommon/ (part of jfreeshart)
 
 
 --------------------------------------------------------------------

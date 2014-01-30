@@ -10,7 +10,6 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -20,10 +19,13 @@ import javax.swing.text.BadLocationException;
 import org.fife.rsta.ui.GoToDialog;
 import org.fife.rsta.ui.search.FindDialog;
 import org.fife.rsta.ui.search.ReplaceDialog;
-import org.fife.rsta.ui.search.SearchDialogSearchContext;
+import org.fife.rsta.ui.search.SearchEvent;
+import org.fife.rsta.ui.search.SearchListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.utils.StringUtil;
 
@@ -37,13 +39,14 @@ import com.asetune.utils.StringUtil;
  * @author Robert Futrell
  * @version 1.0
  */
-public class RSTAUIDemoApp extends JFrame implements ActionListener
+public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListener
 {
 	private static final long	serialVersionUID	= 1L;
 
 	private RSyntaxTextArea	textArea;
 	private FindDialog		findDialog;
 	private ReplaceDialog	replaceDialog;
+
 
 	public RSTAUIDemoApp()
 	{
@@ -123,30 +126,63 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
-		String command = e.getActionCommand();
-		SearchDialogSearchContext context = findDialog.getSearchContext();
-
-		if ( FindDialog.ACTION_FIND.equals(command) )
-		{
-			if ( !SearchEngine.find(textArea, context) )
-			{
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-			}
-		}
-		else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
-		{
-			if ( !SearchEngine.replace(textArea, context) )
-			{
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-			}
-		}
-		else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
-		{
-			int count = SearchEngine.replaceAll(textArea, context);
-			JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
-		}
+		System.out.println("actionPerformed(): e="+e);
+		
+//		String command = e.getActionCommand();
+//		SearchContext context = findDialog.getSearchContext();
+//
+//		if ( FindDialog.ACTION_FIND.equals(command) )
+//		{
+//			if ( !SearchEngine.find(textArea, context).wasFound() )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+//			}
+//		}
+//		else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
+//		{
+//			if ( !SearchEngine.replace(textArea, context).wasFound() )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+//			}
+//		}
+//		else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
+//		{
+//			int count = SearchEngine.replaceAll(textArea, context).getCount();
+//			JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
+//		}
 
 	}
+
+	@Override
+	public void searchEvent(SearchEvent e)
+	{
+		System.out.println("searchEvent(): e="+e);
+		SearchContext context = e.getSearchContext();
+
+		SearchResult sr = SearchEngine.find(textArea, context);
+		
+			
+//		if ( FindDialog.ACTION_FIND.equals(command) )
+//		{
+//			if ( !SearchEngine.find(textArea, context).wasFound() )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+//			}
+//		}
+//		else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
+//		{
+//			if ( !SearchEngine.replace(textArea, context).wasFound() )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+//			}
+//		}
+//		else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
+//		{
+//			int count = SearchEngine.replaceAll(textArea, context).getCount();
+//			JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
+//		}
+	}
+
 
 	public static void main(String[] args)
 	{
@@ -255,5 +291,4 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener
 		}
 
 	}
-
 }

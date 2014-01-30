@@ -339,4 +339,20 @@ extends DefaultCompletionProvider
 		}
 		return false;
 	}
+	
+	/**
+	 * Get tooltip text for a specific object<br>
+	 * This is most possibly called from any ToolTipSupplier if the word can't be 
+	 * resolved within that dictionary...<p>
+	 * 
+	 * This method should be overridden by any implementors for specific functionality
+	 *  
+	 * @param word The word we currently has the mouse over
+	 * @param fullWord 
+	 * @return null if not tip, otherwise hopefully a HTML string which describes a table/procedure or any object... 
+	 */
+	public String getToolTipTextForObject(String word, String fullWord)
+	{
+		return null;
+	}
 }

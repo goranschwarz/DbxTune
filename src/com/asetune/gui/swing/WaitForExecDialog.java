@@ -24,6 +24,8 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
 
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
@@ -170,7 +172,12 @@ implements PropertyChangeListener, ActionListener
 	public void markExtraText(String str)
 	{
 		if ( ! StringUtil.isNullOrBlank(str) && _extraText_txt != null)
-			_extraText_txt.markAll(str, false, false, false);
+		{
+//			_extraText_txt.markAll(str, false, false, false);
+			SearchContext context = new SearchContext();
+			context.setSearchFor(str);
+			SearchEngine.find(_extraText_txt, context);
+		}
 	}
 
 	/**

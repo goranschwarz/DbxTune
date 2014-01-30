@@ -517,6 +517,27 @@ extends CompletionProviderAbstract
 ////	System.out.println("!!!! PARSE(JSqlParser) END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 //################### BEGIN old parser code #########################################	
 
+	private void refresh()
+	{
+		// Clear old completions
+		clear();
+
+		_schemaNames.clear();
+
+		// DO THE REFRESH
+		List<SqlTableCompletion> list = refreshCompletion();
+
+		// Restore the "saved" completions
+		super.addCompletions(getStaticCompletions());
+
+		if (list != null && list.size() > 0)
+		{
+			// Add the completion list
+			addSqlCompletions(list);
+
+			setNeedRefresh(false);
+		}
+	} // end method
 
 	@Override
 	protected List<Completion> getCompletionsImpl(JTextComponent comp)
@@ -606,26 +627,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 
 		if (needRefresh())
-		{
-			// Clear old completions
-			clear();
-
-			_schemaNames.clear();
-
-			// DO THE REFRESH
-			List<SqlTableCompletion> list = refreshCompletion();
-
-			// Restore the "saved" completions
-			super.addCompletions(getStaticCompletions());
-
-			if (list != null && list.size() > 0)
-			{
-				// Add the completion list
-				addSqlCompletions(list);
-
-				setNeedRefresh(false);
-			}
-		} // end _needRefresh
+			refresh();
 
 
 		//-----------------------------------------------------------
@@ -725,7 +727,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 					if (etId._schName.equalsIgnoreCase(di._dbName))
 					{
 						// use the local schemas (in current database)
-						if (etId._schName.equals(_currentCatalog))
+						if (etId._schName.equalsIgnoreCase(_currentCatalog))
 						{
 //System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject: IN CURRENT DATABASE");
 							// lets return all schemas/owners
@@ -962,7 +964,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 							//   return known schema names in current catalog/db
 							// else
 							//   get available schemas for the specified catalog/db (NOT cached) 
-							if (catName.equals(_currentCatalog))
+							if (catName.equalsIgnoreCase(_currentCatalog))
 							{
 //System.out.println("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... in CURRENT-CATALOG.");
 								// lets return all schemas/owners
@@ -1122,7 +1124,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				//	System.out.println("sa2[]: >"+StringUtil.toCommaStr(sa2, "|")+"<");
 					if (sa2.length >= 2)
 					{
-						if (sa2[1].equals(alias))
+						if (sa2[1].equalsIgnoreCase(alias))
 						{
 							table = sa2[0];
 							if (stripPrefix && table.indexOf('.') >= 0)
@@ -1308,6 +1310,10 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		return schemaInfoList;
 	}
 
+	protected void enrichCompletionForTables(Connection conn, WaitForExecDialog waitDialog)
+	throws SQLException
+	{
+	}
 	protected List<TableInfo> refreshCompletionForTables(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
@@ -1816,11 +1822,12 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				ProcedureParameterInfo pi = new ProcedureParameterInfo();
 				pi._paramName       = rs.getString("COLUMN_NAME");
 				pi._paramPos        = colId;
+				pi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
 				pi._paramType       = rs.getString("TYPE_NAME");
 				pi._paramLength     = rs.getInt   ("LENGTH");
 				pi._paramIsNullable = rs.getInt   ("NULLABLE");
-//				pi._paramRemark     = rs.getString("REMARKS");
-//				pi._paramDefault    = rs.getString("COLUMN_DEF");
+				pi._paramRemark     = rs.getString("REMARKS");
+				pi._paramDefault    = rs.getString("COLUMN_DEF");
 				pi._paramScale      = rs.getInt   ("SCALE");
 	
 				if ( ! prevProcName.equals(procName) )
@@ -1860,11 +1867,12 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 					ProcedureParameterInfo ppi = new ProcedureParameterInfo();
 					ppi._paramName       = rs.getString("COLUMN_NAME");
 					ppi._paramPos        = colId;
+					ppi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
 					ppi._paramType       = rs.getString("TYPE_NAME");
 					ppi._paramLength     = rs.getInt   ("LENGTH");
 					ppi._paramIsNullable = rs.getInt   ("NULLABLE");
-//					ppi._paramRemark     = rs.getString("REMARKS");
-//					ppi._paramDefault    = rs.getString("COLUMN_DEF");
+					ppi._paramRemark     = rs.getString("REMARKS");
+					ppi._paramDefault    = rs.getString("COLUMN_DEF");
 					ppi._paramScale      = rs.getInt   ("SCALE");
 					
 //System.out.println("refreshCompletionForTableColumns(): bulkMode="+bulkMode+", ROW="+ppi);
@@ -1874,6 +1882,25 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 			} // end: for (TableInfo ti : tableInfoList)
 		} // end: fetch-row-by-row
+	}
+
+	/**
+	 * Decode DatabaseMetaData getProcedureColumns COLUMN_TYPE
+	 * @param type
+	 * @return
+	 */
+	private static String procInOutDecode(short type)
+	{
+		switch (type)
+		{
+		case DatabaseMetaData.procedureColumnIn:      return "IN";
+		case DatabaseMetaData.procedureColumnOut:     return "OUT";
+		case DatabaseMetaData.procedureColumnInOut:   return "INOUT";
+		case DatabaseMetaData.procedureColumnResult:  return "RESULT";
+		case DatabaseMetaData.procedureColumnReturn:  return "RETURN";
+		case DatabaseMetaData.procedureColumnUnknown: return "UNKNOWN";
+		}
+		return "unknown("+type+")";
 	}
 
 	protected List<ProcedureInfo> refreshCompletionForSystemProcedures(Connection conn, WaitForExecDialog waitDialog)
@@ -1998,6 +2025,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 					{
 						thisStartTime = System.currentTimeMillis();
 						_tableInfoList = refreshCompletionForTables(conn, getWaitDialog());
+						enrichCompletionForTables(conn, getWaitDialog());
 						_logger.debug("---------------- Refresh Completion: TAB-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
 						if (isLookupTableColumns())
 						{
@@ -2454,7 +2482,13 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : di._dbRemark) + "</font></i>";
 			setShortDescription(shortDesc);
-			setSummary(_dbInfo.toHtmlString());
+//			setSummary(_dbInfo.toHtmlString());
+		}
+
+		@Override
+		public String getSummary()
+		{
+			return _dbInfo.toHtmlString();
 		}
 
 		/**
@@ -2507,7 +2541,15 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				"<font color=\"blue\">"+si._name+"</font>" +
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(si._remark) ? "" : si._remark) + "</font></i>";
 			setShortDescription(shortDesc);
-			setSummary(_schemaInfo.toHtmlString());
+//			setSummary(_schemaInfo.toHtmlString());
+		}
+
+		@Override
+		public String getSummary()
+		{
+			if (_schemaInfo != null)
+				return _schemaInfo.toHtmlString();
+			return super.getSummary();
 		}
 
 		/**
@@ -2527,6 +2569,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	extends ShorthandCompletion
 	{
 		private TableInfo _tableInfo = null;
+		private CompletionProviderAbstract _provider = null;
 
 		public static String createReplacementText(TableInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 		{
@@ -2552,20 +2595,24 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		public SqlTableCompletion(CompletionProviderAbstractSql provider, TableInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 		{
 			super(provider, ti._tabName, createReplacementText(ti, addCatalog, addSchema, quoteNames));
-//			super(provider, 
-//				ti._tabName,
-//				! quoteTableNames 
-//					? ti._tabSchema+"."+fixStrangeNames(ti._tabName) 
-//					: "\""+ti._tabSchema+"\".\""+ti._tabName+"\"");
-
 			_tableInfo = ti;
+			if (provider instanceof CompletionProviderAbstract)
+				_provider  = (CompletionProviderAbstract)provider;
 
 			String shortDesc = 
 				"<font color=\"blue\">"+ti._tabType+"</font>" +
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : ti._tabRemark) + "</font></i>";
 			setShortDescription(shortDesc);
-			setSummary(_tableInfo.toHtmlString());
+//			setSummary(_tableInfo.toHtmlString());
+		}
+		
+		@Override
+		public String getSummary()
+		{
+			if ( ! _tableInfo.isColumnRefreshed() )
+				_tableInfo.refreshColumnInfo(_provider._connectionProvider);
+			return _tableInfo.toHtmlString();
 		}
 
 		/**
@@ -2585,6 +2632,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	extends ShorthandCompletion
 	{
 		private ProcedureInfo _procInfo = null;
+		private CompletionProviderAbstract _provider = null;
 		
 		public static String createReplacementText(ProcedureInfo pi, boolean addCatalog, String catName, boolean addSchema, boolean quoteNames)
 		{
@@ -2620,18 +2668,24 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		public SqlProcedureCompletion(CompletionProviderAbstractSql provider, ProcedureInfo pi, boolean addCatalog, String catalogName, boolean addSchema, boolean quoteNames)
 		{
 			super(provider, pi._procName, createReplacementText(pi, addCatalog, catalogName, addSchema, quoteNames));
-//			super(provider, 
-//				pi._procName,
-//				fixStrangeNames(pi._procName));
-
 			_procInfo = pi;
+			if (provider instanceof CompletionProviderAbstract)
+				_provider  = (CompletionProviderAbstract)provider;
 
 			String shortDesc = 
 				"<font color=\"blue\">"+pi._procType+"</font>" +
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";
 			setShortDescription(shortDesc);
-			setSummary(_procInfo.toHtmlString());
+			//setSummary(_procInfo.toHtmlString());
+		}
+
+		@Override
+		public String getSummary()
+		{
+			if ( ! _procInfo.isParamsRefreshed() )
+				_procInfo.refreshParameterInfo(_provider._connectionProvider);
+			return _procInfo.toHtmlString();
 		}
 
 		/**
@@ -2651,11 +2705,14 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	extends ShorthandCompletion
 	{
 		private TableInfo _tableInfo = null;
+		private CompletionProviderAbstract _provider = null;
 		
 		public SqlColumnCompletion(CompletionProvider provider, String tabAliasName, String colname, TableInfo tableInfo)
 		{
 			super(provider, fixStrangeNames(colname), (tabAliasName == null ? colname : tabAliasName+"."+colname));
 			_tableInfo = tableInfo;
+			if (provider instanceof CompletionProviderAbstract)
+				_provider  = (CompletionProviderAbstract)provider;
 
 			TableColumnInfo ci = _tableInfo.getColumnInfo(colname);
 			String colPos = "";
@@ -2666,7 +2723,15 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				"<font color=\"blue\">"+_tableInfo.getColDdlDesc(colname)+"</font>" +
 				" -- <i><font color=\"green\">" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
 			setShortDescription(shortDesc);
-			setSummary(_tableInfo.toHtmlString(colname));
+			//setSummary(_tableInfo.toHtmlString(colname));
+		}
+
+		@Override
+		public String getSummary()
+		{
+			if ( ! _tableInfo.isColumnRefreshed() )
+				_tableInfo.refreshColumnInfo(_provider._connectionProvider);
+			return _tableInfo.toHtmlString();
 		}
 
 		/**
@@ -2699,7 +2764,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	{
 		for (DbInfo di : _dbInfoList)
 		{
-			if (dbName.equals(di._dbName))
+			if (dbName.equalsIgnoreCase(di._dbName))
 				return di;
 		}
 		return null;
@@ -2746,7 +2811,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 //	{
 //		for (SchemaInfo si : _schemaInfoList)
 //		{
-//			if (schemaName.equals(si._name))
+//			if (schemaName.equalsIgnoreCase(si._name))
 //				return si;
 //		}
 //		return null;
@@ -2800,10 +2865,24 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 	protected TableInfo getTableInfo(String tableName)
 	{
+		return getTableInfo(null, null, tableName, false);
+	}
+	protected TableInfo getTableInfo(String catName, String schemaName, String tableName, boolean getColInfo)
+	{
 		for (TableInfo ti : _tableInfoList)
 		{
-			if (tableName.equals(ti._tabName))
+			if (tableName.equalsIgnoreCase(ti._tabName))
+			{
+				if (StringUtil.hasValue(catName) && ! catName.equalsIgnoreCase(ti._tabCat))
+					continue;
+				if (StringUtil.hasValue(schemaName) && ! schemaName.equalsIgnoreCase(ti._tabSchema))
+					continue;
+					
+				if (getColInfo && ! ti.isColumnRefreshed())
+					ti.refreshColumnInfo(_connectionProvider);
+					
 				return ti;
+			}
 		}
 		return null;
 	}
@@ -2820,13 +2899,58 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		public String _tabRemark  = null;
 		
 		public boolean _needColumnRefresh = true;
-		public boolean isColumnRefreshed() {return _needColumnRefresh;}
+		public boolean isColumnRefreshed() {return ! _needColumnRefresh;}
 
 		public ArrayList<TableColumnInfo> _columns = new ArrayList<TableColumnInfo>();
 
 		public void addColumn(TableColumnInfo ci)
 		{
+			// If column name already exists, do NOT add it again
+			for (TableColumnInfo existingCi : _columns)
+			{
+				if (existingCi._colName.equals(ci._colName))
+				{
+					//(new Exception("callstack for: addColumn("+ci._colName+") already exists.")).printStackTrace();
+					return;
+				}
+			}
+
 			_columns.add(ci);
+		}
+
+		public void refreshColumnInfo(ConnectionProvider connProvider)
+		{
+			try
+			{
+				final Connection conn = connProvider.getConnection();
+				if (conn == null)
+					return;
+
+				DatabaseMetaData dbmd = conn.getMetaData();
+
+				ResultSet rs = dbmd.getColumns(_tabCat, _tabSchema, _tabName, "%");
+				while(rs.next())
+				{
+					TableColumnInfo ci = new TableColumnInfo();
+					ci._colName       = rs.getString("COLUMN_NAME");
+					ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
+					ci._colType       = rs.getString("TYPE_NAME");
+					ci._colLength     = rs.getInt   ("COLUMN_SIZE");
+					ci._colIsNullable = rs.getInt   ("NULLABLE");
+					ci._colRemark     = rs.getString("REMARKS");
+					ci._colDefault    = rs.getString("COLUMN_DEF");
+					ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+					
+					addColumn(ci);
+				}
+				rs.close();
+
+				_needColumnRefresh = false;
+			}
+			catch (SQLException e)
+			{
+				_logger.warn("Problems looking up Column MetaData for table '"+_tabName+"'. Caught: "+e);
+			}
 		}
 
 		@Override
@@ -2881,7 +3005,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			TableColumnInfo ci = null;
 			for (TableColumnInfo e : _columns)
 			{
-				if (colname.equals(e._colName))
+				if (colname.equalsIgnoreCase(e._colName))
 				{
 					ci = e;
 					break;
@@ -2915,7 +3039,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			TableColumnInfo ci = null;
 			for (TableColumnInfo e : _columns)
 			{
-				if (colname.equals(e._colName))
+				if (colname.equalsIgnoreCase(e._colName))
 				{
 					ci = e;
 					break;
@@ -2964,6 +3088,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	{
 		public String _paramName       = null;
 		public int    _paramPos        = -1;
+		public String _paramInOutType  = null;
 		public String _paramType       = null;
 //		public String _paramType2      = null;
 		public int    _paramLength     = -1;
@@ -2976,20 +3101,48 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 	protected ProcedureInfo getProcedureInfo(String procName)
 	{
+		return getProcedureInfo(null, null, procName, false);
+	}
+	protected ProcedureInfo getProcedureInfo(String catName, String schemaName, String procName, boolean getParamInfo)
+	{
 		for (ProcedureInfo pi : _procedureInfoList)
 		{
-			if (procName.equals(pi._procName))
+			if (procName.equalsIgnoreCase(pi._procName))
+			{
+				if (StringUtil.hasValue(catName) && ! catName.equalsIgnoreCase(pi._procCat))
+					continue;
+				if (StringUtil.hasValue(schemaName) && ! schemaName.equalsIgnoreCase(pi._procSchema))
+					continue;
+					
+				if (getParamInfo && ! pi.isParamsRefreshed())
+					pi.refreshParameterInfo(_connectionProvider);
+					
 				return pi;
+			}
 		}
 		return null;
 	}
 
 	protected ProcedureInfo getSystemProcedureInfo(String procName)
 	{
+		return getSystemProcedureInfo(null, null, procName, false);
+	}
+	protected ProcedureInfo getSystemProcedureInfo(String catName, String schemaName, String procName, boolean getParamInfo)
+	{
 		for (ProcedureInfo pi : _systemProcInfoList)
 		{
-			if (procName.equals(pi._procName))
+			if (procName.equalsIgnoreCase(pi._procName))
+			{
+				if (StringUtil.hasValue(catName) && ! catName.equalsIgnoreCase(pi._procCat))
+					continue;
+				if (StringUtil.hasValue(schemaName) && ! schemaName.equalsIgnoreCase(pi._procSchema))
+					continue;
+
+				if (getParamInfo && ! pi.isParamsRefreshed())
+					pi.refreshParameterInfo(_connectionProvider);
+					
 				return pi;
+			}
 		}
 		return null;
 	}
@@ -3006,13 +3159,53 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		public String _procRemark  = null;
 		
 		public boolean _needParamsRefresh = true;
-		public boolean isParamsRefreshed() {return _needParamsRefresh;}
+		public boolean isParamsRefreshed() {return ! _needParamsRefresh;}
 
 		public ArrayList<ProcedureParameterInfo> _parameters = new ArrayList<ProcedureParameterInfo>();
 
 		public void addParameter(ProcedureParameterInfo ci)
 		{
 			_parameters.add(ci);
+		}
+
+		public void refreshParameterInfo(ConnectionProvider connProvider)
+		{
+			try
+			{
+				final Connection conn = connProvider.getConnection();
+				if (conn == null)
+					return;
+
+				DatabaseMetaData dbmd = conn.getMetaData();
+
+				int colId = 0;
+				ResultSet rs = dbmd.getProcedureColumns(_procCat, _procSchema, _procName, "%");
+
+				while(rs.next())
+				{
+					colId++;
+
+					ProcedureParameterInfo ppi = new ProcedureParameterInfo();
+					ppi._paramName       = rs.getString("COLUMN_NAME");
+					ppi._paramPos        = colId;
+					ppi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
+					ppi._paramType       = rs.getString("TYPE_NAME");
+					ppi._paramLength     = rs.getInt   ("LENGTH");
+					ppi._paramIsNullable = rs.getInt   ("NULLABLE");
+					ppi._paramRemark     = rs.getString("REMARKS");
+					ppi._paramDefault    = rs.getString("COLUMN_DEF");
+					ppi._paramScale      = rs.getInt   ("SCALE");
+					
+					addParameter(ppi);
+				}
+				rs.close();
+
+				_needParamsRefresh = false;
+			}
+			catch (SQLException e)
+			{
+				_logger.warn("Problems looking up Parmeter MetaData for procedure '"+_procName+"'. Caught: "+e);
+			}
 		}
 
 		@Override
@@ -3034,6 +3227,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=1\">");
 			sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
 			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Name")       .append("</B></FONT></TD>");
+			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("ParamType")  .append("</B></FONT></TD>");
 			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Datatype")   .append("</B></FONT></TD>");
 			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Length")     .append("</B></FONT></TD>");
 			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Nulls")      .append("</B></FONT></TD>");
@@ -3049,6 +3243,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				else
 					sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffcc\">");
 				sb.append("	<TD NOWRAP>").append(pi._paramName)      .append("</TD>");
+				sb.append("	<TD NOWRAP>").append(pi._paramInOutType) .append("</TD>");
 				sb.append("	<TD NOWRAP>").append(pi._paramType)      .append("</TD>");
 				sb.append("	<TD NOWRAP>").append(pi._paramLength)    .append("</TD>");
 				sb.append("	<TD NOWRAP>").append(pi._paramIsNullable).append("</TD>");
@@ -3068,7 +3263,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			ProcedureParameterInfo pi = null;
 			for (ProcedureParameterInfo e : _parameters)
 			{
-				if (paramName.equals(e._paramName))
+				if (paramName.equalsIgnoreCase(e._paramName))
 				{
 					pi = e;
 					break;
@@ -3086,6 +3281,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			sb.append("<B>Column Description:</B> ").append(StringUtil.isNullOrBlank(pi._paramRemark) ? "not available" : pi._paramRemark).append("<BR>");
 			sb.append("<BR>");
 			sb.append("<B>Name:</B> ")       .append(pi._paramName)      .append("<BR>");
+			sb.append("<B>In/Out:</B> ")     .append(pi._paramInOutType) .append("<BR>");
 			sb.append("<B>Type:</B> ")       .append(pi._paramType)      .append("<BR>");
 			sb.append("<B>Length:</B> ")     .append(pi._paramLength)    .append("<BR>");
 			sb.append("<B>Is Nullable:</B> ").append(pi._paramIsNullable).append("<BR>");
@@ -3102,7 +3298,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			ProcedureParameterInfo ci = null;
 			for (ProcedureParameterInfo e : _parameters)
 			{
-				if (colname.equals(e._paramName))
+				if (colname.equalsIgnoreCase(e._paramName))
 				{
 					ci = e;
 					break;
@@ -3327,38 +3523,84 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	 */
 	public static CompletionProviderAbstract installAutoCompletion(Connection conn, TextEditorPane textPane, RTextScrollPane scroll, ErrorStrip errorStrip, Window window, ConnectionProvider connProvider)
 	{
+		CompletionProviderAbstract provider = null;
+
 		if (conn == null)
 		{
 			_logger.info("Installing Completion Provider for JDBC");
-			return CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+			provider = CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+		}
+		else
+		{
+			try
+			{
+				DatabaseMetaData md = conn.getMetaData();
+				String prodName = md.getDatabaseProductName();
+				
+				if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(prodName))
+				{
+					_logger.info("Installing Completion Provider for Sybase ASE");
+					provider = CompletionProviderAse.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+				}
+				else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(prodName))
+				{
+					_logger.info("Installing Completion Provider for Sybase Replication Server");
+					provider = CompletionProviderRepServer.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+				}
+				else
+				{
+					_logger.info("Installing Completion Provider for JDBC");
+					provider = CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+				}
+			}
+			catch (SQLException e)
+			{
+				_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. Caught: "+e);
+				provider = CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
+			}
 		}
 
-		try
+		return provider;
+	}
+
+	/**
+	 * Called from any ToolTipProvider to check if word can be found in the CompletionProviders dictionary
+	 */
+	@Override
+	public String getToolTipTextForObject(String word, String fullWord)
+	{
+		if (StringUtil.isNullOrBlank(word))
+			return null;
+
+		if (needRefresh())
+			refresh();
+
+		SqlObjectName sqlObj = new SqlObjectName(word);
+		
+		DbInfo        dbInfo    = getDbInfo(             sqlObj.getObjectName());
+		TableInfo     tabInfo   = getTableInfo(          sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName(), true);
+		ProcedureInfo procInfo  = getProcedureInfo(      sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName(), true);
+		ProcedureInfo sProcInfo = getSystemProcedureInfo(sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName(), true);
+
+//System.out.println("dbInfo="+dbInfo);
+//System.out.println("tabInfo="+tabInfo);
+//System.out.println("procInfo="+procInfo);
+//System.out.println("sProcInfo="+sProcInfo);
+
+		StringBuilder sb = new StringBuilder();
+		if (dbInfo    != null) sb.append(dbInfo   .toHtmlString());
+		if (tabInfo   != null) sb.append(tabInfo  .toHtmlString());
+		if (procInfo  != null) sb.append(procInfo .toHtmlString());
+		if (sProcInfo != null) sb.append(sProcInfo.toHtmlString());
+		if (sb.length() != 0)
 		{
-			DatabaseMetaData md = conn.getMetaData();
-			String prodName = md.getDatabaseProductName();
-			
-			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(prodName))
-			{
-				_logger.info("Installing Completion Provider for Sybase ASE");
-				return CompletionProviderAse.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
-			}
-			else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(prodName))
-			{
-				_logger.info("Installing Completion Provider for Sybase Replication Server");
-				return CompletionProviderRepServer.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
-			}
-			else
-			{
-				_logger.info("Installing Completion Provider for JDBC");
-				return CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
-			}
+			sb.insert(0, "<html>");
+			sb.append("</html>");
+			return sb.toString();
 		}
-		catch (SQLException e)
-		{
-			_logger.info("Installing Completion Provider for JDBC, problems getting Database Product Name. Caught: "+e);
-			return CompletionProviderJdbc.installAutoCompletion(textPane, scroll, errorStrip, window, connProvider);
-		}
+		
+		return null;
+//		return "<html>DUMMY getToolTipTextForObject(word='<b>"+word+"</b>', fullWord='<b>"+fullWord+"</b>'): sqlObj.getObjectName()='"+sqlObj.getObjectName()+"'</html>";
 	}
 }
 

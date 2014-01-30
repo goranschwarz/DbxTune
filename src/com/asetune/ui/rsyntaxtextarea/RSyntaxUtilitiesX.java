@@ -23,13 +23,16 @@ import javax.swing.text.Utilities;
 
 import org.apache.log4j.Logger;
 import org.fife.rsta.ui.GoToDialog;
-import org.fife.rsta.ui.search.FindDialog;
 import org.fife.rsta.ui.search.ReplaceDialog;
-import org.fife.rsta.ui.search.SearchDialogSearchContext;
+import org.fife.rsta.ui.search.SearchEvent;
+import org.fife.rsta.ui.search.SearchEvent.Type;
+import org.fife.rsta.ui.search.SearchListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 
 public class RSyntaxUtilitiesX
@@ -164,6 +167,100 @@ public class RSyntaxUtilitiesX
 		menu.add(new JMenuItem(new ReplaceDialogAction(textArea, owner)));
 	}
 
+//	/**
+//	 * Quick and dirty Find/Replace Action/Dialog, reusing the RSTA dialog.
+//	 * But this needs to be replaced be something better.
+//	 * Like a mix of Eclipse(layout and "Wrap Search") and TextPad(Mark button)
+//	 * Also save/restore the search/replace history 
+//	 * 
+//	 * @author gorans
+//	 */
+//	private static class ReplaceDialogAction extends AbstractAction
+//	{
+//		private static final long serialVersionUID = 1L;
+//		private ReplaceDialog _replaceDialog;
+//		private RTextArea _textArea;
+//		private Component _owner;
+//		private JFrame    _frame;
+//
+//		private static final String NAME = "Find/Replace...";
+//
+//		public ReplaceDialogAction(RTextArea textArea, Component owner)
+//		{
+//			super(NAME);
+//			_textArea = textArea;
+//			_owner = owner; //JOptionPane.getFrameForComponent(_textArea);
+//			if (_owner != null && _owner instanceof JFrame)
+//				_frame = (JFrame) _owner;
+//
+//			// Key Mapping
+//			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+//			int       key       = KeyEvent.VK_F;
+//			KeyStroke keyStroke = KeyStroke.getKeyStroke(key, mask);
+//
+//			if (_textArea.getActionForKeyStroke(keyStroke) != null)
+//			{
+//				_logger.warn("Sorry but keyBinding for command '"+NAME+"' using keyStroke '"+keyStroke+"', is already used, ignoring this Key Mapping.");
+//			}
+//			else
+//			{
+//				// set it in the popup menu
+//				putValue(Action.ACCELERATOR_KEY, keyStroke);
+//
+//				// But it's not propagated to the TextArea, so this is done extra (don't know if I'm doing something wrong)
+//				_textArea.registerKeyboardAction(this, NAME, keyStroke, JComponent.WHEN_FOCUSED);
+//				//_textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
+//			}
+//			_logger.debug("_textArea.getActionForKeyStroke("+keyStroke+"), command("+NAME+"): "+_textArea.getActionForKeyStroke(keyStroke) );
+//			
+//			_replaceDialog = new ReplaceDialog(_frame, this);
+//		}
+//
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//			String command = e.getActionCommand();
+//			_logger.debug("ReplaceDialogAction.actionPerformed(): command = '"+command+"'.");
+//
+//			// If it's the dialog, open it
+//			if ( NAME.equals(command) )
+//			{
+//				String selectText = _textArea.getSelectedText();
+//				if ( selectText != null )
+//					_replaceDialog.setSearchString(selectText);
+//
+//				_replaceDialog.setVisible(true);
+//				return;
+//			}
+//
+//			// else it must be any FindDialog Action
+//			SearchDialogSearchContext context = _replaceDialog.getSearchContext();
+//
+//			if ( FindDialog.ACTION_FIND.equals(command) )
+//			{
+//				if (context.getMarkAll())
+//					_textArea.markAll(context.getSearchFor(), context.getMatchCase(), context.getWholeWord(), context.isRegularExpression());
+//				else
+//					_textArea.clearMarkAllHighlights();
+//			}
+//
+//			if ( ! SearchEngine.find(_textArea, context) )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+//			}
+//			else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
+//			{
+//				if ( ! SearchEngine.replace(_textArea, context) )
+//					UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+//			}
+//			else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
+//			{
+//				int count = SearchEngine.replaceAll(_textArea, context);
+//				JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
+//			}
+//		}
+//
+//	}
 	/**
 	 * Quick and dirty Find/Replace Action/Dialog, reusing the RSTA dialog.
 	 * But this needs to be replaced be something better.
@@ -172,7 +269,7 @@ public class RSyntaxUtilitiesX
 	 * 
 	 * @author gorans
 	 */
-	private static class ReplaceDialogAction extends AbstractAction
+	private static class ReplaceDialogAction extends AbstractAction implements SearchListener
 	{
 		private static final long serialVersionUID = 1L;
 		private ReplaceDialog _replaceDialog;
@@ -216,6 +313,8 @@ public class RSyntaxUtilitiesX
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
+//System.out.println("actionPerformed(): e="+e);
+
 			String command = e.getActionCommand();
 			_logger.debug("ReplaceDialogAction.actionPerformed(): command = '"+command+"'.");
 
@@ -230,30 +329,64 @@ public class RSyntaxUtilitiesX
 				return;
 			}
 
-			// else it must be any FindDialog Action
-			SearchDialogSearchContext context = _replaceDialog.getSearchContext();
+//			// else it must be any FindDialog Action
+//			SearchDialogSearchContext context = _replaceDialog.getSearchContext();
+//
+//			if ( FindDialog.ACTION_FIND.equals(command) )
+//			{
+//				if (context.getMarkAll())
+//					_textArea.markAll(context.getSearchFor(), context.getMatchCase(), context.getWholeWord(), context.isRegularExpression());
+//				else
+//					_textArea.clearMarkAllHighlights();
+//			}
+//
+//			if ( ! SearchEngine.find(_textArea, context) )
+//			{
+//				UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+//			}
+//			else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
+//			{
+//				if ( ! SearchEngine.replace(_textArea, context) )
+//					UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+//			}
+//			else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
+//			{
+//				int count = SearchEngine.replaceAll(_textArea, context);
+//				JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
+//			}
+		}
 
-			if ( FindDialog.ACTION_FIND.equals(command) )
-			{
-				if (context.getMarkAll())
-					_textArea.markAll(context.getSearchFor(), context.getMatchCase(), context.getWholeWord(), context.isRegularExpression());
-				else
-					_textArea.clearMarkAllHighlights();
-			}
+		@Override
+		public void searchEvent(SearchEvent e)
+		{
+			Type type = e.getType();
+//System.out.println("searchEvent(): type="+type);
+			SearchContext context = _replaceDialog.getSearchContext();
 
-			if ( ! SearchEngine.find(_textArea, context) )
+			SearchResult sr = null; 
+
+			if ( type.equals(Type.MARK_ALL) )
 			{
-				UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
-			}
-			else if ( ReplaceDialog.ACTION_REPLACE.equals(command) )
-			{
-				if ( ! SearchEngine.replace(_textArea, context) )
+				sr = SearchEngine.markAll(_textArea, context);
+				if ( sr.getMarkedCount() <= 0 )
 					UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
 			}
-			else if ( ReplaceDialog.ACTION_REPLACE_ALL.equals(command) )
+			else if ( type.equals(Type.FIND) )
 			{
-				int count = SearchEngine.replaceAll(_textArea, context);
-				JOptionPane.showMessageDialog(null, count + " occurrences replaced.");
+				sr = SearchEngine.find(_textArea, context);
+				if ( ! sr.wasFound() )
+					UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+			}
+			else if ( type.equals(Type.REPLACE) )
+			{
+				sr = SearchEngine.replace(_textArea, context);
+				if ( ! sr.wasFound() )
+					UIManager.getLookAndFeel().provideErrorFeedback(_textArea);
+			}
+			else if ( type.equals(Type.REPLACE_ALL) )
+			{
+				sr = SearchEngine.replaceAll(_textArea, context);
+				JOptionPane.showMessageDialog(null, sr.getCount() + " occurrences replaced.");
 			}
 		}
 
