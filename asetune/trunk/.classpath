@@ -29,23 +29,23 @@
 			<attribute name="javadoc_location" value="http://www.cleondris.ch/opensource/ssh2/javadoc/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/rsyntaxtextarea_2.5.0_Source.zip">
+	<classpathentry kind="lib" path="lib/rsyntaxtextarea.jar" sourcepath="3pp/rsyntaxtextarea_2.5.1_Source.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/rsyntaxtextarea"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.5.0_Source.zip">
+	<classpathentry kind="lib" path="lib/autocomplete.jar" sourcepath="3pp/autocomplete_2.5.1_Source.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://javadoc.fifesoft.com/autocomplete"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/rstaui.jar" sourcepath="3pp/rstaui_2.5.0_Source.zip"/>
-	<classpathentry kind="lib" path="lib/jfreechart-1.0.14.jar" sourcepath="3pp/jfreechart-1.0.14.zip">
+	<classpathentry kind="lib" path="lib/rstaui.jar" sourcepath="3pp/rstaui_2.5.1_Source.zip"/>
+	<classpathentry kind="lib" path="lib/jfreechart-1.0.17.jar" sourcepath="3pp/jfreechart-1.0.17.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://www.jfree.org/jfreechart/api/javadoc/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/jcommon-1.0.17.jar">
+	<classpathentry kind="lib" path="lib/jcommon-1.0.21.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://www.jfree.org/jcommon/api/"/>
 		</attributes>
@@ -70,12 +70,12 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/swingx-all-1.6.4-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/h2-1.3.169.jar">
+	<classpathentry kind="lib" path="lib/h2-1.3.175.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="http://www.h2database.com/javadoc"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/proxy-vole_20121203.jar" sourcepath="3pp/proxy-vole_20121203_src.zip">
+	<classpathentry kind="lib" path="lib/proxy-vole_20131209.jar" sourcepath="3pp/proxy-vole_20131209_src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api/"/>
 		</attributes>

@@ -8,15 +8,16 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.ConnectionProvider;
 
 public class ToolTipSupplierH2
 extends ToolTipSupplierAbstractSql
 {
-	public ToolTipSupplierH2(Window owner, ConnectionProvider connectionProvider)
+	public ToolTipSupplierH2(Window owner, CompletionProviderAbstract compleationProvider, ConnectionProvider connectionProvider)
 	{
-		super(owner, connectionProvider);
+		super(owner, compleationProvider, connectionProvider);
 	}
 
 	@Override

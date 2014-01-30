@@ -32,6 +32,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.PlatformUtils;
@@ -317,7 +318,7 @@ implements ActionListener, DocumentListener
 				searchFor = "[" + _currentSrv + "]";
 
 			// Mark server
-			_textArea.markAll( searchFor, true, true, false);
+//			_textArea.markAll( searchFor, true, true, false);
 			
 			// Position at start of the editor
 			_textArea.setCaretPosition(0);
@@ -330,9 +331,12 @@ implements ActionListener, DocumentListener
 			context.setRegularExpression(false);
 			context.setSearchForward(true);
 			context.setWholeWord(true);
+			context.setMarkAll(true);
 
-			boolean found = SearchEngine.find(_textArea, context);
-			if ( !found )
+//			boolean found = SearchEngine.find(_textArea, context);
+//			if ( !found )
+			SearchResult found = SearchEngine.find(_textArea, context);
+			if ( !found.wasFound() )
 			{
 				Runnable doLater = new Runnable()
 				{

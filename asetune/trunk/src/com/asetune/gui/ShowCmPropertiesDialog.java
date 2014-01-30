@@ -24,6 +24,8 @@ import javax.swing.event.ChangeListener;
 import net.miginfocom.swing.MigLayout;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
 
 import com.asetune.AseTune;
 import com.asetune.cm.CountersModel;
@@ -568,7 +570,11 @@ extends JDialog implements ActionListener, ChangeListener
 		_diffCols_txt.setBackground( _diffColsHighlight_chk.isSelected() ? DIFF_COLOR : _needConfig_txt.getBackground() );
 		_pctCols_txt .setBackground( _pctColsHighlight_chk .isSelected() ? PCT_COLOR  : _needConfig_txt.getBackground() );
 		
-		_sqlExec.clearMarkAllHighlights();
+//		_sqlExec.clearMarkAllHighlights();
+		SearchContext context = new SearchContext();
+		context.setMarkAll(false);
+		SearchEngine.find(_sqlExec, context);
+
 		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, aseVersion, isCeEnabled));
 		if (_diffColsHighlight_chk.isSelected()) RTextUtility.markAll(_sqlExec, DIFF_COLOR, _cm.getDiffColumns());
 		if (_pctColsHighlight_chk .isSelected()) RTextUtility.markAll(_sqlExec, PCT_COLOR,  _cm.getPctColumns());

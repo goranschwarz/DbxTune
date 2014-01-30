@@ -11,6 +11,7 @@ import javax.swing.text.Highlighter;
 import org.fife.ui.rtextarea.ChangeableHighlightPainter;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 public class RTextUtility
 {
@@ -48,8 +49,10 @@ public class RTextUtility
 				
 				ta.setCaretPosition(0);
 //				boolean found = SearchEngine.find(ta, toMark, true, matchCase, wholeWord, regex);
-				boolean found = SearchEngine.find(ta, searchCtx);
-				while (found)
+//				boolean found = SearchEngine.find(ta, searchCtx);
+//				while (found)
+				SearchResult found = SearchEngine.find(ta, searchCtx);
+				while (found.wasFound())
 				{
 					int start = ta.getSelectionStart();
 					int end = ta.getSelectionEnd();

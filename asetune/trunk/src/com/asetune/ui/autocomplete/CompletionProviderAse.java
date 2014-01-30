@@ -396,8 +396,32 @@ extends CompletionProviderAbstractSql
 				}
 			}
 		}
-		
+
 		return tableInfoList;
+	}
+
+	@Override
+	protected void enrichCompletionForTables(Connection conn, WaitForExecDialog waitDialog) 
+	throws SQLException
+	{
+		// If Column lookup is enabled, no need to do this here
+		if ( isLookupTableColumns() )
+			return;
+
+		List<TableInfo> mdaTableInfoList = new ArrayList<TableInfo>();
+
+		waitDialog.setState("Getting Table Column information, for ASE MDA Tables");
+
+		for (TableInfo ti : _tableInfoList)
+		{
+			if ("master".equals(ti._tabCat) && ti._tabName.startsWith("mon"))
+				if (mdaTableInfoList != null)
+					mdaTableInfoList.add(ti);
+		}
+
+		// Get column description for MDA Tables (even if the Column check is disabled), it's not "that" many rows...
+		if (mdaTableInfoList != null)
+			refreshCompletionForTableColumns(conn, waitDialog, mdaTableInfoList, true);
 	}
 
 	//##############################################################################

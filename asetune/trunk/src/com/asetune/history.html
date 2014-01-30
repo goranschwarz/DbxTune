@@ -135,6 +135,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
            Example of calling a stored proc with output params is HANA "\call procname('in-a', ?) :(string=null out)"</li>
        <li>More command line switches example(-Uuser -Ppasswd -ujdbc:sap://host.acme.com:30115)</li>
        <li>send 'sql init' string when you connect</li>
+       <li>ToolTip Provider accesses Code Completion, and show column/parameters information for tables/procedures</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>
@@ -145,6 +146,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
            <li>If connected to Oracle: enable/reads the dbms_output subsystem</li>
            <li>On errors within stored procedures, get the SP Text and mark the "error" row with red. The text is displayed in the tooltip of the error.</li>
            <li>Code Completion: Finer control of what to get/refresh</li>
+           <li>ToolTip Supplier, option to enable/disable column/parameter lookup to Code Completion</li>
+           <li>Ability to change JDBC AutoCommit, this is hidden, but can be enabled with property 'QueryWindow.jdbc.autoCommit.show=true'</li>
        </ul>
        <li>Probably a bunch of more stuff that I have forgot</li>
 	</ul>
@@ -222,6 +225,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Threads</b><br>
 	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.0.21,     Component: JCommon</li>
+	  <li>To version 1.0.17,     Component: JFreeChart</li>
+	  <li>To version 2.5.1,      Component: RSyntaxTextArea</li>
+	  <li>To version 2.5.1,      Component: Autocomplete, part of RSyntaxTextArea</li>
+	  <li>To version 2.5.1,      Component: RSTAUI, part of RSyntaxTextArea</li>
+	  <li>To version 1.3.175,    Component: H2 database</li>
+	  <li>To version 2013-12-09, Component: ProxyVole</li>
+	</ul>
 	</LI>
 
 </UL>

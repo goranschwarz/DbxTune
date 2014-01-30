@@ -9,6 +9,7 @@ import java.sql.Statement;
 
 import org.fife.ui.rtextarea.RTextArea;
 
+import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
@@ -17,9 +18,9 @@ import com.asetune.utils.StringUtil;
 public class ToolTipSupplierAse
 extends ToolTipSupplierAbstractSql
 {
-	public ToolTipSupplierAse(Window owner, ConnectionProvider connectionProvider)
+	public ToolTipSupplierAse(Window owner, CompletionProviderAbstract compleationProvider, ConnectionProvider connectionProvider)
 	{
-		super(owner, connectionProvider);
+		super(owner, compleationProvider, connectionProvider);
 	}
 
 	@Override

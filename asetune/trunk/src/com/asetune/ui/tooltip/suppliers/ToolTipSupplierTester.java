@@ -15,7 +15,7 @@ extends ToolTipSupplierAbstract
 	
 	public ToolTipSupplierTester(Window owner, ConnectionProvider connectionProvider)
 	{
-		super(owner, connectionProvider);
+		super(owner, null, connectionProvider);
 		_parser = new ToolTipProviderXmlParser();
 	}
 
