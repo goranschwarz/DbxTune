@@ -56,13 +56,14 @@ public class ResultSetTableModel
 	private ArrayList<String>            _rsmdColumnTypeName    = new ArrayList<String>();  // rsmd.getColumnTypeName(c);
 	private ArrayList<String>            _rsmdColumnTypeNameStr = new ArrayList<String>();  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
 	private ArrayList<String>            _rsmdColumnClassName   = new ArrayList<String>();  // rsmd.getColumnClassName(c);
-	private ArrayList<Integer>           _displaySize   = new ArrayList<Integer>(); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
-	private ArrayList<ArrayList<Object>> _rows          = new ArrayList<ArrayList<Object>>();
-	private SQLWarning                   _sqlWarning    = null;
-	private boolean                      _allowEdit     = true; 
-	private String                       _name          = null;
-	private PipeCommand                  _pipeCmd       = null;
-	private boolean                      _cancelled     = false;
+	private ArrayList<Integer>           _displaySize           = new ArrayList<Integer>(); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+	private ArrayList<ArrayList<Object>> _rows                  = new ArrayList<ArrayList<Object>>();
+	private SQLWarning                   _sqlWarning            = null;
+	private boolean                      _allowEdit             = true; 
+	private String                       _name                  = null;
+	private PipeCommand                  _pipeCmd               = null;
+	private boolean                      _cancelled             = false;
+	private int                          _abortedAfterXRows     = -1;
 
 	/**
 	 * This constructor creates a TableModel from a ResultSet.  
@@ -75,9 +76,9 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
 	throws SQLException
 	{
-		this(rs, true, name, null, null);
+		this(rs, true, name, -1, null, null);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable, String name, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
 		_allowEdit = editable;
@@ -144,6 +145,15 @@ public class ResultSetTableModel
 			{
 				_cancelled = true;
 				break;
+			}
+				
+			if ( stopAfterXrows > 0 )
+			{
+				if (readCount >= stopAfterXrows)
+				{
+					_abortedAfterXRows = readCount;
+					break;
+				}
 			}
 				
 			readCount++;
@@ -247,6 +257,16 @@ public class ResultSetTableModel
 		return _cancelled;
 	}
 
+	public boolean wasAbortedAfterXRows()
+	{
+		return _abortedAfterXRows >= 0;
+	}
+	public int getAbortedAfterXRows()
+	{
+		return _abortedAfterXRows;
+	}
+    
+    
 //	/** apply pipe cmd filter */
 //	private boolean addRow(ArrayList<Object> row)
 //	{

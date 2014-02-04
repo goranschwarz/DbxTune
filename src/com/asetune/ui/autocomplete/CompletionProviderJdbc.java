@@ -5,6 +5,9 @@ import java.awt.Window;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
+import org.fife.ui.autocomplete.DefaultCompletionProvider;
+import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
+import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
@@ -24,7 +27,8 @@ extends CompletionProviderAbstractSql
 		textPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
-		AutoCompletion ac = new SqlAutoCompletion(acProvider);
+		RoundRobinAutoCompletion ac = new SqlAutoCompletion(acProvider);
+		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
 //		ac.setChoicesWindowSize(600, 600);
@@ -76,9 +80,27 @@ extends CompletionProviderAbstractSql
 	@Override
 	protected void refreshCompletionForStaticCmds()
 	{
-		resetStaticCompletion();
-
-		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM "));
+//		resetStaticCompletion();
+//
+//		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
+//		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM "));
 	}
+
+	@Override
+	public DefaultCompletionProvider createTemplateProvider()
+	{
+		// A DefaultCompletionProvider is the simplest concrete implementation
+		// of CompletionProvider. This provider has no understanding of
+		// language semantics. It simply checks the text entered up to the
+		// caret position for a match against known completions. This is all
+		// that is needed in the majority of cases.
+		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+
+		// Add completions for all Java keywords. A BasicCompletion is just
+		// a straightforward word completion.
+		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
+
+		return provider;
+	}
+
 }

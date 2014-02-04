@@ -1,10 +1,11 @@
 package com.asetune.ui.autocomplete;
 
-import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 
 public class SqlAutoCompletion
-extends AutoCompletion
+//extends AutoCompletion
+extends RoundRobinAutoCompletion
 {
 	public SqlAutoCompletion(CompletionProvider provider)
 	{
