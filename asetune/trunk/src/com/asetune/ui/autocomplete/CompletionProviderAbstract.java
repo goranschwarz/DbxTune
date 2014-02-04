@@ -9,6 +9,7 @@ import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 
+import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.Util;
@@ -354,5 +355,14 @@ extends DefaultCompletionProvider
 	public String getToolTipTextForObject(String word, String fullWord)
 	{
 		return null;
+	}
+
+	/**
+	 * Override this method to create a Completion Provider that delivers static content
+	 * @return
+	 */
+	public DefaultCompletionProvider createTemplateProvider()
+	{
+		return new DefaultCompletionProvider();
 	}
 }

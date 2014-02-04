@@ -229,7 +229,13 @@ public class QueryWindow
 	
 	public final static String  PROPKEY_showRowCount           = PROPKEY_APP_PREFIX + "showRowCount";
 	public final static boolean DEFAULT_showRowCount           = true;
-	
+
+	public final static String  PROPKEY_limitRsRowsRead        = PROPKEY_APP_PREFIX + "limitRsRowsRead";
+	public final static boolean DEFAULT_limitRsRowsRead        = false;
+
+	public final static String  PROPKEY_limitRsRowsReadCount   = PROPKEY_APP_PREFIX + "limitRsRowsReadCount";
+	public final static int     DEFAULT_limitRsRowsReadCount   = 1000;
+
 	public final static String  PROPKEY_showSentSql            = PROPKEY_APP_PREFIX + "showSentSql";
 	public final static boolean DEFAULT_showSentSql            = false;
 	
@@ -328,7 +334,9 @@ public class QueryWindow
 	private JCheckBoxMenuItem _rsInTabs_chk               = new JCheckBoxMenuItem("In Tabbed Panel", false);
 	private JCheckBoxMenuItem _asPlainText_chk            = new JCheckBoxMenuItem("As Plain Text", DEFAULT_asPlainText);
 	private JCheckBoxMenuItem _showRowCount_chk           = new JCheckBoxMenuItem("Row Count", DEFAULT_showRowCount);
-	private JCheckBoxMenuItem _showSentSql_chk            = new JCheckBoxMenuItem("Show Sent SQL", DEFAULT_showSentSql);
+	private JCheckBoxMenuItem _limitRsRowsRead_chk        = new JCheckBoxMenuItem("Limit ResultSet to # rows", DEFAULT_limitRsRowsRead);
+	private JMenuItem         _limitRsRowsReadDialog_mi   = new JMenuItem        ("Limit ResultSet to # rows, settings...");
+	private JCheckBoxMenuItem _showSentSql_chk            = new JCheckBoxMenuItem("Print Sent SQL", DEFAULT_showSentSql);
 	private JCheckBoxMenuItem _printRsInfo_chk            = new JCheckBoxMenuItem("Print ResultSet Info", DEFAULT_printRsInfo);
 	private JCheckBoxMenuItem _clientTiming_chk           = new JCheckBoxMenuItem("Time SQL Statement", DEFAULT_clientTiming);
 	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
@@ -1123,6 +1131,15 @@ public class QueryWindow
 		                             "<br>" +
 		                             "That's why this option is visible, so you can turn this on/off as you which!" +
 		                             "</html>");
+		_limitRsRowsRead_chk.setToolTipText(
+				"<html>" +
+				"<b>Stop</b> reading the ResultSet after # rows.<br>" +
+				"To change the number of rows to stop after, choose the next menu item (dialog)" +
+				"</html>");
+		_limitRsRowsReadDialog_mi.setToolTipText(
+				"<html>" +
+				"Open a dialog where you can change how many rows we should stop after." +
+				"</html>");
 		_showSentSql_chk.setToolTipText("<html>Include the sent/executed SQL Statement in the output.<br></html>");
 		_printRsInfo_chk.setToolTipText("<html>Print Information about the ResultSet in the output.<br></html>");
 		_clientTiming_chk.setToolTipText("<html>Time how long the SQL Statement takes, from the client side.<br>Clock starts when sending the SQL, clock stops when client receives first answer back from the server</html>");
@@ -1443,6 +1460,7 @@ public class QueryWindow
 		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,  DEFAULT_restoreWinSizeForConn) );
 		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,            DEFAULT_asPlainText) );
 		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,           DEFAULT_showRowCount) );
+		_limitRsRowsRead_chk       .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,        DEFAULT_limitRsRowsRead) );
 		_showSentSql_chk           .setSelected( conf.getBooleanProperty(PROPKEY_showSentSql,            DEFAULT_showSentSql) );
 		_printRsInfo_chk           .setSelected( conf.getBooleanProperty(PROPKEY_printRsInfo,            DEFAULT_printRsInfo) );
 		_clientTiming_chk          .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,           DEFAULT_clientTiming) );
@@ -1474,6 +1492,7 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_restoreWinSizeForConn,  _prefWinOnConnect_mi       .isSelected());
 		conf.setProperty(PROPKEY_asPlainText,            _asPlainText_chk           .isSelected());
 		conf.setProperty(PROPKEY_showRowCount,           _showRowCount_chk          .isSelected());
+		conf.setProperty(PROPKEY_limitRsRowsRead,        _limitRsRowsRead_chk       .isSelected());	
 		conf.setProperty(PROPKEY_showSentSql,            _showSentSql_chk           .isSelected());
 		conf.setProperty(PROPKEY_printRsInfo,            _printRsInfo_chk           .isSelected());
 		conf.setProperty(PROPKEY_clientTiming,           _clientTiming_chk          .isSelected());
@@ -2258,6 +2277,8 @@ public class QueryWindow
 			_rsInTabs_chk              .setEnabled(false);
 			_asPlainText_chk           .setEnabled(false);
 			_showRowCount_chk          .setEnabled(false);
+			_limitRsRowsRead_chk       .setEnabled(false);
+			_limitRsRowsReadDialog_mi  .setEnabled(false);
 			_showSentSql_chk           .setEnabled(false);
 			_printRsInfo_chk           .setEnabled(false);
 			_clientTiming_chk          .setEnabled(false);
@@ -2307,6 +2328,8 @@ public class QueryWindow
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
+				_limitRsRowsRead_chk       .setEnabled(true);
+				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -2333,6 +2356,8 @@ public class QueryWindow
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
+				_limitRsRowsRead_chk       .setEnabled(true);
+				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -2353,6 +2378,8 @@ public class QueryWindow
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
+				_limitRsRowsRead_chk       .setEnabled(true);
+				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
@@ -2373,6 +2400,8 @@ public class QueryWindow
 			_rsInTabs_chk              .setEnabled(true);
 			_asPlainText_chk           .setEnabled(true);
 			_showRowCount_chk          .setEnabled(true);
+			_limitRsRowsRead_chk       .setEnabled(true);
+			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
@@ -2396,6 +2425,8 @@ public class QueryWindow
 			_rsInTabs_chk              .setEnabled(true);
 			_asPlainText_chk           .setEnabled(true);
 			_showRowCount_chk          .setEnabled(true);
+			_limitRsRowsRead_chk       .setEnabled(true);
+			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
@@ -2458,6 +2489,8 @@ public class QueryWindow
 				_rsInTabs_chk              .setEnabled(false);
 				_asPlainText_chk           .setEnabled(false);
 				_showRowCount_chk          .setEnabled(false);
+				_limitRsRowsRead_chk       .setEnabled(false);
+				_limitRsRowsReadDialog_mi  .setEnabled(false);
 				_showSentSql_chk           .setEnabled(false);
 				_printRsInfo_chk           .setEnabled(false);
 				_clientTiming_chk          .setEnabled(false);
@@ -4547,9 +4580,13 @@ public class QueryWindow
 								}
 								else
 								{
+									int     limitRsRowsCount = -1; // do not limit
+									if (_limitRsRowsRead_chk.isSelected())
+										limitRsRowsCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount);
+									
 									if (_asPlainText_chk.isSelected())
 									{
-										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd(), progress);
+										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 										
 										if (_printRsInfo_chk.isSelected())
@@ -4560,11 +4597,14 @@ public class QueryWindow
 										
 										if (tm.isCancelled())
 											_resultCompList.add(new JAseCancelledResultSet(sql));
+
+										if (tm.wasAbortedAfterXRows())
+											_resultCompList.add(new JAseLimitedResultSet(tm.getAbortedAfterXRows(), sql));
 									}
 									else
 									{
 										// Convert the ResultSet into a TableModel, which fits on a JTable
-										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sr.getPipeCmd(), progress);
+										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 					
 										// Create the JTable, using the just created TableModel/ResultSet
@@ -4588,6 +4628,9 @@ public class QueryWindow
 										
 										if (tm.isCancelled())
 											_resultCompList.add(new JAseCancelledResultSet(sql));
+
+										if (tm.wasAbortedAfterXRows())
+											_resultCompList.add(new JAseLimitedResultSet(tm.getAbortedAfterXRows(), sql));
 									}
 								}
 			
@@ -5679,6 +5722,20 @@ public class QueryWindow
 		}
 	}
 
+	private static class JAseLimitedResultSet
+	extends JAseMessage
+	{
+		private static final long serialVersionUID = 1L;
+
+		public JAseLimitedResultSet(int numberOfRows, String originSql)
+		{
+			super("Reading the ResultSet was stopped after "+numberOfRows+" rows.", originSql);
+//			init();
+
+			setForeground(ColorUtils.DARK_RED);
+		}
+	}
+	
 	private static class JAseRowCount 
 	extends JAseMessage
 	{
@@ -6697,21 +6754,25 @@ public class QueryWindow
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText_chk           .setText("<html><b>As Plain Text</b>             - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
-		_appendResults_chk         .setText("<html><b>Append Results</b>            - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i></html>");
-		_showRowCount_chk          .setText("<html><b>Row Count</b>                 - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
-		_showSentSql_chk           .setText("<html><b>Show Sent SQL Statement</b>   - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i></html>");
-		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>      - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i></html>");
-		_clientTiming_chk          .setText("<html><b>Client Timing</b>             - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
-		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>     - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
-		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b> - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
-		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>         - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
-		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>  - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
-		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>           - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
+		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
+		_appendResults_chk         .setText("<html><b>Append Results</b>               - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i></html>");
+		_showRowCount_chk          .setText("<html><b>Row Count</b>                    - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
+		_limitRsRowsRead_chk       .setText("<html><b>Limit ResultSet to # rows</b>    - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after # rows.</font></i></html>");
+		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b> - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
+		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i></html>");
+		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i></html>");
+		_clientTiming_chk          .setText("<html><b>Client Timing</b>                - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
+		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>        - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
+		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b>    - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
+		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>            - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>     - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
+		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>              - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
 
 		popupMenu.add(_asPlainText_chk);
 		popupMenu.add(_appendResults_chk);
 		popupMenu.add(_showRowCount_chk);
+		popupMenu.add(_limitRsRowsRead_chk);
+		popupMenu.add(_limitRsRowsReadDialog_mi);
 		popupMenu.add(_showSentSql_chk);
 		popupMenu.add(_printRsInfo_chk);
 		popupMenu.add(_clientTiming_chk);
@@ -6725,6 +6786,30 @@ public class QueryWindow
 		// Set default visibility
 		_oracleEnableDbmsOutput_chk.setVisible(false);
 
+		// Action MenuItem: _limitRsRowsReadDialog_mi
+		_limitRsRowsReadDialog_mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+				String key1 = "Number of rows";
+
+				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+				in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+""));
+
+				Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Limit ResultSet", in, false);
+
+				if (results != null)
+				{
+					tmpConf.setProperty(PROPKEY_limitRsRowsReadCount, Integer.parseInt(results.get(key1)));
+
+					saveProps();
+				}
+			}
+		});
+		
 		// Menu items for Code Completion
 		//---------------------------------------------------
 		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
