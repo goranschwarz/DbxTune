@@ -20,6 +20,8 @@ import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.NextWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
 
 public class RSyntaxTextAreaX
 extends RSyntaxTextArea
@@ -119,7 +121,10 @@ extends RSyntaxTextArea
 		localInit(this);
 	}
 
-	/**
+    public static final String toUpperCase = "to-upper-case";
+    public static final String toLowerCase = "to-lower-case";
+
+    /**
 	 * initialize this class
 	 */
 	public static void localInit(RSyntaxTextArea textArea)
@@ -130,6 +135,9 @@ extends RSyntaxTextArea
 		am.put(RTextAreaEditorKit.selectionNextWordAction,     new NextWordAction(    RTextAreaEditorKit.selectionNextWordAction, true));
 		am.put(RTextAreaEditorKit.previousWordAction,          new PreviousWordAction(RTextAreaEditorKit.previousWordAction,          false));
 		am.put(RTextAreaEditorKit.selectionPreviousWordAction, new PreviousWordAction(RTextAreaEditorKit.selectionPreviousWordAction, true));
+
+		am.put(toUpperCase, new ToUpperCaseAction(toUpperCase));
+		am.put(toLowerCase, new ToLowerCaseAction(toLowerCase));
 
 		// FIXME: the am.put(), doesn't seems to work... I don't know what the issue is, need to dig into this later
 		// Add Ctrl+/ to comment un-comment lines
@@ -143,6 +151,10 @@ extends RSyntaxTextArea
 
 		textArea.registerKeyboardAction(new RSyntaxTextAreaEditorKit.ToggleCommentAction(), RSyntaxTextAreaEditorKit.rstaToggleCommentAction, keyStroke, JComponent.WHEN_FOCUSED);
 //		textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
+
+		// TO LOWER and UPPPER mapping
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toUpperCase);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toLowerCase);
 	}
 
 	/** 

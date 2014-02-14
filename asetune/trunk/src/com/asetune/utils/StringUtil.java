@@ -481,7 +481,7 @@ public class StringUtil
 	public static String word(String str, int number)
 	{
 		String[] stra = str.split("[ \t\n\f\r]");
-		if ( stra.length < number )
+		if ( stra.length <= number )
 		{
 			return null;
 			// throw new

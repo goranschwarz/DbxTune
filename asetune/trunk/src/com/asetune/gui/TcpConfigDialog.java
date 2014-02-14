@@ -1174,7 +1174,7 @@ implements ActionListener, TableModelListener
 			refreshTable();
 			
 			// hide 'Group Name' if no child's are found
-			if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+			if ( MainFrame.hasInstance() && ! MainFrame.getInstance().getTabbedPane().hasChildPanels() )
 			{
 				TableColumnModelExt tcmx = (TableColumnModelExt)this.getColumnModel();
 				tcmx.getColumnExt(TAB_HEADER[TAB_POS_GROUP_NAME]).setVisible(false);
@@ -1371,7 +1371,7 @@ implements ActionListener, TableModelListener
 		{
 			DefaultTableModel tm = (DefaultTableModel)getModel();
 
-			JTabbedPane tabPane = MainFrame.getTabbedPane();
+			JTabbedPane tabPane = MainFrame.hasInstance() ? MainFrame.getInstance().getTabbedPane() : null;
 			if (tabPane == null)
 				return;
 

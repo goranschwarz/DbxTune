@@ -1745,8 +1745,10 @@ implements ChangeListener, ActionListener, FocusListener
 				sb.append( cmd );
 				if (addGo)
 				{
+					String goTerminator = AseSqlScriptReader.getConfiguredGoTerminator();
+
 					// If it's NOT ended with any 'go' command or other terminator, add a 'go' at the end... 
-					if ( ! AseSqlScriptReader.hasCommandTerminator(sb.toString()) )
+					if ( ! AseSqlScriptReader.hasCommandTerminator(sb.toString(), goTerminator) )
 						sb.append("\ngo");
 				}
 				if ( ! cmd.endsWith("\n") )

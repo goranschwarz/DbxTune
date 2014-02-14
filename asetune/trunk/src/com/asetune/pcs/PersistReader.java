@@ -1069,7 +1069,7 @@ implements Runnable, ConnectionProvider
 	 */
 	private void sortOfflineCm()
 	{
-		GTabbedPane tabPane = MainFrame.getTabbedPane();
+		GTabbedPane tabPane = MainFrame.hasInstance() ? MainFrame.getInstance().getTabbedPane() : null;
 		if (tabPane == null)
 			return;
 

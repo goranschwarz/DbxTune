@@ -3,7 +3,7 @@
  */
 package com.asetune.xmenu;
 
-import com.asetune.ProcessDetailFrame;
+import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 
 public class CaptureSql
 extends XmenuActionBase 
@@ -30,6 +30,6 @@ extends XmenuActionBase
 		String spidStr  = getParamValue(0);
 		int    spid     = Integer.parseInt(spidStr);
 
-		new ProcessDetailFrame(spid, -1);
+		new ProcessDetailFrame(getConnectionProvider(), spid, -1);
 	}
 }

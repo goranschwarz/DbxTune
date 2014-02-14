@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import javax.swing.ListCellRenderer;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
 import javax.swing.text.JTextComponent;
@@ -55,6 +56,7 @@ extends CompletionProviderAbstract
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
 //		AutoCompletion ac = new AutoCompletion(acProvider);
 		RoundRobinAutoCompletion ac = new RepServerAutoCompletion(acProvider);
+		ac.setListCellRenderer(acProvider.createDefaultCompletionCellRenderer());
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
@@ -148,6 +150,17 @@ extends CompletionProviderAbstract
 		provider.refreshCompletionForStaticCmds();
 
 		return provider;
+	}
+
+	/**
+	 * Cell renderer for SQL Completions
+	 * 
+	 * @return
+	 */
+	@Override
+	public ListCellRenderer createDefaultCompletionCellRenderer()
+	{
+		return new RepServerCellRenderer();
 	}
 
 	@Override

@@ -11,6 +11,7 @@ import javax.swing.Action;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -99,12 +100,33 @@ public class RSyntaxUtilitiesX
 	 */
 	public static void installRightClickMenuExtentions(final RTextArea textArea, final RTextScrollPane textAreaScroll, Component owner)
 	{
-		JPopupMenu menu =textArea.getPopupMenu();
+		JPopupMenu menu = textArea.getPopupMenu();
 		JMenuItem mi;
+		JMenu     m;
 		
 		//--------------------------------
 		menu.addSeparator();
+
+		//--------------------------------
+		// Change Case
+		m = new JMenu("Change Case");
+		menu.add(m);
+
+		//-- Upper
+		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.ToUpperCaseAction(RSyntaxTextAreaX.toUpperCase));
+		mi.setText("Upper Case");
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		m.add(mi);
 		
+		//-- Lower
+		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.ToLowerCaseAction(RSyntaxTextAreaX.toLowerCase));
+		mi.setText("Lower Case");
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+		m.add(mi);
+		
+		//--------------------------------
+		menu.addSeparator();
+
 		//--------------------------------
 		// Word Wrap
 		if (textArea != null)
@@ -139,9 +161,9 @@ public class RSyntaxUtilitiesX
 
 		//--------------------------------
 		// Current Line Highlight
-		if (textAreaScroll != null && textArea != null)
+		if (textArea != null)
 		{
-			mi = new JCheckBoxMenuItem("Current Line Highlight", textAreaScroll.getLineNumbersEnabled());
+			mi = new JCheckBoxMenuItem("Current Line Highlight", textArea.getHighlightCurrentLine());
 			mi.addActionListener(new ActionListener()
 			{
 				@Override
@@ -416,7 +438,7 @@ public class RSyntaxUtilitiesX
 
 			// Key Mapping
 			int       mask      = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-			int       key       = KeyEvent.VK_L;
+			int       key       = KeyEvent.VK_G;
 			KeyStroke keyStroke = KeyStroke.getKeyStroke(key, mask);
 
 			if (_textArea.getActionForKeyStroke(keyStroke) != null)

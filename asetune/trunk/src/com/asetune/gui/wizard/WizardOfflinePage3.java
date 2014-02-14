@@ -194,7 +194,7 @@ implements ActionListener, TableModelListener
 		SwingUtils.calcColumnWidths(_sessionTable);
 
 		// hide 'Group Name' if no child's are found
-		if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+		if ( MainFrame.hasInstance() && ! MainFrame.getInstance().getTabbedPane().hasChildPanels() )
 		{
 			TableColumnModelExt tcmx = (TableColumnModelExt)_sessionTable.getColumnModel();
 			tcmx.getColumnExt(TAB_HEADER[TAB_POS_GROUP_NAME]).setVisible(false);

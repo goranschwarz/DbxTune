@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Properties;
 
 import com.asetune.AseTune;
+import com.asetune.utils.ConnectionProvider;
 
 /**
  * @author gorans
@@ -26,6 +27,7 @@ implements XmenuAction
 	String                       _menuName        = null;
 	String                       _config          = null;
 	Connection                   _conn            = null;
+	ConnectionProvider           _connProvider    = null;
 	boolean                      _closeConnOnExit = true;
 	Window                       _owner           = null;
 
@@ -37,15 +39,16 @@ implements XmenuAction
 		super();
 	}
 
-	@Override public void setMenuProperties(Properties p)                     { _menuProps = p; }
-	@Override public void setAllProperties(Properties p)                      { _allProps = p; }
-	@Override public void setParamValues(LinkedHashMap<String,String> map)    { _paramValues = map; }
+	@Override public void setMenuProperties(Properties p)                     { _menuProps       = p; }
+	@Override public void setAllProperties(Properties p)                      { _allProps        = p; }
+	@Override public void setParamValues(LinkedHashMap<String,String> map)    { _paramValues     = map; }
 	@Override public void addParamValue(String k, String v)                   { _paramValues.put(k, v); }
-	@Override public void setConfig(String name)                              { _config = name; }
-	@Override public void setMenuName(String name)                            { _menuName = name; }
-	@Override public void setConnection(Connection conn)                      { _conn = conn; }
+	@Override public void setConfig(String name)                              { _config          = name; }
+	@Override public void setMenuName(String name)                            { _menuName        = name; }
+	@Override public void setConnectionProvider(ConnectionProvider connProv)  { _connProvider    = connProv; }
+	@Override public void setConnection(Connection conn)                      { _conn            = conn; }
 	@Override public void setCloseConnOnExit(boolean b)                       { _closeConnOnExit = b; }
-	@Override public void setOwner(Window window)                             { _owner = window; }
+	@Override public void setOwner(Window window)                             { _owner           = window; }
 
 	@Override public Properties                   getMenuProperties()         { return _menuProps; }
 	@Override public Properties                   getAllProperties()          { return _allProps; }
@@ -54,6 +57,7 @@ implements XmenuAction
 	@Override public String                       getParamValue(String param) { return (String)_paramValues.get(param); }
 	@Override public String                       getConfig()                 { return _config; }
 	@Override public String                       getMenuName()               { return _menuName; }
+	@Override public ConnectionProvider           getConnectionProvider()     { return _connProvider; }
 	@Override public Connection                   getConnection()             { return _conn; }
 	@Override public boolean                      isCloseConnOnExit()         { return _closeConnOnExit; }
 	@Override public Window                       getOwner()                  { return _owner; }

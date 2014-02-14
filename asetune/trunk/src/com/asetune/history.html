@@ -25,6 +25,44 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H2>2013-xx-xx</H2>
 <UL>
 	<LI>
+	<b>ASE 16.0 support</b><br>
+	Here is the big picture of what has been added for ASE 16.0
+	<ul>
+	   <li>Tool 'Configure ASE for Monitoring': added parameters 'threshold event monitoring', 'threshold event max messages' </li> 
+	   <li>Processes: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
+	   <li>Active Statements: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
+	   <li>Cached Procedures: new column 'Active' - Indicates whether the plan for this procedure is active or not</li> 
+	   <li>Cached Procedures Sum: new column 'SumActive' - How many of this instance where column Active = 'Yes'</li> 
+	   <li>Objects: new columns</li>
+	     <ul>
+	       <li>Scans              - The number of scans on this object</li>
+	       <li>LastScanDate       - The date of the last scan on this object</li>
+	       <li>LastScanDateDiff   - How many MS ago did we do a Scan</li>
+	       <li>Inserts            - The number of inserts on this object</li>
+	       <li>LastInsertDate     - The date of the last insert on this object</li>
+	       <li>LastInsertDateDiff - How many MS ago did we do a Insert</li>
+	       <li>Updates            - The number of updates on this object</li>
+	       <li>LastUpdateDate     - The date of the last update on this object</li>
+	       <li>LastUpdateDateDiff - How many MS ago did we do a Update</li>
+	       <li>Deletes            - The number of deletes on this object</li>
+	       <li>LastDeleteDate     - The date of the last delete on this object</li>
+	       <li>LastDeleteDateDiff - How many MS ago did we do a Delete</li>
+	     </ul> 
+	   <li>Statement Cache Details: new columns</li>
+	     <ul>
+	       <li>TotalPIO         - The total PIO value.</li>
+	       <li>TotalLIO         - The total LIO value.</li>
+	       <li>TotalCpuTime     - The total execution time value. (ms)</li>
+	       <li>TotalElapsedTime - The total elapsed time value. (ms)</li>
+	     </ul> 
+	   <li>Server - Resource Governor - New Performance Counter, works on MDA Table 'monThresholdEvent', which contains information "events" that the Resource Governor has exceeded.</li> 
+	   <li>RepAgent - Stream Stats   - New Performance Counter, works on MDA Table 'monRepStreamStatistics'.</li> 
+	   <li>RepAgent - Sync Task Stat - New Performance Counter, works on MDA Table 'monRepSyncTaskStatistics'.</li> 
+	   <li>RepAgent - RA Trunc Point - New Performance Counter, works on MDA Table 'monRepTruncationPoint'.</li> 
+	</ul>
+	</LI>
+
+	<LI>
 	<b>Enhancement: System Load</b><br>
 	Three new graphs
 	<ul>
@@ -59,6 +97,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Enhancement: Summary Panel</b><br>
 	New field 'UTC Time Diff', which just prints out the time difference in minutes to UTC Data<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Objects, Cached Objects</b><br>
+	In the GUI Panel you can now limit number of records fetched from the server.<br>
+	This is of interest if you have thousands of tables, and it takes a <b>long time</b> to fetch the rows.<br>
+	The limitation is done <b>after</b> the <code>order by</code> has been applied...<br>
+	And the <code>order by</code> for the Counter Models are:
+	<ul>
+	   <li>Objects        - <code>order by LogicalReads desc</code></li> 
+	   <li>Cached Objects - <code>order by CachedKB desc</code></li> 
+	</ul>
 	</LI>
 
 	<LI>
@@ -136,6 +186,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>More command line switches example(-Uuser -Ppasswd -ujdbc:sap://host.acme.com:30115)</li>
        <li>send 'sql init' string when you connect</li>
        <li>ToolTip Provider accesses Code Completion, and show column/parameters information for tables/procedures</li>
+       <li>Added the Capture SQL to the tools menu... (if you connect to a ASE) this could be good to have from within SQL Window</li>
+       <li>All text areas using RSyntaxTextArea can now do ToUpperCase(Ctrl-U) and ToLowerCase(Ctrl-L), and the pupup menu also has to upper and lower entries.</li>
+       <li>The send terminator 'go' now has a sub command 'plain'. This temporary sets 'As Plain Text' but just for this SQL batch.<br>ResultSets for this SQL Batch will be displayed in a RSyntaxtTextArea object.</li>
+       <li>The send terminator 'go' now has a sub command 'top #'. This temporary sets 'Limit ResultSet rows' but just for this SQL batch.</li>
+       <li>Send SQL Batch Terminator string can be changed (via a dialog), the default is 'go'.</li>
+       <li>Code Completion List now also shows icons...</li>
+       <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>

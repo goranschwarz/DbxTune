@@ -4,10 +4,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -17,6 +20,8 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmCachedObjects;
+import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.Configuration;
@@ -66,17 +71,20 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean defaultOpt = conf == null ? true : conf.getBooleanProperty(getName()+".TabRowCount", true);
+		boolean defaultOpt;
+		int     defaultIntOpt;
+
+		// RowCount
+		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_tabRowCount : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, CmObjectActivity.DEFAULT_sample_tabRowCount);
 		JCheckBox sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
 
-		sampleRowCount_chk.setName(getName()+".TabRowCount");
+		sampleRowCount_chk.setName(CmObjectActivity.PROPKEY_sample_tabRowCount);
 		sampleRowCount_chk.setToolTipText("<html>" +
 				"Sample Table Row Count using ASE functions <code>row_count()</code> and <code>data_pages()</code>.<br>" +
 				"<b>Note 1</b>: Only in ASE 15.0.2 or higher.<br>" +
-				"<b>Note 2</b>: You can also set the property 'CmObjectActivity.TabRowCount=true|false' in the configuration file.<br>" +
+				"<b>Note 2</b>: You can also set the property '"+CmObjectActivity.PROPKEY_sample_tabRowCount+"'=true|false' in the configuration file.<br>" +
 				"<b>Note 3</b>: To check if this is enabled or not, use the Properties dialog in this tab pane, right click + properties...<br>" +
 				"</html>");
-		panel.add(sampleRowCount_chk, "wrap");
 
 		sampleRowCount_chk.addActionListener(new ActionListener()
 		{
@@ -86,7 +94,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(getName()+".TabRowCount", ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// This will force the CM to re-initialize the SQL statement.
@@ -96,6 +104,83 @@ extends TabularCntrPanel
 			}
 		});
 		
+		// Top Rows (top #)
+		defaultOpt    = conf == null ? CmObjectActivity.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_topRows,      CmObjectActivity.DEFAULT_sample_topRows);
+		defaultIntOpt = conf == null ? CmObjectActivity.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmObjectActivity.PROPKEY_sample_topRowsCount, CmObjectActivity.DEFAULT_sample_topRowsCount);
+		final JCheckBox  sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
+		final JTextField sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
+
+		sampleTopRows_chk.setName(CmObjectActivity.PROPKEY_sample_topRows);
+		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+
+		sampleTopRowsCount_txt.setName(CmObjectActivity.PROPKEY_sample_topRowsCount);
+		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+
+		sampleTopRows_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmObjectActivity.PROPKEY_sample_topRows, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+			}
+		});
+		
+		final ActionListener sampleTopRowsCount_action = new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				
+				String strVal = sampleTopRowsCount_txt.getText();
+				int    intVal = CmObjectActivity.DEFAULT_sample_topRowsCount;
+				try { intVal = Integer.parseInt(strVal);}
+				catch (NumberFormatException nfe)
+				{
+					intVal = CmObjectActivity.DEFAULT_sample_topRowsCount;
+					SwingUtils.showWarnMessage(CmObjectActivityPanel.this, "Not a Number", "<html>This must be a number, you entered '"+strVal+"'.<br>Setting to default value '"+intVal+"'.</html>", nfe);
+					sampleTopRowsCount_txt.setText(intVal+"");
+				}
+				conf.setProperty(CmObjectActivity.PROPKEY_sample_topRowsCount, intVal);
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+			}
+		};
+		sampleTopRowsCount_txt.addActionListener(sampleTopRowsCount_action);
+		sampleTopRowsCount_txt.addFocusListener(new FocusListener()
+		{
+			@Override
+			public void focusLost(FocusEvent e)
+			{
+				// Just call the "action" on sampleTopRowsCount_txt, so we don't have to duplicate code.
+				sampleTopRowsCount_action.actionPerformed(null);
+			}
+			
+			@Override public void focusGained(FocusEvent e) {}
+		});
+		
+		
+		// LAYOUT
+		panel.add(sampleRowCount_chk,     "wrap");
+		
+		panel.add(sampleTopRows_chk,      "split");
+		panel.add(sampleTopRowsCount_txt, "wrap");
+
 		return panel;
 	}
 
