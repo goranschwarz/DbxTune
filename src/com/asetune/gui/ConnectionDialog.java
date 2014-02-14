@@ -2322,7 +2322,7 @@ if (_connProfileVisible_chk.isSelected())
 			setPreferredScrollableViewportSize(new Dimension(400, 100));
 
 			// hide 'Group Name' if no child's are found
-			if ( ! MainFrame.getTabbedPane().hasChildPanels() )
+			if ( MainFrame.hasInstance() && ! MainFrame.getInstance().getTabbedPane().hasChildPanels() )
 			{
 				TableColumnModelExt tcmx = (TableColumnModelExt)this.getColumnModel();
 				tcmx.getColumnExt(PCS_TAB_HEADER[PCS_TAB_POS_GROUP_NAME]).setVisible(false);
@@ -2358,7 +2358,7 @@ if (_connProfileVisible_chk.isSelected())
 		{
 			DefaultTableModel tm = (DefaultTableModel)getModel();
 
-			JTabbedPane tabPane = MainFrame.getTabbedPane();
+			JTabbedPane tabPane = MainFrame.hasInstance() ? MainFrame.getInstance().getTabbedPane() : null;
 			if (tabPane == null)
 				return;
 

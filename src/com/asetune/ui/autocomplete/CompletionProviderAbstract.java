@@ -1,9 +1,15 @@
 package com.asetune.ui.autocomplete;
 
+import java.awt.Component;
 import java.awt.Window;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.Icon;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.ListCellRenderer;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Element;
@@ -22,26 +28,28 @@ import com.asetune.utils.ConnectionProvider;
 public abstract class CompletionProviderAbstract
 extends DefaultCompletionProvider
 {
-	public static String  PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = "code.completion.lookup.static.cmds.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_MISC_INFO                     = "code.completion.lookup.misc.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO                 = "code.completion.lookup.database.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = "code.completion.lookup.table.name.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = "code.completion.lookup.table.columns.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = "code.completion.lookup.procedure.name.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = "code.completion.lookup.procedure.columns.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = "code.completion.lookup.system.procedure.name.info";
-	public static String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = "code.completion.lookup.system.procedure.columns.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = "code.completion.lookup.static.cmds.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_MISC_INFO                     = "code.completion.lookup.misc.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO                 = "code.completion.lookup.database.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = "code.completion.lookup.table.name.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = "code.completion.lookup.table.columns.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = "code.completion.lookup.procedure.name.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = "code.completion.lookup.procedure.columns.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = "code.completion.lookup.system.procedure.name.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = "code.completion.lookup.system.procedure.columns.info";
 
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_MISC_INFO                     = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO                 = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = true;
-	public static boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_MISC_INFO                     = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO                 = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = true;
 
+	protected static final List<Completion> EMPTY_COMPLETION_LIST = new ArrayList<Completion>();
+	
 	public boolean isLookupStaticCmds()             { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO,              DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO); }
 	public boolean isLookupMisc()                   { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_MISC_INFO,                     DEFAULT_CODE_COMP_LOOKUP_MISC_INFO); }
 	public boolean isLookupDb()                     { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO,                 DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO); }
@@ -365,4 +373,10 @@ extends DefaultCompletionProvider
 	{
 		return new DefaultCompletionProvider();
 	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	abstract public ListCellRenderer createDefaultCompletionCellRenderer();
 }

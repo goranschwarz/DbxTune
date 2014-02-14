@@ -195,6 +195,12 @@ extends CountersModel
 			ClientApplName = "P.ClientApplName, ";
 			ase1570_nl     = "\n";
 		}
+		// ASE 16.0
+		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
+		if (aseVersion >= 1600000)
+		{
+			ClientDriverVersion = "P.ClientDriverVersion, ";
+		}
 
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
@@ -221,7 +227,7 @@ extends CountersModel
 		         "S.BatchID, S.LineNumber, \n" +
 		         dbNameCol+", procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), linenum=S.LineNumber, \n" +
 		         "P.Command, P.Application, \n" +
-		         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
+		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "S.CpuTime, S.WaitTime, \n" +
 		         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
@@ -292,7 +298,7 @@ extends CountersModel
 		         "P.BatchID, P.LineNumber, \n" +
 		         dbNameCol+", procname='', linenum=P.LineNumber, \n" +
 		         "P.Command, P.Application, \n" +
-		         HostName + ClientName + ClientHostName + ClientApplName + ase1570_nl +
+		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "CpuTime=-1, WaitTime=-1, \n" +
 		         "ExecTimeInMs    = -1, \n" +
 		         "UsefullExecTime = -1, \n" +

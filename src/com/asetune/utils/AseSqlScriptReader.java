@@ -33,20 +33,25 @@ import com.asetune.sql.pipe.PipeCommandException;
  */
 public class AseSqlScriptReader
 {
-	/** sql in case of String input */
+	public static final String	PROPKEY_sqlBatchTerminator	= "AseSqlScriptReader.sqlBatchTerminator";
+	public static final String	DEFAULT_sqlBatchTerminator	= "go";
+
+	/** SQL in case of String input */
 	private String          _sqlStr                = null;
 
 	/** The file in case of a File input */
 	private File            _file                  = null;
 
-	/** read sql after last 'go' executor */
+	/** read SQL after last 'go' executor */
 	private boolean         _execWithoutGoAtTheEnd = false;
 
-	/** send sql after a ';' is the last character at the end */
+	private String          _goTerminator          = DEFAULT_sqlBatchTerminator.toLowerCase();
+	
+	/** send SQL after a ';' is the last character at the end */
 	private boolean         _useSemiColonHack      = false;
 	private SemiColonHelper _semiColonHelper       = null;
 
-	/** Alternative 'go' teminator. for example HANA and Oracle uses '/' */
+	/** Alternative 'go' terminator. for example HANA and Oracle uses '/' */
 	private String          _alternativeGoTerminator = null;
 
 	private int             _multiExecCount        = 0;
@@ -55,7 +60,9 @@ public class AseSqlScriptReader
 	private int             _batchStartLine        = -1;
 	private int             _batchNumber           = -1;
 	private int             _totalBatchCount       = -1;
-
+	private boolean         _asPlainText           = false; 
+	private int             _topRows               = -1;
+	
 	/** keep track of where in the file we are */
 	private int             _lineInReader          = 0;
 	private Reader          _reader                = null;
@@ -79,6 +86,12 @@ public class AseSqlScriptReader
 
 	public AseSqlScriptReader(String goSql, boolean execWithoutGoAtTheEnd)
 	{
+		this(goSql, execWithoutGoAtTheEnd, null);
+	}
+
+	public AseSqlScriptReader(String goSql, boolean execWithoutGoAtTheEnd, String sqlBatchTerminator)
+	{
+		setGoTerminator(sqlBatchTerminator);
 		setSqlCommand(goSql);
 		setExecWithoutGoAtTheEnd(execWithoutGoAtTheEnd);
 	}
@@ -143,6 +156,26 @@ public class AseSqlScriptReader
 	}
 
 	/**
+	 * Set what string to use to "terminate" a SQL batch
+	 * @param terminator
+	 */
+	public void setGoTerminator(String terminator)
+	{
+		if (StringUtil.isNullOrBlank(terminator))
+			throw new RuntimeException("Terminator string can't be null or empty.");
+
+		_goTerminator = terminator;
+	}
+
+	/**
+	 * @return what is used to as termination string
+	 */
+	public String getGoTerminator()
+	{
+		return _goTerminator;
+	}
+	
+	/**
 	 * If the string or last part isn't 'go' terminated, execute it anyway.
 	 * @param sql
 	 */
@@ -176,15 +209,119 @@ public class AseSqlScriptReader
 		return _alternativeGoTerminator;
 	}
 
+	/**
+	 * Check if the row is the terminator<br>
+	 * 
+	 * @param row input string
+	 * @param terminator String to use as terminator (note: this is no-case)
+	 * @return true if it's the terminator string
+	 */
+	public static boolean isTerminator(String row, String terminator)
+	{
+		return isTerminator(row, terminator, null);
+	}
+	/**
+	 * Check if the row is the terminator
+	 * 
+	 * @param row input string
+	 * @param terminator String to use as terminator (note: this is no-case)
+	 * @param allowExtraChars 
+	 * @return true if it's the terminator string
+	 */
+	public static boolean isTerminator(String row, String terminator, char... allowExtraChars)
+	{
+		if (row == null)
+			return false;
+
+		int rlen = row.length();
+		int tlen = terminator.length();
+
+		if (rlen < tlen)
+			return false;
+
+		// Check first part of the row (up to terminator length), return false if NOT same char at start
+		int rp = 0; // RowPos, 
+		int tp = 0; // TerminatorPos
+		while (rp<rlen && tp<tlen) 
+		{
+			char rc = row.charAt(rp++);
+			char tc = terminator.charAt(tp++);
+			if (rc == tc)
+				continue;
+
+			// If characters don't match but case may be ignored,
+			// try converting both characters to uppercase.
+			// If the results match, then the comparison scan should continue.
+			char urc = Character.toUpperCase(rc);
+			char utc = Character.toUpperCase(tc);
+			if (urc == utc)
+				continue;
+
+			// No more match
+			return false;
+		}
+
+		// so START of the row and terminator seems to be same
+		// Now lets see if NEXT character is whitespace or "allowedExtraChars", then it's a terminator
+		// otherwise it's a "normal" rows
+		if (rp<rlen)
+		{
+			char rc = row.charAt(rp++);
+
+			if (Character.isWhitespace(rc))
+				return true;
+
+			for (int i=0; i<allowExtraChars.length; i++)
+				if (allowExtraChars[i] == rc)
+					return true;
+
+			// Not whitespace or allowedChar, so NO-MATCH
+			return false;
+		}
+
+		// If we got this far, it's a terminator string
+		return true;
+
+		//--------------------------
+		// Below is basic logic that were used earlier
+		//--------------------------
+		//String goLower          = terminator.toLowerCase();
+		//String goLowerWithSpace = terminator.toLowerCase() + " ";
+		//String goUpperWithSpace = terminator.toUpperCase() + " ";
+		//String goLowerWithPipe  = terminator.toLowerCase() + "|";
+		//String goUpperWithPipe  = terminator.toUpperCase() + "|";
+		//
+		//if (row.equalsIgnoreCase(goLower))    return true;
+		//if (row.startsWith(goLowerWithSpace)) return true;
+		//if (row.startsWith(goUpperWithSpace)) return true;
+		//if (row.startsWith(goLowerWithPipe))  return true;
+		//if (row.startsWith(goUpperWithPipe))  return true;
+		//		
+		//return false;
+	}
+
+	/**
+	 * Get default Configuration of the goTermination string
+	 * @return
+	 */
+	public static String getConfiguredGoTerminator()
+	{
+		return Configuration.getCombinedConfiguration().getProperty(AseSqlScriptReader.PROPKEY_sqlBatchTerminator, AseSqlScriptReader.DEFAULT_sqlBatchTerminator);	
+	}
+
 	public static boolean hasCommandTerminator(String sqlStr)
 	{
-		return hasCommandTerminator(sqlStr, false, null);
+		return hasCommandTerminator(sqlStr, false, null, DEFAULT_sqlBatchTerminator);
 	}
-	public static boolean hasCommandTerminator(String sqlStr, String alternativeGoTerminator)
+	public static boolean hasCommandTerminator(String sqlStr, String goTerminator)
 	{
-		return hasCommandTerminator(sqlStr, false, alternativeGoTerminator);
+		return hasCommandTerminator(sqlStr, false, null, goTerminator);
 	}
-	public static boolean hasCommandTerminator(String sqlStr, boolean useSemicolonHack, String alternativeGoTerminator)
+	public static boolean hasCommandTerminator(String sqlStr, String alternativeGoTerminator, String goTerminator)
+	{
+		return hasCommandTerminator(sqlStr, false, alternativeGoTerminator, DEFAULT_sqlBatchTerminator);
+	}
+	public static boolean hasCommandTerminator(String sqlStr, boolean useSemicolonHack, String alternativeGoTerminator, String goTerminator)
 	{
 		Reader         reader;
 		BufferedReader bReader;
@@ -192,6 +329,9 @@ public class AseSqlScriptReader
 		if (sqlStr == null)
 			throw new IllegalArgumentException("Input string can't be null.");
 
+		if (StringUtil.isNullOrBlank(goTerminator))
+			goTerminator = DEFAULT_sqlBatchTerminator;
+		
 		reader = new StringReader(sqlStr);
 		bReader = new BufferedReader(reader);
 
@@ -232,7 +372,8 @@ public class AseSqlScriptReader
 			row = lastRow;
 
 			// if end of batch 'go [###]'
-			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+//			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+			if ( isTerminator(row, goTerminator, '|'))
 			{
 				hasTerminator = true;
 			}
@@ -251,14 +392,16 @@ public class AseSqlScriptReader
 			}
 	
 			// if end of batch 'reset'
-			if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+//			if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+			if (isTerminator(row, "reset"))
 			{
 				hasTerminator = true;
 			}
 			
 			// do no more (kind of EOF): 'quit/exit'
-			if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
-			     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+//			if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
+//			     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+			if (isTerminator(row, "quit") || isTerminator(row, "exit"))
 			{
 				hasTerminator = true;
 			}
@@ -317,7 +460,8 @@ public class AseSqlScriptReader
 			{
 				// if end of batch 'go [###]'
 //				if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") )
-				if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+//				if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+				if (isTerminator(row, getGoTerminator(), '|') )
 				{
 					totalBatchCount++;
 					rowsInLastBatch = 0;
@@ -350,15 +494,17 @@ public class AseSqlScriptReader
 				}
 
 				// if end of batch 'reset'
-				if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+//				if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+				if (isTerminator(row, "reset"))
 				{
 					rowsInLastBatch = 0;
 					continue;
 				}
 				
 				// do no more (kind of EOF): 'quit/exit'
-				if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
-				     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+//				if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
+//				     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+				if (isTerminator(row, "quit") || isTerminator(row, "exit"))
 				{
 					rowsInLastBatch = 0;
 					break;
@@ -419,6 +565,21 @@ public class AseSqlScriptReader
 		return _multiExecWait;
 	}
 
+	public boolean asPlaintText()
+	{
+		return _asPlainText;
+	}
+
+	public boolean isTopRowsSet()
+	{
+		return _topRows > 0;
+	}
+
+	public int getTopRows()
+	{
+		return _topRows;
+	}
+
 	/**
 	 * When we have a 'go | someSubCommand', we needs to apply some filter.
 	 * 
@@ -445,6 +606,10 @@ public class AseSqlScriptReader
 
 		StringBuilder batchBuffer = new StringBuilder();
 
+		// Reset some stuff
+		_asPlainText = false;
+		_topRows     = -1;
+		
 		// Get lines from the reader
 		String row;
 		for (row = _bReader.readLine(); row != null; row = _bReader.readLine())
@@ -525,40 +690,47 @@ public class AseSqlScriptReader
 
 			// if end of batch 'go [###]'
 //			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") )
-			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+//			if (row.equalsIgnoreCase("go") || row.startsWith("go ") || row.startsWith("GO ") || row.startsWith("go|") || row.startsWith("GO|") )
+//			if (row.equalsIgnoreCase(_goLower) || row.startsWith(_goLowerWithSpace) || row.startsWith(_goUpperWithSpace) || row.startsWith(_goLowerWithPipe) || row.startsWith(_goUpperWithPipe) )
+			if (isTerminator(row, getGoTerminator(), '|'))
 			{
-				// Format of the 'go' could be: 'go[ # [wait ###]][|pipeCmd]' or in other words
+				// Format of the 'go' could be: 'go[ # [wait ###][plain]][|pipeCmd]' or in other words
 				// go
+				// go plain
 				// go 10
+				// go 10 plain
 				// go 10 wait 1000
+				// go 10 top 100
 				// go 10|pipeCmd
 				// go 10 |pipeCmd
 				// go 10 | pipeCmd
 				// go|pipeCmd
 				// go |pipeCmd
 				// go | pipeCmd
-				if (row.length() > 3)
+//				if (row.length() > 3)
+				if (row.length() > getGoTerminator().length()+1)
 				{
 					int pipePos = row.indexOf('|');
 					String goCmdStr  = null;
 					String goPipeStr = null;
-					
+
 					if (pipePos > -1)
 					{
-						goCmdStr  = row.substring(2, pipePos).trim();
+						goCmdStr  = row.substring(getGoTerminator().length(), pipePos).trim();
 						goPipeStr = row.substring(pipePos + 1).trim();;
 					}
 					else
 					{
-						goCmdStr = row.substring(2).trim();
+						goCmdStr = row.substring(getGoTerminator().length()).trim();
 					}
 
 					// Get go ## [wait ###]
+					// or simple: "parse" everything *after* the terminator string 'go'
 					if ( ! StringUtil.isNullOrBlank(goCmdStr) )
 					{
+						_multiExecCount = 1;
 						String goExecCount     = "1";
-						String goCmdOptionStr1 = "";
-						String goCmdOptionStr2 = "";
+						String originGoCmdStr = goCmdStr;
 
 						// goExecCount
 						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
@@ -567,44 +739,94 @@ public class AseSqlScriptReader
 
 							goExecCount = goCmdStr.substring(0, endPos).trim();
 							goCmdStr    = goCmdStr.substring(   endPos).trim();
-						}
 
-						// goCmdOptionStr1
-						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
-						{
-							int endPos = goCmdStr.indexOf(" ") >= 0 ? goCmdStr.indexOf(" ") : goCmdStr.length();
-
-							goCmdOptionStr1 = goCmdStr.substring(0, endPos).trim();
-							goCmdStr        = goCmdStr.substring(   endPos).trim();
-						}
-
-						// goCmdOptionStr2
-						if (goCmdStr.indexOf(" ") >= 0 || goCmdStr.length() > 0)
-						{
-							int endPos = goCmdStr.indexOf(" ") >= 0 ? goCmdStr.indexOf(" ") : goCmdStr.length();
-
-							goCmdOptionStr2 = goCmdStr.substring(0, endPos).trim();
-							goCmdStr        = goCmdStr.substring(   endPos).trim();
-						}
-
-						// get how many executions
-						try { _multiExecCount = Integer.parseInt( goExecCount ); }
-						catch (NumberFormatException ignore) {}
-
-						// get wait/sleep time
-						if ( ! StringUtil.isNullOrBlank(goCmdOptionStr1) )
-						{
-							if ("wait".equalsIgnoreCase(goCmdOptionStr1))
-							{
-								try { _multiExecWait = Integer.parseInt( goCmdOptionStr2 ); }
-								catch (NumberFormatException ignore) {}
+							// get how many executions
+							// if not a number, restore some stuff
+							try 
+							{ 
+								_multiExecCount = Integer.parseInt( goExecCount ); 
 							}
-							else
+							catch (NumberFormatException ignore) 
 							{
-								throw new GoSyntaxException("Unknown sub command '"+goCmdOptionStr1+"'. \nSyntax is 'go #1 [wait #2]'\n\n#1 = Number of times to repeat the command\n#2 = Ms to sleep after each batch execution.\n");
+								goCmdStr = originGoCmdStr;
 							}
 						}
-					}
+
+						// If something is left here, it must be sub commands
+						// so split them on ',' and loop them all
+						if (goCmdStr.length() > 0)
+						{
+							String[] goSubCmds = goCmdStr.split(",");
+							for (String subCmd : goSubCmds)
+							{
+								subCmd = subCmd.trim();
+								String word1 = StringUtil.word(subCmd, 0);
+								String word2 = StringUtil.word(subCmd, 1);
+								String word3 = StringUtil.word(subCmd, 2);
+
+								// get wait/sleep time
+								// or any options after: go [#] options
+								if (StringUtil.hasValue(word1))
+								{
+									String error = null;
+
+									if ("wait".equalsIgnoreCase(word1))
+									{
+										try { _multiExecWait = Integer.parseInt( word2 ); }
+										catch (NumberFormatException nfe) 
+										{
+											error = "Sub command 'wait #' The parameter '"+word2+"' is not a number.";
+										}
+									}
+									else if ("top".equalsIgnoreCase(word1))
+									{
+										try { _topRows = Integer.parseInt( word2 ); }
+										catch (NumberFormatException nfe) 
+										{
+											error = "Sub command 'top #' The parameter '"+word2+"' is not a number.";
+										}
+									}
+									else if ("plain".equalsIgnoreCase(word1))
+									{
+										_asPlainText = true;
+										if (StringUtil.hasValue(word2))
+										{
+											error = "Sub command 'plain' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+										}
+									}
+									else
+									{
+										error = "Unknown sub command '"+word1+"'.";
+									}
+
+									// If we have "spill" in the sub command
+									// probably that next sub command wasn't comma(,) separated
+									if (StringUtil.hasValue(word3))
+									{
+										error = "Have you forgot to comma separate different sub commands?.\nCurrent sub command looks like '"+subCmd+"'.";
+									}
+									
+									if (error != null)
+									{
+										String desc = 
+											error +" \n" +
+											"\n" +
+											"Syntax is 'go [#1] [,plain] [,top #2] [,wait #3]'\n" +
+											"\n" +
+											"#1 = Number of times to repeat the command\n" +
+											"#2 = Rows to read from a ResultSet.\n" +
+											"#3 = Ms to sleep after each SQL Batch send/execution.\n" +
+											"\n" +
+											"Example:\n" +
+											"select * from tabName where ...\n" +
+											"go top 100, plain\n" +
+											"";
+										throw new GoSyntaxException(desc);
+									}
+								}// end: hasValue(word1)
+							} // end: for each sub command
+						} // end: any sub commands
+					} // end: "parse" everything *after* the 'go' terminator
 
 					// Get go | pipeCmd
 					if ( ! StringUtil.isNullOrBlank(goPipeStr) )
@@ -615,13 +837,15 @@ public class AseSqlScriptReader
 //					// get how many 
 //					try { _multiExecCount = Integer.parseInt( row.substring(3) ); }
 //					catch (NumberFormatException ignore) {}
-				}
+
+				} // end has 'gp' terminator
 
 				return batchBuffer.toString();
 			}
 
 			// if end of batch 'reset'
-			if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+//			if (row.equalsIgnoreCase("reset") || row.startsWith("reset ") || row.startsWith("RESET "))
+			if (isTerminator(row, "reset"))
 			{
 				// reset the batch
 				batchBuffer = new StringBuilder();
@@ -631,8 +855,9 @@ public class AseSqlScriptReader
 			}
 			
 			// do no more (kind of EOF): 'quit/exit'
-			if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
-			     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+//			if (    row.equalsIgnoreCase("quit") || row.startsWith("quit ") || row.startsWith("QUIT ") 
+//			     || row.equalsIgnoreCase("exit") || row.startsWith("exit ") || row.startsWith("EXIT ") )
+			if (isTerminator(row, "quit") || isTerminator(row, "exit"))
 				return null;
 
 			// Append current SQL to batch buffer
@@ -852,17 +1077,17 @@ public class AseSqlScriptReader
 			"go \n" +
 			
 			"select 5.2 \n" +
-			"go 100\n" +
+			"Go 100\n" +
 			
 			"select 5.3.1 \n" +
 			"select 5.3.2 \n" +
-			"go\n" +
+			"gO\n" +
 			
 			"select 'disregard this batch' \n" +
-			"reset \n" +
+			"rEsEt \n" +
 			
 			"select 5.4 \n" +
-			"go \n" +
+			"GO \n" +
 			
 			"select 5.5 with pipeCmd \n" +
 			"go|grep 'some grep str'\n" +
@@ -871,7 +1096,7 @@ public class AseSqlScriptReader
 			"go 10 | grep 'some_other_grep_str'\n" +
 			
 			"select 'do not show-exit' \n" +
-			"exit \n" +
+			"eXit \n" +
 			
 			"select 'never, we should not reach here' \n" +
 			"go \n";

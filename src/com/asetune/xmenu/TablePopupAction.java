@@ -27,34 +27,34 @@ implements ActionListener
 {
 	private static Logger _logger = Logger.getLogger(TablePopupAction.class);
 
-	private String             _menuName;
-	private String             _connName;
-	private String             _classname;
-	private String             _config;
-	private List<Set<String>>  _params;
-	private Properties         _menuProps;
-	private Properties         _allProps;
-	private XmenuAction        _xmenuObject;
-	private JTable             _table;
-	private ConnectionProvider  _connFactory;
-	private boolean            _closeConnOnExit;
-	private Window             _owner;
+	private String              _menuName;
+	private String              _connName;
+	private String              _classname;
+	private String              _config;
+	private List<Set<String>>   _params;
+	private Properties          _menuProps;
+	private Properties          _allProps;
+	private XmenuAction         _xmenuObject;
+	private JTable              _table;
+	private ConnectionProvider  _connProvider;
+	private boolean             _closeConnOnExit;
+	private Window              _owner;
 
 	public TablePopupAction(String menuName, String connName, String classname, List<Set<String>> params, 
 			String config, Properties menuProps, Properties allProps, 
-			JTable table, ConnectionProvider connFactory, boolean closeConnOnExit, Window owner)
+			JTable table, ConnectionProvider connProvider, boolean closeConnOnExit, Window owner)
 	{
-		_menuName    = menuName;
-		_connName    = connName != null ? connName : classname;
-		_classname   = classname;
-		_params      = params;
-		_config      = config;
-		_menuProps   = menuProps;
-		_allProps    = allProps;
-		_table       = table;
-		_connFactory = connFactory;
+		_menuName        = menuName;
+		_connName        = connName != null ? connName : classname;
+		_classname       = classname;
+		_params          = params;
+		_config          = config;
+		_menuProps       = menuProps;
+		_allProps        = allProps;
+		_table           = table;
+		_connProvider    = connProvider;
 		_closeConnOnExit = closeConnOnExit;
-		_owner       = owner;
+		_owner           = owner;
 	}
 
 	@Override 
@@ -88,15 +88,16 @@ implements ActionListener
 			_xmenuObject.setAllProperties(_allProps);
 			_xmenuObject.setOwner(_owner);
 
+			_xmenuObject.setConnectionProvider(_connProvider);
 			if (_xmenuObject.createConnectionOnStart())
 			{
-				_xmenuObject.setConnection( _connFactory.getNewConnection(_connName) );
+				_xmenuObject.setConnection( _connProvider.getNewConnection(_connName) );
 				_xmenuObject.setCloseConnOnExit( _closeConnOnExit );
 			}
 			else
 			{
 //				_xmenuObject.setConnection(null);
-				_xmenuObject.setConnection(_connFactory.getConnection());
+				_xmenuObject.setConnection(_connProvider.getConnection());
 				_xmenuObject.setCloseConnOnExit(false);
 			}
 //			_xmenuObject.setConnection( MainFrame.getMonConnection() );

@@ -67,7 +67,8 @@ extends CountersModel
 		"HkgcRequestsDcomp", "HkgcOverflowsDcomp", 
 		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages", 
 		"PRSSelectCount", "PRSRewriteCount",
-		"NumLevel0Waiters"};
+		"NumLevel0Waiters",
+		"Scans", "Updates", "Inserts", "Deletes"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -125,13 +126,22 @@ extends CountersModel
 	public static final String  PROPKEY_sample_objectName             = PROP_PREFIX + ".sample.ObjectName";
 	public static final boolean DEFAULT_sample_objectName             = false;
 
+	public static final String  PROPKEY_sample_topRows                = PROP_PREFIX + ".sample.topRows";
+	public static final boolean DEFAULT_sample_topRows                = false;
+
+	public static final String  PROPKEY_sample_topRowsCount           = PROP_PREFIX + ".sample.topRows.count";
+	public static final int     DEFAULT_sample_topRowsCount           = 500;
+
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-//		Configuration.registerDefaultValue(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter);
-//		Configuration.registerDefaultValue(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins);
+		Configuration.registerDefaultValue(PROPKEY_sample_tabRowCount,            DEFAULT_sample_tabRowCount);
+		Configuration.registerDefaultValue(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout);
+		Configuration.registerDefaultValue(PROPKEY_sample_objectName,             DEFAULT_sample_objectName);
+		Configuration.registerDefaultValue(PROPKEY_sample_topRows,                DEFAULT_sample_topRows);
+		Configuration.registerDefaultValue(PROPKEY_sample_topRowsCount,           DEFAULT_sample_topRowsCount);
 	}
 	
 	private void addTrendGraphs()
@@ -156,9 +166,15 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+
+			mtd.addColumn("monOpenObjectActivity", "LastScanDateDiff"               ,"<html>How many Milliseconds since last Scan.  <br><b>Formula</b>: datediff(ms, LastScanDate, getdate())<br></html>");
+			mtd.addColumn("monOpenObjectActivity", "LastInsertDateDiff"             ,"<html>How many Milliseconds since last Insert.<br><b>Formula</b>: datediff(ms, LastInsertDate, getdate())<br></html>");
+			mtd.addColumn("monOpenObjectActivity", "LastUpdateDateDiff"             ,"<html>How many Milliseconds since last Update.<br><b>Formula</b>: datediff(ms, LastUpdateDate, getdate())<br></html>");
+			mtd.addColumn("monOpenObjectActivity", "LastDeleteDateDiff"             ,"<html>How many Milliseconds since last Delete.<br><b>Formula</b>: datediff(ms, LastDeleteDate, getdate())<br></html>");
+
 			mtd.addColumn("monOpenObjectActivity", "LockContPct"                    ,"<html>How many Lock Requests in percent was Blocked by another concurrent SPID's due to incompatible locking issues.<br><b>Note</b>: Do also considder number of LockWaits and not only the percentage.<br><b>Formula</b>: LockWaits / LockRequests * 100.0<br></html>");
-			mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+".TabRowCount=false</code>.</html>");
-			mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+".TabRowCount=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsPerPage"                    ,"<html>Number of rows per page.<br><b>Formula</b>: TabRowCount/NumUsedPages</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsInsUpdDel"                  ,"<html>RowsInsUpdDel = RowsInserted + RowsDeleted + RowsUpdated<br>So this is simply a summary of all DML changes on this table.</html>");
 			mtd.addColumn("monOpenObjectActivity", "Remark"                         ,"<html>Some tip of what's happening with this table<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
@@ -213,8 +229,10 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		Configuration lc = new Configuration();
 
-		lc.setProperty(getName()+".TabRowCount",  conf.getBooleanProperty(getName()+".TabRowCount", true));
-
+		lc.setProperty(PROPKEY_sample_tabRowCount,  conf.getBooleanProperty(PROPKEY_sample_tabRowCount,  DEFAULT_sample_tabRowCount));
+		lc.setProperty(PROPKEY_sample_topRows,      conf.getBooleanProperty(PROPKEY_sample_topRows,      DEFAULT_sample_topRows));
+		lc.setProperty(PROPKEY_sample_topRowsCount, conf.getIntProperty    (PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount));
+		
 		return lc;
 	}
 
@@ -222,13 +240,17 @@ extends CountersModel
 	@Override
 	public String getLocalConfigurationDescription(String propName)
 	{
-		if (propName.equals(getName()+".TabRowCount")) return "Sample Table Row Count using ASE functions row_count() and data_pages()";
+		if (propName.equals(PROPKEY_sample_tabRowCount))  return "Sample Table Row Count using ASE functions row_count() and data_pages()";
+		if (propName.equals(PROPKEY_sample_topRows))      return "Get only first # rows (select top # ...) true or false";
+		if (propName.equals(PROPKEY_sample_topRowsCount)) return "Get only first # rows (select top # ...), number of rows";
 		return "";
 	}
 	@Override
 	public String getLocalConfigurationDataType(String propName)
 	{
-		if (propName.equals(getName()+".TabRowCount")) return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_tabRowCount))  return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_topRows))      return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_topRowsCount)) return Integer.class.getSimpleName();
 		return "";
 	}
 
@@ -247,6 +269,8 @@ extends CountersModel
 		// so concatinate at least 3 int should be possible... 
 		String bigint = "numeric(10,0)"; // bigint if above 15.0
 
+		String topRows      = ""; // 'top 500' if only first 500 rows should be displayed
+		
 		String TabRowCount  = "";
 		String NumUsedPages = "";
 		String RowsPerPage  = "";
@@ -273,9 +297,9 @@ extends CountersModel
 //		if (aseVersion >= 15020)
 		if (aseVersion >= 1502000)
 		{
-			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+getName()+".TabRowCount=false\n";
-			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+getName()+".TabRowCount=false\n";
-			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+getName()+".TabRowCount=false\n";
+			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			DBName       = "A.DBName, \n";
 //			ObjectName   = "A.ObjectName, \n";
 			ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
@@ -285,18 +309,18 @@ extends CountersModel
 
 			// debug/trace
 			Configuration conf = Configuration.getCombinedConfiguration();
-			if (conf.getBooleanProperty(getName()+".ObjectName", false))
+			if (conf.getBooleanProperty(PROPKEY_sample_objectName, DEFAULT_sample_objectName))
 			{
 				ObjectName = "ObjectName=isnull(object_name(A.ObjectID, A.DBID), 'ObjId='+convert(varchar(30),A.ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
-				_logger.info(getName()+".ObjectName=true, using the string '"+ObjectName+"' for ObjectName lookup.");
+				_logger.info(PROPKEY_sample_objectName+"=true, using the string '"+ObjectName+"' for ObjectName lookup.");
 				ObjectName += ", \n";
 			}
-			if (conf.getBooleanProperty(getName()+".TabRowCount", true) == false)
+			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == false)
 			{
-				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
-				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
-				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+getName()+".TabRowCount=true\n";
-				_logger.info(getName()+".TabRowCount=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
+				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
+				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
+				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
+				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
 //		if (aseVersion >= 15700)
@@ -356,6 +380,48 @@ extends CountersModel
 			nl_15702           = "\n";
 		}
 
+		// ASE 16.0
+		String Scans              = ""; // The number of scans on this object
+		String LastScanDate       = ""; // The date of the last scan on this object
+		String LastScanDateDiff   = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+		String Updates            = ""; // The number of updates on this object
+		String LastUpdateDate     = ""; // The date of the last update on this object
+		String LastUpdateDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+		String Inserts            = ""; // The date of the last update on this object
+		String LastInsertDate     = ""; // The date of the last insert on this object
+		String LastInsertDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+		String Deletes            = ""; // The number of deletes on this object
+		String LastDeleteDate     = ""; // The date of the last delete on this object
+		String LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+		String nl_16000           = ""; // NL for this section
+
+		if (aseVersion >= 1600000)
+		{
+			Scans              = "Scans, ";              // DO DIFF CALC
+			LastScanDate       = "LastScanDate, ";
+			LastScanDateDiff   = "LastScanDateDiff = datediff(ms, LastScanDate, getdate()), ";
+			Updates            = "Updates, ";            // DO DIFF CALC
+			LastUpdateDate     = "LastUpdateDate, ";
+			LastUpdateDateDiff = "LastUpdateDateDiff = datediff(ms, LastUpdateDate, getdate()), ";
+			Inserts            = "Inserts, ";            // DO DIFF CALC
+			LastInsertDate     = "LastInsertDate, ";
+			LastInsertDateDiff = "LastInsertDateDiff = datediff(ms, LastInsertDate, getdate()), ";
+			Deletes            = "Deletes, ";            // DO DIFF CALC
+			LastDeleteDate     = "LastDeleteDate, ";
+			LastDeleteDateDiff = "LastDeleteDateDiff = datediff(ms, LastDeleteDate, getdate()), ";
+
+			nl_16000           = "\n";
+		}
+
+		// TOP ROWS
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if (conf.getBooleanProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows))
+		{
+			int rowCount = conf.getIntProperty(PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount);
+			topRows = "top " + rowCount + " ";
+
+			_logger.warn("CM='"+getName()+"'. Limiting number of rows fetch. Adding phrase '"+topRows+"' at the start of the SQL Statement.");
+		}
 
 
 		if (isClusterEnabled)
@@ -370,6 +436,7 @@ extends CountersModel
 		         IndexName +
 		         "LockScheme = lockscheme(A.ObjectID, A.DBID), \n" +
 		         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
+		         Scans + LastScanDate + LastScanDateDiff + nl_16000 +
 		         "LockRequests=isnull(LockRequests,0), LockWaits=isnull(LockWaits,0), \n" +
 		         "LockContPct = CASE WHEN isnull(LockRequests,0) > 0 \n" +
 		         "                   THEN convert(numeric(10,1), ((LockWaits+0.0)/(LockRequests+0.0)) * 100.0) \n" +
@@ -385,7 +452,11 @@ extends CountersModel
 		         RowsPerPage +
 		         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
 		         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
-		         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n";
+		         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
+		         Inserts            + Updates            + Deletes            + nl_16000 +
+		         LastInsertDateDiff + LastUpdateDateDiff + LastDeleteDateDiff + nl_16000 +
+		         LastInsertDate     + LastUpdateDate     + LastDeleteDate     + nl_16000 +
+		         ""; // end of cols1
 		cols2 += "";
 		cols3 += ObjectCacheDate + "LastOptSelectDate, LastUsedDate";
 	//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
@@ -514,7 +585,7 @@ extends CountersModel
 			cols2 += ase15501_ce_nl; // NL for this section
 
 		String sql = 
-			"select " + cols1 + cols2 + cols3 + "\n" +
+			"select " + topRows + cols1 + cols2 + cols3 + "\n" +
 			"from master..monOpenObjectActivity A \n" +
 			"where UsedCount > 0 OR LockRequests > 0 OR LogicalReads > 100 \n" +
 //			(isClusterEnabled ? "order by 2,3,4" : "order by 1,2,3") + "\n";
@@ -536,7 +607,7 @@ extends CountersModel
 		// FIRST try to reset timeout if it's below the default
 		if (getQueryTimeout() < getDefaultQueryTimeout())
 		{
-			if (conf.getBooleanProperty(getName()+".QueryTimeout.disable.onTimeoutException", true))
+			if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, true))
 			{
 				setQueryTimeout(getDefaultQueryTimeout(), true);
 				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
@@ -546,21 +617,21 @@ extends CountersModel
 
 		// SECONDARY Disable the: TabRowCount, NumUsedPages, RowsPerPage
 		// It might be that what causing the timeout
-		if (conf.getBooleanProperty(getName()+".TabRowCount.disable.onTimeoutException", true))
+		if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout))
 		{
-			if (conf.getBooleanProperty(getName()+".TabRowCount", true) == false)
+			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == false)
 			{
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (tempConf == null) 
 					return;
-				tempConf.setProperty(getName()+".TabRowCount", false);
+				tempConf.setProperty(PROPKEY_sample_tabRowCount, false);
 				tempConf.save();
 				
 				// This will force the CM to re-initialize the SQL statement.
 				setSql(null);
 	
-				String key=getName()+".TabRowCount";
+				String key=PROPKEY_sample_tabRowCount;
 				_logger.warn("CM='"+getName()+"'. Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method handelTimeoutException(). This is done by setting "+key+"=false");
 				
 				if (getGuiController() != null && getGuiController().hasGUI())

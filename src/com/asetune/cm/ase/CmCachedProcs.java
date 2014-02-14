@@ -200,6 +200,10 @@ extends CountersModel
 		String AvgPagesWritten   = ""; // xxx / ExecutionCount
 		String ase1570_nl        = "";
 
+		// ASE 16.0
+		String Active            = ""; // Indicates whether the plan for this procedure is active or not
+		
+		
 		if (isClusterEnabled)
 		{
 			InstanceID = "InstanceID, ";
@@ -237,9 +241,14 @@ extends CountersModel
 			ase1570_nl        = "\n";
 		}
 		
+		if (aseVersion >= 1600000)
+		{
+			Active            = "Active, ";
+		}
+
 		cols = 
 			InstanceID + 
-			"PlanID, DBName, ObjectName, ObjectType, MemUsageKB, CompileDate, CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
+			"PlanID, DBName, ObjectName, ObjectType, " + Active + "MemUsageKB, CompileDate, CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
 			ase1550_nl + RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +
 			ase1570_nl + ExecutionCount + ase1570_nl +  
 			AvgCPUTime + 

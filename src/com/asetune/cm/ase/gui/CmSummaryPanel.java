@@ -1622,7 +1622,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 			String toTabName = "Blocking";
 			if ( _focusToBlockingTab == null )
-				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the ASE Server", MainFrame.getTabbedPane(), toTabName);
+				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the ASE Server", cm.getGuiController().getTabbedPane(), toTabName);
 			_focusToBlockingTab.setVisible(true);
 		}
 		else
@@ -1642,7 +1642,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 			String toTabName = "Databases";
 			if ( _focusToDatabasesTab_fullLog == null )
-				_focusToDatabasesTab_fullLog = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Full Database Transaction Logs in the ASE Server", MainFrame.getTabbedPane(), toTabName);
+				_focusToDatabasesTab_fullLog = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Full Database Transaction Logs in the ASE Server", cm.getGuiController().getTabbedPane(), toTabName);
 			_focusToDatabasesTab_fullLog.setVisible(true);
 		}
 		else
@@ -1662,7 +1662,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 			String toTabName = "Databases";
 			if ( _focusToDatabasesTab_oldestOpenTran == null )
-				_focusToDatabasesTab_oldestOpenTran = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Transaction in the ASE Server", MainFrame.getTabbedPane(), toTabName);
+				_focusToDatabasesTab_oldestOpenTran = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Transaction in the ASE Server", cm.getGuiController().getTabbedPane(), toTabName);
 			_focusToDatabasesTab_oldestOpenTran.setVisible(true);
 		}
 		else

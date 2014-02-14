@@ -28,6 +28,7 @@ extends CompletionProviderAbstractSql
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
 		RoundRobinAutoCompletion ac = new SqlAutoCompletion(acProvider);
+		ac.setListCellRenderer(acProvider.createDefaultCompletionCellRenderer());
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.

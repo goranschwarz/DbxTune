@@ -2084,12 +2084,13 @@ implements
 	public boolean isActiveOrUndocked()
 	{
 		// is active/visible
-		Component activeTab = MainFrame.getActiveTab();
+//		Component activeTab = MainFrame.getActiveTab();
+		Component activeTab = getCm().getGuiController().getActiveTab(); // FIXME: why isn't GuiController available here...
 		if (this.equals(activeTab))
 			return true;
 
 		// is undocked
-		GTabbedPane gtp = MainFrame.getTabbedPane();
+		GTabbedPane gtp = getCm().getGuiController().getTabbedPane(); // FIXME: why isn't GuiController available here... 
 		if (gtp.isTabUnDocked(getPanelName()))
 			return true;
 
@@ -4617,14 +4618,8 @@ implements
 
 				_indicatorIcon = new ImageIcon(im);
 			}
-			GTabbedPane gtp = MainFrame.getTabbedPane();
+			GTabbedPane gtp = getCm().getGuiController().getTabbedPane(); // FIXME: why isn't gui controller availaible here
 			gtp.setIconAtTitle(getPanelName(), _indicatorIcon);
-//			JTabbedPane jtp = MainFrame.getTabbedPane();
-//			int jtpIndex = jtp.indexOfTab(_icon);
-//			if ( jtpIndex != -1 )
-//			{
-//				jtp.setIconAt(jtpIndex, _indicatorIcon);
-//			}
 		}
 		else
 		{
@@ -4634,14 +4629,8 @@ implements
 			// g.clearRect(pX, pY, pW, pH);
 
 			// Swap icon back to original
-			GTabbedPane gtp = MainFrame.getTabbedPane();
+			GTabbedPane gtp = getCm().getGuiController().getTabbedPane(); // FIXME: why isn't gui controller availaible here
 			gtp.setIconAtTitle(getPanelName(), _icon);
-//			JTabbedPane jtp = MainFrame.getTabbedPane();
-//			int jtpIndex = jtp.indexOfTab(_indicatorIcon);
-//			if ( jtpIndex != -1 )
-//			{
-//				jtp.setIconAt(jtpIndex, _icon);
-//			}
 		}
 	}
 

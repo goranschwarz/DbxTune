@@ -4,37 +4,23 @@
 
 
 package com.asetune;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.naming.NameNotFoundException;
-import javax.swing.JButton;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.cm.CounterModelHostMonitor;
-import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CountersModelUserDefined;
 import com.asetune.cm.ase.CmActiveObjects;
 import com.asetune.cm.ase.CmActiveStatements;
 import com.asetune.cm.ase.CmBlocking;
@@ -67,6 +53,9 @@ import com.asetune.cm.ase.CmRaScanners;
 import com.asetune.cm.ase.CmRaScannersTime;
 import com.asetune.cm.ase.CmRaSenders;
 import com.asetune.cm.ase.CmRaSysmon;
+import com.asetune.cm.ase.CmRaStreamStats;
+import com.asetune.cm.ase.CmRaSyncTaskStats;
+import com.asetune.cm.ase.CmRaTruncPoint;
 import com.asetune.cm.ase.CmSpMonitorConfig;
 import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.cm.ase.CmSpidWait;
@@ -81,22 +70,15 @@ import com.asetune.cm.ase.CmSysmon;
 import com.asetune.cm.ase.CmTableCompression;
 import com.asetune.cm.ase.CmTempdbActivity;
 import com.asetune.cm.ase.CmThreads;
+import com.asetune.cm.ase.CmThresholdEvent;
 import com.asetune.cm.ase.CmWorkQueues;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
-import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.SplashWindow;
-import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
-import com.asetune.hostmon.HostMonitor;
-import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.StringUtil;
-import com.asetune.utils.SwingUtils;
 
 
 /*
@@ -106,8 +88,9 @@ import com.asetune.utils.SwingUtils;
  */
 
 public abstract class GetCounters 
-extends Thread
-implements ICounterController
+//extends Thread
+//implements ICounterController
+extends CounterControllerAbstract
 {
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(GetCounters.class);
@@ -115,25 +98,25 @@ implements ICounterController
 	/** Instance variable */
 	private static GetCounters _instance = null;
 
-	protected Thread _thread = null;
-
-	/** The counterModels has been created */
-	private static boolean _countersIsCreated  = false; 
-
-	/** have we been initialized or not */
-	private static boolean _isInitialized      = false; 
-
-	/** if we should do refreshing of the counters, or is refreshing paused */
-	private static boolean _refreshIsEnabled   = false;
-
-	/** if any monitoring thread is currently getting information from the monitored server */
-	private static boolean _isRefreshing = false;
-
-	
-	private static String _waitEvent = "";
-	
-	/** Keep a list of all CounterModels that you have initialized */
-	protected static List<CountersModel> _CMList = new ArrayList<CountersModel>();
+//	protected Thread _thread = null;
+//
+//	/** The counterModels has been created */
+//	private static boolean _countersIsCreated  = false; 
+//
+//	/** have we been initialized or not */
+//	private static boolean _isInitialized      = false; 
+//
+//	/** if we should do refreshing of the counters, or is refreshing paused */
+//	private static boolean _refreshIsEnabled   = false;
+//
+//	/** if any monitoring thread is currently getting information from the monitored server */
+//	private static boolean _isRefreshing = false;
+//
+//	
+//	private static String _waitEvent = "";
+//	
+//	/** Keep a list of all CounterModels that you have initialized */
+//	protected static List<CountersModel> _CMList = new ArrayList<CountersModel>();
 
 	/** is sp_configure 'capture missing statistics' set or not */
 	protected boolean _config_captureMissingStatistics = false;
@@ -147,10 +130,10 @@ implements ICounterController
 	/** A list of roles which the connected user has */
 	protected List<String> _activeRoleList = null;
 
-	/** Statistic field: first sample time */
-	private Timestamp _statFirstSampleTime = null;
-	/** Statistic field: last sample time */
-	private Timestamp _statLastSampleTime  = null;
+//	/** Statistic field: first sample time */
+//	private Timestamp _statFirstSampleTime = null;
+//	/** Statistic field: last sample time */
+//	private Timestamp _statLastSampleTime  = null;
 
 	public static final String TRANLOG_DISK_IO_TOOLTIP =
 		  "Below is a table that describes how a fast or slow disk affects number of transactions per second.<br>" +
@@ -179,157 +162,157 @@ implements ICounterController
 	// 20 extra for init time of XX seconds or so
 
 	
-	private CountersModel _summaryCm     = null;
-	private String        _summaryCmName = null;
-	private ISummaryPanel _summaryPanel  = null;
-
-	@Override
-	public CountersModel getSummaryCm()
-	{
-		return _summaryCm;
-	}
-
-	@Override
-	public void setSummaryCm(CountersModel cm)
-	{
-		_summaryCm = cm;
-		_summaryCmName = cm == null ? null : cm.getName();
-	}
-
-	@Override
-	public String getSummaryCmName()
-	{
-		return _summaryCmName;
-	}
-
-	@Override
-	public ISummaryPanel getSummaryPanel()
-	{
-		return _summaryPanel;
-	}
-
-	@Override
-	public void setSummaryPanel(ISummaryPanel summaryPanel)
-	{
-		_summaryPanel = summaryPanel;
-	}
-
-	
-	/** Add a CounterModel */
-	@Override
-	public void addCm(CountersModel cm)
-	{ 
-		_CMList.add(cm);
-	}
-
-	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
-	public static List<CountersModel> getCmList()
-	{ 
-		return _CMList; 
-	}
-
-	 // Get any <code>CountersModel</code> that does NOT starts with 'CM*', which then is a UDC Used Defined Counter 
-//	/**
-//	 * Get any <code>CountersModel</code> that does NOT starts with 'CM*', which then is a UDC Used Defined Counter
-//	 * @return a List of CountersModel objects, if NO UDC exists, an empty list will be returned.
-//	 */
-//	public static List<CountersModel> getCmListUdc() 
+//	private CountersModel _summaryCm     = null;
+//	private String        _summaryCmName = null;
+//	private ISummaryPanel _summaryPanel  = null;
+//
+//	@Override
+//	public CountersModel getSummaryCm()
 //	{
-//		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
-//		for (CountersModel cm : _CMList)
-//		{
-//			if ( ! cm.getName().startsWith("Cm") )
-//				cmList.add(cm);
-//		}
-//		return cmList; 
+//		return _summaryCm;
 //	}
+//
+//	@Override
+//	public void setSummaryCm(CountersModel cm)
+//	{
+//		_summaryCm = cm;
+//		_summaryCmName = cm == null ? null : cm.getName();
+//	}
+//
+//	@Override
+//	public String getSummaryCmName()
+//	{
+//		return _summaryCmName;
+//	}
+//
+//	@Override
+//	public ISummaryPanel getSummaryPanel()
+//	{
+//		return _summaryPanel;
+//	}
+//
+//	@Override
+//	public void setSummaryPanel(ISummaryPanel summaryPanel)
+//	{
+//		_summaryPanel = summaryPanel;
+//	}
+//
+//	
+//	/** Add a CounterModel */
+//	@Override
+//	public void addCm(CountersModel cm)
+//	{ 
+//		_CMList.add(cm);
+//	}
+//
+//	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
+//	public static List<CountersModel> getCmList()
+//	{ 
+//		return _CMList; 
+//	}
+//
+//	 // Get any <code>CountersModel</code> that does NOT starts with 'CM*', which then is a UDC Used Defined Counter 
+////	/**
+////	 * Get any <code>CountersModel</code> that does NOT starts with 'CM*', which then is a UDC Used Defined Counter
+////	 * @return a List of CountersModel objects, if NO UDC exists, an empty list will be returned.
+////	 */
+////	public static List<CountersModel> getCmListUdc() 
+////	{
+////		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
+////		for (CountersModel cm : _CMList)
+////		{
+////			if ( ! cm.getName().startsWith("Cm") )
+////				cmList.add(cm);
+////		}
+////		return cmList; 
+////	}
+////	/** 
+////	 * Get any <code>CountersModel</code> that starts with the name 'CM*', which is s System CM 
+////	 * @return a List of System CountersModel objects
+////	 */
+////	public static List<CountersModel> getCmListSystem() 
+////	{
+////		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
+////		for (CountersModel cm : _CMList)
+////		{
+////			if ( cm.getName().startsWith("Cm") )
+////				cmList.add(cm);
+////		}
+////		return cmList; 
+////	}
+//
 //	/** 
-//	 * Get any <code>CountersModel</code> that starts with the name 'CM*', which is s System CM 
-//	 * @return a List of System CountersModel objects
+//	 * Get any <code>CountersModel</code> that depends on a specific ASE configuration 
+//	 * @return a List of CountersModel objects
 //	 */
-//	public static List<CountersModel> getCmListSystem() 
+//	public static List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
 //	{
 //		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
 //		for (CountersModel cm : _CMList)
 //		{
-//			if ( cm.getName().startsWith("Cm") )
-//				cmList.add(cm);
+//			String[] sa = cm.getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
+////			String[] sa = cm.getDependsOnConfig();
+//			if ( sa == null )
+//				continue;
+//
+//			for (String cfg : sa)
+//			{
+//				// remove any default values '=value'
+//				int index = cfg.indexOf("=");
+//				if (index >= 0)
+//					cfg = cfg.substring(0, index).trim();
+//					
+//				if ( cfgName.equals(cfg) && ! cmList.contains(cm) )
+//					cmList.add(cm);
+//			}
 //		}
 //		return cmList; 
 //	}
-
-	/** 
-	 * Get any <code>CountersModel</code> that depends on a specific ASE configuration 
-	 * @return a List of CountersModel objects
-	 */
-	public static List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
-	{
-		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
-		for (CountersModel cm : _CMList)
-		{
-			String[] sa = cm.getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
-//			String[] sa = cm.getDependsOnConfig();
-			if ( sa == null )
-				continue;
-
-			for (String cfg : sa)
-			{
-				// remove any default values '=value'
-				int index = cfg.indexOf("=");
-				if (index >= 0)
-					cfg = cfg.substring(0, index).trim();
-					
-				if ( cfgName.equals(cfg) && ! cmList.contains(cm) )
-					cmList.add(cm);
-			}
-		}
-		return cmList; 
-	}
-	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
-	public static List<CountersModel> getCmListDependsOnConfig(String cfg)
-	{
-		return getCmListDependsOnConfig(cfg, null, 0, false);
-	}
-
-	/** 
-	 * Get <code>CountersModel</code> object for a CM that has the "short" name for example CMprocCallStack 
-	 * @return if the CM is not found a null will be return
-	 */
-	@Override
-	public CountersModel getCmByName(String name) 
-	{
-		if (StringUtil.isNullOrBlank(name))
-			return null;
-
-		for (CountersModel cm : _CMList)
-		{
-			if (cm != null && cm.getName().equalsIgnoreCase(name))
-			{
-				return cm;
-			}
-		}
-		return null;
-	}
-	
-	/** 
-	 * Get <code>CountersModel</code> object for a CM that has the "long" name for example 'Procedure Call Stack' for CMprocCallStack
-	 * @return if the CM is not found a null will be return
-	 */
-	@Override
-	public CountersModel getCmByDisplayName(String name) 
-	{
-		if (StringUtil.isNullOrBlank(name))
-			return null;
-
-		for (CountersModel cm : _CMList)
-		{
-			if (cm != null && cm.getDisplayName().equalsIgnoreCase(name))
-			{
-				return cm;
-			}
-		}
-		return null;
-	}
+//	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
+//	public static List<CountersModel> getCmListDependsOnConfig(String cfg)
+//	{
+//		return getCmListDependsOnConfig(cfg, null, 0, false);
+//	}
+//
+//	/** 
+//	 * Get <code>CountersModel</code> object for a CM that has the "short" name for example CMprocCallStack 
+//	 * @return if the CM is not found a null will be return
+//	 */
+//	@Override
+//	public CountersModel getCmByName(String name) 
+//	{
+//		if (StringUtil.isNullOrBlank(name))
+//			return null;
+//
+//		for (CountersModel cm : _CMList)
+//		{
+//			if (cm != null && cm.getName().equalsIgnoreCase(name))
+//			{
+//				return cm;
+//			}
+//		}
+//		return null;
+//	}
+//	
+//	/** 
+//	 * Get <code>CountersModel</code> object for a CM that has the "long" name for example 'Procedure Call Stack' for CMprocCallStack
+//	 * @return if the CM is not found a null will be return
+//	 */
+//	@Override
+//	public CountersModel getCmByDisplayName(String name) 
+//	{
+//		if (StringUtil.isNullOrBlank(name))
+//			return null;
+//
+//		for (CountersModel cm : _CMList)
+//		{
+//			if (cm != null && cm.getDisplayName().equalsIgnoreCase(name))
+//			{
+//				return cm;
+//			}
+//		}
+//		return null;
+//	}
 
 	/** 
 	 * have we got set a singleton object to be used. (set with setInstance() ) 
@@ -359,14 +342,14 @@ implements ICounterController
 		_instance = cnt;
 	}
 
-	/**
-	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
-	 * Most possible called from disconnect() or similar
-	 */
-	public void reset()
-	{
-		reset(true);
-	}
+//	/**
+//	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
+//	 * Most possible called from disconnect() or similar
+//	 */
+//	public void reset()
+//	{
+//		reset(true);
+//	}
 
 	/**
 	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
@@ -374,16 +357,11 @@ implements ICounterController
 	 * 
 	 * @param resetAllCms call reset() on all cm's
 	 */
+	@Override
 	public void reset(boolean resetAllCms)
 	{
-		// have we been initialized or not
-		_isInitialized      = false; 
+		super.reset(resetAllCms);
 
-		// if we should do refreshing of the counters, or is refreshing paused
-		_refreshIsEnabled   = false;
-
-		_waitEvent = "";
-		
 		// is sp_configure 'capture missing statistics' set or not
 		_config_captureMissingStatistics = false;
 
@@ -395,17 +373,11 @@ implements ICounterController
 		
 		// A list of roles which the connected user has
 		_activeRoleList = null;
-
-
-		if (resetAllCms)
-		{
-			for (CountersModel cm : getCmList())
-				cm.reset();
-		}
 	}
 
 
 	/** Init needs to be implemented by any subclass */
+	@Override
 	public abstract void init()
 	throws Exception;
 
@@ -414,21 +386,22 @@ implements ICounterController
 	public abstract void run();
 
 	/** shutdown or stop any collector */
+	@Override
 	public abstract void shutdown();
 	
-	public static void setWaitEvent(String str)
-	{
-		_waitEvent = str;
-	}
-	public static String getWaitEvent()
-	{
-		return _waitEvent;
-	}
-
-	public boolean isInitialized()
-	{
-		return _isInitialized;
-	}
+//	public static void setWaitEvent(String str)
+//	{
+//		_waitEvent = str;
+//	}
+//	public static String getWaitEvent()
+//	{
+//		return _waitEvent;
+//	}
+//
+//	public boolean isInitialized()
+//	{
+//		return _isInitialized;
+//	}
 
 	/**
 	 * When we have a database connection, lets do some extra init this
@@ -441,17 +414,22 @@ implements ICounterController
 	 * @param isClusterEnabled    is it a cluster ASE
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
+	@Override
 	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
-		if (_isInitialized)
-			return;
+//		if (_isInitialized)
+//			return;
+		if (isInitialized())
+		return;
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
 			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
 
 			
-		if (! _countersIsCreated)
+//		if (! _countersIsCreated)
+//			createCounters();
+		if (! isCountersCreated())
 			createCounters();
 		
 		_logger.info("Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
@@ -557,7 +535,7 @@ implements ICounterController
 			AseConnectionUtils.setClusterEditionSystemView(conn, systemView);
 		}
 			
-		_isInitialized = true;
+		setInitialized(true);
 	}
 
 	/**
@@ -675,9 +653,10 @@ implements ICounterController
 	 * initialize the counter object using a specific ASE release
 	 * this so we can decide what monitor tables and columns we could use.
 	 */
+	@Override
 	public void createCounters()
 	{
-		if (_countersIsCreated)
+		if (isCountersCreated())
 			return;
 
 		_logger.info("Creating ALL CM Objects.");
@@ -714,6 +693,9 @@ implements ICounterController
 		CmRaScannersTime   .create(counterController, guiController);
 //		CmRaSqlActivity    .create(counterController, guiController);
 //		CmRaSqlMisses      .create(counterController, guiController);
+		CmRaStreamStats    .create(counterController, guiController);
+		CmRaSyncTaskStats  .create(counterController, guiController);
+		CmRaTruncPoint     .create(counterController, guiController);
 		CmRaSysmon         .create(counterController, guiController);
 		CmCachedProcs      .create(counterController, guiController);
 		CmCachedProcsSum   .create(counterController, guiController);
@@ -723,6 +705,7 @@ implements ICounterController
 		CmErrolog          .create(counterController, guiController);
 		CmDeadlock         .create(counterController, guiController);
 		CmLockTimeout      .create(counterController, guiController);
+		CmThresholdEvent   .create(counterController, guiController);
 		CmPCacheModuleUsage.create(counterController, guiController);
 		CmPCacheMemoryUsage.create(counterController, guiController);
 		CmStatementCache   .create(counterController, guiController);
@@ -747,595 +730,595 @@ implements ICounterController
 		createUserDefinedCounterModelHostMonitors();
 
 		// done
-		_countersIsCreated = true;
+		setCountersIsCreated(true);
 	}
 
-	/**
-	 * A User Defined Counter
-	 * <p>
-	 * Can be defined from the properties file:
-	 * <pre>
-	 * #-----------------------------------------------------------
-	 * # Go and get information about you'r own thing
-	 * # Normally used to get a some application specific counters
-	 * # If it's a "load" application how many X have we loaded so far
-	 * #-----------------------------------------------------------
-	 * udc.appSpecificCounter.name=App1 loading
-	 * udc.appSpecificCounter.sql=select appName, loadCount=count(*) from appTable
-	 * udc.appSpecificCounter.pkPos=1
-	 * udc.appSpecificCounter.diff=loadCount
-	 * 
-	 * 
-	 * #-----------------------------------------------------------
-	 * # Here is a example where we are not satisfied with the current AseTune counters
-	 * # so lets make "a new and improved" tab.
-	 * #
-	 * # In this example we are also using ASE version dependensies
-	 * # meaning newer versions of the ASE server might have "extra" columns in there MDA tables
-	 * #
-	 * #
-	 * # Here is a example where we are not satisfied with the current AseTune counters
-	 * # so lets make "a new and improved" tab.
-	 * #
-	 * # In this example we are also using ASE version dependensies
-	 * # meaning newer versions of the ASE server might have "extra" columns in there MDA tables
-	 * #-----------------------------------------------------------
-	 * udc.procAcct.name=EXTRA PROCESS ACTIVITY
-	 * udc.procAcct.sql=      select SPID, KPID, CPUTime, LogicalReads, PhysicalReads       from monProcessActivity
-	 * udc.procAcct.sql.12510=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime       from monProcessActivity
-	 * udc.procAcct.sql.12520=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead       from monProcessActivity
-	 * udc.procAcct.sql.12530=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten       from monProcessActivity
-	 * udc.procAcct.sql.12540=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB       from monProcessActivity
-	 * udc.procAcct.sql.15010=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, NewCol1=getdate()       from monProcessActivity
-	 * udc.procAcct.sql.15020=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, NewCol1=getdate(), AndAotherNewCol=getdate()       from monProcessActivity
-	 * udc.procAcct.pkPos=1, 2 
-	 * udc.procAcct.diff=PhysicalReads, LogicalReads, PagesRead, PhysicalWrites, PagesWritten
-	 * udc.procAcct.toolTipMonTables=monProcessActivity
-	 * </pre>
-	 */
-	private void createUserDefinedCounterModels()
-	{
-		Configuration conf = null;
-		if(AseTune.hasGUI())
-		{
-			conf = Configuration.getCombinedConfiguration();
-		}
-		else
-		{
-			conf = Configuration.getInstance(Configuration.PCS);
-		}
-		
-		if (conf == null)
-			return;
-
-		createUserDefinedCounterModels(conf);
-	}
-
-	public static int createUserDefinedCounterModels(Configuration conf)
-	{
-		if (conf == null)
-			throw new IllegalArgumentException("The passed Configuration can't be null");
-			//return 1;
-
-		int failCount = 0;
-
-		String prefix = "udc.";
-
-		for (String name : conf.getUniqueSubKeys(prefix, false))
-		{
-//			if (getInstance().getCmByName(name) != null)
-			if (CounterController.getInstance().getCmByName(name) != null)
-			{
-				_logger.info("Already loaded the UDC named '"+name+"', skipping this and continue with next one.");
-				continue;
-			}
-			SplashWindow.drawProgress("Loading: User Defined Counter Model '"+name+"'");
-			
-			String startKey = prefix + name + ".";
-			
-			Map<Integer, String> sqlVer = null;
-
-			_logger.info("Loading/Initializing User Defined Counter '"+name+"'.");
-
-			// Get the individual properties
-			String  udcName          = conf.getProperty(startKey    + "name");
-			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
-			String  udcDescription   = conf.getProperty(startKey    + "description", "");
-			String  udcSqlInit       = conf.getProperty(startKey    + "sqlInit");
-			String  udcSqlClose      = conf.getProperty(startKey    + "sqlClose");
-			String  udcSql           = conf.getProperty(startKey    + "sql");
-			String  udcPk            = conf.getProperty(startKey    + "pk");
-			String  udcPkPos         = conf.getProperty(startKey    + "pkPos");
-			String  udcDiff          = conf.getProperty(startKey    + "diff");
-			boolean udcNDCT0  = conf.getBooleanProperty(startKey    + "negativeDiffCountersToZero", false);
-			String  udcNeedRole      = conf.getProperty(startKey    + "needRole");
-			String  udcNeedConfig    = conf.getProperty(startKey    + "needConfig");
-			int     udcNeedVersion   = conf.getIntProperty(startKey + "needVersion", 0);
-			int     udcNeedCeVersion = conf.getIntProperty(startKey + "needCeVersion", 0);
-			String  udcTTMT          = conf.getProperty(startKey    + "toolTipMonTables");
-
-			// The below values are read in method: addUdcGraph()
-//			int     udcGraphType        = -1;
-//			boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
-//			String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
-//			String  udcGraphName        = conf.getProperty(startKey + "graph.name");
-//			String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
-//			String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
-//			String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
-//			String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
-//			String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
-
-			// CHECK for mandatory properties
-			if (udcName == null)
-			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'name' has been defined.");
-				failCount++;
-				continue;
-			}
-			if (udcSql == null)
-			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'sql' has been defined.");
-				failCount++;
-				continue;
-			}
-			if (udcPkPos != null)
-			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', 'pkPos' are not longer supported, please use 'pk' instead.");
-				failCount++;
-				continue;
-			}
-
-			if (udcPk == null)
-			{
-				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'pk' has been defined.");
-				failCount++;
-				continue;
-			}
-
-			// Check/get version specific SQL strings
-			String sqlVersionPrefix = startKey + "sql" + ".";
-			//int     sqlVersionHigh = -1;
-			for (String key : conf.getKeys(sqlVersionPrefix))
-			{
-				String sqlVersionStr = key.substring(sqlVersionPrefix.length());
-				int    sqlVersionNumInKey = 0;
-
-				try
-				{
-					sqlVersionNumInKey = Integer.parseInt(sqlVersionStr);
-				}
-				catch(NumberFormatException ex)
-				{
-					_logger.warn("Problems initialize User Defined Counter '"+name+"', a sql.##### where ##### should specify ASE server version if faulty in the string '"+sqlVersionStr+"'.");
-					failCount++;
-					continue;
-				}
-				
-				// Add all the udName.sql.#VERSION# to the map.
-				// we will descide what version to use later on.
-				if (sqlVer == null)
-					sqlVer = new HashMap<Integer, String>();
-
-				sqlVer.put(
-					new Integer(sqlVersionNumInKey), 
-					conf.getProperty(sqlVersionPrefix + sqlVersionNumInKey) );
-			}
-
-			// Get me some array variables, that we will "spit" properties into
-			List<String>     udcPkList          = new LinkedList<String>();
-			String[] udcPkArray         = {};
-			String[] udcDiffArray       = {};
-			String[] udcTTMTArray       = {};
-			String[] udcNeedRoleArray   = {};
-			String[] udcNeedConfigArray = {};
-			String[] udcPctArray        = {}; // not used, just initialized
-
-			// Split some properties using commas "," as the delimiter  
-			if (udcPk         != null) udcPkArray          = udcPk        .split(",");
-			if (udcDiff       != null) udcDiffArray        = udcDiff      .split(",");
-			if (udcTTMT       != null) udcTTMTArray        = udcTTMT      .split(",");
-			if (udcNeedRole   != null) udcNeedRoleArray    = udcNeedRole  .split(",");
-			if (udcNeedConfig != null) udcNeedConfigArray  = udcNeedConfig.split(",");
-
-			
-
-			
-			// Get rid of extra " " spaces from the split 
-			for (int i=0; i<udcPkArray        .length; i++) udcPkArray        [i] = udcPkArray        [i].trim(); 
-			for (int i=0; i<udcDiffArray      .length; i++) udcDiffArray      [i] = udcDiffArray      [i].trim(); 
-			for (int i=0; i<udcTTMTArray      .length; i++) udcTTMTArray      [i] = udcTTMTArray      [i].trim(); 
-			for (int i=0; i<udcNeedRoleArray  .length; i++) udcNeedRoleArray  [i] = udcNeedRoleArray  [i].trim(); 
-			for (int i=0; i<udcNeedConfigArray.length; i++) udcNeedConfigArray[i] = udcNeedConfigArray[i].trim(); 
-
-			for (int i=0; i<udcPkArray   .length; i++) udcPkList.add( udcPkArray[i] ); 
-
-			_logger.info("Creating User Defined Counter '"+name+"' with sql '"+udcSql+"'.");
-
-			// Finally create the Counter model and all it's surondings...
-			CountersModel cm = new CountersModelUserDefined( name, MainFrame.TCP_GROUP_UDC, udcSql, sqlVer,
-					udcPkList, //pk1, pk2, pk3, 
-					udcDiffArray, udcPctArray, 
-					udcTTMTArray, udcNeedRoleArray, udcNeedConfigArray, 
-					udcNeedVersion, udcNeedCeVersion, 
-					udcNDCT0);
-
-			TabularCntrPanel tcp = null;
-			if (AseTune.hasGUI())
-			{
-				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName());
-				tcp.setToolTipText( udcDescription );
-				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
-				tcp.setCm(cm);
-				MainFrame.addTcp( tcp );
-			}
-			cm.setTabPanel(tcp);
-
-			cm.setSqlInit(udcSqlInit);
-			cm.setSqlClose(udcSqlClose);
-			cm.setDisplayName(udcDisplayName);
-			cm.setDescription(udcDescription);
-
-			//
-			// User defined graphs, if any
-			//
-			addUdcGraph(cm, udcName, startKey, conf);
-
-			// Register at the template 
-			CounterSetTemplates.register(cm);
-
-			_CMList.add(cm);
-		}
-
-		return failCount;
-	}
-
-	private static void addUdcGraph(CountersModel cm, String udcName, String startKey, Configuration conf)
-	{
-		int     udcGraphType        = -1;
-		boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
-		String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
-		String  udcGraphName        = conf.getProperty(startKey + "graph.name");
-		String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
-		String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
-		String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
-		String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
-		String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
-
-		if ( ! udcHasGraph )
-			return;
-
-		String name = udcName;
-		boolean addGraph = true;
-
-		if (udcGraphName == null)
-			udcGraphName = udcName + "Graph";
-
-		if (udcGraphLabel == null)
-			udcGraphLabel = udcName + " Graph";
-
-		if (udcGraphMenuLabel == null)
-			udcGraphMenuLabel = udcGraphLabel;
-
-		if (udcGraphDataCols == null)
-		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.cols' has been defined.");
-			addGraph = false;
-		}
-		if (udcGraphDataMethods == null)
-		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.methods' has been defined.");
-			addGraph = false;
-		}
-		if (udcGraphDataLabels == null)
-			udcGraphDataLabels = udcGraphDataCols;
-
-		if      (udcGraphTypeStr.equalsIgnoreCase("byCol")) udcGraphType = TrendGraph.TYPE_BY_COL;
-		else if (udcGraphTypeStr.equalsIgnoreCase("byRow"))	udcGraphType = TrendGraph.TYPE_BY_ROW;
-		else
-		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.type' can only be 'byCol' or 'byRow'.");
-			addGraph = false;
-		}
-
-		String[] udcGraphDataColsArr    = {};
-		String[] udcGraphDataMethodsArr = {};
-		String[] udcGraphDataLabelsArr  = {};
-
-		// Split some properties using commas "," as the delimiter  
-		if (udcGraphDataCols    != null) udcGraphDataColsArr    = udcGraphDataCols   .split(",");
-		if (udcGraphDataMethods != null) udcGraphDataMethodsArr = udcGraphDataMethods.split(",");
-		if (udcGraphDataLabels  != null) udcGraphDataLabelsArr  = udcGraphDataLabels .split(",");
-
-		// Get rid of extra " " spaces from the split 
-		for (int i=0; i<udcGraphDataColsArr   .length; i++) udcGraphDataColsArr   [i] = udcGraphDataColsArr   [i].trim(); 
-		for (int i=0; i<udcGraphDataMethodsArr.length; i++) udcGraphDataMethodsArr[i] = udcGraphDataMethodsArr[i].trim(); 
-		for (int i=0; i<udcGraphDataLabelsArr .length; i++) udcGraphDataLabelsArr [i] = udcGraphDataLabelsArr [i].trim(); 
-
-		if (udcGraphDataColsArr.length != udcGraphDataMethodsArr.length)
-		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.methods' has "+udcGraphDataMethodsArr.length+" entries, they has to be equal.");
-			addGraph = false;
-		}
-		if (udcGraphDataColsArr.length != udcGraphDataLabelsArr.length)
-		{
-			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.labels' has "+udcGraphDataLabelsArr.length+" entries, they has to be equal.");
-			addGraph = false;
-		}
-
-		for (int i=0; i<udcGraphDataMethodsArr.length; i++) 
-		{
-			if ( ! CountersModel.isValidGraphMethod(udcGraphDataMethodsArr[i], true))
-			{
-				_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'The graph method '"+udcGraphDataMethodsArr[i]+"' is unknown.");
-				_logger.error("Valid method names is: "+CountersModel.getValidGraphMethodsString(true));
-				addGraph = false;
-			}
-		}
-		if (udcGraphType == TrendGraph.TYPE_BY_ROW)
-		{
-			if (udcGraphDataColsArr.length > 1)
-			{
-				_logger.warn("Add a graph using type 'byRow' to the User Defined Counter '"+name+"'. Only the first entry in 'graph.data.cols', 'graph.data.labels', 'graph.data.methods' will be used");
-			}
-		}
-
-		if (addGraph)
-		{
-			if (AseTune.hasGUI())
-			{
-				// GRAPH
-				TrendGraph tg = new TrendGraph(
-						udcGraphName,      // Name of the raph
-						udcGraphMenuLabel, // Menu Checkbox text
-						udcGraphLabel,     // Label on the graph
-						udcGraphDataLabelsArr, // Labels for each plotline
-						false,
-						cm, 
-						true, // initial visible
-						0,    // valid from version
-						-1);
-				tg.setGraphType(udcGraphType);
-				tg.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
-				cm.addTrendGraph(udcGraphName, tg, true);
-			}
-			
-			// Data Point
-			cm.setGraphType(udcGraphType);
-			cm.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
-			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr));
-		}
-	}
-	
-	
-	/**
-	 * 
-	 */
-	private void createUserDefinedCounterModelHostMonitors()
-	{
-		Configuration conf = null;
-		if(AseTune.hasGUI())
-		{
-//			conf = Configuration.getInstance(Configuration.CONF);
-			conf = Configuration.getCombinedConfiguration();
-		}
-		else
-		{
-			conf = Configuration.getInstance(Configuration.PCS);
-		}
-		
-		if (conf == null)
-			return;
-
-		createUserDefinedCounterModelHostMonitors(conf);
-	}
-
-	/**
-	 * 
-	 * @param conf
-	 * @return
-	 */
-	public static int createUserDefinedCounterModelHostMonitors(Configuration conf)
-	{
-		if (conf == null)
-			throw new IllegalArgumentException("The passed Configuration can't be null");
-			//return 1;
-
-		int failCount = 0;
-
-		String prefix = "hostmon.udc.";
-
-		for (String name : conf.getUniqueSubKeys(prefix, false))
-		{
-			SplashWindow.drawProgress("Loading: Host Monitor User Defined Counter '"+name+"'");
-			
-			String startKey = prefix + name + ".";
-
-			_logger.debug("STARTING TO Initializing Host Monitor User Defined Counter '"+name+"'.");
-
+//	/**
+//	 * A User Defined Counter
+//	 * <p>
+//	 * Can be defined from the properties file:
+//	 * <pre>
+//	 * #-----------------------------------------------------------
+//	 * # Go and get information about you'r own thing
+//	 * # Normally used to get a some application specific counters
+//	 * # If it's a "load" application how many X have we loaded so far
+//	 * #-----------------------------------------------------------
+//	 * udc.appSpecificCounter.name=App1 loading
+//	 * udc.appSpecificCounter.sql=select appName, loadCount=count(*) from appTable
+//	 * udc.appSpecificCounter.pkPos=1
+//	 * udc.appSpecificCounter.diff=loadCount
+//	 * 
+//	 * 
+//	 * #-----------------------------------------------------------
+//	 * # Here is a example where we are not satisfied with the current AseTune counters
+//	 * # so lets make "a new and improved" tab.
+//	 * #
+//	 * # In this example we are also using ASE version dependensies
+//	 * # meaning newer versions of the ASE server might have "extra" columns in there MDA tables
+//	 * #
+//	 * #
+//	 * # Here is a example where we are not satisfied with the current AseTune counters
+//	 * # so lets make "a new and improved" tab.
+//	 * #
+//	 * # In this example we are also using ASE version dependensies
+//	 * # meaning newer versions of the ASE server might have "extra" columns in there MDA tables
+//	 * #-----------------------------------------------------------
+//	 * udc.procAcct.name=EXTRA PROCESS ACTIVITY
+//	 * udc.procAcct.sql=      select SPID, KPID, CPUTime, LogicalReads, PhysicalReads       from monProcessActivity
+//	 * udc.procAcct.sql.12510=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime       from monProcessActivity
+//	 * udc.procAcct.sql.12520=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead       from monProcessActivity
+//	 * udc.procAcct.sql.12530=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten       from monProcessActivity
+//	 * udc.procAcct.sql.12540=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB       from monProcessActivity
+//	 * udc.procAcct.sql.15010=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, NewCol1=getdate()       from monProcessActivity
+//	 * udc.procAcct.sql.15020=select SPID, KPID, CPUTime, LogicalReads, PhysicalReads, WaitTime, PagesRead, PhysicalWrites, PagesWritten, MemUsageKB, NewCol1=getdate(), AndAotherNewCol=getdate()       from monProcessActivity
+//	 * udc.procAcct.pkPos=1, 2 
+//	 * udc.procAcct.diff=PhysicalReads, LogicalReads, PagesRead, PhysicalWrites, PagesWritten
+//	 * udc.procAcct.toolTipMonTables=monProcessActivity
+//	 * </pre>
+//	 */
+//	private void createUserDefinedCounterModels()
+//	{
+//		Configuration conf = null;
+//		if(AseTune.hasGUI())
+//		{
+//			conf = Configuration.getCombinedConfiguration();
+//		}
+//		else
+//		{
+//			conf = Configuration.getInstance(Configuration.PCS);
+//		}
+//		
+//		if (conf == null)
+//			return;
+//
+//		createUserDefinedCounterModels(conf);
+//	}
+//
+//	public static int createUserDefinedCounterModels(Configuration conf)
+//	{
+//		if (conf == null)
+//			throw new IllegalArgumentException("The passed Configuration can't be null");
+//			//return 1;
+//
+//		int failCount = 0;
+//
+//		String prefix = "udc.";
+//
+//		for (String name : conf.getUniqueSubKeys(prefix, false))
+//		{
+////			if (getInstance().getCmByName(name) != null)
+//			if (CounterController.getInstance().getCmByName(name) != null)
+//			{
+//				_logger.info("Already loaded the UDC named '"+name+"', skipping this and continue with next one.");
+//				continue;
+//			}
+//			SplashWindow.drawProgress("Loading: User Defined Counter Model '"+name+"'");
+//			
+//			String startKey = prefix + name + ".";
+//			
+//			Map<Integer, String> sqlVer = null;
+//
+//			_logger.info("Loading/Initializing User Defined Counter '"+name+"'.");
+//
+//			// Get the individual properties
 //			String  udcName          = conf.getProperty(startKey    + "name");
 //			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
-			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", name);
-			String  udcDescription   = conf.getProperty(startKey    + "description", "");
-
-			// The below values are read in method: addUdcGraph()
-//			boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
-//			String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
-//			String  udcGraphName        = conf.getProperty(startKey + "graph.name");
-//			String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
-//			String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
-//			String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
-//			String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
-//			String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
-
-			_logger.info("Creating User Defined Host Monitor Counter '"+name+"'.");
-
-			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, false);
-
-			TabularCntrPanel tcp = null;
-			if (AseTune.hasGUI())
-			{
-				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName())
-				{
-					private static final long	serialVersionUID	= 1L;
-
-					JLabel  l_hostmonThreadNotInit_lbl;
-					JLabel  l_hostmonThreadIsRunning_lbl;
-					JLabel  l_hostmonThreadIsStopped_lbl;
-					JButton l_hostmonStart_but;
-					JButton l_hostmonStop_but;
-
-					@Override
-					protected JPanel createLocalOptionsPanel()
-					{
-						JPanel panel = SwingUtils.createPanel("Host Monitor", true);
-						panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
-						panel.setToolTipText(
-							"<html>" +
-								"Use this panel to check or controll the underlying Host Monitoring Thread.<br>" +
-								"You can Start and/or Stop the hostmon thread.<br>" +
-							"</html>");
-
-						l_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
-						l_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
-						l_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
-						l_hostmonStart_but            = new JButton("Start");
-						l_hostmonStop_but             = new JButton("Stop");
-
-						l_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread has not yet been initialized.</html>");
-						l_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
-						l_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
-						l_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
-						l_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
-
-						l_hostmonThreadNotInit_lbl  .setVisible(true);
-						l_hostmonThreadIsRunning_lbl.setVisible(false);
-						l_hostmonThreadIsStopped_lbl.setVisible(false);
-						l_hostmonStart_but          .setVisible(false);
-						l_hostmonStop_but           .setVisible(false);
-
-						panel.add( l_hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
-						panel.add( l_hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
-						panel.add( l_hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
-						panel.add( l_hostmonStart_but,           "hidemode 3, wrap");
-						panel.add( l_hostmonStop_but,            "hidemode 3, wrap");
-
-						l_hostmonStart_but.addActionListener(new ActionListener()
-						{
-							@Override
-							public void actionPerformed(ActionEvent e)
-							{
-								CountersModel cm = getCm();
-								if (cm != null)
-								{
-									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-									if (hostMonitor != null)
-									{
-										try
-										{
-											hostMonitor.setPaused(false);
-											hostMonitor.start();
-										}
-										catch (Exception ex)
-										{
-											SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
-										}
-									}
-								}
-							}
-						});
-
-						l_hostmonStop_but.addActionListener(new ActionListener()
-						{
-							@Override
-							public void actionPerformed(ActionEvent e)
-							{
-								CountersModel cm = getCm();
-								if (cm != null)
-								{
-									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-									if (hostMonitor != null)
-									{
-										hostMonitor.setPaused(true);
-										hostMonitor.shutdown();
-									}
-								}
-							}
-						});
-						return panel;
-					}
-
-					@Override
-					public void checkLocalComponents()
-					{
-						CountersModel cm = getCm();
-						if (cm != null)
-						{
-							HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-							if (hostMonitor != null)
-							{
-								boolean isRunning = hostMonitor.isRunning();
-								boolean isPaused  = hostMonitor.isPaused();
-
-								l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
-								l_hostmonThreadNotInit_lbl  .setVisible( false );
-
-								if ( hostMonitor.isOsCommandStreaming() )
-								{
-									l_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
-									l_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
-									l_hostmonStart_but          .setVisible( ! isRunning );
-									l_hostmonStop_but           .setVisible(   isRunning );
-								}
-								else
-								{
-									l_hostmonThreadIsRunning_lbl.setVisible( true );
-									l_hostmonThreadIsStopped_lbl.setText("<html>This module has <b>no</b> background thread.<br>And it's executed on every <b>refresh</b>.</html>");
-									l_hostmonThreadIsStopped_lbl.setVisible( true );
-
-								//	l_hostmonThreadIsRunning_lbl.setVisible( false );
-								//	l_hostmonThreadIsStopped_lbl.setVisible( false );
-									l_hostmonStart_but          .setVisible( false );
-									l_hostmonStop_but           .setVisible( false );
-								}
-
-								if (isPaused)
-									setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
-							}
-							else
-							{
-								setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
-								l_hostmonThreadNotInit_lbl  .setVisible( true );
-								l_hostmonThreadIsRunning_lbl.setVisible( false );
-								l_hostmonThreadIsStopped_lbl.setVisible( false );
-								l_hostmonStart_but          .setVisible( false );
-								l_hostmonStop_but           .setVisible( false );
-								if (cm.getSampleException() != null)
-									setWatermarkText(cm.getSampleException().toString());
-							}
-						}
-					}
-				};
-				tcp.setToolTipText( udcDescription );
-				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/hostmon_ud_counter_activity.png") );
-				tcp.setCm(cm);
-				MainFrame.addTcp( tcp );
-			}
-			cm.setTabPanel(tcp);
-
-			cm.setDisplayName(udcDisplayName);
-			cm.setDescription(udcDescription);
-
-			// Add a graph
-			addUdcGraph(cm, name, startKey, conf);
-
-			// Register at the template 
-			CounterSetTemplates.register(cm);
-
-			_CMList.add(cm);
-		}
-
-		return failCount;
-	}
+//			String  udcDescription   = conf.getProperty(startKey    + "description", "");
+//			String  udcSqlInit       = conf.getProperty(startKey    + "sqlInit");
+//			String  udcSqlClose      = conf.getProperty(startKey    + "sqlClose");
+//			String  udcSql           = conf.getProperty(startKey    + "sql");
+//			String  udcPk            = conf.getProperty(startKey    + "pk");
+//			String  udcPkPos         = conf.getProperty(startKey    + "pkPos");
+//			String  udcDiff          = conf.getProperty(startKey    + "diff");
+//			boolean udcNDCT0  = conf.getBooleanProperty(startKey    + "negativeDiffCountersToZero", false);
+//			String  udcNeedRole      = conf.getProperty(startKey    + "needRole");
+//			String  udcNeedConfig    = conf.getProperty(startKey    + "needConfig");
+//			int     udcNeedVersion   = conf.getIntProperty(startKey + "needVersion", 0);
+//			int     udcNeedCeVersion = conf.getIntProperty(startKey + "needCeVersion", 0);
+//			String  udcTTMT          = conf.getProperty(startKey    + "toolTipMonTables");
+//
+//			// The below values are read in method: addUdcGraph()
+////			int     udcGraphType        = -1;
+////			boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
+////			String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
+////			String  udcGraphName        = conf.getProperty(startKey + "graph.name");
+////			String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+////			String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
+////			String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
+////			String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
+////			String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
+//
+//			// CHECK for mandatory properties
+//			if (udcName == null)
+//			{
+//				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'name' has been defined.");
+//				failCount++;
+//				continue;
+//			}
+//			if (udcSql == null)
+//			{
+//				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'sql' has been defined.");
+//				failCount++;
+//				continue;
+//			}
+//			if (udcPkPos != null)
+//			{
+//				_logger.error("Can't initialize User Defined Counter '"+name+"', 'pkPos' are not longer supported, please use 'pk' instead.");
+//				failCount++;
+//				continue;
+//			}
+//
+//			if (udcPk == null)
+//			{
+//				_logger.error("Can't initialize User Defined Counter '"+name+"', no 'pk' has been defined.");
+//				failCount++;
+//				continue;
+//			}
+//
+//			// Check/get version specific SQL strings
+//			String sqlVersionPrefix = startKey + "sql" + ".";
+//			//int     sqlVersionHigh = -1;
+//			for (String key : conf.getKeys(sqlVersionPrefix))
+//			{
+//				String sqlVersionStr = key.substring(sqlVersionPrefix.length());
+//				int    sqlVersionNumInKey = 0;
+//
+//				try
+//				{
+//					sqlVersionNumInKey = Integer.parseInt(sqlVersionStr);
+//				}
+//				catch(NumberFormatException ex)
+//				{
+//					_logger.warn("Problems initialize User Defined Counter '"+name+"', a sql.##### where ##### should specify ASE server version if faulty in the string '"+sqlVersionStr+"'.");
+//					failCount++;
+//					continue;
+//				}
+//				
+//				// Add all the udName.sql.#VERSION# to the map.
+//				// we will descide what version to use later on.
+//				if (sqlVer == null)
+//					sqlVer = new HashMap<Integer, String>();
+//
+//				sqlVer.put(
+//					new Integer(sqlVersionNumInKey), 
+//					conf.getProperty(sqlVersionPrefix + sqlVersionNumInKey) );
+//			}
+//
+//			// Get me some array variables, that we will "spit" properties into
+//			List<String>     udcPkList          = new LinkedList<String>();
+//			String[] udcPkArray         = {};
+//			String[] udcDiffArray       = {};
+//			String[] udcTTMTArray       = {};
+//			String[] udcNeedRoleArray   = {};
+//			String[] udcNeedConfigArray = {};
+//			String[] udcPctArray        = {}; // not used, just initialized
+//
+//			// Split some properties using commas "," as the delimiter  
+//			if (udcPk         != null) udcPkArray          = udcPk        .split(",");
+//			if (udcDiff       != null) udcDiffArray        = udcDiff      .split(",");
+//			if (udcTTMT       != null) udcTTMTArray        = udcTTMT      .split(",");
+//			if (udcNeedRole   != null) udcNeedRoleArray    = udcNeedRole  .split(",");
+//			if (udcNeedConfig != null) udcNeedConfigArray  = udcNeedConfig.split(",");
+//
+//			
+//
+//			
+//			// Get rid of extra " " spaces from the split 
+//			for (int i=0; i<udcPkArray        .length; i++) udcPkArray        [i] = udcPkArray        [i].trim(); 
+//			for (int i=0; i<udcDiffArray      .length; i++) udcDiffArray      [i] = udcDiffArray      [i].trim(); 
+//			for (int i=0; i<udcTTMTArray      .length; i++) udcTTMTArray      [i] = udcTTMTArray      [i].trim(); 
+//			for (int i=0; i<udcNeedRoleArray  .length; i++) udcNeedRoleArray  [i] = udcNeedRoleArray  [i].trim(); 
+//			for (int i=0; i<udcNeedConfigArray.length; i++) udcNeedConfigArray[i] = udcNeedConfigArray[i].trim(); 
+//
+//			for (int i=0; i<udcPkArray   .length; i++) udcPkList.add( udcPkArray[i] ); 
+//
+//			_logger.info("Creating User Defined Counter '"+name+"' with sql '"+udcSql+"'.");
+//
+//			// Finally create the Counter model and all it's surondings...
+//			CountersModel cm = new CountersModelUserDefined( name, MainFrame.TCP_GROUP_UDC, udcSql, sqlVer,
+//					udcPkList, //pk1, pk2, pk3, 
+//					udcDiffArray, udcPctArray, 
+//					udcTTMTArray, udcNeedRoleArray, udcNeedConfigArray, 
+//					udcNeedVersion, udcNeedCeVersion, 
+//					udcNDCT0);
+//
+//			TabularCntrPanel tcp = null;
+//			if (AseTune.hasGUI())
+//			{
+//				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName());
+//				tcp.setToolTipText( udcDescription );
+//				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
+//				tcp.setCm(cm);
+//				MainFrame.addTcp( tcp );
+//			}
+//			cm.setTabPanel(tcp);
+//
+//			cm.setSqlInit(udcSqlInit);
+//			cm.setSqlClose(udcSqlClose);
+//			cm.setDisplayName(udcDisplayName);
+//			cm.setDescription(udcDescription);
+//
+//			//
+//			// User defined graphs, if any
+//			//
+//			addUdcGraph(cm, udcName, startKey, conf);
+//
+//			// Register at the template 
+//			CounterSetTemplates.register(cm);
+//
+//			_CMList.add(cm);
+//		}
+//
+//		return failCount;
+//	}
+//
+//	private static void addUdcGraph(CountersModel cm, String udcName, String startKey, Configuration conf)
+//	{
+//		int     udcGraphType        = -1;
+//		boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
+//		String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
+//		String  udcGraphName        = conf.getProperty(startKey + "graph.name");
+//		String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+//		String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
+//		String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
+//		String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
+//		String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
+//
+//		if ( ! udcHasGraph )
+//			return;
+//
+//		String name = udcName;
+//		boolean addGraph = true;
+//
+//		if (udcGraphName == null)
+//			udcGraphName = udcName + "Graph";
+//
+//		if (udcGraphLabel == null)
+//			udcGraphLabel = udcName + " Graph";
+//
+//		if (udcGraphMenuLabel == null)
+//			udcGraphMenuLabel = udcGraphLabel;
+//
+//		if (udcGraphDataCols == null)
+//		{
+//			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.cols' has been defined.");
+//			addGraph = false;
+//		}
+//		if (udcGraphDataMethods == null)
+//		{
+//			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.data.methods' has been defined.");
+//			addGraph = false;
+//		}
+//		if (udcGraphDataLabels == null)
+//			udcGraphDataLabels = udcGraphDataCols;
+//
+//		if      (udcGraphTypeStr.equalsIgnoreCase("byCol")) udcGraphType = TrendGraph.TYPE_BY_COL;
+//		else if (udcGraphTypeStr.equalsIgnoreCase("byRow"))	udcGraphType = TrendGraph.TYPE_BY_ROW;
+//		else
+//		{
+//			_logger.error("Can't add a graph to the User Defined Counter '"+name+"', no 'graph.type' can only be 'byCol' or 'byRow'.");
+//			addGraph = false;
+//		}
+//
+//		String[] udcGraphDataColsArr    = {};
+//		String[] udcGraphDataMethodsArr = {};
+//		String[] udcGraphDataLabelsArr  = {};
+//
+//		// Split some properties using commas "," as the delimiter  
+//		if (udcGraphDataCols    != null) udcGraphDataColsArr    = udcGraphDataCols   .split(",");
+//		if (udcGraphDataMethods != null) udcGraphDataMethodsArr = udcGraphDataMethods.split(",");
+//		if (udcGraphDataLabels  != null) udcGraphDataLabelsArr  = udcGraphDataLabels .split(",");
+//
+//		// Get rid of extra " " spaces from the split 
+//		for (int i=0; i<udcGraphDataColsArr   .length; i++) udcGraphDataColsArr   [i] = udcGraphDataColsArr   [i].trim(); 
+//		for (int i=0; i<udcGraphDataMethodsArr.length; i++) udcGraphDataMethodsArr[i] = udcGraphDataMethodsArr[i].trim(); 
+//		for (int i=0; i<udcGraphDataLabelsArr .length; i++) udcGraphDataLabelsArr [i] = udcGraphDataLabelsArr [i].trim(); 
+//
+//		if (udcGraphDataColsArr.length != udcGraphDataMethodsArr.length)
+//		{
+//			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.methods' has "+udcGraphDataMethodsArr.length+" entries, they has to be equal.");
+//			addGraph = false;
+//		}
+//		if (udcGraphDataColsArr.length != udcGraphDataLabelsArr.length)
+//		{
+//			_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'graph.data.cols' has "+udcGraphDataColsArr.length+" entries while 'graph.data.labels' has "+udcGraphDataLabelsArr.length+" entries, they has to be equal.");
+//			addGraph = false;
+//		}
+//
+//		for (int i=0; i<udcGraphDataMethodsArr.length; i++) 
+//		{
+//			if ( ! CountersModel.isValidGraphMethod(udcGraphDataMethodsArr[i], true))
+//			{
+//				_logger.error("Can't add a graph to the User Defined Counter '"+name+"'. 'The graph method '"+udcGraphDataMethodsArr[i]+"' is unknown.");
+//				_logger.error("Valid method names is: "+CountersModel.getValidGraphMethodsString(true));
+//				addGraph = false;
+//			}
+//		}
+//		if (udcGraphType == TrendGraph.TYPE_BY_ROW)
+//		{
+//			if (udcGraphDataColsArr.length > 1)
+//			{
+//				_logger.warn("Add a graph using type 'byRow' to the User Defined Counter '"+name+"'. Only the first entry in 'graph.data.cols', 'graph.data.labels', 'graph.data.methods' will be used");
+//			}
+//		}
+//
+//		if (addGraph)
+//		{
+//			if (AseTune.hasGUI())
+//			{
+//				// GRAPH
+//				TrendGraph tg = new TrendGraph(
+//						udcGraphName,      // Name of the raph
+//						udcGraphMenuLabel, // Menu Checkbox text
+//						udcGraphLabel,     // Label on the graph
+//						udcGraphDataLabelsArr, // Labels for each plotline
+//						false,
+//						cm, 
+//						true, // initial visible
+//						0,    // valid from version
+//						-1);
+//				tg.setGraphType(udcGraphType);
+//				tg.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
+//				cm.addTrendGraph(udcGraphName, tg, true);
+//			}
+//			
+//			// Data Point
+//			cm.setGraphType(udcGraphType);
+//			cm.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
+//			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr));
+//		}
+//	}
+//	
+//	
+//	/**
+//	 * 
+//	 */
+//	private void createUserDefinedCounterModelHostMonitors()
+//	{
+//		Configuration conf = null;
+//		if(AseTune.hasGUI())
+//		{
+////			conf = Configuration.getInstance(Configuration.CONF);
+//			conf = Configuration.getCombinedConfiguration();
+//		}
+//		else
+//		{
+//			conf = Configuration.getInstance(Configuration.PCS);
+//		}
+//		
+//		if (conf == null)
+//			return;
+//
+//		createUserDefinedCounterModelHostMonitors(conf);
+//	}
+//
+//	/**
+//	 * 
+//	 * @param conf
+//	 * @return
+//	 */
+//	public static int createUserDefinedCounterModelHostMonitors(Configuration conf)
+//	{
+//		if (conf == null)
+//			throw new IllegalArgumentException("The passed Configuration can't be null");
+//			//return 1;
+//
+//		int failCount = 0;
+//
+//		String prefix = "hostmon.udc.";
+//
+//		for (String name : conf.getUniqueSubKeys(prefix, false))
+//		{
+//			SplashWindow.drawProgress("Loading: Host Monitor User Defined Counter '"+name+"'");
+//			
+//			String startKey = prefix + name + ".";
+//
+//			_logger.debug("STARTING TO Initializing Host Monitor User Defined Counter '"+name+"'.");
+//
+////			String  udcName          = conf.getProperty(startKey    + "name");
+////			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
+//			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", name);
+//			String  udcDescription   = conf.getProperty(startKey    + "description", "");
+//
+//			// The below values are read in method: addUdcGraph()
+////			boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
+////			String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
+////			String  udcGraphName        = conf.getProperty(startKey + "graph.name");
+////			String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+////			String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
+////			String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
+////			String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
+////			String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
+//
+//			_logger.info("Creating User Defined Host Monitor Counter '"+name+"'.");
+//
+//			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, false);
+//
+//			TabularCntrPanel tcp = null;
+//			if (AseTune.hasGUI())
+//			{
+//				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName())
+//				{
+//					private static final long	serialVersionUID	= 1L;
+//
+//					JLabel  l_hostmonThreadNotInit_lbl;
+//					JLabel  l_hostmonThreadIsRunning_lbl;
+//					JLabel  l_hostmonThreadIsStopped_lbl;
+//					JButton l_hostmonStart_but;
+//					JButton l_hostmonStop_but;
+//
+//					@Override
+//					protected JPanel createLocalOptionsPanel()
+//					{
+//						JPanel panel = SwingUtils.createPanel("Host Monitor", true);
+//						panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
+//						panel.setToolTipText(
+//							"<html>" +
+//								"Use this panel to check or controll the underlying Host Monitoring Thread.<br>" +
+//								"You can Start and/or Stop the hostmon thread.<br>" +
+//							"</html>");
+//
+//						l_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
+//						l_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
+//						l_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
+//						l_hostmonStart_but            = new JButton("Start");
+//						l_hostmonStop_but             = new JButton("Stop");
+//
+//						l_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread has not yet been initialized.</html>");
+//						l_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+//						l_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+//						l_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
+//						l_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
+//
+//						l_hostmonThreadNotInit_lbl  .setVisible(true);
+//						l_hostmonThreadIsRunning_lbl.setVisible(false);
+//						l_hostmonThreadIsStopped_lbl.setVisible(false);
+//						l_hostmonStart_but          .setVisible(false);
+//						l_hostmonStop_but           .setVisible(false);
+//
+//						panel.add( l_hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
+//						panel.add( l_hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
+//						panel.add( l_hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
+//						panel.add( l_hostmonStart_but,           "hidemode 3, wrap");
+//						panel.add( l_hostmonStop_but,            "hidemode 3, wrap");
+//
+//						l_hostmonStart_but.addActionListener(new ActionListener()
+//						{
+//							@Override
+//							public void actionPerformed(ActionEvent e)
+//							{
+//								CountersModel cm = getCm();
+//								if (cm != null)
+//								{
+//									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+//									if (hostMonitor != null)
+//									{
+//										try
+//										{
+//											hostMonitor.setPaused(false);
+//											hostMonitor.start();
+//										}
+//										catch (Exception ex)
+//										{
+//											SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
+//										}
+//									}
+//								}
+//							}
+//						});
+//
+//						l_hostmonStop_but.addActionListener(new ActionListener()
+//						{
+//							@Override
+//							public void actionPerformed(ActionEvent e)
+//							{
+//								CountersModel cm = getCm();
+//								if (cm != null)
+//								{
+//									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+//									if (hostMonitor != null)
+//									{
+//										hostMonitor.setPaused(true);
+//										hostMonitor.shutdown();
+//									}
+//								}
+//							}
+//						});
+//						return panel;
+//					}
+//
+//					@Override
+//					public void checkLocalComponents()
+//					{
+//						CountersModel cm = getCm();
+//						if (cm != null)
+//						{
+//							HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+//							if (hostMonitor != null)
+//							{
+//								boolean isRunning = hostMonitor.isRunning();
+//								boolean isPaused  = hostMonitor.isPaused();
+//
+//								l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
+//								l_hostmonThreadNotInit_lbl  .setVisible( false );
+//
+//								if ( hostMonitor.isOsCommandStreaming() )
+//								{
+//									l_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
+//									l_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
+//									l_hostmonStart_but          .setVisible( ! isRunning );
+//									l_hostmonStop_but           .setVisible(   isRunning );
+//								}
+//								else
+//								{
+//									l_hostmonThreadIsRunning_lbl.setVisible( true );
+//									l_hostmonThreadIsStopped_lbl.setText("<html>This module has <b>no</b> background thread.<br>And it's executed on every <b>refresh</b>.</html>");
+//									l_hostmonThreadIsStopped_lbl.setVisible( true );
+//
+//								//	l_hostmonThreadIsRunning_lbl.setVisible( false );
+//								//	l_hostmonThreadIsStopped_lbl.setVisible( false );
+//									l_hostmonStart_but          .setVisible( false );
+//									l_hostmonStop_but           .setVisible( false );
+//								}
+//
+//								if (isPaused)
+//									setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
+//							}
+//							else
+//							{
+//								setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
+//								l_hostmonThreadNotInit_lbl  .setVisible( true );
+//								l_hostmonThreadIsRunning_lbl.setVisible( false );
+//								l_hostmonThreadIsStopped_lbl.setVisible( false );
+//								l_hostmonStart_but          .setVisible( false );
+//								l_hostmonStop_but           .setVisible( false );
+//								if (cm.getSampleException() != null)
+//									setWatermarkText(cm.getSampleException().toString());
+//							}
+//						}
+//					}
+//				};
+//				tcp.setToolTipText( udcDescription );
+//				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/hostmon_ud_counter_activity.png") );
+//				tcp.setCm(cm);
+//				MainFrame.addTcp( tcp );
+//			}
+//			cm.setTabPanel(tcp);
+//
+//			cm.setDisplayName(udcDisplayName);
+//			cm.setDescription(udcDescription);
+//
+//			// Add a graph
+//			addUdcGraph(cm, name, startKey, conf);
+//
+//			// Register at the template 
+//			CounterSetTemplates.register(cm);
+//
+//			_CMList.add(cm);
+//		}
+//
+//		return failCount;
+//	}
 
 	
 	
@@ -1451,513 +1434,513 @@ implements ICounterController
 		}
 	}
 
-	/**
-	 * Interrupt the sleep and request a new refresh.<br>
-	 * Note: this will be disregarded if we not sleeping waiting for a new refresh.
-	 */
-	public void doRefresh()
-	{
-		if ( isRefreshing() )
-			_logger.info("Sorry, can't do refresh now, we are already in a Performance Counter Refresh");
-		else
-			doInterrupt();
-	}
-
-	/**
-	 * calls interrupt() on the refresh thread.<br>
-	 * So if the refresh thread is asleap waiting for next refresh it will be interupted and
-	 * start to do a new refresh of data.
-	 */
-	public void doInterrupt()
-	{
-		// interrupt the collector thread
-		if (_thread != null)
-		{
-			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"', this was done by thread '"+Thread.currentThread().getName()+"'.");
-			_thread.interrupt();
-		}
-	}
-
-	private boolean _isSleeping = false;
-	/** Check if we are sleeping by calling the method sleep() in this class. */
-	public boolean isSleeping()
-	{
-		return _isSleeping;
-	}
-	/**
-	 * Sleep for X ms, should only be used when GUI should be able to be interrupted.
-	 * @param ms sleep time
-	 * @return true if we were sleept the whole time, false if we were interrupted.
-	 */
-	public boolean sleep(int ms)
-	{
-		try 
-		{
-			_isSleeping = true;
-			Thread.sleep(ms); 
-			return true;
-		}
-		catch (InterruptedException ignore)
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug("Thread '"+Thread.currentThread().getName()+"' was interrupted.", new Exception("Dummy exception, to get callstack from where this happened."));
-			return false;
-		}
-		finally
-		{
-			_isSleeping = false;
-		}
-	}
-
-	/** 
-	 * Interrupt the thread if it's sleeping using the sleep() method in this class.<br>
-	 * If Thread:sleep() has been used it wont do interrupts, just skipping your request.
-	 */
-	public void doInterruptSleep()
-	{
-		if ( isSleeping() )
-			doInterrupt();
-		else
-			_logger.info("Sorry, can't interrupt sleep now, because WE ARE NOT SLEEPING.");
-	}
-	
-	/** enable/continue refreshing of monitor counters from the monitored server */
-	public void enableRefresh()
-	{
-		_refreshIsEnabled = true;
-
-		// If we where in sleep at the getCounters loop
-		if (_thread != null)
-		{
-			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"' if it was sleeping... This was done by thread '"+Thread.currentThread().getName()+"'.");
-			_thread.interrupt();
-		}
-	}
-
-	/** pause/disable refreshing of monitor counters from the monitored server */
-	public void disableRefresh()
-	{
-		_refreshIsEnabled = false;
-	}
-
-	/** if we refreshing of the counters is enabled, or paused */
-	public boolean isRefreshEnabled()
-	{
-		return _refreshIsEnabled;
-	}
-
-
-	/**
-	 * Are we currently getting counter information from the monitored server
-	 * @return yes or no
-	 */
-	public boolean isRefreshing()
-	{
-		return _isRefreshing;
-	}
-
-	/**
-	 * Indicate the we are currently in the process of getting counter information from the monitored server
-	 * @param true=isRefresing
-	 */
-	public static void setInRefresh(boolean s)
-	{
-		_isRefreshing = s;
-	}
-
-//	public void clearComponents()
+//	/**
+//	 * Interrupt the sleep and request a new refresh.<br>
+//	 * Note: this will be disregarded if we not sleeping waiting for a new refresh.
+//	 */
+//	public void doRefresh()
 //	{
-//		if ( ! _isInitialized )
-//			return;
+//		if ( isRefreshing() )
+//			_logger.info("Sorry, can't do refresh now, we are already in a Performance Counter Refresh");
+//		else
+//			doInterrupt();
+//	}
 //
-//		if (!isRefreshingCounters())
+//	/**
+//	 * calls interrupt() on the refresh thread.<br>
+//	 * So if the refresh thread is asleap waiting for next refresh it will be interupted and
+//	 * start to do a new refresh of data.
+//	 */
+//	public void doInterrupt()
+//	{
+//		// interrupt the collector thread
+//		if (_thread != null)
 //		{
-//			MainFrame.clearSummaryData();
-//
-//			Iterator<CountersModel> i = _CMList.iterator();
-//			while (i.hasNext())
-//			{
-//				CountersModel cm = i.next();
-//				
-//				if (cm != null)
-//				{
-//					cm.clear();
-//				}
-//			}
-//			
-//			SummaryPanel.getInstance().clearGraph();
-//
-////			MainFrame.statusFld.setText("");
+//			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"', this was done by thread '"+Thread.currentThread().getName()+"'.");
+//			_thread.interrupt();
 //		}
 //	}
-
-	
-	////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////
-	//// database connection
-	////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////
-	private Connection         _conn                      = null;
-	private long               _lastIsClosedCheck         = 0;
-	private long               _lastIsClosedRefreshTime   = 2000;
-
-	/** When did we do a connect last time */
-	private Date _lastMonConnectTime = null;
-
-	/** If controller want's to disconnect/stop collecting after a specific time */
-	private Date _stopMonConnectTime = null;
-
-//	/**
-//	 * Override this if any implementers wont allow isClosed() check...<br>
-//	 * For example in GUI mode the Event Dispath Thread we do not want to do it...<br>
-//	 * NOTE: This is a BIG workaround, which should be implemented in another way
-//	 * 
-//	 * @return true if allowed
-//	 */
-//	protected boolean allowNonCachedIsClosedCheck()
+//
+//	private boolean _isSleeping = false;
+//	/** Check if we are sleeping by calling the method sleep() in this class. */
+//	public boolean isSleeping()
 //	{
+//		return _isSleeping;
+//	}
+//	/**
+//	 * Sleep for X ms, should only be used when GUI should be able to be interrupted.
+//	 * @param ms sleep time
+//	 * @return true if we were sleept the whole time, false if we were interrupted.
+//	 */
+//	public boolean sleep(int ms)
+//	{
+//		try 
+//		{
+//			_isSleeping = true;
+//			Thread.sleep(ms); 
+//			return true;
+//		}
+//		catch (InterruptedException ignore)
+//		{
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("Thread '"+Thread.currentThread().getName()+"' was interrupted.", new Exception("Dummy exception, to get callstack from where this happened."));
+//			return false;
+//		}
+//		finally
+//		{
+//			_isSleeping = false;
+//		}
+//	}
+//
+//	/** 
+//	 * Interrupt the thread if it's sleeping using the sleep() method in this class.<br>
+//	 * If Thread:sleep() has been used it wont do interrupts, just skipping your request.
+//	 */
+//	public void doInterruptSleep()
+//	{
+//		if ( isSleeping() )
+//			doInterrupt();
+//		else
+//			_logger.info("Sorry, can't interrupt sleep now, because WE ARE NOT SLEEPING.");
+//	}
+//	
+//	/** enable/continue refreshing of monitor counters from the monitored server */
+//	public void enableRefresh()
+//	{
+//		_refreshIsEnabled = true;
+//
+//		// If we where in sleep at the getCounters loop
+//		if (_thread != null)
+//		{
+//			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"' if it was sleeping... This was done by thread '"+Thread.currentThread().getName()+"'.");
+//			_thread.interrupt();
+//		}
+//	}
+//
+//	/** pause/disable refreshing of monitor counters from the monitored server */
+//	public void disableRefresh()
+//	{
+//		_refreshIsEnabled = false;
+//	}
+//
+//	/** if we refreshing of the counters is enabled, or paused */
+//	public boolean isRefreshEnabled()
+//	{
+//		return _refreshIsEnabled;
+//	}
+//
+//
+//	/**
+//	 * Are we currently getting counter information from the monitored server
+//	 * @return yes or no
+//	 */
+//	public boolean isRefreshing()
+//	{
+//		return _isRefreshing;
+//	}
+//
+//	/**
+//	 * Indicate the we are currently in the process of getting counter information from the monitored server
+//	 * @param true=isRefresing
+//	 */
+//	public static void setInRefresh(boolean s)
+//	{
+//		_isRefreshing = s;
+//	}
+//
+////	public void clearComponents()
+////	{
+////		if ( ! _isInitialized )
+////			return;
+////
+////		if (!isRefreshingCounters())
+////		{
+////			MainFrame.clearSummaryData();
+////
+////			Iterator<CountersModel> i = _CMList.iterator();
+////			while (i.hasNext())
+////			{
+////				CountersModel cm = i.next();
+////				
+////				if (cm != null)
+////				{
+////					cm.clear();
+////				}
+////			}
+////			
+////			SummaryPanel.getInstance().clearGraph();
+////
+//////			MainFrame.statusFld.setText("");
+////		}
+////	}
+//
+//	
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	//// database connection
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	private Connection         _conn                      = null;
+//	private long               _lastIsClosedCheck         = 0;
+//	private long               _lastIsClosedRefreshTime   = 2000;
+//
+//	/** When did we do a connect last time */
+//	private Date _lastMonConnectTime = null;
+//
+//	/** If controller want's to disconnect/stop collecting after a specific time */
+//	private Date _stopMonConnectTime = null;
+//
+////	/**
+////	 * Override this if any implementers wont allow isClosed() check...<br>
+////	 * For example in GUI mode the Event Dispath Thread we do not want to do it...<br>
+////	 * NOTE: This is a BIG workaround, which should be implemented in another way
+////	 * 
+////	 * @return true if allowed
+////	 */
+////	protected boolean allowNonCachedIsClosedCheck()
+////	{
+////		return true;
+////	}
+//
+//	/**
+//	 * Do we have a connection to the database?<br>
+//	 * <b>NOTE:</b> Do NOT call the database to check it, just use the last information we got.
+//	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>
+//	 * On SQLExceptions, we should check if the database connection is still open/valid.
+//	 * <p>
+//	 * This is probably called from GUI places where we dont want a fast answer.
+//	 * @return true or false
+//	 */
+//	@Override
+//	public boolean isMonConnectedStatus()
+//	{
+//		if (_lastIsMonConnectedReturned < 0)
+//			isMonConnected();
+//		
+//		return _lastIsMonConnectedReturned > 0;
+//	}
+//
+//	/**
+//	 * Do we have a connection to the database?
+//	 * @return true or false
+//	 */
+//	@Override
+//	public boolean isMonConnected()
+//	{
+////		return isMonConnected(false, false);
+//		return isMonConnected(false, true);
+//	}
+//	/** remember the status of last call to isMonConnected() -1=notInitialized, 0=false, 1=true*/
+//	private int _lastIsMonConnectedReturned = -1;
+//
+//	/**
+//	 * Do we have a connection to the database?
+//	 * @return true or false
+//	 */
+//	@Override
+//	public boolean isMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
+//	{
+//		if (_conn == null) 
+//		{
+//			_lastIsMonConnectedReturned = 0; //false;
+//			return false;
+//		}
+//
+//		//DEBUG: System.out.print("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+")");
+//		// Cache the last call for X ms (default 1200 ms)
+//		if ( ! forceConnectionCheck )
+//		{
+//			long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+//			if ( diff < _lastIsClosedRefreshTime)
+//			{
+//				//DEBUG: System.out.println("    <<--- isMonConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
+//				_lastIsMonConnectedReturned = 1; //true;
+//				return true;
+//			}
+//
+////			if ( ! allowNonCachedIsClosedCheck() )
+////			{
+////				if (_logger.isDebugEnabled())
+////				{
+//////					long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+////					_logger.debug("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
+////				}
+//////	long diff = System.currentTimeMillis() - _lastIsClosedCheck;
+////	System.out.println("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") <--return-("+_lastIsMonConnectedReturned+"). Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
+////				return _lastIsMonConnectedReturned;
+////			}
+//
+//		}
+//
+//		// check the connection itself
+//		try
+//		{
+//			//DEBUG: System.out.println("    DO: isClosed");
+//			// jConnect issues RPC: sp_mda 0, 7 on isClosed()
+////			if (_conn.isClosed()) // hmmm this might block if done from 2 places at the same time... which happend when SQL Timeout occurs.
+//			if (isClosed(_conn))  // so lets use our own implementation... which does 'select 1' with a timeout
+//			{
+//				if (closeConnOnFailure)
+//					closeMonConnection();
+//
+//				_lastIsMonConnectedReturned = 0; //false;
+//				return false;
+//			}
+//		}
+//		catch (SQLException e)
+//		{
+//			_lastIsMonConnectedReturned = 0; //false;
+//			return false;
+//		}
+//
+//		_lastIsClosedCheck = System.currentTimeMillis();
+//		_lastIsMonConnectedReturned = 1; //true;
 //		return true;
 //	}
-
-	/**
-	 * Do we have a connection to the database?<br>
-	 * <b>NOTE:</b> Do NOT call the database to check it, just use the last information we got.
-	 * The last status should be maintained everytime a physical check is done via isMonConnected().<br>
-	 * On SQLExceptions, we should check if the database connection is still open/valid.
-	 * <p>
-	 * This is probably called from GUI places where we dont want a fast answer.
-	 * @return true or false
-	 */
-	@Override
-	public boolean isMonConnectedStatus()
-	{
-		if (_lastIsMonConnectedReturned < 0)
-			isMonConnected();
-		
-		return _lastIsMonConnectedReturned > 0;
-	}
-
-	/**
-	 * Do we have a connection to the database?
-	 * @return true or false
-	 */
-	@Override
-	public boolean isMonConnected()
-	{
-//		return isMonConnected(false, false);
-		return isMonConnected(false, true);
-	}
-	/** remember the status of last call to isMonConnected() -1=notInitialized, 0=false, 1=true*/
-	private int _lastIsMonConnectedReturned = -1;
-
-	/**
-	 * Do we have a connection to the database?
-	 * @return true or false
-	 */
-	@Override
-	public boolean isMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
-	{
-		if (_conn == null) 
-		{
-			_lastIsMonConnectedReturned = 0; //false;
-			return false;
-		}
-
-		//DEBUG: System.out.print("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+")");
-		// Cache the last call for X ms (default 1200 ms)
-		if ( ! forceConnectionCheck )
-		{
-			long diff = System.currentTimeMillis() - _lastIsClosedCheck;
-			if ( diff < _lastIsClosedRefreshTime)
-			{
-				//DEBUG: System.out.println("    <<--- isMonConnected(): not time for refresh. diff='"+diff+"', _lastIsClosedRefreshTime='"+_lastIsClosedRefreshTime+"'.");
-				_lastIsMonConnectedReturned = 1; //true;
-				return true;
-			}
-
-//			if ( ! allowNonCachedIsClosedCheck() )
+//	// Simulate the _conn.isClosed() functionality, but add a query timeout...
+//	// it looks like jConnect isClosed() could hang if you call many simultaneously
+//	private boolean isClosed(Connection conn)
+//	throws SQLException
+//	{
+//		try
+//		{
+//			Statement stmnt   = conn.createStatement();
+//			ResultSet rs      = stmnt.executeQuery("select 'AseTune-check:isClosed(conn)'");
+//
+//			stmnt.setQueryTimeout(5);
+//			while (rs.next())
 //			{
+//				rs.getString(1);
+//			}
+//			rs.close();
+//			stmnt.close();
+//
+//			// false = connection is alive, NOT Closed
+//			return false;
+//		}
+//		catch (SQLException e)
+//		{
+//			if ( ! "JZ0C0".equals(e.getSQLState()) ) // connection is already closed...
+//					_logger.warn("isClosed(conn) had problems", e);
+//
+//			throw e;
+//		}
+//	}
+//
+//	/**
+//	 * get last connect time (or actually when setMonConnection() was called last time).
+//	 */
+//	@Override
+//	public Date getMonConnectionTime()
+//	{
+//		return _lastMonConnectTime;
+//	}
+//
+//	@Override
+//	public void setMonDisConnectTime(Date time)
+//	{
+//		_stopMonConnectTime = time;
+//	}
+//	@Override
+//	public Date getMonDisConnectTime()
+//	{
+//		return _stopMonConnectTime;
+//	}
+//
+//	/**
+//	 * Set the <code>Connection</code> to use for monitoring.
+//	 */
+//	@Override
+//	public void setMonConnection(Connection conn)
+//	{
+//		_conn = conn;
+//		if (isMonConnected())
+//			_lastMonConnectTime = new Date();
+//	}
+//
+//	/**
+//	 * Gets the <code>Connection</code> to the monitored server.
+//	 */
+//	@Override
+//	public Connection getMonConnection()
+//	{
+//		return _conn;
+//	}
+//
+//	/** Gets the <code>Connection</code> to the monitored server. */
+//	@Override
+//	public void closeMonConnection()
+//	{
+//		if (_conn == null) 
+//			return;
+//
+//		try
+//		{
+//			if ( ! _conn.isClosed() )
+//			{
+//				_conn.close();
 //				if (_logger.isDebugEnabled())
 //				{
-////					long diff = System.currentTimeMillis() - _lastIsClosedCheck;
-//					_logger.debug("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
+//					_logger.debug("Connection closed");
 //				}
-////	long diff = System.currentTimeMillis() - _lastIsClosedCheck;
-//	System.out.println("isMonConnected(forceConnectionCheck="+forceConnectionCheck+", closeConnOnFailure="+closeConnOnFailure+") <--return-("+_lastIsMonConnectedReturned+"). Skipping isClosed() towards the server. due to allowNonCachedIsClosedCheck() returned FALSE. Instead returning last known state, which was '"+_lastIsMonConnectedReturned+"', Last server check () was made "+TimeUtils.msToTimeStr(diff)+" ago, _lastIsClosedRefreshTime="+_lastIsClosedRefreshTime);
-//				return _lastIsMonConnectedReturned;
 //			}
-
-		}
-
-		// check the connection itself
-		try
-		{
-			//DEBUG: System.out.println("    DO: isClosed");
-			// jConnect issues RPC: sp_mda 0, 7 on isClosed()
-//			if (_conn.isClosed()) // hmmm this might block if done from 2 places at the same time... which happend when SQL Timeout occurs.
-			if (isClosed(_conn))  // so lets use our own implementation... which does 'select 1' with a timeout
-			{
-				if (closeConnOnFailure)
-					closeMonConnection();
-
-				_lastIsMonConnectedReturned = 0; //false;
-				return false;
-			}
-		}
-		catch (SQLException e)
-		{
-			_lastIsMonConnectedReturned = 0; //false;
-			return false;
-		}
-
-		_lastIsClosedCheck = System.currentTimeMillis();
-		_lastIsMonConnectedReturned = 1; //true;
-		return true;
-	}
-	// Simulate the _conn.isClosed() functionality, but add a query timeout...
-	// it looks like jConnect isClosed() could hang if you call many simultaneously
-	private boolean isClosed(Connection conn)
-	throws SQLException
-	{
-		try
-		{
-			Statement stmnt   = conn.createStatement();
-			ResultSet rs      = stmnt.executeQuery("select 'AseTune-check:isClosed(conn)'");
-
-			stmnt.setQueryTimeout(5);
-			while (rs.next())
-			{
-				rs.getString(1);
-			}
-			rs.close();
-			stmnt.close();
-
-			// false = connection is alive, NOT Closed
-			return false;
-		}
-		catch (SQLException e)
-		{
-			if ( ! "JZ0C0".equals(e.getSQLState()) ) // connection is already closed...
-					_logger.warn("isClosed(conn) had problems", e);
-
-			throw e;
-		}
-	}
-
-	/**
-	 * get last connect time (or actually when setMonConnection() was called last time).
-	 */
-	@Override
-	public Date getMonConnectionTime()
-	{
-		return _lastMonConnectTime;
-	}
-
-	@Override
-	public void setMonDisConnectTime(Date time)
-	{
-		_stopMonConnectTime = time;
-	}
-	@Override
-	public Date getMonDisConnectTime()
-	{
-		return _stopMonConnectTime;
-	}
-
-	/**
-	 * Set the <code>Connection</code> to use for monitoring.
-	 */
-	@Override
-	public void setMonConnection(Connection conn)
-	{
-		_conn = conn;
-		if (isMonConnected())
-			_lastMonConnectTime = new Date();
-	}
-
-	/**
-	 * Gets the <code>Connection</code> to the monitored server.
-	 */
-	@Override
-	public Connection getMonConnection()
-	{
-		return _conn;
-	}
-
-	/** Gets the <code>Connection</code> to the monitored server. */
-	@Override
-	public void closeMonConnection()
-	{
-		if (_conn == null) 
-			return;
-
-		try
-		{
-			if ( ! _conn.isClosed() )
-			{
-				_conn.close();
-				if (_logger.isDebugEnabled())
-				{
-					_logger.debug("Connection closed");
-				}
-			}
-		}
-		catch (SQLException ev)
-		{
-			_logger.error("closeMonConnection", ev);
-		}
-
-		cleanupMonConnection();
-		_conn = null;
-	}
-
-	/** override this method to cleanup stuff on disconnect */
-	@Override
-	public void cleanupMonConnection()
-	{
-	}
-
-	////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////
-	//// SSH connection
-	////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////
-	private SshConnection      _sshConn                      = null;
-	private long               _sshLastIsClosedCheck         = 0;
-	private long               _sshLastIsClosedRefreshTime   = 1200;
-
-	/**
-	 * Do we have a connection to the HOST?
-	 * @return true or false
-	 */
-	public boolean isHostMonConnected()
-	{
-		return isHostMonConnected(false, false);
-	}
-	/**
-	 * Do we have a connection to the HOST?
-	 * @return true or false
-	 */
-	public boolean isHostMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
-	{
-		if (_sshConn == null) 
-			return false;
-
-		// Cache the last call for X ms (default 1200 ms)
-		if ( ! forceConnectionCheck )
-		{
-			long diff = System.currentTimeMillis() - _sshLastIsClosedCheck;
-			if ( diff < _sshLastIsClosedRefreshTime)
-			{
-				return true;
-			}
-		}
-
-		// check the connection itself
-		try
-		{
-			if (_sshConn.isClosed())
-			{
-				if (closeConnOnFailure)
-					closeHostMonConnection();
-				return false;
-			}
-		}
-		catch (Exception e)
-		{
-			return false;
-		}
-
-		_sshLastIsClosedCheck = System.currentTimeMillis();
-		return true;
-	}
-
-	/**
-	 * Set the <code>SshConnection</code> to use for monitoring.
-	 */
-	public void setHostMonConnection(SshConnection sshConn)
-	{
-		_sshConn = sshConn;
-//		MainFrame.setStatus(MainFrame.ST_CONNECT);
-	}
-
-	/**
-	 * Gets the <code>SshConnection</code> to the monitored server.
-	 */
-	public SshConnection getHostMonConnection()
-	{
-		return _sshConn;
-	}
-
-	/** Gets the <code>SshConnection</code> to the monitored server. */
-	public void closeHostMonConnection()
-	{
-		if (_sshConn == null) 
-			return;
-
-		try
-		{
-			if ( ! _sshConn.isClosed() )
-			{
-				_sshConn.close();
-				if (_logger.isDebugEnabled())
-				{
-					_logger.debug("SSH Connection closed");
-				}
-			}
-		}
-		catch (Exception ev)
-		{
-			_logger.error("closeHostMonConnection", ev);
-		}
-		_conn = null;
-	}
-	
-
-	//==================================================================
-	// BEGIN: statistical mehods
-	//==================================================================
-	/**
-	 * Call this whenever we do a new sample
-	 * @param mainSampleTime the time of the sample.
-	 */
-	public void setStatisticsTime(Timestamp mainSampleTime)
-	{
-		if (_statFirstSampleTime == null)
-			_statFirstSampleTime = mainSampleTime;
-
-		_statLastSampleTime = mainSampleTime;
-	}
-
-	/**
-	 * Reset statistical times (first/last) sample times<br>
-	 * This would be called by the statistical "sender" after a disconnect.
-	 */
-	public void resetStatisticsTime()
-	{
-		_statFirstSampleTime = null;
-		_statLastSampleTime  = null;
-	}
-
-	/**
-	 * Get first sample time, used by the statistical send<br>
-	 * If no samples has been done it will return null
-	 */
-	public Timestamp getStatisticsFirstSampleTime()
-	{
-		return _statFirstSampleTime;
-	}
-
-	/**
-	 * Get last sample time, used by the statistical send
-	 * If no samples has been done it will return null
-	 */
-	public Timestamp getStatisticsLastSampleTime()
-	{
-		return _statLastSampleTime;
-	}
-	//==================================================================
-	// END: statistical mehods
-	//==================================================================
+//		}
+//		catch (SQLException ev)
+//		{
+//			_logger.error("closeMonConnection", ev);
+//		}
+//
+//		cleanupMonConnection();
+//		_conn = null;
+//	}
+//
+//	/** override this method to cleanup stuff on disconnect */
+//	@Override
+//	public void cleanupMonConnection()
+//	{
+//	}
+//
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	//// SSH connection
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	////////////////////////////////////////////////////////////////////////////////////////
+//	private SshConnection      _sshConn                      = null;
+//	private long               _sshLastIsClosedCheck         = 0;
+//	private long               _sshLastIsClosedRefreshTime   = 1200;
+//
+//	/**
+//	 * Do we have a connection to the HOST?
+//	 * @return true or false
+//	 */
+//	public boolean isHostMonConnected()
+//	{
+//		return isHostMonConnected(false, false);
+//	}
+//	/**
+//	 * Do we have a connection to the HOST?
+//	 * @return true or false
+//	 */
+//	public boolean isHostMonConnected(boolean forceConnectionCheck, boolean closeConnOnFailure)
+//	{
+//		if (_sshConn == null) 
+//			return false;
+//
+//		// Cache the last call for X ms (default 1200 ms)
+//		if ( ! forceConnectionCheck )
+//		{
+//			long diff = System.currentTimeMillis() - _sshLastIsClosedCheck;
+//			if ( diff < _sshLastIsClosedRefreshTime)
+//			{
+//				return true;
+//			}
+//		}
+//
+//		// check the connection itself
+//		try
+//		{
+//			if (_sshConn.isClosed())
+//			{
+//				if (closeConnOnFailure)
+//					closeHostMonConnection();
+//				return false;
+//			}
+//		}
+//		catch (Exception e)
+//		{
+//			return false;
+//		}
+//
+//		_sshLastIsClosedCheck = System.currentTimeMillis();
+//		return true;
+//	}
+//
+//	/**
+//	 * Set the <code>SshConnection</code> to use for monitoring.
+//	 */
+//	public void setHostMonConnection(SshConnection sshConn)
+//	{
+//		_sshConn = sshConn;
+////		MainFrame.setStatus(MainFrame.ST_CONNECT);
+//	}
+//
+//	/**
+//	 * Gets the <code>SshConnection</code> to the monitored server.
+//	 */
+//	public SshConnection getHostMonConnection()
+//	{
+//		return _sshConn;
+//	}
+//
+//	/** Gets the <code>SshConnection</code> to the monitored server. */
+//	public void closeHostMonConnection()
+//	{
+//		if (_sshConn == null) 
+//			return;
+//
+//		try
+//		{
+//			if ( ! _sshConn.isClosed() )
+//			{
+//				_sshConn.close();
+//				if (_logger.isDebugEnabled())
+//				{
+//					_logger.debug("SSH Connection closed");
+//				}
+//			}
+//		}
+//		catch (Exception ev)
+//		{
+//			_logger.error("closeHostMonConnection", ev);
+//		}
+//		_conn = null;
+//	}
+//	
+//
+//	//==================================================================
+//	// BEGIN: statistical mehods
+//	//==================================================================
+//	/**
+//	 * Call this whenever we do a new sample
+//	 * @param mainSampleTime the time of the sample.
+//	 */
+//	public void setStatisticsTime(Timestamp mainSampleTime)
+//	{
+//		if (_statFirstSampleTime == null)
+//			_statFirstSampleTime = mainSampleTime;
+//
+//		_statLastSampleTime = mainSampleTime;
+//	}
+//
+//	/**
+//	 * Reset statistical times (first/last) sample times<br>
+//	 * This would be called by the statistical "sender" after a disconnect.
+//	 */
+//	public void resetStatisticsTime()
+//	{
+//		_statFirstSampleTime = null;
+//		_statLastSampleTime  = null;
+//	}
+//
+//	/**
+//	 * Get first sample time, used by the statistical send<br>
+//	 * If no samples has been done it will return null
+//	 */
+//	public Timestamp getStatisticsFirstSampleTime()
+//	{
+//		return _statFirstSampleTime;
+//	}
+//
+//	/**
+//	 * Get last sample time, used by the statistical send
+//	 * If no samples has been done it will return null
+//	 */
+//	public Timestamp getStatisticsLastSampleTime()
+//	{
+//		return _statLastSampleTime;
+//	}
+//	//==================================================================
+//	// END: statistical mehods
+//	//==================================================================
 
 }

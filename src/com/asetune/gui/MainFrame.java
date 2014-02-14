@@ -85,7 +85,6 @@ import com.asetune.GetCounters;
 import com.asetune.GetCountersGui;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
-import com.asetune.ProcessDetailFrame;
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.MailGroupDialog;
@@ -112,6 +111,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.AseStackTraceAnalyzer;
 import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
+import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.tools.WindowType;
@@ -1520,7 +1520,7 @@ public class MainFrame
 			TcpConfigDialog.showDialog(_instance);
 
 		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
-			new ProcessDetailFrame(-1, -1);
+			new ProcessDetailFrame(this, -1, -1);
 
 		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 		{
@@ -1877,16 +1877,12 @@ public class MainFrame
 
 				if ( cm.getTabPanel() != null)
 				{
-					JTabbedPane tp = MainFrame.getTabbedPane();
-					if (tp instanceof GTabbedPane)
+					GTabbedPane tp = getTabbedPane();
+					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(cm.getDisplayName()))
-						{
-							JFrame frame = gtp.getTabUnDockedFrame(cm.getDisplayName());
-							String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, "asetune."+cm.getName(), true, extraInfo);
-							fileList += fn + NL;
-						}
+						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
+						String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, "asetune."+cm.getName(), true, extraInfo);
+						fileList += fn + NL;
 					}
 				}
 			}
@@ -3393,7 +3389,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	
 	/**
 	 */
-	public static GTabbedPane getTabbedPane()
+	@Override
+	public GTabbedPane getTabbedPane()
 	{
 		// We are probably in NO-GUI mode
 		if ( ! AseTune.hasGUI() )
@@ -3886,7 +3883,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	 * What tab is currently active?
 	 * @return the Component within the tab
 	 */
-	public static Component getActiveTab()
+	@Override
+	public Component getActiveTab()
 	{
 		return _mainTabbedPane.getSelectedComponent(true);
 	}

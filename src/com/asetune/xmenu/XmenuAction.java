@@ -9,6 +9,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Properties;
 
+import com.asetune.utils.ConnectionProvider;
+
 /**
  * @author gorans
  */
@@ -21,6 +23,7 @@ public interface XmenuAction
 	public void setMenuName(String name);
 	public void setConfig(String name);
 	public void setConnection(Connection conn);
+	public void setConnectionProvider(ConnectionProvider connProvider);
 	public void setCloseConnOnExit(boolean b);
 	public void setOwner(Window window);
 
@@ -39,6 +42,8 @@ public interface XmenuAction
 
 	public Connection                   getConnection();
 	public boolean                      isCloseConnOnExit();
+
+	public ConnectionProvider           getConnectionProvider();
 
 	public abstract void doWork();
 

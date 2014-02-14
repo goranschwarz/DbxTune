@@ -1,7 +1,7 @@
 /**
  */
 
-package com.asetune;
+package com.asetune.tools.sqlcapture;
 
 import java.util.Iterator;
 import java.util.Vector;

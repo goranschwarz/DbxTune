@@ -187,4 +187,102 @@ public class RSyntaxTextAreaEditorKitX
 			return RSyntaxUtilitiesX.getWordEnd((RSyntaxTextArea) textArea, offs);
 		}
 	}
+
+	/**
+	 * to uppercase
+	 */
+	@SuppressWarnings("serial")
+	public static class ToUpperCaseAction extends RecordableTextAction
+	{
+		protected ToUpperCaseAction(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			if (!textArea.isEditable() || !textArea.isEnabled())
+			{
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			String str = textArea.getSelectedText();
+			if (str != null)
+			{
+				textArea.beginAtomicEdit();
+				try 
+				{
+					int selStart = textArea.getSelectionStart();
+					int selEnd   = textArea.getSelectionEnd();
+
+					str = str.toUpperCase();
+					textArea.replaceSelection(str); 
+					
+					textArea.setSelectionStart(selStart);
+					textArea.setSelectionEnd  (selEnd);
+				}
+				finally 
+				{
+					textArea.endAtomicEdit(); 
+				}
+			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
+		}
+	}
+
+	/**
+	 * to lowercase
+	 */
+	@SuppressWarnings("serial")
+	public static class ToLowerCaseAction extends RecordableTextAction
+	{
+		protected ToLowerCaseAction(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			if (!textArea.isEditable() || !textArea.isEnabled())
+			{
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			String str = textArea.getSelectedText();
+			if (str != null)
+			{
+				textArea.beginAtomicEdit();
+				try 
+				{
+					int selStart = textArea.getSelectionStart();
+					int selEnd   = textArea.getSelectionEnd();
+
+					str = str.toLowerCase();
+					textArea.replaceSelection(str); 
+					
+					textArea.setSelectionStart(selStart);
+					textArea.setSelectionEnd  (selEnd);
+				}
+				finally 
+				{
+					textArea.endAtomicEdit(); 
+				}
+			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
+		}
+	}
 }

@@ -146,7 +146,7 @@
 		//doCleanup("delete from asemon_error_info         where appVersion  like '2.%' ");
 		//doCleanup("delete from asemon_error_info2        where appVersion  like '2.%' ");
 
-		//doCleanup("delete from asemon_error_info         where logLocation  like 'com.asetune.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
+		//doCleanup("delete from asemon_error_info         where logLocation  like 'com.asetune.tools.sqlcapture.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like '%SQLException, Error writing DDL to Persistent Counter DB. Caught: org.h2.jdbc.JdbcSQLException: Unknown data type%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.ClassCastException: java.lang.% cannot be cast to java.lang.%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.NumberFormatException: Infinite or NaN%' ");

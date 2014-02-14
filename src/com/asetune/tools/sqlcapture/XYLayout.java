@@ -1,4 +1,4 @@
-package com.asetune;
+package com.asetune.tools.sqlcapture;
 
 import java.awt.Component;
 import java.awt.Container;

@@ -124,6 +124,7 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			mtd.addColumn("monCachedProcedures",  "SumActive",             "<html>Number of instances that has the column Active = 'Yes'          <br><b>Formula</b>: sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END) <br> </html>");
 			mtd.addColumn("monCachedProcedures",  "NumberOfPlanesInCache", "<html>Number of instances of this procedure in the Procedure Cache    <br><b>Formula</b>: count(*) group by DBName, ObjectName, ObjectType <br> </html>");
 			mtd.addColumn("monCachedProcedures",  "SumMemUsageKB",         "<html>SUM MemUsageKB                                                  <br><b>Formula</b>: sum(MemUsageKB)                       <br></html>");
 			mtd.addColumn("monCachedProcedures",  "MaxCompileDate",        "<html>MAX CompileDate                                                 <br><b>Formula</b>: max(CompileDate)                      <br></html>");
@@ -201,11 +202,22 @@ extends CountersModel
 			AvgPagesWritten   = "  AvgPagesWritten       = CASE WHEN sum(convert(bigint,ExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,PagesWritten  )) + 0.0) / (sum(convert(bigint,ExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
 		}
 		
+		// ASE 16.0
+		String SumActive      = ""; // Indicates whether the plan for this procedure is active or not
+		String ase1600_nl     = "";
+
+		if (aseVersion >= 1600000)
+		{
+			SumActive      = "  SumActive = sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END), ";
+			ase1600_nl     = "\n";
+		}
+
 		cols = 
 			"  DBName, \n" +
 			"  ObjectName, \n" +
 			"  ObjectType, \n" +
 			"  NumberOfPlanesInCache = count(*), \n" +
+			SumActive + ase1600_nl +
 			"  SumMemUsageKB         = sum(convert(bigint,MemUsageKB)), \n" +
 			"  MaxCompileDate        = max(CompileDate), \n" +
 			"  MinCompileAgeInSec    = datediff(ss, max(CompileDate), getdate()), \n" +

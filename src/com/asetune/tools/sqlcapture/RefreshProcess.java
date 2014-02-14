@@ -2,7 +2,7 @@
 */
 
 
-package com.asetune;
+package com.asetune.tools.sqlcapture;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Point;
@@ -43,9 +43,13 @@ import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.AseTune;
+import com.asetune.MonTablesDictionary;
+import com.asetune.Version;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.AseConfigMonitoringDialog;
+import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -2077,7 +2081,6 @@ public class RefreshProcess extends Thread
 		}
 
   	} // end: method
-	
 
 	public void createCounters()
 	{
@@ -2458,6 +2461,10 @@ public class RefreshProcess extends Thread
 				if (srvVersion >= 1502000)
 				{
 					cols3 += ", SourceCodeID";  //
+				}
+				if (srvVersion >= 1600000)
+				{
+					cols3 += ", PartitionID";  //
 				}
 				
 				String sql =

@@ -245,6 +245,7 @@ extends CountersModel
 		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the process
 		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
 		String nl_15702           = ""; // NL for this section
+		String sp_15702           = ""; // column Space padding for this section
 //		if (aseVersion >= 15702)
 		if (aseVersion >= 1570020)
 		{
@@ -253,6 +254,18 @@ extends CountersModel
 			IOSize4Pages       = "A.IOSize4Pages, ";
 			IOSize8Pages       = "A.IOSize8Pages, ";
 			nl_15702           = "\n";
+			sp_15702           = "  ";
+		}
+
+		// ASE 16.0
+		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
+		String nl_16000           = ""; // NL for this section
+		String sp_16000           = ""; // column Space padding for this section
+		if (aseVersion >= 1600000)
+		{
+			ClientDriverVersion = "MP.ClientDriverVersion, ";
+			nl_16000            = "\n";
+			sp_16000            = "  ";
 		}
 
 		cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
@@ -263,13 +276,14 @@ extends CountersModel
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
 			+ "  SP.stmtnum, SP.linenum, \n"
+			+ sp_16000 + ClientDriverVersion + nl_16000 
 			+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
 			+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
 			+ "  SP.tran_name, SP.cpu, SP.physical_io, \n"
 			+ "  A.CPUTime, A.WaitTime, A.LogicalReads, \n"
 			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
-			+ IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
+			+ sp_15702 + IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
 //		if (aseVersion >= 12520)
 		if (aseVersion >= 1252000)

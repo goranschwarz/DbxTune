@@ -1,7 +1,7 @@
 /**
 */
 
-package com.asetune;
+package com.asetune.tools.sqlcapture;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -43,6 +43,7 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.gui.LineNumberedPaper;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -51,6 +52,7 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
 
 
@@ -134,6 +136,7 @@ public class ProcessDetailFrame extends JFrame
 
 	private RefreshProcess refressProcess;
 	private Connection cnx;
+	private ConnectionProvider _connectionProvider = null;
 
 
 	//
@@ -423,8 +426,12 @@ public class ProcessDetailFrame extends JFrame
 //	private Image        frameIcon;
 
 //	public ProcessDetailFrame(int k, int in_spid)
-	public ProcessDetailFrame(int SPID, int KPID)
+	public ProcessDetailFrame(ConnectionProvider connProvider, int SPID, int KPID)
 	{
+		_connectionProvider = connProvider;
+		if (_connectionProvider == null)
+			throw new RuntimeException("ProcessDetailFrame: The passed ConnectionProvider was null.");
+
 //		pdf = this;
 		try
 		{
@@ -1451,7 +1458,8 @@ public class ProcessDetailFrame extends JFrame
 
 		// Open the connection
 //		cnx = OpenConnectionDlg.getAnotherConnection(Version.getAppName()+"-spid", true);
-		cnx = AseConnectionFactory.getConnection(null, Version.getAppName()+"-spid", null);
+//		cnx = AseConnectionFactory.getConnection(null, Version.getAppName()+"-spid", null);
+		cnx = _connectionProvider.getNewConnection(Version.getAppName()+"-spid");
 		if ( ! AseConnectionUtils.checkForMonitorOptions(cnx, AseConnectionFactory.getUser(), true, this) )
 		{
 			// FIXME: should we continue here or not...

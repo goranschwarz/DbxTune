@@ -57,6 +57,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
@@ -126,6 +127,9 @@ import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
@@ -153,6 +157,7 @@ import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
+import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.StatusBar.ServerInfo;
 import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
@@ -276,8 +281,11 @@ public class QueryWindow
 	public final static String  DEFAULT_favoriteCmdFileNameRcl = Version.APP_STORE_DIR + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
 
 	public final static String  PROPKEY_restoreWinSizeForConn  = PROPKEY_APP_PREFIX + "restoreWinSizeForConn";
-	public final static boolean DEFAULT_restoreWinSizeForConn  = true;
+	public final static boolean DEFAULT_restoreWinSizeForConn  = false;
 	
+	public final static String  PROPKEY_sqlBatchTerminator     = AseSqlScriptReader.PROPKEY_sqlBatchTerminator;
+	public final static String  DEFAULT_sqlBatchTerminator     = AseSqlScriptReader.DEFAULT_sqlBatchTerminator;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_asPlainText,         DEFAULT_asPlainText);
@@ -313,6 +321,7 @@ public class QueryWindow
 	public static final String ACTION_RS_GENERATE_ALL_DDL       = "RS_GENERATE_ALL_DDL";
 	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
 	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
+	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
 
 	private Connection  _conn            = null;
 	private int         _connType        = -1;
@@ -344,19 +353,22 @@ public class QueryWindow
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
 	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
 	private JCheckBoxMenuItem _jdbcAutoCommit_chk         = new JCheckBoxMenuItem("JDBC AutoCommit", DEFAULT_jdbcAutoCommit);
+	private JMenuItem         _sqlBatchTermDialog_mi      = new JMenuItem        ("Change SQL Batch Terminator");
 
-	private JButton     _appOptions_but  = new JButton("Options");
-	private JComboBox   _dbnames_cbx     = new JComboBox();
-	private JPanel      _resPanel        = new JPanel( new MigLayout("insets 0 0 0 0, gap 0 0, wrap") );
-	private JScrollPane _resPanelScroll  = new JScrollPane(_resPanel);
-	private RTextScrollPane _resPanelTextScroll  = new RTextScrollPane();
-//	private JLabel	    _msgline         = new JLabel("");	     // For displaying messages
-	private StatusBar   _statusBar       = new StatusBar();
-	private JSplitPane  _splitPane       = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-	private int         _lastTabIndex    = -1;
-	private boolean     _closeConnOnExit = true;
-	private static Font _aseMsgFont      = null;
-	private ArrayList<JComponent> _resultCompList  = null;
+	private JButton           _appOptions_but             = new JButton("Options");
+	private JButton           _codeCompletionOpt_but      = new JButton(); 
+
+	private JComboBox         _dbnames_cbx                = new JComboBox();
+	private JPanel            _resPanel                   = new JPanel( new MigLayout("insets 0 0 0 0, gap 0 0, wrap") );
+	private JScrollPane       _resPanelScroll             = new JScrollPane(_resPanel);
+	private RTextScrollPane   _resPanelTextScroll         = new RTextScrollPane();
+//	private JLabel	          _msgline                    = new JLabel("");	     // For displaying messages
+	private StatusBar         _statusBar                  = new StatusBar();
+	private JSplitPane        _splitPane                  = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+	private int               _lastTabIndex               = -1;
+	private boolean           _closeConnOnExit            = true;
+	private static Font       _aseMsgFont                 = null;
+	private ArrayList<JComponent> _resultCompList         = null;
 	
 	private int         _srvVersion                = 0;
 	private String      _connectedDriverName       = null;
@@ -444,6 +456,7 @@ public class QueryWindow
 	// Tools
 	private JMenu               _tools_m                = new JMenu("Tools");
 	private JMenuItem           _toolDummy_mi           = new JMenuItem("Dummy entry");
+	private JMenuItem           _aseCaptureSql_mi       = new JMenuItem("Capture SQL...");
 
 	// Start time
 	private static long _startTime = System.currentTimeMillis();
@@ -806,8 +819,10 @@ public class QueryWindow
 	
 			// TOOLS
 			_tools_m.add(_toolDummy_mi);
+			_tools_m.add(_aseCaptureSql_mi);
 
-			_toolDummy_mi.setVisible(false);
+			_toolDummy_mi    .setVisible(false);
+			_aseCaptureSql_mi.setVisible(false);
 
 			
 			_file_m .setMnemonic(KeyEvent.VK_T);
@@ -866,6 +881,7 @@ public class QueryWindow
 			_rs_configChangedDdl_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_dumpQueue_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png"));
 			_rsWhoIsDown_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/rs_admin_who_is_down.png"));
+			_aseCaptureSql_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 
 			//--------------------------
 			// MENU - Actions
@@ -886,6 +902,7 @@ public class QueryWindow
 			_rs_configAllDdl_mi    .setActionCommand(ACTION_RS_GENERATE_ALL_DDL);
 			_rs_dumpQueue_mi       .setActionCommand(ACTION_RS_DUMP_QUEUE);
 			_rsWhoIsDown_mi        .setActionCommand(ACTION_RS_WHO_IS_DOWN);
+			_aseCaptureSql_mi      .setActionCommand(ACTION_ASE_CAPTURE_SQL);
 
 			//--------------------------
 			// And the action listener
@@ -906,6 +923,7 @@ public class QueryWindow
 			_rs_configAllDdl_mi    .addActionListener(this);
 			_rs_dumpQueue_mi       .addActionListener(this);
 			_rsWhoIsDown_mi        .addActionListener(this);
+			_aseCaptureSql_mi      .addActionListener(this);
 		}
 
 //		final JPopupMenu fileHistoryPopupMenu = new JPopupMenu();
@@ -1113,6 +1131,9 @@ public class QueryWindow
 		try {_setAseOptions_but = createSetAseOptionButton(null, _srvVersion);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'set options' button.",ex);}
 
+		try {_codeCompletionOpt_but = createCodeCompletionOptionButton(null);}
+		catch (Throwable ex) {_logger.error("Problems creating the 'Code Completion Options' button.",ex);}
+
 		try {_copy_but = createCopyResultsButton(null);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'Copy results' button.",ex);}
 
@@ -1134,7 +1155,13 @@ public class QueryWindow
 		_limitRsRowsRead_chk.setToolTipText(
 				"<html>" +
 				"<b>Stop</b> reading the ResultSet after # rows.<br>" +
-				"To change the number of rows to stop after, choose the next menu item (dialog)" +
+				"To change the number of rows to stop after, choose the next menu item (dialog)<br>" +
+				"<br>" +
+				"This could also be accomplished with the 'go top 500' command.<br>" +
+				"which would limit number or records read for the current SQL Batch.<br>" +
+				"Example:<br>" +
+				"<code>select * from someTable</code><br>" +
+				"<code>go top 500</code><br>" +
 				"</html>");
 		_limitRsRowsReadDialog_mi.setToolTipText(
 				"<html>" +
@@ -1220,6 +1247,10 @@ public class QueryWindow
 				"<html>" +
 				"JDBC AutoCommit settings.<br>" +
 				"</html>");
+		_sqlBatchTermDialog_mi.setToolTipText(
+				"<html>" +
+				"Open a dialog where you can change the string used to send a SQL Batch to the server." +
+				"</html>");
 //		_copy_but    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 //		_query_txt   .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
@@ -1287,21 +1318,22 @@ public class QueryWindow
 //		_queryErrStrip.setVisible(false);
 		_queryErrStrip.setVisible(true);
 		
-		bottom.add(_dbnames_cbx,        "split 6, hidemode 2");
-		bottom.add(_exec_but,           "");
-		bottom.add(_execGuiShowplan_but,"");
-//		bottom.add(_rsInTabs,           "hidemode 2");
-//		bottom.add(_asPlainText,        "");
-//		bottom.add(_showRowCount,       "");
-		bottom.add(_appOptions_but,     "gap 30");
-		bottom.add(_setAseOptions_but,  "");
-//		bottom.add(_showplan,           "");
-		bottom.add(new JLabel(),        "growx, pushx"); // dummy label to "grow" the _copy to the right side
-		bottom.add(_copy_but,           "wrap");
-		bottom.add(_resPanelScroll,     "span 4, width 100%, height 100%, hidemode 3");
-		bottom.add(_resPanelTextScroll, "span 4, width 100%, height 100%, hidemode 3");
-//		bottom.add(_msgline,            "dock south");
-		bottom.add(_statusBar,          "dock south");
+		bottom.add(_dbnames_cbx,           "split 6, hidemode 2");
+		bottom.add(_exec_but,              "");
+		bottom.add(_execGuiShowplan_but,   "");
+//		bottom.add(_rsInTabs,              "hidemode 2");
+//		bottom.add(_asPlainText,           "");
+//		bottom.add(_showRowCount,          "");
+		bottom.add(_appOptions_but,        "gap 30");
+		bottom.add(_setAseOptions_but,     "");
+		bottom.add(_codeCompletionOpt_but, "");
+//		bottom.add(_showplan,              "");
+		bottom.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
+		bottom.add(_copy_but,              "wrap");
+		bottom.add(_resPanelScroll,        "span 4, width 100%, height 100%, hidemode 3");
+		bottom.add(_resPanelTextScroll,    "span 4, width 100%, height 100%, hidemode 3");
+//		bottom.add(_msgline,               "dock south");
+		bottom.add(_statusBar,             "dock south");
 
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
@@ -1585,7 +1617,7 @@ public class QueryWindow
 		String screenResStr = SwingUtils.getScreenResulutionAsString();
 
 		int width   = 600;
-		int height  = 400;
+		int height  = 550;
 		int winPosX = -1;
 		int winPosY = -1;
 		int divLoc  = -1;
@@ -1709,6 +1741,9 @@ public class QueryWindow
 
 		if (ACTION_RS_WHO_IS_DOWN.equals(actionCmd))
 			action_rsWhoIsDown(e);
+
+		if (ACTION_ASE_CAPTURE_SQL.equals(actionCmd))
+			action_aseCaptureSql(e);
 
 		if (ACTION_VIEW_CMD_HISTORY.equals(actionCmd))
 			action_viewCmdHistory(e);
@@ -2249,6 +2284,7 @@ public class QueryWindow
 		_cmdRcl_but            .setVisible(false);
 		_rs_dumpQueue_mi       .setVisible(false);
 		_rsWhoIsDown_mi        .setVisible(false);
+		_aseCaptureSql_mi      .setVisible(false);
 
 		// view and tools menu might be empty...
 		// if so hide the main menu entry as well
@@ -2322,6 +2358,7 @@ public class QueryWindow
 			{
 				_ase_viewConfig_mi         .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
 				_cmdSql_but                .setVisible(true);
+				_aseCaptureSql_mi          .setVisible(true);
 
 				_dbnames_cbx               .setEnabled(true);
 				_exec_but                  .setEnabled(true);
@@ -3137,6 +3174,11 @@ public class QueryWindow
 			0, false);
 	}
 
+	private void action_aseCaptureSql(ActionEvent e)
+	{
+		new ProcessDetailFrame(this, -1, -1);
+	}
+
 	private void action_viewCmdHistory(ActionEvent e)
 	{
 		if (_cmdHistoryDialog == null)
@@ -3253,7 +3295,7 @@ public class QueryWindow
 		String screenResStr = SwingUtils.getScreenResulutionAsString();
 
 		int width   = 600;
-		int height  = 400;
+		int height  = 550;
 		int winPosX = -1;
 		int winPosY = -1;
 		int divLoc  = -1;
@@ -3599,7 +3641,7 @@ public class QueryWindow
 					for (int r : selRows)
 					{
 						String val = table.getValueAt(r, atCol) + "";
-						sb.append(val).append("<br>").append("go").append("<br>");
+						sb.append(val).append("<br>").append(AseSqlScriptReader.getConfiguredGoTerminator()).append("<br>");
 					}
 					if (selRows.length > 0)
 					{
@@ -3629,7 +3671,7 @@ public class QueryWindow
 					for (int r : selRows)
 					{
 						String val = table.getValueAt(r, atCol) + "";
-						sb.append(val).append("\n").append("go").append("\n");
+						sb.append(val).append("\n").append(AseSqlScriptReader.getConfiguredGoTerminator()).append("\n");
 					}
 					if (selRows.length > 0)
 					{
@@ -3825,8 +3867,12 @@ public class QueryWindow
 		{
 			doBgThread.get();
 		}
-		catch (Exception ex)
+		catch (Throwable originEx)
 		{
+			Throwable ex = originEx;
+			if (ex instanceof ExecutionException)
+				ex = ex.getCause();
+			
 			// lets write the exception to the output window...
 			_resPanelScroll    .setVisible(false);
 			_resPanelTextScroll.setVisible(true);
@@ -3848,14 +3894,21 @@ public class QueryWindow
 			// DO POPUP
 //			if ( ! (ex instanceof SQLException) )
 //			{
-			// TODO: maybe add a "dont show this message again... only show it in the output window"
-				SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
-					"<html>" +
-					"<h2>Problems when executing Statement</h2>" +
-					ex.getMessage() +
-					"</html>", 
-					ex);
+//			// TODO: maybe add a "dont show this message again... only show it in the output window"
 //			}
+
+			String msg = ex.getMessage();
+			if (ex instanceof GoSyntaxException)
+			{
+				msg = "<html>" + ex.getMessage().replace("\n", "<br>") + "</html>";
+			}
+
+			SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
+				"<html>" +
+				"<h2>Problems when executing Statement</h2>" +
+				msg +
+				"</html>", 
+				originEx);
 		}
 
 		if (guiShowplanExec)
@@ -4493,9 +4546,12 @@ public class QueryWindow
 
 			String sql = "";
 
+			// Get SQL Batch Terminator
+			String sqlBatchTerminator = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
+				
 			// treat each 'go' rows as a individual execution
 			// readCommand(), does the job
-			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true);
+			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true, sqlBatchTerminator);
 			if (_useSemicolonHack_chk.isSelected())
 				sr.setSemiColonHack(true);
 
@@ -4580,11 +4636,17 @@ public class QueryWindow
 								}
 								else
 								{
-									int     limitRsRowsCount = -1; // do not limit
+									int limitRsRowsCount = -1; // do not limit
 									if (_limitRsRowsRead_chk.isSelected())
 										limitRsRowsCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount);
+									if (sr.isTopRowsSet())
+										limitRsRowsCount = sr.getTopRows();
 									
-									if (_asPlainText_chk.isSelected())
+									boolean asPlainText = _asPlainText_chk.isSelected();
+									if (sr.asPlaintText())
+										asPlainText = true;
+
+									if (asPlainText)
 									{
 										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
@@ -4727,7 +4789,7 @@ public class QueryWindow
 			progress.setState("Add data to GUI result");
 
 			// Finally, add all the results to the output
-			addToResultsetPanel(_resultCompList, _appendResults_chk.isSelected());
+			addToResultsetPanel(_resultCompList, _appendResults_chk.isSelected(), _asPlainText_chk.isSelected());
 
 
 			//---------------------------------------
@@ -4793,10 +4855,11 @@ public class QueryWindow
 		}
 		catch (GoSyntaxException ex)
 		{
-			_logger.warn("Problems parsing the 'go'. Caught: "+ex, ex);
+			_logger.warn("Problems parsing the SQL Batch Terminator ('go'). Caught: "+ex, ex);
 			if (guiShowErrors)
 			{
-				SwingUtils.showWarnMessage("Problems creating PipeCommand", ex.getMessage(), ex);
+				String htmlMsg = "<html>" + ex.getMessage().replace("\n", "<br>") + "</html>";
+				SwingUtils.showWarnMessage("Problems interpreting a SQL Batch Terminator", htmlMsg, ex);
 			}
 			throw ex;
 		}
@@ -4814,8 +4877,9 @@ public class QueryWindow
 		_resPanel.repaint();
 	}
 
-	/** Add components to output */
-	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append)
+	/** Add components to output 
+	 * @param asPlainText */
+	private void addToResultsetPanel(ArrayList<JComponent> compList, boolean append, boolean asPlainText)
 	{
 		//-----------------------------
 		// Add data... to panel(s) in various ways
@@ -4842,6 +4906,9 @@ public class QueryWindow
 		StringBuilder htmlMessageBuffer = new StringBuilder();
 
 		int numOfTables = countTables(compList);
+		if (asPlainText)
+			numOfTables = 0;
+
 		if (numOfTables == 1)
 		{
 			_resPanelScroll    .setVisible(true);
@@ -4875,6 +4942,11 @@ public class QueryWindow
 					_resPanel.add(p, "");
 
 					rowCount = tab.getRowCount();
+				}
+				else if (jcomp instanceof JPlainResultSet)
+				{
+					JPlainResultSet plainRs = (JPlainResultSet)jcomp;
+					_resPanel.add(createPlainRsTextArea(plainRs), "gapy 1, growx, pushx");
 				}
 				else if (jcomp instanceof JAseMessage)
 				{
@@ -4917,6 +4989,7 @@ public class QueryWindow
 			if (_logger.isTraceEnabled())
 				_logger.trace("Several RS: "+compList.size());
 			
+			// AS JTABLE
 			if (_rsInTabs_chk.isSelected())
 			{
 				// Add Result sets to individual tabs, on a JTabbedPane 
@@ -4948,6 +5021,11 @@ public class QueryWindow
 						tabPane.addTab("Result "+(i++), p);
 
 						rowCount += tab.getRowCount();
+					}
+					else if (jcomp instanceof JPlainResultSet)
+					{
+						JPlainResultSet plainRs = (JPlainResultSet)jcomp;
+						_resPanel.add(createPlainRsTextArea(plainRs), "gapy 1, growx, pushx");
 					}
 					else if (jcomp instanceof JAseMessage)
 					{
@@ -4995,8 +5073,9 @@ public class QueryWindow
 				}
 //				_msgline.setText(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
 				_statusBar.setMsg(" "+numOfTables+" ResultSet with totally "+rowCount+" rows, and "+msgCount+" messages.");
-			}
-			else
+				
+			} // end: (numOfTables > 1)
+			else // not as JTable
 			{
 				// Add Result sets to individual panels, which are 
 				// appended to the result panel
@@ -5024,6 +5103,11 @@ public class QueryWindow
 						_resPanel.add(p, "");
 
 						rowCount += tab.getRowCount();
+					}
+					else if (jcomp instanceof JPlainResultSet)
+					{
+						JPlainResultSet plainRs = (JPlainResultSet)jcomp;
+						_resPanel.add(createPlainRsTextArea(plainRs), "gapy 1, growx, pushx");
 					}
 					else if (jcomp instanceof JAseMessage)
 					{
@@ -5067,7 +5151,7 @@ public class QueryWindow
 		{
 			int msgCount = 0;
 
-			if (_asPlainText_chk.isSelected())
+			if (asPlainText)
 			{
 				_resPanelScroll    .setVisible(false);
 				_resPanelTextScroll.setVisible(true);
@@ -5438,6 +5522,40 @@ public class QueryWindow
 	}
 
 
+	private Component createPlainRsTextArea(JPlainResultSet plainRs)
+	{
+		String text = plainRs.getText();
+
+//		boolean hasHtml = false;
+//		if (text.indexOf("<html") >= 0 || text.indexOf("<HTML") >= 0)
+//			hasHtml = true;
+//		if (text.indexOf("<!doctype html") >= 0 || text.indexOf("<!DOCTYPE HTML") >= 0)
+//			hasHtml = true;
+//		if (hasHtml)
+//		{
+//			return createHtmlMessage(new StringBuilder(text), false);
+//		}
+
+		// TextArea
+		RSyntaxTextAreaX textArea = new RSyntaxTextAreaX(text);
+		textArea.setHighlightCurrentLine(false);
+
+		boolean hasXml = text.indexOf("<?xml ") >= 0;
+		if (hasXml)
+		{
+			textArea.setCodeFoldingEnabled(true);
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+		}
+		else
+		{
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		}
+
+		RSyntaxUtilitiesX.installRightClickMenuExtentions(textArea, null, _window);
+		installResultTextExtraMenuEntries(textArea);
+		return textArea;
+	}
+
 	private boolean doConvertToXmlTextPane(JTable jtable)
 	{
 		if (jtable == null)               return false;
@@ -5552,9 +5670,10 @@ public class QueryWindow
 		for (JComponent jcomp: list)
 		{
 			if (jcomp instanceof JTable)
-			{
 				count++;
-			}
+
+			if (jcomp instanceof JPlainResultSet)
+				count++;
 		}
 		return count;
 	}
@@ -6757,7 +6876,7 @@ public class QueryWindow
 		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
 		_appendResults_chk         .setText("<html><b>Append Results</b>               - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i></html>");
 		_showRowCount_chk          .setText("<html><b>Row Count</b>                    - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
-		_limitRsRowsRead_chk       .setText("<html><b>Limit ResultSet to # rows</b>    - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after # rows.</font></i></html>");
+		_limitRsRowsRead_chk       .setText("SET_LATER: _limitRsRowsRead_chk");
 		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b> - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
 		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i></html>");
 		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i></html>");
@@ -6767,7 +6886,12 @@ public class QueryWindow
 		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>            - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
 		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>     - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
 		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>              - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
+		_sqlBatchTermDialog_mi     .setText("SET_LATER: _sqlBatchTermDialog_mi");
 
+		// For dialogs set special icon
+		_limitRsRowsReadDialog_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings_dialog_12.png"));
+		_sqlBatchTermDialog_mi   .setIcon(SwingUtils.readImageIcon(Version.class, "images/settings_dialog_12.png"));
+		
 		popupMenu.add(_asPlainText_chk);
 		popupMenu.add(_appendResults_chk);
 		popupMenu.add(_showRowCount_chk);
@@ -6777,11 +6901,12 @@ public class QueryWindow
 		popupMenu.add(_printRsInfo_chk);
 		popupMenu.add(_clientTiming_chk);
 		popupMenu.add(_useSemicolonHack_chk);
+		popupMenu.add(_sqlBatchTermDialog_mi);
 		popupMenu.add(_oracleEnableDbmsOutput_chk);
 		popupMenu.add(_rsInTabs_chk);
 		popupMenu.add(_getObjectTextOnError_chk);
 		popupMenu.add(_jdbcAutoCommit_chk);
-		popupMenu.add(new JSeparator());
+//		popupMenu.add(new JSeparator());
 		
 		// Set default visibility
 		_oracleEnableDbmsOutput_chk.setVisible(false);
@@ -6810,22 +6935,254 @@ public class QueryWindow
 			}
 		});
 		
+		// Action MenuItem: _sqlBatchTermDialog_mi
+		_sqlBatchTermDialog_mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+				String key1 = "SQL Batch Terminator";
+
+				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+				in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator));
+
+				Map<String,String> results = ParameterDialog.showParameterDialog(_window, "SQL Batch Terminator", in, false);
+
+				if (results != null)
+				{
+					tmpConf.setProperty(PROPKEY_sqlBatchTerminator, results.get(key1));
+
+					saveProps();
+				}
+			}
+		});
+		
+		// On OPEN the popup we might want to change some stuff
+		// This is done here
+		popupMenu.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				Component[] compArray = popupMenu.getComponents();
+				for (Component comp : compArray)
+				{
+					if (_limitRsRowsRead_chk.equals(comp))
+					{
+						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+"");
+						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i></html>";
+						_limitRsRowsRead_chk.setText(label);
+					}
+					if (_sqlBatchTermDialog_mi.equals(comp))
+					{
+						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
+						String label  = "<html><b>Change SQL Batch 'Send' Terminator...</b> - <i><font color=\"green\">Current terminator is '<b>"+config+"</b>'</font></i></html>";
+						_sqlBatchTermDialog_mi.setText(label);
+					}
+				}
+			}
+			
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+		});
+		
+		
+		
+//		// Menu items for Code Completion
+//		//---------------------------------------------------
+//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+//		popupMenu.add(codeCompl_m);
+//		
+//		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
+//		final JPopupMenu codeComplPopupMenu = codeCompl_m.getPopupMenu();
+//		codeComplPopupMenu.addPopupMenuListener(new PopupMenuListener()
+//		{
+//			@Override
+//			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+//			{
+//				// remove all old items (if any)
+//				codeComplPopupMenu.removeAll();
+//
+//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
+//
+//				JMenuItem cc_stat_mi  = new JCheckBoxMenuItem("<html><b>Static Commands</b>                   - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
+//				JMenuItem cc_misc_mi  = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                      - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
+//				JMenuItem cc_db_mi    = new JCheckBoxMenuItem("<html><b>Database Info x</b>                   - <i><font color=\"green\">Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
+//				JMenuItem cc_tn_mi    = new JCheckBoxMenuItem("<html><b>Table Name Info x</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
+//				JMenuItem cc_tc_mi    = new JCheckBoxMenuItem("<html><b>Table Column Info x</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
+//				JMenuItem cc_pn_mi    = new JCheckBoxMenuItem("<html><b>Procedure Info x</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
+//				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
+//				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
+//				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+//
+//				// Reset action
+//				cc_reset_mi.addActionListener(new ActionListener()
+//				{
+//					@Override
+//					public void actionPerformed(ActionEvent e)
+//					{
+//						// mark code completion for refresh
+//						if (_compleationProviderAbstract != null)
+//						{
+//							_compleationProviderAbstract.setNeedRefresh(true);
+//							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+//						}
+//					}
+//				});
+//
+//				// All other actions
+//				cc_stat_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupStaticCmds            (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_misc_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupMisc                  (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_db_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupDb                    (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_tn_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupTableName             (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_tc_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupTableColumns          (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_pn_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupProcedureName         (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_pp_mi   .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupProcedureColumns      (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_spn_mi  .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupSystemProcedureName   (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//				cc_spp_mi  .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupSystemProcedureColumns(((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//
+//				// Add it to the Code Completion popup menu
+//				codeComplPopupMenu.add(cc_reset_mi);
+//				codeComplPopupMenu.add(new JSeparator());
+//				codeComplPopupMenu.add(cc_stat_mi);
+//				codeComplPopupMenu.add(cc_misc_mi);
+//				codeComplPopupMenu.add(cc_db_mi);
+//				codeComplPopupMenu.add(cc_tn_mi);
+//				codeComplPopupMenu.add(cc_tc_mi);
+//				codeComplPopupMenu.add(cc_pn_mi);
+//				codeComplPopupMenu.add(cc_pp_mi);
+//				codeComplPopupMenu.add(cc_spn_mi);
+//				codeComplPopupMenu.add(cc_spp_mi);
+//			}
+//			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+//			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+//		});
+//
+//		// Menu items for Code Completion
+//		//---------------------------------------------------
+//		JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+//		popupMenu.add(ttProvider_m);
+//		
+//		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
+//		final JPopupMenu ttProviderPopupMenu = ttProvider_m.getPopupMenu();
+//		ttProviderPopupMenu.addPopupMenuListener(new PopupMenuListener()
+//		{
+//			@Override
+//			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+//			{
+//				// remove all old items (if any)
+//				ttProviderPopupMenu.removeAll();
+//
+//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
+//
+//				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color=\"green\">Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
+////				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color=\"green\">describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
+//
+//				// Reset action
+//				cc_reset_mi.addActionListener(new ActionListener()
+//				{
+//					@Override
+//					public void actionPerformed(ActionEvent e)
+//					{
+//						// mark code completion for refresh
+//						if (_compleationProviderAbstract != null)
+//						{
+//							_compleationProviderAbstract.setNeedRefresh(true);
+//							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+//						}
+//					}
+//				});
+//
+//				// All other actions
+//				cc_show_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { if (_tooltipProviderAbstract != null) _tooltipProviderAbstract.setShowTableInformation(((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+////				cc_xxxx_mi .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { if (_tooltipProviderAbstract != null) _tooltipProviderAbstract.setSomeMethodName      (((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
+//
+//				// Add it to the Code Completion popup menu
+//				ttProviderPopupMenu.add(cc_reset_mi);
+//				ttProviderPopupMenu.add(new JSeparator());
+//				ttProviderPopupMenu.add(cc_show_mi);
+////				ttProviderPopupMenu.add(cc_xxxx_mi);
+//			}
+//			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
+//			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
+//		});
+
+		return popupMenu;
+	}
+
+	/**
+	 * Create a JButton that can enable/disable Application Executions Options
+	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
+	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
+	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
+	 */
+	private JButton createAppOptionButton(JButton button)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings.png"));
+		button.setToolTipText("<html>Set various Application Options related to the Statement Execution</html>");
+		button.setText("Options");
+
+		JPopupMenu popupMenu = createAppOptionPopupMenu();
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	/*----------------------------------------------------------------------
+	** END: set Application Option Button
+	**----------------------------------------------------------------------*/ 
+
+
+	
+	/*----------------------------------------------------------------------
+	** BEGIN: Code Completions Option Button
+	**----------------------------------------------------------------------*/ 
+	private JPopupMenu createCodeCompletionOptionPopupMenu()
+	{
+		// Do PopupMenu
+		final JPopupMenu popupMenu = new JPopupMenu();
+
+		final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+		
 		// Menu items for Code Completion
 		//---------------------------------------------------
-		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
-		popupMenu.add(codeCompl_m);
+//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+//		popupMenu.add(codeCompl_m);
 		
 		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
-		final JPopupMenu codeComplPopupMenu = codeCompl_m.getPopupMenu();
-		codeComplPopupMenu.addPopupMenuListener(new PopupMenuListener()
+//		final JPopupMenu codeComplPopupMenu = codeCompl_m.getPopupMenu();
+		popupMenu.addPopupMenuListener(new PopupMenuListener()
 		{
 			@Override
 			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
 			{
 				// remove all old items (if any)
-				codeComplPopupMenu.removeAll();
+				popupMenu.removeAll();
 
-				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_exec_mi  = new JMenuItem("<html><b>Open</b> - <i><font color=\"green\">Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
+
+				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b>   - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
 
 				JMenuItem cc_stat_mi  = new JCheckBoxMenuItem("<html><b>Static Commands</b>                   - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
 				JMenuItem cc_misc_mi  = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                      - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
@@ -6836,6 +7193,32 @@ public class QueryWindow
 				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
 				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
 				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+
+				// exec/open action
+				cc_exec_mi.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(final ActionEvent e)
+					{
+						SwingUtilities.invokeLater( new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								// hmmm, this doesnt seem to work...
+								//_query_txt.requestFocusInWindow();
+								//KeyEvent ctrlSpace = new KeyEvent(_query_txt, KeyEvent.KEY_TYPED, EventQueue.getMostRecentEventTime(), KeyEvent.CTRL_DOWN_MASK, KeyEvent.VK_SPACE, ' ');
+								//_query_txt.dispatchEvent(ctrlSpace);
+
+								// But this worked, but a bit ugly
+								_query_txt.requestFocusInWindow();
+								//ActionListener al = _query_txt.getActionForKeyStroke(AutoCompletion.getDefaultTriggerKey());
+								ActionListener al = _query_txt.getActionMap().get("AutoComplete");
+								al.actionPerformed(e);
+							}
+						});
+					}
+				});
 
 				// Reset action
 				cc_reset_mi.addActionListener(new ActionListener()
@@ -6864,26 +7247,27 @@ public class QueryWindow
 				cc_spp_mi  .addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { _compleationProviderAbstract.setLookupSystemProcedureColumns(((JCheckBoxMenuItem)e.getSource()).isSelected()); } });
 
 				// Add it to the Code Completion popup menu
-				codeComplPopupMenu.add(cc_reset_mi);
-				codeComplPopupMenu.add(new JSeparator());
-				codeComplPopupMenu.add(cc_stat_mi);
-				codeComplPopupMenu.add(cc_misc_mi);
-				codeComplPopupMenu.add(cc_db_mi);
-				codeComplPopupMenu.add(cc_tn_mi);
-				codeComplPopupMenu.add(cc_tc_mi);
-				codeComplPopupMenu.add(cc_pn_mi);
-				codeComplPopupMenu.add(cc_pp_mi);
-				codeComplPopupMenu.add(cc_spn_mi);
-				codeComplPopupMenu.add(cc_spp_mi);
+				popupMenu.add(cc_exec_mi);
+				popupMenu.add(cc_reset_mi);
+				popupMenu.add(new JSeparator());
+				popupMenu.add(cc_stat_mi);
+				popupMenu.add(cc_misc_mi);
+				popupMenu.add(cc_db_mi);
+				popupMenu.add(cc_tn_mi);
+				popupMenu.add(cc_tc_mi);
+				popupMenu.add(cc_pn_mi);
+				popupMenu.add(cc_pp_mi);
+				popupMenu.add(cc_spn_mi);
+				popupMenu.add(cc_spp_mi);
+				popupMenu.add(new JSeparator());
+				popupMenu.add(ttProvider_m);
 			}
 			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {/*empty*/}
 			@Override public void popupMenuCanceled(PopupMenuEvent e) {/*empty*/}
 		});
 
-		// Menu items for Code Completion
+		// Menu items for ToolTip Provider
 		//---------------------------------------------------
-		JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
-		popupMenu.add(ttProvider_m);
 		
 		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
 		final JPopupMenu ttProviderPopupMenu = ttProvider_m.getPopupMenu();
@@ -6933,21 +7317,38 @@ public class QueryWindow
 	}
 
 	/**
-	 * Create a JButton that can enable/disable available Graphs for a specific CounterModel
+	 * Create a JButton that can enable/disable Application Executions Options
 	 * @param button A instance of JButton, if null is passed a new Jbutton will be created.
 	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
 	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
 	 */
-	private JButton createAppOptionButton(JButton button)
+	private JButton createCodeCompletionOptionButton(JButton button)
 	{
 		if (button == null)
 			button = new JButton();
 
-		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings.png"));
-		button.setToolTipText("<html>Set various Application Options related to the Statement Execution</html>");
-		button.setText("Options");
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/code_completion.png"));
+//		button.setText("Code Completion");
+		button.setToolTipText(
+			"<html>" +
+			"<h3>Code Completion</h3>" +
+			"Set various Options related to Code Completion/Assist<br>" +
+			"Use <b>Ctrl-Space</b> to activate Code Completion/Assist<br>" +
+			"<br>" +
+			"The second time you press <b>Ctrl-Space</b> the window will show <i>sql templates</i><br>" +
+			"<br>" +
+			"<b>Various Tips how it can be used</b>:<br>" +
+			"<ul>" +
+			"  <li><code>aaa</code><b>&lt;Ctrl-Space&gt;</b>                              - <i><font color=\"green\">Get list of tables/views/etc that starts with <b><code>aaa</code></b>   </font></i></li>" +
+			"  <li><code>select t.<b>&lt;Ctrl-Space&gt;</b> from tabname t</code>         - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+			"  <li><code>select * from tabname t where t.<b>&lt;Ctrl-Space&gt;</b></code> - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+			"  <li><code>exec</code> <b>&lt;Ctrl-Space&gt;</b>                            - <i><font color=\"green\">Get stored procedures   </font></i></li>" +
+			"  <li><code>:s</code><b>&lt;Ctrl-Space&gt;</b>                               - <i><font color=\"green\">Get schemas   </font></i></li>" +
+			"  <li><code>use </code><b>&lt;Ctrl-Space&gt;</b>                             - <i><font color=\"green\">Get list of databases/catalogs  </font></i></li>" +
+			"</ul>" +
+			"</html>");
 
-		JPopupMenu popupMenu = createAppOptionPopupMenu();
+		JPopupMenu popupMenu = createCodeCompletionOptionPopupMenu();
 		button.setComponentPopupMenu(popupMenu);
 
 		// If we click on the button, display the popup menu
@@ -6970,10 +7371,10 @@ public class QueryWindow
 		return button;
 	}
 	/*----------------------------------------------------------------------
-	** BEGIN: set Application Option Button
+	** END: Code Completions Option Button
 	**----------------------------------------------------------------------*/ 
 
-
+	
 	
 	/*----------------------------------------------------------------------
 	** BEGIN: Favorite SQL and RCL button stuff
@@ -7815,6 +8216,8 @@ public class QueryWindow
 	/*----------------------------------------------------------------------
 	** BEGIN: class ResultSetJXTable
 	**----------------------------------------------------------------------*/ 
+	private final static Color NULL_VALUE_COLOR = new Color(240, 240, 240);
+	
 	private static class ResultSetJXTable
 	extends JXTable
 	{
@@ -7842,6 +8245,19 @@ public class QueryWindow
 					_lastMouseClick = e.getPoint();
 				}
 			});
+
+			// PINK = spid is BLOCKED by some other user
+			addHighlighter( new ColorHighlighter(new HighlightPredicate()
+			{
+				@Override
+				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+				{
+					String cellValue = adapter.getString();
+					if (cellValue == null || ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(cellValue))
+						return true;
+					return false;
+				}
+			}, NULL_VALUE_COLOR, null));
 		}
 
 		// 

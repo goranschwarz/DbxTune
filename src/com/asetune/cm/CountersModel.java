@@ -1013,19 +1013,16 @@ implements Cloneable, ITableTooltip
 //				refresh = true;
 
 			// Current TAB is visible
-			if ( equalsTabPanel(MainFrame.getActiveTab()) )
+//			if ( equalsTabPanel(MainFrame.getActiveTab()) )
+			if ( getGuiController() != null && equalsTabPanel(getGuiController().getActiveTab()) )
 				refresh = true;
 
 			// Current TAB is un-docked (in it's own window)
-			if (getTabPanel() != null)
+			if (getTabPanel() != null && getGuiController() != null)
 			{
-				JTabbedPane tp = MainFrame.getTabbedPane();
-				if (tp instanceof GTabbedPane)
-				{
-					GTabbedPane gtp = (GTabbedPane) tp;
-					if (gtp.isTabUnDocked(getDisplayName()))
+				GTabbedPane tp = getGuiController().getTabbedPane();
+				if (tp.isTabUnDocked(getDisplayName()))
 						refresh = true;
-				}
 			}
 
 			// Current CM has active graphs

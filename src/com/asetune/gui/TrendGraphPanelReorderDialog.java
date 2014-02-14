@@ -433,8 +433,8 @@ public class TrendGraphPanelReorderDialog
 			Icon   icon             = null;
 			String cmDisplayName    = cm.getDisplayName();
 			
-			int    tabIndex         = MainFrame.getTabbedPane().indexOfTab(cmDisplayName);
-			if (tabIndex >= 0) icon = MainFrame.getTabbedPane().getIconAt(tabIndex);
+			int    tabIndex         = MainFrame.hasInstance() ? MainFrame.getInstance().getTabbedPane().indexOfTab(cmDisplayName) : -1;
+			if (tabIndex >= 0) icon = MainFrame.getInstance().getTabbedPane().getIconAt(tabIndex);
 
 			// If the tab icon can't be found, try to grab it from the TabularCntrPanel
 			if (icon == null)

@@ -53,7 +53,8 @@ extends CountersModel
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"UseCountDiff", "NumRecompilesPlanFlushes", "NumRecompilesSchemaChanges", 
 		"LockWaits", "LockWaitTime", "SortCount", "SortSpilledCount", "TotalSortTime", 
-		"ParallelDegreeReduced", "ParallelPlanRanSerial", "WorkerThreadDeficit"};
+		"ParallelDegreeReduced", "ParallelPlanRanSerial", "WorkerThreadDeficit",
+		"TotalPIO", "TotalLIO", "TotalCpuTime", "TotalElapsedTime"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -303,6 +304,20 @@ extends CountersModel
 			nl_15702           = "\n";
 		}
 
+		// ASE 16.0
+		String TotalPIO            = ""; // The total PIO value.
+		String TotalLIO            = ""; // The total LIO value.
+		String TotalCpuTime        = ""; // The total execution time value. (ms)
+		String TotalElapsedTime    = ""; // The total elapsed time value. (ms)
+		if (aseVersion >= 1600000)
+		{
+			TotalPIO		 = "TotalPIO, ";         // DIFF COUNTER
+			TotalLIO         = "TotalLIO, ";         // DIFF COUNTER
+			TotalCpuTime     = "TotalCpuTime, ";     // DIFF COUNTER
+			TotalElapsedTime = "TotalElapsedTime, "; // DIFF COUNTER
+		}
+
+		
 		// NOTE: The function 'show_plan(-1,SSQLID,-1,-1)'
 		//       returns a Ase Message (MsgNum=0) within the ResultSet
 		//       those messages are placed in the column named 'msgAsColValue'
@@ -331,10 +346,10 @@ extends CountersModel
 			LockWaits + LockWaitTime + nl_15702 +
 			SortCount + SortSpilledCount + TotalSortTime + MaxSortTime + nl_15702 + 
 			" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
-			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, \n" + // Elapsed time value.
-			" MaxLIO,         MinLIO,         AvgLIO, \n" +         // Logical IO
-			" MaxPIO,         MinPIO,         AvgPIO, \n" +         // Physical IO
-			" MaxCpuTime,     MinCpuTime,     AvgCpuTime, \n" +     // Execution time.
+			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, "+ TotalElapsedTime + "\n" + // Elapsed time value.
+			" MaxLIO,         MinLIO,         AvgLIO,         "+ TotalLIO         + "\n" + // Logical IO
+			" MaxPIO,         MinPIO,         AvgPIO,         "+ TotalPIO         + "\n" + // Physical IO
+			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     "+ TotalCpuTime     + "\n" + // Execution time.
 			" LastUsedDate, \n" +               // Date when this statement was last used.
 			" LastRecompiledDate, \n" +         // Date when this statement was last recompiled.
 			" CachedDate, \n" +                 // Date when this statement was cached.

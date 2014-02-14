@@ -1,5 +1,6 @@
 package com.asetune.ui.autocomplete;
 
+import java.awt.Component;
 import java.awt.Window;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -11,9 +12,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.ListCellRenderer;
 import javax.swing.text.JTextComponent;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
@@ -22,11 +30,13 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public abstract class CompletionProviderAbstractSql
@@ -546,7 +556,9 @@ extends CompletionProviderAbstract
 
 		// Do the real work
 		List<Completion> cList = getCompletionsSql(comp);
-		int cSize = cList.size();
+		if (cList == null)
+			return EMPTY_COMPLETION_LIST;
+//		int cSize = cList.size();
 
 		int needsLookupCount = 0;
 		for (Completion c : cList)
@@ -1710,11 +1722,12 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
 			ProcedureInfo pi = new ProcedureInfo();
-			pi._procCat     = rs.getString("PROCEDURE_CAT");
-			pi._procSchema  = rs.getString("PROCEDURE_SCHEM");
-			pi._procName    = rs.getString("PROCEDURE_NAME");
-			pi._procType    = rs.getString("PROCEDURE_TYPE");
-			pi._procRemark  = rs.getString("REMARKS");
+			pi._procCat          = rs.getString("PROCEDURE_CAT");
+			pi._procSchema       = rs.getString("PROCEDURE_SCHEM");
+			pi._procName         = rs.getString("PROCEDURE_NAME");
+			pi._procType         = decodeProcedureType(rs.getInt("PROCEDURE_TYPE"));
+			pi._procRemark       = rs.getString("REMARKS");
+//			pi._procSpecificName = rs.getString("SPECIFIC_NAME"); //in HANA = not there...
 
 			procInfoList.add(pi);
 			
@@ -1724,6 +1737,13 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		rs.close();
 		
 		return procInfoList;
+	}
+	public String decodeProcedureType(int type)
+	{
+		if      (type == DatabaseMetaData.procedureResultUnknown) return "Procedure (Result-Unknown)";
+		else if (type == DatabaseMetaData.procedureNoResult)      return "Procedure (No-Result)";
+		else if (type == DatabaseMetaData.procedureReturnsResult) return "Procedure (Returns-Results)";
+		else return "Procedure";
 	}
 
 	protected void refreshCompletionForProcedureParameters(Connection conn, WaitForExecDialog waitDialog, List<ProcedureInfo> procedureInfoList, boolean bulkMode )
@@ -2511,7 +2531,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		
 		public SqlSchemaCompletion(CompletionProviderAbstractSql provider, String schemaName)
 		{
-			super(provider, schemaName, fixStrangeNames(schemaName));
+			super(provider, schemaName, fixStrangeNames(schemaName)+".");
 
 			String shortDesc = 
 				"<font color=\"blue\">"+schemaName+"</font>" +
@@ -2607,6 +2627,19 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 //			setSummary(_tableInfo.toHtmlString());
 		}
 		
+		public String getType()
+		{
+			if (_tableInfo == null)
+				return "";
+			return _tableInfo._tabType;
+		}
+		public String getName()
+		{
+			if (_tableInfo == null)
+				return "";
+			return _tableInfo._tabName;
+		}
+
 		@Override
 		public String getSummary()
 		{
@@ -2674,10 +2707,30 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 			String shortDesc = 
 				"<font color=\"blue\">"+pi._procType+"</font>" +
+				(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
 //				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
 				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";
 			setShortDescription(shortDesc);
 			//setSummary(_procInfo.toHtmlString());
+		}
+
+		public String getType()
+		{
+			if (_procInfo == null)
+				return "";
+			return _procInfo._procType;
+		}
+		public String getName()
+		{
+			if (_procInfo == null)
+				return "";
+			return _procInfo._procName;
+		}
+		public String getRemark()
+		{
+			if (_procInfo == null)
+				return "";
+			return _procInfo._procRemark;
 		}
 
 		@Override
@@ -3157,6 +3210,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		public String _procName    = null;
 		public String _procType    = null;
 		public String _procRemark  = null;
+		public String _procSpecificName = null;
 		
 		public boolean _needParamsRefresh = true;
 		public boolean isParamsRefreshed() {return ! _needParamsRefresh;}
@@ -3602,6 +3656,18 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		return null;
 //		return "<html>DUMMY getToolTipTextForObject(word='<b>"+word+"</b>', fullWord='<b>"+fullWord+"</b>'): sqlObj.getObjectName()='"+sqlObj.getObjectName()+"'</html>";
 	}
+
+	/**
+	 * Cell renderer for SQL Completions
+	 * 
+	 * @return
+	 */
+	@Override
+	public ListCellRenderer createDefaultCompletionCellRenderer()
+	{
+		return new SqlCellRenderer();
+	}
+
 }
 
 

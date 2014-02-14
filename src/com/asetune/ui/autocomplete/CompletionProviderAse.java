@@ -1,5 +1,6 @@
 package com.asetune.ui.autocomplete;
 
+import java.awt.Component;
 import java.awt.Window;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -9,6 +10,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.ListCellRenderer;
 
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
@@ -44,6 +51,7 @@ extends CompletionProviderAbstractSql
 
 		CompletionProviderAbstract acProvider = createCompletionProvider(window, connectionProvider);
 		RoundRobinAutoCompletion ac = new SqlAutoCompletion(acProvider);
+		ac.setListCellRenderer(acProvider.createDefaultCompletionCellRenderer());
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
