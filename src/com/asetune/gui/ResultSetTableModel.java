@@ -58,6 +58,7 @@ public class ResultSetTableModel
 	private ArrayList<String>            _rsmdColumnClassName   = new ArrayList<String>();  // rsmd.getColumnClassName(c);
 	private ArrayList<Integer>           _displaySize           = new ArrayList<Integer>(); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 	private ArrayList<ArrayList<Object>> _rows                  = new ArrayList<ArrayList<Object>>();
+	private int                          _readCount             = 0;
 	private SQLWarning                   _sqlWarning            = null;
 	private boolean                      _allowEdit             = true; 
 	private String                       _name                  = null;
@@ -76,9 +77,9 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
 	throws SQLException
 	{
-		this(rs, true, name, -1, null, null);
+		this(rs, true, name, -1, false, null, null);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
 		_allowEdit = editable;
@@ -137,8 +138,8 @@ public class ResultSetTableModel
 		if (progress != null)
 			originProgressState = progress.getState();
 
+		_readCount = 0;
 		int rowCount = 0;
-		int readCount = 0;
 		while(rs.next())
 		{
 			if ( progress != null && progress.isCancelled() )
@@ -149,18 +150,18 @@ public class ResultSetTableModel
 				
 			if ( stopAfterXrows > 0 )
 			{
-				if (readCount >= stopAfterXrows)
+				if (_readCount >= stopAfterXrows)
 				{
-					_abortedAfterXRows = readCount;
+					_abortedAfterXRows = _readCount;
 					break;
 				}
 			}
 				
-			readCount++;
+			_readCount++;
 			if (progress != null)
 			{
-				if ( (readCount % 100) == 0 )
-					progress.setState(originProgressState + " row "+readCount);
+				if ( (_readCount % 100) == 0 )
+					progress.setState(originProgressState + " row "+_readCount);
 			}
 
 			// read any eventual SQLWarnings that is part of the row
@@ -168,7 +169,12 @@ public class ResultSetTableModel
 //			for (SQLWarning sqlw = rs.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
 //				_sqlWarnList.add(sqlw);
 			rs.clearWarnings();
-				
+
+			// If we do not read data, just go to the top and position for next potential read
+			if ( noData )
+				continue;
+
+			// Read all columns for a row and add it to the structure
 			ArrayList<Object> row = new ArrayList<Object>();
 			for (int c=1; c<_numcols; c++)
 			{
@@ -249,7 +255,16 @@ public class ResultSetTableModel
 //		rs.close();
 
 		if (progress != null)
-			progress.setState(originProgressState + " Read done, rows "+readCount);
+			progress.setState(originProgressState + " Read done, rows "+_readCount);
+	}
+
+	/** 
+	 * How many rows did we read from the network<br>
+	 * NOTE: the rows might have been discarded in some way, so it's basically number of calls to rs.next()
+	 */
+	public int getReadCount()
+	{
+		return _readCount;
 	}
 
 	public boolean isCancelled()

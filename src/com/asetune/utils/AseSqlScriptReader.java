@@ -18,7 +18,7 @@ import com.asetune.sql.pipe.PipeCommandException;
  * <p>
  * 'isql' commands that are implemented
  * <ul>
- *     <li>go [count] - execute the above SQL Statement(s), <code>[count]</code> is how many times the statements should be executed.</li>
+ *     <li>go [count] [subCmd] - execute the above SQL Statement(s), <code>[count]</code> is how many times the statements should be executed.</li>
  *     <li>exit       - do not continue</li>
  *     <li>quit       - do not continue</li>
  *     <li>reset      - skip above statements and continue with next batch</li>
@@ -27,6 +27,8 @@ import com.asetune.sql.pipe.PipeCommandException;
  * <ul>
  *     <li>!! command - OS Commands are not supported.</li>
  *     <li>vi         - Editing the batch is not supported</li>
+ *     <li>:r         - Read another file</li>
+ *     <li>:w         - Write to another file</li>
  * </ul>
  * 
  * @author gorans
@@ -60,8 +62,15 @@ public class AseSqlScriptReader
 	private int             _batchStartLine        = -1;
 	private int             _batchNumber           = -1;
 	private int             _totalBatchCount       = -1;
-	private boolean         _asPlainText           = false; 
-	private int             _topRows               = -1;
+	
+	private int             _topRows               = -1; // option 'top #'
+	private int             _rowCount              = -1; // option 'rowc'
+	private int             _asPlainText           = -1; // option 'plain'
+	private int             _noData                = -1; // option 'nodata'
+	private int             _appendOutput          = -1; // option 'append'
+	private int             _printSql              = -1; // option 'psql' -- print SQL Statement
+	private int             _printRsi              = -1; // option 'prsi' -- print ResultSet Information
+	private int             _printClientTiming     = -1; // option 'time' -- print client timing
 	
 	/** keep track of where in the file we are */
 	private int             _lineInReader          = 0;
@@ -565,20 +574,25 @@ public class AseSqlScriptReader
 		return _multiExecWait;
 	}
 
-	public boolean asPlaintText()
-	{
-		return _asPlainText;
-	}
 
-	public boolean isTopRowsSet()
-	{
-		return _topRows > 0;
-	}
+	public boolean hasOption_topRows()           { return _topRows           > 0; }
+	public boolean hasOption_rowCount()          { return _rowCount          > 0; }
+	public boolean hasOption_asPlaintText()      { return _asPlainText       > 0; }
+	public boolean hasOption_noData()            { return _noData            > 0; }
+	public boolean hasOption_appendOutput()      { return _appendOutput      > 0; }
+	public boolean hasOption_printSql()          { return _printSql          > 0; }
+	public boolean hasOption_printRsi()          { return _printRsi          > 0; }
+	public boolean hasOption_printClientTiming() { return _printClientTiming > 0; }
 
-	public int getTopRows()
-	{
-		return _topRows;
-	}
+	// Below boolean methods, yes we use "int opt = -1" as "not specified"
+	public int     getOption_topRows()           { return _topRows; }
+	public boolean getOption_rowCount()          { return _rowCount          > 0; }
+	public boolean getOption_asPlaintText()      { return _asPlainText       > 0; }
+	public boolean getOption_noData()            { return _noData            > 0; }
+	public boolean getOption_appendOutput()      { return _appendOutput      > 0; }
+	public boolean getOption_printSql()          { return _printSql          > 0; }
+	public boolean getOption_printRsi()          { return _printRsi          > 0; }
+	public boolean getOption_printClientTiming() { return _printClientTiming > 0; }
 
 	/**
 	 * When we have a 'go | someSubCommand', we needs to apply some filter.
@@ -606,9 +620,15 @@ public class AseSqlScriptReader
 
 		StringBuilder batchBuffer = new StringBuilder();
 
-		// Reset some stuff
-		_asPlainText = false;
-		_topRows     = -1;
+		// Reset some stuff (like options)
+		_topRows           = -1;
+		_rowCount          = -1;
+		_asPlainText       = -1;
+		_noData            = -1;
+		_appendOutput      = -1;
+		_printSql          = -1;
+		_printRsi          = -1;
+		_printClientTiming = -1;
 		
 		// Get lines from the reader
 		String row;
@@ -786,13 +806,47 @@ public class AseSqlScriptReader
 											error = "Sub command 'top #' The parameter '"+word2+"' is not a number.";
 										}
 									}
+									else if ("rowc".equalsIgnoreCase(word1))
+									{
+										_rowCount = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
 									else if ("plain".equalsIgnoreCase(word1))
 									{
-										_asPlainText = true;
+										_asPlainText = 1;
 										if (StringUtil.hasValue(word2))
-										{
-											error = "Sub command 'plain' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
-										}
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
+									else if ("nodata".equalsIgnoreCase(word1))
+									{
+										_noData = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
+									else if ("append".equalsIgnoreCase(word1))
+									{
+										_appendOutput = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
+									else if ("psql".equalsIgnoreCase(word1))
+									{
+										_printSql = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
+									else if ("prsi".equalsIgnoreCase(word1))
+									{
+										_printRsi = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
+									else if ("time".equalsIgnoreCase(word1))
+									{
+										_printClientTiming = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
 									else
 									{
@@ -811,11 +865,22 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,plain] [,top #2] [,wait #3]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,wait #3] [,plain] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
 											"#3 = Ms to sleep after each SQL Batch send/execution.\n" +
+											"\n" +
+											"Description of sub commands\n" +
+											"top #  - Read only first # rows in the result set\n" +
+											"wait # - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
+											"plain  - Do NOT use a GUI table for result set, instead print as plain text.\n" +
+											"nodata - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
+											"append - Do NOT clear results from previous executions. Append at the end.\n" +
+											"psql   - Print the executed SQL Statement in the output\n" +
+											"prsi   - Print info about the ResultSet data types etc in the output\n" +
+											"time   - Print how long time the SQL Batch took, from the clients perspective\n" +
+											"rowc   - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
 											"\n" +
 											"Example:\n" +
 											"select * from tabName where ...\n" +
