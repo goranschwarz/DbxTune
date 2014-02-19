@@ -351,6 +351,7 @@ public class QueryWindow
 	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
 	private JCheckBoxMenuItem _oracleEnableDbmsOutput_chk = new JCheckBoxMenuItem("Oracle Enable DBMS Output", DEFAULT_oracleEnableDbmsOutput);
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
+	private boolean           _appendResults_scriptReader = false;
 	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
 	private JCheckBoxMenuItem _jdbcAutoCommit_chk         = new JCheckBoxMenuItem("JDBC AutoCommit", DEFAULT_jdbcAutoCommit);
 	private JMenuItem         _sqlBatchTermDialog_mi      = new JMenuItem        ("Change SQL Batch Terminator");
@@ -3738,7 +3739,7 @@ public class QueryWindow
 
 	private void resetResultsetPanel()
 	{
-		if ( _appendResults_chk.isSelected() )
+		if ( _appendResults_chk.isSelected() || _appendResults_scriptReader)
 		{
 			String dateTimeNowStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 			String appenModeStr   = 
@@ -3913,7 +3914,11 @@ public class QueryWindow
 
 		if (guiShowplanExec)
 		{
-			if ( ! _appendResults_chk.isSelected() )
+			if ( _appendResults_chk.isSelected() || _appendResults_scriptReader)
+			{
+				// Simply do nothing: multiple negations could be missread, so this is easier to understand
+			}
+			else
 			{
 				_resPanel.removeAll();
 				_resPanel.setLayout(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
@@ -4569,17 +4574,24 @@ public class QueryWindow
 				if ( StringUtil.isNullOrBlank(sql) )
 					continue;
 
+				// Set "global" flag, sine it's used elsewhere
+				_appendResults_scriptReader = sr.hasOption_appendOutput();
+				
 				progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
 
 				// if 'go 10' we need to execute this 10 times
 				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
 				{
+					// If cancel has been pressed, do not continue to repeat the command
+					if (progress.isCancelled())
+						break;
+
 					try
 					{
-						int rowsAffected = 0;							
+						int rowsAffected = 0;
 
 						// Used during ResultSet loop
-						Statement	stmnt = null;
+						Statement stmnt = null;
 	
 						// Any result sets
 						ResultSet rs = null;
@@ -4588,7 +4600,7 @@ public class QueryWindow
 						// The for of this would be: {?=call procName(parameters)}
 						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
 
-						if (_showSentSql_chk.isSelected())
+						if (_showSentSql_chk.isSelected() || sr.hasOption_printSql())
 							_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
 						// remember the start time
@@ -4615,6 +4627,8 @@ public class QueryWindow
 							// Append, messages and Warnings to _resultCompList, if any
 							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 	
+							ResultSetTableModel rstm = null;
+
 							if(hasRs)
 							{
 								rsCount++;
@@ -4639,38 +4653,42 @@ public class QueryWindow
 									int limitRsRowsCount = -1; // do not limit
 									if (_limitRsRowsRead_chk.isSelected())
 										limitRsRowsCount = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount);
-									if (sr.isTopRowsSet())
-										limitRsRowsCount = sr.getTopRows();
+									if (sr.hasOption_topRows())
+										limitRsRowsCount = sr.getOption_topRows();
 									
 									boolean asPlainText = _asPlainText_chk.isSelected();
-									if (sr.asPlaintText())
-										asPlainText = true;
+									if (sr.hasOption_asPlaintText())
+										asPlainText = sr.getOption_asPlaintText();
 
+									boolean noData = false;
+									if (sr.hasOption_noData())
+										noData = sr.getOption_noData();
+									
 									if (asPlainText)
 									{
-										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, sr.getPipeCmd(), progress);
-										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, noData, sr.getPipeCmd(), progress);
+										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 										
-										if (_printRsInfo_chk.isSelected())
-											_resultCompList.add( new JResultSetInfo(tm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+										if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
+											_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
-										_resultCompList.add(new JPlainResultSet(tm));
+										_resultCompList.add(new JPlainResultSet(rstm));
 										// FIXME: use a callback interface instead
 										
-										if (tm.isCancelled())
+										if (rstm.isCancelled())
 											_resultCompList.add(new JAseCancelledResultSet(sql));
 
-										if (tm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSet(tm.getAbortedAfterXRows(), sql));
+										if (rstm.wasAbortedAfterXRows())
+											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
 									}
 									else
 									{
 										// Convert the ResultSet into a TableModel, which fits on a JTable
-										ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, sr.getPipeCmd(), progress);
-										putSqlWarningMsgs(tm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
+										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, noData, sr.getPipeCmd(), progress);
+										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 					
 										// Create the JTable, using the just created TableModel/ResultSet
-										JXTable tab = new ResultSetJXTable(tm);
+										JXTable tab = new ResultSetJXTable(rstm);
 										tab.setSortable(true);
 										tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 										tab.packAll(); // set size so that all content in all cells are visible
@@ -4681,18 +4699,18 @@ public class QueryWindow
 										// Add a popup menu
 										tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
 		
-										if (_printRsInfo_chk.isSelected())
-											_resultCompList.add( new JResultSetInfo(tm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
+										if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
+											_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
 										// Add the JTable to a list for later use
 										_resultCompList.add(tab);
 										// FIXME: use a callback interface instead
 										
-										if (tm.isCancelled())
+										if (rstm.isCancelled())
 											_resultCompList.add(new JAseCancelledResultSet(sql));
 
-										if (tm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSet(tm.getAbortedAfterXRows(), sql));
+										if (rstm.wasAbortedAfterXRows())
+											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
 									}
 								}
 			
@@ -4705,11 +4723,15 @@ public class QueryWindow
 							} // end: hasResultSets 
 			
 							// Treat update/row count(s)
+							// Some drivers doesn't return the count for selects
+							// so try to get the count from the ResultSetTableModel
 							rowsAffected = stmnt.getUpdateCount();
+							if (rowsAffected <= 0 && rstm != null)
+								rowsAffected = rstm.getReadCount();
 							if (rowsAffected >= 0)
 							{
 //System.out.println("hasRs="+hasRs+", rowsAffected="+rowsAffected);
-								if (_showRowCount_chk.isSelected())
+								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
 								{
 //System.out.println("(" + rowsAffected + " rows affected)\n");
 									_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
@@ -4748,7 +4770,7 @@ public class QueryWindow
 	
 						// How long did it take
 						long execFinnishTime = System.currentTimeMillis();
-						if (_clientTiming_chk.isSelected())
+						if (_clientTiming_chk.isSelected() || sr.hasOption_printClientTiming())
 							_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime, startRowInSelection + sr.getSqlBatchStartLine() + 1, sql));
 	
 						// Sleep for a while, if that's enabled
@@ -4789,7 +4811,7 @@ public class QueryWindow
 			progress.setState("Add data to GUI result");
 
 			// Finally, add all the results to the output
-			addToResultsetPanel(_resultCompList, _appendResults_chk.isSelected(), _asPlainText_chk.isSelected());
+			addToResultsetPanel(_resultCompList, (_appendResults_chk.isSelected() || _appendResults_scriptReader), _asPlainText_chk.isSelected());
 
 
 			//---------------------------------------
@@ -6873,14 +6895,14 @@ public class QueryWindow
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i></html>");
-		_appendResults_chk         .setText("<html><b>Append Results</b>               - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i></html>");
-		_showRowCount_chk          .setText("<html><b>Row Count</b>                    - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i></html>");
+		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i> 'go plain'</html>");
+		_appendResults_chk         .setText("<html><b>Append Results</b>               - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i> 'go append'</html>");
+		_showRowCount_chk          .setText("<html><b>Row Count</b>                    - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i> 'go rowc'</html>");
 		_limitRsRowsRead_chk       .setText("SET_LATER: _limitRsRowsRead_chk");
 		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b> - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
-		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i></html>");
-		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i></html>");
-		_clientTiming_chk          .setText("<html><b>Client Timing</b>                - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i></html>");
+		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
+		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
+		_clientTiming_chk          .setText("<html><b>Client Timing</b>                - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
 		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>        - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
 		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b>    - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
 		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>            - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
@@ -6972,7 +6994,7 @@ public class QueryWindow
 					if (_limitRsRowsRead_chk.equals(comp))
 					{
 						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+"");
-						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i></html>";
+						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i> 'go top "+config+"'</html>";
 						_limitRsRowsRead_chk.setText(label);
 					}
 					if (_sqlBatchTermDialog_mi.equals(comp))

@@ -190,6 +190,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>All text areas using RSyntaxTextArea can now do ToUpperCase(Ctrl-U) and ToLowerCase(Ctrl-L), and the pupup menu also has to upper and lower entries.</li>
        <li>The send terminator 'go' now has a sub command 'plain'. This temporary sets 'As Plain Text' but just for this SQL batch.<br>ResultSets for this SQL Batch will be displayed in a RSyntaxtTextArea object.</li>
        <li>The send terminator 'go' now has a sub command 'top #'. This temporary sets 'Limit ResultSet rows' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'psql'. This temporary sets 'Print the executed SQL Statement in the output' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'prsi'. This temporary sets 'Print info about the ResultSet data types etc in the output' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'time'. This temporary sets 'Print how long time the SQL Batch took, from the clients perspective' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'rowc'. This temporary sets 'Print the rowcount from JDBC driver, not the number of rows actually returned' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'append'. This temporary sets 'Do NOT clear results from previous executions. Append at the end' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a sub command 'nodata'. This temporary sets 'Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)' but just for this SQL batch.</li>
        <li>Send SQL Batch Terminator string can be changed (via a dialog), the default is 'go'.</li>
        <li>Code Completion List now also shows icons...</li>
        <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
