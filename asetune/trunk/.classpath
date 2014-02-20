@@ -96,11 +96,5 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jconn4.jar"/>
-	<classpathentry kind="lib" path="C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3.jar" sourcepath="C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3-javadoc.jar!/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/SwingBox-bin.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
