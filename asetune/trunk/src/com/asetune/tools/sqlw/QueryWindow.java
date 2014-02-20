@@ -5984,7 +5984,8 @@ public class QueryWindow
 			super("Client Exec Time: " + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStartTime) 
 					+ " (sqlExec="     + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execStopTime    - execStartTime)
 					+ ", readResults=" + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStopTime)
-					+ "), for SQL starting at Line "+atLine, originSql );
+					+ "), at '"+(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()))
+					+"', for SQL starting at Line "+atLine, originSql );
 
 			_execStartTime   = execStartTime;
 			_execStopTime    = execStopTime;
