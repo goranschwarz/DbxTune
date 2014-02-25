@@ -4464,7 +4464,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					" MP.SecondsWaiting, " +
 					" MP.SecondsConnected , " +
 					" MP.WaitEventID, " +
-					" WaitEventDescription = (select W.Description from monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
+					" WaitEventDescription = (select W.Description from master..monWaitEventInfo W where W.WaitEventID = MP.WaitEventID "+monWaitEventInfoWhere+"), " +
 					" MP.BlockingSPID, " +
 					" procname = (select isnull(object_name(sp.id, sp.dbid), object_name(sp.id, 2)) from master..sysprocesses sp where sp.spid = MP.SPID), " +
 					" MP.BatchID, " +
