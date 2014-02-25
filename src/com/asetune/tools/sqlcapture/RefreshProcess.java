@@ -2311,7 +2311,7 @@ public class RefreshProcess extends Thread
 			{
 				String sql = 
 					"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
-					"from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C \n" + 
+					"from master..monProcessWaits W, master..monWaitEventInfo I, master..monWaitClassInfo C \n" + 
 					"where W.WaitEventID=I.WaitEventID \n" + 
 					"  and I.WaitClassID=C.WaitClassID \n";
 //				if (srvVersion >= 15700)
