@@ -2476,7 +2476,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	protected static boolean allowSquareBracketsAroundIdentifiers(String productName)
 	{
 		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName)) return true;
-		if (DbUtils.DB_PROD_NAME_MS        .equals(productName)) return true;
+		if (DbUtils.DB_PROD_NAME_MSSQL        .equals(productName)) return true;
 		if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(productName)) return true;  // think so but not sure
 		if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(productName)) return true;  // think so but not sure
 
@@ -3468,7 +3468,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			}
 			
 			// in some cases check schema/owner name
-			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) || DbUtils.DB_PROD_NAME_MS.equals(_dbProductName))
+			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(_dbProductName))
 			{
 				// if empty schema/owner, add 'dbo'
 				if (StringUtil.isNullOrBlank(_originSchName))

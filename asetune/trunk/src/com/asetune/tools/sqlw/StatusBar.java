@@ -62,6 +62,17 @@ public class StatusBar extends JPanel
 		"To get rid of status 'TRAN_ABORT' simply issue <code>begin tran commit tran</code> to induce a dummy transaction that succeeds..." +
 		"</html>";
 	
+	private static final String ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE = 
+			"<html>" +
+			"Various status for the current connection. Are we in a transaction or not.<br>" +
+			"<br>" +
+			"<code>@@trancount</code> / TranCount Explanation:<br>" +
+			"<ul>" +
+			"  <li>Simply a counter on <code>begin transaction</code> nesting level<br>" +
+			"      Try to issue <code>begin/commit/rollback tran</code> multiple times and see how @@trancount increases/decreases (rollback always resets it to 0)</li>" +
+			"</ul>" +
+			"</html>";
+		
 	private static final String JDBC_STATE_INFO_TOOLTIP_BASE = 
 		"<html>" +
 		"Various status for the current connection. Are we in a transaction or not.<br>" +
@@ -285,16 +296,16 @@ public class StatusBar extends JPanel
 		if (csi._tranCount > 0)
 			tranCount = "TranCount=<b><font color=\"red\">" + csi._tranCount        + "</font></b>";
 
-		if (csi._tranState != AseConnectionUtils.ConnectionStateInfo.TSQL_TRAN_SUCCEED)
+		if ( csi.isNonNormalTranState() )
 			tranState = "TranState=<b><font color=\"red\">" + csi.getTranStateStr() + "</font></b>";
 		
 		String text = spid;
-		if (csi._tranCount > 0 || csi._tranState != AseConnectionUtils.ConnectionStateInfo.TSQL_TRAN_SUCCEED)
+		if (csi._tranCount > 0 || csi.isNonNormalTranState())
 		{
 			text = "<html>"
 				+ dbname    + ", "
 				+ spid      + ", " 
-				+ tranState + ", " 
+				+ (csi.isTranStateUsed() ? (tranState + ", ") : "") 
 				+ tranCount + 
 				"</html>";
 		}
@@ -304,13 +315,13 @@ public class StatusBar extends JPanel
 		
 		String tooltip = "<html>" +
 			"<table border=0 cellspacing=0 cellpadding=1>" +
-			"<tr> <td>Current DB: </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
-			"<tr> <td>SPID:       </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
-			"<tr> <td>Tran State: </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" +
-			"<tr> <td>Tran Count: </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
+			                         "<tr> <td>Current DB: </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
+			                         "<tr> <td>SPID:       </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
+			(csi.isTranStateUsed() ? "<tr> <td>Tran State: </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
+			                         "<tr> <td>Tran Count: </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
 			"</table>" +
 			"<hr>" + 
-			ASE_STATE_INFO_TOOLTIP_BASE.replace("<html>", ""); // remove the first/initial <html> tag...
+			(csi.isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...
 
 		_aseConnStateInfo.setToolTipText(tooltip); //add dbname,spid,transtate, trancount here
 
@@ -411,7 +422,7 @@ public class StatusBar extends JPanel
 			else if (productName.equals(DbUtils.DB_PROD_NAME_HANA))       productNameShort = "HANA";
 			else if (productName.equals(DbUtils.DB_PROD_NAME_H2))         productNameShort = "H2";
 			else if (productName.equals(DbUtils.DB_PROD_NAME_ORACLE))     productNameShort = "ORA";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_MS))         productNameShort = "MS-SQL";
+			else if (productName.equals(DbUtils.DB_PROD_NAME_MSSQL))         productNameShort = "MS-SQL";
 			else productNameShort = "UNKNOWN";
 			
 			return productNameShort;

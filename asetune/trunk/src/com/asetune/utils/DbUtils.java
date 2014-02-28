@@ -24,7 +24,7 @@ public class DbUtils
 	public static final String DB_PROD_NAME_HANA       = "HDB";
 
 	public static final String DB_PROD_NAME_HSQL       = "HSQL Database Engine"; // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_MS         = "Microsoft SQL Server"; // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_MSSQL      = "Microsoft SQL Server"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_ORACLE     = "Oracle";               // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_DB2_UX     = "DB2/Linux";            // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_DB2_ZOS    = "DB2";                  // got this from web, so might not be correct

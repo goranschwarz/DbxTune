@@ -686,7 +686,7 @@ if (_connProfileVisible_chk.isSelected())
 			serverName = DbUtils.getOracleServername(conn);
 		}
 		// Microsoft
-		else if (DbUtils.DB_PROD_NAME_MS.equals(currentDbProductName))
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
 		{
 			serverName = AseConnectionUtils.getAseServername(conn);
 		}

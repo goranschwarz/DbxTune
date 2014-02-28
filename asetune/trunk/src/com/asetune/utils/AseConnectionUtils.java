@@ -3586,9 +3586,11 @@ public class AseConnectionUtils
 	/**
 	 * Get various state about a ASE Connection
 	 */
-	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn)
+	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean getTranState)
 	{
-		String sql = "select dbname=db_name(), spid=@@spid, transtate=@@transtate, trancount=@@trancount";
+		String sql = "select dbname=db_name(), spid=@@spid, trancount=@@trancount";
+		if (getTranState)
+			sql += ", transtate=@@transtate";
 
 		ConnectionStateInfo csi = new ConnectionStateInfo();
 
@@ -3602,8 +3604,8 @@ public class AseConnectionUtils
 			{
 				csi._dbname    = rs.getString(1);
 				csi._spid      = rs.getInt(2);
-				csi._tranState = rs.getInt(3);
-				csi._tranCount = rs.getInt(4);
+				csi._tranCount = rs.getInt(3);
+				csi._tranState = getTranState ? rs.getInt(4) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
 			}
 			rs.close();
 			stmnt.close();
@@ -3639,6 +3641,7 @@ public class AseConnectionUtils
 		public static final int TSQL_TRAN_SUCCEED = 1;
 		public static final int TSQL_STMT_ABORT = 2;
 		public static final int TSQL_TRAN_ABORT = 3;
+		public static final int TSQL_TRANSTATE_NOT_AVAILABLE = 4; // Possible a MSSQL system
 
 		public static final String[] TSQL_TRANSTATE_NAMES =
 		{
@@ -3649,7 +3652,8 @@ public class AseConnectionUtils
 			"TRAN_IN_PROGRESS",
 			"TRAN_SUCCEED",
 			"STMT_ABORT",
-			"TRAN_ABORT"
+			"TRAN_ABORT",
+			"NOT_AVAILABLE"
 		};
 
 		public static final String[] TSQL_TRANSTATE_DESCRIPTIONS =
@@ -3658,9 +3662,26 @@ public class AseConnectionUtils
 			"TRAN_IN_PROGRESS = Transaction in progress. \nThe previous statement executed successfully.",
 			"TRAN_SUCCEED = Last Transaction succeeded. \nThe transaction completed and committed its changes.",
 			"STMT_ABORT = Last Statement aborted. \nThe previous statement was aborted; \nNo effect on the transaction.",
-			"TRAN_ABORT = Last Transaction aborted. \nThe transaction aborted and rolled back any changes."
+			"TRAN_ABORT = Last Transaction aborted. \nThe transaction aborted and rolled back any changes.",
+			"NOT_AVAILABLE = Not available in this system."
 		};
 		
+
+		public boolean isTranStateUsed()
+		{
+			return _tranState != TSQL_TRANSTATE_NOT_AVAILABLE;
+		}
+
+		public boolean isNonNormalTranState()
+		{
+			return ! isNormalTranState();
+		}
+		public boolean isNormalTranState()
+		{
+			if (_tranState == TSQL_TRAN_SUCCEED)            return true;
+			if (_tranState == TSQL_TRANSTATE_NOT_AVAILABLE) return true;
+			return false;
+		}
 
 		public String getTranStateStr()
 		{
@@ -3694,6 +3715,9 @@ public class AseConnectionUtils
 				case TSQL_TRAN_ABORT:
 					return TSQL_TRANSTATE_NAMES[state];
 
+				case TSQL_TRANSTATE_NOT_AVAILABLE:
+					return TSQL_TRANSTATE_NAMES[state];
+
 				default:
 					return "TSQL_UNKNOWN_STATE("+state+")";
 			}
@@ -3712,6 +3736,9 @@ public class AseConnectionUtils
 					return TSQL_TRANSTATE_DESCRIPTIONS[state];
 
 				case TSQL_TRAN_ABORT:
+					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+
+				case TSQL_TRANSTATE_NOT_AVAILABLE:
 					return TSQL_TRANSTATE_DESCRIPTIONS[state];
 
 				default:

@@ -305,7 +305,7 @@ implements Connection
 			serverName = DbUtils.getOracleServername(_conn);
 		}
 		// Microsoft
-		else if (DbUtils.DB_PROD_NAME_MS.equals(currentDbProductName))
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
 		{
 			serverName = AseConnectionUtils.getAseServername(_conn);
 		}
