@@ -1394,6 +1394,10 @@ public class QueryWindow
 		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
 			setDbNames();
 
+		// Refresh the database list (if MSSQL)
+		if (_conn != null && DbUtils.isProductName(DbUtils.DB_PROD_NAME_MSSQL, _connectedToProductName))
+			setDbNames();
+
 		// Write some initial text, and mark it
 		// or Kick of a initial SQL query, if one is specified.
 		if (StringUtil.isNullOrBlank(sql))
@@ -2027,7 +2031,7 @@ public class QueryWindow
 					_connectedSrvSortorder = AseConnectionUtils.getAseSortorder(_conn);
 
 					// Also get "various statuses" like if we are in a transaction or not
-					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
+					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
 					_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 					setWatermark();
 				}
@@ -2216,7 +2220,7 @@ public class QueryWindow
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// MS-SQL
-			else if (DbUtils.DB_PROD_NAME_MS.equals(_connectedToProductName))
+			else if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2240,10 +2244,29 @@ public class QueryWindow
 			}
 			
 
+			
 			//---------------------------------------------------
-			// JDBC Specific status - refreshed after each execution
-			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
-			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+			// Connection STATE information
+			//---------------------------------------------------
+			if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
+			{
+				// Connection info status: USE ASE stuff...
+				setDbNames();
+
+				// Also get "various statuses" like if we are in a transaction or not
+				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, false);
+				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+
+			}
+			else
+			{
+				//---------------------------------------------------
+				// JDBC Specific status - refreshed after each execution
+				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+			}
+
+			
 
 			// Load Windown Props for this server
 			loadWinPropsForSrv(_connectedWithUrl);
@@ -2488,6 +2511,12 @@ public class QueryWindow
 		else
 		{
 			_oracleEnableDbmsOutput_chk.setVisible(false);
+		}
+
+		// MS SQL
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			_dbnames_cbx               .setEnabled(true);
 		}
 
 		// view and tools menu might be empty...
@@ -3706,7 +3735,7 @@ public class QueryWindow
 		{
 			propPostfix = "hana.";
 		}
-		else if (DbUtils.DB_PROD_NAME_MS.equals(_connectedToProductName))
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
 		{
 			propPostfix = "mssql.";
 		}
@@ -3935,7 +3964,8 @@ public class QueryWindow
 			_conn.isClosed(); 
 
 			// if ASE, refresh the database list and currect working database
-			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+//			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MSSQL))
 			{
 				// issue 'select 1' to check if the connection is valid
 				doDummySelect();
@@ -3943,9 +3973,10 @@ public class QueryWindow
 				// getCurrentDb() is also done in setDbNames()
 				// it only refreshes the DB Combobox if number of databases has changed.
 				setDbNames();
-				
+
 				// Also get "various statuses" like if we are in a transaction or not
-				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn);
+				boolean getTranState = DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, getTranState);
 				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 			}
 			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
@@ -4252,7 +4283,7 @@ public class QueryWindow
 				_rpcParams = new ArrayList<QueryWindow.RpcParam>();
 
 				// If we are connected to a server that has return codes
-				if (DbUtils.isProductName(dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_RS, DbUtils.DB_PROD_NAME_MS))
+				if (DbUtils.isProductName(dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_RS, DbUtils.DB_PROD_NAME_MSSQL))
 					_doReturnCode = true;
 
 				boolean forceRpc = false;
@@ -8054,9 +8085,14 @@ public class QueryWindow
 		{
 			setWatermarkText("Not Connected...");
 		}
-		else if ( _aseConnectionStateInfo != null && ( _aseConnectionStateInfo._tranCount > 0 || _aseConnectionStateInfo._tranState != AseConnectionUtils.ConnectionStateInfo.TSQL_TRAN_SUCCEED) )
+		else if ( _aseConnectionStateInfo != null && ( _aseConnectionStateInfo._tranCount > 0 || _aseConnectionStateInfo.isNonNormalTranState()) )
 		{
-			String str = _aseConnectionStateInfo.getTranStateDescription() + "\n@@trancount = " + _aseConnectionStateInfo._tranCount;
+			String str;
+			if (_aseConnectionStateInfo.isTranStateUsed())
+				str = _aseConnectionStateInfo.getTranStateDescription() + "\n@@trancount = " + _aseConnectionStateInfo._tranCount;
+			else
+				str = "@@trancount = " + _aseConnectionStateInfo._tranCount;
+				
 			setWatermarkText(str);
 		}
 		else

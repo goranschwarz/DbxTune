@@ -142,7 +142,7 @@ public class ConnectionProfileManager
 		else if (DbUtils.DB_PROD_NAME_H2        .equals(productName)) return ICON_DB_PROD_NAME_H2;
 		else if (DbUtils.DB_PROD_NAME_HANA      .equals(productName)) return ICON_DB_PROD_NAME_HANA;
 		else if (DbUtils.DB_PROD_NAME_HSQL      .equals(productName)) return ICON_DB_PROD_NAME_HSQL;
-		else if (DbUtils.DB_PROD_NAME_MS        .equals(productName)) return ICON_DB_PROD_NAME_MSSQL;
+		else if (DbUtils.DB_PROD_NAME_MSSQL        .equals(productName)) return ICON_DB_PROD_NAME_MSSQL;
 		else if (DbUtils.DB_PROD_NAME_MYSQL     .equals(productName)) return ICON_DB_PROD_NAME_MYSQL;
 		else if (DbUtils.DB_PROD_NAME_ORACLE    .equals(productName)) return ICON_DB_PROD_NAME_ORACLE;
 		
