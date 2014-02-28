@@ -42,9 +42,9 @@ extends DefaultCompletionProvider
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_MISC_INFO                     = true;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_DATABASE_INFO                 = true;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_NAME_INFO               = true;
-	public static final boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_TABLE_COLUMNS_INFO            = false;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_NAME_INFO           = true;
-	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = false;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = true;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = true;
 
