@@ -4,19 +4,8 @@ package com.asetune.tools.sqlcapture;
  * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
  */
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import javax.naming.NameNotFoundException;
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 

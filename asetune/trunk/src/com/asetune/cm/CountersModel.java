@@ -29,7 +29,6 @@ import java.util.Map;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TableModelListener;
@@ -2980,6 +2979,16 @@ implements Cloneable, ITableTooltip
 	}
 
 
+	/**
+	 * Do local adjustments on the rateData
+	 * 
+	 * @param tmpRateData
+	 */
+	public void localCalculationRatePerSec(SamplingCnt rateData)
+	{
+	}
+
+
 	/** 
 	 * In here we can choose the discard/change values from ResultSet, when doing SQL Refresh <br>
 	 * overridden to change the "resultset"
@@ -3671,6 +3680,9 @@ implements Cloneable, ITableTooltip
 				// we got some data, compute the rates and update the data model
 				tmpRateData = SamplingCnt.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
+				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
+				localCalculationRatePerSec(tmpRateData);
+	
 				long secondLcTime = endLcRefresh();
 				setLcRefreshTime(firstLcTime + secondLcTime);
 

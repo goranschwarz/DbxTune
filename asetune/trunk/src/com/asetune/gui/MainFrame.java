@@ -111,10 +111,10 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.AseStackTraceAnalyzer;
 import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
+import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.tools.tailw.LogTailWindow;
-import com.asetune.tools.WindowType;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -1256,6 +1256,15 @@ public class MainFrame
 			GTabbedPane tabGroupRepAgent     = new GTabbedPane("MainFrame_TabbedPane_RepAgent");
 			GTabbedPane tabGroupHostMonitor  = new GTabbedPane("MainFrame_TabbedPane_HostMonitor");
 			GTabbedPane tabGroupUdc          = new GTabbedPane("MainFrame_TabbedPane_Udc");
+
+			// Lets do setTabLayoutPolicy for all sub tabs...
+			tabGroupServer      .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupObjectAccess.setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupCache       .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupDisk        .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupRepAgent    .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupHostMonitor .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
+			tabGroupUdc         .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
 
 			_mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
 			_mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));

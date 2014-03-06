@@ -185,7 +185,8 @@ extends CountersModel
 			InstanceID = "W.InstanceID, ";
 
 //		if (aseVersion >= 15056)
-		if (aseVersion >= 1505060)
+//		if (aseVersion >= 1505060)
+		if (aseVersion >= 1502030)
 			UserName = "UserName = suser_name(W.ServerUserID), ";
 
 		cols = InstanceID + "W.SPID, W.KPID, " + UserName + "\n" +

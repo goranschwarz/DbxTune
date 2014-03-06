@@ -20,8 +20,8 @@ import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.NextWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
-import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
 
 public class RSyntaxTextAreaX
 extends RSyntaxTextArea

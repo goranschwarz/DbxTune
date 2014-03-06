@@ -49,7 +49,6 @@ import com.asetune.Version;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.AseConfigMonitoringDialog;
-import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;

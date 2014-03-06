@@ -4624,9 +4624,6 @@ public class QueryWindow
 						// Used during ResultSet loop
 						Statement stmnt = null;
 	
-						// Any result sets
-						ResultSet rs = null;
-	
 						// RPC handling if the text starts with '\exec '
 						// The for of this would be: {?=call procName(parameters)}
 						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
@@ -4653,13 +4650,14 @@ public class QueryWindow
 			
 						// iterate through each result set
 						int rsCount = 0;
+						int loopCount = 0;
 						do
 						{
+							loopCount++; // used for debugging
+
 							// Append, messages and Warnings to _resultCompList, if any
 							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-hasRs-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 	
-							ResultSetTableModel rstm = null;
-
 							if(hasRs)
 							{
 								rsCount++;
@@ -4667,7 +4665,9 @@ public class QueryWindow
 								progress.setState("Reading resultset "+rsCount+".");
 			
 								// Get next resultset to work with
-								rs = stmnt.getResultSet();
+								ResultSet rs = stmnt.getResultSet();
+
+								ResultSetTableModel rstm = null;
 			
 								// Append, messages and Warnings to _resultCompList, if any
 								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-after-getResultSet()-Statement-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
@@ -4748,26 +4748,42 @@ public class QueryWindow
 								// Append, messages and Warnings to _resultCompList, if any
 								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 	
+								// Get rowcount from the ResultSetTableModel
+								if (rstm != null)
+								{
+									int readCount = rstm.getReadCount();
+        							if (readCount >= 0)
+        							{
+        								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+        									_resultCompList.add( new JAseRowCount(readCount, sql) );
+        							}
+								}
+
 								// Close it
 								rs.close();
 
 							} // end: hasResultSets 
-			
-							// Treat update/row count(s)
-							// Some drivers doesn't return the count for selects
-							// so try to get the count from the ResultSetTableModel
-							rowsAffected = stmnt.getUpdateCount();
-							if (rowsAffected <= 0 && rstm != null)
-								rowsAffected = rstm.getReadCount();
-							if (rowsAffected >= 0)
+							else // Treat update/row count(s) for NON RESULTSETS
 							{
-//System.out.println("hasRs="+hasRs+", rowsAffected="+rowsAffected);
-								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+								// Java DOC: getUpdateCount() Retrieves the current result as an update count; if the result is a ResultSet object 
+								//           or there are no more results, -1 is returned. This method should be called only once per result.
+								// Without this else statement, some drivers maight fail... (MS-SQL actally did)
+
+								rowsAffected = stmnt.getUpdateCount();
+
+								if (rowsAffected >= 0)
 								{
-//System.out.println("(" + rowsAffected + " rows affected)\n");
-									_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
+									_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
+
+									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+										_resultCompList.add( new JAseRowCount(rowsAffected, sql) );
 								}
-							}
+								else
+								{
+									_logger.debug("---- No more results to process.");
+								}
+							} // end: no-resultset
+			
 							// Append, messages and Warnings to _resultCompList, if any
 							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 			
@@ -4780,7 +4796,7 @@ public class QueryWindow
 							putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 
 							if (_logger.isTraceEnabled())
-								_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+								_logger.trace( "--loopCount="+loopCount+", hasRs="+hasRs+", rowsAffected="+rowsAffected+", "+((hasRs || rowsAffected != -1) ? "continue-to-loop" : "<<< EXIT LOOP <<<") );
 						}
 						while (hasRs || rowsAffected != -1);
 			
@@ -6054,7 +6070,9 @@ public class QueryWindow
 		{
 			String prodName = productName; 
 			if (DbUtils.DB_PROD_NAME_HANA.equals(productName)) prodName = "HANA";
-			
+
+//System.out.println("JSQLExceptionMessage: prodName='"+prodName+"'.");
+//ex.printStackTrace();
 			return prodName + ": ErrorCode "+ex.getErrorCode()+", SQLState "+ex.getSQLState()+", ExceptionClass: " + ex.getClass().getName() + "\n"
 //				+ "("+Version.getAppName()+": The SQL Batch was aborted due to a thrown SQLException)\n"
 				+ ex.getMessage();

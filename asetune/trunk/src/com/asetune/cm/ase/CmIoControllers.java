@@ -4,12 +4,16 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -17,7 +21,7 @@ import com.asetune.gui.MainFrame;
 public class CmIoControllers
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmIoControllers.class);
+	private static Logger        _logger          = Logger.getLogger(CmIoControllers.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIoControllers.class.getSimpleName();
@@ -41,7 +45,7 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"BlockingPolls", "NonBlockingPolls", "EventPolls", "NonBlockingEventPolls", "FullPolls", 
-		"Events", "Pending", "Completed", 
+		"Events", "Completed",   // Pending seems not to be a incremental counter
 		"Reads", "Writes", "Deferred"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -92,8 +96,45 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	
+	public static final String   GRAPH_NAME_PENDING_DISK_IO   = "pendingDiskIo"; 
+	public static final String   GRAPH_NAME_COMPLETED_DISK_IO = "completedDiskIo"; 
+
 	private void addTrendGraphs()
 	{
+		String[] labels1 = new String[] { "Pending" };
+		String[] labels2 = new String[] { "Completed" };
+		
+		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1));
+		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+			tg = new TrendGraph(GRAPH_NAME_PENDING_DISK_IO,
+					"Pending DiskIO's", 	                                 // Menu CheckBox text
+					"Pending DiskIO's, or number of outstanding (from IOController)", // Label 
+					labels1, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
+					"Completed DiskIO's", 	                                 // Menu CheckBox text
+					"Completed DiskIO's per Seconds (from IOController)", // Label 
+					labels2, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
 	}
 
 	@Override
@@ -118,5 +159,43 @@ extends CountersModel
 	{
 		String sql = "select * from master..monIOController";
 		return sql;
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_PENDING_DISK_IO.equals(tgdp.getName()))
+		{
+    		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
+    		if (rqRows == null)
+    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), retuned null, so I can't do more here.");
+    		else
+    		{
+    			Double[] arr = new Double[1];
+    			arr[0] = this.getAbsValueSum(rqRows, "Pending");
+    			_logger.debug("updateGraphData("+GRAPH_NAME_PENDING_DISK_IO+"): Pending='"+arr[0]+"'.");
+    
+    			// Set the values
+    			tgdp.setDate(this.getTimestamp());
+    			tgdp.setData(arr);
+    		}
+		}
+
+		if (GRAPH_NAME_COMPLETED_DISK_IO.equals(tgdp.getName()))
+		{
+    		int[] rqRows = this.getAbsRowIdsWhere("Type", "DiskController");
+    		if (rqRows == null)
+    			_logger.warn("When updateGraphData for '"+tgdp.getName()+"', getAbsRowIdsWhere('Type', 'DiskController'), retuned null, so I can't do more here.");
+    		else
+    		{
+    			Double[] arr = new Double[1];
+    			arr[0] = this.getRateValueSum(rqRows, "Completed");
+    			_logger.debug("updateGraphData("+GRAPH_NAME_COMPLETED_DISK_IO+"): Completed='"+arr[0]+"'.");
+    
+    			// Set the values
+    			tgdp.setDate(this.getTimestamp());
+    			tgdp.setData(arr);
+    		}
+		}
 	}
 }

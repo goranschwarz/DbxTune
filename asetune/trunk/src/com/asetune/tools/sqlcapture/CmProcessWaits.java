@@ -4,8 +4,6 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.swing.JTabbedPane;
-
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSybMessageHandler;

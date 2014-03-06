@@ -249,12 +249,14 @@ implements SybMessageHandler
 						// Close it
 						rs.close();
 					}
-
-					// Treat update/row count(s)
-					rowsAffected = stmnt.getUpdateCount();
-					if (rowsAffected >= 0)
+					else
 					{
-//						rso.add(rowsAffected);
+						// Treat update/row count(s)
+						rowsAffected = stmnt.getUpdateCount();
+						if (rowsAffected >= 0)
+						{
+//							rso.add(rowsAffected);
+						}
 					}
 
 					// Check if we have more resultsets
@@ -441,25 +443,18 @@ implements SybMessageHandler
 						// Close it
 						rs.close();
 					}
-
-					// Treat update/row count(s)
-					rowsAffected = stmnt.getUpdateCount();
-					if (rowsAffected >= 0)
+					else
 					{
-					//	sb.append("("+rowsAffected+" row affected)\n");
+    					// Treat update/row count(s)
+    					rowsAffected = stmnt.getUpdateCount();
+    					if (rowsAffected >= 0)
+    					{
+    					//	sb.append("("+rowsAffected+" row affected)\n");
+    					}
 					}
 
 					// Check if we have more result sets
-//					try 
-//					{ 
-						hasRs = stmnt.getMoreResults(); 
-//					} 
-//					catch (SQLException ex2) 
-//					{
-//						sb.append(getSqlWarningMsgs(stmnt, true));
-////						sb.append(getSqlWarningMsgs(ex2));
-//						hasRs = stmnt.getMoreResults(); 
-//					}
+					hasRs = stmnt.getMoreResults(); 
 
 					_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
 				}

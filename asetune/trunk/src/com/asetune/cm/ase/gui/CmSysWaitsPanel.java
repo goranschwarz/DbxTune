@@ -70,39 +70,48 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_showLegend    = PROP_PREFIX + ".graph.show.legend";
 	private static final boolean DEFAULT_showLegend    = true;
 
-//	private static final String  PROPKEY_includeWaitId250      = PROP_PREFIX + ".graph.include.id.250";
-//	private static final boolean DEFAULT_includeWaitId250      = true;
+	private static final String  PROPKEY_includeWaitId250             = PROP_PREFIX + ".graph.include.id.250";
+	private static final boolean DEFAULT_includeWaitId250             = false;
 
-	private static final String  PROPKEY_generateEvent         = PROP_PREFIX + ".graph.generate.event";
-	private static final boolean DEFAULT_generateEvent         = true;
+	private static final String  PROPKEY_generateEvent                = PROP_PREFIX + ".graph.generate.event";
+	private static final boolean DEFAULT_generateEvent                = true;
 
-	private static final String  PROPKEY_generateEventWaitTime = PROP_PREFIX + ".graph.generate.event.waitTime";
-	private static final boolean DEFAULT_generateEventWaitTime = true;
+	private static final String  PROPKEY_generateEventWaitTime        = PROP_PREFIX + ".graph.generate.event.waitTime";
+	private static final boolean DEFAULT_generateEventWaitTime        = true;
 
-	private static final String  PROPKEY_generateEventWaits    = PROP_PREFIX + ".graph.generate.event.waits";
-	private static final boolean DEFAULT_generateEventWaits    = true;
+	private static final String  PROPKEY_generateEventWaits           = PROP_PREFIX + ".graph.generate.event.waits";
+	private static final boolean DEFAULT_generateEventWaits           = true;
 
-	private static final String  PROPKEY_generateClass         = PROP_PREFIX + ".graph.generate.class";
-	private static final boolean DEFAULT_generateClass         = false;
+	private static final String  PROPKEY_generateEventWaitTimePerWait = PROP_PREFIX + ".graph.generate.event.waitTimePerWait";
+	private static final boolean DEFAULT_generateEventWaitTimePerWait = true;
 
-	private static final String  PROPKEY_generateClassWaitTime = PROP_PREFIX + ".graph.generate.class.waitTime";
-	private static final boolean DEFAULT_generateClassWaitTime = true;
+	private static final String  PROPKEY_generateClass                = PROP_PREFIX + ".graph.generate.class";
+	private static final boolean DEFAULT_generateClass                = false;
 
-	private static final String  PROPKEY_generateClassWaits    = PROP_PREFIX + ".graph.generate.class.waits";
-	private static final boolean DEFAULT_generateClassWaits    = true;
+	private static final String  PROPKEY_generateClassWaitTime        = PROP_PREFIX + ".graph.generate.class.waitTime";
+	private static final boolean DEFAULT_generateClassWaitTime        = true;
+
+	private static final String  PROPKEY_generateClassWaits           = PROP_PREFIX + ".graph.generate.class.waits";
+	private static final boolean DEFAULT_generateClassWaits           = true;
+
+	private static final String  PROPKEY_generateClassWaitTimePerWait = PROP_PREFIX + ".graph.generate.class.waitTimePerWait";
+	private static final boolean DEFAULT_generateClassWaitTimePerWait = true;
 
 	static
 	{
-		Configuration.registerDefaultValue(PROPKEY_generateDummy,         DEFAULT_generateDummy);
-		Configuration.registerDefaultValue(PROPKEY_enableGraph,           DEFAULT_enableGraph);
-		Configuration.registerDefaultValue(PROPKEY_graphType,             DEFAULT_graphType);
-		Configuration.registerDefaultValue(PROPKEY_showLegend,            DEFAULT_showLegend);
-		Configuration.registerDefaultValue(PROPKEY_generateEvent,         DEFAULT_generateEvent);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTime, DEFAULT_generateEventWaitTime);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaits,    DEFAULT_generateEventWaits);
-		Configuration.registerDefaultValue(PROPKEY_generateClass,         DEFAULT_generateClass);
-		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTime, DEFAULT_generateClassWaitTime);
-		Configuration.registerDefaultValue(PROPKEY_generateClassWaits,    DEFAULT_generateClassWaits);
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,                DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,                  DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,                    DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,                   DEFAULT_showLegend);
+		Configuration.registerDefaultValue(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250);
+		Configuration.registerDefaultValue(PROPKEY_generateEvent,                DEFAULT_generateEvent);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateClass,                DEFAULT_generateClass);
+		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits);
+		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTime);
 	}
 
 	public CmSysWaitsPanel(CountersModel cm)
@@ -122,24 +131,27 @@ extends TabularCntrPanel
 	private CategoryDataset createDataset(GTable dataTable)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean generateDummy         = conf.getBooleanProperty(PROPKEY_generateDummy,         DEFAULT_generateDummy);
-//		boolean includeWaitId250      = conf.getBooleanProperty(PROPKEY_includeWaitId250,      DEFAULT_includeWaitId250);
-		boolean generateEvent         = conf.getBooleanProperty(PROPKEY_generateEvent,         DEFAULT_generateEvent);
-		boolean generateEventWaitTime = conf.getBooleanProperty(PROPKEY_generateEventWaitTime, DEFAULT_generateEventWaitTime);
-		boolean generateEventWaits    = conf.getBooleanProperty(PROPKEY_generateEventWaits,    DEFAULT_generateEventWaits);
-		boolean generateClass         = conf.getBooleanProperty(PROPKEY_generateClass,         DEFAULT_generateClass);
-		boolean generateClassWaitTime = conf.getBooleanProperty(PROPKEY_generateClassWaitTime, DEFAULT_generateClassWaitTime);
-		boolean generateClassWaits    = conf.getBooleanProperty(PROPKEY_generateClassWaits,    DEFAULT_generateClassWaits);
+		boolean generateDummy                = conf.getBooleanProperty(PROPKEY_generateDummy,                DEFAULT_generateDummy);
+		boolean includeWaitId250             = conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250);
+		boolean generateEvent                = conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent);
+		boolean generateEventWaitTime        = conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime);
+		boolean generateEventWaits           = conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits);
+		boolean generateEventWaitTimePerWait = conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait);
+		boolean generateClass                = conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass);
+		boolean generateClassWaitTime        = conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime);
+		boolean generateClassWaits           = conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits);
+		boolean generateClassWaitTimePerWait = conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait);
 
 		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
 		if (dataTable != null)
 		{
-			int ClassName_pos   = dataTable.findViewColumn("WaitClassDesc");
-			int EventName_pos   = dataTable.findViewColumn("WaitEventDesc");
-//			int WaitEventID_pos = dataTable.findViewColumn("WaitEventID");
-			int WaitTime_pos    = dataTable.findViewColumn("WaitTime"); 
-			int Waits_pos       = dataTable.findViewColumn("Waits");
+			int ClassName_pos       = dataTable.findViewColumn("WaitClassDesc");
+			int EventName_pos       = dataTable.findViewColumn("WaitEventDesc");
+			int WaitEventID_pos     = dataTable.findViewColumn("WaitEventID");
+			int WaitTime_pos        = dataTable.findViewColumn("WaitTime"); 
+			int Waits_pos           = dataTable.findViewColumn("Waits");
+			int WaitTimePerWait_pos = dataTable.findViewColumn("WaitTimePerWait"); 
 
 			CountersModel cm = getDisplayCm();
 			if (cm == null)
@@ -147,39 +159,46 @@ extends TabularCntrPanel
 
 			if (cm != null)
 			{
-				Map<String, Double> classesWaitTime = new LinkedHashMap<String, Double>();
-				Map<String, Double> classesWaits    = new LinkedHashMap<String, Double>();
+				Map<String, Double> classesWaitTime        = new LinkedHashMap<String, Double>();
+				Map<String, Double> classesWaits           = new LinkedHashMap<String, Double>();
+				Map<String, Double> classesWaitTimePerWait = new LinkedHashMap<String, Double>();
 				for(int r=0; r<dataTable.getRowCount(); r++)
 				{
-					String ClassName   = (String)dataTable.getValueAt(r, ClassName_pos);
-					String EventName   = (String)dataTable.getValueAt(r, EventName_pos);
-//					Number WaitEventID = (Number)dataTable.getValueAt(r, WaitEventID_pos);
-					Number WaitTime    = (Number)dataTable.getValueAt(r, WaitTime_pos);
-					Number Waits       = (Number)dataTable.getValueAt(r, Waits_pos);
+					String ClassName       = (String)dataTable.getValueAt(r, ClassName_pos);
+					String EventName       = (String)dataTable.getValueAt(r, EventName_pos);
+					Number WaitEventID     = (Number)dataTable.getValueAt(r, WaitEventID_pos);
+					Number WaitTime        = (Number)dataTable.getValueAt(r, WaitTime_pos);
+					Number Waits           = (Number)dataTable.getValueAt(r, Waits_pos);
+					Number WaitTimePerWait = (Number)dataTable.getValueAt(r, WaitTimePerWait_pos);
 
-//					// SKIP Wait EventId 250
-//					if ( ! includeWaitId250 && WaitEventID.intValue() == 250)
-//						continue;
+					// SKIP Wait EventId 250
+					if ( ! includeWaitId250 && WaitEventID.intValue() == 250)
+						continue;
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"', WaitTimePerWait("+WaitTimePerWait_pos+")='"+WaitTimePerWait+"'.");
 
 					if (generateClass)
 					{
-						Double sumWaitTime = classesWaitTime.get(ClassName);
-						Double sumWaits    = classesWaits   .get(ClassName);
+						Double sumWaitTime        = classesWaitTime       .get(ClassName);
+						Double sumWaits           = classesWaits          .get(ClassName);
+						Double sumWaitTimePerWait = classesWaitTimePerWait.get(ClassName);
 
-						classesWaitTime.put(ClassName, new Double(sumWaitTime==null ? WaitTime.doubleValue() : sumWaitTime + WaitTime.doubleValue()) );
-						classesWaits   .put(ClassName, new Double(sumWaits   ==null ? Waits   .doubleValue() : sumWaits    + Waits   .doubleValue()) );
+						classesWaitTime       .put(ClassName, new Double(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
+						classesWaits          .put(ClassName, new Double(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
+						classesWaitTimePerWait.put(ClassName, new Double(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
 					}
 					
 					if (generateEvent)
 					{
 						if (generateEventWaitTime)
-							dataset.addValue(WaitTime.doubleValue(), EventName, "Event - WaitTime");
+							dataset.addValue(WaitTime       .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTime");
 
 						if (generateEventWaits)
-							dataset.addValue(Waits.doubleValue(), EventName, "Event - Waits");
+							dataset.addValue(Waits          .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - Waits");
+
+						if (generateEventWaitTimePerWait)
+							dataset.addValue(WaitTimePerWait.doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTimePerWait");
 					}
 				}
 				if (generateClass)
@@ -201,6 +220,16 @@ extends TabularCntrPanel
 							String key = entry.getKey();
 							Double val = entry.getValue();
 							dataset.addValue(val, "(class) "+key, "Class - Waits");
+						}
+					}
+
+					if (generateClassWaitTimePerWait)
+					{
+						for (Map.Entry<String,Double> entry : classesWaitTimePerWait.entrySet()) 
+						{
+							String key = entry.getKey();
+							Double val = entry.getValue();
+							dataset.addValue(val, "(class) "+key, "Class - WaitTimePerWait");
 						}
 					}
 				}
@@ -236,7 +265,8 @@ extends TabularCntrPanel
 		boolean showLegend     = conf.getBooleanProperty(PROPKEY_showLegend, DEFAULT_showLegend);
 
 		// some "statics" that can be used in the graphs
-		final String          chartTitle              = "Wait Event Graph - by Event and by Class";
+//		final String          chartTitle              = "Wait Event Graph - by Event and by Class";
+		final String          chartTitle              = "Wait Graph - by EventID and by ClassName";
 		final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
 		final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
 
@@ -436,13 +466,15 @@ extends TabularCntrPanel
 		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-//		final JCheckBox includeWaitId250_chk      = new JCheckBox("Include 'WaitID=250, waiting for incoming network data' in graphs.");
-		final JCheckBox generateEvent_chk         = new JCheckBox("Genereate Graphs for Events");
-		final JCheckBox generateEventWaitTime_chk = new JCheckBox("WaitTime");
-		final JCheckBox generateEventWaits_chk    = new JCheckBox("Waits");
-		final JCheckBox generateClass_chk         = new JCheckBox("Genereate Graphs for Classes");
-		final JCheckBox generateClassWaitTime_chk = new JCheckBox("WaitTime");
-		final JCheckBox generateClassWaits_chk    = new JCheckBox("Waits");
+		final JCheckBox includeWaitId250_chk             = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
+		final JCheckBox generateEvent_chk                = new JCheckBox("Genereate Graphs for Events");
+		final JCheckBox generateEventWaitTime_chk        = new JCheckBox("WaitTime");
+		final JCheckBox generateEventWaits_chk           = new JCheckBox("Waits");
+		final JCheckBox generateEventWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
+		final JCheckBox generateClass_chk                = new JCheckBox("Genereate Graphs for Classes");
+		final JCheckBox generateClassWaitTime_chk        = new JCheckBox("WaitTime");
+		final JCheckBox generateClassWaits_chk           = new JCheckBox("Waits");
+		final JCheckBox generateClassWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
 
 		final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
 		final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
@@ -462,15 +494,15 @@ extends TabularCntrPanel
 		enableGraph_chk.setToolTipText("Do you want the Graph to be visible at all...");
 		showLegend_chk.setToolTipText("Show Legend, which describes all data value types");
 
-//		tooltip = 
-//			"<html>" +
-//			"If you want to include 'WaitID=250, waiting for incoming network data' in graphs..<br>" +
-//			"<br>" +
-//			"<br>" +
-//			"Another way to include/exclude event types in the graphs, is to use the 'filters' panel.<br>" +
-//			"The Graph is based on what is visible in the Table..." +
-//			"</html>";
-//		includeWaitId250_chk.setToolTipText(tooltip);
+		tooltip = 
+			"<html>" +
+			"If you want to include 'WaitID=250, waiting for incoming network data' in graphs..<br>" +
+			"<br>" +
+			"<br>" +
+			"Another way to include/exclude event types in the graphs, is to use the 'filters' panel.<br>" +
+			"The Graph is based on what is visible in the Table..." +
+			"</html>";
+		includeWaitId250_chk.setToolTipText(tooltip);
 
 		tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
 		graphType_lbl.setToolTipText(tooltip);
@@ -487,25 +519,27 @@ extends TabularCntrPanel
 		if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
 		graphType_cbx.setSelectedItem(orientation);
 
-//		includeWaitId250_chk     .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,      DEFAULT_includeWaitId250));
-		generateEvent_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,         DEFAULT_generateEvent));
-		generateEventWaitTime_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime, DEFAULT_generateEventWaitTime));
-		generateEventWaits_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,    DEFAULT_generateEventWaits));
-		generateClass_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,         DEFAULT_generateClass));
-		generateClassWaitTime_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime, DEFAULT_generateClassWaitTime));
-		generateClassWaits_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,    DEFAULT_generateClassWaits));
+		includeWaitId250_chk            .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250));
+		generateEvent_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent));
+		generateEventWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime));
+		generateEventWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits));
+		generateEventWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait));
+		generateClass_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass));
+		generateClassWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime));
+		generateClassWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits));
+		generateClassWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait));
 
 		enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
 		showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
 		
 		// ACTION LISTENERS
-//		includeWaitId250_chk.addActionListener(new ActionListener()
-//		{
-//			public void actionPerformed(ActionEvent e)
-//			{
-//				helperActionSave(PROPKEY_includeWaitId250, ((JCheckBox)e.getSource()).isSelected());
-//			}
-//		});
+		includeWaitId250_chk.addActionListener(new ActionListener()
+		{
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_includeWaitId250, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 
 		enableGraph_chk.addActionListener(new ActionListener()
 		{
@@ -552,8 +586,9 @@ extends TabularCntrPanel
 			{
 				boolean b = ((JCheckBox)e.getSource()).isSelected();
 				helperActionSave(PROPKEY_generateEvent, ((JCheckBox)e.getSource()).isSelected());
-				generateEventWaitTime_chk.setEnabled(b);
-				generateEventWaits_chk   .setEnabled(b);
+				generateEventWaitTime_chk       .setEnabled(b);
+				generateEventWaits_chk          .setEnabled(b);
+				generateEventWaitTimePerWait_chk.setEnabled(b);
 			}
 		});
 		generateEventWaitTime_chk.addActionListener(new ActionListener()
@@ -572,6 +607,14 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateEventWaits, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
+		generateEventWaitTimePerWait_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_generateEventWaitTimePerWait, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 
 
 
@@ -582,8 +625,9 @@ extends TabularCntrPanel
 			{
 				boolean b = ((JCheckBox)e.getSource()).isSelected();
 				helperActionSave(PROPKEY_generateClass, b);
-				generateClassWaitTime_chk.setEnabled(b);
-				generateClassWaits_chk   .setEnabled(b);
+				generateClassWaitTime_chk       .setEnabled(b);
+				generateClassWaits_chk          .setEnabled(b);
+				generateClassWaitTimePerWait_chk.setEnabled(b);
 			}
 		});
 		generateClassWaitTime_chk.addActionListener(new ActionListener()
@@ -602,22 +646,33 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateClassWaits, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
+		generateClassWaitTimePerWait_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_generateClassWaitTimePerWait, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 
 		// ADD to panel
-//		panel.add(includeWaitId250_chk,      "wrap");
-		panel.add(enableGraph_chk,           "split");
-		panel.add(graphType_lbl,             "");
-		panel.add(graphType_cbx,             "wrap");
+//		panel.add(includeWaitId250_chk,             "wrap");
+		panel.add(enableGraph_chk,                  "split");
+		panel.add(graphType_lbl,                    "");
+		panel.add(graphType_cbx,                    "wrap");
 
-		panel.add(generateEvent_chk,         "split");
-		panel.add(generateEventWaitTime_chk, "");
-		panel.add(generateEventWaits_chk,    "wrap");
+		panel.add(generateEvent_chk,                "split");
+		panel.add(generateEventWaitTime_chk,        "");
+		panel.add(generateEventWaits_chk,           "");
+		panel.add(generateEventWaitTimePerWait_chk, "wrap");
 
-		panel.add(generateClass_chk,         "split");
-		panel.add(generateClassWaitTime_chk, "");
-		panel.add(generateClassWaits_chk,    "wrap");
+		panel.add(generateClass_chk,                "split");
+		panel.add(generateClassWaitTime_chk,        "");
+		panel.add(generateClassWaits_chk,           "");
+		panel.add(generateClassWaitTimePerWait_chk, "wrap");
 
-		panel.add(showLegend_chk,            "wrap");
+		panel.add(showLegend_chk,                   "split");
+		panel.add(includeWaitId250_chk,             "wrap");
 
 		// enable disable all subcomponents in panel
 		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
@@ -625,10 +680,13 @@ extends TabularCntrPanel
 		if (enableGraph_chk.isSelected())
 		{
 			// initial enabled or not
-			generateEventWaitTime_chk.setEnabled(generateEvent_chk.isSelected());
-			generateEventWaits_chk   .setEnabled(generateEvent_chk.isSelected());
-			generateClassWaitTime_chk.setEnabled(generateClass_chk.isSelected());
-			generateClassWaits_chk   .setEnabled(generateClass_chk.isSelected());
+			generateEventWaitTime_chk       .setEnabled(generateEvent_chk.isSelected());
+			generateEventWaits_chk          .setEnabled(generateEvent_chk.isSelected());
+			generateEventWaitTimePerWait_chk.setEnabled(generateEvent_chk.isSelected());
+
+			generateClassWaitTime_chk       .setEnabled(generateClass_chk.isSelected());
+			generateClassWaits_chk          .setEnabled(generateClass_chk.isSelected());
+			generateClassWaitTimePerWait_chk.setEnabled(generateClass_chk.isSelected());
 		}
 
 		return panel;

@@ -1,14 +1,6 @@
 package com.asetune.ui.autocomplete;
 
-import java.awt.Component;
-
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.Icon;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.ListCellRenderer;
-
-import org.fife.ui.autocomplete.BasicCompletion;
 
 public class RepServerCellRenderer
 extends DefaultListCellRenderer

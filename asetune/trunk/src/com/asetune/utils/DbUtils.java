@@ -86,10 +86,12 @@ public class DbUtils
 				// Close it
 				rs.close();
 			}
-
-			rowsAffected = stmnt.getUpdateCount();
-			if (rowsAffected >= 0)
+			else
 			{
+				rowsAffected = stmnt.getUpdateCount();
+				if (rowsAffected >= 0)
+				{
+				}
 			}
 
 			// Check if we have more ResultSets

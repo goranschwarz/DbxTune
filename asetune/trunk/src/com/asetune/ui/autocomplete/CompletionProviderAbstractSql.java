@@ -1,6 +1,5 @@
 package com.asetune.ui.autocomplete;
 
-import java.awt.Component;
 import java.awt.Window;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -12,16 +11,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 import javax.swing.text.JTextComponent;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
@@ -30,13 +23,11 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
-import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public abstract class CompletionProviderAbstractSql

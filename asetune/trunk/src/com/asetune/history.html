@@ -63,6 +63,42 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
+	<b>Enhancement: Engines</b><br>
+	When you use ASE 15.7 and using 'threaded kernel mode' CPU Usage calculation gets a bit <i>strange</i>, this due to including IOCPUTime in the calculation.<br>
+	This manifests itself as a <b>higher</b> CPU usages than it really is, because <b>all</b> engines will have a high IOCPUTime even if it's only one engine/SPID that
+	the IO originates from. The IO is done by the IOController but the counter IOCPUTime is <i>faulty</i> increased on <b>all</b> engines.<br>
+	By the way this might be fixed by ASE CR#757246 in the future<br>
+	<br>
+	A CheckBox '<code>Collapse IOCPUTime into IdleCPUTime</code>' was introduced, so you can decide if you want to <i>disregard</i> the column IOCPUTime in the calculations. Or actually 
+	move/collapse the IOCPUTime counter into the IdleCPUTime counter.<br>
+	Note: this CheckBox is only visible if you run ASE 15.7 and if you are in process kernel mode, the CheckBox will be disabled.<br>
+	<br>
+	Also added the following columns, while the old columns 'CPUTime', 'SystemCPUTime', 'UserCPUTime', 'IOCPUTime' and 'IdleCPUTime' are now <i>just</i> difference counters. 
+	<ul>
+	   <li>NonIdleCPUTimePct - Formula: (SystemCPUTime + UserCPUTime [ + IOCPUTime]) / CPUTime * 100.0</li> 
+	   <li>SystemCPUTimePct  - Formula: SystemCPUTime / CPUTime * 100.0</li>
+	   <li>UserCPUTimePct    - Formula: UserCPUTime   / CPUTime * 100.0</li>
+	   <li>IOCPUTimePct      - Formula: IOCPUTime     / CPUTime * 100.0</li>
+	   <li>IdleCPUTimePct    - Formula: IdleCPUTime   / CPUTime * 100.0</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Wait</b><br>
+	Added WaitTimePerWait to the local graphs...<br>
+	Also enabled the CheckBox 'Include [250] waiting for incoming network data in graph   
+	</LI>
+
+	<LI>
+	<b>Enhancement: SPID Wait</b><br>
+	Added local graphs... More or less the same graphs as in the 'Wait' tab.<br>
+	<ul>
+	   <li>Summary Graphs on EventID - WaitTime, Waits, WaitTimePerWait (all records is summarized over EventID)</li> 
+	   <li>Summary Graphs on ClassName - WaitTime, Waits, WaitTimePerWait (all records is summarized over ClassName)</li> 
+	</ul>
+	</LI>
+
+	<LI>
 	<b>Enhancement: System Load</b><br>
 	Three new graphs
 	<ul>
@@ -109,6 +145,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	   <li>Objects        - <code>order by LogicalReads desc</code></li> 
 	   <li>Cached Objects - <code>order by CachedKB desc</code></li> 
 	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement:IO Controller</b><br>
+	Two new graphs
+	<ul>
+	   <li>Pending IO's, or number of outstanding IO's</li> 
+	   <li>Completed IO's per seconds</li> 
+	</ul>
+	Also removed column Pending from being difference calculated, it seems that it's a peek counter.
 	</LI>
 
 	<LI>
