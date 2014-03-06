@@ -40,6 +40,7 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.AbstractTableModel;
@@ -249,6 +250,27 @@ public class JdbcDriverHelper
 	}
 
 
+	public static String getDefaultClassNameForJarFile(String jarName)
+	{
+		if (jarName == null)
+			return "";
+
+		if      (jarName.equals ("jconn3.jar"))         return "com.sybase.jdbc3.jdbc.SybDriver";
+		else if (jarName.equals ("jconn4.jar"))         return "com.sybase.jdbc4.jdbc.SybDriver";
+		else if (jarName.matches("jtds-.*\\.jar"))      return "net.sourceforge.jtds.jdbc.Driver";
+		else if (jarName.matches("h2-.*\\.jar"))        return "org.h2.Driver";
+		else if (jarName.equals ("ngdbc.jar"))          return "com.sap.db.jdbc.Driver";
+		else if (jarName.matches("ojdbc.*\\.jar"))      return "oracle.jdbc.OracleDriver";
+		else if (jarName.matches("sqljdbc.*\\.jar"))    return "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
+		else if (jarName.matches("postgresql.*\\.jar")) return "org.postgresql.Driver";
+		else if (jarName.equals ("mysql.jar"))          return "com.mysql.jdbc.Driver";
+		else if (jarName.equals ("derby.jar"))          return "org.apache.derby.jdbc.EmbeddedDriver";
+		else if (jarName.equals ("derbyclient.jar"))    return "org.apache.derby.jdbc.ClientDriver";
+
+		return "";
+	}
+
+
 	private static class DriverWrapper implements Driver
 	{
 		private Driver	     _driver;
@@ -313,7 +335,7 @@ public class JdbcDriverHelper
 				{
 					try
 					{
-//System.out.println("INSTALL: DE-REGISTER DRIVER: dmClassName='"+dmClassName+"', dmDriver='"+dmDriver+"', driver.class='"+driver.getClass().getName()+"'.");
+//System.out.println("INSTALL: DE-REGISTER DRIVER: dmClassName='"+dmClassName+"', dmDriver='"+dmDriver+"', driver.class='"+dmDriver.getClass().getName()+"'.");
 						DriverManager.deregisterDriver(dmDriver);
 					}
 					catch (SQLException ex)
@@ -573,7 +595,8 @@ public class JdbcDriverHelper
 
 		private GTable               _table         = new GTable();
 		private JdbcDriverTableModel _tm            = null;
-		private JLabel               _xmlFile       = new JLabel(getFileName());
+//		private JLabel               _xmlFile       = new JLabel(getFileName());
+		private JTextArea            _xmlFile       = new JTextArea(getFileName());
 		private JButton              _reload_but    = new JButton("Reload");
 		private JButton              _download_but  = new JButton("Download");
 		private JButton              _addDriver_but = new JButton("Add/Change Driver");
@@ -602,6 +625,12 @@ public class JdbcDriverHelper
 			_download_but .setToolTipText("<html>Download various JDBC drivers<br>"+Version.getAppName()+" can't distribute a lot of JDBC Drivers, so you need to download them yourself.<br><br>This will just open a web page that has a collection of various JDBC Drivers that can be downloaded.<br>Put them in the directory <code>"+driversDir+"</code> and restart "+Version.getAppName()+".</html>");
 			_addDriver_but.setToolTipText("Open a Dialog to add a JDBC Driver");
 			_delDriver_but.setToolTipText("Delete the selected Driver in the list");
+
+			// Simulate that it's a JLabel, so grab background and font, this is done so we can select the text and copy it...
+			JLabel dummy = new JLabel("dummy");
+			_xmlFile.setEditable(false);
+			_xmlFile.setBackground( dummy.getBackground() );
+			_xmlFile.setFont(       dummy.getFont() );
 
 			JScrollPane scroll = new JScrollPane();
 			scroll.setViewportView(_table);
@@ -824,6 +853,16 @@ public class JdbcDriverHelper
 		{
 			if (jarFile == null)
 				jarFile = "";
+			
+			if (jarFile.startsWith("file:/"))
+				jarFile = jarFile.substring("file:/".length());
+
+			if (jarFile.startsWith("jar:file:"))
+				jarFile = jarFile.substring("jar:file:".length());
+
+			if (jarFile.endsWith("!/"))
+				jarFile = jarFile.substring(0, jarFile.length()-"!/".length());
+
 			_jarFile = jarFile;
 		}
 
@@ -851,7 +890,7 @@ public class JdbcDriverHelper
 		{
 			// Add entry
 			StringBuilder sb = new StringBuilder();
-				
+			
 			sb.append("\n");
 			sb.append("    ").append(XML_BEGIN_TAG_DRIVER_ENTRY).append("\n");
 			sb.append("        ").append(XML_BEGIN_SUBTAG_CLASSNAME)  .append(StringUtil.xmlSafe(getClassName()    )).append(XML_END___SUBTAG_CLASSNAME)  .append("\n");
@@ -1059,6 +1098,7 @@ public class JdbcDriverHelper
 					// The install will de-register all classes in the current Driver Manager with the same class name 
 					try
 					{
+//System.out.println("JdbcDriverHelper: in(parseXmlFile): entry: classname='"+entry.getClassName()+"', jarFile='"+entry.getJarFile()+"', homePage='"+entry.getHomePage()+"', desc='"+entry.getDescription()+"', urlTemplateList='"+entry.getUrlTemplateList()+"'.");
 						DriverWrapper.install(
 								entry.getClassName(), 
 								entry.getJarFile(), 
@@ -1388,7 +1428,13 @@ public class JdbcDriverHelper
 				int returnVal = fc.showOpenDialog(this);
 				if(returnVal == JFileChooser.APPROVE_OPTION) 
 				{
-					_jarFile_txt.setText(fc.getSelectedFile().getAbsolutePath());
+					File retFile = fc.getSelectedFile();
+					_jarFile_txt.setText(retFile.getAbsolutePath());
+					
+					String filename = retFile.getName();
+					String className = getDefaultClassNameForJarFile(filename);
+					_className_txt.setText(className);
+					focusLost(null);
 				}
 			}
 
@@ -1418,9 +1464,11 @@ public class JdbcDriverHelper
 		@Override
 		public void focusLost(FocusEvent e)
 		{
-			Object source = e.getSource();
+			Object source = null;
+			if (e != null)
+				source = e.getSource();
 
-			if (_className_txt.equals(source))
+			if (_className_txt.equals(source) || source == null)
 			{
 				String className = _className_txt.getText().trim();
 				// Fill up templates
