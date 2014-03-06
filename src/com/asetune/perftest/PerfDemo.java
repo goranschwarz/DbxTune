@@ -1219,7 +1219,7 @@ implements ActionListener
 							// jConnect will return #Rows selected at
 							// the end of a result set and before the
 							// next getMoreResults call.
-							int rowsSelected = stmnt.getUpdateCount();
+//							int rowsSelected = stmnt.getUpdateCount();
 //							if (rowsSelected >= 0)
 //							{
 //								System.out.println(rowsSelected + " rows Affected.");

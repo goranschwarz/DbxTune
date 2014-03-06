@@ -2357,6 +2357,9 @@ public class AseConnectionUtils
 		rs.close();
 		stmt.close();
 		
+		if ( val != null )
+			val = val.trim();
+
 		return val;
 	}
 

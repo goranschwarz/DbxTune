@@ -5,19 +5,34 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.MonTablesDictionary;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.ase.gui.CmEnginesPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 
 /**
+ * Use ASE monEngine table to gather CPU Usage statistics
+ * <p>
+ * in ASE 15.7 threaded mode, the IOCPUTime seems to use the DiskController Thread for all engines...<br>
+ * This leads to a higher IO Usage than it *really* is...<br>
+ * If option PROPKEY_collapse_IoCpuTime_to_IdleCpuTime is true the IOCPUTime will be moved/collapsed into IdleCPUTime<br>
+ * This might be addressed in ASE CR#757246, see CmEnginesPanel for a more detailed description.
+ * <p>
+ *  
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmEngines
@@ -44,7 +59,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
-	public static final String[] PCT_COLUMNS      = new String[] {"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime"};
+	public static final String[] PCT_COLUMNS      = new String[] {"NonIdleCPUTimePct", "SystemCPUTimePct", "UserCPUTimePct", "IOCPUTimePct", "IdleCPUTimePct"};//"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime", "Yields", 
 		"DiskIOChecks", "DiskIOPolled", "DiskIOCompleted", "ContextSwitches", 
@@ -95,9 +110,37 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+//	sp_configure 'kernel mode' = 'threaded'|'process'
+	private String  _config_kernelMode = "";
+	private boolean _collapse_IoCpuTime_to_IdleCpuTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime, DEFAULT_collapse_IoCpuTime_to_IdleCpuTime);
+
+	private static final String  PROP_PREFIX                               = CM_NAME;
+
+	public static final String   PROPKEY_collapse_IoCpuTime_to_IdleCpuTime = PROP_PREFIX + ".collapse.IoCpuTime_to_IdleCpuTime";
+	public static final boolean  DEFAULT_collapse_IoCpuTime_to_IdleCpuTime = true;
+
+
 	public static final String   GRAPH_NAME_CPU_SUM = "cpuSum"; //GetCounters.CM_GRAPH_NAME__ENGINE__CPU_SUM;
 	public static final String   GRAPH_NAME_CPU_ENG = "cpuEng"; //GetCounters.CM_GRAPH_NAME__ENGINE__CPU_ENG;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime, DEFAULT_collapse_IoCpuTime_to_IdleCpuTime);
+	}
+
+	public boolean inThreadedMode()
+	{
+		return "threaded".equalsIgnoreCase(_config_kernelMode);
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmEnginesPanel(this);
+	}
 
 	private void addTrendGraphs()
 	{
@@ -137,6 +180,22 @@ extends CountersModel
 	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+
+			mtd.addColumn("monEngine", "NonIdleCPUTimePct"  ,"<html>'CPU Busy' Percent calculation<br>         <b>Formula</b>: (SystemCPUTime + UserCPUTime [+ IOCPUTime]) / CPUTime * 100.0<br> <b>Note</b>: IOCPUTime depends on ASE Version and if 'Collapse IOCPUTime into IdleCPUTime' is enabled or not.<br></html>");
+			mtd.addColumn("monEngine", "SystemCPUTimePct"   ,"<html>'System CPU Busy' Percent calculation.<br> <b>Formula</b>: SystemCPUTime / CPUTime * 100.0   <br></html>");
+			mtd.addColumn("monEngine", "UserCPUTimePct"     ,"<html>'User CPU Busy' Percent calculation.<br>   <b>Formula</b>: UserCPUTime / CPUTime * 100.0     <br></html>");
+			mtd.addColumn("monEngine", "IOCPUTimePct"       ,"<html>'IO CPU Busy' Percent calculation.<br>     <b>Formula</b>: IOCPUTime / CPUTime * 100.0       <br> <b>Note</b>: IOCPUTime depends on ASE Version and if 'Collapse IOCPUTime into IdleCPUTime' is enabled or not. (-1 if 'Collapse...' is enabled)<br></html>");
+			mtd.addColumn("monEngine", "IdleCPUTimePct"     ,"<html>'Idle' Percent calculation.<br>            <b>Formula</b>: IdleCPUTime / CPUTime * 100.0     <br></html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
@@ -161,8 +220,20 @@ extends CountersModel
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
+		// Get if we are in "process" or "threaded" kernel mode, which will be an input if "IOCPUTime" should be treated as "IdleCPUTime" 
+		// This is only valid for ASE 15.7 and relates to: CR 757246- sp_sysmon IO Busy is over weighted in threaded mode.
+		//sp_configure 'kernel mode' = 'threaded'|'process'
+		if (aseVersion >= 1570000 && conn != null)
+		{
+			_config_kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
+//System.out.println("getSqlForVersion(): _config_kernelMode="+_config_kernelMode);
+		}
+		
+		_collapse_IoCpuTime_to_IdleCpuTime = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime, DEFAULT_collapse_IoCpuTime_to_IdleCpuTime);
+//System.out.println("getSqlForVersion(): collapse_IoCpuTime_to_IdleCpuTime="+_collapse_IoCpuTime_to_IdleCpuTime);
+
+		
 		String ThreadID = "";
-//		if (aseVersion >= 15700)
 		if (aseVersion >= 1570000)
 		{
 			ThreadID = "ThreadID, ";
@@ -177,34 +248,79 @@ extends CountersModel
 		String HkgcPendingItemsDcomp = "";
 		String HkgcOverflowsDcomp    = "";
 		String nl_15701              = "";
-//		if (aseVersion >= 15701)
 		if (aseVersion >= 1570010)
 		{
 			HkgcPendingItemsDcomp = "HkgcPendingItemsDcomp, ";
 			HkgcOverflowsDcomp    = "HkgcOverflowsDcomp, ";
 			nl_15701              = "\n";
 		}
+
+		// 15.7 & kernelMode='threaded' & PROPKEY_collapse_IoCpuTime_to_IdleCpuTime
+		// we may be able to collapse IOCPUTime -> IdleCPUTime
+		String IOCPUTime           = "";
+		String IdleCPUTime         = "IdleCPUTime, ";
+		
+		String NonIdleCPUTime_calc = "SystemCPUTime + UserCPUTime";
+		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
+		{
+			NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime) + convert(bigint,IOCPUTime)";
+
+			// take away IOCPUTime in 15.7 & inThreadedMode & checkBoxIsEnabled
+			if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime)";
+				
+		}
+
+		String NonIdleCPUTimePct = "NonIdleCPUTimePct = CASE WHEN CPUTime > 0 \n"+
+			       		           "                         THEN convert(numeric(10,1), (("+NonIdleCPUTime_calc+" + 0.0) / (CPUTime + 0.0)) * 100.0 ) \n" + 
+			       		           "                         ELSE convert(numeric(10,1), 0.0 ) \n" +
+			       		           "                    END, \n";
+		String SystemCPUTimePct  = "SystemCPUTimePct  = CASE WHEN CPUTime > 0 \n" + 
+		                           "                         THEN convert(numeric(10,1), ((SystemCPUTime + 0.0) / (CPUTime + 0.0)) * 100.0 ) \n" +
+		                           "                         ELSE convert(numeric(10,1), 0.0 )  \n" +
+		                           "                    END,  \n";
+		String UserCPUTimePct    = "UserCPUTimePct    = CASE WHEN CPUTime > 0   \n" +
+		                           "                         THEN convert(numeric(10,1), ((UserCPUTime + 0.0) / (CPUTime + 0.0)) * 100.0 )   \n" +
+		                           "                         ELSE convert(numeric(10,1), 0.0 )   \n" +
+		                           "                    END,   \n";
+		String IOCPUTimePct      = "";
+		String IdleCPUTimePct    = "IdleCPUTimePct    = CASE WHEN CPUTime > 0   \n" +
+		                           "                         THEN convert(numeric(10,1), ((IdleCPUTime + 0.0) / (CPUTime + 0.0)) * 100.0 )   \n" +
+		                           "                         ELSE convert(numeric(10,1), 0.0 )   \n" +
+		                           "                    END,  \n";
+
+		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
+		{
+			IOCPUTime            = "IOCPUTime, ";
+			IOCPUTimePct         = "IOCPUTimePct      = CASE WHEN CPUTime > 0   \n" +
+			                       "                         THEN convert(numeric(10,1), ((IOCPUTime + 0.0) / (CPUTime + 0.0)) * 100.0 )   \n" +
+			                       "                         ELSE convert(numeric(10,1), 0.0 )   \n" +
+			                       "                    END,   \n";
+		}
+
+		if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+		{
+			IOCPUTime    = "IOCPUTime    = convert(int, -1), \n";
+			IOCPUTimePct = "IOCPUTimePct = convert(numeric(10,1), -1.0), \n";
+			IdleCPUTime  = "IdleCPUTime  = IdleCPUTime + IOCPUTime, ";
+		}
 		
 		cols1 += "EngineNumber, CurrentKPID, PreviousKPID, CPUTime, SystemCPUTime, UserCPUTime, \n";
-//		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
-		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
-			cols1 += "IOCPUTime, ";
-		cols1 += "IdleCPUTime, ContextSwitches, Connections, \n";
+		cols1 += IOCPUTime + IdleCPUTime + "\n" +
+				NonIdleCPUTimePct + SystemCPUTimePct + UserCPUTimePct + IOCPUTimePct + IdleCPUTimePct +
+				"ContextSwitches, Connections, \n";
 
 		cols2 += "";
 		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, "+ThreadID+"OSPID";
 
-//		if (aseVersion >= 12532)
 		if (aseVersion >= 1253020)
 		{
 			cols2 += "Yields, DiskIOChecks, DiskIOPolled, DiskIOCompleted, \n";
 		}
-//		if (aseVersion >= 15025)
 		if (aseVersion >= 1502050)
 		{
 			cols2 += "MaxOutstandingIOs, ";
 		}
-//		if (aseVersion >= 15000)
 		if (aseVersion >= 1500000)
 		{
 			cols2 += "HkgcMaxQSize, HkgcPendingItems, HkgcHWMItems, HkgcOverflows, \n";
@@ -223,10 +339,6 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		// FIXME: in ASE 15.7 threaded mode, the IOCPUTime seems to use the DiskController Thread for all engines...
-		//        This leads to a higher IO Usage than it *really* is...
-		//        One way to solve this would be to simply disregard IOCPUTime totally... but that would probably lead to strange results
-
 		int aseVersion = getServerVersion();
 		// NOTE: IOCPUTime was introduced in ASE 15.5
 
@@ -234,36 +346,54 @@ extends CountersModel
 		{
 			Double[] dataArray  = new Double[3];
 			String[] labelArray = new String[3];
-//			if (aseVersion >= 15500)
 			if (aseVersion >= 1550000)
 			{
-				dataArray  = new Double[4];
-				labelArray = new String[4];
+				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				{
+					// dummy for easier logic (multiple negation are hard to understand)
+				}
+				else
+				{
+					dataArray  = new Double[4];
+					labelArray = new String[4];
+				}
 			}
 
 			labelArray[0] = "System+User CPU";
 			labelArray[1] = "System CPU";
 			labelArray[2] = "User CPU";
 
-			dataArray[0] = this.getDiffValueAvg("CPUTime");
-			dataArray[1] = this.getDiffValueAvg("SystemCPUTime");
-			dataArray[2] = this.getDiffValueAvg("UserCPUTime");
+//			dataArray[0] = this.getDiffValueAvg("CPUTime");
+//			dataArray[1] = this.getDiffValueAvg("SystemCPUTime");
+//			dataArray[2] = this.getDiffValueAvg("UserCPUTime");
+			dataArray[0] = this.getDiffValueAvg("NonIdleCPUTimePct");
+			dataArray[1] = this.getDiffValueAvg("SystemCPUTimePct");
+			dataArray[2] = this.getDiffValueAvg("UserCPUTimePct");
 
-//			if (aseVersion >= 15500)
 			if (aseVersion >= 1550000)
 			{
-				labelArray[0] = "System+User+IO CPU";
-
-				dataArray[3]  = this.getDiffValueAvg("IOCPUTime");
-				labelArray[3] = "IO CPU";
-
-				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData(cpuSum): CPUTime='"+dataArray[0]+"', SystemCPUTime='"+dataArray[1]+"', UserCPUTime='"+dataArray[2]+"', IoCPUTime='"+dataArray[3]+"'.");
+				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				{
+					// dummy for easier logic (multiple negation are hard to understand)
+					if (_logger.isDebugEnabled())
+						_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"'.");
+				}
+				else
+				{
+    				labelArray[0] = "System+User+IO CPU";
+    
+//    				dataArray[3]  = this.getDiffValueAvg("IOCPUTime");
+    				dataArray[3]  = this.getDiffValueAvg("IOCPUTimePct");
+    				labelArray[3] = "IO CPU";
+    
+    				if (_logger.isDebugEnabled())
+    					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"', IOCPUTimePct='"+dataArray[3]+"'.");
+				}
 			}
 			else
 			{
 				if (_logger.isDebugEnabled())
-					_logger.debug("updateGraphData(cpuSum): CPUTime='"+dataArray[0]+"', SystemCPUTime='"+dataArray[1]+"', UserCPUTime='"+dataArray[2]+"'.");
+					_logger.debug("updateGraphData(cpuSum): NonIdleCPUTimePct='"+dataArray[0]+"', SystemCPUTimePct='"+dataArray[1]+"', UserCPUTimePct='"+dataArray[2]+"'.");
 			}
 
 			// Set the values
@@ -275,12 +405,18 @@ extends CountersModel
 		if (GRAPH_NAME_CPU_ENG.equals(tgdp.getName()))
 		{
 			// Set label on the TrendGraph if we are above 15.5
-//			if (aseVersion >= 15500)
 			if (aseVersion >= 1550000)
 			{
-				TrendGraph tg = getTrendGraph(tgdp.getName());
-				if (tg != null)
-					tg.setLabel("CPU Usage per Engine (System + User + IO)");
+				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				{
+					// dummy for easier logic (multiple negation are hard to understand)
+				}
+				else
+				{
+    				TrendGraph tg = getTrendGraph(tgdp.getName());
+    				if (tg != null)
+    					tg.setLabel("CPU Usage per Engine (System + User + IO)");
+				}
 			}
 			
 			Double[] engCpuArray = new Double[this.size()];
@@ -292,7 +428,8 @@ extends CountersModel
 					instanceId = this.getAbsString(i, "InstanceID");
 				String engineNumber = this.getAbsString(i, "EngineNumber");
 
-				engCpuArray[i] = this.getDiffValueAsDouble(i, "CPUTime");
+//				engCpuArray[i] = this.getDiffValueAsDouble(i, "CPUTime");
+				engCpuArray[i] = this.getDiffValueAsDouble(i, "NonIdleCPUTimePct");
 				if (instanceId == null)
 					engNumArray[i] = "eng-" + engineNumber;
 				else
@@ -310,6 +447,34 @@ extends CountersModel
 	}
 
 
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public Configuration getLocalConfiguration()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration lc = new Configuration();
+
+		lc.setProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime,  conf.getBooleanProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime, DEFAULT_collapse_IoCpuTime_to_IdleCpuTime));
+
+		return lc;
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public String getLocalConfigurationDescription(String propName)
+	{
+		if (propName.equals(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime)) return CmEnginesPanel.TOOLTIP_collapse_IoCpuTime_to_IdleCpuTime;
+		return "";
+	}
+	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime)) return Boolean.class.getSimpleName();
+		return "";
+	}
+
 	/** 
 	 * Compute the CPU times in pct instead of numbers of usage seconds since last sample
 	 */
@@ -320,8 +485,9 @@ extends CountersModel
 		// NOTE: IOCPUTime was introduced in ASE 15.5
 		
 		// Compute the avgServ column, which is IOTime/(Reads+APFReads+Writes)
-		int CPUTime,        SystemCPUTime,        UserCPUTime,        IOCPUTime,        IdleCPUTime;
-		int CPUTimeId = -1, SystemCPUTimeId = -1, UserCPUTimeId = -1, IOCPUTimeId = -1, IdleCPUTimeId = -1;
+		int CPUTime,                    SystemCPUTime,             UserCPUTime,             IOCPUTime,             IdleCPUTime;
+		int CPUTime_pos           = -1, SystemCPUTime_pos    = -1, UserCPUTime_pos    = -1, IOCPUTime_pos    = -1, IdleCPUTime_pos    = -1;
+		int NonIdleCPUTimePct_pos = -1, SystemCPUTimePct_pos = -1, UserCPUTimePct_pos = -1, IOCPUTimePct_pos = -1, IdleCPUTimePct_pos = -1;
 	
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -330,26 +496,31 @@ extends CountersModel
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
 			String colName = colNames.get(colId);
-			if      (colName.equals("CPUTime"))       CPUTimeId       = colId;
-			else if (colName.equals("SystemCPUTime")) SystemCPUTimeId = colId;
-			else if (colName.equals("UserCPUTime"))   UserCPUTimeId   = colId;
-			else if (colName.equals("IOCPUTime"))     IOCPUTimeId     = colId;
-			else if (colName.equals("IdleCPUTime"))   IdleCPUTimeId   = colId;
+			if      (colName.equals("CPUTime"))           CPUTime_pos           = colId;
+			else if (colName.equals("SystemCPUTime"))     SystemCPUTime_pos     = colId;
+			else if (colName.equals("UserCPUTime"))       UserCPUTime_pos       = colId;
+			else if (colName.equals("IOCPUTime"))         IOCPUTime_pos         = colId;
+			else if (colName.equals("IdleCPUTime"))       IdleCPUTime_pos       = colId;
+
+			else if (colName.equals("NonIdleCPUTimePct")) NonIdleCPUTimePct_pos = colId;
+			else if (colName.equals("SystemCPUTimePct"))  SystemCPUTimePct_pos  = colId;
+			else if (colName.equals("UserCPUTimePct"))    UserCPUTimePct_pos    = colId;
+			else if (colName.equals("IOCPUTimePct"))      IOCPUTimePct_pos      = colId;
+			else if (colName.equals("IdleCPUTimePct"))    IdleCPUTimePct_pos    = colId;
 		}
-	
+
 		// Loop on all diffData rows
 		for (int rowId=0; rowId < diffData.getRowCount(); rowId++) 
 		{
-			CPUTime	=       ((Number)diffData.getValueAt(rowId, CPUTimeId      )).intValue();
-			SystemCPUTime = ((Number)diffData.getValueAt(rowId, SystemCPUTimeId)).intValue();
-			UserCPUTime =   ((Number)diffData.getValueAt(rowId, UserCPUTimeId  )).intValue();
-			IdleCPUTime =   ((Number)diffData.getValueAt(rowId, IdleCPUTimeId  )).intValue();
+			CPUTime	=       ((Number)diffData.getValueAt(rowId, CPUTime_pos      )).intValue();
+			SystemCPUTime = ((Number)diffData.getValueAt(rowId, SystemCPUTime_pos)).intValue();
+			UserCPUTime =   ((Number)diffData.getValueAt(rowId, UserCPUTime_pos  )).intValue();
+			IdleCPUTime =   ((Number)diffData.getValueAt(rowId, IdleCPUTime_pos  )).intValue();
 
 			IOCPUTime = 0;
-//			if (aseVersion >= 15500)
 			if (aseVersion >= 1550000)
 			{
-				IOCPUTime =   ((Number)diffData.getValueAt(rowId, IOCPUTimeId  )).intValue();
+				IOCPUTime = ((Number)diffData .getValueAt(rowId, IOCPUTime_pos  )).intValue();
 			}
 
 			if (_logger.isDebugEnabled())
@@ -381,17 +552,57 @@ extends CountersModel
 			}
 
 			if (_logger.isDebugEnabled())
-				_logger.debug("++++CPUTime = "+calcCPUTime+", SystemCPUTime = "+calcSystemCPUTime+", UserCPUTime = "+calcUserCPUTime+", IoCPUTime = "+calcIoCPUTime+", IdleCPUTime = "+calcIdleCPUTime);
+				_logger.debug("++++calc:CPUTime = "+calcCPUTime+", calc:SystemCPUTime = "+calcSystemCPUTime+", calc:UserCPUTime = "+calcUserCPUTime+", calc:IoCPUTime = "+calcIoCPUTime+", calc:IdleCPUTime = "+calcIdleCPUTime);
 	
-			diffData.setValueAt(calcCPUTime,       rowId, CPUTimeId       );
-			diffData.setValueAt(calcSystemCPUTime, rowId, SystemCPUTimeId );
-			diffData.setValueAt(calcUserCPUTime,   rowId, UserCPUTimeId   );
-			diffData.setValueAt(calcIdleCPUTime,   rowId, IdleCPUTimeId   );
+			diffData.setValueAt(calcCPUTime,       rowId, NonIdleCPUTimePct_pos );
+			diffData.setValueAt(calcSystemCPUTime, rowId, SystemCPUTimePct_pos  );
+			diffData.setValueAt(calcUserCPUTime,   rowId, UserCPUTimePct_pos    );
+			diffData.setValueAt(calcIdleCPUTime,   rowId, IdleCPUTimePct_pos    );
 	
 //			if (aseVersion >= 15500)
 			if (aseVersion >= 1550000)
 			{
-				diffData.setValueAt(calcIoCPUTime, rowId, IOCPUTimeId);
+				diffData.setValueAt(calcIoCPUTime, rowId, IOCPUTimePct_pos);
+
+				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				{
+					diffData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
+					diffData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Local adjustments to the rate values 
+	 */
+	@Override
+	public void localCalculationRatePerSec(SamplingCnt rateData)
+	{
+		int aseVersion = getServerVersion();
+
+		List<String> colNames = rateData.getColNames();
+		if (colNames==null) 
+			return;
+
+		int IOCPUTime_pos    = -1;
+		int IOCPUTimePct_pos = -1;
+
+		// Get column position
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if      (colName.equals("IOCPUTime"))         IOCPUTime_pos         = colId;
+			else if (colName.equals("IOCPUTimePct"))      IOCPUTimePct_pos      = colId;
+		}
+
+		// Loop on all rateData rows
+		for (int rowId=0; rowId < rateData.getRowCount(); rowId++) 
+		{
+			if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+			{
+				rateData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
+				rateData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
 			}
 		}
 	}

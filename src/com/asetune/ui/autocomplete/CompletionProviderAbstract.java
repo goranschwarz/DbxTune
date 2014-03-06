@@ -1,21 +1,15 @@
 package com.asetune.ui.autocomplete;
 
-import java.awt.Component;
 import java.awt.Window;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.Icon;
-import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.ListCellRenderer;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 
-import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.Util;

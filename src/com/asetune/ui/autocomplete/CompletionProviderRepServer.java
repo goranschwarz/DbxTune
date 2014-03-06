@@ -15,7 +15,6 @@ import javax.swing.text.Caret;
 import javax.swing.text.JTextComponent;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;

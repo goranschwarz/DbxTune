@@ -451,7 +451,7 @@ public class ConnectionDialog
 		
 		Dimension size = getPreferredSize();
 //		size.width += 100;
-		size.width = 480;
+		size.width = 530; // if not set the window will grow to wide...
 
 //		setPreferredSize(size);
 //		setMinimumSize(size);

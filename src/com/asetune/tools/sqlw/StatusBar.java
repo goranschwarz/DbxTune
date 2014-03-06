@@ -9,7 +9,6 @@ import javax.swing.JTextArea;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseConnectionUtils.ConnectionStateInfo;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.DbUtils.JdbcConnectionStateInfo;

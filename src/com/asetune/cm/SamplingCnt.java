@@ -841,11 +841,19 @@ extends CounterTableModel
 	
 						rsNum++;
 					}
-	
-					// Treat update/row count(s)
-					rowsAffected = stmnt.getUpdateCount();
-					if (rowsAffected >= 0)
+					else
 					{
+						// Treat update/row count(s)
+						rowsAffected = stmnt.getUpdateCount();
+
+						if (rowsAffected >= 0)
+						{
+							_logger.debug("DDL or DML rowcount = "+rowsAffected);
+						}
+						else
+						{
+							_logger.debug("No more results to process.");
+						}
 					}
 	
 					// Check if we have more result sets

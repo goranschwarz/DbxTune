@@ -1,6 +1,5 @@
 package com.asetune.ui.autocomplete;
 
-import java.awt.Component;
 import java.awt.Window;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -11,14 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.ListCellRenderer;
-
 import org.apache.log4j.Logger;
-import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
