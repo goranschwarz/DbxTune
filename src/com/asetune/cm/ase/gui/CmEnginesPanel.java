@@ -15,6 +15,7 @@ import com.asetune.cm.ase.CmEngines;
 import com.asetune.cm.ase.CmIoControllers;
 import com.asetune.cm.ase.CmThreads;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GCheckBox;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -155,6 +156,10 @@ extends TabularCntrPanel
 				
 				// ReInitialize the SQL
 				getCm().setSql(null);
+				
+				// Reset attached graphs (this will reinitialize, graph series since they will change)
+				for (TrendGraph tg : getCm().getTrendGraphs().values())
+					tg.resetGraph();
 			}
 		});
 		

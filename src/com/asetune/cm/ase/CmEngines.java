@@ -409,7 +409,9 @@ extends CountersModel
 			{
 				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
-					// dummy for easier logic (multiple negation are hard to understand)
+    				TrendGraph tg = getTrendGraph(tgdp.getName());
+    				if (tg != null)
+    					tg.setLabel("CPU Usage per Engine (System + User)");
 				}
 				else
 				{

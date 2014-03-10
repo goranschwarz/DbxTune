@@ -1991,17 +1991,14 @@ implements Cloneable, ITableTooltip
 	
 	/** Called so the object can calculate what data to be used/send to any graphs in a later stage 
 	 *  This method is called once for every "data sample" we do. 
-	 *  and if not overriden, it will simple just call updateGraphData(TrendGraphDataPoint) foreach installed TrendGraphDataPoint */
+	 *  and if not overridden, it will simple just call updateGraphData(TrendGraphDataPoint) for each installed TrendGraphDataPoint */
 	public void updateGraphData()
 	{
 		if (_trendGraphsData.size() == 0)
 			return;
 
-		for (Map.Entry<String,TrendGraphDataPoint> entry : _trendGraphsData.entrySet()) 
+		for (TrendGraphDataPoint tgdp : _trendGraphsData.values()) 
 		{
-		//	String              graphName = entry.getKey();
-			TrendGraphDataPoint tgdp      = entry.getValue();
-
 			updateGraphData(tgdp);
 			
 			//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', _trendGraphData="+tgdp);
