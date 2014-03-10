@@ -71,6 +71,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.ClickListener;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
@@ -125,9 +126,11 @@ implements ActionListener, MouseListener
 	private MyTracePainter     _tracePainter         = null;
 //	private TimeLineWriter     _timeLineWriter       = null;
 	private MyTracePoint2D     _currentTimeLinePoint = null;
+	private MyTracePoint2D     _currentTimeLinePoint2= null;
+	private double             _currentTimeLinePoint2_lastPoint = 0;
 	private JPanel             _labelPanel           = null; // fetched & guessed during initialization
 
-	/** What is the last point we have requested a tooltip for */
+	/** What is the last point we have requested a tool tip for */
 	private ITracePoint2D _lastToolTipPoint = null;
 
 	static
@@ -185,7 +188,7 @@ implements ActionListener, MouseListener
 		_chart.getAxisY().setPaintGrid(true);
 		
 		// Add a mouse listener...
-		_chart.addMouseListener(this);
+		installMouseListener();
 
 		_chartPanel = new ChartPanel(_chart);
 		_watermark = new Watermark(_chartPanel, _labelName);
@@ -237,6 +240,39 @@ implements ActionListener, MouseListener
 		loadProps();
 	}
 	
+	private void installMouseListener()
+	{
+		// 
+		_chart.addMouseListener(this);
+
+		// distinguage between double and single click
+		_chart.addMouseListener(new ClickListener()
+		{
+			@Override
+			/** On double click, delegate to MainFrame what to do, but probably open/position yourself in the in-memory/storedData */
+			public void doubleClick(MouseEvent e)
+			{
+				ITracePoint2D tp = _chart.getNearestPointManhattan(e);
+				MainFrame.getInstance().setTimeLinePoint((long)tp.getX());
+			}
+			
+			@Override
+			/** on single click, set a time line on all graphs, this makes it easier to align or view a point in time, especially when you have side-by-side graphs */
+			public void singleClick(MouseEvent e)
+			{
+				ITracePoint2D tp = _chart.getNearestPointManhattan(e);
+
+				double    timePoint = tp.getX();
+//				Timestamp timeStamp = new Timestamp((long)timePoint);
+//System.out.println("mouseClicked(clickCount=1): timePoint="+timePoint+", timeStamp="+timeStamp);
+				
+				TrendGraphDashboardPanel tgdp = CounterController.getSummaryPanel().getGraphPanel();
+				for (TrendGraph tg : tgdp.getGraphOrder())
+					tg.setTimeLineMarker2(timePoint);
+			}
+		});
+	}
+
 	//------------------------------------------
 	// BEGIN: implementing MouseListener
 	//------------------------------------------
@@ -265,15 +301,12 @@ implements ActionListener, MouseListener
 		else if ( SwingUtilities.isLeftMouseButton(e) )
 		{ // begin LEFT-CLICK
 
-			// SINGLE click
-			if (e.getClickCount() == 1)
+			// DOUBLE click
+			if (e.getClickCount() == 2)
 			{
 			}
-			else // DOUBLE click
+			else // SINGLE click
 			{
-				@SuppressWarnings("deprecation")
-				ITracePoint2D tp = _chart.translateMousePosition(e);
-				MainFrame.getInstance().setTimeLinePoint((long)tp.getX());
 			} // end: double-click
 		} // end: left-click
 	}
@@ -327,6 +360,7 @@ implements ActionListener, MouseListener
 	public void setTimeLineMarker(long time)
 	{
 		_logger.trace("setTimeLineMarker(time="+time+"): name='"+_graphName+"'.");
+		_chart.setRequestedRepaint(true);
 
 		if (_currentTimeLinePoint != null)
 		{
@@ -370,6 +404,10 @@ implements ActionListener, MouseListener
 				if (tpSmaller != null && tpBigger != null)
 				{
 					_currentTimeLinePoint = tpSmaller;
+					double closest = Math.min( time - tpSmaller.getX(), tpBigger.getX() - time);
+					if (closest == time - tpSmaller.getX()) _currentTimeLinePoint = tpSmaller;
+					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint = tpBigger;
+
 					if (_logger.isTraceEnabled())
 						_logger.trace("TrendGraph='"+_labelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
 				}
@@ -380,6 +418,98 @@ implements ActionListener, MouseListener
 			_logger.trace("TrendGraph='"+_labelName+"', setTimeLineMarked(true)");
 			_currentTimeLinePoint.setTimeLineMarked(true);
 			//_series[0].firePointChanged(_currentTimeLinePoint,  TracePoint2D.STATE_CHANGED);
+		}
+		else
+		{
+			_logger.trace("TrendGraph='"+_labelName+"', did not find point "+time);
+		}
+	}
+
+//	/** 
+//	 * Set where in the graph a "vertical bar" should be displayed 
+//	 */
+//	public void setTimeLineMarker2(Timestamp time)
+//	{
+//		if (time == null)
+//			setTimeLineMarker2(0);
+//		else
+//			setTimeLineMarker2(time.getTime());
+//	}
+
+	/** 
+	 * Set where in the graph a "vertical bar" should be displayed 
+	 */
+	public void setTimeLineMarker2(double time)
+	{
+		_logger.trace("setTimeLineMarker(time="+time+"): name='"+_graphName+"'.");
+		_chart.setRequestedRepaint(true);
+
+		if (_currentTimeLinePoint2 != null)
+		{
+			_currentTimeLinePoint2.setTimeLineMarked2(false);
+			_currentTimeLinePoint2 = null;
+
+			// If unmark, simple get out of here
+			// and it's the same time as last, then stop here, do *not* mark a new point in time
+			if (time == _currentTimeLinePoint2_lastPoint)
+			{
+				_currentTimeLinePoint2_lastPoint = 0;
+				return;
+			}
+		}
+
+		_currentTimeLinePoint2 = null;
+		_currentTimeLinePoint2_lastPoint = time;
+
+		// This was a reset
+		if (time == 0)
+			return;
+
+		if (_series.length == 0)
+			return;
+
+		ITrace2D s = _series[0];
+		if (s != null)
+		{
+			MyTracePoint2D tpSmaller = null;
+			MyTracePoint2D tpBigger  = null;
+			for (Iterator<ITracePoint2D> it = s.iterator(); it.hasNext();)
+			{
+				MyTracePoint2D p = (MyTracePoint2D) it.next();
+				double graphPoint = p.getX();
+				if( graphPoint == time )
+				{
+					_currentTimeLinePoint2 = p;
+					break;
+				}
+				else
+				{
+					if( graphPoint < time )
+						tpSmaller = p;
+					else if (tpBigger == null)
+						tpBigger = p;
+				}
+			}
+			// Ok, we did not find it, but choose the nearest one
+			if (_currentTimeLinePoint2 == null)
+			{
+				if (tpSmaller != null && tpBigger != null)
+				{
+					_currentTimeLinePoint2 = tpSmaller;
+					double closest = Math.min( time - tpSmaller.getX(), tpBigger.getX() - time);
+					if (closest == time - tpSmaller.getX()) _currentTimeLinePoint2 = tpSmaller;
+					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint2 = tpBigger;
+
+					if (_logger.isTraceEnabled())
+						_logger.trace("TrendGraph='"+_labelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
+				}
+			}
+		}
+		if (_currentTimeLinePoint2 != null)
+		{
+			_logger.trace("TrendGraph='"+_labelName+"', setTimeLineMarked2(true)");
+			_currentTimeLinePoint2.setTimeLineMarked2(true);
+			//_series[0].firePointChanged(_currentTimeLinePoint2,  TracePoint2D.STATE_CHANGED);
 		}
 		else
 		{
@@ -1387,6 +1517,7 @@ implements ActionListener, MouseListener
 	{
         private static final long serialVersionUID = 1L;
 		private boolean _timelineMarked = false;
+		private boolean _timelineMarked2 = false;
 
 		public MyTracePoint2D(double value, double value2)
 		{
@@ -1395,6 +1526,9 @@ implements ActionListener, MouseListener
 		
 		public boolean isTimeLineMarked() {return _timelineMarked;}
 		public void    setTimeLineMarked(boolean b) {_timelineMarked = b;}
+
+		public boolean isTimeLineMarked2() {return _timelineMarked2;}
+		public void    setTimeLineMarked2(boolean b) {_timelineMarked2 = b;}
 	}
 
 	//------------------------------------------------------------
@@ -1461,11 +1595,26 @@ implements ActionListener, MouseListener
 				if (my.isTimeLineMarked())
 				{
 					if (_logger.isTraceEnabled())
-						_logger.trace("PointPainterTimeLineMark.paintPoint(): graphName="+StringUtil.left(_graphName,15)+", absoluteX="+absoluteX+", absoluteY="+absoluteY+", nextX="+nextX+", nextY="+nextY+".");	
+						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked(): graphName="+StringUtil.left(_graphName,15)+", absoluteX="+absoluteX+", absoluteY="+absoluteY+", nextX="+nextX+", nextY="+nextY+".");	
 
 					// Set the color to write the timeline marker
 					Color saveColor = g.getColor();
 					g.setColor(Color.DARK_GRAY);
+
+					// Write some special stuff to indicate WHERE we are positioned in the Graph
+					g.fillRect(nextX, 0, 3, 999);
+
+					// RESTORE original Color
+					g.setColor(saveColor);
+				}
+				if (my.isTimeLineMarked2())
+				{
+					if (_logger.isTraceEnabled())
+						_logger.trace("PointPainterTimeLineMark.paintPoint(): isTimeLineMarked2(): graphName="+StringUtil.left(_graphName,15)+", absoluteX="+absoluteX+", absoluteY="+absoluteY+", nextX="+nextX+", nextY="+nextY+".");	
+
+					// Set the color to write the timeline marker
+					Color saveColor = g.getColor();
+					g.setColor(Color.LIGHT_GRAY);
 
 					// Write some special stuff to indicate WHERE we are positioned in the Graph
 					g.fillRect(nextX, 0, 3, 999);
