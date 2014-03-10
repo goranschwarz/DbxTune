@@ -16,6 +16,7 @@ import info.monitorenter.gui.chart.labelformatters.LabelFormatterSimple;
 import info.monitorenter.gui.chart.pointpainters.APointPainter;
 import info.monitorenter.gui.chart.rangepolicies.RangePolicyFixedViewport;
 import info.monitorenter.gui.chart.rangepolicies.RangePolicyMinimumViewport;
+import info.monitorenter.gui.chart.rangepolicies.RangePolicyUnbounded;
 import info.monitorenter.gui.chart.traces.Trace2DLtd;
 import info.monitorenter.gui.chart.traces.painters.ATracePainter;
 import info.monitorenter.gui.chart.views.ChartPanel;
@@ -549,167 +550,6 @@ implements ActionListener, MouseListener
 		addPoint(tgdp.getDate(), tgdp.getData(), tgdp.getLabel());
 	}
 
-//	/** Add graph data
-//	 * @deprecated This is now done in CountersModel
-//	 */
-//	public void addPoint()
-//	{
-//		if ( _dataColNames.length == 0)
-//			return;
-//
-//		if ( isGraphEnabled() && _cm != null)
-//		{
-//			if (_udGraphType == TYPE_BY_COL)
-//			{
-//				Double[] dataArray = new Double[_dataColNames.length];
-//				for (int i=0; i<_dataColNames.length; i++)
-//				{
-//					String colName = _dataColNames[i];
-//					String op      = _dataMethods[i];
-//					Double data    = null;
-//	
-//					if      (op.equals("rateMax"))       data = _cm.getRateValueMax(colName);
-//					else if (op.equals("rateMin"))       data = _cm.getRateValueMin(colName);
-//					else if (op.equals("rateAvg"))       data = _cm.getRateValueAvg(colName);
-//					else if (op.equals("rateAvgGtZero")) data = _cm.getRateValueAvgGtZero(colName);
-//					else if (op.equals("rateSum"))       data = _cm.getRateValueSum(colName);
-//	
-//					else if (op.equals("diffMax"))       data = _cm.getDiffValueMax(colName);
-//					else if (op.equals("diffMin"))       data = _cm.getDiffValueMin(colName);
-//					else if (op.equals("diffAvg"))       data = _cm.getDiffValueAvg(colName);
-//					else if (op.equals("diffAvgGtZero")) data = _cm.getDiffValueAvgGtZero(colName);
-//					else if (op.equals("diffSum"))       data = _cm.getDiffValueSum(colName);
-//	
-//					else if (op.equals("absMax"))        data = _cm.getAbsValueMax(colName);
-//					else if (op.equals("absMin"))        data = _cm.getAbsValueMin(colName);
-//					else if (op.equals("absAvg"))        data = _cm.getAbsValueAvg(colName);
-//					else if (op.equals("absAvgGtZero"))  data = _cm.getAbsValueAvgGtZero(colName);
-//					else if (op.equals("absSum"))        data = _cm.getAbsValueSum(colName);
-//					else
-//					{
-//						_logger.warn("Graph named '"+_graphName+"' has unknown operator '"+op+"' for column '"+colName+"'.");
-//					}
-//	
-//					dataArray[i] = data;
-//				}
-//				if (_logger.isDebugEnabled())
-//				{
-//					String debugStr = "Graph named '" + _graphName + "', type 'byCol' add data: ";
-//					for (int i=0; i<_dataColNames.length; i++)
-//					{
-//						debugStr += _dataColNames[i] + "='" + dataArray[i] + "', ";
-//					}
-//					_logger.debug(debugStr);
-//				}
-//	
-//				addPoint((java.util.Date) _cm.getTimestamp(), dataArray);
-//			}
-//			else if (_udGraphType == TYPE_BY_ROW)
-//			{
-//				String[] labelArray = new String[_cm.getRowCount()];
-//				Double[] dataArray  = new Double[_cm.getRowCount()];
-//
-//				int labelPos = _cm.findColumn(_seriesNames[0]);
-//				
-//				for (int i=0; i<_cm.getRowCount(); i++)
-//				{
-//					Object labelObj = null;
-//					String colName  = _dataColNames[0];
-//					String op       = _dataMethods[0];
-//					Double data     = null;
-//
-//					// Compose a LABEL
-//					if (labelPos >= 0)
-//						labelObj = _cm.getValueAt(i, labelPos);
-//					else
-//					{
-//						if      (op.equals("rateVal")) labelObj = _cm.getRatePkValue(i);
-//						else if (op.equals("diffVal")) labelObj = _cm.getDiffPkValue(i);
-//						else if (op.equals("absVal"))  labelObj = _cm.getAbsPkValue(i);
-//					}
-//					if (labelObj == null)
-//						labelObj = "row-"+i;
-//
-//					// Get data
-//					if      (op.equals("rateVal")) data = _cm.getRateValueAsDouble(i, colName);
-//					else if (op.equals("diffVal")) data = _cm.getDiffValueAsDouble(i, colName);
-//					else if (op.equals("absVal"))  data = _cm.getAbsValueAsDouble(i,  colName);
-//					else
-//					{
-//						_logger.warn("Graph named '"+_graphName+"' has unknown operator '"+op+"' for column '"+colName+"'.");
-//					}
-//
-//					labelArray[i] = labelObj.toString();
-//					dataArray[i]  = data;
-//				}
-//
-//				if (_logger.isDebugEnabled())
-//				{
-//					_logger.debug("Graph named '" + _graphName + "', type 'byRow' add data: ");;
-//					for (int i=0; i<dataArray.length; i++)
-//					{
-//						_logger.debug(" :::: row="+i+", data='"+dataArray[i]+"', label='"+labelArray[i]+"'.");
-//					}
-//				}
-//
-//				addPoint((java.util.Date) _cm.getTimestamp(), dataArray, labelArray);
-//			}
-//			else
-//			{
-//				_logger.warn("Unknown graph type("+_udGraphType+").");
-//			}
-//		} // end: isGraphEnabled()
-//	} // end: method
-
-//	public void addPoint(java.util.Date s, Double val)
-//	{
-//		MyTracePoint2D tp;
-//		int refreshIntervalInSec = MainFrame.getRefreshInterval();
-//		int chartMaxSamples = (_chartMaxSaveTimeInSec/refreshIntervalInSec);
-//		boolean graphNeedInit = false;
-//		
-//		if (s == null)
-//			return;
-//
-//		// to avoid duplicate values
-//		if (_oldTs != null)
-//			if (_oldTs.equals(s))
-//				return;
-//		_oldTs = s;
-//
-//		if (_series[0] == null)
-//		{
-//			String seriesName = null;
-//			if (_seriesNames != null && _seriesNames.length >= 1)
-//			{
-//				seriesName = _seriesNames[0];
-//			}
-//			if (seriesName == null)
-//			{
-//				seriesName = "Unknown";
-//			}
-//			_series[0] = new Trace2DLtd(chartMaxSamples);
-//			_series[0].setRenderer(_chart); // needed in jChart2D 3.2.1  
-//			_series[0].setZIndex(new Integer(_colorPtr));
-//			_series[0].setColor(nextColor());
-//			_series[0].setName(seriesName);
-//			_series[0].addTracePainter(_tracePainter);
-//			
-//			_chart.addTrace(_series[0]);
-//			graphNeedInit = true;
-//			//_logger.debug(series[0].getName() + "Series[" + 0 + "] Z=" + series[0].getZIndex());
-//		}
-//		tp = new MyTracePoint2D(s.getTime(), val.doubleValue());
-//
-//		_series[0].addPoint(tp);
-//		
-//		if(graphNeedInit)
-//		{
-//			_logger.debug(_series[0].getName() + "-Series[" + 0 + "] graphNeedInit=" + graphNeedInit);
-//			initGraph(_series[0], refreshIntervalInSec, -1);
-//		}
-//	}
-
 	public void addPoint(java.util.Date s, Double[] val)
 	{
 		addPoint(s, val, null);
@@ -752,8 +592,11 @@ implements ActionListener, MouseListener
 			_logger.debug("Resize the series array from " + _series.length + " to " + val.length + ".");
 			prevSeries = _series;
 			_series = new ITrace2D[val.length];
-			//System.arraycopy(prevSeries, 0, series, 0, prevSeries.length);
+			
+			// Copy the old series into the extended one...
+			System.arraycopy(prevSeries, 0, _series, 0, prevSeries.length);
 			_logger.debug("AFTER Resize the series array is " + _series.length + ".");
+//System.out.println("+ EXTEND: GRAPH.addPoint() graph='"+getName()+"', (val.length > _series.length)... prevSize="+prevSeries.length+", newSize="+_series.length);
 		}
 
 		for (int i = 0; i < val.length; i++)
@@ -780,7 +623,8 @@ implements ActionListener, MouseListener
 				{
 					seriesName = "Unknown";
 				}
-				
+//System.out.println("  INIT:   GRAPH.addPoint() graph='"+getName()+"', _series["+i+"]==null, so lets initialize this one. _colorPtr="+_colorPtr+", chartMaxSamples="+chartMaxSamples+", seriesName='"+seriesName+"'.");
+
 				_series[i] = new Trace2DLtd(chartMaxSamples);
 				_series[i].setRenderer(_chart); // needed in jChart2D 3.2.1  
 				_series[i].setZIndex(new Integer(_colorPtr));
@@ -915,6 +759,15 @@ implements ActionListener, MouseListener
 		}
 	}
 
+	/**
+	 * Removes all data points, but keep the time etc...
+	 */
+	public void resetGraph()
+	{
+		clearGraph();
+	}
+
+	
 	public void clearGraph()
 	{
 		Runnable doWork = new Runnable()
@@ -1004,6 +857,15 @@ implements ActionListener, MouseListener
 	}
 
 	/**
+	 * Override this to add graph specific menu items
+	 * @param list
+	 */
+	public List<JComponent> createGraphSpecificMenuItems()
+	{
+		return null;
+	}
+
+	/**
 	 * Create the Menu components that can be used my a JMenu or a JPopupMenu
 	 * @return a List of Menu components (null is never returned, instead a empty List)
 	 */
@@ -1011,8 +873,58 @@ implements ActionListener, MouseListener
 	{
 		ArrayList<JComponent> list = new ArrayList<JComponent>();
 
+		List<JComponent> userList = createGraphSpecificMenuItems();
+		if (userList != null)
+		{
+			for (JComponent comp : userList)
+				list.add(comp);
+			
+			list.add( new JSeparator() );
+		}
+		
 		//------------------------------------------------------------
-		JMenuItem  mi = new JMenuItem("Set Graph Minimum Height");
+		JMenuItem  mi = new JMenuItem("Reset/Clear this Graph");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				resetGraph();
+			}
+		});
+
+		//------------------------------------------------------------
+		mi = new JMenuItem("Set Max Values, in Y Axis...");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String key1 = "Max Values in Graph (-1 = no max value)";
+
+				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+				in.put(key1, "-1");
+
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Max Value, for Graph: "+getLabel(), in, false);
+
+				if (results != null)
+				{
+					int  newMaxValue = -1;
+					try{ newMaxValue = Integer.parseInt(results.get(key1)); }
+					catch(NumberFormatException ignore) {}
+
+					if (newMaxValue > 0)
+						_chart.getAxisY().setRangePolicy(new RangePolicyFixedViewport(new Range(0,newMaxValue)));
+					else
+						_chart.getAxisY().setRangePolicy(new RangePolicyUnbounded());
+				}
+			}
+		});
+
+		//------------------------------------------------------------
+		mi = new JMenuItem("Set Graph Minimum Height");
 		list.add(mi);
 		mi.addActionListener(new ActionListener()
 		{
@@ -1024,7 +936,7 @@ implements ActionListener, MouseListener
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 				in.put(key1, Integer.toString( (_panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight) ));
 
-				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing", in, false);
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing, for Graph: "+getLabel(), in, false);
 
 				if (results != null)
 				{
@@ -1066,7 +978,6 @@ implements ActionListener, MouseListener
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-//				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), SummaryPanel.getInstance().getGraphPanel());
 				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), CounterController.getSummaryPanel().getGraphPanel());
 				if (ret == JOptionPane.OK_OPTION)
 				{
@@ -1079,7 +990,7 @@ implements ActionListener, MouseListener
 
 		
 		//------------------------------------------------------------
-		mi = new JMenuItem("Disable this graph");
+		mi = new JMenuItem("Disable this Graph");
 		list.add(mi);
 		mi.addActionListener(new ActionListener()
 		{
@@ -1093,7 +1004,7 @@ implements ActionListener, MouseListener
 
 		//------------------------------------------------------------
 		// TODO: Enable other graphs
-		JMenu menu = new JMenu("Enable other graphs");
+		JMenu menu = new JMenu("Enable other Graphs");
 		list.add(menu);
 
 		final JPopupMenu popupMenu = menu.getPopupMenu();
@@ -1136,6 +1047,21 @@ implements ActionListener, MouseListener
 			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
 		});
 		
+		//------------------------------------------------------------
+		mi = new JMenuItem("Enable other Graphs, Dialog...");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), CounterController.getSummaryPanel().getGraphPanel());
+				if (ret == JOptionPane.OK_OPTION)
+				{
+				}
+			}
+		});
+
 
 //		if ( list.size() == 0 )
 //			_logger.warn("No PopupMenu has been assigned for the Graph in the panel '" + _graphName + "'.");
@@ -1432,11 +1358,20 @@ implements ActionListener, MouseListener
 			int strWidth = fm.stringWidth(_text);
 			int xPos = (r.width - strWidth) / 2;
 			int yPos = (int) fm.getHeight() - 2;
+			
+			// We don't want the start of the label to be invisible
+			if (xPos < 3)
+				xPos = 3;
+
 			g.drawString(_text, xPos, yPos);
 		}
 	
 		public void setWatermarkText(String text)
 		{
+			// If the text hasn't changed, get out of here
+			if (text != null && text.equals(_text))
+				return;
+			
 			_text = text;
 			_logger.debug("setWatermarkText: to '" + _text + "'.");
 			repaint();

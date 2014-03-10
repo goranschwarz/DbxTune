@@ -1,4 +1,4 @@
-use perfdemo
+--use perfdemo
 go
 
 
@@ -18,6 +18,10 @@ begin
 end
 go
 
+declare @dbname varchar(30)
+select @dbname = db_name()
+print 'Installing into dbname ''%1!'', at server ''%2!''', @dbname, @@servername
+go
 
 
 

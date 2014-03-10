@@ -1575,6 +1575,7 @@ public class JdbcDriverHelper
 
 		try
 		{
+			@SuppressWarnings("resource")
 			RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 			FileChannel channel = raf.getChannel();
 

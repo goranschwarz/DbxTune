@@ -50,6 +50,8 @@ import org.jfree.util.TableOrder;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpidWait;
+import com.asetune.gui.MainFrame;
+import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
@@ -87,6 +89,19 @@ extends TabularCntrPanel
 		"<b>- Only with clients that has logged in to ASE in the last 60 seconds</b><br>" +
 		"<code>SPID in (select spid from master..sysprocesses where datediff(ss,loggedindatetime,getdate()) < 60)</code><br>" +
 		"</html>";
+	
+	public static final String TOOLTIP_trendGraph_skipWaitIdList = 
+		"<html>" +
+		"Edit what WaitEventID's that should be discarded from the Thrend Graph Summary Page<br>" +
+		"<br>" +
+		"If you got <b>spikes</b> in the graph, so the <b>importand</b> WaitEventID's gets lost...<br>" +
+		"This is the place to edit what WaitEventID's to discard<br>" +
+		"<br>" +
+		"<b>Note</b>: This is a comma separeted list of integers<br>" +
+		"<br>" +
+		"<b>Current List</b>: THE_SKIP_LIST_GOES_HERE<br>" +
+		"</html>";
+
 
 	private static final String  PROP_PREFIX           = CmSpidWait.CM_NAME;
 
@@ -123,7 +138,7 @@ extends TabularCntrPanel
 	private static final boolean DEFAULT_generateEventWaitTimePerWait = true;
 
 	private static final String  PROPKEY_generateClass                = PROP_PREFIX + ".graph.generate.class";
-	private static final boolean DEFAULT_generateClass                = false;
+	private static final boolean DEFAULT_generateClass                = true;
 
 	private static final String  PROPKEY_generateClassWaitTime        = PROP_PREFIX + ".graph.generate.class.waitTime";
 	private static final boolean DEFAULT_generateClassWaitTime        = true;
@@ -706,6 +721,8 @@ extends TabularCntrPanel
 		final RSyntaxTextArea extraWhereClause_txt = new RSyntaxTextArea();
 		final JButton         extraWhereClause_but = new JButton("Apply Extra Where Clause");
 
+		final JButton         trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
+
 		String tooltip;
 		tooltip = 
 			"<html>" +
@@ -746,6 +763,9 @@ extends TabularCntrPanel
 		extraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
 		extraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
 
+		tooltip = TOOLTIP_trendGraph_skipWaitIdList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList, CmSpidWait.DEFAULT_trendGraph_skipWaitIdList));
+		trendGraph_settings_but.setToolTipText(tooltip);
+
 		// SET INITIAL VALUES for components
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String orientationStr = conf.getProperty(PROPKEY_graphType, DEFAULT_graphType);
@@ -781,6 +801,7 @@ extends TabularCntrPanel
 		// ACTION LISTENERS
 		includeWaitId250_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_includeWaitId250, ((JCheckBox)e.getSource()).isSelected());
@@ -789,6 +810,7 @@ extends TabularCntrPanel
 
 		includeSystemThreads_chk.addActionListener(new ActionListener()
 		{
+			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(PROPKEY_includeSystemThreads, ((JCheckBox)e.getSource()).isSelected());
@@ -925,6 +947,18 @@ extends TabularCntrPanel
 			}
 		});
 
+		trendGraph_settings_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				openPropertiesEditor();
+
+				// Update the tooltip text
+				trendGraph_settings_but.setToolTipText( TOOLTIP_trendGraph_skipWaitIdList.replace("THE_SKIP_LIST_GOES_HERE", Configuration.getCombinedConfiguration().getProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList, CmSpidWait.DEFAULT_trendGraph_skipWaitIdList)) );
+			}
+		});
+
 		JPanel panelL = SwingUtils.createPanel("Dummy Left",  false);
 		JPanel panelR = SwingUtils.createPanel("Dummy Right", false);
 		panelL.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
@@ -955,6 +989,7 @@ extends TabularCntrPanel
 
 		panelR.add(extraWhereClause_txt,             "push, grow, wrap");
 		panelR.add(extraWhereClause_but,             "wrap");
+		panelR.add(trendGraph_settings_but,        "wrap");
 
 
 		// enable disable all subcomponents in panel
@@ -975,6 +1010,34 @@ extends TabularCntrPanel
 		return panel;
 	}
 
+	public static void openPropertiesEditor()
+	{
+		final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+		String key1 = "WaitEventID's to skip (comma separated list)";
+		String key2 = "ClassNames's to skip (comma separated list)";
+		String key3 = "UserNames's to skip (comma separated list)";
+		String key4 = "Skip System SPID's (true or false)";
+
+		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+		in.put(key1, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipWaitIdList,    CmSpidWait.DEFAULT_trendGraph_skipWaitIdList));
+		in.put(key2, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipWaitClassList, CmSpidWait.DEFAULT_trendGraph_skipWaitClassList));
+		in.put(key3, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipUserNameList,  CmSpidWait.DEFAULT_trendGraph_skipUserNameList));
+		in.put(key4, Configuration.getCombinedConfiguration().getProperty( CmSpidWait.PROPKEY_trendGraph_skipSystemThreads, CmSpidWait.DEFAULT_trendGraph_skipSystemThreads+""));
+
+		Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "SPID WaitEvent's to skip", in, false);
+
+		if (results != null)
+		{
+			tmpConf.setProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitIdList,    results.get(key1));
+			tmpConf.setProperty(CmSpidWait.PROPKEY_trendGraph_skipWaitClassList, results.get(key2));
+			tmpConf.setProperty(CmSpidWait.PROPKEY_trendGraph_skipUserNameList,  results.get(key3));
+			tmpConf.setProperty(CmSpidWait.PROPKEY_trendGraph_skipSystemThreads, results.get(key4));
+
+			tmpConf.save();
+		}
+	}
+	
 //	@Override
 //	protected JPanel createLocalOptionsPanel()
 //	{

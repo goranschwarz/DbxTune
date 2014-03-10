@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -42,7 +43,10 @@ import org.jfree.util.TableOrder;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmSpidWait;
 import com.asetune.cm.ase.CmSysWaits;
+import com.asetune.gui.MainFrame;
+import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
@@ -483,6 +487,8 @@ extends TabularCntrPanel
 		final JLabel    graphType_lbl    = new JLabel("Type");
 		final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
 
+		final JButton   trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
+
 		String tooltip;
 		tooltip = 
 			"<html>" +
@@ -655,11 +661,21 @@ extends TabularCntrPanel
 			}
 		});
 
+		trendGraph_settings_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				openPropertiesEditor();
+			}
+		});
+
 		// ADD to panel
 //		panel.add(includeWaitId250_chk,             "wrap");
 		panel.add(enableGraph_chk,                  "split");
 		panel.add(graphType_lbl,                    "");
-		panel.add(graphType_cbx,                    "wrap");
+		panel.add(graphType_cbx,                    "");
+		panel.add(trendGraph_settings_but,          "wrap");
 
 		panel.add(generateEvent_chk,                "split");
 		panel.add(generateEventWaitTime_chk,        "");
@@ -690,5 +706,27 @@ extends TabularCntrPanel
 		}
 
 		return panel;
+	}
+
+	public static void openPropertiesEditor()
+	{
+		final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+
+		String key1 = "WaitEventID's to skip (comma separated list)";
+		String key2 = "ClassNames's to skip (comma separated list)";
+
+		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+		in.put(key1, Configuration.getCombinedConfiguration().getProperty( CmSysWaits.PROPKEY_trendGraph_skipWaitIdList,    CmSpidWait.DEFAULT_trendGraph_skipWaitIdList));
+		in.put(key2, Configuration.getCombinedConfiguration().getProperty( CmSysWaits.PROPKEY_trendGraph_skipWaitClassList, CmSpidWait.DEFAULT_trendGraph_skipWaitClassList));
+
+		Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "System WaitEvent's to skip", in, false);
+
+		if (results != null)
+		{
+			tmpConf.setProperty(CmSysWaits.PROPKEY_trendGraph_skipWaitIdList,    results.get(key1));
+			tmpConf.setProperty(CmSysWaits.PROPKEY_trendGraph_skipWaitClassList, results.get(key2));
+
+			tmpConf.save();
+		}
 	}
 }

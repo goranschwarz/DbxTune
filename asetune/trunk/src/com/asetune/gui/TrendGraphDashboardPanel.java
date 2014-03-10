@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
@@ -28,6 +29,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
+import com.asetune.gui.swing.VerticalScrollPane;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -40,18 +42,30 @@ extends JPanel
 	private static final long	serialVersionUID	= 1L;
 	static Logger _logger = Logger.getLogger(TrendGraphDashboardPanel.class);
 
-	private final String GRAPH_LAYOUT_PROP = "push, grow, hidemode 3, wrap";
-	private final String FACEBOOK_URL      = "http://www.facebook.com/pages/AseTune/223112614400980"; 
-	private final String SOURCEFORGE_URL   = "http://sourceforge.net/projects/asetune/"; 
-	private final String DONATE_URL        = "http://www.asetune.com/donate.html"; 
+	private final String GRAPH_LAYOUT_CONSTRAINT = "insets 0 0 0 0, fill, hidemode 3, wrap "; // + _graphLayoutColumns
+//	private final String GRAPH_LAYOUT_PROP       = "push, grow, hidemode 3";
+	private final String GRAPH_LAYOUT_PROP       = "grow";
+
+	private final String FACEBOOK_URL            = "http://www.facebook.com/pages/AseTune/223112614400980"; 
+	private final String SOURCEFORGE_URL         = "http://sourceforge.net/projects/asetune/"; 
+	private final String DONATE_URL              = "http://www.asetune.com/donate.html"; 
 
 	private final static String  PROPKEY_inMemoryHistoryEnabled     = "in-memory.history.enabled"; 
 	private final static boolean DEFAULT_inMemoryHistoryEnabled     = false; 
 
+	private final static String  PROPKEY_graphLayoutColumns         = "TrendGraphDashboardPanel.graphLayoutColumns"; 
+	private final static int     DEFAULT_graphLayoutColumns         = 1; 
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_inMemoryHistoryEnabled, DEFAULT_inMemoryHistoryEnabled);
+		Configuration.registerDefaultValue(PROPKEY_graphLayoutColumns,     DEFAULT_graphLayoutColumns);
 	}
+
+	private int                _graphLayoutColumns            = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_graphLayoutColumns, DEFAULT_graphLayoutColumns);
+	private JLabel             _graphLayoutColumns_lbl        = new JLabel("Graph Columns");
+	private SpinnerNumberModel _graphLayoutColumns_spm        = new SpinnerNumberModel(_graphLayoutColumns, 1, 10, 1);
+	private JSpinner           _graphLayoutColumns_sp         = new JSpinner(_graphLayoutColumns_spm);
 
 	private JLabel             _maxChartHistoryInMinutes_lbl  = new JLabel("Trends Graph History in Minutes");
 	private SpinnerNumberModel _maxChartHistoryInMinutes_spm  = new SpinnerNumberModel(TrendGraph.getChartMaxHistoryTimeInMinutes(), 1, 999, 1);
@@ -76,6 +90,11 @@ extends JPanel
 	private Desktop            _desktop = null;
 	private boolean            _initialized = false;
 
+	private JPanel             _topPanel   = null;
+	private JPanel             _graphPanel = null;
+	private JScrollPane        _graphPanelScroll = null;
+
+	
 	public TrendGraphDashboardPanel()
 	{
 		if (Desktop.isDesktopSupported())
@@ -105,6 +124,9 @@ extends JPanel
 	{
 		setLayout(new MigLayout("insets 0 0 0 0", "", ""));
 
+		_graphLayoutColumns_lbl.setToolTipText("<html>How many Graphs do you want <i>side by side</i>. </html>");
+		_graphLayoutColumns_sp .setToolTipText("<html>How many Graphs do you want <i>side by side</i>. </html>");
+		
 		_maxChartHistoryInMinutes_lbl.setToolTipText("How many minutes should be represented in the graphs.");
 		_maxChartHistoryInMinutes_sp .setToolTipText("How many minutes should be represented in the graphs.");
 		
@@ -155,24 +177,35 @@ extends JPanel
 		}
 
 		// Create a separate Panel for the things to position at the top...
-		JPanel topPanel = new JPanel(new MigLayout("insets 0 0 0 0", "", ""));
+		_topPanel = new JPanel(new MigLayout("insets 0 0 0 0", "", ""));
 
-		topPanel.add(new JLabel(""),                "span 8, align center, gaptop 10, pushx"); // Dummy to fill up space
-		topPanel.add(_maxChartHistoryInMinutes_lbl, "");
-//		topPanel.add(_maxChartHistoryInMinutes_lbl, "split 7, align center, gaptop 10");
-		topPanel.add(_maxChartHistoryInMinutes_sp,  "");
+		_topPanel.add(new JLabel(""),                "span 10, align center, gaptop 10, pushx"); // Dummy to fill up space
 
-		topPanel.add(_maxInMemHistoryEnabled_chk,   "gap 10");
-		topPanel.add(_maxInMemHistoryInMinutes_chk, "gap 10,  hidemode 2");
-		topPanel.add(_maxInMemHistoryInMinutes_lbl, "gap 5,   hidemode 2");
-		topPanel.add(_maxInMemHistoryInMinutes_sp,  "gap 5,   hidemode 2");
-		topPanel.add(new JLabel(""),                "pushx"); // Dummy to fill up space
+		_topPanel.add(_graphLayoutColumns_lbl,       "");
+		_topPanel.add(_graphLayoutColumns_sp,        "");
 
-		topPanel.add(_donate_but,      "hidemode 3"); _donate_but.setVisible(false);
-		topPanel.add(_sourceforge_but, "hidemode 2");
-		topPanel.add(_facebook_but,    "hidemode 2");
+		_topPanel.add(_maxChartHistoryInMinutes_lbl, "gap 20");
+//		_topPanel.add(_maxChartHistoryInMinutes_lbl, "split 7, align center, gaptop 10");
+		_topPanel.add(_maxChartHistoryInMinutes_sp,  "");
 
-		add(topPanel, "pushx, growx, wrap");
+		_topPanel.add(_maxInMemHistoryEnabled_chk,   "gap 10");
+		_topPanel.add(_maxInMemHistoryInMinutes_chk, "gap 10,  hidemode 2");
+		_topPanel.add(_maxInMemHistoryInMinutes_lbl, "gap 5,   hidemode 2");
+		_topPanel.add(_maxInMemHistoryInMinutes_sp,  "gap 5,   hidemode 2");
+		_topPanel.add(new JLabel(""),                "pushx"); // Dummy to fill up space
+
+		_topPanel.add(_donate_but,      "hidemode 3"); _donate_but.setVisible(false);
+		_topPanel.add(_sourceforge_but, "hidemode 2");
+		_topPanel.add(_facebook_but,    "hidemode 2");
+
+		_graphPanel = new JPanel(new MigLayout(GRAPH_LAYOUT_CONSTRAINT+_graphLayoutColumns, "", ""));
+//		_graphPanelScroll = new JScrollPane(_graphPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+//		_graphPanelScroll = new JScrollPane(_graphPanel);
+		_graphPanelScroll = new VerticalScrollPane(_graphPanel);
+		_graphPanelScroll.getVerticalScrollBar().setUnitIncrement(16);
+
+		add(_topPanel,         "pushx, growx, wrap");
+		add(_graphPanelScroll, "push, grow, wrap");
 
 		// Install some focusable tooltip
 		FocusableTipExtention.install(_donate_but);
@@ -185,6 +218,23 @@ extends JPanel
 	
 	private void initComponentActions() 
 	{
+		// GRAPH COLUMNS
+		_graphLayoutColumns_spm.addChangeListener(new ChangeListener()
+		{
+			@Override
+			public void stateChanged(ChangeEvent ce)
+			{
+				_graphLayoutColumns = _graphLayoutColumns_spm.getNumber().intValue();
+
+				MigLayout layoutManager = (MigLayout)_graphPanel.getLayout();
+				layoutManager.setLayoutConstraints(GRAPH_LAYOUT_CONSTRAINT+_graphLayoutColumns);
+
+				reLayout();
+
+				saveProps();
+			}
+		});
+		
 		// HISTORY
 		_maxChartHistoryInMinutes_spm.addChangeListener(new ChangeListener()
 		{
@@ -433,13 +483,16 @@ extends JPanel
 		else
 		{
 			// Add the graph
-			add(tg.getPanel(), GRAPH_LAYOUT_PROP);
+			_graphPanel.add(tg.getPanel(), GRAPH_LAYOUT_PROP);
 		}
 	}
 
 	private void saveProps()
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+
+		// In memory history: enabled | disabled
+		conf.setProperty(PROPKEY_graphLayoutColumns, _graphLayoutColumns);
 
 		// Graph history
 		String str = _maxChartHistoryInMinutes_spm.getNumber().toString();
@@ -500,6 +553,20 @@ extends JPanel
 
 
 	/**
+	 * remove/add all graphs from the GraphPanel, this so we can change number of columns in the layout etc...
+	 */
+	private void reLayout()
+	{
+		// remove all Graphs from the Panels Layout Manager
+		for (TrendGraph tg : _graphCurrentOrderMap.values())
+			_graphPanel.remove(tg.getPanel());
+
+		// Then add them again... 
+		for (TrendGraph tg : _graphCurrentOrderMap.values())
+			_graphPanel.add(tg.getPanel(), GRAPH_LAYOUT_PROP);
+	}
+
+	/**
 	 * Enable or disable a graph.
 	 * @param graphName
 	 * @param enabled
@@ -523,7 +590,7 @@ extends JPanel
 
 		// remove all Graphs from the Panels Layout Manager
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
-			remove(tg.getPanel());
+			_graphPanel.remove(tg.getPanel());
 
 		_graphCurrentOrderMap.clear();
 
@@ -561,7 +628,7 @@ extends JPanel
 
 				// Add it to panel if not already part of it
 				if ( ! inPanel )
-					add(graphPanel, GRAPH_LAYOUT_PROP);
+					_graphPanel.add(graphPanel, GRAPH_LAYOUT_PROP);
 			}
 		}
 		
@@ -572,14 +639,14 @@ extends JPanel
 			JPanel graphPanel = tg.getPanel();
 
 			_graphCurrentOrderMap.put(tg.getName(), tg);
-			add(graphPanel, GRAPH_LAYOUT_PROP);
+			_graphPanel.add(graphPanel, GRAPH_LAYOUT_PROP);
 		}
 	}
 	public void setGraphOrder(LinkedHashMap<String, Boolean> newGraphOrderMap)
 	{
 		// remove all Graphs from the Panels Layout Manager
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
-			remove(tg.getPanel());
+			_graphPanel.remove(tg.getPanel());
 
 		_graphCurrentOrderMap.clear();
 
@@ -599,7 +666,7 @@ extends JPanel
 				_graphCurrentOrderMap.put(tg.getName(), tg);
 
 				tg.setEnable(enabled);
-				add(tg.getPanel(), GRAPH_LAYOUT_PROP);
+				_graphPanel.add(tg.getPanel(), GRAPH_LAYOUT_PROP);
 			}
 		}
 		//FIXME: what if the newGraphOrderMap is "less" than _graphOriginOrderMap... this means that the passed newGraphOrderMap is not complete... should we handle this

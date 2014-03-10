@@ -1,4 +1,4 @@
-use perfdemo
+--use perfdemo
 go
 
 
@@ -16,6 +16,11 @@ begin
 	print "ERROR: Sorry you are in the wrong database, you should not install into the 'master' database."
 	select syb_quit()
 end
+go
+
+declare @dbname varchar(30)
+select @dbname = db_name()
+print 'Installing into dbname ''%1!'', at server ''%2!''', @dbname, @@servername
 go
 
 

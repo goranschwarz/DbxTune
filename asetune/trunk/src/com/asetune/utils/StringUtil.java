@@ -398,6 +398,20 @@ public class StringUtil
 	}
 
 	/**
+	 * splits every part of a comma separated string into a ArrayList<String>
+	 * @param str "db1,db2,db2" returns ArrayList ["db1"]["db2"]["db2"]
+	 * @return List<String>
+	 */
+	public static List<String> commaStrToList(String str)
+	{
+		String[] sa = commaStrToArray(str);
+		ArrayList<String> retList = new ArrayList<String>();
+		for (String s : sa)
+			retList.add(s);
+		return retList;
+	}
+
+	/**
 	 * 
 	 * @param oa
 	 * @param o

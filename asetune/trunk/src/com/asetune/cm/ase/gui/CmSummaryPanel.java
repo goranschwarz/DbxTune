@@ -80,7 +80,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JPanel           _dataPanel;
 	private JScrollPane      _dataPanelScroll;
 	private TrendGraphDashboardPanel _graphPanel;
-	private JScrollPane      _graphPanelScroll;
+//	private JScrollPane      _graphPanelScroll;
 	
 	private JLabel           _title_lbl                    = new JLabel();
 	private JButton          _trendGraphs_but              = new JButton();
@@ -371,17 +371,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_graphPanel      = createGraphPanel();
 		_dataPanel       = createDataPanel();
 
-		_graphPanelScroll = new JScrollPane(_graphPanel);
+//		_graphPanelScroll = new JScrollPane(_graphPanel);
 		_dataPanelScroll  = new JScrollPane(_dataPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		
-		_graphPanelScroll.getVerticalScrollBar().setUnitIncrement(16);
+//		_graphPanelScroll.getVerticalScrollBar().setUnitIncrement(16);
 		_dataPanelScroll.getVerticalScrollBar().setUnitIncrement(16);
 
-		JSplitPane  split  = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, _dataPanelScroll, _graphPanelScroll);
+//		JSplitPane  split  = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, _dataPanelScroll, _graphPanelScroll);
+		JSplitPane  split  = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, _dataPanelScroll, _graphPanel);
 		add(split, BorderLayout.CENTER);
 
 		// set a Decorator to the panel, that will show text: "Not Connected..." etc
-		_watermark = new Watermark(_graphPanelScroll, "Not Connected...");
+//		_watermark = new Watermark(_graphPanelScroll, "Not Connected...");
+		_watermark = new Watermark(_graphPanel, "Not Connected...");
 
 		// load saved properties
 		loadProps();
@@ -1618,6 +1620,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_logger.debug("LOCK-WAITS="+lockWaits+", TEXT='"+_lockWaits_txt.getText()+"'.");
 		if (lockWaits > 0) // Disabled for the moment
 		{
+			_lockWaits_txt    .setBackground(Color.RED);
+			_lockWaitsDiff_txt.setBackground(Color.RED);
+
 			MainFrame.getInstance().setBlockingLocks(true, lockWaits);
 
 			String toTabName = "Blocking";
@@ -1626,7 +1631,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_focusToBlockingTab.setVisible(true);
 		}
 		else
+		{
+			_lockWaits_txt    .setBackground(_atAtServerName_txt.getBackground());
+			_lockWaitsDiff_txt.setBackground(_atAtServerName_txt.getBackground());
+
 			MainFrame.getInstance().setBlockingLocks(false, 0);
+		}
 		// end: Check LOCK WAITS and, do notification
 
 		//----------------------------------------------
@@ -1638,6 +1648,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_logger.debug("FULL-LOG="+lockWaits+", TEXT='"+_fullTranslog_txt.getText()+"'.");
 		if (fullLogs > 0) // Disabled for the moment
 		{
+			_fullTranslog_txt.setBackground(Color.RED);
+
 			MainFrame.getInstance().setFullTransactionLog(true, fullLogs);
 
 			String toTabName = "Databases";
@@ -1646,7 +1658,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_focusToDatabasesTab_fullLog.setVisible(true);
 		}
 		else
+		{
+			_fullTranslog_txt.setBackground(_atAtServerName_txt.getBackground());
+
 			MainFrame.getInstance().setFullTransactionLog(false, 0);
+		}
 		// end: Check FULL LOGS and, do notification
 
 		//----------------------------------------------
@@ -1658,6 +1674,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTran_txt.getText()+"'.");
 		if (oldestOpenTranInSec > 0)
 		{
+			_oldestOpenTran_txt.setBackground(Color.RED);
+
 			MainFrame.getInstance().setOldestOpenTran(true, oldestOpenTranInSec);
 
 			String toTabName = "Databases";
@@ -1666,7 +1684,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_focusToDatabasesTab_oldestOpenTran.setVisible(true);
 		}
 		else
+		{
+			_oldestOpenTran_txt.setBackground(_atAtServerName_txt.getBackground());
+
 			MainFrame.getInstance().setOldestOpenTran(false, 0);
+		}
 		// end: Check OLDEST OPEN TRANSACTION and, do notification
 	}
 

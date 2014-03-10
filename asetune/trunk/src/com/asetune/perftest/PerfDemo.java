@@ -24,6 +24,7 @@ import java.util.Vector;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -105,6 +106,7 @@ implements ActionListener
 	private JComboBox  _qProdGenHow_cbx= new JComboBox(new String[] {"<Choose Type>", QTYPE_ALL, QTYPE_1, QTYPE_2, QTYPE_3});
 	private JButton    _qProdGen_but   = new JButton("Generate new values");
 	private JButton    _qTruncate_but  = new JButton("Truncate Queue");
+	private JCheckBox  _qProdAutoGen_chk = new JCheckBox("Auto Generate new values (queue < 10000)");
 
 	// Queue Consumer PANEL
 	private final String RESUME_CONSUMERS     = "Resume All Consumers";
@@ -342,6 +344,9 @@ implements ActionListener
 		panel.add(new JLabel("How to generate"));
 		panel.add(_qProdGenHow_cbx, "pushx, growx, wrap");
 		_qProdGenHow_cbx.addActionListener(this);
+
+		panel.add(_qProdAutoGen_chk, "span, split, tag left, wrap");
+		_qProdAutoGen_chk.addActionListener(this);
 
 		panel.add(_qProdGen_but, "span, split, tag right, wrap");
 		_qProdGen_but.addActionListener(this);
@@ -796,6 +801,11 @@ implements ActionListener
 		}
 		_qProdQSizeTime = System.currentTimeMillis();
 		_qProdQSizeSave = size;
+		
+		if (size < 10000 && _qProdAutoGen_chk.isSelected())
+		{
+			_qProdGen_but.doClick();
+		}
 	}
 
 	protected void refreshQConsumerInfo()
