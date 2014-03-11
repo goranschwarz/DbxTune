@@ -22,6 +22,7 @@ import info.monitorenter.gui.chart.traces.painters.ATracePainter;
 import info.monitorenter.gui.chart.views.ChartPanel;
 import info.monitorenter.util.Range;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -38,6 +39,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.geom.Rectangle2D;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -1587,8 +1589,10 @@ implements ActionListener, MouseListener
 
 		/** @see info.monitorenter.gui.chart.IPointPainter#paintPoint(int, int, int, int, java.awt.Graphics, info.monitorenter.gui.chart.TracePoint2D) */
 		@Override
-		public void paintPoint(final int absoluteX, final int absoluteY, final int nextX, final int nextY, final Graphics g, final ITracePoint2D original) 
+		public void paintPoint(final int absoluteX, final int absoluteY, final int nextX, final int nextY, final Graphics gIn, final ITracePoint2D original) 
 		{
+			Graphics2D g = (Graphics2D) gIn;
+
 			if (original instanceof MyTracePoint2D)
 			{
 				MyTracePoint2D my = (MyTracePoint2D) original;
@@ -1617,7 +1621,11 @@ implements ActionListener, MouseListener
 					g.setColor(Color.LIGHT_GRAY);
 
 					// Write some special stuff to indicate WHERE we are positioned in the Graph
-					g.fillRect(nextX, 0, 3, 999);
+//					g.fillRect(nextX, 0, 3, 999);
+					
+					// Draw a dashed "line"
+					Rectangle2D rect = new Rectangle2D.Float( nextX, 0, 1, 999 );
+					g.fill( _dashedStroke.createStrokedShape( rect ) );
 
 					// RESTORE original Color
 					g.setColor(saveColor);
@@ -1625,6 +1633,8 @@ implements ActionListener, MouseListener
 			}
 		}
 	}
+	// used above in the painter
+	private static final BasicStroke _dashedStroke = new BasicStroke( 1, BasicStroke.CAP_BUTT,  BasicStroke.JOIN_BEVEL, 0, new float[]{3}, 0 );
 
 
 	//------------------------------------------------------------
