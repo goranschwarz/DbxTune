@@ -15,6 +15,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -124,6 +125,7 @@ import org.fife.ui.rsyntaxtextarea.FileLocation;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
+import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
@@ -148,6 +150,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.parser.ParserProperties;
@@ -217,7 +220,7 @@ public class QueryWindow
 	implements ActionListener, ConnectionProvider, CaretListener, DocumentListener, CommandHistoryDialog.HistoryExecutor, WatchdogIsFileChanged.WatchdogIsFileChangedChecker
 {
 	private static Logger _logger = Logger.getLogger(QueryWindow.class);
-	private static final long serialVersionUID = 1L;
+
 	private static final String LOCAL_JVM = ManagementFactory.getRuntimeMXBean().getName();
 	
 	private final static String NOT_CONNECTED_STR              = "not connected";
@@ -323,6 +326,11 @@ public class QueryWindow
 	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
 	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
 
+	public static final String ACTION_PREV_ERROR                = "PREV_ERROR";
+	public static final String ACTION_NEXT_ERROR                = "NEXT_ERROR";
+
+	private static final Color DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR	= new Color(255,255,170);
+
 	private Connection  _conn            = null;
 	private int         _connType        = -1;
 	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo  = null;
@@ -339,6 +347,8 @@ public class QueryWindow
 	private JButton           _execGuiShowplan_but        = new ExecButton("Exec, GUI Showplan");    // Execute, but display it with a GUI showplan
 	private JButton           _setAseOptions_but          = new JButton("Set");        // Do various set ... options
 	private JButton           _copy_but                   = new JButton("Copy Res");    // Copy All resultsets to clipboard
+	private JButton           _nextErr_but                = new JButton("Next");
+	private JButton           _prevErr_but                = new JButton("Prev");
 
 	private JCheckBoxMenuItem _rsInTabs_chk               = new JCheckBoxMenuItem("In Tabbed Panel", false);
 	private JCheckBoxMenuItem _asPlainText_chk            = new JCheckBoxMenuItem("As Plain Text", DEFAULT_asPlainText);
@@ -1081,6 +1091,24 @@ public class QueryWindow
 		_exec_but           .setText(null);
 		_execGuiShowplan_but.setText(null);
 		
+		_prevErr_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/prev_error.png"));
+		_prevErr_but.setText(null);
+		_prevErr_but.setContentAreaFilled(false);
+		_prevErr_but.setMargin( new Insets(0,0,0,0) );
+		_prevErr_but.setToolTipText("<html>Goto <b>previous</b> error message in the SQL Text.</html>");
+		_prevErr_but.setVisible(false);
+		_prevErr_but.addActionListener(this);
+		_prevErr_but.setActionCommand(ACTION_PREV_ERROR);;
+
+		_nextErr_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/next_error.png"));
+		_nextErr_but.setText(null);
+		_nextErr_but.setContentAreaFilled(false);
+		_nextErr_but.setMargin( new Insets(0,0,0,0) );
+		_nextErr_but.setToolTipText("<html>Goto <b>next</b>     error message in the SQL Text.</html>");
+		_nextErr_but.setVisible(false);
+		_nextErr_but.addActionListener(this);
+		_nextErr_but.setActionCommand(ACTION_NEXT_ERROR);;
+
 		
 		// Set various components
 		_exec_but.setToolTipText(
@@ -1138,8 +1166,6 @@ public class QueryWindow
 		try {_copy_but = createCopyResultsButton(null);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'Copy results' button.",ex);}
 
-//		_showplan.setToolTipText("<html>Show Graphical showplan for the sql statement (work with ASE 15.x).</html>");
-		
 		_dbnames_cbx     .setToolTipText("<html>Change database context.</html>");
 		_rsInTabs_chk    .setToolTipText("<html>Check this if you want to have multiple result sets in individual tabs.</html>");
 		_asPlainText_chk .setToolTipText("<html>No fancy output, just write the output as 'plan text'.</html>");
@@ -1319,7 +1345,7 @@ public class QueryWindow
 //		_queryErrStrip.setVisible(false);
 		_queryErrStrip.setVisible(true);
 		
-		bottom.add(_dbnames_cbx,           "split 6, hidemode 2");
+		bottom.add(_dbnames_cbx,           "split 8, hidemode 2");
 		bottom.add(_exec_but,              "");
 		bottom.add(_execGuiShowplan_but,   "");
 //		bottom.add(_rsInTabs,              "hidemode 2");
@@ -1330,7 +1356,10 @@ public class QueryWindow
 		bottom.add(_codeCompletionOpt_but, "");
 //		bottom.add(_showplan,              "");
 		bottom.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
-		bottom.add(_copy_but,              "wrap");
+		bottom.add(_copy_but,              "");
+		bottom.add(_nextErr_but,           "hidemode 2");
+		bottom.add(_prevErr_but,           "hidemode 2, wrap");
+		
 		bottom.add(_resPanelScroll,        "span 4, width 100%, height 100%, hidemode 3");
 		bottom.add(_resPanelTextScroll,    "span 4, width 100%, height 100%, hidemode 3");
 //		bottom.add(_msgline,               "dock south");
@@ -1341,7 +1370,7 @@ public class QueryWindow
 
 		_resPanelScroll    .setVisible(true);
 		_resPanelTextScroll.setVisible(false);
-
+		
 		// ADD Ctrl+e, F5, F9
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_E,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_EXECUTE);
 		_query_txt.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), ACTION_EXECUTE);
@@ -1389,7 +1418,7 @@ public class QueryWindow
 
 		_exec_but           .setActionCommand(ACTION_EXECUTE);
 		_execGuiShowplan_but.setActionCommand(ACTION_EXECUTE_GUI_SHOWPLAN);
-		
+
 		// Refresh the database list (if ASE)
 		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
 			setDbNames();
@@ -1778,7 +1807,13 @@ public class QueryWindow
 //		if (_copy_but.equals(source))
 //			actionCopy(e);
 
+		if (ACTION_PREV_ERROR.equals(actionCmd))
+			action_prevError(e);
 
+		if (ACTION_NEXT_ERROR.equals(actionCmd))
+			action_nextError(e);
+
+		
 		setComponentVisibility();
 		setWatermark();
 	}
@@ -1786,7 +1821,6 @@ public class QueryWindow
 	** END: implementing ActionListener
 	**--------------------------------------------------*/
 
-	
 	
 	
 	/*---------------------------------------------------
@@ -1832,6 +1866,8 @@ public class QueryWindow
 	private void resetParserDbMessages()
 	{
 		_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, null);
+		_nextErr_but.setVisible(false);
+		_prevErr_but.setVisible(false);
 	}
 	/*---------------------------------------------------
 	** END: implementing DocumentListener
@@ -3224,6 +3260,111 @@ public class QueryWindow
 		logTailDialog.startTail();
 	}
 
+	
+	private void action_nextError(ActionEvent e)
+	{
+		int atQueryLine = _query_txt.getCaretLineNumber() + 1;
+		int newQueryLine = -1;
+		
+		@SuppressWarnings("unchecked")
+		ArrayList<JAseMessage> errorInfo = (ArrayList<JAseMessage>) _query_txt.getDocument().getProperty(ParserProperties.DB_MESSAGES);
+		if (errorInfo == null)
+			return;
+
+		for (JAseMessage msg : errorInfo)
+		{
+			if (atQueryLine >= msg._scriptRow)
+				continue;
+			newQueryLine = msg._scriptRow;
+			break;
+		}
+
+		if (newQueryLine > 0)
+		{
+			try { _query_txt.setCaretPosition(_query_txt.getLineStartOffset(newQueryLine - 1)); }
+			catch (BadLocationException ble) { UIManager.getLookAndFeel().provideErrorFeedback(_query_txt);	}
+
+			RXTextUtilities.possiblyMoveLineInScrollPane(_query_txt);
+			
+			// FIXME: find the component in the output window and make it visible (scroll to rect)
+			for (int i=0; i<_resPanel.getComponentCount(); i++)
+			{
+				Component comp = _resPanel.getComponent(i);
+				if (comp instanceof JAseMessage)
+				{
+					JAseMessage msg = (JAseMessage)comp;
+					if (msg._scriptRow == newQueryLine)
+					{
+						msg.setBackground(DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR);
+						msg.setSelectionStart(0);
+						msg.setSelectionEnd(msg.getText().length());
+						//break;
+					}
+					else
+						msg.setBackground(Color.WHITE); //FIXME: Maybe not hardcode this color, get it from UI
+				}
+			}
+		}
+		else
+		{
+			UIManager.getLookAndFeel().provideErrorFeedback(_query_txt);
+		}
+	}
+
+	private void action_prevError(ActionEvent e)
+	{
+		int atQueryLine = _query_txt.getCaretLineNumber() + 1;
+		int newQueryLine = -1;
+		
+		@SuppressWarnings("unchecked")
+		ArrayList<JAseMessage> errorInfo = (ArrayList<JAseMessage>) _query_txt.getDocument().getProperty(ParserProperties.DB_MESSAGES);
+		if (errorInfo == null)
+			return;
+
+		for (JAseMessage msg : errorInfo)
+		{
+			if (msg._scriptRow < atQueryLine)
+			{
+				newQueryLine = msg._scriptRow;
+				continue;
+			}
+			break;
+		}
+		if (atQueryLine < newQueryLine)
+			newQueryLine = -1;
+
+		if (newQueryLine > 0)
+		{
+			try { _query_txt.setCaretPosition(_query_txt.getLineStartOffset(newQueryLine - 1)); }
+			catch (BadLocationException ble) { UIManager.getLookAndFeel().provideErrorFeedback(_query_txt); }
+
+			RXTextUtilities.possiblyMoveLineInScrollPane(_query_txt);
+
+			// FIXME: find the component in the output window and make it visible (scroll to rect)
+			for (int i=0; i<_resPanel.getComponentCount(); i++)
+			{
+				Component comp = _resPanel.getComponent(i);
+				if (comp instanceof JAseMessage)
+				{
+					JAseMessage msg = (JAseMessage)comp;
+					if (msg._scriptRow == newQueryLine)
+					{
+						msg.setBackground(DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR);
+						msg.setSelectionStart(0);
+						msg.setSelectionEnd(msg.getText().length());
+						//break;
+					}
+					else
+						msg.setBackground(Color.WHITE); //FIXME: Maybe not hardcode this color, get it from UI
+				}
+			}
+		}
+		else
+		{
+			UIManager.getLookAndFeel().provideErrorFeedback(_query_txt);
+		}
+	}
+
 
 	//////////////////////////////////////////////////////////////
 	// BEGIN: IMPLEMEMNTS the CommandHistoryDialog HistoryExecutor
@@ -4052,12 +4193,43 @@ public class QueryWindow
 			
 			StringBuilder sb = new StringBuilder();
 			int scriptRow = -1;
-			if(sqe instanceof EedInfo)
+			if(sqe instanceof EedInfo) // Message from jConnect
 			{
 				// Error is using the addtional TDS error data.
 				EedInfo eedi = (EedInfo) sqe;
 				msgSeverity  = eedi.getSeverity();
-				if(eedi.getSeverity() > 10)
+				
+				// Try to figgure out what we should write out in the 'script row'
+				// Normally it's *nice* to print out *where* in the "whole" document the error happened, especially syntax errors etc (and not just "within" the SQL batch, because you would have several in a file)
+				// BUT: if we *call* a stored procedure, and that stored procedure produces errors, then we want to write from what "script line" (or where) the procedure was called at
+				// BUT: if we are developing creating procedures/functions etc we would want *where* in the "script line" (within the prcedure text) the error is produced (easier to find syntax errors, faulty @var names, table nemaes etc...)
+				int lineNumber = eedi.getLineNumber();
+				int lineNumberAdjust = 0;
+
+				// for some product LineNumber starts at 0, so lets just adjust for this in the calculated (script row ###)
+				if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName)) lineNumberAdjust = 1;
+				if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(_connectedToProductName)) lineNumberAdjust = 1;
+
+				// print messages, take some specific actions
+				if (msgSeverity <= 10)
+				{
+					// If message originates from a Stored Procedures
+					// do not use the Line Number from the Stored Procs, instead use the SQL Batch start...
+					// ERROR messages get's handle in a TOTAL different way
+					if(eedi.getProcedureName() != null)
+					{
+						lineNumber = 1;
+
+						// If batch starts with empty lines, increment the lineNumber...
+						lineNumber += StringUtil.getFirstInputLine(currentSql);
+					}
+				}
+
+				// which row in the script was this at... not this might change if (msgSeverity > 10)
+				scriptRow = startRowInSelection + batchStartRow + lineNumber + lineNumberAdjust;
+
+				// Fill in some extra information for error messages
+				if (msgSeverity > 10)
 				{
 					boolean firstOnLine = true;
 					sb.append("Msg " + sqe.getErrorCode() +
@@ -4076,18 +4248,8 @@ public class QueryWindow
 						firstOnLine = false;
 					}
 
-					// Try to figgure out what we should write out in the 'script row'
-					// Normally it's *nice* to print out *where* in the "whole" document the error happened, especially syntax errors etc (and not just "within" the SQL batch, because you would have several in a file)
-					// BUT: if we *call* a stored procedure, and that stored procedure produces errors, then we want to write from what "script line" (or where) the procedure was called at
-					// BUT: if we are developing creating procedures/functions etc we would want *where* in the "script line" (within the prcedure text) the error is produced (easier to find syntax errors, faulty @var names, table nemaes etc...)
-					int lineNumber = eedi.getLineNumber();
-					int lineNumberAdjust = 0;
-
-					// for some product LineNumber starts at 0, so lets just adjust for this in the calculated (script row ###)
-					if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName)) lineNumberAdjust = 1;
-					if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(_connectedToProductName)) lineNumberAdjust = 1;
+					// If message is from a procedure, get some extra...
 					String extraDesc  = "";
-
 					if ( StringUtil.hasValue(eedi.getProcedureName()) )
 					{
 						String regex    = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
@@ -4143,6 +4305,7 @@ public class QueryWindow
 							", Status " + eedi.getStatus() + 
 							", TranState " + eedi.getTranState() + ":\n");
 				}
+
 				// Now print the error or warning
 				String msg = sqe.getMessage();
 				if (msg.endsWith("\n"))
@@ -4150,7 +4313,7 @@ public class QueryWindow
 				else
 					sb.append(msg+"\n");
 
-			} // end: if(sqe instanceof EedInfo)
+			} // end: if(sqe instanceof EedInfo) -- jConnect message
 			else
 			{
 				// jConnect: SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
@@ -4232,7 +4395,7 @@ public class QueryWindow
 				}
 
 //				if ( ! StringUtil.isNullOrBlank(aseMsg))
-				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity, scriptRow, currentSql, objectText) );
+				resultCompList.add( new JAseMessage(aseMsg, msgNum, msgText, msgSeverity, scriptRow, currentSql, objectText, _query_txt) );
 
 				if (_logger.isTraceEnabled())
 					_logger.trace("ASE Msg("+debugStr+"): "+aseMsg);
@@ -4596,6 +4759,8 @@ public class QueryWindow
 
 			int batchCount = sr.getSqlTotalBatchCount();
 
+			boolean isConnectionOk = true;
+
 			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
@@ -4609,6 +4774,9 @@ public class QueryWindow
 				_appendResults_scriptReader = sr.hasOption_appendOutput();
 				
 				progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
+				
+				if (! isConnectionOk)
+					break;
 
 				// if 'go 10' we need to execute this 10 times
 				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
@@ -4844,6 +5012,14 @@ public class QueryWindow
 
 						// Add the information to the output window
 						// This is done in: errorReportingVendorSqlException()
+						
+						
+						// Check if we are still connected...
+						if ( ! AseConnectionUtils.isConnectionOk(conn) )
+						{
+							isConnectionOk = false;
+							break;
+						}
 					}
 
 				} // end: 'go 10'
@@ -4880,13 +5056,18 @@ public class QueryWindow
 				if (jcomp instanceof JAseMessage)
 				{
 					JAseMessage msg = (JAseMessage) jcomp;
-					if (msg._scriptRow >= 0)
+					if ( msg._scriptRow >= 0 && (msg._msgSeverity > 10 || msg._msgSeverity == -1) )
 						errorInfo.add(msg);
 				}
 			}
 			_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, errorInfo);
 			for (int p=0; p<_query_txt.getParserCount(); p++)
 				_query_txt.forceReparsing(p);
+
+			// Show/hide error buttons
+			boolean showErrorButtons = errorInfo.size() > 0;
+			_prevErr_but.setVisible(showErrorButtons);
+			_nextErr_but.setVisible(showErrorButtons);
 
 			// We're done, so clear the feedback message
 			//_msgline.setText(" ");
@@ -5571,7 +5752,7 @@ public class QueryWindow
 			}
 			if (line < 0)
 				line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
-			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, col, originSql, objectText); 
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, col, originSql, objectText, _query_txt); 
 
 			errorInfo.add(exMsg);
 			resultCompList.add(exMsg);
@@ -5579,7 +5760,7 @@ public class QueryWindow
 		else
 		{
 			int line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
-			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, -1, originSql, null);
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, -1, originSql, null, _query_txt);
 
 			errorInfo.add(exMsg);
 			resultCompList.add(exMsg);
@@ -5763,6 +5944,8 @@ public class QueryWindow
 		private String _originSql   = null;
 		private String _objectText  = null; // IF stored procedure/function is passed
 
+		private RTextArea _sqlTextArea;
+
 //		public JAseMessage()
 //		{
 //			_init();
@@ -5775,22 +5958,22 @@ public class QueryWindow
 			init();
 		}
 
-		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql)
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, RTextArea sqlTextArea)
 		{
-			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, null);
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, null, sqlTextArea);
 		}
 
-		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, String objectText)
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, String objectText, RTextArea sqlTextArea)
 		{
-			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, objectText);
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, objectText, sqlTextArea);
 		}
 
-		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql)
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, RTextArea sqlTextArea)
 		{
-			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, scriptCol, originSql, null);
+			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, scriptCol, originSql, null, sqlTextArea);
 		}
 
-		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, String objectText)
+		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, String objectText, RTextArea sqlTextArea)
 		{
 			super(aseMsg);
 			_msgNum      = msgNum;
@@ -5800,6 +5983,7 @@ public class QueryWindow
 			_scriptCol   = scriptCol; // can be used to draw an red underline in the TextArea
 			_originSql   = originSql;
 			_objectText  = objectText;
+			_sqlTextArea = sqlTextArea;
 			init();
 //System.out.println("JAseMessage: msgNum="+msgNum+", msgSeverity="+msgSeverity+", msgText='"+msgText+"', aseMsg='"+aseMsg+"'.");
 		}
@@ -5815,12 +5999,61 @@ public class QueryWindow
 				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
 			setFont(_aseMsgFont);
 
-			if (_msgSeverity >= 16)
+			if (_msgSeverity > 10)
 				setForeground(ColorUtils.DARK_RED);
 
 			setLineWrap(true);
 			setWrapStyleWord(true);
 //			setOpaque(false); // Transparent
+
+			// install: GO-TO row when you inter the field
+			if (_scriptRow > 0)
+			{
+				this.addMouseListener(new MouseListener()
+				{
+					@Override public void mouseReleased(MouseEvent e) {}
+					@Override public void mousePressed(MouseEvent e) {}
+					@Override public void mouseExited(MouseEvent e) {}
+					@Override public void mouseEntered(MouseEvent e) {}
+					
+					@Override 
+					public void mouseClicked(MouseEvent e) 
+					{
+						if (_sqlTextArea == null)
+							return;
+
+						try
+						{
+							// Move to correct line in SQL Text
+							_sqlTextArea.setCaretPosition(_sqlTextArea.getLineStartOffset(_scriptRow - 1));
+							RXTextUtilities.possiblyMoveLineInScrollPane(_sqlTextArea);
+
+							// Unmark all messages
+							Container parent = getParent();
+							if (parent instanceof JPanel)
+							{
+								JPanel panel = (JPanel)parent;
+								for (int i=0; i<panel.getComponentCount(); i++)
+								{
+									Component comp = panel.getComponent(i);
+									if (comp instanceof JAseMessage)
+									{
+										JAseMessage msg = (JAseMessage)comp;
+										msg.setBackground(Color.WHITE); //FIXME: Maybe not hardcode this color, get it from UI
+									}
+								}
+							}
+							// Mark the message
+							setBackground(DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR);
+						}
+						catch (BadLocationException ble)
+						{ // Never happens
+							UIManager.getLookAndFeel().provideErrorFeedback(_sqlTextArea);
+							ble.printStackTrace();
+						}
+					}
+				});
+			}
 		}
 
 		@Override
@@ -6077,9 +6310,9 @@ public class QueryWindow
 //				+ "("+Version.getAppName()+": The SQL Batch was aborted due to a thrown SQLException)\n"
 				+ ex.getMessage();
 		}
-		public JSQLExceptionMessage(SQLException ex, String productName, int line, int col, String originSql, String objectText)
+		public JSQLExceptionMessage(SQLException ex, String productName, int line, int col, String originSql, String objectText, RTextArea sqlTextArea)
 		{
-			super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql);
+			super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql, sqlTextArea);
 			setObjectText(objectText);
 			setForeground(ColorUtils.RED);
 		}
@@ -6706,6 +6939,8 @@ public class QueryWindow
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plan_html, timing_html, plan_detail_html, parallel_plan_detail_html ON-OFF",
+			                                                                                                                 null, "statistics *_html",                    false, "Sets ALL of the below xxx_html settings."));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plan_html ON-OFF",                 null, "statistics plan_html",                 false, "Number of rows and number of threads per operator"));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics timing_html ON-OFF",               null, "statistics timing_html",               false, "Execution statistics related to the timing spent in each operator per execution phase"));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plan_detail_html ON-OFF",          null, "statistics plan_detail_html",          false, "Details of plan operators, such as the name, different timestamps captured during the execution, number of rows affected"));

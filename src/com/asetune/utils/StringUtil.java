@@ -1179,6 +1179,44 @@ public class StringUtil
 		return -1;
 	}
 
+	/**
+	 * What line number does the input starts at
+	 * 
+	 * @param str
+	 * @return Line number where input starts. 0 = first line
+	 */
+	public static int getFirstInputLine(String str)
+	{
+		if (isNullOrBlank(str))
+			return 0;
+
+		int line = 0;
+		int len = str.length();
+		for (int i=0; i<len; i++)
+		{
+			char ch = str.charAt(i);
+
+			if (ch == '\r' || ch == '\n')
+			{
+				line++;
+
+				// If it's a Winows, then treat <CR><NL> as on line-end 
+				if (ch == '\r' && (i+1)<len && str.charAt(i+1) == '\n')
+					i++;
+
+				continue;
+			}
+
+			// skip other whitespaces
+			if (Character.isWhitespace(ch))
+				continue;
+			
+			// Other chars, get out of here
+			break;
+		}
+		return line;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE

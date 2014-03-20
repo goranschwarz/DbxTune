@@ -268,6 +268,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>Send SQL Batch Terminator string can be changed (via a dialog), the default is 'go'.</li>
        <li>Code Completion List now also shows icons...</li>
        <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
+       <li>On errors, two buttons will be visible: 'next' and 'previous', which will move the cursor to the SQL Text where the error happened</li>
+       <li>If you click on a (error) message in the output window, the cursor will be moved in the SQL Text, which was responsible for the error message.</li>
+       <li>If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
+       <li>Added ASE Set option 'set statistics *_html', which enables/disables ALL options for HTML Statistics output.</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>

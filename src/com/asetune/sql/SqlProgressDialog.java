@@ -2,7 +2,6 @@ package com.asetune.sql;
 
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -95,7 +94,8 @@ implements PropertyChangeListener, ActionListener
 
 	public SqlProgressDialog(Window owner, Connection conn, String sql)
 	{
-		super((Frame)null, "Waiting for server...", true);
+//		super((Frame)null, "Waiting for server...", true);
+		super(owner, "Waiting for server...", ModalityType.DOCUMENT_MODAL);
 		setLayout(new MigLayout());
 
 		_conn = conn;

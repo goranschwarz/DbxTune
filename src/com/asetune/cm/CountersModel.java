@@ -1673,8 +1673,9 @@ implements Cloneable, ITableTooltip
 				}
 				catch (SQLException ex)
 				{
-					_logger.warn("Problems when executing sql: "+sql, ex);
+					_logger.warn("Problems when executing sql for cm='"+getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
 					return "<html>" +  
+					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
 					       "Problems when executing sql: "+sql+"<br>" +
 					       ex.toString() +
 					       "</html>";
