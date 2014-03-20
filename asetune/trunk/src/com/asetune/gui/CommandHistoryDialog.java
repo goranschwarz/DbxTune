@@ -154,6 +154,9 @@ implements ChangeListener, ActionListener, FocusListener
 	private static final String  PROPKEY_FILE_SAVE_ENTRIES        = "CommandHistory.file.save.entries";
 	private static final int     DEFAULT_FILE_SAVE_ENTRIES        = 100;
 
+	private static final String  PROPKEY_ENTRY_LIMIT_SIZE        = "CommandHistory.entry.limit.size";
+	private static final int     DEFAULT_ENTRY_LIMIT_SIZE        = 5*1024; // 5KB
+
 
 	private static final String  PROPKEY_showDialogWriteHistoryFail = "CommandHistory.showDialogOnWriteHistoryFail";
 
@@ -949,6 +952,18 @@ implements ChangeListener, ActionListener, FocusListener
 	 */
 	public void addEntry(String server, String username, String dbname, String cmd)
 	{
+		// Dont append empty stuff
+		if (StringUtil.isNullOrBlank(cmd))
+			return;
+
+		// Is it to big, DONT APPEND
+		int cmdLen = cmd.length();
+		int limitLen = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_ENTRY_LIMIT_SIZE, DEFAULT_ENTRY_LIMIT_SIZE);
+		if (cmdLen > limitLen)
+		{
+			_logger.info("Adding SQL entry to the history was skipped. It was to big, size limit is set to "+limitLen+" and the Command length was "+cmdLen+" bytes.");
+			return;
+		}
 		// Only append to the history file if it's a NEW SQL Statement
 		// Counter in GUI will be incremented, but the history file will nor be appended
 		//
