@@ -4622,7 +4622,16 @@ if (_connProfileVisible_chk.isSelected())
 			// If the host_port can be found in the interfaces file, then
 			// the combo box will display the server.
 			_aseServer_cbx.updateFirstEntry(hosts, ports);
-	
+
+			// If it's not a servername from the sql.ini
+			// Check if we got a host:port combination in the properties file, if so lets load it
+			String hostPortStr = AseConnectionFactory.toHostPortStr(hosts, ports);
+
+			String user = Configuration.getCombinedConfiguration().getProperty("conn.username."+hostPortStr);
+			String pass = Configuration.getCombinedConfiguration().getProperty("conn.password."+hostPortStr);
+			if (StringUtil.hasValue(user)) _aseUser_txt  .setText(user);
+			if (StringUtil.hasValue(pass)) _asePasswd_txt.setText(pass);
+			
 //			if (_logger.isDebugEnabled())
 //			{
 //				_aseServerName_lbl.setText(host + ":" + portStr);
