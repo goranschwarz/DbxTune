@@ -2885,7 +2885,7 @@ if (_connProfileVisible_chk.isSelected())
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 		if ( conf != null && ! StringUtil.isNullOrBlank(loginTimeoutStr) )
 		{
-			conf.setProperty(AseConnectionFactory.PROPERTY_LOGINTIMEOUT, loginTimeoutStr);
+			conf.setProperty(AseConnectionFactory.PROPKEY_LOGINTIMEOUT, loginTimeoutStr);
 		}
 
 		// -------------------------------------------
@@ -4627,11 +4627,11 @@ if (_connProfileVisible_chk.isSelected())
 			// Check if we got a host:port combination in the properties file, if so lets load it
 			String hostPortStr = AseConnectionFactory.toHostPortStr(hosts, ports);
 
+			// if username has been stored, restore "all" other saved properties
 			String user = Configuration.getCombinedConfiguration().getProperty("conn.username."+hostPortStr);
-			String pass = Configuration.getCombinedConfiguration().getProperty("conn.password."+hostPortStr);
-			if (StringUtil.hasValue(user)) _aseUser_txt  .setText(user);
-			if (StringUtil.hasValue(pass)) _asePasswd_txt.setText(pass);
-			
+			if (StringUtil.hasValue(user)) 
+				loadPropsForServer(hostPortStr);
+
 //			if (_logger.isDebugEnabled())
 //			{
 //				_aseServerName_lbl.setText(host + ":" + portStr);
@@ -4806,6 +4806,7 @@ if (_connProfileVisible_chk.isSelected())
 		}
 
 		conf.setProperty("conn.login.timeout",                  _aseLoginTimeout_txt.getText() );
+		conf.setProperty("conn.login.timeout."+hostPort,        _aseLoginTimeout_txt.getText() );
 
 		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL,               _aseSshTunnel_chk.isSelected() );
 		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPort,  _aseSshTunnel_chk.isSelected() );
@@ -4814,8 +4815,11 @@ if (_connProfileVisible_chk.isSelected())
 		conf.setProperty("conn.login.sql.init."+hostPort,       _aseSqlInit_txt.getText() );
 
 		conf.setProperty("conn.url.raw",                        _aseConnUrl_txt.getText() );
+		conf.setProperty("conn.url.raw."+hostPort,              _aseConnUrl_txt.getText() );
 		conf.setProperty("conn.url.raw.checkbox",               _aseConnUrl_chk.isSelected() );
+		conf.setProperty("conn.url.raw.checkbox."+hostPort,     _aseConnUrl_chk.isSelected() );
 		conf.setProperty("conn.url.options",                    _aseOptions_txt.getText() );
+		conf.setProperty("conn.url.options."+hostPort,          _aseOptions_txt.getText() );
 
 		conf.setProperty("conn.savePassword",                   _aseOptionSavePwd_chk.isSelected() );
 		conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP,        _aseOptionConnOnStart_chk.isSelected() );
@@ -4959,7 +4963,7 @@ if (_connProfileVisible_chk.isSelected())
 
 		str = conf.getProperty("conn.login.timeout");
 		if (str == null)
-			str = conf.getProperty(AseConnectionFactory.PROPERTY_LOGINTIMEOUT, "10");
+			str = conf.getProperty(AseConnectionFactory.PROPKEY_LOGINTIMEOUT, AseConnectionFactory.DEFAULT_LOGINTIMEOUT+"");
 		_aseLoginTimeout_txt.setText(str);
 
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
@@ -5255,9 +5259,21 @@ if (_connProfileVisible_chk.isSelected())
 			_aseSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
 		updateSshTunnelDescription();
 
+		// SQL Init
 		_aseSqlInit_txt.setText( conf.getProperty("conn.login.sql.init."+hostPortStr, ""));
 
+		// Login timeout
+		_aseLoginTimeout_txt.setText(conf.getProperty("conn.login.timeout."+hostPortStr, AseConnectionFactory.DEFAULT_LOGINTIMEOUT+""));
 
+		// Use RAW URL string
+		_aseConnUrl_chk.setSelected(conf.getBooleanProperty("conn.url.raw.checkbox."+hostPortStr, false));
+		if (_aseConnUrl_chk.isSelected())
+			_aseConnUrl_txt.setText(conf.getProperty("conn.url.raw."+hostPortStr, ""));
+
+		// URL Options
+		_aseOptions_txt.setText(conf.getProperty("conn.url.options."+hostPortStr, ""));
+
+		
 		//----------------------------------------
 		// OS HOST stuff
 		//----------------------------------------

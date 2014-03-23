@@ -37,7 +37,8 @@ public class AseConnectionFactory
 {
 	private static Logger _logger = Logger.getLogger(AseConnectionFactory.class);
 
-	public static final String PROPERTY_LOGINTIMEOUT = "AseConnectionFactory.loginTimeout";
+	public static final String PROPKEY_LOGINTIMEOUT = "AseConnectionFactory.loginTimeout";
+	public static final int    DEFAULT_LOGINTIMEOUT = 10;
 	
 	private static String              _driver              = "com.sybase.jdbc4.jdbc.SybDriver";
 	private static String              _urlTemplate         = "jdbc:sybase:Tds:HOST:PORT";
@@ -1339,18 +1340,18 @@ public class AseConnectionFactory
 
 		// Get some configuration....
 		boolean emulateMultipleQueryRowSupport = true;
-		int loginTimeout = 10;
+		int loginTimeout = DEFAULT_LOGINTIMEOUT;
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf != null)
 		{
 			emulateMultipleQueryRowSupport = conf.getBooleanProperty("AseConnectionFactory.emulateMultipleQueryRowSupport", true);
-			loginTimeout                   = conf.getIntProperty(PROPERTY_LOGINTIMEOUT, loginTimeout);
+			loginTimeout                   = conf.getIntProperty(PROPKEY_LOGINTIMEOUT, loginTimeout);
 		}
 		else
 		{
 			emulateMultipleQueryRowSupport = System.getProperty("AseConnectionFactory.emulateMultipleQueryRowSupport", "true").trim().equalsIgnoreCase("true");
-			try { loginTimeout = Integer.parseInt(System.getProperty(PROPERTY_LOGINTIMEOUT, loginTimeout+"")); }
+			try { loginTimeout = Integer.parseInt(System.getProperty(PROPKEY_LOGINTIMEOUT, loginTimeout+"")); }
 			catch (NumberFormatException ignore) {}
 		}
 		
