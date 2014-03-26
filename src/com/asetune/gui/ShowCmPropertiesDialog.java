@@ -36,6 +36,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.RTextUtility;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 public class ShowCmPropertiesDialog
 extends JDialog implements ActionListener, ChangeListener
@@ -301,7 +302,8 @@ extends JDialog implements ActionListener, ChangeListener
 		
 		
 //		int     aseVersion  = 12503;
-		int     aseVersion  = 1250030;
+//		int     aseVersion  = 1250030;
+		int     aseVersion  = Ver.ver(12,5,0,3);
 		boolean isCeEnabled = false;
 
 		if (_cm.isRuntimeInitialized())

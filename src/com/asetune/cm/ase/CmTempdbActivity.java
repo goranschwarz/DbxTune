@@ -17,6 +17,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -38,9 +39,11 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15500;
-	public static final int      NEED_SRV_VERSION = 1550000;
+//	public static final int      NEED_SRV_VERSION = 1550000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,5);
 //	public static final int      NEED_CE_VERSION  = 15020;
-	public static final int      NEED_CE_VERSION  = 1502000;
+//	public static final int      NEED_CE_VERSION  = 1502000;
+	public static final int      NEED_CE_VERSION  = Ver.ver(15,0,2);
 
 	public static final String[] MON_TABLES       = new String[] {"monTempdbActivity"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};

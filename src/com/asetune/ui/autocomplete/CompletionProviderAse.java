@@ -27,6 +27,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 public class CompletionProviderAse
 extends CompletionProviderAbstractSql
@@ -306,7 +307,8 @@ extends CompletionProviderAbstractSql
 			_aseMonTableDesc = new HashMap<String, String>();
 			String sql = "select TableName, Description from master.dbo.monTables ";
 //			if (aseVersionNum >= 15700)
-			if (aseVersionNum >= 1570000)
+//			if (aseVersionNum >= 1570000)
+			if (aseVersionNum >= Ver.ver(15,7))
 				sql += " where Language = 'en_US' ";
 
 			try
@@ -622,7 +624,8 @@ extends CompletionProviderAbstractSql
 				
 				String sql = "select TableName, ColumnName, Description from master.dbo.monTableColumns ";
 //				if (aseVersionNum >= 15700)
-				if (aseVersionNum >= 1570000)
+//				if (aseVersionNum >= 1570000)
+				if (aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US' ";
 
 				try

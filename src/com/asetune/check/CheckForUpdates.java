@@ -57,6 +57,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 import com.btr.proxy.search.ProxySearch;
 import com.btr.proxy.search.ProxySearch.Strategy;
 
@@ -1679,25 +1680,29 @@ public class CheckForUpdates
 			String sql_monTables_rowCount = 
 				"select count(*) from master.dbo.monTables \n" +
 //				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
-				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTables = 
 				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
 			    "from master.dbo.monTables t \n" +
 //				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
-				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
 			// monTableColumns
 			String sql_monTableColumns_rowCount = 
 				"select count(*) from master.dbo.monTableColumns \n" +
 //				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
-				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTableColumns = 
 				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
 			    "from master.dbo.monTableColumns c " +
 //				(mtd.getMdaVersion() >= 15700 ? "where Language = 'en_US' \n" : "");
-				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+//				(mtd.getMdaVersion() >= 1570000 ? "where Language = 'en_US' \n" : "");
+				(mtd.getMdaVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 			
 			// monTableParameters
 			String sql_monTableParameters_rowCount = 

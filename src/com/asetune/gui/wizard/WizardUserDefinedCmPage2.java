@@ -36,6 +36,7 @@ import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 
 
@@ -58,10 +59,11 @@ implements ActionListener
 	                                                      "Specify this as a number/integer.<br>" +
 //	                                                      "Example 1: 15030, which is 15.0.3<br>" +
 //	                                                      "Example 2: 15031, which is 15.0.3 ESD#1<br>" +
-	                                                      "Example 1: 1503000, which is 15.0.3<br>" +
-	                                                      "Example 2: 1503010, which is 15.0.3 ESD#1<br>" +
-	                                                      "Example 3: 1503042, which is 15.0.3 ESD#4.2<br>" +
-	                                                      "Example 4: 1570100, which is 15.7 SP100<br>" +
+	                                                      "Example 1: "+Ver.ver(15,0,3)    +", which is 15.0.3<br>" +
+	                                                      "Example 2: "+Ver.ver(15,0,3,1)  +", which is 15.0.3 ESD#1<br>" +
+	                                                      "Example 3: "+Ver.ver(15,0,3,4,2)+", which is 15.0.3 ESD#4.2<br>" +
+	                                                      "Example 4: "+Ver.ver(15,7,0,100)+", which is 15.7 SP100<br>" +
+	                                                      "Example 5: "+Ver.ver(16,0,0,1,1)+", which is 16.0 SP01 PL01<br>" +
 	                                                      "Note: always use 7 digits as the version number. Or 0 if you mean 'any version'<br>" +
 	                                                  "</html>";
 
@@ -257,8 +259,8 @@ implements ActionListener
 					return "ASE Version needs to be a number."; 
 				}
 
-				if (aseVersionInt > 0 && aseVersionStr.length() != "1503010".length())
-					return "ASE Version needs to be a number, Example 1503011 (15.0.3 ESD#1.1).";
+				if (aseVersionInt > 0 && aseVersionStr.length() != (Ver.ver(15,0,3,1)+"".length()) )
+					return "ASE Version needs to be a number, Example "+Ver.ver(15,0,3,1)+" (15.0.3 ESD#1.1).";
 			}
 		}
 

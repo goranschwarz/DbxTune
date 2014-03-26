@@ -6,6 +6,7 @@ import com.asetune.cm.sql.VersionInfo;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 public class SpOptDiag
 extends SQLWindow
@@ -33,7 +34,8 @@ extends SQLWindow
 		try
 		{
 //			if (aseVersion >= 15700)
-			if (aseVersion >= 1570000)
+//			if (aseVersion >= 1570000)
+			if (aseVersion >= Ver.ver(15,7))
 			{
 				// do not install
 				// but replace use 'sp_showoptstats' instead of 'sp__optdiag'
@@ -62,10 +64,14 @@ extends SQLWindow
 //					AseConnectionUtils.checkCreateStoredProc(conn, 15000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
 //				else
 //					AseConnectionUtils.checkCreateStoredProc(conn, 12503, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
-				if (aseVersion >= 1500000)
-					AseConnectionUtils.checkCreateStoredProc(conn, 1500000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				if (aseVersion >= 1500000)
+//					AseConnectionUtils.checkCreateStoredProc(conn, 1500000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				else
+//					AseConnectionUtils.checkCreateStoredProc(conn, 1250300, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+				if (aseVersion >= Ver.ver(15,0))
+					AseConnectionUtils.checkCreateStoredProc(conn, Ver.ver(15,0),     "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
 				else
-					AseConnectionUtils.checkCreateStoredProc(conn, 1250300, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+					AseConnectionUtils.checkCreateStoredProc(conn, Ver.ver(12,5,0,3), "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
 			}
 		}
 		catch (Exception e)

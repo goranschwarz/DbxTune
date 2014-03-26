@@ -202,6 +202,7 @@ import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 import com.asetune.utils.WatchdogIsFileChanged;
 import com.asetune.xmenu.TablePopupFactory;
 import com.sybase.jdbcx.EedInfo;
@@ -2437,7 +2438,8 @@ public class QueryWindow
 				_jdbcAutoCommit_chk        .setEnabled(true);
 				_setAseOptions_but         .setEnabled(true);
 //				_execGuiShowplan_but       .setEnabled( (_aseVersion >= 15000) );
-				_execGuiShowplan_but       .setEnabled( (_srvVersion >= 1500000) );
+//				_execGuiShowplan_but       .setEnabled( (_srvVersion >= 1500000) );
+				_execGuiShowplan_but       .setEnabled( (_srvVersion >= Ver.ver(15,0)) );
 			}
 			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
 			{
@@ -6906,7 +6908,8 @@ public class QueryWindow
 		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
 
 //		if (aseVersion >= 15020) 
-		if (aseVersion >= 1502000) 
+//		if (aseVersion >= 1502000) 
+		if (aseVersion >= Ver.ver(15,0,2)) 
 		{
 			boolean statementCache   = false;
 			boolean literalAutoParam = false;
@@ -6923,19 +6926,23 @@ public class QueryWindow
 		}
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF", null, "showplan", false, "Displays the query plan"));
 //		if (aseVersion >= 15030) 
-		if (aseVersion >= 1503000) 
+//		if (aseVersion >= 1503000) 
+		if (aseVersion >= Ver.ver(15,0,3)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch on 3604,9529 with override", "set switch off 3604,9529", "switch 3604,9529", false, "Traceflag 3604,9529: Include Lava operator execution statistics and resource use in a showplan format at most detailed level."));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics subquerycache ON-OFF", null, "statistics subquerycache", false, "Statistics about internal subquery optimizations"));
 //		if (aseVersion >= 15000) 
-		if (aseVersion >= 1500000) 
+//		if (aseVersion >= 1500000) 
+		if (aseVersion >= Ver.ver(15,0)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plancost ON-OFF",      null, "statistics plancost",      false, "Query plan in tree format, includes estimated/actual rows and IO's"));
 //		if (aseVersion >= 15020) 
-		if (aseVersion >= 1502000) 
+//		if (aseVersion >= 1502000) 
+		if (aseVersion >= Ver.ver(15,0,2)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics resource ON-OFF",      null, "statistics resource",      false, "Resource usage, includes procedure cache and tempdb"));
 
-		if (aseVersion >= 1570100)
+//		if (aseVersion >= 1570100)
+		if (aseVersion >= Ver.ver(15,7,0,100))
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 
@@ -6984,7 +6991,8 @@ public class QueryWindow
 		}
 		
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch ON-OFF 3604", null, "switch 3604", false, "Set traceflag 3604 on|off, <b>the below options needs this</b>."));

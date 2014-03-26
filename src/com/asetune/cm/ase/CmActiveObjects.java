@@ -15,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmActiveObjectsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -143,7 +144,8 @@ extends CountersModel
 		pkCols.add("IndexID");
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
 		// NOTE: PK is NOT unique, so therefore 'dupMergeCount' column is added to the SQL Query
@@ -169,11 +171,13 @@ extends CountersModel
 			InstanceID = "InstanceID, ";
 
 //		if (aseVersion >= 12520)
-		if (aseVersion >= 1252000)
+//		if (aseVersion >= 1252000)
+		if (aseVersion >= Ver.ver(12,5,2))
 			TableSize = "TableSize, \n";
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 		{
 			TableSize = "";
 			PartitionName = "PartitionName, ";
@@ -182,7 +186,8 @@ extends CountersModel
 		}
 
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
 				        "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
@@ -202,7 +207,8 @@ extends CountersModel
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "SPID != @@spid";
 //		if (aseVersion < 15000)
-		if (aseVersion < 1500000)
+//		if (aseVersion < 1500000)
+		if (aseVersion < Ver.ver(15,0))
 		{
 			whereSpidNotMe = "SPID != convert(int,@@spid)";
 		}

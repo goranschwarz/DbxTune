@@ -55,6 +55,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 
 
 public class RefreshProcess extends Thread 
@@ -438,7 +439,8 @@ public class RefreshProcess extends Thread
 				 */
 				String extraCols = "";
 //				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "  S.RowsAffected, \n";
 				}
@@ -808,12 +810,14 @@ public class RefreshProcess extends Thread
 
 				String extraCols = "";
 //				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "       RowsAffected, ErrorStatus, \n";
 				}
 //				if (_aseVersion >= 15030 )
-				if (_aseVersion >= 1503000 )
+//				if (_aseVersion >= 1503000 )
+				if (_aseVersion >= Ver.ver(15,0,3) )
 				{
 					extraCols += "      ProcNestLevel, StatementNumber, \n";
 				}
@@ -1945,13 +1949,15 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    PhysicalReads      int             not null,\n");
 				tabWriter.write("    LogicalReads       int             not null,\n");
 //				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
+				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 				tabWriter.write("    RowsAffected       int             not null,\n");
 				tabWriter.write("    ErrorStatus        int             not null,\n");
 				}
 //				if (_aseVersion >= 15030 )
-				if (_aseVersion >= 1503000 )
+//				if (_aseVersion >= 1503000 )
+				if (_aseVersion >= Ver.ver(15,0,3) )
 				{
 				tabWriter.write("    ProcNestLevel      int             not null,\n");
 				tabWriter.write("    StatementNumber    int             not null,\n");
@@ -2133,12 +2139,14 @@ public class RefreshProcess extends Thread
 //		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
 //		cols3 = "";
 ////		if (_aseVersion >= 12520)
-//		if (_aseVersion >= 1252000)
+////		if (_aseVersion >= 1252000)
+//		if (_aseVersion >= Ver.ver(12,5,2))
 //		{
 //			cols3 = ", TableSize";
 //		}
 ////		if (_aseVersion >= 15000)
-//		if (_aseVersion >= 1500000)
+////		if (_aseVersion >= 1500000)
+//		if (_aseVersion >= Ver.ver(15,0))
 //		{
 //			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 //			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
@@ -2168,12 +2176,14 @@ public class RefreshProcess extends Thread
 				cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
 				cols3 = "";
 //				if (srvVersion >= 12520)
-				if (srvVersion >= 1252000)
+//				if (srvVersion >= 1252000)
+				if (srvVersion >= Ver.ver(12,5,2))
 				{
 					cols3 = ", TableSize";
 				}
 //				if (srvVersion >= 15000)
-				if (srvVersion >= 1500000)
+//				if (srvVersion >= 1500000)
+				if (srvVersion >= Ver.ver(15,0))
 				{
 					cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 					cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
@@ -2202,7 +2212,8 @@ public class RefreshProcess extends Thread
 				pkCols.add("OwnerUserID");
 
 //				if (srvVersion >= 15000)
-				if (srvVersion >= 1500000)
+//				if (srvVersion >= 1500000)
+				if (srvVersion >= Ver.ver(15,0))
 					pkCols.add("PartitionID");
 
 				return pkCols;
@@ -2300,6 +2311,7 @@ public class RefreshProcess extends Thread
 				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
 				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
 				//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
+				//if (getServerVersion() >= Ver.ver(15,0,3,1)) // NOTE this is done early in initialization, so getServerVersion() can't be used
 				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
 	
 				return msgHandler;
@@ -2314,7 +2326,8 @@ public class RefreshProcess extends Thread
 					"where W.WaitEventID=I.WaitEventID \n" + 
 					"  and I.WaitClassID=C.WaitClassID \n";
 //				if (srvVersion >= 15700)
-				if (srvVersion >= 1570000)
+//				if (srvVersion >= 1570000)
+				if (srvVersion >= Ver.ver(15,7))
 				{
 					sql += "  and C.Language = 'en_US' \n";
 					sql += "  and I.Language = 'en_US' \n";
@@ -2417,12 +2430,14 @@ public class RefreshProcess extends Thread
 //		cols2 = "";
 //		cols3 = "WaitTime, PageNumber, RowNumber";
 ////		if (_aseVersion >= 15002)
-//		if (_aseVersion >= 1500020)
+////		if (_aseVersion >= 1500020)
+//		if (_aseVersion >= Ver.ver(15,0,0,2))
 //		{
 //			cols2 = "BlockedState, BlockedBy, ";  //
 //		}
 ////		if (_aseVersion >= 15020)
-//		if (_aseVersion >= 1502000)
+////		if (_aseVersion >= 1502000)
+//		if (_aseVersion >= Ver.ver(15,0,2))
 //		{
 //			cols3 += ", SourceCodeID";  //
 //		}
@@ -2452,16 +2467,19 @@ public class RefreshProcess extends Thread
 				cols2 = "";
 				cols3 = "WaitTime, PageNumber, RowNumber";
 //				if (srvVersion >= 15002)
-				if (srvVersion >= 1500020)
+//				if (srvVersion >= 1500020)
+				if (srvVersion >= Ver.ver(15,0,0,2))
 				{
 					cols2 = "BlockedState, BlockedBy, ";  //
 				}
 //				if (srvVersion >= 15020)
-				if (srvVersion >= 1502000)
+//				if (srvVersion >= 1502000)
+				if (srvVersion >= Ver.ver(15,0,2))
 				{
 					cols3 += ", SourceCodeID";  //
 				}
-				if (srvVersion >= 1600000)
+//				if (srvVersion >= 1600000)
+				if (srvVersion >= Ver.ver(16,0))
 				{
 					cols3 += ", PartitionID";  //
 				}
@@ -2555,7 +2573,8 @@ public class RefreshProcess extends Thread
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off
 //		if (aseVersion >= 15031)
-		if (aseVersion >= 1503010)
+//		if (aseVersion >= 1503010)
+		if (aseVersion >= Ver.ver(15,0,3,1))
 			AseConnectionUtils.setCompatibilityMode(conn, false);
 
 		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();

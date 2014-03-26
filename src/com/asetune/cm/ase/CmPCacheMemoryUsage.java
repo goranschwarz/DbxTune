@@ -12,6 +12,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmPCacheMemoryUsagePanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -33,7 +34,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15010;
-	public static final int      NEED_SRV_VERSION = 1501000;
+//	public static final int      NEED_SRV_VERSION = 1501000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,1);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcedureCacheMemoryUsage", "monProcedureCacheModuleUsage"};
@@ -124,7 +126,8 @@ extends CountersModel
 	{
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -135,7 +138,8 @@ extends CountersModel
 		String InstanceID     = "";
 		String InstanceIDJoin = "";
 //		if (isClusterEnabled && aseVersion >= 15500)
-		if (isClusterEnabled && aseVersion >= 1550000)
+//		if (isClusterEnabled && aseVersion >= 1550000)
+		if (isClusterEnabled && aseVersion >= Ver.ver(15,5))
 		{
 			InstanceID     = "M.InstanceID, ";
 			InstanceIDJoin = "  and M.InstanceID *= C.InstanceID \n";

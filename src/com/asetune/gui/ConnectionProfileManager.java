@@ -9,13 +9,16 @@ import javax.swing.ImageIcon;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.gui.ConnectionProfile.JdbcEntry;
+import com.asetune.gui.ConnectionProfile.OfflineEntry;
+import com.asetune.gui.ConnectionProfile.TdsEntry;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.SwingUtils;
 
 public class ConnectionProfileManager
 {
 	private static Logger _logger = Logger.getLogger(ConnectionProfileManager.class);
-	private static final long serialVersionUID = 1L;
+//	private static final long serialVersionUID = 1L;
 
 	/** */
 	private LinkedHashMap<String, ConnectionProfile> _profileMap = new LinkedHashMap<String, ConnectionProfile>();
@@ -142,7 +145,7 @@ public class ConnectionProfileManager
 		else if (DbUtils.DB_PROD_NAME_H2        .equals(productName)) return ICON_DB_PROD_NAME_H2;
 		else if (DbUtils.DB_PROD_NAME_HANA      .equals(productName)) return ICON_DB_PROD_NAME_HANA;
 		else if (DbUtils.DB_PROD_NAME_HSQL      .equals(productName)) return ICON_DB_PROD_NAME_HSQL;
-		else if (DbUtils.DB_PROD_NAME_MSSQL        .equals(productName)) return ICON_DB_PROD_NAME_MSSQL;
+		else if (DbUtils.DB_PROD_NAME_MSSQL     .equals(productName)) return ICON_DB_PROD_NAME_MSSQL;
 		else if (DbUtils.DB_PROD_NAME_MYSQL     .equals(productName)) return ICON_DB_PROD_NAME_MYSQL;
 		else if (DbUtils.DB_PROD_NAME_ORACLE    .equals(productName)) return ICON_DB_PROD_NAME_ORACLE;
 		
@@ -174,4 +177,27 @@ public class ConnectionProfileManager
 		return ICON_DB_PROD_NAME_OTHER;
 	}
 
+	public void possiblyAddChange(String key, String productName, TdsEntry tds)
+	{
+		possiblyAddChange(key, productName, tds, null, null);
+	}
+
+	public void possiblyAddChange(String key, String productName, OfflineEntry offline)
+	{
+		possiblyAddChange(key, productName, null, offline, null);
+	}
+
+	public void possiblyAddChange(String key, String productName, JdbcEntry jdbc)
+	{
+		possiblyAddChange(key, productName, null, null, jdbc);
+	}
+
+	private void possiblyAddChange(String key, String productName, TdsEntry tds, OfflineEntry offline, JdbcEntry jdbc)
+	{
+		// Check if the profile exists
+		// If the profile doesn't exists, ask if we should create a new one, AND Give it a PROPER NAME
+		
+		// If the profile has been updated, ask if we want to update the information in the ConnectionProfile as well
+		
+	}
 }

@@ -49,6 +49,7 @@ import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class PersistWriterJdbc
@@ -948,7 +949,8 @@ public class PersistWriterJdbc
 				// only 15.0 or above is supported
 				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
 //				if (aseVersion < 15000)
-				if (aseVersion < 1500000)
+//				if (aseVersion < 1500000)
+				if (aseVersion < Ver.ver(15,0))
 				{
 					String msg = "The PCS storage is ASE Version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
 					_logger.error(msg);
@@ -982,7 +984,8 @@ public class PersistWriterJdbc
 				}
 
 //				if (aseVersion >= 15000)
-				if (aseVersion >= 1500000)
+//				if (aseVersion >= 1500000)
+				if (aseVersion < Ver.ver(15,0))
 				{
 					_logger.debug("Connected to ASE (above 15.0), do some specific settings 'set delayed_commit on'.");
 					dbExecSetting("set delayed_commit on ");

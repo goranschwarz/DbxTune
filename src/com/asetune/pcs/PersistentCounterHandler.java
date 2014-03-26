@@ -29,6 +29,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 
 public class PersistentCounterHandler 
@@ -500,7 +501,8 @@ implements Runnable
 			}
 			
 //			if (_aseVersion >= 15700)
-			if (_aseVersion >= 1570000)
+//			if (_aseVersion >= 1570000)
+			if (_aseVersion >= Ver.ver(15,7))
 			{
 				//-----------------------------------------------------------
 				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
@@ -674,7 +676,8 @@ implements Runnable
 					//--------------------------------------------
 					// GET sp__optdiag
 //					if (_aseVersion >= 15700)
-					if (_aseVersion >= 1570000)
+//					if (_aseVersion >= 1570000)
+					if (_aseVersion >= Ver.ver(15,7))
 					{
 						sql = "exec "+entry.getDbname()+"..sp_showoptstats '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
 
@@ -1425,7 +1428,8 @@ implements Runnable
 			try
 			{
 //				if (_aseVersion >= 15700)
-				if (_aseVersion >= 1570000)
+//				if (_aseVersion >= 1570000)
+				if (_aseVersion >= Ver.ver(15,7))
 				{
 					// do not install use: sp_showoptstats instead
 				}
@@ -1433,10 +1437,14 @@ implements Runnable
 //					AseConnectionUtils.checkCreateStoredProc(_conn, 15000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
 //				else
 //					AseConnectionUtils.checkCreateStoredProc(_conn, 12503, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
-				else if (_aseVersion >= 1500000)
-					AseConnectionUtils.checkCreateStoredProc(_conn, 1500000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				else if (_aseVersion >= 1500000)
+//					AseConnectionUtils.checkCreateStoredProc(_conn, 1500000, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
+//				else
+//					AseConnectionUtils.checkCreateStoredProc(_conn, 1250030, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+				else if (_aseVersion >= Ver.ver(15,0))
+					AseConnectionUtils.checkCreateStoredProc(_conn, Ver.ver(15,0),     "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_15_0.sql", "sa_role");
 				else
-					AseConnectionUtils.checkCreateStoredProc(_conn, 1250030, "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
+					AseConnectionUtils.checkCreateStoredProc(_conn, Ver.ver(12,5,0,3), "sybsystemprocs", "sp__optdiag", VersionInfo.SP__OPTDIAG_CRDATE, VersionInfo.class, "sp__optdiag_v1_9_4.sql", "sa_role");
 			}
 			catch (Exception e)
 			{

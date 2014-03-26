@@ -11,6 +11,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmBlockingPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -38,7 +39,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15002;
-	public static final int      NEED_SRV_VERSION = 1500020;
+//	public static final int      NEED_SRV_VERSION = 1500020;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,0,2);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monLocks"};

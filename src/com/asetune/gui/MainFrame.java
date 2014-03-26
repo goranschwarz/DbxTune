@@ -126,6 +126,7 @@ import com.asetune.utils.Memory;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class MainFrame
@@ -1537,7 +1538,8 @@ public class MainFrame
 			String aseVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
 			int    aseVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
 //			if (aseVersionNum >= 15020)
-			if (aseVersionNum >= 1502000)
+//			if (aseVersionNum >= 1502000)
+			if (aseVersionNum >= Ver.ver(15,0,2))
 			{
 				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
 				apptrace.setVisible(true);
@@ -2544,13 +2546,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 						cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_OLDEST_TRAN_IN_SEC, true);
 
 //						if (aseVersion >= 15033 && hasMonRole)
-						if (aseVersion >= 1503030 && hasMonRole)
+//						if (aseVersion >= 1503030 && hasMonRole)
+						if (aseVersion >= Ver.ver(15,0,3,3) && hasMonRole)
 							cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_TRANSACTION,    true);
 					}
 
 					// GRAPHS in SYSLOAD
 //					if (aseVersion >= 15500 && hasMonRole)
-					if (aseVersion >= 1550000 && hasMonRole)
+//					if (aseVersion >= 1550000 && hasMonRole)
+					if (aseVersion >= Ver.ver(15,5) && hasMonRole)
 					{
 						cm = GetCounters.getInstance().getCmByName(CmSysLoad.CM_NAME);
 						if (cm != null)
@@ -2559,7 +2563,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 					// GRAPHS in PROC_CACHE_MODULE_USAGE
 //					if (aseVersion >= 15010 && hasMonRole)
-					if (aseVersion >= 1501000 && hasMonRole)
+//					if (aseVersion >= 1501000 && hasMonRole)
+					if (aseVersion >= Ver.ver(15,0,1) && hasMonRole)
 					{
 						cm = GetCounters.getInstance().getCmByName(CmPCacheModuleUsage.CM_NAME);
 						if (cm != null)
@@ -3541,7 +3546,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.07.name",                        "sp_spaceused2 - List space and row used by each table in the current database");
 		systmp.setProperty("system.predefined.sql.07.execute",                     "exec sp_spaceused2");
 //		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "15000");
-		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "1500000");
+//		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "1500000");
+		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        Ver.ver(15,0));
 		systmp.setProperty("system.predefined.sql.07.install.dbname",              "sybsystemprocs");
 		systmp.setProperty("system.predefined.sql.07.install.procName",            "sp_spaceused2");
 		systmp.setProperty("system.predefined.sql.07.install.procDateThreshold",   VersionInfo.SP_SPACEUSED2_CR_STR);
@@ -4449,7 +4455,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				if (MonTablesDictionary.hasInstance())
 				{
 //					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
-					if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
+//					if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
+					if (MonTablesDictionary.getInstance().getMdaVersion() >= Ver.ver(15,7))
 						monWaitEventInfoWhere = " and W.Language = 'en_US'";
 				}
 

@@ -33,6 +33,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -178,6 +179,7 @@ extends CountersModel
 		// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
 		//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
 		//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
+		//if (getServerVersion() >= Ver.ver(15,0,3,1)) // NOTE this is done early in initialization, so getServerVersion() can't be used
 		msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
 
 		return msgHandler;
@@ -232,7 +234,8 @@ extends CountersModel
 		cols1 += "WaitEventDesc = convert(varchar(50),''), -- runtime replaced with cached values from monWaitEventInfo \n";
 		cols1 += "W.WaitEventID, WaitTime, Waits \n";
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 		}
 		cols2 += ", WaitTimePerWait = CASE WHEN Waits > 0 \n" +

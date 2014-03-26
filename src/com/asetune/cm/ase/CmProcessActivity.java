@@ -21,6 +21,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -205,7 +206,8 @@ extends CountersModel
 
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -247,7 +249,8 @@ extends CountersModel
 		String nl_15702           = ""; // NL for this section
 		String sp_15702           = ""; // column Space padding for this section
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "A.IOSize1Page, ";
 			IOSize2Pages       = "A.IOSize2Pages, ";
@@ -261,7 +264,8 @@ extends CountersModel
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
 		String nl_16000           = ""; // NL for this section
 		String sp_16000           = ""; // column Space padding for this section
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			ClientDriverVersion = "MP.ClientDriverVersion, ";
 			nl_16000            = "\n";
@@ -286,17 +290,20 @@ extends CountersModel
 			+ sp_15702 + IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
 //		if (aseVersion >= 12520)
-		if (aseVersion >= 1252000)
+//		if (aseVersion >= 1252000)
+		if (aseVersion >= Ver.ver(12,5,2))
 		{
 			cols2+="  A.WorkTables,  \n";
 		}
 //		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
-		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+//		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 			cols2+="  tempdb_name = db_name(tempdb_id(SP.spid)), pssinfo_tempdb_pages = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
 		}
 //		if (aseVersion >= 15025)
-		if (aseVersion >= 1502050)
+//		if (aseVersion >= 1502050)
+		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2+="  N.NetworkEngineNumber, MP.ServerUserID, \n";
 		}

@@ -119,6 +119,11 @@ extends DefaultListCellRenderer
 		{
 			return ICON_COLUMN;
 		}
-		return ICON_UNKNOWN_TYPE;
+//		else if (completion instanceof TemplateCompletion)
+//		{
+//			return ICON_TEMPLATE;
+//		}
+		return ICON_TEMPLATE;
+//		return ICON_UNKNOWN_TYPE;
 	}
 }

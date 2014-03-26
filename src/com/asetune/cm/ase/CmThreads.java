@@ -25,6 +25,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -46,7 +47,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15700;
-	public static final int      NEED_SRV_VERSION = 1570000;
+//	public static final int      NEED_SRV_VERSION = 1570000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,7);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monThread"};
@@ -236,7 +238,8 @@ extends CountersModel
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 //		if (getServerVersion() < 15700)
-		if (getServerVersion() < 1570000)
+//		if (getServerVersion() < 1570000)
+		if (getServerVersion() < Ver.ver(15,7))
 		{
 			// disable the graph checkbox...
 			TrendGraph tg = getTrendGraph(tgdp.getName());

@@ -18,6 +18,7 @@ import com.asetune.cm.ase.gui.CmCachedProcsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -111,7 +112,8 @@ extends CountersModel
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 //		if (srvVersion >= 15700)
-		if (srvVersion >= 1570000)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 			return NEED_CONFIG;
 
 		return new String[] {"per object statistics active=1"};
@@ -210,7 +212,8 @@ extends CountersModel
 		}
 
 //		if (aseVersion >= 15500 || (aseVersion >= 15030 && isClusterEnabled) )
-		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
+//		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
+		if (aseVersion >= Ver.ver(15,5) || (aseVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
 		{
 			orderBy = "order by RequestCnt desc \n";
 
@@ -221,7 +224,8 @@ extends CountersModel
 		}
 
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			ExecutionCount    = "ExecutionCount, ";
 			CPUTime           = "CPUTime, ";
@@ -241,7 +245,8 @@ extends CountersModel
 			ase1570_nl        = "\n";
 		}
 		
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			Active            = "Active, ";
 		}
@@ -356,7 +361,8 @@ extends CountersModel
 	public String[] getDdlDetailsSortOnColName()
 	{
 //		if (getServerVersion() < 15500)
-		if (getServerVersion() < 1550000)
+//		if (getServerVersion() < 1550000)
+		if (getServerVersion() < Ver.ver(15,5))
 			return null;
 
 		String[] sa = {"RequestCntDiff"};

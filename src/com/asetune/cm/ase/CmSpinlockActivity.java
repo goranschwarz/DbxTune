@@ -22,6 +22,7 @@ import com.asetune.cm.ase.gui.CmSpinlockActivityPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -43,7 +44,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15702;
-	public static final int      NEED_SRV_VERSION = 1570020;
+//	public static final int      NEED_SRV_VERSION = 1570020;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,7,0,2);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monSpinlockActivity"};
@@ -132,7 +134,8 @@ extends CountersModel
 		pkCols.add("InstanceID");
 		pkCols.add("SpinlockName");
 		
-		if (srvVersion >= 1570100)
+//		if (srvVersion >= 1570100)
+		if (srvVersion >= Ver.ver(15,7,0,100))
 			pkCols.add("SpinlockSlotID");
 
 		return pkCols;
@@ -156,7 +159,8 @@ extends CountersModel
 			"       InstanceID, \n" +
 			"       SpinlockName, \n" +
 			"       Instances    = count(*), \n" +
-			((aseVersion >= 1570100) ? "       SpinlockSlotID = convert(int, 0), \n" : "") + // in 15.7 SP100, add SpinlockSlotID as dummy to be consistent with below full statement
+//			((aseVersion >= 1570100) ? "       SpinlockSlotID = convert(int, 0), \n" : "") + // in 15.7 SP100, add SpinlockSlotID as dummy to be consistent with below full statement
+			((aseVersion >= Ver.ver(15,7,0,100)) ? "       SpinlockSlotID = convert(int, 0), \n" : "") + // in 15.7 SP100, add SpinlockSlotID as dummy to be consistent with below full statement
 			"       OwnerPID     = max(OwnerPID), \n" +
 			"       LastOwnerPID = max(LastOwnerPID), \n" +
 			"       Grabs        = sum(Grabs), \n" +
@@ -175,7 +179,8 @@ extends CountersModel
 
 		// in 15.7.0 SP100 the SpinlockSlotID was introduced... but we can keep/toggle with the GROUPED select above if we ONLY WANT ONE row for each SpinlockName...
 		boolean showSpinlockSlotID = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_SpinlockSlotID, DEFAULT_sample_SpinlockSlotID);
-		if (aseVersion >= 1570100 && showSpinlockSlotID)
+//		if (aseVersion >= 1570100 && showSpinlockSlotID)
+		if (aseVersion >= Ver.ver(15,7,0,100) && showSpinlockSlotID)
 		{
 			sql = 
 				"select Type = convert(varchar(30), ''), \n" +

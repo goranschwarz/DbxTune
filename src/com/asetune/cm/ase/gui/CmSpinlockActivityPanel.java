@@ -14,6 +14,7 @@ import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 public class CmSpinlockActivityPanel
 extends TabularCntrPanel
@@ -85,7 +86,8 @@ extends TabularCntrPanel
 		{
 			if (cm.isRuntimeInitialized())
 			{
-				boolean visible = cm.getServerVersion() >= 1570100;
+//				boolean visible = cm.getServerVersion() >= 1570100;
+				boolean visible = cm.getServerVersion() >= Ver.ver(15,7,0,100);
 				_sampleSpinlockSlotID_chk.setVisible(visible);
 
 			} // end isRuntimeInitialized

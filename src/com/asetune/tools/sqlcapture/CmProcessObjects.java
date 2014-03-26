@@ -8,6 +8,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -108,7 +109,8 @@ extends CountersModel
 		pkCols.add("IndexID");
 		pkCols.add("OwnerUserID");
 
-		if (srvVersion >= 1500000)
+//		if (srvVersion >= 1500000)
+		if (srvVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
 		return pkCols;
@@ -123,11 +125,13 @@ extends CountersModel
 		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
 		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
 		cols3 = "";
-		if (aseVersion >= 1252000)
+//		if (aseVersion >= 1252000)
+		if (aseVersion >= Ver.ver(12,5,2))
 		{
 			cols3 = ", TableSize";
 		}
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 		{
 			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize

@@ -58,8 +58,9 @@ implements ActionListener, DocumentListener
 	private String _filename = null;
 	private String _winTitle = "Interface File Editor";
 
-	private String _currentSrv = "";
-
+	private String _currentSrv  = "";
+	private String _lastEditSrv = null;
+	
 	private boolean _changed = false;
 	private int     _originTextHasCode = 0;
 
@@ -218,7 +219,47 @@ implements ActionListener, DocumentListener
 	@Override
 	public void changedUpdate(DocumentEvent e)
 	{
+		whatEntryWasEdit(e);
 		checkChangedStatus();
+	}
+
+	private void whatEntryWasEdit(DocumentEvent e)
+	{
+		// NOTE: this isn't pretty... might not even work on Mac (if it still uses \r as line break)
+		// and it will use extra memory...
+		String[] lines = _textArea.getText().split("\n");
+		
+		for (int lineNum=_textArea.getCaretLineNumber(); lineNum>=0; lineNum--)
+		{
+			String strAtLine = lines[lineNum];
+
+			// If empty line, get out of here
+			if (StringUtil.isNullOrBlank(strAtLine))
+				break;
+			
+			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
+			{
+//				if (strAtLine.matches("^[[].*[]].*"))
+				if (strAtLine.startsWith("["))
+				{
+					_lastEditSrv = strAtLine.substring(strAtLine.indexOf("[")+1, strAtLine.indexOf("]")).trim();
+					break;
+				}
+			}
+			else
+			{
+				if (strAtLine.matches("^query="))  continue; // this isn't really needed in here, it's just if the platform check fails
+				if (strAtLine.matches("^master=")) continue; // this isn't really needed in here, it's just if the platform check fails
+				if (strAtLine.matches("^[A-Za-z0-9].*"))
+				{
+					int endPos = strAtLine.indexOf(" ");
+					if (endPos == -1)
+						endPos = strAtLine.length();
+					_lastEditSrv = strAtLine.substring(0, endPos).trim();
+					break;
+				}
+			}
+		}
 	}
 
 	private void checkChangedStatus()
@@ -292,6 +333,8 @@ implements ActionListener, DocumentListener
 		setFilename(filename);
 		try 
 		{
+			_textArea.getDocument().removeDocumentListener(this);
+
 			File f = new File(_filename);
 			FileReader reader = new FileReader(f);
 			_textArea.read(reader, "");  // Use TextComponent read
@@ -302,19 +345,30 @@ implements ActionListener, DocumentListener
 		catch (IOException ioex) 
 		{
 			SwingUtils.showErrorMessage("Open File", "Problems Open file '"+_filename+"'.", ioex);
-		}	
+		}
+		_textArea.getDocument().addDocumentListener(this);
+
 
 		setVisible(true);
 
 		return _retStatus;
 	}
 	
+	/**
+	 * What entry did was the last one user was "close" to... (cursor was close to this entry)
+	 * @return
+	 */
+	public String getLastEditServerEntry()
+	{
+		return _lastEditSrv;		
+	}
+
 	public void markCurrentServer()
 	{
 		if ( ! StringUtil.isNullOrBlank(_currentSrv) )
 		{
 			String searchFor = _currentSrv;
-			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Desktop_WIN)
+			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
 				searchFor = "[" + _currentSrv + "]";
 
 			// Mark server

@@ -10,6 +10,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -31,7 +32,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15030;
-	public static final int      NEED_SRV_VERSION = 1503000;
+//	public static final int      NEED_SRV_VERSION = 1503000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,3);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monSQLRepActivity"};
@@ -110,7 +112,8 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 //		if (srvVersion >= 15500)
-		if (srvVersion >= 1550000)
+//		if (srvVersion >= 1550000)
+		if (srvVersion >= Ver.ver(15,5))
 			pkCols.add("InstanceID");
 		pkCols.add("DBID");
 		pkCols.add("ObjectID");

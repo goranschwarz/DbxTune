@@ -17,6 +17,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -174,7 +175,8 @@ extends CountersModel
 
 
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			LogicalReads    = "LogicalReads, \n";
 			PhysicalWrites  = "PhysicalWrites, \n";

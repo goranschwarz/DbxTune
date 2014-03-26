@@ -19,6 +19,7 @@ import com.asetune.cm.ase.gui.CmExecutionTimePanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -45,7 +46,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 1570100; // 15.7 SP100
+//	public static final int      NEED_SRV_VERSION = 1570100; // 15.7 SP100
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,7,0,100); // 15.7 SP100
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monSysExecutionTime"};
@@ -126,7 +128,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -138,7 +141,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -150,7 +154,8 @@ extends CountersModel
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}

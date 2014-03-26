@@ -18,6 +18,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -170,12 +171,14 @@ extends CountersModel
 		String optGoalPlan = "";
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 		{
 			datatype    = "bigint";
 		}
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -264,7 +267,8 @@ extends CountersModel
 			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' "+restrictTmpSysmonitorsWhere+" \n" +
 			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' "+restrictTmpSysmonitorsWhere+" \n";
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 			sqlCreateTmpSysmonitors =
 				"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
 				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' "+restrictTmpSysmonitorsWhere+" \n" +
@@ -399,11 +403,13 @@ extends CountersModel
 		String sqlInit = "DBCC traceon(3604) \n";
 
 //		if (aseVersion < 12520)
-		if (aseVersion < 1252000)
+//		if (aseVersion < 1252000)
+		if (aseVersion < Ver.ver(12,5,2))
 			sqlInit += "DBCC traceon(8399) \n";
 
 //		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion < 15000) )
-		if (aseVersion >= 1502000 || (aseVersion >= 1254010 && aseVersion < 1500000) )
+//		if (aseVersion >= 1502000 || (aseVersion >= 1254010 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4,1) && aseVersion < Ver.ver(15,0)) )
 		{
 			sqlInit = "set switch on 3604 with no_info \n";
 		}

@@ -25,6 +25,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public abstract class AseConfigText
@@ -483,7 +484,8 @@ public abstract class AseConfigText
 				"\n"; 
 			
 //			if (aseVersion >= 15700)
-			if (aseVersion >= 1570000)
+//			if (aseVersion >= 1570000)
+			if (aseVersion >= Ver.ver(15,7))
 			{
 				sql += 
 					"\n" +
@@ -516,7 +518,8 @@ public abstract class AseConfigText
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monThreadPool"; }
 //		@Override public    int        needVersion()                       { return 15700; }
-		@Override public    int        needVersion()                       { return 1570000; }
+//		@Override public    int        needVersion()                       { return 1570000; }
+		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
 	}
 
 	public static class HelpDb extends AseConfigText
@@ -542,7 +545,8 @@ public abstract class AseConfigText
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
 //		@Override public    int        needVersion()                       { return 15700; }
-		@Override public    int        needVersion()                       { return 1570000; }
+//		@Override public    int        needVersion()                       { return 1570000; }
+		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
 	}
 
 	public static class HelpServer extends AseConfigText
@@ -571,7 +575,8 @@ public abstract class AseConfigText
 		{
 			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
 //			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
-			if (aseVersion >= 1502000 || (aseVersion >= 1254020 && aseVersion < 1500000) )
+//			if (aseVersion >= 1502000 || (aseVersion >= 1254020 && aseVersion < 1500000) )
+			if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4,2) && aseVersion < Ver.ver(15,0)) )
 				return "show switch"; 
 			else
 				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 
@@ -677,7 +682,8 @@ public abstract class AseConfigText
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_version"; }
 //		@Override public    int        needVersion()                       { return 12540; }
-		@Override public    int        needVersion()                       { return 1254000; }
+//		@Override public    int        needVersion()                       { return 1254000; }
+		@Override public    int        needVersion()                       { return Ver.ver(12,5,4); }
 	}
 
 	public static class ShmDumpConfig extends AseConfigText
@@ -703,7 +709,8 @@ public abstract class AseConfigText
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monLicense"; }
 //		@Override public    int        needVersion()                       { return 15000; }
-		@Override public    int        needVersion()                       { return 1500000; }
+//		@Override public    int        needVersion()                       { return 1500000; }
+		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
 	}
 	
 	public static class ClusterInfo extends AseConfigText
@@ -711,7 +718,8 @@ public abstract class AseConfigText
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
 //		@Override public    int        needVersion()                       { return 15020; }
-		@Override public    int        needVersion()                       { return 1502000; }
+//		@Override public    int        needVersion()                       { return 1502000; }
+		@Override public    int        needVersion()                       { return Ver.ver(15,0,2); }
 		@Override public    boolean    needCluster()                       { return true; }
 	}
 	
@@ -719,7 +727,8 @@ public abstract class AseConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
 ////		@Override public    int        needVersion()                       { return 15000; }
-//		@Override public    int        needVersion()                       { return 1500000; }
+////		@Override public    int        needVersion()                       { return 1500000; }
+//		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
 //		@Override public    List<String> needRole()
 //		{ 
 //			List<String> list = new ArrayList<String>();

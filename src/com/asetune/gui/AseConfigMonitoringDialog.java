@@ -54,6 +54,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class AseConfigMonitoringDialog
@@ -714,58 +715,68 @@ public class AseConfigMonitoringDialog
 				   )
 				{
 //					if (_aseVersionNum >= 15020)
-					if (_aseVersionNum >= 1502000)
+//					if (_aseVersionNum >= 1502000)
+					if (_aseVersionNum >= Ver.ver(15,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_enableSpinlockMonitoring_chk) )
 				{
 //					if (_aseVersionNum >= 15702)
-					if (_aseVersionNum >= 1570020)
+//					if (_aseVersionNum >= 1570020)
+					if (_aseVersionNum >= Ver.ver(15,7,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_executionTimeMonitoring_chk) )
 				{
-					if (_aseVersionNum >= 1570100)
+//					if (_aseVersionNum >= 1570100)
+					if (_aseVersionNum >= Ver.ver(15,7,0,100))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_statementCacheMonitoring_chk) )
 				{
 //					if (_aseVersionNum >= 15020)
-					if (_aseVersionNum >= 1502000)
+//					if (_aseVersionNum >= 1502000)
+					if (_aseVersionNum >= Ver.ver(15,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_captureCompressionStatistics_chk) )
 				{
 //					if (_aseVersionNum >= 15700)
-					if (_aseVersionNum >= 1570000)
+//					if (_aseVersionNum >= 1570000)
+					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_cfgCapMissingStatistics_chk) )
 				{
 //					if (_aseVersionNum >= 15031)
-					if (_aseVersionNum >= 1503010)
+//					if (_aseVersionNum >= 1503010)
+					if (_aseVersionNum >= Ver.ver(15,0,3,1))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeActive_chk) )
 				{
 //					if (_aseVersionNum >= 15700)
-					if (_aseVersionNum >= 1570000)
+//					if (_aseVersionNum >= 1570000)
+					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeMaxMessages_sp) )
 				{
 //					if (_aseVersionNum >= 15700)
-					if (_aseVersionNum >= 1570000)
+//					if (_aseVersionNum >= 1570000)
+					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMonitoring_chk) )
 				{
-					if (_aseVersionNum >= 1600000)
+//					if (_aseVersionNum >= 1600000)
+					if (_aseVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMaxMessages_sp) )
 				{
-					if (_aseVersionNum >= 1600000)
+//					if (_aseVersionNum >= 1600000)
+					if (_aseVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
 				else // All other components
@@ -1206,11 +1217,13 @@ public class AseConfigMonitoringDialog
 			rs.close();
 			
 //			if (_aseVersionNum >= 15031) 
-			if (_aseVersionNum >= 1503010)
+//			if (_aseVersionNum >= 1503010)
+			if (_aseVersionNum >= Ver.ver(15,0,3,1))
 				_cfgCapMissingStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture missing statistics") > 0 );
 
 //			if (_aseVersionNum >= 15020) 
-			if (_aseVersionNum >= 1502000) 
+//			if (_aseVersionNum >= 1502000) 
+			if (_aseVersionNum >= Ver.ver(15,0,2)) 
 			{
 				_cfgEnableMetricsCapture_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "enable metrics capture") > 0 );
 				_cfgMetricsElapMax_spm      .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics elap max") );
@@ -1220,7 +1233,8 @@ public class AseConfigMonitoringDialog
 			}
 
 //			if (_aseVersionNum >= 15700) 
-			if (_aseVersionNum >= 1570000) 
+//			if (_aseVersionNum >= 1570000) 
+			if (_aseVersionNum >= Ver.ver(15,7)) 
 			{
 				_captureCompressionStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture compression statistics") > 0 );
 			}
@@ -1821,14 +1835,17 @@ public class AseConfigMonitoringDialog
 		{
 			System.out.println("Open the Dialog with a VALID connection.");
 			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
-			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
+//			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
+			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1));
 
 			System.out.println("Open the Dialog with a CLOSED connection.");
 			conn.close();
-			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
+//			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
+			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1));
 
 			System.out.println("Open the Dialog with a NULL connection.");
-			AseConfigMonitoringDialog.showDialog((Frame)null, null, 1251000);
+//			AseConfigMonitoringDialog.showDialog((Frame)null, null, 1251000);
+			AseConfigMonitoringDialog.showDialog((Frame)null, null, Ver.ver(12,5,1));
 		}
 		catch (Exception e)
 		{
