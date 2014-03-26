@@ -30,9 +30,31 @@
 	//------------------------------------------
 	$doAction = $_GET['doAction'];
 
+	if ( $doAction == "testVersion" )
+	{
+		$version = $_GET['version'];
+		echo "input version = '" . $version . "'<br>";
+		echo "conv  version = '" . versionFixNEW($version) . "'<br>";
+		die("----END---<br>");
+	}
+
+
+	function doQuery($sql)
+	{
+		echo "EXEC: <pre>$sql</pre><br>\n";
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: SQL Failed");
+		}
+		htmlResultset($userIdCache, $result, $sql);
+	}
+
 	function doCleanup($sql)
 	{
 		echo "EXEC: <code>$sql</code><br>\n";
+//		echo "EXEC: <pre>$sql</pre><br>\n";
 		mysql_query($sql) or die("ERROR: " . mysql_error());
 		printf("Records affected: %d<br>\n", mysql_affected_rows());
 		printf("<br>\n");
@@ -146,7 +168,7 @@
 		//doCleanup("delete from asemon_error_info         where appVersion  like '2.%' ");
 		//doCleanup("delete from asemon_error_info2        where appVersion  like '2.%' ");
 
-		//doCleanup("delete from asemon_error_info         where logLocation  like 'com.asetune.tools.sqlcapture.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
+		//doCleanup("delete from asemon_error_info         where logLocation  like 'com.asetune.RefreshProcess.refreshStmt(RefreshProcess.java:%)%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like '%SQLException, Error writing DDL to Persistent Counter DB. Caught: org.h2.jdbc.JdbcSQLException: Unknown data type%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.ClassCastException: java.lang.% cannot be cast to java.lang.%' ");
 		//doCleanup("delete from asemon_error_info         where logStacktrace  like 'java.lang.NumberFormatException: Infinite or NaN%' ");
@@ -271,7 +293,7 @@
 		//doCleanup("ALTER TABLE asemon_connect_info ADD sshTunnelInfo varchar(100)  AFTER srvIpPort");
 		//doCleanup("ALTER TABLE asemon_connect_info MODIFY srvIpPort varchar(100)");
 
-		doCleanup("ALTER TABLE sqlw_usage CHANGE sqlwCheckId sqlwCheckId int not null auto_increment");
+		//doCleanup("ALTER TABLE sqlw_usage CHANGE sqlwCheckId sqlwCheckId int not null auto_increment");
 
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
@@ -289,6 +311,180 @@
 
         // FIX offline-read settings...
 //		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = -1   WHERE srvVersion < 0");
+
+
+
+
+
+		// FIX VERSION for INT columns
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 1000000 AND srvVersion > 0");
+//		doCleanup("update asemon_mda_info         set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 1000000 AND srvVersion > 0");
+
+		// FIX VERSION for CHAR columns
+//		doCleanup("update asemon_error_info       set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+//		doCleanup("update asemon_error_info2      set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+//		doCleanup("update asemon_error_info_save  set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 1000000");
+
+        // FIX offline-read settings...
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = -1   WHERE srvVersion < 0");
+
+
+
+//---------------------------------------------------------------------
+//--- make the update (for integers)
+//update version_xxx
+//   set ver    = ((ver/1000)*100000) + ((ver-((ver/1000)*1000))/10*100) + ((ver-((ver/1000)*1000))%10)
+//where (ver < 1570050 or ver >= 1600000) AND ver < 100000000
+//
+//update version_xxx
+//   set ver = ver*100
+//where (ver/1000) >= 1570 and (ver-((ver/1000)*1000)) >= 50 AND ver < 100000000 -- 15.7 SP50 and higher
+//
+//
+//--- make the update (for strings)
+//update version_xxx
+//   set verStr = cast( ((cast(verStr as int)/1000)*100000) + ((cast(verStr as int)-((cast(verStr as int)/1000)*1000))/10*100) + ((cast(verStr as int)-((cast(verStr as int)/1000)*1000))%10) as varchar(12))
+//where (cast(verStr as int) < 1570050 or cast(verStr as int) >= 1600000) AND cast(verStr as int) < 100000000
+//
+//update version_xxx
+//   set verStr = cast( cast(verStr as int)*100 as varchar(12))
+//where (cast(verStr as int)/1000) >= 1570 and (cast(verStr as int)-((cast(verStr as int)/1000)*1000)) >= 50 AND cast(verStr as int) < 100000000-- 15.7 SP50 and higher
+//---------------------------------------------------------------------
+
+//sqlw_connect_info       int (srvVersionInt)
+//asemon_connect_info     int
+//asemon_mda_info         int
+//asemon_error_info       varchar
+//asemon_error_info2      varchar
+//asemon_error_info_save  varchar
+
+//		//-------------------------------------------
+//		// sqlw_connect_info
+//		//-------------------------------------------
+//		doCleanup("
+//			update sqlw_connect_info
+//			   set srvVersionInt = ((srvVersionInt DIV 1000)*100000) + ((srvVersionInt-((srvVersionInt DIV 1000)*1000)) DIV 10*100) + ((srvVersionInt-((srvVersionInt DIV 1000)*1000)) MOD 10)
+//			where (srvVersionInt < 1570050 or srvVersionInt >= 1600000) AND srvVersionInt < 100000000 AND srvVersionInt > 0
+//		");
+//		doCleanup("
+//			update sqlw_connect_info
+//			   set srvVersionInt = srvVersionInt*100
+//			where (srvVersionInt DIV 1000) >= 1570 and (srvVersionInt-((srvVersionInt DIV 1000)*1000)) >= 50 AND srvVersionInt < 100000000 AND srvVersionInt > 0
+//		");
+
+
+//		//-------------------------------------------
+//		// asemon_mda_info
+//		//-------------------------------------------
+//		doCleanup("
+//			update asemon_mda_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion = ((srvVersion DIV 1000)*100000) + ((srvVersion-((srvVersion DIV 1000)*1000)) DIV 10*100) + ((srvVersion-((srvVersion DIV 1000)*1000)) MOD 10)
+//			where (srvVersion < 1570050 or srvVersion >= 1600000) AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+//		doCleanup("
+//			update asemon_mda_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion = srvVersion*100
+//			where (srvVersion DIV 1000) >= 1570 and (srvVersion-((srvVersion DIV 1000)*1000)) >= 50 AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+
+//		//-------------------------------------------
+//		// asemon_connect_info
+//		//-------------------------------------------
+//		doCleanup("
+//			update asemon_connect_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion = ((srvVersion DIV 1000)*100000) + ((srvVersion-((srvVersion DIV 1000)*1000)) DIV 10*100) + ((srvVersion-((srvVersion DIV 1000)*1000)) MOD 10)
+//			where (srvVersion < 1570050 or srvVersion >= 1600000) AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+//		doCleanup("
+//			update asemon_connect_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion = srvVersion*100
+//			where (srvVersion DIV 1000) >= 1570 and (srvVersion-((srvVersion DIV 1000)*1000)) >= 50 AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+
+//		//-------------------------------------------
+//		// asemon_error_info
+//		//-------------------------------------------
+//		doCleanup("
+//			update asemon_error_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( ((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*100000) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) DIV 10*100) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) MOD 10) ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) < 1570050 or CONVERT(srvVersion,SIGNED INTEGER) >= 1600000) AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+//		doCleanup("
+//			update asemon_error_info
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( CONVERT(srvVersion,SIGNED INTEGER)*100 ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) DIV 1000) >= 1570 and (CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) >= 50 AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+
+//		//-------------------------------------------
+//		// asemon_error_info2
+//		//-------------------------------------------
+//		doCleanup("
+//			update asemon_error_info2
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( ((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*100000) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) DIV 10*100) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) MOD 10) ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) < 1570050 or CONVERT(srvVersion,SIGNED INTEGER) >= 1600000) AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+//		doCleanup("
+//			update asemon_error_info2
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( CONVERT(srvVersion,SIGNED INTEGER)*100 ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) DIV 1000) >= 1570 and (CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) >= 50 AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+
+//		//-------------------------------------------
+//		// asemon_error_info2
+//		//-------------------------------------------
+//		doCleanup("
+//			update asemon_error_info_save
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( ((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*100000) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) DIV 10*100) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) MOD 10) ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) < 1570050 or CONVERT(srvVersion,SIGNED INTEGER) >= 1600000) AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+//		doCleanup("
+//			update asemon_error_info_save
+//			   set serverAddTime = serverAddTime,
+//			       srvVersion    = CAST( ( CONVERT(srvVersion,SIGNED INTEGER)*100 ) AS char(30))
+//			where (CONVERT(srvVersion,SIGNED INTEGER) DIV 1000) >= 1570 and (CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) >= 50 AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+
+
+
+
+//		//--------------------------------------------------------------------
+//		// TEST SELECT for VersionUpdate to BIG  (interger columns)
+//		//--------------------------------------------------------------------
+//		doQuery("select count(*) from asemon_mda_info");
+//		doQuery("
+//			select distinct srvVersion, ((srvVersion DIV 1000)*100000) + ((srvVersion-((srvVersion DIV 1000)*1000)) DIV 10*100) + ((srvVersion-((srvVersion DIV 1000)*1000)) MOD 10)
+//			from asemon_mda_info
+//			where (srvVersion < 1570050 or srvVersion >= 1600000) AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+//		doQuery("
+//			select distinct srvVersion, srvVersion*100
+//			from asemon_mda_info
+//			where (srvVersion DIV 1000) >= 1570 and (srvVersion-((srvVersion DIV 1000)*1000)) >= 50 AND srvVersion < 100000000 AND srvVersion > 0
+//		");
+//		//--------------------------------------------------------------------
+//		// TEST SELECT for VersionUpdate to BIG  (CHAR columns)
+//		//--------------------------------------------------------------------
+//		doQuery("select count(*) from asemon_error_info");
+//		doQuery("
+//			select distinct CONVERT(srvVersion,SIGNED INTEGER), ((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*100000) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) DIV 10*100) + ((CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) MOD 10)
+//			from asemon_error_info
+//			where (CONVERT(srvVersion,SIGNED INTEGER) < 1570050 or CONVERT(srvVersion,SIGNED INTEGER) >= 1600000) AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+//		doQuery("
+//			select distinct CONVERT(srvVersion,SIGNED INTEGER), CONVERT(srvVersion,SIGNED INTEGER)*100
+//			from asemon_error_info
+//			where (CONVERT(srvVersion,SIGNED INTEGER) DIV 1000) >= 1570 and (CONVERT(srvVersion,SIGNED INTEGER)-((CONVERT(srvVersion,SIGNED INTEGER) DIV 1000)*1000)) >= 50 AND CONVERT(srvVersion,SIGNED INTEGER) < 100000000 AND CONVERT(srvVersion,SIGNED INTEGER) > 0
+//		");
+
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

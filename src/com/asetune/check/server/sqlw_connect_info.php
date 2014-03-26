@@ -39,7 +39,7 @@
 	$jdbcDriver         = getUrlParam('jdbcDriver');
 	$jdbcUrl            = getUrlParam('jdbcUrl');
 
-	$srvVersionInt      = getUrlParam('srvVersionInt');
+	$srvVersionInt      = versionFix(getUrlParam('srvVersionInt'));
 	$srvName            = getUrlParam('srvName');
 	$srvUser            = getUrlParam('srvUser');
 	$srvCharsetName     = getUrlParam('srvCharsetName');

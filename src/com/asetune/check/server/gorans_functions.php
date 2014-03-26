@@ -110,7 +110,7 @@
 	//----------------------------------------
 	// FUNCTION: upgrade version from "small" version number to "big" version number
 	//----------------------------------------
-	function versionFix($version)
+	function versionFixOLD($version)
 	{
 		// If the input is empty, lets just return with nothing...
 		if (strlen($version) == 0)
@@ -149,11 +149,150 @@
 		}
 	}
 
+	//----------------------------------------
+	// FUNCTION: upgrade version from "small" version number to "big" version number
+	// short  version: 12540     len=5, (Major[##] Minor[#] Maint[#] Esd[#])
+	// medium version: 1570100   len=7, (Major[##] Minor[#] Maint[#] SP[###])         if before 15.7 SP, then SP will have '123' 1=zero, 2=ESD Level, 3=ESD PathLevel (esd#4.2)
+	// long   version: 160000101 len=5, (Major[##] Minor[#] Maint[#] SP[###] PL[##])  new stuff... for older esd[x.y]. x partwill be held by the 3 digit SP, y part will be held by PL
+	//----------------------------------------
+//NOTE: NOT READY YET
+// test it with: http://www.asemon.se/db_cleanup.php?doAction=testVersion&version=1570100
+	function versionFix($version)
+	{
+		// If the input is empty, lets just return with nothing...
+		if (strlen($version) == 0)
+			return $version;
+
+		// If the input is a number below 0: do nothing its a offline-read session
+		if ($version < 0)
+			return $version;
+
+		// If version is to "short" expand it to 5 characters
+		while (strlen($version) < 5)
+			$version = $version . "0";
+
+//echo "VER = '" . $version . "'<br>";
+//echo "LEN = " . strlen($version) . "<br>";
+		// if its a "short" version, convert it to a "long" version (AseTune version 3.2.0 and older)
+		if (strlen($version) < 7)
+		{
+//echo "xxxxx < 7 <br>";
+			// Upgrade version from 12503 to 125000300
+			// keep first 4 numbers
+			// the last number we will expand to 3 numbers (esd#4->040, esd#4.2->042)
+			// this to be able to handle SAP/Sybase New Version strings with Service Packs (ASE 15.7.0 SP101 will be 1570101)
+			$baseVersion = substr($version, 0, 4);
+			$esdVersion  = substr($version, 4);
+
+			if      (strlen($esdVersion) == 1) $esdVersion = "00" . $esdVersion;
+			else if (strlen($esdVersion) == 2) $esdVersion = "0" . $esdVersion;
+			else if (strlen($esdVersion) == 3) $esdVersion = $esdVersion;
+			else $esdVersion = substr($esdVersion, 0, 3);
+
+			$plVersion = "00";
+			$version = $baseVersion . $esdVersion . $plVersion;
+
+			return $version;
+		}
+
+		// if its a "medium" version, convert it to a "long" version (AseTune version 3.3.x)
+		// xxyzppp -> xxyzpppll
+		if (strlen($version) < 9)
+		{
+//echo "YYYYY < 9 <br>";
+			// Upgrade version from 1250030 to 125000300
+			// Upgrade version from 1570050 to 157005000
+			// Upgrade version from 1570100 to 157010000
+			// Upgrade version from 1570120 to 157012000
+			// keep first 4 numbers
+			// the last number we will expand to 5 numbers (esd#4->00400, esd#4.2->00402)
+			// this to be able to handle SAP/Sybase New Version strings with Service Packs and Patch Level
+			//      ASE 12.5.4 ESD#10.1  will be 125401001
+			//      ASE 15.5.0 ESD#5.2   will be 155000502
+			//      ASE 15.7.0 ESD#4.2   will be 157000402
+			//      ASE 15.7.0 SP51      will be 157005100
+			//      ASE 15.7.0 SP100     will be 157010000
+			//      ASE 15.7.0 SP120     will be 157012000
+			//      ASE 15.7.0 SP01 PL01 will be 157000101
+			$baseVersion = substr($version, 0, 4);
+			$spVersion = substr($version, 4);
+			$plVersion = "00";
+
+			$baseVersionInt = intval($baseVersion);
+			$spVersionInt   = intval($spVersion);
+//echo "baseVersionInt = " . $baseVersionInt . "<br>";
+//echo "spVersionInt   = " . $spVersionInt . "<br>";
+
+
+			if ($baseVersionInt >= 1600)
+			{
+				$spVersion = substr($version, 4, 3);
+				$plVersion = "00";
+			}
+			else if ($baseVersionInt >= 1570 && $spVersionInt >= 50) // if 15.7 SP50 or above (this is where we started with SP)
+			{
+				$spVersion = substr($version, 4, 3);
+				$plVersion = "00";
+			}
+			else // Convert ESD#x.y for PRE 15.7 servers
+			{
+				$spVersion = "00" . substr($version, 5, 1);
+				$plVersion = "0"  . substr($version, 6, 1);
+			}
+
+			$version = $baseVersion . $spVersion . $plVersion;
+
+			return $version;
+		}
+		else // Do nothing if already at the new "big" version (or chop it off after  9 chars if it's to long)
+		{
+			return substr($version, 0, 9);
+		}
+	}
+	// SQL UPDATE:
+	//
+	// Upgrade version from 1250030 to 125000300
+	// Upgrade version from 1570050 to 157005000
+	// Upgrade version from 1570100 to 157010000
+	// Upgrade version from 1570120 to 157012000
+	//
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 100000000 AND srvVersion > 0");
+//		doCleanup("update asemon_mda_info         set serverAddTime = serverAddTime, srvVersion = ((srvVersion DIV 10 * 1000) + ((srvVersion % 10)*10))   WHERE srvVersion < 100000000 AND srvVersion > 0");
+
+		// FIX VERSION for CHAR columns
+//		doCleanup("update asemon_error_info       set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 100000000");
+//		doCleanup("update asemon_error_info2      set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 100000000");
+//		doCleanup("update asemon_error_info_save  set serverAddTime = serverAddTime, srvVersion = ((CONVERT(srvVersion,SIGNED INTEGER) DIV 10 * 1000) + ((CONVERT(srvVersion,SIGNED INTEGER) % 10)*10))   WHERE CONVERT(srvVersion,SIGNED INTEGER) < 100000000");
+
+        // FIX offline-read settings...
+//		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = -1   WHERE srvVersion < 0");
+
+
 
 	//----------------------------------------
 	// FUNCTION: htmlResultset
 	//----------------------------------------
-	function htmlResultset($result, $headName, $colNameForNewLine='')
+	function versionDisplay($version)
+	{
+		if ( ! is_numeric($version) )
+			return $version;
+
+		if (strlen($version) == 9)
+		{
+			$baseVersion = substr($version, 0, 4);
+			$spVersion   = substr($version, 4, 3);
+			$plVersion   = substr($version, 7);
+
+			return $baseVersion . " " . $spVersion . " " . $plVersion;
+		}
+
+		return $version;
+	}
+
+	//----------------------------------------
+	// FUNCTION: htmlResultset
+	//----------------------------------------
+	function htmlResultset($userIdCache, $result, $headName, $colNameForNewLine='')
 	{
 		$colIdForNewLine = -1;
 		$fields_num = mysql_num_fields($result);
@@ -218,8 +357,31 @@
 				else if ( $colname == "sapUserName" )
 					echo "<td nowrap><A HREF=\"https://sapneth1.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=DISPLAY&00200682500000002187=" . $cell . "\" target=\"_blank\">$cell</A></td>";
 
-//				else if ( $colname == "user_name" )
-//					echo "<td nowrap><A HREF=\"https://sapneth1.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=DISPLAY&00200682500000002187=" . $cell . "\" target=\"_blank\">$cell</A></td>";
+				else if ( $colname == "user_name" || $colname == "userName" )
+				{
+					// if SAP user, then link to the description page()
+					if (preg_match("/[iIdD][0-9][0-9][0-9][0-9][0-9][0-9]/", $cell))
+					{
+						$userName = $userIdCache[ strtoupper($cell) ];
+						if ( ! empty($userName) )
+							$userName = " (" . $userName . ")";
+
+						echo "<td nowrap>";
+						echo "<A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A>";
+						echo ", SAP: <A HREF=\"https://people.wdf.sap.corp/profiles/" . $cell . "\" target=\"_blank\">$cell</A>";
+						echo $userName;
+						echo "</td>";
+					}
+					else
+					{
+						echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
+//						$cellCont = nl2br($cell, false);
+//						echo "<td nowrap>$cellCont</td>";
+					}
+				}
+
+				else if ( $colname == "deleteUserIdDesc" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?userId_key=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "userNameUsage" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
@@ -257,14 +419,14 @@
 				else if ( $colname == "getConnectForDomain" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?getConnectForDomain=" . $cell . "\">$cell</A></td>";
 
-				else if ( $colname == "srvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">$cell</A></td>";
+				else if ( $colname == "srvVersion" || $colname == "srvVersionInt" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "deleteSrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "verifySrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
