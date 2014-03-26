@@ -230,6 +230,9 @@ public class QueryWindow
 
 	public final static String  PROPKEY_APP_PREFIX             = "QueryWindow.";
 
+	public final static String  PROPKEY_showAppNameInTitle     = PROPKEY_APP_PREFIX + "showAppNameInTitle";
+	public final static boolean DEFAULT_showAppNameInTitle     = true;
+
 	public final static String  PROPKEY_saveBeforeExecute      = PROPKEY_APP_PREFIX + "saveBeforeExecute";
 	public final static boolean DEFAULT_saveBeforeExecute      = true;
 	
@@ -463,6 +466,7 @@ public class QueryWindow
 
 	private JMenu               _preferences_m          = new JMenu("Preferences");
 	private JCheckBoxMenuItem   _prefWinOnConnect_mi    = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
+	private JCheckBoxMenuItem   _prefShowAppNameInTitle_mi = new JCheckBoxMenuItem("Show '"+APP_NAME+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
 	//---------------------------------------
 
 	// Tools
@@ -822,6 +826,16 @@ public class QueryWindow
 
 			_view_m.add(_preferences_m);
 			_preferences_m.add(_prefWinOnConnect_mi);
+			_preferences_m.add(_prefShowAppNameInTitle_mi);
+			
+			_prefShowAppNameInTitle_mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					saveProps();
+				}
+			});
 			
 			_ase_viewConfig_mi     .setVisible(false);
 			_rs_configChangedDdl_mi.setVisible(false);
@@ -1154,6 +1168,12 @@ public class QueryWindow
 			"Restore Window size and position, based on the connected server name.<br>" +
 			"This simply means, when a new connection is made, the last known Window Properties will be restored for that connection name.<br>" +
 			"</html>");
+
+		_prefShowAppNameInTitle_mi.setToolTipText(
+				"<html>" +
+				"Show Application Name as a prefix in the Window Title bar.<br>" +
+				"If this is disabled, the only the connected server name will be in the title.<br>" +
+				"</html>");
 
 		try {_appOptions_but = createAppOptionButton(null);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'Application Options' button.",ex);}
@@ -1525,6 +1545,7 @@ public class QueryWindow
 		_lastFileNameSaveMax =                   conf.getIntProperty(    PROPKEY_lastFileNameSaveMax,    DEFAULT_lastFileNameSaveMax);
 		_fSaveBeforeExec_mi        .setSelected( conf.getBooleanProperty(PROPKEY_saveBeforeExecute,      DEFAULT_saveBeforeExecute) );
 		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,  DEFAULT_restoreWinSizeForConn) );
+		_prefShowAppNameInTitle_mi .setSelected( conf.getBooleanProperty(PROPKEY_showAppNameInTitle,     DEFAULT_showAppNameInTitle) );
 		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,            DEFAULT_asPlainText) );
 		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,           DEFAULT_showRowCount) );
 		_limitRsRowsRead_chk       .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,        DEFAULT_limitRsRowsRead) );
@@ -1557,6 +1578,7 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_lastFileNameSaveMax,    _lastFileNameSaveMax);
 		conf.setProperty(PROPKEY_saveBeforeExecute,      _fSaveBeforeExec_mi        .isSelected());
 		conf.setProperty(PROPKEY_restoreWinSizeForConn,  _prefWinOnConnect_mi       .isSelected());
+		conf.setProperty(PROPKEY_showAppNameInTitle,     _prefShowAppNameInTitle_mi .isSelected());
 		conf.setProperty(PROPKEY_asPlainText,            _asPlainText_chk           .isSelected());
 		conf.setProperty(PROPKEY_showRowCount,           _showRowCount_chk          .isSelected());
 		conf.setProperty(PROPKEY_limitRsRowsRead,        _limitRsRowsRead_chk       .isSelected());	
@@ -1885,6 +1907,10 @@ public class QueryWindow
 		String title = _titlePrefix;
 		if (srvStr != null)
 			title += " - " + srvStr;
+
+		boolean showAppNameInTitle = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showAppNameInTitle, DEFAULT_showAppNameInTitle);
+		if ( ! showAppNameInTitle )
+			title = StringUtil.hasValue(srvStr) ? srvStr : "unknown";
 		
 		if (_jframe  != null) _jframe .setTitle(title);
 		if (_jdialog != null) _jdialog.setTitle(title);

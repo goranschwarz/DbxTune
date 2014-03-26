@@ -555,7 +555,8 @@ implements ActionListener, FocusListener //, ChangeListener
 		panel   .setToolTipText("Details View of what this command does");
 		_cmd_txt.setToolTipText("<html>Read only view, to edit the command please press <b>change</b></html>");
 		
-		_cmd_txt.setEnabled(false);
+//		_cmd_txt.setEnabled(false);
+		_cmd_txt.setEditable(false);
 
 		panel.add(createInfoPanel(),      "span, growx, pushx, wrap");
 		panel.add(_cmd_scroll,            "span, grow, push, wrap");
