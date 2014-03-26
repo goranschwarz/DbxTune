@@ -24,6 +24,7 @@ import com.asetune.cm.ase.gui.CmSummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -182,7 +183,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,0,3,3), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -193,7 +195,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -204,7 +207,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -215,7 +219,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -226,7 +231,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -237,7 +243,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -248,7 +255,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -259,7 +267,8 @@ extends CountersModel
 				false,   // is Percent Graph
 				this, 
 				false,   // visible at start
-				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);     // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -386,14 +395,16 @@ extends CountersModel
 		
 		// Allow This CM to read monState even if 'enable monitoring' is turned off...
 		setNonConfiguredMonitoringAllowed(false); // to reset this if we disconnects from SP100, and connects to a lower version
-		if (aseVersion >= 1570100)
+//		if (aseVersion >= 1570100)
+		if (aseVersion >= Ver.ver(15,7,0,100))
 		{
 			setNonConfiguredMonitoringAllowed(true);
 		}
 
 
 		String utcTimeDiff = "";
-		if (aseVersion >= 1254000)
+//		if (aseVersion >= 1254000)
+		if (aseVersion >= Ver.ver(12,5,4))
 		{
 			utcTimeDiff = ", utcTimeDiff        = datediff(mi, getutcdate(), getdate()) \n";
 		}
@@ -457,7 +468,8 @@ extends CountersModel
 			cols1 += ", StartDate           = min(StartDate) \n";
 			cols1 += ", CountersCleared     = max(CountersCleared) \n";
 			
-			if (aseVersion >= 1570100)
+//			if (aseVersion >= 1570100)
+			if (aseVersion >= Ver.ver(15,7,0,100))
 			{
 				cols1 += ", Rollbacks          = sum(Rollbacks) \n";	
 				cols1 += ", Selects            = sum(Selects) \n";
@@ -493,7 +505,8 @@ extends CountersModel
 
 				", bootcount          = @@bootcount \n" + // from 12.5.0.3
 //				", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
-				", recovery_state     = "+ (aseVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+//				", recovery_state     = "+ (aseVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+				", recovery_state     = "+ (aseVersion >= Ver.ver(12,5,1) ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
 
 				", cpu_busy           = @@cpu_busy \n" +
 				", cpu_io             = @@io_busy \n" +
@@ -674,7 +687,8 @@ extends CountersModel
 				transactions_pos = getCounterDataAbs().findColumn("Transactions");
 			
 			// if you don't have 'mon_role', the column 'Transactions' is not part of the result set even if we are above 15.0.3 ESD#3
-			if ( aseVersion < 1503030 || transactions_pos == -1 )
+//			if ( aseVersion < 1503030 || transactions_pos == -1 )
+			if ( aseVersion < Ver.ver(15,0,3,3) || transactions_pos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TRANSACTION);
@@ -687,7 +701,8 @@ extends CountersModel
 			}
 			else
 			{
-				if ( aseVersion >= 1570100 )
+//				if ( aseVersion >= 1570100 )
+				if ( aseVersion >= Ver.ver(15,7,0,100) )
 				{
 					Double[] dArray = new Double[2];
 					String[] lArray = new String[] { "Transactions", "Rollbacks" };
@@ -727,7 +742,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("Selects");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_SELECT_OPERATIONS);
@@ -761,7 +777,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("Inserts");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_IUDM_OPERATIONS);
@@ -798,7 +815,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("TableAccesses");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TAB_IND_ACCESS);
@@ -833,7 +851,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("TempDbObjects");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TEMPDB_ACCESS);
@@ -868,7 +887,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("ULCFlushes");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ULC);
@@ -904,7 +924,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("PagesRead");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_IO_RW);
@@ -941,7 +962,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("LogicalReads");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-			if ( aseVersion < 1570100 || col_pos == -1 )
+//			if ( aseVersion < 1570100 || col_pos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_LOGICAL_READ);

@@ -12,6 +12,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmSysmonPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -127,14 +128,16 @@ extends CountersModel
 	{
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
 
 		String discardSpinlocks = "group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0')";
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 			discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
 
 		String sql =   

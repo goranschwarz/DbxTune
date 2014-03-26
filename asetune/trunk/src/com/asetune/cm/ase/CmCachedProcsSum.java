@@ -18,6 +18,7 @@ import com.asetune.cm.ase.gui.CmCachedProcsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -40,7 +41,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 1550000;
+//	public static final int      NEED_SRV_VERSION = 1550000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,5);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedProcedures"};
@@ -112,7 +114,8 @@ extends CountersModel
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		if (srvVersion >= 1570000)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 			return NEED_CONFIG;
 
 		return new String[] {"per object statistics active=1"};
@@ -184,7 +187,8 @@ extends CountersModel
 		String AvgPhysicalWrites = ""; // xxx / ExecutionCount
 		String AvgPagesWritten   = ""; // xxx / ExecutionCount
 
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			SumExecutionCount = "  SumExecutionCount     = sum(convert(bigint,ExecutionCount)), \n";
 			SumCPUTime        = "  SumCPUTime            = sum(convert(bigint,CPUTime)), \n";
@@ -206,7 +210,8 @@ extends CountersModel
 		String SumActive      = ""; // Indicates whether the plan for this procedure is active or not
 		String ase1600_nl     = "";
 
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			SumActive      = "  SumActive = sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END), ";
 			ase1600_nl     = "\n";
@@ -340,7 +345,8 @@ extends CountersModel
 	public String[] getDdlDetailsSortOnColName()
 	{
 //		if (getServerVersion() < 15500)
-		if (getServerVersion() < 1550000)
+//		if (getServerVersion() < 1550000)
+		if (getServerVersion() < Ver.ver(15,5))
 			return null;
 
 		String[] sa = {"SumRequestCntDiff"};

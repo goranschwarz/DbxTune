@@ -9,6 +9,7 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -101,6 +102,7 @@ extends CountersModel
 		// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
 		//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
 		//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
+		//if (getServerVersion() >= Ver.ver(15,0,3,1)) // NOTE this is done early in initialization, so getServerVersion() can't be used
 		msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
 
 		return msgHandler;
@@ -132,7 +134,8 @@ extends CountersModel
 			"where W.WaitEventID=I.WaitEventID \n" + 
 			"  and I.WaitClassID=C.WaitClassID \n";
 
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			sql += "  and C.Language = 'en_US' \n";
 			sql += "  and I.Language = 'en_US' \n";

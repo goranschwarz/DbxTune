@@ -9,6 +9,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.utils.Ver;
+
 
 public class CountersModelUserDefined
     extends CountersModel
@@ -67,9 +69,10 @@ public class CountersModelUserDefined
 				if (srvVersion >= sqlVersionNumInKey)
 				{
 //					if (sqlVersionNumInKey < 12503)
-					if (sqlVersionNumInKey < 1250030)
+//					if (sqlVersionNumInKey < 1250030)
+					if (sqlVersionNumInKey < Ver.ver(12,5,0,3))
 					{
-						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is 1250030 (which is Ase Version 12.5.0.3 in a numbered format, (1250030 is new to be able to support ServicePackage, so for version '15.7.0 SP100'=1570100, '15.7.0 ESD#4'=1570040, '15.7.0 ESD#4.2'=1570042) ), disregarding this entry.");
+						_logger.warn("Reading User Defined Counter '"+getName()+"' with specialized sql for version number '"+sqlVersionNumInKey+"'. First version number that we support is "+Ver.ver(12,5,0,3)+" (which is Ase Version 12.5.0.3 in a numbered format, ("+Ver.ver(12,5,0,3)+" is new to be able to support ServicePackage, so for version '15.7.0 SP100'="+Ver.ver(15,7,0,100)+", '15.7.0 ESD#4'="+Ver.ver(15,7,0,4)+", '15.7.0 ESD#4.2'="+Ver.ver(12,7,0,4,2)+") ), disregarding this entry.");
 					}
 					else
 					{

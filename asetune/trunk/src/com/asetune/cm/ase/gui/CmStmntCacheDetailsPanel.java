@@ -14,6 +14,7 @@ import com.asetune.cm.ase.CmStmntCacheDetails;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 public class CmStmntCacheDetailsPanel
 extends TabularCntrPanel
@@ -155,7 +156,8 @@ extends TabularCntrPanel
 		{
 			boolean enabled = false;
 //			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 15700)
-			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 1570000)
+//			if (cm.isRuntimeInitialized() && cm.getServerVersion() >= 1570000)
+			if ( cm.isRuntimeInitialized() && cm.getServerVersion() >= Ver.ver(15,7) )
 				enabled = true;
 
 			sampleXmlPlan_chk.setEnabled(enabled);

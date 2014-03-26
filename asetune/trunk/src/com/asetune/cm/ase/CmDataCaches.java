@@ -19,6 +19,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.SamplingCnt;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -187,7 +188,8 @@ extends CountersModel
 		String Overhead            = "";
 
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			Status              = "Status, ";
 			Type                = "Type, ";

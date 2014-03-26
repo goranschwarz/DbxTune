@@ -22,6 +22,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -300,7 +301,8 @@ extends CountersModel
 		String QuiesceTag         = "";
 		String SuspendedProcesses = "";
 //		if (aseVersion >= 12510)
-		if (aseVersion >= 1251000)
+//		if (aseVersion >= 1251000)
+		if (aseVersion >= Ver.ver(12,5,1))
 		{
 			QuiesceTag         = "od.QuiesceTag, ";
 			SuspendedProcesses = "od.SuspendedProcesses, ";
@@ -316,7 +318,8 @@ extends CountersModel
 		String PRSRewriteCount = "";
 		String nl_15702        = "";
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			PRSUpdateCount  = "od.PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
 			PRSSelectCount  = "od.PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
@@ -379,11 +382,13 @@ extends CountersModel
 		cols2 += "";
 		cols3 += QuiesceTag;
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 		}
 //		if (aseVersion >= 15025)
-		if (aseVersion >= 1502050)
+//		if (aseVersion >= 1502050)
+		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2 += "od.LastTranLogDumpTime, od.LastCheckpointTime, ";
 		}

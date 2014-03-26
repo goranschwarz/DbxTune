@@ -22,6 +22,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class MonTablesDictionary
@@ -51,7 +52,7 @@ public class MonTablesDictionary
 	/** ASE @@version string */
 	private String _aseVersionStr = "";
 
-	/** Calculate the @@version into a number. example: 12.5.4 -> 1254000 (15.7.0 SP100: 1570100)*/
+	/** Calculate the @@version into a number. example: 12.5.4 -> 125400000 (15.7.0 SP100: 157010000), 16.0 SP01 PL01 = 160000101 */
 	private int    _aseVersionNum = 0;
 
 	/** If the version string contained the string 'Cluster Edition', this member will be true. */
@@ -60,7 +61,7 @@ public class MonTablesDictionary
 	/** ASE sp_version 'installmontables' string */
 	private String _montablesVersionStr = "";
 
-	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 1254000 */
+	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 125400000 */
 	private int    _montablesVersionNum = 0;
 
 	/** sp_version 'installmontables' Status string */
@@ -69,7 +70,7 @@ public class MonTablesDictionary
 	/** ASE sp_version 'installmaster' string */
 	private String _installmasterVersionStr = "";
 
-	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 1254000 */
+	/** Calculate the sp_version 'installmontables' into a number. example: 12.5.4 -> 125400000 */
 	private int    _installmasterVersionNum = 0;
 
 	/** sp_version 'installmontables' Status string */
@@ -125,7 +126,8 @@ public class MonTablesDictionary
 		int version = _montablesVersionNum; 
 
 //		if (_aseVersionNum >= 15020)
-		if (_aseVersionNum >= 1502000)
+//		if (_aseVersionNum >= 1502000)
+		if (_aseVersionNum >= Ver.ver(15,0,2))
 			version = _installmasterVersionNum;
 
 		// If _installmasterVersionNum or _montablesVersionNum is 0
@@ -282,7 +284,8 @@ public class MonTablesDictionary
 			if ( ! offline )
 			{
 //				if (_aseVersionNum >= 15700)
-				if (_aseVersionNum >= 1570000)
+//				if (_aseVersionNum >= 1570000)
+				if (_aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US' ";
 
 				sql = sql.replace("\"", "");
@@ -344,7 +347,8 @@ public class MonTablesDictionary
 				if ( ! offline )
 				{
 //					if (_aseVersionNum >= 15700)
-					if (_aseVersionNum >= 1570000)
+//					if (_aseVersionNum >= 1570000)
+					if (_aseVersionNum >= Ver.ver(15,7))
 						sql += " and Language = 'en_US' ";
 
 					sql = sql.replace("\"", "");
@@ -496,7 +500,8 @@ public class MonTablesDictionary
 			{
 				sql = SQL_MON_WAIT_CLASS_INFO_1;
 //				if (_aseVersionNum >= 15700)
-				if (_aseVersionNum >= 1570000)
+//				if (_aseVersionNum >= 1570000)
+				if (_aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
@@ -511,7 +516,8 @@ public class MonTablesDictionary
 
 				sql = SQL_MON_WAIT_CLASS_INFO;
 //				if (_aseVersionNum >= 15700)
-				if (_aseVersionNum >= 1570000)
+//				if (_aseVersionNum >= 1570000)
+				if (_aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US'";
 				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -542,7 +548,8 @@ public class MonTablesDictionary
 			{
 				sql = SQL_MON_WAIT_EVENT_INFO_1;
 //				if (_aseVersionNum >= 15700)
-				if (_aseVersionNum >= 1570000)
+//				if (_aseVersionNum >= 1570000)
+				if (_aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US'";
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
@@ -557,7 +564,8 @@ public class MonTablesDictionary
 	
 				sql = SQL_MON_WAIT_EVENT_INFO;
 //				if (_aseVersionNum >= 15700)
-				if (_aseVersionNum >= 1570000)
+//				if (_aseVersionNum >= 1570000)
+				if (_aseVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US'";
 				rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -726,7 +734,8 @@ public class MonTablesDictionary
 		//------------------------------------
 		// sp_version
 //		if (_aseVersionNum >= 12540)
-		if (_aseVersionNum >= 1254000)
+//		if (_aseVersionNum >= 1254000)
+		if (_aseVersionNum >= Ver.ver(12,5,4))
 		{
 			try
 			{
@@ -832,7 +841,7 @@ public class MonTablesDictionary
 					return;
 				}
 			}
-		} // end: if (aseVersionNum >= 1254000)
+		} // end: if (aseVersionNum >= 12.5.4)
 
 		_logger.info("ASE 'montables'     for sp_version shows: Status='"+_montablesStatus    +"', VersionNum='"+_montablesVersionNum    +"', VersionStr='"+_montablesVersionStr+"'.");
 		_logger.info("ASE 'installmaster' for sp_version shows: Status='"+_installmasterStatus+"', VersionNum='"+_installmasterVersionNum+"', VersionStr='"+_installmasterVersionStr+"'.");
@@ -854,10 +863,13 @@ public class MonTablesDictionary
 		// is installed monitor tables version different than ASE version
 		if (_montablesVersionNum > 0)
 		{
+			//System.out.println("_aseVersionNum/1000='"+(_aseVersionNum/1000)+"', _montablesVersionNum/1000='"+(_montablesVersionNum/1000)+"'.");
+			//System.out.println("_aseVersionNum/100000='"+(_aseVersionNum/100000)+"', _montablesVersionNum/10000='"+(_montablesVersionNum/10000)+"'.");
+
 			// strip off the ROLLUP VERSION  (divide by 10 takes away last digit)
 //			if (_aseVersionNum/10 != _montablesVersionNum/10)
-//System.out.println("_aseVersionNum/1000='"+(_aseVersionNum/1000)+"', _montablesVersionNum/1000='"+(_montablesVersionNum/1000)+"'.");
-			if (_aseVersionNum/1000 != _montablesVersionNum/1000)
+//			if (_aseVersionNum/1000 != _montablesVersionNum/1000)
+			if (_aseVersionNum/100000 != _montablesVersionNum/100000) // Ver.ver(...) can we use that in some way here... if VER "length" changes the xx/100000 needs to be changed
 			{
 				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"' while MonTables version is '"+AseConnectionUtils.versionIntToStr(_montablesVersionNum)+"'. Please check it's status with: sp_version";
 				if (_hasGui)

@@ -19,6 +19,7 @@ import com.asetune.cm.ase.gui.CmCachedObjectsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -217,7 +218,8 @@ extends CountersModel
 		pkCols.add("IndexID");
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
 		pkCols.add("CacheID");
@@ -267,7 +269,8 @@ extends CountersModel
 		String TableCachedPct    = "";
 		String TotalSizeKB_where = "";
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 		{
 			TableCachedPct    = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
 			TotalSizeKB_where = "  and M.TotalSizeKB > 0 \n";
@@ -279,11 +282,13 @@ extends CountersModel
 		         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
 
 //		if (aseVersion >= 15504) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
-		if (aseVersion >= 1550040) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+//		if (aseVersion >= 1550040) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+		if (aseVersion >= Ver.ver(15,5,0,4)) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
 			cols2 += "M.ProcessesAccessing, \n";
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 			cols2 += "M.PartitionID, M.PartitionName, M.TotalSizeKB, TotalSizeKBDiff=M.TotalSizeKB, \n";
 
 		String sql = 

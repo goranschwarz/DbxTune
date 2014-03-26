@@ -14,6 +14,7 @@ import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -42,7 +43,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15031;
-	public static final int      NEED_SRV_VERSION = 1503010;
+//	public static final int      NEED_SRV_VERSION = 1503010;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,3,1);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"sysstatistics"};

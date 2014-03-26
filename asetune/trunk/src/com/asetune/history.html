@@ -28,6 +28,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>ASE 16.0 support</b><br>
 	Here is the big picture of what has been added for ASE 16.0
 	<ul>
+	   <li>Version String in 16 has been changed again. SP### will now be SP## PL##. So ServicePack and PachLevel has been separated.<br>
+	       Changes in AseTune was also made to the internal version "integer" which holds the parsed version number.</li>
 	   <li>Tool 'Configure ASE for Monitoring': added parameters 'threshold event monitoring', 'threshold event max messages' </li> 
 	   <li>Processes: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
 	   <li>Active Statements: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
@@ -272,6 +274,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>If you click on a (error) message in the output window, the cursor will be moved in the SQL Text, which was responsible for the error message.</li>
        <li>If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
        <li>Added ASE Set option 'set statistics *_html', which enables/disables ALL options for HTML Statistics output.</li>
+       <li>After the sql.ini/interfaces file has been changed via the "edit" button: Select the last edited entry as the new server.</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>

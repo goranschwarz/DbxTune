@@ -19,6 +19,7 @@ import com.asetune.cm.ase.gui.CmIoQueueSumPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -169,7 +170,8 @@ extends CountersModel
 		         "  ELSE convert(numeric(18,1), null) \n" +
 		         "END";
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 		}
 

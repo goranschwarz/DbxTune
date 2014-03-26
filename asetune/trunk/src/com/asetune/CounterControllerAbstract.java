@@ -340,16 +340,19 @@ implements ICounterController
 //
 //		// Get some specific configurations
 ////		if (aseVersion >= 15031)
-//		if (aseVersion >= 1503010)
+////		if (aseVersion >= 1503010)
+//		if (aseVersion >= Ver.ver(15,0,3,1))
 //			_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
 //
 ////		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
+////		if (aseVersion >= 1502000)
+//		if (aseVersion >= Ver.ver(15,0,2))
 //			_config_enableMetricsCapture = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable metrics capture");
 //
 //		_config_threadedKernelMode = false;
 ////		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
+////		if (aseVersion >= 1570000)
+//		if (aseVersion >= Ver.ver(15,7))
 //		{
 //			String kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
 //			_config_threadedKernelMode = "threaded".equals(kernelMode);
@@ -359,7 +362,8 @@ implements ICounterController
 //		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 //		// This will hurt performance, especially when querying sysmonitors table, so set this to off
 ////		if (aseVersion >= 15031)
-//		if (aseVersion >= 1503010)
+////		if (aseVersion >= 1503010)
+//		if (aseVersion >= Ver.ver(15,0,3,1))
 //			AseConnectionUtils.setCompatibilityMode(conn, false);
 //
 //		// initialize all the CM's
@@ -476,7 +480,8 @@ implements ICounterController
 ////				 || aseVersion >= 15500 && aseVersion <= 15501
 ////			   )
 ////			if ( aseVersion >= 15031 && aseVersion < 16000 )
-//			if ( aseVersion >= 1503010 && aseVersion < 1600000 )
+////			if ( aseVersion >= 1503010 && aseVersion < 1600000 )
+//			if ( aseVersion >= Ver.ver(15,0,3,1) && aseVersion < Ver.ver(16,0) )
 //			{
 //				if (_config_captureMissingStatistics || _config_enableMetricsCapture)
 //				{

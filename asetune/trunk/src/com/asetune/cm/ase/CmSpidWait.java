@@ -32,6 +32,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -213,7 +214,8 @@ extends CountersModel
 
 //		if (aseVersion >= 15056)
 //		if (aseVersion >= 1505060)
-		if (aseVersion >= 1502030)
+//		if (aseVersion >= 1502030)
+		if (aseVersion >= Ver.ver(15,0,2,3))
 			UserName = "UserName = suser_name(W.ServerUserID), ";
 
 		cols = InstanceID + "W.SPID, W.KPID, " + UserName + "\n" +

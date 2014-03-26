@@ -23,6 +23,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -291,11 +292,13 @@ extends CountersModel
 		String ase1570_SP100_nl    = ""; // NL for this section
 
 //		if (aseVersion >= 15000)
-		if (aseVersion >= 1500000)
+//		if (aseVersion >= 1500000)
+		if (aseVersion >= Ver.ver(15,0))
 			bigint = "bigint";
 
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
@@ -324,7 +327,8 @@ extends CountersModel
 			}
 		}
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			SharedLockWaitTime    = "SharedLockWaitTime, ";
 			ExclusiveLockWaitTime = "ExclusiveLockWaitTime, ";
@@ -334,7 +338,8 @@ extends CountersModel
 			ase15700_nl           = "\n"; // NL for this section
 		}
 
-		if (aseVersion >= 1570100)
+//		if (aseVersion >= 1570100)
+		if (aseVersion >= Ver.ver(15,7,0,100))
 		{
 			NumLevel0Waiters    = "NumLevel0Waiters, ";
 			AvgLevel0WaitTime   = "AvgLevel0WaitTime, ";
@@ -348,7 +353,8 @@ extends CountersModel
 		String HkgcOverflowsDcomp = "";
 		String nl_15701           = ""; // NL for this section
 //		if (aseVersion >= 15701)
-		if (aseVersion >= 1570010)
+//		if (aseVersion >= 1570010)
+		if (aseVersion >= Ver.ver(15,7,0,1))
 		{
 			HkgcRequestsDcomp  = "HkgcRequestsDcomp, ";
 			HkgcPendingDcomp   = "HkgcPendingDcomp, ";
@@ -367,7 +373,8 @@ extends CountersModel
 		String LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String nl_15702           = ""; // NL for this section
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "IOSize1Page, ";        // DO DIFF CALC
 			IOSize2Pages       = "IOSize2Pages, ";       // DO DIFF CALC
@@ -395,7 +402,8 @@ extends CountersModel
 		String LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
 		String nl_16000           = ""; // NL for this section
 
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			Scans              = "Scans, ";              // DO DIFF CALC
 			LastScanDate       = "LastScanDate, ";
@@ -462,17 +470,20 @@ extends CountersModel
 	//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 	// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
 		}
 //		if (aseVersion >= 15701)
-		if (aseVersion >= 1570010)
+//		if (aseVersion >= 1570010)
+		if (aseVersion >= Ver.ver(15,7,0,1))
 		{
 			cols2 += HkgcRequestsDcomp + HkgcPendingDcomp + HkgcOverflowsDcomp + nl_15701;
 		}
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			cols2 += PRSSelectCount + LastPRSSelectDate + PRSRewriteCount + LastPRSRewriteDate + nl_15702;
 		}
@@ -516,7 +527,8 @@ extends CountersModel
 		String ase15501_ce_nl            = ""; // NL for this section
 
 //		if ( aseVersion >= 15030 && isClusterEnabled )
-		if ( aseVersion >= 1503000 && isClusterEnabled )
+//		if ( aseVersion >= 1503000 && isClusterEnabled )
+		if ( aseVersion >= Ver.ver(15,0,3) && isClusterEnabled )
 		{
 			PhysicalLocks             = "PhysicalLocks, ";
 			PhysicalLocksRetained     = "PhysicalLocksRetained, ";
@@ -539,7 +551,8 @@ extends CountersModel
 			ase15030_ce_nl            = "\n";
 		}
 //		if ( aseVersion >= 15501 && isClusterEnabled )
-		if ( aseVersion >= 1550010 && isClusterEnabled )
+//		if ( aseVersion >= 1550010 && isClusterEnabled )
+		if ( aseVersion >= Ver.ver(15,5,0,1) && isClusterEnabled )
 		{
 			MaxPhysicalLockWaitTime   = "MaxPhysicalLockWaitTime, ";
 			MaxTransferReqWaitTime    = "MaxTransferReqWaitTime, ";

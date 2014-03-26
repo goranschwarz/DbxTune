@@ -7,6 +7,7 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -114,15 +115,18 @@ extends CountersModel
 				"LockState, LockType, LockLevel, ";
 		cols2 = "";
 		cols3 = "WaitTime, PageNumber, RowNumber";
-		if (aseVersion >= 1500020)
+//		if (aseVersion >= 1500020)
+		if (aseVersion >= Ver.ver(15,0,0,2))
 		{
 			cols2 = "BlockedState, BlockedBy, ";  //
 		}
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			cols3 += ", SourceCodeID";  //
 		}
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			cols3 += ", PartitionID";  //
 		}

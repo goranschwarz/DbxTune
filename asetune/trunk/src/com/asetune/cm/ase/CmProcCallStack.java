@@ -16,6 +16,7 @@ import com.asetune.cm.SamplingCnt;
 import com.asetune.cm.ase.gui.CmProcCallStackPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -111,7 +112,8 @@ extends CountersModel
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 //		if (srvVersion >= 15700)
-		if (srvVersion >= 1570000)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 			return NEED_CONFIG;
 
 		return new String[] {"enable monitoring=1"};
@@ -145,11 +147,16 @@ extends CountersModel
 
 		if (isClusterEnabled)    InstanceID      = "InstanceID, ";
 //		if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
-		if (aseVersion >= 1253000) LineNumber      = "LineNumber, ";
+//		if (aseVersion >= 1253000) LineNumber      = "LineNumber, ";
+		if (aseVersion >= Ver.ver(12,5,3)) LineNumber      = "LineNumber, ";
+
 //		if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
-		if (aseVersion >= 1502050) StatementNumber = "StatementNumber, ";
+//		if (aseVersion >= 1502050) StatementNumber = "StatementNumber, ";
+		if (aseVersion >= Ver.ver(15,0,2,5)) StatementNumber = "StatementNumber, ";
+		
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			ExecutionCount = "ExecutionCount, ";
 			CPUTime        = "CPUTime, ";

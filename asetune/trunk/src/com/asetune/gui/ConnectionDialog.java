@@ -3779,7 +3779,12 @@ if (_connProfileVisible_chk.isSelected())
 			if (rc != 999) // always do this
 			{
 				loadNewInterfaces( ifile );
-				_aseServer_cbx.setSelectedItem(currentSrvName);
+				
+				String lastEditSrv = ife.getLastEditServerEntry();
+				if (StringUtil.hasValue(lastEditSrv))
+					_aseServer_cbx.setSelectedItem(lastEditSrv);
+				else
+					_aseServer_cbx.setSelectedItem(currentSrvName);
 			}
 		}
 		
@@ -4201,6 +4206,9 @@ if (_connProfileVisible_chk.isSelected())
 						return;
 				}
 
+				// Update Connection Profile
+				updateConnectionProfile(OFFLINE_CONN);
+
 				// SET CONNECTION TYP and "CLOSE" the dialog
 				_connectionType = OFFLINE_CONN;
 				setVisible(false);
@@ -4214,6 +4222,9 @@ if (_connProfileVisible_chk.isSelected())
 					if ( ! jdbcConnect() )
 						return;
 				}
+
+				// Update Connection Profile
+				updateConnectionProfile(JDBC_CONN);
 
 				// SET CONNECTION TYP and "CLOSE" the dialog
 				_connectionType = JDBC_CONN;
@@ -4424,6 +4435,9 @@ if (_connProfileVisible_chk.isSelected())
 					_logger.warn("Could not determen stop/disconnect time, stop time will NOT be set.");
 				}
 
+				// Update Connection Profile
+				updateConnectionProfile(TDS_CONN);
+
 				// SET CONNECTION TYP and "CLOSE" the dialog
 				_connectionType = TDS_CONN;
 				setVisible(false);
@@ -4474,6 +4488,76 @@ if (_connProfileVisible_chk.isSelected())
 		updateSshTunnelDescription();
 		
 		validateContents();
+	}
+
+	private void updateConnectionProfile(int connType)
+	{
+//		// If the 'add on connect' option is not enabled, get out of here
+//		if ( ! _connProfile_addOnConnect.isSelected() )
+//			return;
+
+		String dbProduct = null;
+		try { dbProduct = getDatabaseProductName(); }
+		catch (SQLException ignore) {}
+
+		if (connType == TDS_CONN)
+		{
+			// Get host:port combination and use that as a key
+			String key = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
+
+			ConnectionProfile.TdsEntry tds = new ConnectionProfile.TdsEntry(); 
+			tds._tdsUsername      = _aseUser_txt  .getText();
+			tds._tdsPassword      = _asePasswd_txt.getText();
+			tds._tdsServer        = _aseServer_cbx.getSelectedItem().toString();
+			tds._tdsHosts         = _aseHost_txt  .getText();
+			tds._tdsPorts         = _asePort_txt  .getText();
+			tds._tdsDbname        = null;
+			tds._tdsLoginTimout   = Integer.parseInt(_aseLoginTimeout_txt.getText());
+			tds._tdsShhTunnelInfo = _aseSshTunnelInfo;
+			tds._tdsSqlInit       = _aseSqlInit_txt.getText();
+			tds._tdsUrlOptions    = _aseOptions_txt.getText();
+			tds._tdsUseUrl        = _aseConnUrl_chk.isSelected();
+			tds._tdsUseUrlStr     = _aseConnUrl_txt.getText(); // actual URL if _aseConnUrl_chk.isSelected is true
+
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, dbProduct, tds);
+		}
+		else if (connType == OFFLINE_CONN)
+		{
+			// Get JDBC URL and use that as a key
+			String key = _offlineJdbcUrl_cbx.getSelectedItem().toString();
+
+			ConnectionProfile.OfflineEntry offline = new ConnectionProfile.OfflineEntry(); 
+			offline._jdbcDriver   = _offlineJdbcDriver_cbx  .getSelectedItem().toString();
+			offline._jdbcUrl      = _offlineJdbcUrl_cbx     .getSelectedItem().toString();
+			offline._jdbcUsername = _offlineJdbcUsername_txt.getText();
+			offline._jdbcPassword = _offlineJdbcPassword_txt.getText();
+
+			offline._checkForNewSessions   = _offlineCheckForNewSessions_chk  .isSelected();
+			offline._H2Option_startH2NwSrv = _offlineH2Option_startH2NwSrv_chk.isSelected();
+
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, dbProduct, offline);
+		}
+		else if (connType == JDBC_CONN)
+		{
+			// Get JDBC URL and use that as a key
+			String key = _jdbcUrl_cbx.getSelectedItem().toString();
+
+			ConnectionProfile.JdbcEntry jdbc = new ConnectionProfile.JdbcEntry(); 
+			jdbc._jdbcDriver             = _jdbcDriver_cbx.getSelectedItem().toString();
+			jdbc._jdbcUrl                = _jdbcUrl_cbx   .getSelectedItem().toString();
+			jdbc._jdbcUsername           = _jdbcUsername_txt.getText();
+			jdbc._jdbcPassword           = _jdbcPassword_txt.getText();
+			jdbc._jdbcSqlInit            = _jdbcSqlInit_txt.getText();
+			jdbc._jdbcUrlOptions         = _jdbcUrlOptions_txt.getText(); // should the be in here???
+//			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;            // NOT YET IMPLEMENTED
+
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, dbProduct, jdbc);
+		}
+		else
+		{
+			_logger.error("Unknown connection type of '"+connType+"'. This was found in updateConnectionProfile() when trying to update the connection profile.");
+			return;
+		}
 	}
 
 	private void updateSshTunnelDescription()
@@ -5273,7 +5357,7 @@ if (_connProfileVisible_chk.isSelected())
 		// URL Options
 		_aseOptions_txt.setText(conf.getProperty("conn.url.options."+hostPortStr, ""));
 
-		
+
 		//----------------------------------------
 		// OS HOST stuff
 		//----------------------------------------

@@ -9,6 +9,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -114,7 +115,8 @@ extends CountersModelAppend
 		cols2 = "";
 		cols3 = "ErrorMessage";
 //		if (aseVersion >= 12510)
-		if (aseVersion >= 1251000)
+//		if (aseVersion >= 1251000)
+		if (aseVersion >= Ver.ver(12,5,1))
 		{
 			cols2 = "State, ";
 		}

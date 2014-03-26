@@ -21,6 +21,7 @@ import com.asetune.cm.ase.gui.CmDeviceIoPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -186,7 +187,8 @@ extends CountersModel
 				this, 
 				false, // visible at start
 //				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,2), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
@@ -199,7 +201,8 @@ extends CountersModel
 				this, 
 				false, // visible at start
 //				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				Ver.ver(15,7,0,2), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
@@ -292,12 +295,14 @@ extends CountersModel
 //			TotalIOs = "TotalIOs = (convert(bigint,Reads) + convert(bigint,Writes))";
 		String TotalIOs = "(Reads + Writes)";
 //		if (aseVersion > 15000) 
-		if (aseVersion > 1500000) 
+//		if (aseVersion > 1500000) 
+		if (aseVersion > Ver.ver(15,0)) 
 			TotalIOs = "(convert(bigint,Reads) + convert(bigint,Writes))";
 
 		String DeviceType = "";
 //		if (aseVersion >= 15020) 
-		if (aseVersion >= 1502000) 
+//		if (aseVersion >= 1502000) 
+		if (aseVersion >= Ver.ver(15,0,2)) 
 		{
 			DeviceType = 
 				"DeviceType = CASE \n" +
@@ -315,7 +320,8 @@ extends CountersModel
 		String WriteServiceTimeMs = ""; // CALCULATED
 //		String nl_15702           = ""; // NL for this section
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			ReadTime           = "ReadTime, ";  // DO DIFF CALC
 			WriteTime          = "WriteTime, "; // DO DIFF CALC
@@ -356,7 +362,8 @@ extends CountersModel
 				 WriteServiceTimeMs;
 		cols3 += DeviceType+" PhysicalName";
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 		}
 
@@ -455,7 +462,8 @@ extends CountersModel
 	
 			// Only available in 15.7.0 esd#2 and above 
 //			if ( aseVersion < 15702 || tranPos == -1 )
-			if ( aseVersion < 1570020 || tranPos == -1 )
+//			if ( aseVersion < 1570020 || tranPos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_R_SERVICE_TIME);
@@ -492,7 +500,8 @@ extends CountersModel
 	
 			// Only available in 15.7.0 esd#2 and above 
 //			if ( aseVersion < 15702 || tranPos == -1 )
-			if ( aseVersion < 1570020 || tranPos == -1 )
+//			if ( aseVersion < 1570020 || tranPos == -1 )
+			if ( aseVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_W_SERVICE_TIME);

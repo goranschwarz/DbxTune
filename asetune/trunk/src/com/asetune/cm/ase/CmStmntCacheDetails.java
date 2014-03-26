@@ -19,6 +19,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -42,7 +43,8 @@ extends CountersModel
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 //	public static final int      NEED_SRV_VERSION = 15020;
-	public static final int      NEED_SRV_VERSION = 1502000;
+//	public static final int      NEED_SRV_VERSION = 1502000;
+	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,2);
 	public static final int      NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedStatement"};
@@ -242,7 +244,8 @@ extends CountersModel
 		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
 		String sql_doXmlPlan   = " xmlPlan       = convert(text, '"+comment+"'), \n";
 //		if (aseVersion >= 15700)
-		if (aseVersion >= 1570000)
+//		if (aseVersion >= 1570000)
+		if (aseVersion >= Ver.ver(15,7))
 		{
 			if ( sampleXmlPlan )
 			{
@@ -284,7 +287,8 @@ extends CountersModel
 		String WorkerThreadDeficit    = ""; // The total thread deficit for all executions of a parallel plan (parallel plans only)
 		String nl_15702               = ""; // NL for this section
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			AvgScanRows			   = "AvgScanRows, ";             // no Diff
 			MaxScanRows            = "MaxScanRows, ";             // no Diff
@@ -309,7 +313,8 @@ extends CountersModel
 		String TotalLIO            = ""; // The total LIO value.
 		String TotalCpuTime        = ""; // The total execution time value. (ms)
 		String TotalElapsedTime    = ""; // The total elapsed time value. (ms)
-		if (aseVersion >= 1600000)
+//		if (aseVersion >= 1600000)
+		if (aseVersion >= Ver.ver(16,0))
 		{
 			TotalPIO		 = "TotalPIO, ";         // DIFF COUNTER
 			TotalLIO         = "TotalLIO, ";         // DIFF COUNTER
@@ -326,18 +331,22 @@ extends CountersModel
 			(isClusterEnabled ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
 			" DBID, \n" +                       // The database ID from which the statement was cached.
 //			(aseVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-			(aseVersion >= 1502040 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
+//			(aseVersion >= 1502040 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
+			(aseVersion >= Ver.ver(15,0,2,4) ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
 //			(aseVersion >= 15700 ? " StmtType, " : "") + // The type of the cached statement.
-			(aseVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
+//			(aseVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
+			(aseVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement.
 			" UserID, SUserID, SUserName = suser_name(SUserID), \n" +
 			" SSQLID, \n" +                     // The unique identifier for a statement.
 			" Hashkey, \n" +                    // The hashkey over the statement's text.
 //			" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
 //			" HasSqltext    = convert(bit,1), \n" +
 //			(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-			(aseVersion >= 1570000 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+//			(aseVersion >= 1570000 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+			(aseVersion >= Ver.ver(15,7) ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
 //			(aseVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
-			(aseVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+//			(aseVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+			(aseVersion >= Ver.ver(15,7) ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 			sql_hasSqlText +
 			sql_hasShowplan + 
 			sql_hasXmlPlan +
@@ -367,7 +376,8 @@ extends CountersModel
 			ParallelDegreeReduced + ParallelPlanRanSerial + WorkerThreadDeficit + nl_15702 + 
 			" QuotedIdentifier    = convert(bit,QuotedIdentifier), \n" + // The quoted identifier session setting.
 //			(aseVersion < 15026 ? " TableCount, \n" : "") + // describeme
-			(aseVersion < 1502060 ? " TableCount, \n" : "") + // describeme
+//			(aseVersion < 1502060 ? " TableCount, \n" : "") + // describeme
+			(aseVersion < Ver.ver(15,0,2,6) ? " TableCount, \n" : "") + // describeme
 			" TransactionIsolationLevel, \n" +  // The transaction isolation level session setting.
 			" TransactionMode, \n" +            // The transaction mode session setting.
 			" SAAuthorization     = convert(bit,SAAuthorization), \n" +     // The SA authorization session setting.

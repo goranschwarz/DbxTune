@@ -34,6 +34,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 
 
 public class GetCountersGui
@@ -620,7 +621,8 @@ public class GetCountersGui
 					// If version is above 15.0.2 and you have 'sa_role' 
 					// then: use ASE function asehostname() to get on which OSHOST the ASE is running
 //					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
-					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
+//					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
+					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= Ver.ver(15,0,2))
 					{
 						if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 							sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";

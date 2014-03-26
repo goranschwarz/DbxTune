@@ -23,6 +23,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -133,7 +134,8 @@ extends CountersModel
 	public static final String  PROPKEY_sample_freezeMda          = PROP_PREFIX + ".sample.freezeMda";
 	public static final boolean DEFAULT_sample_freezeMda          = true;
 //	public static final int     NEED_SRV_VERSION_sample_freezeMda = 12540;
-	public static final int     NEED_SRV_VERSION_sample_freezeMda = 1254000;
+//	public static final int     NEED_SRV_VERSION_sample_freezeMda = 1254000;
+	public static final int     NEED_SRV_VERSION_sample_freezeMda = Ver.ver(12,5,4);
 	
 	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
 	public static final String  DEFAULT_sample_extraWhereClause   = "";
@@ -269,7 +271,8 @@ extends CountersModel
 		// Do the server support optimization goals?
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
-		if (aseVersion >= 1502000)
+//		if (aseVersion >= 1502000)
+		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -277,7 +280,8 @@ extends CountersModel
 		// Get user name, if we are above ASE 12.5.4
 		String UserName   = "";
 //		if (aseVersion >= 12540)
-		if (aseVersion >= 1254000)
+//		if (aseVersion >= 1254000)
+		if (aseVersion >= Ver.ver(12,5,4))
 			UserName = "UserName = suser_name(A.ServerUserID), ";
 		
 		String cols = "";
@@ -293,7 +297,8 @@ extends CountersModel
 		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
 		String nl_15702           = ""; // NL for this section
 //		if (aseVersion >= 15702)
-		if (aseVersion >= 1570020)
+//		if (aseVersion >= 1570020)
+		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "A.IOSize1Page, ";
 			IOSize2Pages       = "A.IOSize2Pages, ";
@@ -314,7 +319,8 @@ extends CountersModel
 			IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 			"  A.TableAccesses, A.IndexAccesses, A.Transactions, A.Commits, A.Rollbacks, A.LocksHeld, A.MemUsageKB, \n" +
 //			(aseVersion >= 15700 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
-			(aseVersion >= 1570000 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
+//			(aseVersion >= 1570000 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
+			(aseVersion >= Ver.ver(15,7) ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
 			"  HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 			"  HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), \n" +
 			"  MonSqlText=convert(text,null), \n" +
