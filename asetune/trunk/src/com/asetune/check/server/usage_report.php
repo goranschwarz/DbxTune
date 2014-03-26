@@ -37,7 +37,7 @@
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?udc=true"                            >User Defined Counters Info Report</A>     <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=first"                         >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?usage=first"                         >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> -or- <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmEngines">CmEngines</A>, <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmObjectActivity">CmObjectActivity</A> <BR>
 <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"                       >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
 <A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"                     >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
@@ -76,6 +76,7 @@ DB Cleanup:
 	$rpt_mda                = $_GET['mda'];
 	$rpt_udc                = $_GET['udc'];
 	$rpt_usage              = $_GET['usage'];
+	$rpt_usage_cmName       = $_GET['cmName'];
 	$rpt_errorInfo          = $_GET['errorInfo'];
 	$rpt_timeoutInfo        = $_GET['timeoutInfo'];
 	$rpt_full               = $_GET['full'];
@@ -97,6 +98,10 @@ DB Cleanup:
 
 	$ipDesc_key             = $_GET['ipDesc_key'];
 	$ipDesc_val             = $_GET['ipDesc_val'];
+
+	$userId_key             = $_GET['userId_key'];
+	$userId_val             = $_GET['userId_val'];
+	$userId_query           = $_GET['userId_query'];
 
 	// sub command
 	$rpt_onDomain            = $_GET['onDomain'];
@@ -137,6 +142,44 @@ DB Cleanup:
 	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die(mysql_error());
 	mysql_select_db("asemon_se", $db) or die(mysql_error());
 
+
+
+	//------------------------------------------
+	// build a form, for userIdDescription
+	//------------------------------------------
+	echo '<br><br>
+		<b>Assign a UserName/Description for UserId: </b>
+		<form action="usage_report.php" method="get">
+			UserName:    <input type="text" size=20 maxlength=20  name="userId_key"   value="" />
+			Description: <input type="text" size=60 maxlength=100 name="userId_val"   value="" />
+		    Query:       <input type="text" size=5  maxlength=20  name="userId_query" value="*" />
+			<input type="submit" value="Submit"/>
+		</form>
+	';
+//	mysql_query("CREATE TABLE userIdDescription (userId varchar(20), description varchar(100))")  or die("ERROR: " . mysql_error());
+
+	//------------------------------------------
+	// Get a CACHE for userIdDescription, which can be used as a lookup table
+	//------------------------------------------
+	$userIdCache = array();
+	$result = mysql_query("select upper(userId) as userId, description from userIdDescription");
+	if ($result)
+	{
+		while ($row = mysql_fetch_assoc($result))
+		{
+			$userIdCache[ $row['userId'] ] = $row['description'];
+		}
+	}
+	else
+	{
+		echo mysql_errno() . ": " . mysql_error() . "<br>";
+	}
+//	print_r($userIdCache);
+//	echo "<br>";
+//	echo "i063783=|" . $userIdCache['i063783'] . "|<br>";
+//	echo "I063783=|" . $userIdCache['I063783'] . "|<br>";
+
+
 	//-------------------------------------------
 	// ON_DOMAIN
 	//-------------------------------------------
@@ -155,7 +198,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "on domain $rpt_onDomain");
+		htmlResultset($userIdCache, $result, "on domain $rpt_onDomain");
 	}
 
 	//-------------------------------------------
@@ -176,7 +219,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "on domain $rpt_onDomain");
+		htmlResultset($userIdCache, $result, "on domain $rpt_onDomain");
 	}
 
 	//-------------------------------------------
@@ -197,7 +240,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "AppStarts MADE BY Caller IP Address $rpt_getAppStartsForIp");
+		htmlResultset($userIdCache, $result, "AppStarts MADE BY Caller IP Address $rpt_getAppStartsForIp");
 	}
 
 	//-------------------------------------------
@@ -221,7 +264,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "CONNECTIONS MADE BY Caller IP Address $rpt_getConnectForIp");
+		htmlResultset($userIdCache, $result, "CONNECTIONS MADE BY Caller IP Address $rpt_getConnectForIp");
 	}
 
 	//-------------------------------------------
@@ -245,7 +288,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "CONNECTIONS MADE BY Domain $rpt_getConnectForDomain");
+		htmlResultset($userIdCache, $result, "CONNECTIONS MADE BY Domain $rpt_getConnectForDomain");
 	}
 
 	//-------------------------------------------
@@ -266,7 +309,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_usage on: $rpt_onId");
+		htmlResultset($userIdCache, $result, "asemon_usage on: $rpt_onId");
 
 
 		// sending query
@@ -275,7 +318,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_connect_info on: $rpt_onId");
+		htmlResultset($userIdCache, $result, "asemon_connect_info on: $rpt_onId");
 
 		// sending query
 		$result = mysql_query("SELECT * FROM asemon_udc_info WHERE checkId = " . $rpt_onId);
@@ -283,7 +326,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_udc_info on: $rpt_onId");
+		htmlResultset($userIdCache, $result, "asemon_udc_info on: $rpt_onId");
 
 		// sending query
 		$result = mysql_query("
@@ -308,7 +351,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "asemon_counter_usage_info on: $rpt_onId");
+		htmlResultset($userIdCache, $result, "asemon_counter_usage_info on: $rpt_onId");
 
 		// NEW ERRORS
 		$sql = "
@@ -339,7 +382,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
+		htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
 
 		// TIMEOUT ERRORS
 		$sql = "
@@ -370,7 +413,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
+		htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
 
 		// SAVED ERRORS
 		$sql = "
@@ -399,7 +442,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
+		htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
 
 		//reset
 		$sql = "";
@@ -422,7 +465,64 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Caller IP Descriptions");
+		htmlResultset($userIdCache, $result, "Caller IP Descriptions");
+	}
+
+
+	//-------------------------------------------
+	// USER ID, assign a description
+	//-------------------------------------------
+	if ( $userId_key != "" || $userId_query != "" )
+	{
+		// get rid of leading spaces etc
+		$userId_key = trim($userId_key);
+		$userId_val = trim($userId_val);
+
+
+//		mysql_query("DELETE FROM userIdDescription")         or die("ERROR: " . mysql_error());
+		mysql_query("DELETE FROM userIdDescription where userId = ''")         or die("ERROR: " . mysql_error());
+
+		echo "Actions taken:";
+		echo "<ul>";
+		if ( $userId_key != "" )
+		{
+			echo "<li><i>Trying to delete user '" . $userId_key . "' (if it exists)</i></li>";
+			mysql_query("DELETE FROM userIdDescription WHERE upper(userId) = upper('" . $userId_key . "')")         or die("ERROR: " . mysql_error());
+		}
+
+		if ( $userId_key != "" && $userId_val != "" )
+		{
+			echo "<li><i>Adding userId: '" . $userId_key . "', with description '" . $userId_val . "'</i></li>";
+			mysql_query("INSERT INTO userIdDescription values(upper('" . $userId_key . "'), '" . $userId_val . "')")  or die("ERROR: " . mysql_error());
+		}
+
+		//echo "userId_query: (" . $userId_query . ")<br>";
+		$sqlWhere = "";
+		if ( $userId_query != "" && $userId_query != "*")
+		{
+			$sqlWhere = " WHERE upper(userId) like upper('%" . $userId_query . "%')";
+		}
+
+		$sql = "SELECT userId, description, upper(userId) as deleteUserIdDesc, userId as user_name FROM userIdDescription" . $sqlWhere . " order by description";
+		echo "<li>Getting records using SQL: <code>" . $sql . "</code></li>";
+		echo "</ul>";
+
+		// sending query
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "User ID Descriptions/Translations");
+
+
+		$sql = "SELECT count(*) as DescriptionCount FROM userIdDescription" . $sqlWhere;
+		$result = mysql_query($sql);
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "Number of records in Translation Table");
 	}
 
 
@@ -457,7 +557,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "START Count");
+		htmlResultset($userIdCache, $result, "START Count");
 																			echo "	</TD>";
 
 																			echo "	<TD VALIGN=\"top\">";
@@ -482,7 +582,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "ASE CONNECT Count");
+		htmlResultset($userIdCache, $result, "ASE CONNECT Count");
 																			echo "	</TD>";
 
 																			echo "	<TD VALIGN=\"top\">";
@@ -508,7 +608,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "START Count WITHOUT 'asetune-virtual-machine'");
+		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
 																			echo "	</TD>";
 
 																			echo "	<TD VALIGN=\"top\">";
@@ -542,7 +642,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "START Count");
+		htmlResultset($userIdCache, $result, "START Count");
 																			echo "	</TD>";
 
 																			echo "	<TD VALIGN=\"top\">";
@@ -566,7 +666,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "ASE CONNECT Count");
+		htmlResultset($userIdCache, $result, "ASE CONNECT Count");
 																			echo "	</TD>";
 
 																			echo "	<TD VALIGN=\"top\">";
@@ -591,7 +691,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "START Count WITHOUT 'asetune-virtual-machine'");
+		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
 																			echo "	</TD>";
 																			echo "</TR>";
 																			echo "</TABLE>";
@@ -601,16 +701,16 @@ DB Cleanup:
 		// Summary per: CALLER-IP-ADDRESS
 		//------------------------------------------
 //		$result = mysql_query("SELECT @@MAX_JOIN_SIZE");
-//		htmlResultset($result, "SELECT @@MAX_JOIN_SIZE");
+//		htmlResultset($userIdCache, $result, "SELECT @@MAX_JOIN_SIZE");
 //echo "XXX: 1<br>";
 //		$result = mysql_query("select count(*) from sumCallerIpStartNow");
-//		htmlResultset($result, "sumCallerIpStartNow");
+//		htmlResultset($userIdCache, $result, "sumCallerIpStartNow");
 
 //		$result = mysql_query("select count(*) from sumCallerIpStartPriv");
-//		htmlResultset($result, "sumCallerIpStartPriv");
+//		htmlResultset($userIdCache, $result, "sumCallerIpStartPriv");
 
 //		$result = mysql_query("select count(*) from callerIpDescription");
-//		htmlResultset($result, "callerIpDescription");
+//		htmlResultset($userIdCache, $result, "callerIpDescription");
 
 
 		mysql_query("SET SQL_BIG_SELECTS=1") or die("ERROR: " . mysql_error());
@@ -655,7 +755,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Caller IP ADDRESS, ORDER BY START_TIME    TOP 30");
+		htmlResultset($userIdCache, $result, "Caller IP ADDRESS, ORDER BY START_TIME    TOP 30");
 
 //echo "XXX: 3<br>";
 		//----------- Move NOW table into PREV
@@ -676,8 +776,6 @@ DB Cleanup:
 				<input type="submit" />
 			</form>
 		';
-
-
 
 
 		//------------------------------------------
@@ -722,7 +820,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Domian Count, ORDER BY START_TIME    TOP 30");
+		htmlResultset($userIdCache, $result, "Domian Count, ORDER BY START_TIME    TOP 30");
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
@@ -740,7 +838,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Domain Count");
+		htmlResultset($userIdCache, $result, "Domain Count");
 
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_diffReset == "true" )
@@ -787,7 +885,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Sybase and SAP users, Start Count, order by START_TIME");
+		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count, order by START_TIME");
 
 		//----------- SECOND RESULT
 		$result = mysql_query("
@@ -805,7 +903,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Sybase and SAP users, Start Count");
+		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count");
 
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_diffReset == "true" )
@@ -837,7 +935,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Country Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
 
 
 		$sql = "
@@ -856,7 +954,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Country Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
 
 	}
 
@@ -881,7 +979,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Country Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
 	}
 
 	//-------------------------------------------
@@ -905,7 +1003,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Version Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Version Count");
 	}
 
 	//-------------------------------------------
@@ -926,7 +1024,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
 			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
@@ -941,7 +1039,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Connected to ASE Version Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
 			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
@@ -957,7 +1055,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, Connected to ASE CLUSTER Version Count");
+		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE CLUSTER Version Count");
 	}
 
 	//-------------------------------------------
@@ -991,7 +1089,7 @@ DB Cleanup:
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($result, "Summary Report, On User");
+		htmlResultset($userIdCache, $result, "Summary Report, On User");
 	}
 
 	//-------------------------------------------
@@ -1021,7 +1119,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, $label);
+		htmlResultset($userIdCache, $result, $label);
 	}
 
 
@@ -1086,7 +1184,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, $label);
+		htmlResultset($userIdCache, $result, $label);
 
 		//------------------------------------------
 		// build a form, for Version DIFF
@@ -1095,9 +1193,9 @@ DB Cleanup:
 			<b>Show new tables/columns for two differect ASE Versons</b>
 			<form action="usage_report.php" method="get">
 				<input type="text" size=4 name="mda" readonly="mda" value="diff" />
-				Is ASE Cluster Edition (0 or 1, default=0):<input type="text" size=5 maxlength=5 name="mda_isCluster"   value="' . $mda_isCluster   . '" />
-				Low Version:                               <input type="text" size=9 maxlength=9 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
-				High Version:                              <input type="text" size=9 maxlength=9 name="mda_highVersion" value="' . $mda_highVersion . '" />
+				Is ASE Cluster Edition (0 or 1, default=0):<input type="text" size=5  maxlength=5  name="mda_isCluster"   value="' . $mda_isCluster   . '" />
+				Low Version:                               <input type="text" size=12 maxlength=12 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
+				High Version:                              <input type="text" size=12 maxlength=12 name="mda_highVersion" value="' . $mda_highVersion . '" />
 				<input type="submit" />
 			</form>
 
@@ -1157,7 +1255,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label);
+			htmlResultset($userIdCache, $result, $label);
 		}
 
 		//------------------------------------------
@@ -1197,7 +1295,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label);
+			htmlResultset($userIdCache, $result, $label);
 
 			//-----------------------------
 			$label = "MDA COLUMN DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new columns in HIGH Version will be visible)";
@@ -1230,7 +1328,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label, "TableName");
+			htmlResultset($userIdCache, $result, $label, "TableName");
 		}
 
 		//-----------------------------
@@ -1280,7 +1378,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label, "TableName");
+			htmlResultset($userIdCache, $result, $label, "TableName");
 
 
 			//-----------------------------
@@ -1299,7 +1397,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label);
+			htmlResultset($userIdCache, $result, $label);
 
 
 			//-----------------------------
@@ -1318,7 +1416,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label);
+			htmlResultset($userIdCache, $result, $label);
 
 			//-----------------------------
 			$label = "MDA Info Report (TABLE-COLUMNS)";
@@ -1336,7 +1434,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label, "TableName");
+			htmlResultset($userIdCache, $result, $label, "TableName");
 
 			//-----------------------------
 			$label = "MDA Info Report (TABLE-PARAMS)";
@@ -1354,7 +1452,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label, "TableName");
+			htmlResultset($userIdCache, $result, $label, "TableName");
 
 			//-----------------------------
 			$label = "MDA Info Report (SYSOBJECT/SYSCOLUMNS)";
@@ -1372,7 +1470,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, $label, "TableName");
+			htmlResultset($userIdCache, $result, $label, "TableName");
 
 			//-----------------------------
 			if ( $debug != "" )
@@ -1391,7 +1489,7 @@ DB Cleanup:
 				if (!$result) {
 					die("Query to show fields from table failed");
 				}
-				htmlResultset($result, $label, "TableName");
+				htmlResultset($userIdCache, $result, $label, "TableName");
 			}
 		}
 
@@ -1415,7 +1513,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "User Defined Counters Info Report");
+		htmlResultset($userIdCache, $result, "User Defined Counters Info Report");
 	}
 
 
@@ -1425,33 +1523,60 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $rpt_usage != "" )
 	{
-		$label = "Counter Usage Info Report";
-		$sql = "
-			SELECT
-				checkId,
-				serverAddTime,
-				sessionType,
-				sessionStartTime,
-				sessionEndTime,
-				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
-				userName,
-				connectId,
-				addSequence,
-				cmName,
-				refreshCount,
-				sumRowCount,
-				(sumRowCount / refreshCount) AS avgSumRowCount
-			FROM asemon_counter_usage_info
-			ORDER BY checkId desc, connectId, sessionStartTime, addSequence
-		";
-		if ( $rpt_usage == "first" )
+		if ( $rpt_usage_cmName != "" )
 		{
-			$sql   = $sql   . " LIMIT 500 ";
-			$label = $label . ", first 500 rows";
+			$label = "Counter Usage Info Report, first 500 ENGINES counters";
+			$sql = "
+				SELECT
+					checkId,
+					serverAddTime,
+					sessionType,
+					sessionStartTime,
+					sessionEndTime,
+					TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+					userName,
+					connectId,
+					addSequence,
+					cmName,
+					refreshCount,
+					sumRowCount,
+					(sumRowCount / refreshCount) AS avgSumRowCount
+				FROM asemon_counter_usage_info
+				WHERE cmName = '$rpt_usage_cmName'
+				ORDER BY checkId desc, connectId, sessionStartTime, addSequence
+			";
+//				LIMIT 1000
 		}
 		else
 		{
-			$label = $label . ", ALL rows";
+			$label = "Counter Usage Info Report";
+			$sql = "
+				SELECT
+					checkId,
+					serverAddTime,
+					sessionType,
+					sessionStartTime,
+					sessionEndTime,
+					TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+					userName,
+					connectId,
+					addSequence,
+					cmName,
+					refreshCount,
+					sumRowCount,
+					(sumRowCount / refreshCount) AS avgSumRowCount
+				FROM asemon_counter_usage_info
+				ORDER BY checkId desc, connectId, sessionStartTime, addSequence
+			";
+			if ( $rpt_usage == "first" )
+			{
+				$sql   = $sql   . " LIMIT 500 ";
+				$label = $label . ", first 500 rows";
+			}
+			else
+			{
+				$label = $label . ", ALL rows";
+			}
 		}
 
 
@@ -1460,7 +1585,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, $label);
+		htmlResultset($userIdCache, $result, $label);
 	}
 
 
@@ -1560,7 +1685,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo");
 
 			$sql = "
 				SELECT
@@ -1584,7 +1709,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
 
 			//reset
 			$sql = "";
@@ -1640,7 +1765,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " NEW RECORDS");
 
 			$sql = "
 				SELECT 'TIMEOUT' as type,
@@ -1670,7 +1795,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " TIMEOUT RECORDS");
 
 			$sql = "
 				SELECT 'SAVED' as type,
@@ -1698,7 +1823,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo" . " SAVED RECORDS");
 
 			//reset
 			$sql = "";
@@ -1762,7 +1887,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo");
 		}
 
 	}
@@ -1831,7 +1956,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "ERROR Info Report: $rpt_errorInfo");
+			htmlResultset($userIdCache, $result, "ERROR Info Report: $rpt_errorInfo");
 		}
 
 	}
@@ -1897,7 +2022,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "Full Report");
+		htmlResultset($userIdCache, $result, "Full Report");
 	}
 
 
@@ -1919,7 +2044,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "SAP asemon_usage Report");
+		htmlResultset($userIdCache, $result, "SAP asemon_usage Report");
 
 		$sql = "
 			SELECT *
@@ -1934,7 +2059,7 @@ DB Cleanup:
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
-		htmlResultset($result, "SAP asemon_connect_info Report");
+		htmlResultset($userIdCache, $result, "SAP asemon_connect_info Report");
 	}
 
 
@@ -1961,18 +2086,18 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "SQL Window Connection Info");
+			htmlResultset($userIdCache, $result, "SQL Window Connection Info");
 		}
 		// a SPECIFIC SQLW session
 		if ( is_numeric($rpt_sqlw_ConnId) )
 		{
 			//------------------------------------------
-			// SQLW_CONNECT_INFO ALL
+			// sqlw_usage on ID
 			//------------------------------------------
 			$sql = "
 				SELECT *
-				FROM sqlw_connect_info
-				where checkId = $rpt_sqlw_ConnId
+				FROM sqlw_usage
+				where sqlwCheckId = $rpt_sqlw_ConnId
 			";
 
 			// sending query
@@ -1980,7 +2105,23 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "SQL Window Connection Info for ID=$rpt_sqlw_ConnId");
+			htmlResultset($userIdCache, $result, "sqlw_usage on: $rpt_sqlw_ConnId");
+
+			//------------------------------------------
+			// sqlw_connect_info on ID
+			//------------------------------------------
+			$sql = "
+				SELECT *
+				FROM sqlw_connect_info
+				where sqlwCheckId = $rpt_sqlw_ConnId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "sqlw_connect_info on: $rpt_sqlw_ConnId");
 		}
 
 
@@ -2009,7 +2150,7 @@ DB Cleanup:
 				echo mysql_errno() . ": " . mysql_error() . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
-			htmlResultset($result, "START Count");
+			htmlResultset($userIdCache, $result, "START Count");
 
 
 			echo "<H2>Statistics per MONTH</H2>";
@@ -2033,7 +2174,7 @@ DB Cleanup:
 				echo mysql_errno() . ": " . mysql_error() . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
-			htmlResultset($result, "START Count");
+			htmlResultset($userIdCache, $result, "START Count");
 
 			//------------------------------------------
 			// Summary per: user_name
@@ -2055,14 +2196,14 @@ DB Cleanup:
 				") or die("ERROR: " . mysql_error());
 
 	//		$result = mysql_query("select count(*) from sumSqlwStartNow");
-	//		htmlResultset($result, "sumSqlwStartNow");
+	//		htmlResultset($userIdCache, $result, "sumSqlwStartNow");
 	//		$result = mysql_query("select * from sumSqlwStartNow order by lastStarted desc");
-	//		htmlResultset($result, "SqlwStartNow");
+	//		htmlResultset($userIdCache, $result, "SqlwStartNow");
 
 	//		$result = mysql_query("select count(*) from sumSqlwStartPriv");
-	//		htmlResultset($result, "sumSqlwStartPriv");
+	//		htmlResultset($userIdCache, $result, "sumSqlwStartPriv");
 	//		$result = mysql_query("select * from sumSqlwStartPriv order by lastStarted desc");
-	//		htmlResultset($result, "SqlwStartPriv");
+	//		htmlResultset($userIdCache, $result, "SqlwStartPriv");
 
 	//echo "XXX: 2<br>";
 			//----------- GET RESULTS & PRINT IT
@@ -2082,7 +2223,7 @@ DB Cleanup:
 				echo mysql_errno() . ": " . mysql_error() . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
-			htmlResultset($result, "SQLW USER USAGE, ORDER BY START_TIME    TOP 30");
+			htmlResultset($userIdCache, $result, "SQLW USER USAGE, ORDER BY START_TIME    TOP 30");
 
 	//echo "XXX: 3<br>";
 			//----------- Move NOW table into PREV
@@ -2111,7 +2252,7 @@ DB Cleanup:
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
-			htmlResultset($result, "SQL Window Usage Report");
+			htmlResultset($userIdCache, $result, "SQL Window Usage Report");
 		}
 
 	}
