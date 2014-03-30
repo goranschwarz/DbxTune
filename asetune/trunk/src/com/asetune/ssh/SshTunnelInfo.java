@@ -16,6 +16,8 @@ public class SshTunnelInfo
 	private String  _sshUsername  = null;
 	private String  _sshPassword  = null;
 	
+	private String  _sshInitOsCmd = null;
+	
 
 	public boolean isLocalPortGenerated() { return _localPortGenerated; }
 	public int    getLocalPort()          { return _localPort;   }
@@ -26,6 +28,7 @@ public class SshTunnelInfo
 	public int    getSshPort()            { return _sshPort;     }
 	public String getSshUsername()        { return _sshUsername; }
 	public String getSshPassword()        { return _sshPassword; }
+	public String getSshInitOsCmd()       { return _sshInitOsCmd;  }
 	
 	public void setLocalPortGenerated(boolean localPortGenerated) { this._localPortGenerated = localPortGenerated; }
 	public void setLocalPort         (int localPort)              { this._localPort          = localPort;   }
@@ -36,6 +39,7 @@ public class SshTunnelInfo
 	public void setSshPort           (int sshPort)                { this._sshPort            = sshPort;     }
 	public void setSshUsername       (String sshUsername)         { this._sshUsername        = sshUsername; }
 	public void setSshPassword       (String sshPassword)         { this._sshPassword        = sshPassword; }
+	public void setSshInitOsCmd      (String initOsCmd)           { this._sshInitOsCmd       = initOsCmd;   }
 
 	public boolean isValid()
 	{
@@ -70,18 +74,20 @@ public class SshTunnelInfo
 	public String getInfoString()
 	{
 //		boolean generateLocalPort = isLocalPortGenerated();
-		int    localPort = getLocalPort();
-		String destHost  = getDestHost();
-		int    destPort  = getDestPort();
-		String sshHost   = getSshHost();
-		int    sshPort   = getSshPort();
-		String sshUser   = getSshUsername();
-//		String sshPass   = getSshPassword();
+		int    localPort    = getLocalPort();
+		String destHost     = getDestHost();
+		int    destPort     = getDestPort();
+		String sshHost      = getSshHost();
+		int    sshPort      = getSshPort();
+		String sshUser      = getSshUsername();
+//		String sshPass      = getSshPassword();
+		String sshInitOsCmd = getSshInitOsCmd();
 
 		return
-			"LocalPort=" + localPort + ", " +
-			"DestHost='" + destHost  + ":" + destPort  + "', " +
-			"SshHost='"  + sshHost   + ":" + sshPort   + "', " +
-			"SshUser='"  + sshUser   + "'.";
+			"LocalPort="     + localPort      + ", " +
+			"DestHost='"     + destHost       + ":" + destPort  + "', " +
+			"SshHost='"      + sshHost        + ":" + sshPort   + "', " +
+			"SshUser='"      + sshUser        + "', " +
+			"SshInitOsCmd='" + sshInitOsCmd   + "'.";
 	}
 }

@@ -136,6 +136,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private JTextField      _sshHostname_txt        = new JTextField("");
 	private JLabel          _sshPort_lbl            = new JLabel("Port num");
 	private JTextField      _sshPort_txt            = new JTextField("22");
+	private JLabel          _sshInitOsCmd_lbl       = new JLabel("Init Cmd");
+	private JTextField      _sshInitOsCmd_txt       = new JTextField("");
 	
 	private JPanel          _logTailPanel           = null;
 	private RSyntaxTextArea _logTail_txt            = new RSyntaxTextArea();
@@ -647,17 +649,19 @@ PropertyConfigurator.configure(log4jProps);
 		panel.setLayout(new MigLayout());
 
 		// Tooltip
-		panel           .setToolTipText("Secure Shell (SSH) is used to access the file on the host where the ASE is located.");
-//		_sshConnect_chk .setToolTipText("ASE is located on a unix/linux host that has SSH Secure Shell");
-		_sshUsername_lbl.setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
-		_sshUsername_txt.setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
-		_sshPassword_lbl.setToolTipText("Password to the User that can access the Log on the Server side");
-		_sshPassword_txt.setToolTipText("Password to the User that can access the Log on the Server side");
-		_sshPassword_chk.setToolTipText("Save the password in the configuration file, and YES it's encrypted.");
-		_sshHostname_lbl.setToolTipText("Host name where the Log is located");
-		_sshHostname_txt.setToolTipText("Host name where the Log is located");
-		_sshPort_lbl    .setToolTipText("Port number of the SSH Server, normally 22.");
-		_sshPort_txt    .setToolTipText("Port number of the SSH Server, normally 22.");
+		panel            .setToolTipText("Secure Shell (SSH) is used to access the file on the host where the ASE is located.");
+//		_sshConnect_chk  .setToolTipText("ASE is located on a unix/linux host that has SSH Secure Shell");
+		_sshUsername_lbl .setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
+		_sshUsername_txt .setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
+		_sshPassword_lbl .setToolTipText("Password to the User that can access the Log on the Server side");
+		_sshPassword_txt .setToolTipText("Password to the User that can access the Log on the Server side");
+		_sshPassword_chk .setToolTipText("Save the password in the configuration file, and YES it's encrypted.");
+		_sshHostname_lbl .setToolTipText("Host name where the Log is located");
+		_sshHostname_txt .setToolTipText("Host name where the Log is located");
+		_sshPort_lbl     .setToolTipText("Port number of the SSH Server, normally 22.");
+		_sshPort_txt     .setToolTipText("Port number of the SSH Server, normally 22.");
+		_sshInitOsCmd_lbl.setToolTipText("<html>Execute OS command(s) before we start to tail the file.<br>This is if you need to do <b><code>su username</code></b> or <b><code>sudo cmd</code></b> or similar stuff to be able to read the file.</html>");
+		_sshInitOsCmd_txt.setToolTipText(_sshInitOsCmd_lbl.getToolTipText());
 
 //		panel.add(_sshConnect_chk,     "span, wrap");
 
@@ -673,6 +677,9 @@ PropertyConfigurator.configure(log4jProps);
 
 		panel.add(_sshPort_lbl,        "");
 		panel.add(_sshPort_txt,        "growx, pushx, wrap");
+
+		panel.add(_sshInitOsCmd_lbl,   "");
+		panel.add(_sshInitOsCmd_txt,   "growx, pushx, wrap");
 
 		
 		// disable input to some fields
@@ -1008,9 +1015,14 @@ PropertyConfigurator.configure(log4jProps);
 		//----------------------------------
 		if ( ! StringUtil.isNullOrBlank(_sshHostname_txt.getText()) )
 			conf.setProperty("LogTail.ssh.conn."+getServername()+".hostname",   _sshHostname_txt.getText() );
+
 		conf.setProperty("LogTail.ssh.conn."+getServername()+".port",       _sshPort_txt.getText() );
+
 		if ( ! StringUtil.isNullOrBlank(_sshUsername_txt.getText()) )
 			conf.setProperty("LogTail.ssh.conn."+getServername()+".username",   _sshUsername_txt.getText() );
+
+		if ( ! StringUtil.isNullOrBlank(_sshInitOsCmd_txt.getText()) )
+			conf.setProperty("LogTail.ssh.conn."+getServername()+".initOsCmd",   _sshInitOsCmd_txt.getText() );
 
 		if (_sshPassword_chk.isSelected())
 			conf.setProperty("LogTail.ssh.conn."+getServername()+".password", _sshPassword_txt.getText(), true);
@@ -1122,10 +1134,11 @@ PropertyConfigurator.configure(log4jProps);
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		_sshHostname_txt.setText( conf.getProperty("LogTail.ssh.conn."+servername+".hostname", _sshHostname_txt.getText()) );
-		_sshPort_txt    .setText( conf.getProperty("LogTail.ssh.conn."+servername+".port",     _sshPort_txt    .getText()) );
-		_sshUsername_txt.setText( conf.getProperty("LogTail.ssh.conn."+servername+".username", _sshUsername_txt.getText()) );
-		_sshPassword_txt.setText( conf.getProperty("LogTail.ssh.conn."+servername+".password", _sshPassword_txt.getText()) );
+		_sshHostname_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".hostname",  _sshHostname_txt .getText()) );
+		_sshPort_txt     .setText( conf.getProperty("LogTail.ssh.conn."+servername+".port",      _sshPort_txt     .getText()) );
+		_sshInitOsCmd_txt.setText( conf.getProperty("LogTail.ssh.conn."+servername+".initOsCmd", _sshInitOsCmd_txt.getText()) );
+		_sshUsername_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".username",  _sshUsername_txt .getText()) );
+		_sshPassword_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".password",  _sshPassword_txt .getText()) );
 
 		_sshPassword_chk.setSelected( conf.getBooleanProperty("LogTail.ssh.conn."+servername+".savePassword", _sshPassword_chk.isSelected()) );
 	}
@@ -1205,6 +1218,8 @@ PropertyConfigurator.configure(log4jProps);
 			final String passwd  = _sshPassword_txt.getText();
 			final String host    = _sshHostname_txt.getText();
 			final String portStr = _sshPort_txt.getText();
+			final String initCmd = _sshInitOsCmd_txt.getText();
+
 			int port = 22;
 			try {port = Integer.parseInt(portStr);} 
 			catch(NumberFormatException ignore) {}
@@ -1219,6 +1234,27 @@ PropertyConfigurator.configure(log4jProps);
 					try
 					{
 						_sshConn.connect();
+						
+						if (StringUtil.hasValue(initCmd))
+						{
+							try
+							{
+    							String output = _sshConn.execCommandOutputAsStr(initCmd);
+    							if (StringUtil.hasValue(output))
+    							{
+    								String htmlStr = 
+    									"<html>" +
+    									"Init Command '<code>"+initCmd+"</code>' produced the following output" +
+    									"<pre>" + output + "</pre>" +
+    									"</html>";
+    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
+    							}
+							}
+							catch (IOException e) 
+							{
+								SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+initCmd+"' Failed...", e);
+							}
+						}
 					}
 					catch (IOException e) 
 					{

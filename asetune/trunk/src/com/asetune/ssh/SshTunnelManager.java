@@ -182,6 +182,22 @@ public class SshTunnelManager
 
 			sshConn.connect();
 			
+			// execute OS Init String if there is one
+			String initCmd = sshTunnelInfo.getSshInitOsCmd();
+			if (StringUtil.hasValue(initCmd))
+			{
+				try
+				{
+					String output = sshConn.execCommandOutputAsStr(initCmd);
+					if (StringUtil.hasValue(output))
+						_logger.info("SSH Init OS Command '"+initCmd+"' produced the following output: " + output);
+				}
+				catch (IOException e)
+				{
+					_logger.warn("SSH Init OS Command '"+initCmd+"' probably failed: " + e.toString());
+				}
+			}
+
 			sshConnWrap = new SshConnectionWrapper(sshConn);
 			sshConnWrap.incrementUsage();
 
