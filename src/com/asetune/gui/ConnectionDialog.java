@@ -4567,30 +4567,38 @@ if (_connProfileVisible_chk.isSelected())
 		if (_aseSshTunnel_chk.isSelected())
 		{
 			boolean generateLocalPort = true;
-			int    localPort = 7487;
-			String destHost  = "asehostname";
-			int    destPort  = 5000;
-			String sshHost   = "sshHost";
-			int    sshPort   = 22;
-			String sshUser   = "sshUser";
-			String sshPass   = "*secret*";
+			int    localPort    = 7487;
+			String destHost     = "asehostname";
+			int    destPort     = 5000;
+			String sshHost      = "sshHost";
+			int    sshPort      = 22;
+			String sshUser      = "sshUser";
+			String sshPass      = "*secret*";
+			String sshInitOsCmd = "";
+			
 			if (_aseSshTunnelInfo != null)
 			{
 				generateLocalPort = _aseSshTunnelInfo.isLocalPortGenerated();
-				localPort = _aseSshTunnelInfo.getLocalPort();
-				destHost  = _aseSshTunnelInfo.getDestHost();
-				destPort  = _aseSshTunnelInfo.getDestPort();
-				sshHost   = _aseSshTunnelInfo.getSshHost();
-				sshPort   = _aseSshTunnelInfo.getSshPort();
-				sshUser   = _aseSshTunnelInfo.getSshUsername();
-				sshPass   = _aseSshTunnelInfo.getSshPassword();
+				localPort    = _aseSshTunnelInfo.getLocalPort();
+				destHost     = _aseSshTunnelInfo.getDestHost();
+				destPort     = _aseSshTunnelInfo.getDestPort();
+				sshHost      = _aseSshTunnelInfo.getSshHost();
+				sshPort      = _aseSshTunnelInfo.getSshPort();
+				sshUser      = _aseSshTunnelInfo.getSshUsername();
+				sshPass      = _aseSshTunnelInfo.getSshPassword();
+				sshInitOsCmd = _aseSshTunnelInfo.getSshInitOsCmd();
 			}
+			
+			String initOsCmdDesc = "";
+			if (StringUtil.hasValue(sshInitOsCmd))
+				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
+
 			_aseSshTunnelDesc_lbl.setText(
 				"<html>" +
 					"Local Port '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
 					"Dest Host  '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
 					"SSH Host   '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
-					"SSH User   '<b>" + sshUser   + "</b>'. " +
+					"SSH User   '<b>" + sshUser   + "</b>'"+initOsCmdDesc+". " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
 				"</html>");
 		}

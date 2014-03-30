@@ -7762,7 +7762,7 @@ public class QueryWindow
 	private JPopupMenu createSqlCommandsButtonPopupMenu(final int version)
 	{
 		ArrayList<FavoriteCommandEntry> commandList = new ArrayList<FavoriteCommandDialog.FavoriteCommandEntry>();
-		commandList.add(new FavoriteCommandEntry("select DBNAME=db_name(), SERVER=@@servername, VERSION=@@version", "db_name(), @@servername, @@version", "What are we using"));
+		commandList.add(new FavoriteCommandEntry("select DBNAME=db_name(), SERVER=@@servername, SRVHOST=asehostname(), VERSION=@@version", "db_name(), @@servername, @@version", "What are we using"));
 		commandList.add(new FavoriteCommandEntry("sp_who",                                        "", "Who is logged in on the system"));
 		commandList.add(new FavoriteCommandEntry("sp_helpdb",                                     "", "What databases are on this ASE"));
 		commandList.add(new FavoriteCommandEntry("sp_helpdevice",                                 "", "What devices are on this ASE"));

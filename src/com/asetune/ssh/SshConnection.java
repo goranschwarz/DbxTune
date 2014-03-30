@@ -538,6 +538,55 @@ public class SshConnection
 	 * lost the connection and make a reconnect attempt, it's likely to fail with 'is already in connected state!' or 'IllegalStateException: Cannot open session, you need to establish a connection first.'  or similar errors.
 	 * 
 	 * @param command The OS Command to be executed
+	 * @return a String, which the command produced
+	 * @throws IOException if return code from the command != 0
+	 */
+	synchronized public String execCommandOutputAsStr(String command) 
+	throws IOException
+	{
+		if (isClosed())
+			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
+		Session sess = _conn.openSession();
+		sess.execCommand(command);
+
+		InputStream stdout = new StreamGobbler(sess.getStdout());
+		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+		StringBuilder sb = new StringBuilder();
+		while (true)
+		{
+			String line = br.readLine();
+			if (line == null)
+				break;
+
+			sb.append(line);
+			sb.append("\n");
+		}
+		String output = sb.toString();
+
+		Integer rc = sess.getExitStatus();
+
+		sess.close();
+		br.close();
+		
+		_logger.debug("execCommandRetAsStr: '"+command+"' produced '"+output+"'.");
+
+		if (rc != null && rc.intValue() != 0)
+			throw new IOException("execCommandRetAsStr('"+command+"') return code not zero. rc="+rc+". Output: "+output);
+
+		return output;
+	}
+
+	/**
+	 * Execute a Operating System Command on the remote host
+	 * <p>
+	 * If the connection has been closed, a new one will be attempted.
+	 * <p>
+	 * Note: This is synchronized because if several execute it simultaneously and we have 
+	 * lost the connection and make a reconnect attempt, it's likely to fail with 'is already in connected state!' or 'IllegalStateException: Cannot open session, you need to establish a connection first.'  or similar errors.
+	 * 
+	 * @param command The OS Command to be executed
 	 * @return a Session object, which you can read stdout and stderr on
 	 * @throws IOException 
 	 * @see Session

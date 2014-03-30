@@ -77,6 +77,9 @@ implements ActionListener, KeyListener, FocusListener
 
 	private JCheckBox          _sshOptionSavePwd_chk = new JCheckBox("Save password", true);
 	
+	private JLabel             _sshInitOsCmd_lbl   = new JLabel("Init OS Cmd");
+	private JTextField         _sshInitOsCmd_txt   = new JTextField("");
+
 	private ImageIcon          _sshTunnelHelpImageIcon  = SwingUtils.readImageIcon(Version.class, "images/sshSessionForwarding.png");
 	private JLabel             _sshTunnelHelpIcon       = new JLabel(_sshTunnelHelpImageIcon);
 
@@ -277,11 +280,14 @@ implements ActionListener, KeyListener, FocusListener
 		_sshPasswd_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_sshOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		
-		_sshHost_lbl   .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
-		_sshHost_txt   .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
-		_sshPort_lbl   .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
-		_sshPort_txt   .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
+		_sshHost_lbl      .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
+		_sshHost_txt      .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
+		_sshPort_lbl      .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
+		_sshPort_txt      .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
+		_sshInitOsCmd_lbl .setToolTipText("<html>Execute OS command(s) after we have connected.<br>This is if you need to do setup some <i>stuff</i> or create a new <i>sub SSH tunnel</i> or do...</html>");
+		_sshInitOsCmd_txt .setToolTipText(_sshInitOsCmd_lbl.getToolTipText());
 
+		
 		panel.add(_sshServerIcon,        "");
 		panel.add(_sshServerHelp,        "wmin 100, pushx, growx");
 
@@ -298,6 +304,9 @@ implements ActionListener, KeyListener, FocusListener
 		panel.add(_sshPasswd_txt,        "pushx, growx");
 
 		panel.add(_sshOptionSavePwd_chk, "skip");
+
+		panel.add(_sshInitOsCmd_lbl,     "");
+		panel.add(_sshInitOsCmd_txt,     "pushx, growx");
 
 		_sshServerName_lbl.setText(":");
 		if (_logger.isDebugEnabled())
@@ -431,6 +440,8 @@ implements ActionListener, KeyListener, FocusListener
 			sshInfo.setSshPort    (Integer.parseInt(_sshPort_txt  .getText()));
 			sshInfo.setSshUsername(                 _sshUser_txt  .getText());
 			sshInfo.setSshPassword(                 _sshPasswd_txt.getText());
+
+			sshInfo.setSshInitOsCmd(                _sshInitOsCmd_txt.getText());
 
 			_sshTunelInfo = sshInfo;
 
@@ -570,6 +581,10 @@ implements ActionListener, KeyListener, FocusListener
 		conf.setProperty(PROP_PREFIX +"ssh.conn.password."+_hostPortStr,   _sshPasswd_txt.getText(), true);
 		conf.setProperty(PROP_PREFIX +"ssh.conn.password",                 _sshPasswd_txt.getText(), true);
 
+		// INIT OS CMD
+		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+_hostPortStr,  _sshInitOsCmd_txt.getText());
+		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd",                _sshInitOsCmd_txt.getText());
+
 
 		//------------------
 		// WINDOW
@@ -605,6 +620,9 @@ implements ActionListener, KeyListener, FocusListener
 
 		// PASSWORD
 		_sshPasswd_txt.setText(ti.getSshPassword());
+
+		// INIT OS CMD
+		_sshInitOsCmd_txt.setText(ti.getSshInitOsCmd());
 	}
 
 	private void getSavedWindowProps()
@@ -711,6 +729,12 @@ implements ActionListener, KeyListener, FocusListener
 		if (strVal == null)
 			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.password", "");
 		sshInfo.setSshPassword(strVal);
+
+		// INIT OS CMD
+		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+hostPortStr);
+		if (strVal == null)
+			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.initOsCmd", "");
+		sshInfo.setSshInitOsCmd(strVal);
 
 		return sshInfo;
 	}
