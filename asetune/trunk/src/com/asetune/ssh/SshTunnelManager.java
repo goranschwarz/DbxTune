@@ -186,15 +186,24 @@ public class SshTunnelManager
 			String initCmd = sshTunnelInfo.getSshInitOsCmd();
 			if (StringUtil.hasValue(initCmd))
 			{
-				try
+				String[] cmdArr = initCmd.split(";");
+				for (int i=0; i<cmdArr.length; i++)
 				{
-					String output = sshConn.execCommandOutputAsStr(initCmd);
-					if (StringUtil.hasValue(output))
-						_logger.info("SSH Init OS Command '"+initCmd+"' produced the following output: " + output);
-				}
-				catch (IOException e)
-				{
-					_logger.warn("SSH Init OS Command '"+initCmd+"' probably failed: " + e.toString());
+					String osCmd = cmdArr[i].trim();
+					if (StringUtil.isNullOrBlank(osCmd))
+						continue;
+					
+					_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+sshTunnelInfo.getSshHost()+":"+sshTunnelInfo.getSshPort()+" with user '"+sshTunnelInfo.getSshUsername()+"'.");
+					try
+					{
+						String output = sshConn.execCommandOutputAsStr(osCmd);
+						if (StringUtil.hasValue(output))
+							_logger.info("SSH Init OS Command ("+(i+1)+" of "+cmdArr.length+") '"+osCmd+"' produced the following output: " + output);
+					}
+					catch (IOException e) 
+					{
+						_logger.warn("SSH Init OS Command '"+osCmd+"' probably failed: " + e.toString());
+					}
 				}
 			}
 

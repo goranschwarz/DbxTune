@@ -1237,22 +1237,31 @@ PropertyConfigurator.configure(log4jProps);
 						
 						if (StringUtil.hasValue(initCmd))
 						{
-							try
+							String[] cmdArr = initCmd.split(";");
+							for (int i=0; i<cmdArr.length; i++)
 							{
-    							String output = _sshConn.execCommandOutputAsStr(initCmd);
-    							if (StringUtil.hasValue(output))
-    							{
-    								String htmlStr = 
-    									"<html>" +
-    									"Init Command '<code>"+initCmd+"</code>' produced the following output" +
-    									"<pre>" + output + "</pre>" +
-    									"</html>";
-    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
-    							}
-							}
-							catch (IOException e) 
-							{
-								SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+initCmd+"' Failed...", e);
+								String osCmd = cmdArr[i].trim();
+								if (StringUtil.isNullOrBlank(osCmd))
+									continue;
+								
+								_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+host+":"+portStr+" with user '"+user+"'.");
+								try
+								{
+	    							String output = _sshConn.execCommandOutputAsStr(osCmd);
+	    							if (StringUtil.hasValue(output))
+	    							{
+	    								String htmlStr = 
+	    									"<html>" +
+	    									"Init Command ("+(i+1)+" of "+cmdArr.length+") '<code>"+osCmd+"</code>' produced the following output" +
+	    									"<pre>" + output + "</pre>" +
+	    									"</html>";
+	    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
+	    							}
+								}
+								catch (IOException e) 
+								{
+									SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+osCmd+"' Failed...", e);
+								}
 							}
 						}
 					}

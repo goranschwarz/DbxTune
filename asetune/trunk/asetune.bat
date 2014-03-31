@@ -188,8 +188,9 @@ echo JVM_GC_PARAMS=%JVM_GC_PARAMS%
 
 rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
+rem --- pushd \\192.168.0.130\xxx\yyy     if it's a UNC path like the example, pushd will map a network drive, which will be unmounted at popd
 rem ------------------------------------------------------------------------
-cd %ASETUNE_HOME%
+pushd %ASETUNE_HOME%
 REM echo %CLASSPATH%
 
 java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DASETUNE_HOME="%ASETUNE_HOME%" -DASETUNE_SAVE_DIR="%ASETUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
@@ -257,5 +258,7 @@ echo -----------------------------------------------------------------------
 goto exit_asetune
 
 :exit_asetune
+popd
+
 pause
 endlocal

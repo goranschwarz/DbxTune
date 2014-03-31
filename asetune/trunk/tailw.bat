@@ -144,8 +144,9 @@ IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
+rem --- pushd \\192.168.0.130\xxx\yyy     if it's a UNC path like the example, pushd will map a network drive, which will be unmounted at popd
 rem ------------------------------------------------------------------------
-cd %TAILW_HOME%
+pushd %TAILW_HOME%
 REM echo %CLASSPATH%
 
 java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%TAILW_HOME%" -DTAILW_HOME="%TAILW_HOME%" -DTAILW_SAVE_DIR="%TAILW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.tailw.LogTailWindow %*
@@ -213,5 +214,7 @@ echo -----------------------------------------------------------------------
 goto exit_tailw
 
 :exit_tailw
+popd
+
 rem pause
 endlocal
