@@ -687,7 +687,8 @@ public class SshConnection
 		}
 
 		Session sess = _conn.openSession();
-		sess.execCommand("uname -a");
+//		sess.execCommand("uname -a");
+		sess.execCommand("uname");
 
 		InputStream stdout = new StreamGobbler(sess.getStdout());
 		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
@@ -708,9 +709,10 @@ public class SshConnection
 		if (_uname != null)
 		{
 			String[] sa = _uname.split(" ");
-			_osName = sa[0];
+			if (sa.length > 0)
+				_osName = sa[0];
 
-			// also try to figgure out a dummy default character set for the OS
+			// also try to figure out a dummy default character set for the OS
 			if      (_osName.equals("Linux")) _osCharset = "UTF-8";
 			else if (_osName.equals("SunOS")) _osCharset = "ISO-8859-1";
 			else if (_osName.equals("AIX"))   _osCharset = "ISO-8859-1"; // TODO: CHECK
