@@ -385,27 +385,31 @@ public class QueryWindow
 	private static Font       _aseMsgFont                 = null;
 	private ArrayList<JComponent> _resultCompList         = null;
 	
-	private int         _srvVersion                = 0;
-	private String      _connectedDriverName       = null;
-	private String      _connectedDriverVersion    = null;
-	private String      _connectedToProductName    = null;
-	private String      _connectedToProductVersion = null;
-	private String      _connectedToServerName     = null;
-	private String      _connectedToSysListeners   = null;
-	private String      _connectedSrvCharset       = null;
-	private String      _connectedSrvSortorder     = null;
-	private String      _connectedAsUser           = null;
-	private String      _connectedWithUrl          = null;
+	private int         _srvVersion                       = 0;
+	private String      _connectedDriverName              = null;
+	private String      _connectedDriverVersion           = null;
+	private String      _connectedToProductName           = null;
+	private String      _connectedToProductVersion        = null;
+	private String      _connectedToServerName            = null;
+	private String      _connectedToSysListeners          = null;
+	private String      _connectedSrvCharset              = null;
+	private String      _connectedSrvSortorder            = null;
+	private String      _connectedAsUser                  = null;
+	private String      _connectedWithUrl                 = null;
+
+	private String      _connectedClientCharsetId         = null;
+	private String      _connectedClientCharsetName       = null;
+	private String      _connectedClientCharsetDesc       = null;
 	
-	private String      _currentDbName             = null; // probably only maintained for ASE
-	private boolean     _oracleDbmsOutputIsEnabled = false; // only maintained for Oracle
+	private String      _currentDbName                    = null; // probably only maintained for ASE
+	private boolean     _oracleDbmsOutputIsEnabled        = false; // only maintained for Oracle
 
 	/** if DB returns a error message, stop executions */
-	private boolean     _abortOnDbMessages         = false;
+	private boolean     _abortOnDbMessages                = false;
 	
 	// Last File
-	private LinkedList<String>_lastFileNameList      = new LinkedList<String>();
-	private int         _lastFileNameSaveMax         = DEFAULT_lastFileNameSaveMax;
+	private LinkedList<String>_lastFileNameList           = new LinkedList<String>();
+	private int         _lastFileNameSaveMax              = DEFAULT_lastFileNameSaveMax;
 
 	// The base Window can be either a JFrame or a JDialog
 	private Window      _window          = null;
@@ -1944,19 +1948,22 @@ public class QueryWindow
 		boolean showOfflineTab = true;
 		boolean showJdbcTab    = true;
 
-		_connectedDriverName       = null;
-		_connectedDriverVersion    = null;
-		_connectedToProductName    = null;
-		_connectedToProductVersion = null;
-		_connectedToServerName     = null;
-		_connectedToSysListeners   = null;
-		_connectedSrvCharset       = null;
-		_connectedSrvSortorder     = null;
-		_connectedAsUser           = null;
-		_connectedWithUrl          = null;
+		_connectedDriverName        = null;
+		_connectedDriverVersion     = null;
+		_connectedToProductName     = null;
+		_connectedToProductVersion  = null;
+		_connectedToServerName      = null;
+		_connectedToSysListeners    = null;
+		_connectedSrvCharset        = null;
+		_connectedSrvSortorder      = null;
+		_connectedAsUser            = null;
+		_connectedWithUrl           = null;
+		_connectedClientCharsetId   = null;
+		_connectedClientCharsetName = null;
+		_connectedClientCharsetDesc = null;
 		
-		_currentDbName             = null;
-		_oracleDbmsOutputIsEnabled = false; // I don't think you need to disable it, hopefully it will be disabled when diconnecting
+		_currentDbName              = null;
+		_oracleDbmsOutputIsEnabled  = false; // I don't think you need to disable it, hopefully it will be disabled when diconnecting
 
 		// mark code completion for refresh
 		if (_compleationProviderAbstract != null)
@@ -2041,16 +2048,19 @@ public class QueryWindow
 		// Get product info
 		try	
 		{
-			_connectedDriverName       = connDialog.getDriverName();
-			_connectedDriverVersion    = connDialog.getDriverVersion();
-			_connectedToProductName    = connDialog.getDatabaseProductName(); 
-			_connectedToProductVersion = connDialog.getDatabaseProductVersion(); 
-			_connectedToServerName     = connDialog.getDatabaseServerName();
-			_connectedToSysListeners   = null;
-			_connectedSrvCharset       = null;
-			_connectedSrvSortorder     = null;
-			_connectedAsUser           = connDialog.getUsername();
-			_connectedWithUrl          = connDialog.getUrl();
+			_connectedDriverName        = connDialog.getDriverName();
+			_connectedDriverVersion     = connDialog.getDriverVersion();
+			_connectedToProductName     = connDialog.getDatabaseProductName(); 
+			_connectedToProductVersion  = connDialog.getDatabaseProductVersion(); 
+			_connectedToServerName      = connDialog.getDatabaseServerName();
+			_connectedToSysListeners    = null;
+			_connectedSrvCharset        = null;
+			_connectedSrvSortorder      = null;
+			_connectedAsUser            = connDialog.getUsername();
+			_connectedWithUrl           = connDialog.getUrl();
+			_connectedClientCharsetId   = null;
+			_connectedClientCharsetName = null;
+			_connectedClientCharsetDesc = null;
 
 			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
 		} 
@@ -2090,8 +2100,11 @@ public class QueryWindow
 						_connectedToSysListeners = AseConnectionUtils.getListeners(_conn, false, false, _window);
 
 					// Sortorder & charset
-					_connectedSrvCharset   = AseConnectionUtils.getAseCharset(_conn);
-					_connectedSrvSortorder = AseConnectionUtils.getAseSortorder(_conn);
+					_connectedSrvCharset        = AseConnectionUtils.getAseCharset(_conn);
+					_connectedSrvSortorder      = AseConnectionUtils.getAseSortorder(_conn);
+					_connectedClientCharsetId   = AseConnectionUtils.getClientCharsetId(_conn);
+					_connectedClientCharsetName = AseConnectionUtils.getClientCharsetName(_conn);
+					_connectedClientCharsetDesc = AseConnectionUtils.getClientCharsetDesc(_conn);
 
 					// Also get "various statuses" like if we are in a transaction or not
 					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
@@ -2185,6 +2198,9 @@ public class QueryWindow
 				connInfo.setSrvCharset       (_connectedSrvCharset); 
 				connInfo.setSrvSortorder     (_connectedSrvSortorder); 
 				connInfo.setSshTunnelInfo    (connDialog.getAseSshTunnelInfo());
+//				connInfo.setClientCharsetId  (_connectedClientCharsetId); 
+//				connInfo.setClientCharsetName(_connectedClientCharsetName); 
+//				connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
 				CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 				
@@ -2231,6 +2247,9 @@ public class QueryWindow
 			connInfo.setSrvCharset       (_connectedSrvCharset); 
 			connInfo.setSrvSortorder     (_connectedSrvSortorder); 
 //			connInfo.setSshTunnelInfo    (connDialog.getOfflineSshTunnelInfo());
+//			connInfo.setClientCharsetId  (_connectedClientCharsetId); 
+//			connInfo.setClientCharsetName(_connectedClientCharsetName); 
+//			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
 			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 		}
@@ -2348,6 +2367,9 @@ public class QueryWindow
 			connInfo.setSrvCharset       (_connectedSrvCharset); 
 			connInfo.setSrvSortorder     (_connectedSrvSortorder); 
 //			connInfo.setSshTunnelInfo    (connDialog.getJdbcSshTunnelInfo());
+//			connInfo.setClientCharsetId  (_connectedClientCharsetId); 
+//			connInfo.setClientCharsetName(_connectedClientCharsetName); 
+//			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
 			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 		}
@@ -2438,7 +2460,7 @@ public class QueryWindow
 			String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
 
 			setSrvInTitle(srvStr);
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 			
 			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
@@ -2539,7 +2561,7 @@ public class QueryWindow
 			_execGuiShowplan_but       .setEnabled(false);
 
 			setSrvInTitle(_conn.toString());
-			ServerInfo srvInfo = new ServerInfo(_conn.toString(), _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			ServerInfo srvInfo = new ServerInfo(_conn.toString(), _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 		}
 
@@ -2564,7 +2586,7 @@ public class QueryWindow
 			_execGuiShowplan_but       .setEnabled(false);
 
 			setSrvInTitle(_connectedWithUrl);
-			ServerInfo srvInfo = new ServerInfo(_connectedWithUrl, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder);
+			ServerInfo srvInfo = new ServerInfo(_connectedWithUrl, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 		}
 		
@@ -2593,16 +2615,19 @@ public class QueryWindow
 	{
 		saveWinProps();
 
-		_connectedDriverName       = null;
-		_connectedDriverVersion    = null;
-		_connectedToProductName    = null;
-		_connectedToProductVersion = null;
-		_connectedToServerName     = null;
-		_connectedAsUser           = null;
-		_connectedWithUrl          = null;
-		_connectedToSysListeners   = null;
-		_connectedSrvCharset       = null;
-		_connectedSrvSortorder     = null;
+		_connectedDriverName        = null;
+		_connectedDriverVersion     = null;
+		_connectedToProductName     = null;
+		_connectedToProductVersion  = null;
+		_connectedToServerName      = null;
+		_connectedAsUser            = null;
+		_connectedWithUrl           = null;
+		_connectedToSysListeners    = null;
+		_connectedSrvCharset        = null;
+		_connectedSrvSortorder      = null;
+		_connectedClientCharsetId   = null;
+		_connectedClientCharsetName = null;
+		_connectedClientCharsetDesc = null;
 
 		_currentDbName             = null;
 		_oracleDbmsOutputIsEnabled = false; // Mark this as false, it will be marked as true when executing...

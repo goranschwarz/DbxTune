@@ -261,14 +261,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>ToolTip Provider accesses Code Completion, and show column/parameters information for tables/procedures</li>
        <li>Added the Capture SQL to the tools menu... (if you connect to a ASE) this could be good to have from within SQL Window</li>
        <li>All text areas using RSyntaxTextArea can now do ToUpperCase(Ctrl-U) and ToLowerCase(Ctrl-L), and the pupup menu also has to upper and lower entries.</li>
-       <li>The send terminator 'go' now has a sub command 'plain'. This temporary sets 'As Plain Text' but just for this SQL batch.<br>ResultSets for this SQL Batch will be displayed in a RSyntaxtTextArea object.</li>
-       <li>The send terminator 'go' now has a sub command 'top #'. This temporary sets 'Limit ResultSet rows' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'psql'. This temporary sets 'Print the executed SQL Statement in the output' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'prsi'. This temporary sets 'Print info about the ResultSet data types etc in the output' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'time'. This temporary sets 'Print how long time the SQL Batch took, from the clients perspective' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'rowc'. This temporary sets 'Print the rowcount from JDBC driver, not the number of rows actually returned' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'append'. This temporary sets 'Do NOT clear results from previous executions. Append at the end' but just for this SQL batch.</li>
-       <li>The send terminator 'go' now has a sub command 'nodata'. This temporary sets 'Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)' but just for this SQL batch.</li>
+       <li>The send terminator 'go' now has a bunch of sub command</li>
+       <ul>
+           <li><code>plain </code> - This temporary sets 'As Plain Text' but just for this SQL batch. ResultSets for this SQL Batch will be displayed in a RSyntaxtTextArea object.</li>
+           <li><code>top # </code> - This temporary sets 'Limit ResultSet rows' but just for this SQL batch.</li>
+           <li><code>psql  </code> - This temporary sets 'Print the executed SQL Statement in the output' but just for this SQL batch.</li>
+           <li><code>prsi  </code> - This temporary sets 'Print info about the ResultSet data types etc in the output' but just for this SQL batch.</li>
+           <li><code>time  </code> - This temporary sets 'Print how long time the SQL Batch took, from the clients perspective' but just for this SQL batch.</li>
+           <li><code>rowc  </code> - This temporary sets 'Print the rowcount from JDBC driver, not the number of rows actually returned' but just for this SQL batch.</li>
+           <li><code>append</code> - This temporary sets 'Do NOT clear results from previous executions. Append at the end' but just for this SQL batch.</li>
+           <li><code>nodata</code> - This temporary sets 'Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)' but just for this SQL batch.</li>
+       </ul>
        <li>Send SQL Batch Terminator string can be changed (via a dialog), the default is 'go'.</li>
        <li>Code Completion List now also shows icons...</li>
        <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
@@ -277,6 +280,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
        <li>Added ASE Set option 'set statistics *_html', which enables/disables ALL options for HTML Statistics output.</li>
        <li>After the sql.ini/interfaces file has been changed via the "edit" button: Select the last edited entry as the new server.</li>
+       <li>Client character set can be chosen via a ComboBox, it will simply update the 'URL Options' field.</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>

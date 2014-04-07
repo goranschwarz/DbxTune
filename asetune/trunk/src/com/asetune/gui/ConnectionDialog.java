@@ -236,6 +236,9 @@ public class ConnectionDialog
 	private JLabel             _aseSshTunnelDesc_lbl   = new JLabel();
 	private JButton            _aseSshTunnel_but       = new JButton("SSH Settings...");
 
+	private JLabel             _aseClientCharset_lbl   = new JLabel("Client Charset");
+	private JComboBox          _aseClientCharset_cbx   = new JComboBox();
+
 	private JLabel             _aseSqlInit_lbl         = new JLabel("SQL Init");
 	private JTextField         _aseSqlInit_txt         = new JTextField("");
 
@@ -1233,8 +1236,12 @@ if (_connProfileVisible_chk.isSelected())
 			    "</ul>" +
 			    "Or just Google: 'ssh tunnel' or 'ssh port forwarding'.<br>" +
 			"</html>");
-		_aseSqlInit_lbl .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
-		_aseSqlInit_txt .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+		_aseClientCharset_lbl .setToolTipText("<html>Character set which is used by the client.<br><b>Note:</b> This will just set field 'URL Options' to use CHARSET=valueInComboBox</html>");
+		_aseClientCharset_cbx .setToolTipText(_aseClientCharset_lbl.getToolTipText());
+		_aseSqlInit_lbl       .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+		_aseSqlInit_txt       .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
+
+		populateClientCharset();
 
 		panel.add(_aseServerIcon,       "");
 		panel.add(_aseServerHelp,       "wmin 100, push, grow");
@@ -1270,6 +1277,9 @@ if (_connProfileVisible_chk.isSelected())
 		panel.add(_aseOptions_txt,       "push, grow, split");
 		panel.add(_aseOptions_but,       "wrap");
 
+		panel.add(_aseClientCharset_lbl, "");
+		panel.add(_aseClientCharset_cbx, "push, grow");
+
 		panel.add(_aseConnUrl_chk,       "");
 		panel.add(_aseConnUrl_txt,       "push, grow");
 		_aseConnUrl_txt.setEnabled(_aseConnUrl_chk.isEnabled());
@@ -1284,16 +1294,17 @@ if (_connProfileVisible_chk.isSelected())
 		AutoCompleteDecorator.decorate(_aseServer_cbx);
 
 		// ADD ACTION LISTENERS
-		_aseServer_cbx   .addActionListener(this);
-		_aseOptions_txt  .addActionListener(this);
-		_aseOptions_but  .addActionListener(this);
-		_aseIfile_but    .addActionListener(this);
-		_aseEditIfile_but.addActionListener(this);
-		_aseIfile_txt    .addActionListener(this);
-		_aseConnUrl_chk  .addActionListener(this);
-		_aseConnUrl_txt  .addActionListener(this);
-		_aseSshTunnel_chk.addActionListener(this);
-		_aseSshTunnel_but.addActionListener(this);
+		_aseServer_cbx       .addActionListener(this);
+		_aseOptions_txt      .addActionListener(this);
+		_aseOptions_but      .addActionListener(this);
+		_aseIfile_but        .addActionListener(this);
+		_aseEditIfile_but    .addActionListener(this);
+		_aseIfile_txt        .addActionListener(this);
+		_aseConnUrl_chk      .addActionListener(this);
+		_aseConnUrl_txt      .addActionListener(this);
+		_aseSshTunnel_chk    .addActionListener(this);
+		_aseSshTunnel_but    .addActionListener(this);
+		_aseClientCharset_cbx.addActionListener(this);
 
 		// If write in host/port, create the combined host:port and show that...
 		_aseHost_txt        .addKeyListener(this);
@@ -1309,7 +1320,67 @@ if (_connProfileVisible_chk.isSelected())
 		
 		return panel;
 	}
-
+	private void populateClientCharset()
+	{
+		_aseClientCharset_cbx.addItem("");
+		_aseClientCharset_cbx.addItem("ascii_8");
+		_aseClientCharset_cbx.addItem("big5");
+		_aseClientCharset_cbx.addItem("big5hk");
+		_aseClientCharset_cbx.addItem("cp1250");
+		_aseClientCharset_cbx.addItem("cp1251");
+		_aseClientCharset_cbx.addItem("cp1252");
+		_aseClientCharset_cbx.addItem("cp1253");
+		_aseClientCharset_cbx.addItem("cp1254");
+		_aseClientCharset_cbx.addItem("cp1255");
+		_aseClientCharset_cbx.addItem("cp1256");
+		_aseClientCharset_cbx.addItem("cp1257");
+		_aseClientCharset_cbx.addItem("cp1258");
+		_aseClientCharset_cbx.addItem("cp437");
+		_aseClientCharset_cbx.addItem("cp850");
+		_aseClientCharset_cbx.addItem("cp852");
+		_aseClientCharset_cbx.addItem("cp855");
+		_aseClientCharset_cbx.addItem("cp857");
+		_aseClientCharset_cbx.addItem("cp858");
+		_aseClientCharset_cbx.addItem("cp860");
+		_aseClientCharset_cbx.addItem("cp864");
+		_aseClientCharset_cbx.addItem("cp866");
+		_aseClientCharset_cbx.addItem("cp869");
+		_aseClientCharset_cbx.addItem("cp874");
+		_aseClientCharset_cbx.addItem("cp932");
+		_aseClientCharset_cbx.addItem("cp936");
+		_aseClientCharset_cbx.addItem("cp949");
+		_aseClientCharset_cbx.addItem("cp950");
+		_aseClientCharset_cbx.addItem("deckanji");
+		_aseClientCharset_cbx.addItem("euccns");
+		_aseClientCharset_cbx.addItem("eucgb");
+		_aseClientCharset_cbx.addItem("eucjis");
+		_aseClientCharset_cbx.addItem("eucksc");
+		_aseClientCharset_cbx.addItem("gb18030");
+		_aseClientCharset_cbx.addItem("greek8");
+		_aseClientCharset_cbx.addItem("iso15");
+		_aseClientCharset_cbx.addItem("iso88592");
+		_aseClientCharset_cbx.addItem("iso88595");
+		_aseClientCharset_cbx.addItem("iso88596");
+		_aseClientCharset_cbx.addItem("iso88597");
+		_aseClientCharset_cbx.addItem("iso88598");
+		_aseClientCharset_cbx.addItem("iso88599");
+		_aseClientCharset_cbx.addItem("iso_1");
+		_aseClientCharset_cbx.addItem("koi8");
+		_aseClientCharset_cbx.addItem("kz1048");
+		_aseClientCharset_cbx.addItem("mac");
+		_aseClientCharset_cbx.addItem("macgrk2");
+		_aseClientCharset_cbx.addItem("macturk");
+		_aseClientCharset_cbx.addItem("mac_cyr");
+		_aseClientCharset_cbx.addItem("mac_ee");
+		_aseClientCharset_cbx.addItem("mac_euro");
+		_aseClientCharset_cbx.addItem("roman8");
+		_aseClientCharset_cbx.addItem("roman9");
+		_aseClientCharset_cbx.addItem("sjis");
+		_aseClientCharset_cbx.addItem("tis620");
+		_aseClientCharset_cbx.addItem("turkish8");
+		_aseClientCharset_cbx.addItem("unicode");
+		_aseClientCharset_cbx.addItem("utf8");	}
+	
 	private JPanel createAseOptionsPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Options", true);
@@ -3851,6 +3922,34 @@ if (_connProfileVisible_chk.isSelected())
 			updateSshTunnelDescription();
 		}
 		
+		// --- ASE: COMBOBOX: Charset ---
+		if (_aseClientCharset_cbx.equals(source))
+		{
+			String selectedCharset = _aseClientCharset_cbx.getSelectedItem() + "";
+			
+			Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_aseOptions_txt.getText());
+
+			if (StringUtil.hasValue(selectedCharset))
+				optionsMap.put("CHARSET", selectedCharset);
+			else
+				optionsMap.remove("CHARSET");
+
+			_aseOptions_txt.setText( StringUtil.toCommaStr(optionsMap, "=", ", ") );
+		}
+		
+		// --- ASE: OPTIONS ---
+		if (_aseOptions_txt.equals(source))
+		{
+			if (StringUtil.hasValue(_aseOptions_txt.getText()))
+			{
+				Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_aseOptions_txt.getText());
+				String charset = optionsMap.get("CHARSET");
+				
+				if (charset != null)
+					_aseClientCharset_cbx.setSelectedItem(charset);
+			}
+		}
+		
 		// --- ASE: CHECKBOX: Connect On Startup ---
 		if (_aseOptionConnOnStart_chk.equals(source))
 		{
@@ -4514,6 +4613,7 @@ if (_connProfileVisible_chk.isSelected())
 			tds._tdsDbname        = null;
 			tds._tdsLoginTimout   = Integer.parseInt(_aseLoginTimeout_txt.getText());
 			tds._tdsShhTunnelInfo = _aseSshTunnelInfo;
+			tds._tdsClientCharset = _aseClientCharset_cbx.getSelectedItem().toString();
 			tds._tdsSqlInit       = _aseSqlInit_txt.getText();
 			tds._tdsUrlOptions    = _aseOptions_txt.getText();
 			tds._tdsUseUrl        = _aseConnUrl_chk.isSelected();
@@ -4903,6 +5003,9 @@ if (_connProfileVisible_chk.isSelected())
 		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL,               _aseSshTunnel_chk.isSelected() );
 		conf.setProperty(PROPKEY_CONN_SSH_TUNNEL+"."+hostPort,  _aseSshTunnel_chk.isSelected() );
 
+		conf.setProperty("conn.login.client.charset",           _aseClientCharset_cbx.getSelectedItem().toString() );
+		conf.setProperty("conn.login.client.charset."+hostPort, _aseClientCharset_cbx.getSelectedItem().toString() );
+
 		conf.setProperty("conn.login.sql.init",                 _aseSqlInit_txt.getText() );
 		conf.setProperty("conn.login.sql.init."+hostPort,       _aseSqlInit_txt.getText() );
 
@@ -5060,6 +5163,10 @@ if (_connProfileVisible_chk.isSelected())
 
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
 		_aseSshTunnel_chk.setSelected(bol);
+
+		str = conf.getProperty("conn.login.client.charset");
+		if (str != null)
+			_aseClientCharset_cbx.setSelectedItem(str);
 
 		str = conf.getProperty("conn.login.sql.init");
 		if (str != null)
@@ -5350,6 +5457,9 @@ if (_connProfileVisible_chk.isSelected())
 		if (_aseSshTunnel_chk.isSelected())
 			_aseSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
 		updateSshTunnelDescription();
+
+		// Client CHARSET
+		_aseClientCharset_cbx.setSelectedItem( conf.getProperty("conn.login.client.charset."+hostPortStr, ""));
 
 		// SQL Init
 		_aseSqlInit_txt.setText( conf.getProperty("conn.login.sql.init."+hostPortStr, ""));

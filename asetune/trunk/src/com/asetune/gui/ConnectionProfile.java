@@ -60,6 +60,7 @@ public class ConnectionProfile
 		public String        _tdsDbname        = null;
 		public int           _tdsLoginTimout   = -1;
 		public SshTunnelInfo _tdsShhTunnelInfo = null;
+		public String        _tdsClientCharset = null;
 		public String        _tdsSqlInit       = null;
 		public String        _tdsUrlOptions    = null;
 		public boolean       _tdsUseUrl        = false;
