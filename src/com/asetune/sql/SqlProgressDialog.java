@@ -77,6 +77,8 @@ implements PropertyChangeListener, ActionListener
 //	private SwingWorker<String, Object>	_swingWorker = null;
 
 	private boolean          _cancelled             = false;
+	
+	private Window           _owner                 = null;
 
 	/**
 	 * This timer is started just before we execute the SQL ststement that refreshes the data
@@ -98,7 +100,8 @@ implements PropertyChangeListener, ActionListener
 		super(owner, "Waiting for server...", ModalityType.DOCUMENT_MODAL);
 		setLayout(new MigLayout());
 
-		_conn = conn;
+		_owner = owner;
+		_conn  = conn;
 
 		Font f = _totalExecTimeDesc_lbl.getFont();
 		_allSql_lbl          .setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
@@ -382,7 +385,13 @@ implements PropertyChangeListener, ActionListener
 					}
 					catch(SQLException ex)
 					{
-						SwingUtils.showErrorMessage("Cancel", "Problems sending cancel to ASE: "+ex, ex);
+						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to ASE: "+ex, ex);
+//						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to ASE (conn will be closed): "+ex, ex);
+
+						// Close the Connection
+						//try {     _conn.close(); }
+						//catch (SQLException ignore) {}
+						//finally { _conn = null; }
 					}
 				}
 				// All others try to call cancel on the statement level
@@ -396,7 +405,13 @@ implements PropertyChangeListener, ActionListener
 						}
 						catch(SQLException ex)
 						{
-							SwingUtils.showErrorMessage("Cancel", "Problems doing cancel to on the Statement level: "+ex, ex);
+							SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level: "+ex, ex);
+//							SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level (conn will be closed): "+ex, ex);
+
+							// Close the Connection
+							//try {     _conn.close(); }
+							//catch (SQLException ignore) {}
+							//finally { _conn = null; }
 						}
 					}
 				}

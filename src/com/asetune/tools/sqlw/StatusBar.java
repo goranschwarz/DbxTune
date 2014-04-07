@@ -218,8 +218,11 @@ public class StatusBar extends JPanel
 					"    <li>Product Name:    <b>" + si.getProductName()    + "</b></li>" +
 					"    <li>Product Version: <b>" + si.getProductVersion() + "</b></li>" +
 					listeners +
-					(StringUtil.isNullOrBlank(si.getCharset()  ) ? "" : "<li>Server Charset:   <b>" + si.getCharset()   + "</b></li>") +
-					(StringUtil.isNullOrBlank(si.getSortorder()) ? "" : "<li>Server SortOrder: <b>" + si.getSortorder() + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getCharset()          ) ? "" : "<li>Server Charset:      <b>" + si.getCharset()           + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getSortorder()        ) ? "" : "<li>Server SortOrder:    <b>" + si.getSortorder()         + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getClientCharsetId()  ) ? "" : "<li>Client Charset ID:   <b>" + si.getClientCharsetId()   + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getClientCharsetName()) ? "" : "<li>Client Charset Name: <b>" + si.getClientCharsetName() + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getClientCharsetDesc()) ? "" : "<li>Client Charset Desc: <b>" + si.getClientCharsetDesc() + "</b></li>") +
 					"</ul>" +
 					"</html>");
 		}
@@ -289,6 +292,8 @@ public class StatusBar extends JPanel
 
 		String dbname    = "db="        + csi._dbname;
 		String spid      = "spid="      + csi._spid;
+		String username  = "user="      + csi._username;
+		String susername = "login="     + csi._susername;
 		String tranState = "TranState=" + csi.getTranStateStr();
 		String tranCount = "TranCount=" + csi._tranCount;
 
@@ -298,12 +303,14 @@ public class StatusBar extends JPanel
 		if ( csi.isNonNormalTranState() )
 			tranState = "TranState=<b><font color=\"red\">" + csi.getTranStateStr() + "</font></b>";
 		
-		String text = spid;
+		String text = spid + ", " + username + ", " + susername;
 		if (csi._tranCount > 0 || csi.isNonNormalTranState())
 		{
 			text = "<html>"
 				+ dbname    + ", "
 				+ spid      + ", " 
+				+ username  + ", " 
+				+ susername + ", " 
 				+ (csi.isTranStateUsed() ? (tranState + ", ") : "") 
 				+ tranCount + 
 				"</html>";
@@ -314,10 +321,12 @@ public class StatusBar extends JPanel
 		
 		String tooltip = "<html>" +
 			"<table border=0 cellspacing=0 cellpadding=1>" +
-			                         "<tr> <td>Current DB: </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
-			                         "<tr> <td>SPID:       </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
-			(csi.isTranStateUsed() ? "<tr> <td>Tran State: </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
-			                         "<tr> <td>Tran Count: </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
+			                         "<tr> <td>Current DB:    </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
+			                         "<tr> <td>SPID:          </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
+			                         "<tr> <td>Current User:  </td> <td><b>" + csi._username         + "</b> </td> </tr>" +
+			                         "<tr> <td>Current Login: </td> <td><b>" + csi._susername        + "</b> </td> </tr>" +
+			(csi.isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
+			                         "<tr> <td>Tran Count:    </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
 			"</table>" +
 			"<hr>" + 
 			(csi.isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...
@@ -384,29 +393,44 @@ public class StatusBar extends JPanel
 		public String _sysListeners;
 		public String _charset;
 		public String _sortorder;
+
+		public String _clientCharsetId;
+		public String _clientCharsetName;
+		public String _clientCharsetDesc;
 		
-		public ServerInfo(String srvName, String productName, String productVersion, String serverName, String username, String withUrl, String sysListeners, String srvCharset, String srvSortorder)
+		public ServerInfo(String srvName, String productName, String productVersion, 
+				String serverName, String username, String withUrl, String sysListeners, 
+				String srvCharset, String srvSortorder,
+				String clientCharsetId, String clientCharsetName, String clientCharsetDesc)
 		{
-			_srvName         = srvName;
-			_productName     = productName;
-			_productVersion  = productVersion;
-			_serverName      = serverName;
-			_username        = username;
-			_withUrl         = withUrl;
-			_sysListeners    = sysListeners;
-			_charset         = srvCharset;
-			_sortorder       = srvSortorder;
+			_srvName           = srvName;
+			_productName       = productName;
+			_productVersion    = productVersion;
+			_serverName        = serverName;
+			_username          = username;
+			_withUrl           = withUrl;
+			_sysListeners      = sysListeners;
+			_charset           = srvCharset;
+			_sortorder         = srvSortorder;
+
+			_clientCharsetId   = clientCharsetId;
+			_clientCharsetName = clientCharsetName;
+			_clientCharsetDesc = clientCharsetDesc;
 		}
 
-		public String getSrvName()        { return _srvName        != null ? _srvName        : NOT_CONNECTED; }
-		public String getProductName()    { return _productName    != null ? _productName    : ""; }
-		public String getProductVersion() { return _productVersion != null ? _productVersion : ""; }
-		public String getServerName()     { return _serverName     != null ? _serverName     : ""; }
-		public String getUsername()       { return _username       != null ? _username       : ""; }
-		public String getWithUrl()        { return _withUrl        != null ? _withUrl        : ""; }
-		public String getSysListeners()   { return _sysListeners   != null ? _sysListeners   : ""; }
-		public String getCharset()        { return _charset        != null ? _charset        : ""; }
-		public String getSortorder()      { return _sortorder      != null ? _sortorder      : ""; }
+		public String getSrvName()           { return _srvName           != null ? _srvName        : NOT_CONNECTED; }
+		public String getProductName()       { return _productName       != null ? _productName    : ""; }
+		public String getProductVersion()    { return _productVersion    != null ? _productVersion : ""; }
+		public String getServerName()        { return _serverName        != null ? _serverName     : ""; }
+		public String getUsername()          { return _username          != null ? _username       : ""; }
+		public String getWithUrl()           { return _withUrl           != null ? _withUrl        : ""; }
+		public String getSysListeners()      { return _sysListeners      != null ? _sysListeners   : ""; }
+		public String getCharset()           { return _charset           != null ? _charset        : ""; }
+		public String getSortorder()         { return _sortorder         != null ? _sortorder      : ""; }
+
+		public String getClientCharsetId()   { return _clientCharsetId   != null ? _clientCharsetId      : ""; }
+		public String getClientCharsetName() { return _clientCharsetName != null ? _clientCharsetName      : ""; }
+		public String getClientCharsetDesc() { return _clientCharsetDesc != null ? _clientCharsetDesc      : ""; }
 
 		public String getProductNameShort()
 		{
@@ -421,21 +445,25 @@ public class StatusBar extends JPanel
 			else if (productName.equals(DbUtils.DB_PROD_NAME_HANA))       productNameShort = "HANA";
 			else if (productName.equals(DbUtils.DB_PROD_NAME_H2))         productNameShort = "H2";
 			else if (productName.equals(DbUtils.DB_PROD_NAME_ORACLE))     productNameShort = "ORA";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_MSSQL))         productNameShort = "MS-SQL";
+			else if (productName.equals(DbUtils.DB_PROD_NAME_MSSQL))      productNameShort = "MS-SQL";
 			else productNameShort = "UNKNOWN";
 			
 			return productNameShort;
 		}
 
-		public void   setSrvName       (String srvName)        { _srvName        = srvName; }
-		public void   setProductName   (String productName)    { _productName    = productName; }
-		public void   setProductVersion(String productVersion) { _productVersion = productVersion; }
-		public void   setServerName    (String serverName)     { _serverName     = serverName; }
-		public void   setUsername      (String username)       { _username       = username; }
-		public void   setWithUrl       (String withUrl)        { _withUrl        = withUrl; }
-		public void   setSysListeners  (String sysListeners)   { _sysListeners   = sysListeners; }
-		public void   setCharset       (String charset)        { _charset        = charset; }
-		public void   setSortorder     (String sortorder)      { _sortorder      = sortorder; }
+		public void   setSrvName          (String srvName)           { _srvName           = srvName; }
+		public void   setProductName      (String productName)       { _productName       = productName; }
+		public void   setProductVersion   (String productVersion)    { _productVersion    = productVersion; }
+		public void   setServerName       (String serverName)        { _serverName        = serverName; }
+		public void   setUsername         (String username)          { _username          = username; }
+		public void   setWithUrl          (String withUrl)           { _withUrl           = withUrl; }
+		public void   setSysListeners     (String sysListeners)      { _sysListeners      = sysListeners; }
+		public void   setCharset          (String charset)           { _charset           = charset; }
+		public void   setSortorder        (String sortorder)         { _sortorder         = sortorder; }
+
+		public void   setClientCharsetId  (String clientCharsetId)   { _clientCharsetId   = clientCharsetId; }
+		public void   setClientCharsetName(String clientCharsetName) { _clientCharsetName = clientCharsetName; }
+		public void   setClientCharsetDesc(String clientCharsetDesc) { _clientCharsetDesc = clientCharsetDesc; }
 	}
 
 }

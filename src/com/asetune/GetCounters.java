@@ -572,6 +572,8 @@ extends CounterControllerAbstract
 		// CR# 581760
 		// "capture missing statistics" will capture statistics for MDA Tables
 		// http://www-dse/cgi-bin/websql/websql.dir/QTS/bugsheet.hts?GO=GO&bugid=581760
+		//
+		// Change the version check when the bug is fixed. In 16.0 it's not fixed.
 		//----------------------
 		try
 		{

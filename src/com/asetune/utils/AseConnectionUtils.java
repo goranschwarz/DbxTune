@@ -871,6 +871,102 @@ public class AseConnectionUtils
 		}
 	}
 
+	public static String getClientCharsetId(Connection conn)
+	{
+		final String UNKNOWN = "";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select @@client_csid";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting Client charset id, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getClientCharsetName(Connection conn)
+	{
+		final String UNKNOWN = "";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select name from master.dbo.syscharsets where id = @@client_csid";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting Client charset id, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getClientCharsetDesc(Connection conn)
+	{
+		final String UNKNOWN = "";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+ 
+			String sql = "select description from master.dbo.syscharsets where id = @@client_csid";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting Client charset id, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
 	public static String getAsaCharset(Connection conn)
 	{
 		final String UNKNOWN = "UNKNOWN";
@@ -3753,7 +3849,7 @@ public class AseConnectionUtils
 	 */
 	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean getTranState)
 	{
-		String sql = "select dbname=db_name(), spid=@@spid, trancount=@@trancount";
+		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
 		if (getTranState)
 			sql += ", transtate=@@transtate";
 
@@ -3768,9 +3864,11 @@ public class AseConnectionUtils
 			while(rs.next())
 			{
 				csi._dbname    = rs.getString(1);
-				csi._spid      = rs.getInt(2);
-				csi._tranCount = rs.getInt(3);
-				csi._tranState = getTranState ? rs.getInt(4) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
+				csi._spid      = rs.getInt   (2);
+				csi._username  = rs.getString(3);
+				csi._susername = rs.getString(4);
+				csi._tranCount = rs.getInt   (5);
+				csi._tranState = getTranState ? rs.getInt(6) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
 			}
 			rs.close();
 			stmnt.close();
@@ -3780,7 +3878,7 @@ public class AseConnectionUtils
 			_logger.error("Error in getAseConnectionStateInfo() problems executing sql='"+sql+"'.", sqle);
 		}
 
-		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
+		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', user_name()='"+csi._username+"', suser_name()='"+csi._susername+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
 		return csi;
 	}
 	/**
@@ -3792,6 +3890,8 @@ public class AseConnectionUtils
 		/** _current* below is only maintained if we are connected to ASE */
 		public String _dbname    = "";
 		public int    _spid      = -1;
+		public String _username  = "";
+		public String _susername = "";
 		public int    _tranState = -1;
 		public int    _tranCount = -1;
 
