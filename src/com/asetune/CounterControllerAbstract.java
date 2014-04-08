@@ -674,8 +674,10 @@ implements ICounterController
 	 * udc.procAcct.diff=PhysicalReads, LogicalReads, PagesRead, PhysicalWrites, PagesWritten
 	 * udc.procAcct.toolTipMonTables=monProcessActivity
 	 * </pre>
+	 * @param guiController 
+	 * @param counterController 
 	 */
-	public void createUserDefinedCounterModels()
+	public void createUserDefinedCounterModels(ICounterController counterController, IGuiController guiController)
 	{
 		Configuration conf = null;
 		if(AseTune.hasGUI())
@@ -690,10 +692,20 @@ implements ICounterController
 		if (conf == null)
 			return;
 
-		createUserDefinedCounterModels(conf);
+		createUserDefinedCounterModels(counterController, guiController, conf);
 	}
 
 	public static int createUserDefinedCounterModels(Configuration conf)
+	{
+		// FIXME: when we have multiple flavors of AseTune (RepServer, IQ, HANA, MSSQL, etc): we probably can't trust this
+		ICounterController counterController = GetCounters.getInstance();
+		IGuiController     guiController     = Configuration.hasGui() ? MainFrame.getInstance() : null;
+
+		return createUserDefinedCounterModels(counterController, guiController, conf);
+	}
+
+
+	public static int createUserDefinedCounterModels(ICounterController counterController, IGuiController guiController, Configuration conf)
 	{
 		if (conf == null)
 			throw new IllegalArgumentException("The passed Configuration can't be null");
@@ -720,21 +732,21 @@ implements ICounterController
 			_logger.info("Loading/Initializing User Defined Counter '"+name+"'.");
 
 			// Get the individual properties
-			String  udcName          = conf.getProperty(startKey    + "name");
-			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
-			String  udcDescription   = conf.getProperty(startKey    + "description", "");
-			String  udcSqlInit       = conf.getProperty(startKey    + "sqlInit");
-			String  udcSqlClose      = conf.getProperty(startKey    + "sqlClose");
-			String  udcSql           = conf.getProperty(startKey    + "sql");
-			String  udcPk            = conf.getProperty(startKey    + "pk");
-			String  udcPkPos         = conf.getProperty(startKey    + "pkPos");
-			String  udcDiff          = conf.getProperty(startKey    + "diff");
-			boolean udcNDCT0  = conf.getBooleanProperty(startKey    + "negativeDiffCountersToZero", false);
-			String  udcNeedRole      = conf.getProperty(startKey    + "needRole");
-			String  udcNeedConfig    = conf.getProperty(startKey    + "needConfig");
-			int     udcNeedVersion   = conf.getIntProperty(startKey + "needVersion", 0);
-			int     udcNeedCeVersion = conf.getIntProperty(startKey + "needCeVersion", 0);
-			String  udcTTMT          = conf.getProperty(startKey    + "toolTipMonTables");
+			final String  udcName          = conf.getProperty(startKey    + "name");
+			final String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
+			final String  udcDescription   = conf.getProperty(startKey    + "description", "");
+			final String  udcSqlInit       = conf.getProperty(startKey    + "sqlInit");
+			final String  udcSqlClose      = conf.getProperty(startKey    + "sqlClose");
+			final String  udcSql           = conf.getProperty(startKey    + "sql");
+			final String  udcPk            = conf.getProperty(startKey    + "pk");
+			final String  udcPkPos         = conf.getProperty(startKey    + "pkPos");
+			final String  udcDiff          = conf.getProperty(startKey    + "diff");
+			final boolean udcNDCT0  = conf.getBooleanProperty(startKey    + "negativeDiffCountersToZero", false);
+			final String  udcNeedRole      = conf.getProperty(startKey    + "needRole");
+			final String  udcNeedConfig    = conf.getProperty(startKey    + "needConfig");
+			final int     udcNeedVersion   = conf.getIntProperty(startKey + "needVersion", 0);
+			final int     udcNeedCeVersion = conf.getIntProperty(startKey + "needCeVersion", 0);
+			final String  udcTTMT          = conf.getProperty(startKey    + "toolTipMonTables");
 
 			// The below values are read in method: addUdcGraph()
 //			int     udcGraphType        = -1;
@@ -832,30 +844,39 @@ implements ICounterController
 			for (int i=0; i<udcPkArray   .length; i++) udcPkList.add( udcPkArray[i] ); 
 
 			_logger.info("Creating User Defined Counter '"+name+"' with sql '"+udcSql+"'.");
+			if (guiController != null && guiController.hasGUI())
+				guiController.splashWindowProgress("Loading: UD Counter Model '"+name+"'");
 
-			// Finally create the Counter model and all it's surondings...
+			// Finally create the Counter model and all it's surroundings...
+			@SuppressWarnings("serial")
 			CountersModel cm = new CountersModelUserDefined( name, MainFrame.TCP_GROUP_UDC, udcSql, sqlVer,
 					udcPkList, //pk1, pk2, pk3, 
 					udcDiffArray, udcPctArray, 
 					udcTTMTArray, udcNeedRoleArray, udcNeedConfigArray, 
 					udcNeedVersion, udcNeedCeVersion, 
-					udcNDCT0);
-
-			TabularCntrPanel tcp = null;
-			if (AseTune.hasGUI())
+					udcNDCT0)
 			{
-				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName());
-				tcp.setToolTipText( udcDescription );
-				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
-				tcp.setCm(cm);
-				MainFrame.addTcp( tcp );
-			}
-			cm.setTabPanel(tcp);
+				@Override
+				protected JPanel createGui()
+				{
+					TabularCntrPanel tcp = new TabularCntrPanel(this);
+
+					tcp.setToolTipText( udcDescription );
+					tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/ud_counter_activity.png") );
+
+					return tcp;
+				}
+			};
 
 			cm.setSqlInit(udcSqlInit);
 			cm.setSqlClose(udcSqlClose);
 			cm.setDisplayName(udcDisplayName);
 			cm.setDescription(udcDescription);
+
+			// The below will register/add itself to the Counter Controller and call createGui if we have a GUI
+			cm.setCounterController(counterController);
+			cm.setGuiController(guiController);
+
 
 			//
 			// User defined graphs, if any
@@ -865,7 +886,7 @@ implements ICounterController
 			// Register at the template 
 			CounterSetTemplates.register(cm);
 
-			_CMList.add(cm);
+//			_CMList.add(cm); // this is done in setCounterController()
 		}
 
 		return failCount;
@@ -992,7 +1013,7 @@ implements ICounterController
 	/**
 	 * 
 	 */
-	public void createUserDefinedCounterModelHostMonitors()
+	public void createUserDefinedCounterModelHostMonitors(ICounterController counterController, IGuiController guiController)
 	{
 		Configuration conf = null;
 		if(AseTune.hasGUI())
@@ -1008,7 +1029,7 @@ implements ICounterController
 		if (conf == null)
 			return;
 
-		createUserDefinedCounterModelHostMonitors(conf);
+		createUserDefinedCounterModelHostMonitors(counterController, guiController, conf);
 	}
 
 	/**
@@ -1016,7 +1037,7 @@ implements ICounterController
 	 * @param conf
 	 * @return
 	 */
-	public static int createUserDefinedCounterModelHostMonitors(Configuration conf)
+	public static int createUserDefinedCounterModelHostMonitors(ICounterController counterController, IGuiController guiController, Configuration conf)
 	{
 		if (conf == null)
 			throw new IllegalArgumentException("The passed Configuration can't be null");
@@ -1034,186 +1055,195 @@ implements ICounterController
 
 			_logger.debug("STARTING TO Initializing Host Monitor User Defined Counter '"+name+"'.");
 
-//			String  udcName          = conf.getProperty(startKey    + "name");
-//			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
-			String  udcDisplayName   = conf.getProperty(startKey    + "displayName", name);
-			String  udcDescription   = conf.getProperty(startKey    + "description", "");
+//			final String  udcName          = conf.getProperty(startKey    + "name");
+//			final String  udcDisplayName   = conf.getProperty(startKey    + "displayName", udcName);
+			final String  udcDisplayName   = conf.getProperty(startKey    + "displayName", name);
+			final String  udcDescription   = conf.getProperty(startKey    + "description", "");
 
 			// The below values are read in method: addUdcGraph()
-//			boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
-//			String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
-//			String  udcGraphName        = conf.getProperty(startKey + "graph.name");
-//			String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
-//			String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
-//			String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
-//			String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
-//			String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
+//			final boolean udcHasGraph  = conf.getBooleanProperty(startKey + "graph", false);
+//			final String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
+//			final String  udcGraphName        = conf.getProperty(startKey + "graph.name");
+//			final String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+//			final String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
+//			final String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
+//			final String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
+//			final String  udcGraphDataLabels  = conf.getProperty(startKey + "graph.data.labels");
 
 			_logger.info("Creating User Defined Host Monitor Counter '"+name+"'.");
+			if (guiController != null && guiController.hasGUI())
+				guiController.splashWindowProgress("Loading: UD Host Counter Model '"+name+"'");
 
-			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, false);
-
-			TabularCntrPanel tcp = null;
-			if (AseTune.hasGUI())
+			@SuppressWarnings("serial")
+			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, false)
 			{
-				tcp = new TabularCntrPanel(udcDisplayName, cm.getGroupName())
+				@Override
+				protected JPanel createGui()
 				{
-					private static final long	serialVersionUID	= 1L;
-
-					JLabel  l_hostmonThreadNotInit_lbl;
-					JLabel  l_hostmonThreadIsRunning_lbl;
-					JLabel  l_hostmonThreadIsStopped_lbl;
-					JButton l_hostmonStart_but;
-					JButton l_hostmonStop_but;
-
-					@Override
-					protected JPanel createLocalOptionsPanel()
+					TabularCntrPanel tcp = new TabularCntrPanel(this)
 					{
-						JPanel panel = SwingUtils.createPanel("Host Monitor", true);
-						panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
-						panel.setToolTipText(
-							"<html>" +
-								"Use this panel to check or controll the underlying Host Monitoring Thread.<br>" +
-								"You can Start and/or Stop the hostmon thread.<br>" +
-							"</html>");
+						private static final long	serialVersionUID	= 1L;
 
-						l_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
-						l_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
-						l_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
-						l_hostmonStart_but            = new JButton("Start");
-						l_hostmonStop_but             = new JButton("Stop");
+						JLabel  l_hostmonThreadNotInit_lbl;
+						JLabel  l_hostmonThreadIsRunning_lbl;
+						JLabel  l_hostmonThreadIsStopped_lbl;
+						JButton l_hostmonStart_but;
+						JButton l_hostmonStop_but;
 
-						l_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread has not yet been initialized.</html>");
-						l_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
-						l_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
-						l_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
-						l_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
-
-						l_hostmonThreadNotInit_lbl  .setVisible(true);
-						l_hostmonThreadIsRunning_lbl.setVisible(false);
-						l_hostmonThreadIsStopped_lbl.setVisible(false);
-						l_hostmonStart_but          .setVisible(false);
-						l_hostmonStop_but           .setVisible(false);
-
-						panel.add( l_hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
-						panel.add( l_hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
-						panel.add( l_hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
-						panel.add( l_hostmonStart_but,           "hidemode 3, wrap");
-						panel.add( l_hostmonStop_but,            "hidemode 3, wrap");
-
-						l_hostmonStart_but.addActionListener(new ActionListener()
+						@Override
+						protected JPanel createLocalOptionsPanel()
 						{
-							@Override
-							public void actionPerformed(ActionEvent e)
+							JPanel panel = SwingUtils.createPanel("Host Monitor", true);
+							panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
+							panel.setToolTipText(
+								"<html>" +
+									"Use this panel to check or controll the underlying Host Monitoring Thread.<br>" +
+									"You can Start and/or Stop the hostmon thread.<br>" +
+								"</html>");
+
+							l_hostmonThreadNotInit_lbl    = new JLabel("<html><b>Not yet initialized</b></html>");
+							l_hostmonThreadIsRunning_lbl  = new JLabel("<html>Is running</html>");
+							l_hostmonThreadIsStopped_lbl  = new JLabel("<html><b>Is stopped</b></html>");
+							l_hostmonStart_but            = new JButton("Start");
+							l_hostmonStop_but             = new JButton("Stop");
+
+							l_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread has not yet been initialized.</html>");
+							l_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+							l_hostmonThreadIsStopped_lbl.setToolTipText("<html>Indicates wheather the underlying Host Monitor Thread is running.</html>");
+							l_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
+							l_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
+
+							l_hostmonThreadNotInit_lbl  .setVisible(true);
+							l_hostmonThreadIsRunning_lbl.setVisible(false);
+							l_hostmonThreadIsStopped_lbl.setVisible(false);
+							l_hostmonStart_but          .setVisible(false);
+							l_hostmonStop_but           .setVisible(false);
+
+							panel.add( l_hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
+							panel.add( l_hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
+							panel.add( l_hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
+							panel.add( l_hostmonStart_but,           "hidemode 3, wrap");
+							panel.add( l_hostmonStop_but,            "hidemode 3, wrap");
+
+							l_hostmonStart_but.addActionListener(new ActionListener()
 							{
-								CountersModel cm = getCm();
-								if (cm != null)
+								@Override
+								public void actionPerformed(ActionEvent e)
 								{
-									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-									if (hostMonitor != null)
+									CountersModel cm = getCm();
+									if (cm != null)
 									{
-										try
+										HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+										if (hostMonitor != null)
 										{
-											hostMonitor.setPaused(false);
-											hostMonitor.start();
-										}
-										catch (Exception ex)
-										{
-											SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
+											try
+											{
+												hostMonitor.setPaused(false);
+												hostMonitor.start();
+											}
+											catch (Exception ex)
+											{
+												SwingUtils.showErrorMessage("Start", "Problems Starting the Host Monitoring Thread.", ex);
+											}
 										}
 									}
 								}
-							}
-						});
+							});
 
-						l_hostmonStop_but.addActionListener(new ActionListener()
-						{
-							@Override
-							public void actionPerformed(ActionEvent e)
+							l_hostmonStop_but.addActionListener(new ActionListener()
 							{
-								CountersModel cm = getCm();
-								if (cm != null)
+								@Override
+								public void actionPerformed(ActionEvent e)
 								{
-									HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-									if (hostMonitor != null)
+									CountersModel cm = getCm();
+									if (cm != null)
 									{
-										hostMonitor.setPaused(true);
-										hostMonitor.shutdown();
+										HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+										if (hostMonitor != null)
+										{
+											hostMonitor.setPaused(true);
+											hostMonitor.shutdown();
+										}
 									}
 								}
-							}
-						});
-						return panel;
-					}
+							});
+							return panel;
+						}
 
-					@Override
-					public void checkLocalComponents()
-					{
-						CountersModel cm = getCm();
-						if (cm != null)
+						@Override
+						public void checkLocalComponents()
 						{
-							HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
-							if (hostMonitor != null)
+							CountersModel cm = getCm();
+							if (cm != null)
 							{
-								boolean isRunning = hostMonitor.isRunning();
-								boolean isPaused  = hostMonitor.isPaused();
-
-								l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
-								l_hostmonThreadNotInit_lbl  .setVisible( false );
-
-								if ( hostMonitor.isOsCommandStreaming() )
+								HostMonitor hostMonitor = (HostMonitor) cm.getClientProperty(HostMonitor.PROPERTY_NAME);
+								if (hostMonitor != null)
 								{
-									l_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
-									l_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
-									l_hostmonStart_but          .setVisible( ! isRunning );
-									l_hostmonStop_but           .setVisible(   isRunning );
+									boolean isRunning = hostMonitor.isRunning();
+									boolean isPaused  = hostMonitor.isPaused();
+
+									l_hostmonThreadIsRunning_lbl.setText("<html>Command: <b>"+hostMonitor.getCommand()+"</b></html>");
+									l_hostmonThreadNotInit_lbl  .setVisible( false );
+
+									if ( hostMonitor.isOsCommandStreaming() )
+									{
+										l_hostmonThreadIsRunning_lbl.setVisible(   isRunning );
+										l_hostmonThreadIsStopped_lbl.setVisible( ! isRunning );
+										l_hostmonStart_but          .setVisible( ! isRunning );
+										l_hostmonStop_but           .setVisible(   isRunning );
+									}
+									else
+									{
+										l_hostmonThreadIsRunning_lbl.setVisible( true );
+										l_hostmonThreadIsStopped_lbl.setText("<html>This module has <b>no</b> background thread.<br>And it's executed on every <b>refresh</b>.</html>");
+										l_hostmonThreadIsStopped_lbl.setVisible( true );
+
+									//	l_hostmonThreadIsRunning_lbl.setVisible( false );
+									//	l_hostmonThreadIsStopped_lbl.setVisible( false );
+										l_hostmonStart_but          .setVisible( false );
+										l_hostmonStop_but           .setVisible( false );
+									}
+
+									if (isPaused)
+										setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
 								}
 								else
 								{
-									l_hostmonThreadIsRunning_lbl.setVisible( true );
-									l_hostmonThreadIsStopped_lbl.setText("<html>This module has <b>no</b> background thread.<br>And it's executed on every <b>refresh</b>.</html>");
-									l_hostmonThreadIsStopped_lbl.setVisible( true );
-
-								//	l_hostmonThreadIsRunning_lbl.setVisible( false );
-								//	l_hostmonThreadIsStopped_lbl.setVisible( false );
+									setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
+									l_hostmonThreadNotInit_lbl  .setVisible( true );
+									l_hostmonThreadIsRunning_lbl.setVisible( false );
+									l_hostmonThreadIsStopped_lbl.setVisible( false );
 									l_hostmonStart_but          .setVisible( false );
 									l_hostmonStop_but           .setVisible( false );
+									if (cm.getSampleException() != null)
+										setWatermarkText(cm.getSampleException().toString());
 								}
-
-								if (isPaused)
-									setWatermarkText("Warning: The host monitoring thread is Stopped/Paused!");
-							}
-							else
-							{
-								setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.");
-								l_hostmonThreadNotInit_lbl  .setVisible( true );
-								l_hostmonThreadIsRunning_lbl.setVisible( false );
-								l_hostmonThreadIsStopped_lbl.setVisible( false );
-								l_hostmonStart_but          .setVisible( false );
-								l_hostmonStop_but           .setVisible( false );
-								if (cm.getSampleException() != null)
-									setWatermarkText(cm.getSampleException().toString());
 							}
 						}
-					}
-				};
-				tcp.setToolTipText( udcDescription );
-				tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/hostmon_ud_counter_activity.png") );
-				tcp.setCm(cm);
-				MainFrame.addTcp( tcp );
-			}
-			cm.setTabPanel(tcp);
+					};
+
+					tcp.setToolTipText( udcDescription );
+					tcp.setIcon( SwingUtils.readImageIcon(Version.class, "images/hostmon_ud_counter_activity.png") );
+
+					return tcp;
+				}
+			};
+
 
 			cm.setDisplayName(udcDisplayName);
 			cm.setDescription(udcDescription);
 
+			// The below will register/add itself to the Counter Controller and call createGui if we have a GUI
+			cm.setCounterController(counterController);
+			cm.setGuiController(guiController);
+			
 			// Add a graph
 			addUdcGraph(cm, name, startKey, conf);
 
 			// Register at the template 
 			CounterSetTemplates.register(cm);
 
-			_CMList.add(cm);
+			//_CMList.add(cm);
 		}
 
 		return failCount;

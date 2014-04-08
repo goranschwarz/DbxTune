@@ -734,8 +734,8 @@ extends CounterControllerAbstract
 		CmOsUptime         .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
-		createUserDefinedCounterModels();
-		createUserDefinedCounterModelHostMonitors();
+		createUserDefinedCounterModels(counterController, guiController);
+		createUserDefinedCounterModelHostMonitors(counterController, guiController);
 
 		// done
 		setCountersIsCreated(true);
