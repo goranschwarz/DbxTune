@@ -1060,11 +1060,16 @@ extends Properties
 		return hexDigit[i & 15];
 	}
 
-	/*
+	/**
 	 * Converts unicodes to encoded &#92;uxxxx and escapes special characters
 	 * with a preceding slash
+	 * 
+	 * @param theString      input string to convert
+	 * @param escapeSpace    should spaces have a extra backslash in front of it
+	 * @param escapeUnicode  escape unicode characters
+	 * @return
 	 */
-	private String saveConvert(String theString, boolean escapeSpace, boolean escapeUnicode)
+	public static String saveConvert(String theString, boolean escapeSpace, boolean escapeUnicode)
 	{
 		int len = theString.length();
 		int bufLen = len * 2;

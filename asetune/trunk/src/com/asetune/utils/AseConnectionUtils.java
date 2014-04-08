@@ -1310,12 +1310,84 @@ public class AseConnectionUtils
 		}
 	}
 
-	private final static int VERSION_MAJOR        = 1;
-	private final static int VERSION_MINOR        = 2;
-	private final static int VERSION_MAINTENANCE  = 3;
-	private final static int VERSION_ROLLUP       = 4;
-	private final static int VERSION_SERVICE_PACK = 5;
-	private final static int VERSION_PATCH_LEVEL  = 6;
+	public static int versionIntPart(int version, int part)
+	{
+		// 9 digit version num   // large version number (12.5.4 ESD#10.1)  125401001   (MMMMSSSPP: MMMM(1254)=MajorMinorMaintenance, SSS(010)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+		if (version > 100000000) // large version number (15.7   SP100)     157010001   (MMMMSSSPP: MMMM(1570)=MajorMinorMaintenance, SSS(100)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+		{                        // large version number (16.0   SP01 PL01) 160000101   (MMMMSSSPP: MMMM(1600)=MajorMinorMaintenance, SSS(001)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+			int baseVer     = version / 100000;
+			int major       = baseVer / 100;
+			int minor       = baseVer % 100 / 10;
+			int maintenance = baseVer % 10;
+			int servicePack = version % 100000 / 100;
+			int patchLevel  = version % 100;
+
+//            System.out.println("");
+//            System.out.println("versionIntToStr(): version     = " + version);
+//            System.out.println("                   baseVer     = " + baseVer);
+//            System.out.println("                   major       = " + major);
+//            System.out.println("                   minor       = " + minor);
+//            System.out.println("                   maintenance = " + maintenance);
+//            System.out.println("                   servicePack = " + servicePack);
+//            System.out.println("                   patchLevel  = " + patchLevel);
+
+			switch (part)
+			{
+			case VERSION_MAJOR:        return major;
+			case VERSION_MINOR:        return minor;
+			case VERSION_MAINTENANCE:  return maintenance;
+			case VERSION_ROLLUP:       return servicePack;
+			case VERSION_SERVICE_PACK: return servicePack;
+			case VERSION_PATCH_LEVEL:  return patchLevel;
+			default:                   return -1;
+			}
+		}
+		// 7 digit version number
+		else if (version > 1000000) // medium version number 1570100   (major minor maintenance EsdLevel/ServicePack)
+		{
+			int major       = version                                         / 100000;
+			int minor       =(version -  (major * 100000))                    / 10000;
+			int maintenance =(version - ((major * 100000) + (minor * 10000))) / 1000;
+			int servicePack = version - ((major * 100000) + (minor * 10000) + (maintenance * 1000));
+	
+			switch (part)
+			{
+			case VERSION_MAJOR:        return major;
+			case VERSION_MINOR:        return minor;
+			case VERSION_MAINTENANCE:  return maintenance;
+			case VERSION_ROLLUP:       return servicePack;
+			case VERSION_SERVICE_PACK: return servicePack;
+			case VERSION_PATCH_LEVEL:  return 0;
+			default:                   return -1;
+			}
+		}
+		// 5 digit version number
+		else // old version number 15704
+		{
+			int major       = version                                     / 1000;
+			int minor       =(version -  (major * 1000))                  / 100;
+			int maintenance =(version - ((major * 1000) + (minor * 100))) / 10;
+			int rollup      = version - ((major * 1000) + (minor * 100) + (maintenance * 10));
+	
+			switch (part)
+			{
+			case VERSION_MAJOR:        return major;
+			case VERSION_MINOR:        return minor;
+			case VERSION_MAINTENANCE:  return maintenance;
+			case VERSION_ROLLUP:       return rollup;
+			case VERSION_SERVICE_PACK: return rollup;
+			case VERSION_PATCH_LEVEL:  return 0;
+			default:                   return -1;
+			}
+		}
+	}
+
+	public final static int VERSION_MAJOR        = 1;
+	public final static int VERSION_MINOR        = 2;
+	public final static int VERSION_MAINTENANCE  = 3;
+	public final static int VERSION_ROLLUP       = 4;
+	public final static int VERSION_SERVICE_PACK = 5;
+	public final static int VERSION_PATCH_LEVEL  = 6;
 
 	/**
 	 * If a version part is overflowing it's max value, try to fix this in here

@@ -25,7 +25,9 @@ public class CountersModelUserDefined
 	
 	private String _sqlInitial = null;
 
-
+	/** Remember the PK locally, since it's blanked out in CounterModel.clear() method, on disconnect */
+	private List<String> _pkList = null;
+	
 	public CountersModelUserDefined
 	(
 			String              name,             // Name of the Counter Model
@@ -47,6 +49,8 @@ public class CountersModelUserDefined
 		
 		_sqlVerStr  = sqlVerStr;
 		_sqlInitial = sql;
+		
+		_pkList   = pkList;
 	}
 
 	@Override
@@ -109,7 +113,7 @@ public class CountersModelUserDefined
 	@Override
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		return getPk();
+		return _pkList;
 	}
 
 //	@Override

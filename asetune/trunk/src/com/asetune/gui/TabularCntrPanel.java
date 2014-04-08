@@ -1140,8 +1140,6 @@ implements
 			return;
 		}
 
-		TableModel tm = _dataTable.getModel();
-
 		CountersModel cm = _cm;
 		if ( !_tailMode )
 			cm = _cmDisplay;
@@ -1170,10 +1168,10 @@ implements
 				{
 					sb.append("ServerName").append(columnSeparator).append("SampleTime").append(columnSeparator).append("SampleIntervall").append(columnSeparator);
 				}
-				for (int c = 0; c < tm.getColumnCount(); c++)
+				for (int c = 0; c < _dataTable.getColumnCount(); c++)
 				{
-					sb.append(tm.getColumnName(c));
-					if ( c < (tm.getColumnCount() - 1) )
+					sb.append(_dataTable.getColumnName(c));
+					if ( c < (_dataTable.getColumnCount() - 1) )
 						sb.append(columnSeparator);
 					else
 						sb.append(rowTerminator);
@@ -1184,12 +1182,10 @@ implements
 			int colCnt = _dataTable.getColumnCount();
 			for (int r = 0; r < tableCnt; r++)
 			{
-				int tmRow = _dataTable.convertRowIndexToModel(r);
-
 				sb.append(rowStart);
 				for (int c = 0; c < colCnt; c++)
 				{
-					sb.append(tm.getValueAt(tmRow, c));
+					sb.append(_dataTable.getValueAt(r, c));
 					if ( c < (colCnt - 1) )
 						sb.append(columnSeparator);
 					else

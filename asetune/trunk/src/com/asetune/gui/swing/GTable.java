@@ -910,7 +910,16 @@ extends JXTable
 		{
 			_inPrivateTableChanged = true;
 
-			super.tableChanged(e);
+			// Is some cases during initialization of table it throws: java.lang.ArrayIndexOutOfBoundsException: 62 >= 60
+			// if some columns are hidden in the JXTable, lets see what happens if we try to catch the error...
+			try
+			{
+				super.tableChanged(e);
+			}
+			catch (Throwable t)
+			{
+				_logger.warn("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
+			}
 
 			// restoring current selected row by PK is sometimes a problem... 
 			// so catch it and log it with the CM Name this so it's easier to debug

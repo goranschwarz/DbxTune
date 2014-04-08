@@ -738,7 +738,7 @@ implements Cloneable, ITableTooltip
 	 * Set who is responsible for collecting the counters for this CounterModel
 	 * @param counterController
 	 */
-	protected void setCounterController(ICounterController counterController)
+	public void setCounterController(ICounterController counterController)
 	{
 		_counterController = counterController;
 		// If we have a Counter Controller, add the CM to it
@@ -768,7 +768,7 @@ implements Cloneable, ITableTooltip
 	 * </p>
 	 * @param guiController
 	 */
-	protected void setGuiController(IGuiController guiController)
+	public void setGuiController(IGuiController guiController)
 	{
 		_guiController = guiController;
 		// If we have a GUI Controller, create a new GUI and add it to the Controller.
