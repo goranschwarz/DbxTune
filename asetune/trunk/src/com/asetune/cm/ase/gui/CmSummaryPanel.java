@@ -556,7 +556,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		String tooltip = "";
 
-		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or inetfaces ";
+		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
 		_localServerName_lbl  .setText("Local server name");
 		_localServerName_lbl  .setToolTipText(tooltip);
 		_localServerName_txt  .setToolTipText(tooltip);

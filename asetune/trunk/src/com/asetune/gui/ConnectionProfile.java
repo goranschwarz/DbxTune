@@ -49,6 +49,7 @@ public class ConnectionProfile
 	public static class TdsEntry
 	{
 		// ASE, IQ, SA, OpenServer... any connection info using jConnect, which uses TDS Tabular Data Stream
+		public String        _tdsIfile         = null;
 		public String        _tdsUsername      = null;
 		public String        _tdsPassword      = null;
 		public boolean       _tdsSavePassword  = true; // Should this be here???

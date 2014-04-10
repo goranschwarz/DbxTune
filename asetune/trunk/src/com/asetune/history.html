@@ -225,6 +225,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+	When you successfully has connect via host:port and the entry is NOT part of the interfaces file<br>
+    Show a popup that ask you if you want to add the entry to the interfaces file<br>
+    If the current interfaces is not writable, then an option to copy the current interfaces to a local/private files will be displayed<br>
+    If you open the interfaces file for EDIT, and it's not writable offer the above "copy option"<br>
+	</LI>
+
+	<LI>
 	<b>SQL Window: Enhancements</b><br>
 	<ul>
 	   <li>Option: How long does a SQL Statement takes from the clients perspective.<br>
@@ -371,6 +379,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Threads</b><br>
 	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: UDC Wizard</b><br>
+    "hint" why "next" button is not enabled was broken in some places<br>
+    Writing the SQL entries to the properties file in another way (newlines etc are escaped, so they will be visible in the Properties Dialog)<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counters, JTable</b><br>
+    The "hide column" popup was to large (outside of the screen in some cases)<br>
+    1: new Dialog where you can enable disable columns and also change the layout order (accessible by right cling on the column header)<br>
+    2: new MenuItem "Hide this column 'ColumnName'", where ColumnName is the current column header you did right click on<br>
 	</LI>
 
 	<LI>

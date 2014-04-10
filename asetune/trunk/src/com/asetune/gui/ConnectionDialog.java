@@ -105,6 +105,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.FileUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.PlatformUtils;
@@ -2761,6 +2762,8 @@ if (_connProfileVisible_chk.isSelected())
 		try
 		{
 			File f = new File(file);
+			
+			// File DOESN'T exists
 			if ( ! f.exists() )
 			{
 				String interfacesFileName = "%SYBASE%\\ini\\sql.ini";
@@ -2776,6 +2779,29 @@ if (_connProfileVisible_chk.isSelected())
 						null);
 				return;
 			}
+
+			// Can we READ the file
+			if ( ! FileUtils.canRead(file) )
+			{
+				_logger.warn("The file '"+file+"' is NOT Readable...");
+			}
+
+			// Can we WRITE to the file
+			if ( ! FileUtils.canWrite(file) )
+			{
+				_logger.warn("The file '"+file+"' is NOT Writable...");
+
+				// The copy interfaces file is instead done:
+				// - When you try to edit the interfaces file
+				// - or when you try to add "unknown" entries after a successfull connect
+				// Having it in here was, bad... incase a shared-read-only interfaces file was used
+				// AND that users do not want to add/copy entries to the "private" file...
+				// So deffering the copy was a better option
+				
+				//file = ConnectionProfileManager.getInstance().copyInterfacesFileToPrivateFile(file);
+			}
+
+			// Load the file
 			if (AseConnectionFactory.setInterfaces(file))
 			{
 				// On success, reload the servers
@@ -3844,6 +3870,16 @@ if (_connProfileVisible_chk.isSelected())
 		{
 			String currentSrvName = _aseServer_cbx.getSelectedItem().toString(); 
 			String ifile = _aseIfile_txt.getText(); 
+			
+			// If file isn't writable, do we want to copy the file to a provate file?
+			if ( ! FileUtils.canWrite(ifile) )
+			{
+				String newFile = ConnectionProfileManager.getInstance().copyInterfacesFileToPrivateFile(ifile);
+				if (newFile != null)
+					ifile = newFile;
+			}
+
+			// Now open the new or old interfaces file
 			InterfaceFileEditor ife = new InterfaceFileEditor(this, ifile, currentSrvName);
 			int rc = ife.open();
 //			if (rc == InterfaceFileEditor.OK)
@@ -4605,6 +4641,7 @@ if (_connProfileVisible_chk.isSelected())
 			String key = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
 
 			ConnectionProfile.TdsEntry tds = new ConnectionProfile.TdsEntry(); 
+			tds._tdsIfile         = _aseIfile_txt .getText();
 			tds._tdsUsername      = _aseUser_txt  .getText();
 			tds._tdsPassword      = _asePasswd_txt.getText();
 			tds._tdsServer        = _aseServer_cbx.getSelectedItem().toString();
@@ -5143,11 +5180,6 @@ if (_connProfileVisible_chk.isSelected())
 		if (str != null)
 			loadNewInterfaces(str);
 
-		str = conf.getProperty("conn.serverName");
-		if (str != null)
-			_aseServer_cbx.setSelectedItem(str);
-
-
 		str = conf.getProperty("conn.hostname");
 		if (str != null)
 			_aseHost_txt.setText(str);
@@ -5155,6 +5187,20 @@ if (_connProfileVisible_chk.isSelected())
 		str = conf.getProperty("conn.port");
 		if (str != null)
 			_asePort_txt.setText(str);
+
+		str = conf.getProperty("conn.serverName");
+		if (str != null)
+			_aseServer_cbx.setSelectedItem(str);
+
+		// If host:port is part of the interfaces file, then use that name
+		str = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
+		if (str != null)
+		{
+			str = AseConnectionFactory.getIServerName(str);
+			if (str != null)
+				_aseServer_cbx.setSelectedItem(str);
+		}
+		
 
 		str = conf.getProperty("conn.login.timeout");
 		if (str == null)
@@ -5215,9 +5261,8 @@ if (_connProfileVisible_chk.isSelected())
 			}			
 		}
 
-		String hostPort = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
-		loadPropsForServer(hostPort);
-
+		String hostPortStr = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
+		loadPropsForServer(hostPortStr);
 
 		
 		bol = conf.getBooleanProperty("conn.savePassword", true);

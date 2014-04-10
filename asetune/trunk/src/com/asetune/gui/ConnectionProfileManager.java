@@ -1,10 +1,18 @@
 package com.asetune.gui;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -12,7 +20,11 @@ import com.asetune.Version;
 import com.asetune.gui.ConnectionProfile.JdbcEntry;
 import com.asetune.gui.ConnectionProfile.OfflineEntry;
 import com.asetune.gui.ConnectionProfile.TdsEntry;
+import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.FileUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class ConnectionProfileManager
@@ -28,6 +40,12 @@ public class ConnectionProfileManager
 
 	/** default file name where the connection profiles are stored */
 	private final static String DEFAULT_STORAGE_FILE = Version.APP_STORE_DIR + File.separator + "ConnectionProfiles.xml";
+
+	public static final String   PROPKEY_ifile_serverAdd_doNotAskAgain    = "ConnectionProfileManager.ifile.serverAdd.doNotAskAgain";
+	public static final boolean  DEFAULT_ifile_serverAdd_doNotAskAgain    = false;
+
+	public static final String   PROPKEY_ifile_copyReadOnly_doNotAskAgain = "ConnectionProfileManager.ifile.copyReadOnly.doNotAskAgain";
+	public static final boolean  DEFAULT_ifile_copyReadOnly_doNotAskAgain = false;
 
 	
 	public enum SrvType 
@@ -180,6 +198,7 @@ public class ConnectionProfileManager
 	public void possiblyAddChange(String key, String productName, TdsEntry tds)
 	{
 		possiblyAddChange(key, productName, tds, null, null);
+		checkAddEntryToInterfacesFile(tds._tdsIfile, key);
 	}
 
 	public void possiblyAddChange(String key, String productName, OfflineEntry offline)
@@ -199,5 +218,168 @@ public class ConnectionProfileManager
 		
 		// If the profile has been updated, ask if we want to update the information in the ConnectionProfile as well
 		
+	}
+	
+	
+	private void checkAddEntryToInterfacesFile(String sqlIniFileName, String hostPortStr)
+	{
+		// Server name was NOT found in the interfaces file
+		// Ask if you want to add it to the interfaces file
+		String server = AseConnectionFactory.getIServerName(hostPortStr);
+		
+		boolean doNotAskAgain = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ifile_serverAdd_doNotAskAgain, DEFAULT_ifile_serverAdd_doNotAskAgain);
+		if (StringUtil.isNullOrBlank(server) && doNotAskAgain==false)
+		{
+			// Check if the sql.ini / interfaces is writable... before we edit the file...
+			// if it's read only - maybe ask if we should copy the file and add the entry...
+			String htmlMsg = "<html>" +
+					"<h3>Add server to sql.ini or interfaces file</h3>" +
+					"The server name was <b>not</b> found in file <code>" + sqlIniFileName + "</code><br>" +
+					"Do you want to add it to the interfaces file?" +
+					"</html>";
+
+			// Compose a possible server name
+			String suggestedName = "";
+			Map<String, String> hostPortMap = StringUtil.parseCommaStrToMap(hostPortStr, ":", ",");
+			for (String key : hostPortMap.keySet())
+			{
+				String val = hostPortMap.get(key);
+
+				// If first entry is localhost, get next entry
+				if (key.equalsIgnoreCase("localhost") && hostPortMap.size() > 1)
+					continue;
+
+				suggestedName = key.toUpperCase();
+				if (suggestedName.indexOf(".") > 0) // hostname.acme.com
+					suggestedName = suggestedName.substring(0, suggestedName.indexOf("."));
+				suggestedName += "_" + val;
+
+				break; // only get first entry
+			}
+			
+			JLabel     header    = new JLabel(htmlMsg);
+			JLabel     label     = new JLabel("As Server Name");
+			JTextField entryName = new JTextField(suggestedName, 30);
+			JPanel     panel     = new JPanel(new MigLayout());
+			panel.add(header,    "span, wrap 20");
+			panel.add(label,     "");
+			panel.add(entryName, "wrap 20");
+
+			String[] options = { "Add Server", "Not this time", "Never ask this question again" };
+			int result = JOptionPane.showOptionDialog(null, panel, "Add Server Name", 
+					JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, 0);
+
+			if (result == 0) // save
+			{
+				boolean canWrite = FileUtils.canWrite(sqlIniFileName);
+				if (canWrite)
+					AseConnectionFactory.addIFileEntry(sqlIniFileName, entryName.getText(), hostPortStr);
+				else
+				{
+//					String htmlStr = "<html>" +
+//							"<h3>Warning</h3>" +
+//							"Name service file '"+sqlIniFileName+"' is <b>not writable</b>" +
+//							"So adding/changing entries will be impossible!<br>" +
+//							"</html>";
+//					SwingUtils.showWarnMessage(null, "not writable", htmlStr, null);
+
+					// Copy the file to $HOME/.asetune/sql.ini and add it there???
+					String newFile = copyInterfacesFileToPrivateFile(sqlIniFileName);
+					if (newFile != null)
+						AseConnectionFactory.addIFileEntry(newFile, entryName.getText(), hostPortStr);
+				}
+			}
+			if (result == 2) // never
+			{
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf != null)
+				{
+					conf.setProperty(PROPKEY_ifile_serverAdd_doNotAskAgain, true);
+					conf.save();
+				}
+			}
+		}
+	}
+	
+	public String copyInterfacesFileToPrivateFile(String currentInterfacesFile)
+	{
+		String newFileName = null;
+
+		String privateSqlIni = AseConnectionFactory.getPrivateInterfacesFile(false);
+		
+		// If load file and private is not the same file AND "load" is read only
+		// Should we copy the "source" file to the "private" file 
+		if ( ! privateSqlIni.equalsIgnoreCase(currentInterfacesFile) )
+		{
+			boolean doNotAskAgain = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ifile_copyReadOnly_doNotAskAgain, DEFAULT_ifile_copyReadOnly_doNotAskAgain);
+			if (doNotAskAgain == false)
+			{
+				String htmlMsg = "<html>" +
+					"<h3>Warning</h3>" +
+					"Name service file <code>"+currentInterfacesFile+"</code> is <b>not writable</b><br>" +
+					"So adding/changing entries will be impossible!<br>" +
+					"<br>" +
+					"If you copy the file to a <i>private</i> file, then you can add and maintain you'r own entries in that file.<br>" +
+					"<br>" +
+					"<br>" +
+					"Do you want to copy the file?<br>" +
+					"<ul>" +
+					"   <li>from: <code>" + currentInterfacesFile + "</code></li>" +
+					"   <li>to:   <code>" + privateSqlIni         + "</code></li>" +
+					"</ul>" +
+					"</html>";
+
+				String[] options = { "Copy", "Not this time", "Never ask this question again" };
+				int result = JOptionPane.showOptionDialog(null, htmlMsg, "Copy File?", 
+						JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, 0);
+				
+				if (result == 0) // Copy
+				{
+					try
+					{
+						FileUtils.copy(currentInterfacesFile, privateSqlIni, true, true); // Overwrite of any existing file will have to be confirmed, using GUI question
+						
+						// lets continue with the name in privateSqlIni
+						newFileName = privateSqlIni;
+
+						// Save the new interfaces file name in the properties
+						// which will picked up by ConnectionDialog next time it opens
+						Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+						if (conf != null)
+						{
+							conf.setProperty("conn.interfaces", newFileName);
+							conf.save();
+						}
+
+						// Simply sets System.setProperty("sybase.home", toTheFileName)
+						AseConnectionFactory.getPrivateInterfacesFile(true); 
+					}
+					catch (IOException ex)
+					{
+    					htmlMsg = "<html>" +
+        						"<h3>Problems Copy the File</h3>" +
+        						"Sorry, There were problems when trying to copy the file.<br>" +
+        						"<ul>" +
+        						"   <li>from: <code>" + currentInterfacesFile + "</code></li>" +
+        						"   <li>to:   <code>" + privateSqlIni         + "</code></li>" +
+        						"</ul>" +
+        						"So lets <b>continue to use the file <code>"+currentInterfacesFile+"</code></b><br>" +
+        						"</html>";
+						SwingUtils.showWarnMessage(null, "Copy File: Problems", htmlMsg, ex);
+					}
+				}
+				if (result == 2) // Never ask this question again
+				{
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(PROPKEY_ifile_copyReadOnly_doNotAskAgain, true);
+						conf.save();
+					}
+				}
+	    	} // end: doNotAskAgain == false
+		} // end:  privateSqlIni != file
+    	
+    	return newFileName;
 	}
 }

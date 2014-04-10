@@ -12,12 +12,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.RowSorter.SortKey;
@@ -67,6 +70,7 @@ extends JXTable
 	private static Logger       _logger = Logger.getLogger(GTable.class);
 
 	private static final long	serialVersionUID			= 1L;
+	private int					_lastMousePressedAtViewHeaderCol= -1;
 	private int					_lastMousePressedAtModelCol	= -1;
 	private int					_lastMousePressedAtModelRow	= -1;
 //	private GTable              _thisTable                  = null;
@@ -87,6 +91,11 @@ extends JXTable
 	{
 		super(tm);
 		init();
+	}
+
+	public int getLastMousePressedAtViewHeaderCol()
+	{
+		return _lastMousePressedAtViewHeaderCol;
 	}
 
 	public int getLastMousePressedAtModelCol()
@@ -306,6 +315,16 @@ extends JXTable
 		};
 		getColumnModel().addColumnModelListener(columnModelListener);
 
+		// Add mouse listener to the Column Header, used in 
+		getTableHeader().addMouseListener(new MouseListener()
+		{
+			@Override public void mouseReleased(MouseEvent e) { columnHeaderMouseActivity(e); }
+			@Override public void mouseExited  (MouseEvent e) { columnHeaderMouseActivity(e); }
+			@Override public void mouseEntered (MouseEvent e) { columnHeaderMouseActivity(e); }
+			@Override public void mouseClicked (MouseEvent e) { columnHeaderMouseActivity(e); }
+			@Override public void mousePressed (MouseEvent e) { columnHeaderMouseActivity(e); }
+		});
+
 		// Set special Render to print multiple columns sorts
 		getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
 
@@ -318,6 +337,20 @@ extends JXTable
 		setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
 	}
 
+	private void columnHeaderMouseActivity(MouseEvent e)
+	{
+		_lastMousePressedAtViewHeaderCol = -1;
+
+		Point p = new Point(e.getX(), e.getY());
+		int col = columnAtPoint(p);
+
+		if ( col >= 0 )
+		{
+			_lastMousePressedAtViewHeaderCol = col;
+		}
+	}
+	
+	
 	/**
 	 * Creates the JMenu on the Component, this can be overrided by a subclass.
 	 */
@@ -363,6 +396,39 @@ extends JXTable
 							GTable.this.packAll();
 						}
 					});
+
+					// Open Hide/View Dialog
+					mi = new JMenuItem("Hide/View Column Dialog...");
+					p.add(mi);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							int ret = GTableHeaderPropertiesDialog.showDialog(null, GTable.this); // NOTE: owner is null here... so this we might want to fix
+							if (ret == JOptionPane.OK_OPTION)
+							{
+							}
+						}
+					});
+
+					// HIDE THIS COLUMN
+					// Now get the column name, which we point at
+					if ( getLastMousePressedAtViewHeaderCol() >= 0 )
+					{
+						final TableColumnExt tcx = (TableColumnExt) getColumnModel().getColumn(getLastMousePressedAtViewHeaderCol());
+    
+    					mi = new JMenuItem("Hide this column '"+tcx.getHeaderValue()+"'"); // Resizes all columns to fit their content
+    					p.add(mi);
+    					mi.addActionListener(new ActionListener()
+    					{
+    						@Override
+    						public void actionPerformed(ActionEvent e)
+    						{
+								tcx.setVisible(false);
+    						}
+    					});
+					}
 
 					// Separator
 					p.add(new JSeparator());
@@ -673,7 +739,18 @@ extends JXTable
 					// hmmm, this will trigger columnMove
 					// but we have the timer before saveColumnLayout is kicked of, so we should be fine
 					// and also since we have already read it into local variables it doesn't matter.
-					tcmx.moveColumn(colViewPos, propViewPos);
+					
+					// If we have hidden columns, we might throw: java.lang.ArrayIndexOutOfBoundsException: 56 >= 56
+					try 
+					{ 
+						tcmx.moveColumn(colViewPos, propViewPos); 
+					}
+					catch (Throwable t) 
+					{
+						_logger.info ("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): (to get stacktrace enable debug loggin) Caught: "+t); 
+						_logger.debug("loadColumnLayout() problems when calling tcmx.moveColumn(colViewPos, propViewPos): Caught: "+t, t); 
+					}
+
 					fixCount++;
 				}
 			}
@@ -918,7 +995,8 @@ extends JXTable
 			}
 			catch (Throwable t)
 			{
-				_logger.warn("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
+				_logger.info("GTable='"+getName()+"', Problems when calling super.tableChanged(e). (enable debug mode to see stacktrace) Caught: "+t); // no stacktrace to log, just info message...
+				_logger.debug("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
 			}
 
 			// restoring current selected row by PK is sometimes a problem... 
@@ -1079,6 +1157,19 @@ extends JXTable
 			}
 		};
 	}
+	
+	public String getToolTipTextForColumn(String colname)
+	{
+		String toolTip = "";
+		
+		TableModel tm = getModel();
+		if (tm instanceof ITableTooltip)
+		{
+			ITableTooltip tt = (ITableTooltip) tm;
+			toolTip = tt.getToolTipTextOnTableColumnHeader(colname);
+		}
+		return toolTip; 
+	}
 
 	// 
 	// TOOL TIP for: CELLS
@@ -1174,8 +1265,56 @@ extends JXTable
 	// }
 	// };
 
-	
-	
+	/**
+	 * Get a list of column names as it's stored in the model
+	 * @return
+	 */
+	public List<String> getOriginColumnOrderStrList()
+	{
+		List<String> list = new ArrayList<String>();
+
+		TableModel tm = getModel();
+		int modelCols = tm.getColumnCount();
+		for (int c=0; c<modelCols; c++)
+			list.add(tm.getColumnName(c));
+
+		return list;
+	}
+
+	/**
+	 * Get a list of column names as it's sorted in the view, invisible columns will be added at the end
+	 * @return
+	 */
+	public List<String> getCurrentColumnOrderStrList()
+	{
+		List<String> list = new ArrayList<String>();
+
+		// Get visible columns in order they are visible
+		for (TableColumn tc : getColumns())
+		{
+			String  colName      = tc.getHeaderValue() + "";
+
+			list.add(colName);
+		}
+
+		// Get hidden columns and add them at the end
+		for (TableColumn tc : getColumns(true))
+		{
+			final TableColumnExt tcx = (TableColumnExt) tc;
+
+			String  colName      = tcx.getHeaderValue() + "";
+			boolean colIsVisible = tcx.isVisible();
+
+			if (colIsVisible)
+				continue;
+
+			list.add(colName);
+		}
+		
+		return list;
+	}
+
+
 	/*----------------------------------------------------
 	 **---------------------------------------------------
 	 **---------------------------------------------------
