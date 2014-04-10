@@ -7,6 +7,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
@@ -149,7 +150,7 @@ public class AseConnectionFactory
 
 			// Problems open the interfaces file
 			// FALLBACK to create/use the private interfaces file.
-			String privateInterfacesFile = getPrivateInterfacesFile();
+			String privateInterfacesFile = getPrivateInterfacesFile(true);
 			try
 			{
 				_logger.info("Trying to open the local "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
@@ -180,21 +181,24 @@ public class AseConnectionFactory
 	}
 
 	/** get name of a local/private interfaces file */
-	private static String getPrivateInterfacesFile()
+	public static String getPrivateInterfacesFile(boolean setSybaseHome)
 	{
 		String file = null;
-		String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : "";
+		String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : ""; // points to: getProperty("user.home") + File.separator + ".asetune"
 
 		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 			file = tmpSybaseEnvLocation + "\\sql.ini";
 		else
 			file = tmpSybaseEnvLocation + "/interfaces";
 
-		// Note: this might get printed several times
-		if (System.getenv("SYBASE") == null)
+		if (setSybaseHome)
 		{
-			_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
-			System.setProperty("sybase.home", tmpSybaseEnvLocation);
+    		// Note: this might get printed several times
+    		if (System.getenv("SYBASE") == null)
+    		{
+    			_logger.info("SYBASE environment variable was not set, setting System Property 'sybase.home' to '"+tmpSybaseEnvLocation+"'.");
+    			System.setProperty("sybase.home", tmpSybaseEnvLocation);
+    		}
 		}
 
 		return file;
@@ -206,7 +210,7 @@ public class AseConnectionFactory
 		// set a local filename if one wasn't passed
 		if (file == null)
 		{
-			file = getPrivateInterfacesFile();
+			file = getPrivateInterfacesFile(true);
 			_logger.info("I will try to use the interfaces file '"+file+"'.");
 		}
 		
@@ -977,9 +981,56 @@ public class AseConnectionFactory
 	}
 
 
+	
 
-	
-	
+
+	/**
+	 * Write a entry to the sql.ini or interfaces file
+	 * @param filename    name of the sql.ini or interfaces file entry
+	 * @param servername  name of the server to add
+	 * @param hostPortStr host1:port, host2:port, host3:port
+	 */
+	public static void addIFileEntry(String filename, String servername, String hostPortStr)
+	{
+		PrintWriter out = null;
+		try 
+		{
+			Map<String, String> hostPortMap = StringUtil.parseCommaStrToMap(hostPortStr, ":", ",");
+
+		    out = new PrintWriter(new BufferedWriter(new FileWriter(filename, true)));
+			if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+			{
+				out.println();
+				out.println("[" + servername + "]");
+				for (String key : hostPortMap.keySet())
+				{
+					String val = hostPortMap.get(key);
+					out.println("query=TCP, " + key + ", " + val);
+				}
+			}
+			else
+			{
+				out.println();
+				out.println(servername);
+				for (String key : hostPortMap.keySet())
+				{
+					String val = hostPortMap.get(key);
+					out.println("\tquery tcp ether " + key + " " + val);
+				}
+			}
+		}
+		catch (IOException e) 
+		{
+			SwingUtils.showErrorMessage(null, "Problems writing to sql.ini or interfaces", 
+					"<html>Problems writing server entry to file '"+filename+"'.<br><br><b>"+e+"</b><html>", e);
+		}
+		finally
+		{
+			if(out != null)
+				out.close();
+		} 		
+	}
+
 	//---------------------------------------
 	// some generic methods
 	//---------------------------------------

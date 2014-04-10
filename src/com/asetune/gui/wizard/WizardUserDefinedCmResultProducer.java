@@ -209,15 +209,14 @@ implements WizardResultProducer
 		out += "### BEGIN: UDC(User Defined Counter) - " + name + "\n";
 		out += "### --------------------------------------------------------------------------------\n";
 		
+		boolean escapeSpaces = false; // false is more readable, but initial spaces on each row will be lost when reading the property
+		
 		                         out +=        prefix + "name              = " + name;
 		                         out += "\n" + prefix + "displayName       = " + displayName;
 		                         out += "\n" + prefix + "description       = " + description;
-//		if (hasVal(sqlInit))     out += "\n" + prefix + "sqlInit           = " + sqlInit .replaceAll("\n", " \\\\n\\\\\n");
-//		                         out += "\n" + prefix + "sql               = " + sql     .replaceAll("\n", " \\\\n\\\\\n");
-//		if (hasVal(sqlClose))    out += "\n" + prefix + "sqlClose          = " + sqlClose.replaceAll("\n", " \\\\n\\\\\n");
-		if (hasVal(sqlInit))     out += "\n" + prefix + "sqlInit           = " + Configuration.saveConvert(sqlInit,  false, true);
-		                         out += "\n" + prefix + "sql               = " + Configuration.saveConvert(sql,      false, true);
-		if (hasVal(sqlClose))    out += "\n" + prefix + "sqlClose          = " + Configuration.saveConvert(sqlClose, false, true);
+		if (hasVal(sqlInit))     out += "\n" + prefix + "sqlInit           = " + Configuration.saveConvert(sqlInit,  escapeSpaces, true).replace("\\n", "\\n\\\n");
+		                         out += "\n" + prefix + "sql               = " + Configuration.saveConvert(sql,      escapeSpaces, true).replace("\\n", "\\n\\\n");
+		if (hasVal(sqlClose))    out += "\n" + prefix + "sqlClose          = " + Configuration.saveConvert(sqlClose, escapeSpaces, true).replace("\\n", "\\n\\\n");
 		if (hasVal(needVersion)) out += "\n" + prefix + "needVersion       = " + needVersion;
 		if (hasVal(needRole))    out += "\n" + prefix + "needRole          = " + needRole;
 		if (hasVal(needConfig))  out += "\n" + prefix + "needConfig        = " + needConfig;

@@ -356,7 +356,7 @@ public class MainFrame
 	private JButton                   _refreshNow_but            = new JButton();
 	private JButton                   _samplePause_but           = new JButton();
 	private JButton                   _samplePlay_but            = new JButton();
-	private JComboBox                 _sampleInterval_cbx        = new JComboBox(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 120});
+	private JComboBox                 _sampleInterval_cbx        = new JComboBox(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 60*2, 60*5, 60*10, 60*30, 60*60});
 	private JButton                   _gcNow_but                 = new JButton();
 	private static JLabel             _statusStatus              = new JLabel(ST_DEFAULT_STATUS_FIELD);
 	private static JLabel             _statusStatus2             = new JLabel(ST_DEFAULT_STATUS2_FIELD);
@@ -1114,7 +1114,7 @@ public class MainFrame
 		_refreshNow_but       .setToolTipText("Abort the \"sleep for next refresh\" and make a new refresh of data NOW (shortcut Alt+r).");
 		_samplePause_but      .setToolTipText("Pause ALL sampling activity.");
 		_samplePlay_but       .setToolTipText("Continue to sample counters again.");
-		_sampleInterval_cbx   .setToolTipText("Sleep time between Data Collection");
+		_sampleInterval_cbx   .setToolTipText("<html>Sleep time between Data Collection<p><b>Tip:</b> You can change this to <i>any</i> number in: <b>Menu-&gt;View-&gt;Preferences-&gt;Refresh Rate...<b></html>");
 		_gcNow_but            .setToolTipText("Do Java Garbage Collection.");
 		_statusStatus         .setToolTipText("What are we doing or waiting for.");
 		_statusStatus2        .setToolTipText("What are we doing or waiting for.");

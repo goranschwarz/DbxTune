@@ -7,6 +7,8 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.sql.Connection;
 import java.util.Map;
 
@@ -16,6 +18,8 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -42,7 +46,7 @@ import com.asetune.utils.Ver;
 
 public class WizardUserDefinedCmPage2
 extends WizardPage
-implements ActionListener
+implements ActionListener, FocusListener, CaretListener
 {
     private static final long serialVersionUID = 1L;
 //	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage2.class);
@@ -155,7 +159,7 @@ implements ActionListener
 		add( new MultiLineLabel(WIZ_HELP1), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlInit_txt, "growx, pushx, wrap");
 
-		button = new JButton("Test SQL");
+		button = new JButton("Open above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_OPEN");
 		add(button, "span, align right, wrap 10");
@@ -167,7 +171,7 @@ implements ActionListener
 		add(_needVersion_lbl, "split, width 80lp!");
 		add(_needVersion_txt, "split, growx, pushx");
 
-		button = new JButton("Test SQL");
+		button = new JButton("Open above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_REFRESH");
 		add(button, "align right, wrap");
@@ -186,10 +190,43 @@ implements ActionListener
 		add( new MultiLineLabel(WIZ_HELP3), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlClose_txt, "growx, pushx, wrap");
 
-		button = new JButton("Test SQL");
+		button = new JButton("Open above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_CLOSE");
 		add(button, "span, align right, wrap 10");
+		
+		// The auto registration doesn't seems to work anymore so to be safe add listeners
+		_sqlInit_txt    .addCaretListener(this);
+		_sql_txt        .addCaretListener(this);
+		_sqlClose_txt   .addCaretListener(this);
+		_needVersion_txt.addCaretListener(this);
+		_needRole_txt   .addCaretListener(this);
+		_needConfig_txt .addCaretListener(this);
+		_monTables_txt  .addCaretListener(this);
+		
+		_sqlInit_txt    .addFocusListener(this);
+		_sql_txt        .addFocusListener(this);
+		_sqlClose_txt   .addFocusListener(this);
+		_needVersion_txt.addFocusListener(this);
+		_needRole_txt   .addFocusListener(this);
+		_needConfig_txt .addFocusListener(this);
+		_monTables_txt  .addFocusListener(this);
+	}
+
+	@Override
+	public void focusGained(FocusEvent e)
+	{
+		userInputReceived( (e.getSource() instanceof Component ? (Component)e.getSource() : null), e);
+	}
+	@Override
+	public void focusLost(FocusEvent e)
+	{
+		userInputReceived( (e.getSource() instanceof Component ? (Component)e.getSource() : null), e);
+	}
+	@Override
+	public void caretUpdate(CaretEvent e)
+	{
+		userInputReceived( (e.getSource() instanceof Component ? (Component)e.getSource() : null), e);
 	}
 
 	private void applyFromTemplate()
@@ -233,7 +270,7 @@ implements ActionListener
 		//System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
 
 		String problem = "";
-		if ( _sql_txt.getText().trim().length() <= 0) problem += "SQL refresh ";
+		if ( _sql_txt.getText().trim().length() <= 0) problem += "SQL Statement ";
 
 		if (problem.length() > 0  &&  problem.endsWith(", "))
 		{
@@ -258,9 +295,8 @@ implements ActionListener
 				{ 
 					return "ASE Version needs to be a number."; 
 				}
-
-				if (aseVersionInt > 0 && aseVersionStr.length() != (Ver.ver(15,0,3,1)+"".length()) )
-					return "ASE Version needs to be a number, Example "+Ver.ver(15,0,3,1)+" (15.0.3 ESD#1.1).";
+				if (aseVersionInt > 0 && aseVersionStr.length() != Integer.toString(Ver.ver(15,0,3,1,1)).length() )
+					return "ASE Version needs to be a number, Example "+Ver.ver(15,0,3,1,1)+" (15.0.3 ESD#1.1).";
 			}
 		}
 

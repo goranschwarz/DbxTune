@@ -35,6 +35,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.utils.FileUtils;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -240,7 +241,7 @@ implements ActionListener, DocumentListener
 			if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
 			{
 //				if (strAtLine.matches("^[[].*[]].*"))
-				if (strAtLine.startsWith("["))
+				if ( strAtLine.startsWith("[") && strAtLine.indexOf("]") >= 0 )
 				{
 					_lastEditSrv = strAtLine.substring(strAtLine.indexOf("[")+1, strAtLine.indexOf("]")).trim();
 					break;
@@ -310,7 +311,7 @@ implements ActionListener, DocumentListener
 		}
 		catch (IOException ioex)
 		{
-			SwingUtils.showErrorMessage("Save File", "Problems Saving file '"+_filename+"'.", ioex);
+			SwingUtils.showErrorMessage("Save File", "<html>Problems Saving file '"+_filename+"'.<br><br><b>"+ioex+"</b></html>", ioex);
 			return false;
 		}
 	}
@@ -338,6 +339,16 @@ implements ActionListener, DocumentListener
 			File f = new File(_filename);
 			FileReader reader = new FileReader(f);
 			_textArea.read(reader, "");  // Use TextComponent read
+
+			if ( ! FileUtils.canWrite(filename) )
+			{
+				String htmlStr = "<html>" +
+					"<h3>Warning</h3>" +
+					"Name service file '"+filename+"' is <b>read only</b><br>" +
+					"So adding/changing entries will be impossible!<br>" +
+					"</html>";
+				SwingUtils.showWarnMessage(null, "read only", htmlStr, null);
+			}
 
 			resetChangedStatus(true);
 			markCurrentServer();

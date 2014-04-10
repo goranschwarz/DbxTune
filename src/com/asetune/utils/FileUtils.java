@@ -7,12 +7,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import javax.swing.JOptionPane;
+
 public class FileUtils
 {
 	public static void copy(String from_name, String to_name) 
 	throws IOException
 	{
-		copy(from_name, to_name, false);
+		copy(from_name, to_name, false, false);
 	}
 
 	// This example is from _Java Examples in a Nutshell_. (http://www.oreilly.com)
@@ -25,7 +27,7 @@ public class FileUtils
 	 * the file, however, it performs a lot of tests to make sure everything is
 	 * as it should be.
 	 */
-	public static void copy(String from_name, String to_name, boolean confirmOverWrite) 
+	public static void copy(String from_name, String to_name, boolean confirmOverWrite, boolean useGuiToConfirmOverWrite) 
 	throws IOException
 	{
 		File from_file = new File(from_name); // Get File objects from Strings
@@ -34,7 +36,7 @@ public class FileUtils
 		// First make sure the source file exists, is a file, and is readable.
 		if ( !from_file.exists() )  abort("FileCopy: no such source file: "       + from_name);
 		if ( !from_file.isFile() )  abort("FileCopy: can't copy directory: "      + from_name);
-		if ( !from_file.canRead() ) abort("FileCopy: source file is unreadable: " + from_name);
+		if ( !canRead(from_file) ) abort("FileCopy: source file is unreadable: " + from_name);
 
 		// If the destination is a directory, use the source file name
 		// as the destination file name
@@ -46,22 +48,54 @@ public class FileUtils
 		// exist, make sure the directory exists and is writeable.
 		if ( to_file.exists() )
 		{
-			if ( !to_file.canWrite() )
+			if ( !canWrite(to_file) )
 				abort("FileCopy: destination file is unwriteable: " + to_name);
 
 			if (confirmOverWrite)
 			{
-				// Ask whether to overwrite it
-				System.out.print("Overwrite existing file " + to_name + "? (Y/N): ");
-				System.out.flush();
-	
-				// Get the user's response.
-				BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-				String response = in.readLine();
-	
-				// Check the response. If not a Yes, abort the copy.
-				if ( !response.equals("Y") && !response.equals("y") )
-					abort("FileCopy: existing file was not overwritten.");
+				if (useGuiToConfirmOverWrite)
+				{
+					String htmlMsg = "<html>" +
+    						"<h3>Confirm Overwite of file</h3>" +
+    						"The destination file <code>"+to_name+"</code> exists!</b><br>" +
+    						"Do you want to overwrite the existing file?</b><br>" +
+    						"<br>" +
+    						"File copy information:<br>" +
+    						"<ul>" +
+    						"   <li>from: <code>" + from_name + "</code></li>" +
+    						"   <li>to:   <code>" + to_name   + "</code></li>" +
+    						"</ul>" +
+    						"</html>";
+
+					//FIXME: Add view capability of source/dest file
+
+					String[] options = { "Yes - Overwite destination file", "No - Keep destination file" };
+					int result = JOptionPane.showOptionDialog(null, htmlMsg, "Copy File?", 
+							JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, 0);
+					
+					if (result == 0) // Yes
+					{
+						// Simply continue with the copy
+					}
+					if (result == 1) // No
+					{
+						return;
+					}
+				}
+				else
+				{
+    				// Ask whether to overwrite it
+    				System.out.print("Overwrite existing file " + to_name + "? (Y/N): ");
+    				System.out.flush();
+    	
+    				// Get the user's response.
+    				BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+    				String response = in.readLine();
+    	
+    				// Check the response. If not a Yes, abort the copy.
+    				if ( !response.equals("Y") && !response.equals("y") )
+    					abort("FileCopy: existing file was not overwritten.");
+				}
 			}
 		}
 		else
@@ -76,7 +110,7 @@ public class FileUtils
 
 			if ( !dir.exists() )   abort("FileCopy: destination directory doesn't exist: "  + parent);
 			if ( dir.isFile() )    abort("FileCopy: destination is not a directory: "       + parent);
-			if ( !dir.canWrite() ) abort("FileCopy: destination directory is unwriteable: " + parent);
+			if ( !canWrite(dir) )  abort("FileCopy: destination directory is unwriteable: " + parent);
 		}
 
 		// If we've gotten this far, then everything is okay.
@@ -113,4 +147,73 @@ public class FileUtils
 	{
 		throw new IOException(msg);
 	}
+	
+	
+	/**
+	 * Check if a file is readable or not
+	 * @param filename
+	 * @return
+	 */
+	public static boolean canRead(String filename)
+	{
+		File f = new File(filename);
+		return canRead(f);
+	}
+
+	/**
+	 * Check if a file is readable or not
+	 * @param filename
+	 * @return
+	 */
+	public static boolean canRead(File file)
+	{
+		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+		{
+			if ( file.isFile())
+			{
+				// Open the file in READ and close it...
+				try { new FileInputStream(file).close(); } 
+				catch (IOException e) {	return false; }
+				return true;
+			}
+		}
+
+		return file.canRead();
+	}
+
+	/**
+	 * Check if a file is writable or not
+	 * @param filename
+	 * @return
+	 */
+	public static boolean canWrite(String filename)
+	{
+		File f = new File(filename);
+		return canWrite(f);
+	}
+	/**
+	 * Check if a file is writable or not
+	 * @param filename
+	 * @return
+	 */
+	public static boolean canWrite(File file)
+	{
+		// for windows the canWrite() is faulty
+		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
+		{
+			if ( file.isFile())
+			{
+    			// Open the file in append mode and close it...
+    			try { new FileOutputStream(file, true).close(); } 
+    			catch (IOException e) {	return false; }
+    			return true;
+			}
+		}
+
+		return file.canWrite();
+	}
+
+	
+	
+
 }
