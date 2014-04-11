@@ -47,6 +47,7 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 import javax.swing.TransferHandler;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -112,6 +113,7 @@ implements ActionListener, FocusListener //, ChangeListener
 	private JLabel               _favoriteIcon_lbl       = new JLabel("Icon");
 	private JTextField           _favoriteIcon_txt       = new JTextField();
 
+	private JButton              _execCmd_but            = new JButton("Execute");
 	private JButton              _addCmd_but             = new JButton("Add");
 	private JButton              _addSeparator_but       = new JButton("Add Separator");
 	private JButton              _changeCmd_but          = new JButton("Change");
@@ -150,11 +152,15 @@ implements ActionListener, FocusListener //, ChangeListener
 		
 		/** Get what history file to use */
 		public String getFavoriteFilename();
+		
+		/** Delegate Execution of the Statement... */
+		public void doExecute(String statement);
 	}
 
 	public FavoriteCommandDialog(FavoriteOwner owner, Window window)
 	{
-		super(window, "Favorite Commands", ModalityType.APPLICATION_MODAL);
+		super(window, "Favorite Commands", ModalityType.MODELESS);
+//		super(window, "Favorite Commands", ModalityType.APPLICATION_MODAL);
 //		super();
 		_owner = owner;
 		_parentWindow = window;
@@ -347,12 +353,17 @@ implements ActionListener, FocusListener //, ChangeListener
 					int mrow = _table.convertRowIndexToModel(vrow);
 					
 					FavoriteCommandEntry entry = _tm.getEntry(mrow);
-					FavoriteCommandEntry e2 = AddOrChangeEntryDialog.showDialog(FavoriteCommandDialog.this, entry);
-					if (e2 != null)
-					{
-						_tm.setChanged(true);
-						_tm.fireTableDataChanged();
-					}
+
+					// Execute in owner
+					_owner.doExecute( entry.getOriginCommand() );
+					
+//					// Open the editor
+//					FavoriteCommandEntry e2 = AddOrChangeEntryDialog.showDialog(FavoriteCommandDialog.this, entry);
+//					if (e2 != null)
+//					{
+//						_tm.setChanged(true);
+//						_tm.fireTableDataChanged();
+//					}
 				}
 			}
 		});
@@ -494,6 +505,7 @@ implements ActionListener, FocusListener //, ChangeListener
 
 //		panel.setToolTipText("<html></html>");
 
+		_execCmd_but            .setToolTipText("<html>Execute the Statement in the text area <b>below</b>.</html>");
 		_addCmd_but             .setToolTipText("<html>Add a new Command to the Favorite list.</html>");
 		_addSeparator_but       .setToolTipText("<html>Add a separator</html>");
 		_changeCmd_but          .setToolTipText("<html>Open the Edit Dialog where you can change the command.</html>");
@@ -517,7 +529,8 @@ implements ActionListener, FocusListener //, ChangeListener
 		panel.add(_preview1_lbl,      "");
 		panel.add(_preview2_lbl,      "pushx, growx, wrap 15");
 		
-		panel.add(_addCmd_but,          "span, split");  // gap left [right] [top] [bottom]
+		panel.add(_execCmd_but,         "span, split");  // gap left [right] [top] [bottom]
+		panel.add(_addCmd_but,          "");
 		panel.add(_addSeparator_but,    "");
 		panel.add(_changeCmd_but,       "");
 		panel.add(_removeCmd_but,       "");
@@ -527,6 +540,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		// Focus action listener
 		
 		// action
+		_execCmd_but     .addActionListener(this);
 		_addCmd_but      .addActionListener(this);
 		_addSeparator_but.addActionListener(this);
 		_changeCmd_but   .addActionListener(this);
@@ -536,6 +550,7 @@ implements ActionListener, FocusListener //, ChangeListener
 
 		// Action Commands
 //		_addCmd_but      .setActionCommand(ACTION_EXECUTE);
+		_execCmd_but     .setAction(_executeFavoriteAction);
 		_addCmd_but      .setAction(_addFavoriteAction);
 		_addSeparator_but.setAction(_addSeparatorAction);
 		_changeCmd_but   .setAction(_changeFavoriteAction);
@@ -641,15 +656,29 @@ implements ActionListener, FocusListener //, ChangeListener
 	 * Create the Menu components that can be used my a JMenu or a JPopupMenu
 	 * @return a List of Menu components (null is never returned, instead a empty List)
 	 */
+	@SuppressWarnings("serial")
 	private List<JComponent> createPopupMenuComponents()
 	{
 		ArrayList<JComponent> list = new ArrayList<JComponent>();
 		JMenuItem  mi = null;
 
-//		//------------------------------------------------------------
-//		mi = new JMenuItem("Execute Selected Row(s)");
-//		mi.setAction(_executeHistoryRowsAction);
-//		list.add(mi);
+		//------------------------------------------------------------
+		mi = new JMenuItem("Execute Selected Row(s)")
+		{
+			@Override
+			public String getToolTipText()
+			{
+				return "<html>" + 
+						"<h3>The below text will be executed in the <i>owners</i> context.</h3>" +
+						"<pre>" +
+						getCommandsForSelectedRows() +
+						"</pre>" +
+						"</html>";
+			}
+		};
+		mi.setAction(_executeFavoriteRowsAction);
+		ToolTipManager.sharedInstance().registerComponent(mi); // just to register so that getToolTipText will be called
+		list.add(mi);
 
 		//------------------------------------------------------------
 		mi = new JMenuItem("Move Up");
@@ -1273,6 +1302,8 @@ implements ActionListener, FocusListener //, ChangeListener
 	//-------------------------------------------------------------------
 	private MoveUpSelectedRowsAction   _moveUpSelectedRowsAction   = new MoveUpSelectedRowsAction();
 	private MoveDownSelectedRowsAction _moveDownSelectedRowsAction = new MoveDownSelectedRowsAction();
+	private ExecuteFavoriteRowsAction  _executeFavoriteRowsAction  = new ExecuteFavoriteRowsAction();
+	private ExecuteFavoriteAction      _executeFavoriteAction      = new ExecuteFavoriteAction();
 	private AddFavoriteAction          _addFavoriteAction          = new AddFavoriteAction();
 	private AddSeparatorAction         _addSeparatorAction         = new AddSeparatorAction();
 	private ChangeFavoriteAction       _changeFavoriteAction       = new ChangeFavoriteAction();
@@ -1370,6 +1401,46 @@ implements ActionListener, FocusListener //, ChangeListener
 		}
 	}
 
+
+	private class ExecuteFavoriteAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Execute";
+		private static final String ICON = "images/exec.png";
+
+		public ExecuteFavoriteAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			_owner.doExecute(_cmd_txt.getText());
+		}
+	}
+
+	private class ExecuteFavoriteRowsAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Execute Selected Row(s)";
+		private static final String ICON = "images/exec.png";
+
+		public ExecuteFavoriteRowsAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			_owner.doExecute(getCommandsForSelectedRows());
+		}
+	}
 
 	private class AddFavoriteAction
 	extends AbstractAction
@@ -1522,6 +1593,47 @@ implements ActionListener, FocusListener //, ChangeListener
 	}
 
 
+//	private String getTextForSelectedRowsInTable()
+//	{
+//		int[] vrows = _table.getSelectedRows();
+//
+//		// Multiple rows is selected in the favorite list
+//		if (vrows.length > 1)
+//		{
+////			System.out.println("MULTI ROW EXECUTION: rows: "+rows.length+", "+rows);
+//
+//			// Copy rows into a String List
+//			// BECAUSE if history size is low, rows will be deleted from the history table at execution
+//			ArrayList<String> execList = new ArrayList<String>();
+//
+//			int[] mrows = new int[vrows.length];
+//			for (int r=0; r<vrows.length; r++)
+//				mrows[r] = _table.convertRowIndexToModel(vrows[r]);
+//
+//			TableModel tm = _table.getModel();
+//			if (tm instanceof FavoriteTableModel)
+//			{
+//				FavoriteTableModel ftm = (FavoriteTableModel) tm;
+//				
+//				// Get each selected command and add it to a list, to be executed in next step
+//				for (int r=0; r<mrows.length; r++)
+//					execList.add( ftm.getCommand(mrows[r]) );
+//			}
+//
+//			// compose a statement, 'go' will be added at the end of each table entry
+//			StringBuilder sb = new StringBuilder();
+//			for (String str : execList)
+//				sb.append(str).append("\ngo\n");
+//
+//			// return str
+//			return sb.toString();
+//		}
+//		else // one or no selection, use the text in the editor
+//		{
+//			return _cmd_txt.getText();
+//		}
+//	} // end: method
+//
 	/**
 	 * helper method used by dragAndDrop and CopyHistoryRowsAction
 	 * @return

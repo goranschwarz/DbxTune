@@ -2948,6 +2948,9 @@ public class QueryWindow
 			
 			if (_watchdogIsFileChanged != null)
 				_watchdogIsFileChanged.setFile(_query_txt.getFileFullPath());
+			
+			// reset the UNDO manager
+			_query_txt.discardAllEdits();
 		}
 		catch (IOException ex)
 		{
@@ -7814,7 +7817,7 @@ public class QueryWindow
 		_favoriteCmdManagerSql.rebuild();
 
 		// Add entry: OPEN User Defined Command Editor
-		JMenuItem openDialog = new JMenuItem("Edit User Defined SQL Commands");
+		JMenuItem openDialog = new JMenuItem("Edit/Open User Defined SQL Commands");
 		openDialog.setToolTipText("Open User Defined SQL Commands Editor");
 		openDialog.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite_file.png"));
 		openDialog.addActionListener(new ActionListener()
@@ -7927,7 +7930,7 @@ public class QueryWindow
 		_favoriteCmdManagerRcl.rebuild();
 
 		// Add entry: OPEN User Defined Command Editor
-		JMenuItem openDialog = new JMenuItem("Edit User Defined RCL Commands");
+		JMenuItem openDialog = new JMenuItem("Edit/Open User Defined RCL Commands");
 		openDialog.setToolTipText("Open User Defined RCL Commands Editor");
 		openDialog.setIcon(SwingUtils.readImageIcon(Version.class, "images/favorite_file.png"));
 		openDialog.addActionListener(new ActionListener()
@@ -7993,6 +7996,13 @@ public class QueryWindow
 		{
 			return _favoriteCmdFilenameSql;
 		}
+		
+		/** implemets FavoriteCommandDialog.doExecute */
+		@Override
+		public void doExecute(String statement)
+		{
+			displayQueryResults(statement, 0, false);
+		}
 	}
 	private class FavoriteCommandManagerRcl 
 	implements FavoriteCommandDialog.FavoriteOwner
@@ -8032,6 +8042,13 @@ public class QueryWindow
 		public String getFavoriteFilename()
 		{
 			return _favoriteCmdFilenameRcl;
+		}
+		
+		/** implemets FavoriteCommandDialog.doExecute */
+		@Override
+		public void doExecute(String statement)
+		{
+			displayQueryResults(statement, 0, false);
 		}
 	}
 	//////////////////////////////////////////////////////////////
