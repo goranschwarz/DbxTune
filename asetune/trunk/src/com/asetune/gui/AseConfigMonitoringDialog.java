@@ -144,7 +144,7 @@ public class AseConfigMonitoringDialog
 	private SpinnerNumberModel _maxSqlTextMonitored_spm       = new SpinnerNumberModel(0, 0, Short.MAX_VALUE, 512); // value, min, max, step
 	private JSpinner           _maxSqlTextMonitored_sp        = new JSpinner(_maxSqlTextMonitored_spm);
 
-	private JLabel             _predefinedConfigs_lbl         = new JLabel("Use pre-defined configuration");
+	private JLabel             _predefinedConfigs_lbl         = new JLabel("Configuration Templates");
 	private JComboBox          _predefinedConfigs_cbx         = new JComboBox(PDC_OPTIONS_STR);
 
 	private JLabel             _configurabelMemory_lbl        = new JLabel("#"+default_configurabelMemoryText);
@@ -410,6 +410,11 @@ public class AseConfigMonitoringDialog
 		_configurabelMemory_lbl          .setToolTipText(_tts.add(_configurabelMemory_lbl,           "Available memory to be used for additional configurations or 'data caches' etc. This memory is basically not used by the ASE, meaning it's \"waste\" and ready for usage by someone..."));
 
 		//--- LAYOUT
+		panel.add(_predefinedConfigs_lbl,            "");
+		panel.add(_predefinedConfigs_cbx,            "right, pushx, wrap 10");
+
+		panel.add(new JSeparator(),                  "span, grow, push, wrap 10");
+
 		panel.add(_enableMonitoring_chk,             "wrap 15");
 
 		panel.add(_perObjectStatisticsActive_chk,    "wrap");
@@ -448,9 +453,6 @@ public class AseConfigMonitoringDialog
 		panel.add(_maxSqlTextMonitored_sp,           "right, pushx, wrap 10");
 
 		panel.add(new JSeparator(),                  "span, grow, push, wrap 10");
-
-		panel.add(_predefinedConfigs_lbl,            "");
-		panel.add(_predefinedConfigs_cbx,            "right, pushx, wrap 10");
 
 		panel.add(_configurabelMemory_lbl,           "span, wrap");
 
@@ -561,8 +563,8 @@ public class AseConfigMonitoringDialog
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
 		//--- TOOLTIP
-		_onExitDoNotDisable_rb.setToolTipText("Monitoring is not disabled when sybmon is terminated.");
-		_onExitAutoDisable_rb .setToolTipText("If no other sybmon is running at the same time, the monitoring will be disabled and on next login it will be enabled again.");
+		_onExitDoNotDisable_rb.setToolTipText("Monitoring is not disabled when "+Version.getAppName()+" is terminated.");
+		_onExitAutoDisable_rb .setToolTipText("If no other "+Version.getAppName()+" is running at the same time, the monitoring will be disabled and on next login it will be enabled again.");
 		_onExitAsk_rb         .setToolTipText("A popup will ask you if you want to disable Monitoring everytime the '"+Version.getAppName()+"' is terminated.");
 
 		ButtonGroup group = new ButtonGroup();
