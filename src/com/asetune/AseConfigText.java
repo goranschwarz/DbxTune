@@ -31,7 +31,7 @@ import com.asetune.utils.Ver;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo/*, AseConfigFile*/};
+	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo, AseConfigFile};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -128,9 +128,9 @@ public abstract class AseConfigText
 			aseConfigText = new AseConfigText.ClusterInfo();
 			break;
 
-//		case AseConfigFile:
-//			aseConfigText = new AseConfigText.ConfigFile();
-//			break;
+		case AseConfigFile:
+			aseConfigText = new AseConfigText.ConfigFile();
+			break;
 
 		default:
 			throw new RuntimeException("Unknown type was passed when create instance. "+type);
@@ -270,6 +270,15 @@ public abstract class AseConfigText
 	}
 
 	/**
+	 * 
+	 * @return List<String> of configurations(s) that must be true.
+	 */
+	public List<String> needConfig()
+	{ 
+		return null;
+	}
+
+	/**
 	 * refresh 
 	 * @param conn
 	 */
@@ -288,6 +297,7 @@ public abstract class AseConfigText
 			int          needVersion = needVersion();
 			boolean      needCluster = needCluster();
 			List<String> needRole    = needRole();
+			List<String> needConfig  = needConfig();
 
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && aseVersion < needVersion)
@@ -317,6 +327,29 @@ public abstract class AseConfigText
 				if ( ! haveRole )
 				{
 					_configStr = "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
+					return;
+				}
+			}
+
+			// Check if we can get the configuration, due to enough rights/role based.
+			if (needConfig != null)
+			{
+				List<String> missingConfigs = new ArrayList<String>();
+				
+				for (String configName : needConfig)
+				{
+					boolean isConfigured = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, configName);
+					if ( ! isConfigured )
+						missingConfigs.add(configName);
+				}
+				
+				if (missingConfigs.size() > 0)
+				{
+					_configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
+					_configStr += "\n";
+					_configStr += "The following configuration(s) is missing:\n";
+					for (String str : missingConfigs)
+						_configStr += "     exec sp_configure '" + str + "', 1\n";
 					return;
 				}
 			}
@@ -723,41 +756,56 @@ public abstract class AseConfigText
 		@Override public    boolean    needCluster()                       { return true; }
 	}
 	
-//	public static class ConfigFile extends AseConfigText
-//	{
-//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
-////		@Override public    int        needVersion()                       { return 15000; }
-////		@Override public    int        needVersion()                       { return 1500000; }
-//		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
-//		@Override public    List<String> needRole()
-//		{ 
-//			List<String> list = new ArrayList<String>();
-//			list.add(AseConnectionUtils.SA_ROLE); // Or SSO_ROLE
-//			return list;
-//		}
-////		@Override public    List<String> needConfig()
-////		{ 
-////			List<String> list = new ArrayList<String>();
-////			list.add("enable file access");
-////			return list;
-////		}
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) 
-//		{ 
-//			return 
-//			"--exec sp_configure 'enable file access', 1 \n" +
-//			"go \n" +
-//			"create existing table #localConfigFile (record varchar(256) null) \n" +
-//			"external file at 'C:\\sybase\\ase_1570x\\GORAN_1570_DS.cfg' \n" +
-//			"go" +
-//			"select isnull(record,'') from #localConfigFile \n" +
-//			"go \n" +
-//			"drop table #localConfigFile \n" +
-//			"go" +
-//			"--exec sp_configure 'enable file access', 0 \n" +
-//			"go \n" +
-//			""; 
-//		}
-//	}
+	public static class ConfigFile extends AseConfigText
+	{
+		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
+		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
+		@Override public    List<String> needRole()
+		{ 
+			List<String> list = new ArrayList<String>();
+			list.add(AseConnectionUtils.SA_ROLE); // Or SSO_ROLE
+			return list;
+		}
+		@Override public    List<String> needConfig()
+		{ 
+			List<String> list = new ArrayList<String>();
+			list.add("enable file access");
+			return list;
+		}
+		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+		{ 
+			return 
+			"declare @cmd      varchar(1024) \n" +
+			"declare @filename varchar(255) \n" +
+			"                               \n" +
+			"-- Get config file name \n" +
+			"select @filename = value2  \n" +
+			"  from master.dbo.syscurconfigs \n" +
+			" where config = (select config from master.dbo.sysconfigures where name = 'configuration file') \n" +
+			"                                        \n" +
+			"-- Drop the object if it already exists \n" +
+			"select @cmd = 'if (object_id(''tempdb.guest.localConfigFile_'+convert(varchar(10),@@spid)+''') is not null) ' + \n" +
+			"              '    drop table tempdb.guest.localConfigFile_'+convert(varchar(10),@@spid) \n" +
+			"execute(@cmd) \n" +
+			"                          \n" +
+			"-- Create the dummy table \n" +
+			"select @cmd = 'create existing table tempdb.guest.localConfigFile_'+convert(varchar(10),@@spid)+'(record varchar(256) null) ' + \n" +
+			"              'external file at ''' + @filename + '''' \n" +
+			"execute(@cmd) \n" +
+			"go                 \n" +
+			"-- get the records \n" +
+			"declare @cmd varchar(1024) \n" +
+			"select @cmd = 'select isnull(record,'''') from tempdb.guest.localConfigFile_'+convert(varchar(10),@@spid) \n" +
+			"execute(@cmd) \n" +
+			"go                \n" +
+			"-- Drop the table \n" +
+			"declare @cmd varchar(1024) \n" +
+			"select @cmd = 'drop table tempdb.guest.localConfigFile_'+convert(varchar(10),@@spid) \n" +
+			"execute(@cmd) \n" +
+			"go \n" +
+			""; 
+		}
+	}
 	
 	
 	/*---------------------------------------------------
