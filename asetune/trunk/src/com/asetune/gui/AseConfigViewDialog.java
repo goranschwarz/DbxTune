@@ -68,6 +68,7 @@ implements ActionListener, ConnectionProvider
 	private AseConfigTextPanel     _aseConfigHelpSortPanel           = new AseConfigTextPanel(this, ConfigType.AseHelpSort);
 	private AseConfigTextPanel     _aseConfigLicenseInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseLicenseInfo);
 	private AseConfigTextPanel     _aseConfigClusterInfoPanel        = new AseConfigTextPanel(this, ConfigType.AseClusterInfo);
+	private AseConfigTextPanel     _aseConfigFileContentPanel        = new AseConfigTextPanel(this, ConfigType.AseConfigFile);
 	
 	private AseConfigViewDialog(Frame owner, ConnectionProvider connProvider)
 	{
@@ -195,6 +196,7 @@ implements ActionListener, ConnectionProvider
 		_tabPane.add("sp_helpsort",      _aseConfigHelpSortPanel);
 		_tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
 		_tabPane.add("Cluster Info",     _aseConfigClusterInfoPanel);
+		_tabPane.add("Config File",      _aseConfigFileContentPanel);
 
 		panel.add(_tabPane,              "grow, height 100%, width 100%");
 		panel.add(createOkCancelPanel(), "grow, push, bottom");
