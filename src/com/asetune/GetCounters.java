@@ -1374,13 +1374,20 @@ extends CounterControllerAbstract
 			mtd.addColumn("sysprocesses", "linenum",        "Line number of the SQL batch or the procedure that is currently executing. \nThis might be faulty but it's usually a good indicator. \nIf this does NOT move between samples you may have a HEAVY SQL statement to optimize or you may waiting for a blocking lock.");
 			mtd.addColumn("sysprocesses", "blocked",        "0 is a good value, otherwise it will be the SPID that we are blocked by, meaning we are waiting for that SPID to release it's locks on some objetc.");
 			mtd.addColumn("sysprocesses", "time_blocked",   "Number of seconds we have been blocked by other SPID's. \nThis is not a summary, it shows you how many seconds we have been waiting since we started to wait for the other SPID to finnish.");
+			mtd.addColumn("sysprocesses", "hostname",       "hostname of the machine where the clinet was started. (This can be filled in by the client, meaning it could be used for something else)");
+			mtd.addColumn("sysprocesses", "ipaddr",         "IP address of the connected client");
+			mtd.addColumn("sysprocesses", "hostprocess",    "hostprocess on the machine which the clinet was started at. (This can be filled in by the client, meaning it could be used for something else)");
+			mtd.addColumn("sysprocesses", "suid",           "Sybase User ID of the user which the client logged in with.");
+			mtd.addColumn("sysprocesses", "cpu",            "cumulative cpu time used by a process in 'ticks'. This is periodically flushed by the system (see sp_configure 'cpu accounting flush interval'");
 			mtd.addColumn("sysprocesses", "clientname",     clientXxx);
 			mtd.addColumn("sysprocesses", "clienthostname", clientXxx);
 			mtd.addColumn("sysprocesses", "clientapplname", clientXxx);
 
-
 			mtd.addColumn("sysprocesses", "tempdb_name",          "What tempdb is this SPID using for temporary storage.");
 			mtd.addColumn("sysprocesses", "pssinfo_tempdb_pages", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
+			mtd.addColumn("sysprocesses", "WaitClassDesc",        "Short description of what 'group' the WaitEventID is grouped in.");
+			mtd.addColumn("sysprocesses", "WaitEventDesc",        "Short description of what this specific WaitEventID stands for.");
+			mtd.addColumn("sysprocesses", "BatchIdDiff",          "How many 'SQL Batches' has the client sent to the server since the last sample, in Diff or Rate");
 
 			mtd.addColumn("monProcess",   "tempdb_name",          "What tempdb is this SPID using for temporary storage.");
 			mtd.addColumn("monProcess",   "pssinfo_tempdb_pages", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
