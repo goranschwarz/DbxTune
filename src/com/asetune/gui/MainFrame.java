@@ -1549,7 +1549,7 @@ public class MainFrame
 				// NOT supported in ASE versions below 15.0.2
 				String htmlMsg = 
 					"<html>" +
-					"  <h2>Sorry this functionality is not available in ASE "+AseConnectionUtils.versionIntToStr(aseVersionNum)+"</h2>" +
+					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionIntToStr(aseVersionNum)+"</h2>" +
 					"  Application Tracing is introduced in ASE 15.0.2" +
 					"</html>";
 				SwingUtils.showInfoMessage(this, "Not supported for this ASE Version", htmlMsg);

@@ -9,6 +9,7 @@ import javax.swing.JTextArea;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.asetune.gui.swing.GLabel;
 import com.asetune.utils.AseConnectionUtils.ConnectionStateInfo;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.DbUtils.JdbcConnectionStateInfo;
@@ -22,6 +23,7 @@ public class StatusBar extends JPanel
 
 	private JLabel     _msgline                   = new JLabel("");
 	private JTextArea  _currentFilename           = new JTextArea("");
+	private GLabel     _currentFilenameEncoding   = new GLabel();         // use focusable tool tip 
 	private JLabel     _currentFilenameIsDirty    = new JLabel("*");
 
 	private JLabel     _userName               = new JLabel("");
@@ -41,6 +43,26 @@ public class StatusBar extends JPanel
 	{
 		init();
 	}
+
+//	juniversalchardet is a Java port of 'universalchardet', that is the encoding detector library of Mozilla. 
+//	http://code.google.com/p/juniversalchardet/
+	private static final String FILENAME_TOOLTIP_BASE = 
+		"<html>" +
+		"Name of the current file.<br>" +
+		"<br>" +
+		"<b>File Encoding</b>: CHARSET-NAME<br>" + // CHARSET-NAME will be changed in setFilename()
+		"<br>" +
+		"What encoding is the file using.<br>" +
+		"Or actually: The encoding we have <b>guessed</b> that it's using.<br>" +
+		"<br>" +
+		"The guess is based on: <br>" +
+		"The library <b>juniversalchardet</b> which is a Java port of 'universalchardet', that is the encoding detector library of Mozilla.<br>" +
+		"More information can be found at <br>" +
+		"<ul>" +
+		"   <li><A HREF=\"http://code.google.com/p/juniversalchardet\">http://code.google.com/p/juniversalchardet</A> </li>" +
+		"   <li><A HREF=\"http://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html\">http://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html</A> </li>" +
+		"</ul>" +
+		"</html>";
 
 	private static final String ASE_STATE_INFO_TOOLTIP_BASE = 
 		"<html>" +
@@ -92,10 +114,24 @@ public class StatusBar extends JPanel
 		_currentFilenameIsDirty.setToolTipText("The file has been changed.");
 
 		// Current file
-		_currentFilename.setToolTipText("Current filename");
+		_currentFilename.setToolTipText(FILENAME_TOOLTIP_BASE);
 		_currentFilename.setEditable(false);
 		_currentFilename.setBackground( _currentFilenameIsDirty.getBackground() );
 		_currentFilename.setFont(       _currentFilenameIsDirty.getFont() );
+
+		// Current file encoding
+		_currentFilenameEncoding.setToolTipText(
+			"<html>What encoding is the file using.<br>" +
+			"Or actually: The encoding we have <b>guessed</b> that it's using.<br>" +
+			"<br>" +
+			"The guess is based on: <br>" +
+			"The library <b>juniversalchardet</b> which is a Java port of 'universalchardet', that is the encoding detector library of Mozilla.<br>" +
+			"More information can be found at <br>" +
+			"<ul>" +
+			"   <li><A HREF=\"http://code.google.com/p/juniversalchardet\">http://code.google.com/p/juniversalchardet</A> </li>" +
+			"   <li><A HREF=\"http://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html\">http://www-archive.mozilla.org/projects/intl/UniversalCharsetDetection.html</A> </li>" +
+			"</ul>" +
+			"</html>");
 
 		// UserName
 		_userName.setToolTipText("What users did we connect as");
@@ -116,6 +152,7 @@ public class StatusBar extends JPanel
 
 		add(_currentFilenameIsDirty, "");
 		add(_currentFilename,        "pushx, growx");
+		add(_currentFilenameEncoding,"hidemode 3");           
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
 		add(_aseConnStateInfo,       "split, growx, hidemode 2");
@@ -131,6 +168,9 @@ public class StatusBar extends JPanel
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 		
 		add(_editorAtLineCol,        "growx");
+
+		// encode name seems to be slightly off, lets hide it until we have a better implementation
+//		_currentFilenameEncoding.setVisible(false); 
 	}
 	
 	public void setMsg(String text)
@@ -149,16 +189,19 @@ public class StatusBar extends JPanel
 	{
 		return _currentFilename.getText();
 	}
-	public void setFilename(String filename)
+	public void setFilename(String filename, String encoding)
 	{
 		File f = new File(filename);
 		if ( ! f.exists() )
 		{
 			_currentFilename.setText(NO_FILE);
 //			_currentFilename.setText("Untitled.txt");
+			_currentFilenameEncoding.setText("");
 			return;
 		}
 		_currentFilename.setText(filename);
+		_currentFilenameEncoding.setText(encoding == null ? "" : encoding);
+		_currentFilename.setToolTipText(FILENAME_TOOLTIP_BASE.replace("CHARSET-NAME", (encoding == null ? "UNKNOWN" : encoding)));
 	}
 
 	public void setFilenameDirty(boolean dirty)

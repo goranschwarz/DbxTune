@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.h2.constant.SysProperties;
+import org.h2.engine.SysProperties;
 
 public class H2UrlHelper
 {

@@ -31,7 +31,6 @@ import com.asetune.AseTune;
 import com.asetune.cm.CountersModel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.RTextUtility;
 import com.asetune.utils.StringUtil;
@@ -514,15 +513,15 @@ extends JDialog implements ActionListener, ChangeListener
 	private void parseVersionString(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr) || "0.0.0".equals(versionStr))
-			versionStr = "00.0.0"; // then the below aseVersionStringToNumber() work better
+			versionStr = "00.0.0"; // then the below sybVersionStringToNumber() work better
 
-		int version = AseConnectionUtils.aseVersionStringToNumber(versionStr);
+		int version = Ver.sybVersionStringToNumber(versionStr);
 		
-		int major = AseConnectionUtils.versionIntPart(version, AseConnectionUtils.VERSION_MAJOR);
-		int minor = AseConnectionUtils.versionIntPart(version, AseConnectionUtils.VERSION_MINOR);
-		int maint = AseConnectionUtils.versionIntPart(version, AseConnectionUtils.VERSION_MAINTENANCE);
-		int esd   = AseConnectionUtils.versionIntPart(version, AseConnectionUtils.VERSION_SERVICE_PACK);
-		int pl    = AseConnectionUtils.versionIntPart(version, AseConnectionUtils.VERSION_PATCH_LEVEL);
+		int major = Ver.versionIntPart(version, Ver.VERSION_MAJOR);
+		int minor = Ver.versionIntPart(version, Ver.VERSION_MINOR);
+		int maint = Ver.versionIntPart(version, Ver.VERSION_MAINTENANCE);
+		int esd   = Ver.versionIntPart(version, Ver.VERSION_SERVICE_PACK);
+		int pl    = Ver.versionIntPart(version, Ver.VERSION_PATCH_LEVEL);
 
 //System.out.println("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+", pl="+pl+".");
 		_testVersionMajor_spm.setValue(major);
@@ -563,7 +562,7 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlWhere.setText(sqlWhere);
 		_sqlClose.setText(sqlClose);
 
-		String aseVersionStr = AseConnectionUtils.versionIntToStr(aseVersion);
+		String aseVersionStr = Ver.versionIntToStr(aseVersion);
 //System.out.println("loadFieldsUsingVersion(): version="+aseVersion+", aseVersionStr='"+aseVersionStr+"'.");
 		_testVersionShort_txt.setText(aseVersionStr);
 		parseVersionString(aseVersionStr);

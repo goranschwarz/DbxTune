@@ -952,7 +952,7 @@ public class PersistWriterJdbc
 //				if (aseVersion < 1500000)
 				if (aseVersion < Ver.ver(15,0))
 				{
-					String msg = "The PCS storage is ASE Version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
+					String msg = "The PCS storage is ASE Version '"+Ver.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
 					_logger.error(msg);
 					_conn.close();
 					_conn = null;
@@ -994,7 +994,7 @@ public class PersistWriterJdbc
 				int asePageSize = AseConnectionUtils.getAsePageSize(_conn);
 				if (asePageSize < 4096)
 				{
-					_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+AseConnectionUtils.versionIntToStr(aseVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
+					_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+Ver.versionIntToStr(aseVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
 				}
 			}
 

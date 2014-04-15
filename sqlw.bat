@@ -98,11 +98,11 @@ set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.2.7.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.3.175.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.3.176.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\wizard.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-core-4.2.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\swingx-all-1.6.4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\swingx-all-1.6.5-1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.2.jar
@@ -113,6 +113,8 @@ set classpath=%classpath%;%SQLW_HOME%\lib\autocomplete.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jcommon-1.0.21.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jfreechart-1.0.14.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\juniversalchardet-1.0.3.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\DDLGen.jar
 
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
@@ -124,14 +126,13 @@ set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
 set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
 
 rem --- echo %CLASSPATH%
+set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 
 
 
 rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
-set PATH=%SQLW_JAVA_HOME%\bin;%ASETUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
-
 
 
 rem ------------------------------------------------------------------------

@@ -415,7 +415,7 @@ public class MonTablesDictionary
 			rs.close();
 			stmt.close();
 
-			_aseVersionNum = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
+			_aseVersionNum = Ver.sybVersionStringToNumber(_aseVersionStr);
 
 			if (AseConnectionUtils.isClusterEnabled(conn))
 				_isClusterEnabled = true;
@@ -627,7 +627,7 @@ public class MonTablesDictionary
 			}
 			rs.close();
 
-			int aseVersionNumFromVerStr = AseConnectionUtils.aseVersionStringToNumber(_aseVersionStr);
+			int aseVersionNumFromVerStr = Ver.sybVersionStringToNumber(_aseVersionStr);
 			_aseVersionNum = Math.max(_aseVersionNum, aseVersionNumFromVerStr);
 
 			// Check if the ASE binary is Cluster Edition Enabled
@@ -753,7 +753,7 @@ public class MonTablesDictionary
 						_montablesVersionStr = spVersion_versionStr;
 						_montablesStatus     = spVersion_status;
 	
-						_montablesVersionNum = AseConnectionUtils.aseVersionStringToNumber(_montablesVersionStr);
+						_montablesVersionNum = Ver.sybVersionStringToNumber(_montablesVersionStr);
 		
 						if ( ! _montablesStatus.equalsIgnoreCase("Complete") )
 						{
@@ -766,7 +766,7 @@ public class MonTablesDictionary
 						_installmasterVersionStr = spVersion_versionStr;
 						_installmasterStatus     = spVersion_status;
 	
-						_installmasterVersionNum = AseConnectionUtils.aseVersionStringToNumber(_installmasterVersionStr);
+						_installmasterVersionNum = Ver.sybVersionStringToNumber(_installmasterVersionStr);
 
 						if ( ! _installmasterStatus.equalsIgnoreCase("Complete") )
 						{
@@ -783,7 +783,7 @@ public class MonTablesDictionary
 				// Stored procedure 'sp_version' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
 				if (ex.getErrorCode() == 2812)
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'. " +
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"'. " +
 							"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, this implies that 'installmaster' has not been applied after upgrade. " +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.error(msg);
@@ -792,7 +792,7 @@ public class MonTablesDictionary
 						"<html>" +
 						"ASE 'installmaster' script may be of a faulty version. <br>" +
 						"<br>" +
-						"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.<br>" +
+						"ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"'.<br>" +
 						"<br>" +
 						"The stored procedure 'sp_version' was introduced in ASE 12.5.4, which I can't find in the connected ASE, <br>" +
 						"this implies that 'installmaster' has <b>not</b> been applied after upgrade.<br>" +
@@ -823,7 +823,7 @@ public class MonTablesDictionary
 						"ASE 'installmaster' script may be of a faulty version. <br>" +
 						"Or the stored procedure 'sp_version' has been replaced with a customer specific one.<br>" +
 						"<br>" +
-						"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.<br>" +
+						"ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"'.<br>" +
 						"<br>" +
 						"To fix the issue Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' again and check it's status by executing: <code>sp_version</code>. <br>" +
 						"<br>" +
@@ -871,7 +871,7 @@ public class MonTablesDictionary
 //			if (_aseVersionNum/1000 != _montablesVersionNum/1000)
 			if (_aseVersionNum/100000 != _montablesVersionNum/100000) // Ver.ver(...) can we use that in some way here... if VER "length" changes the xx/100000 needs to be changed
 			{
-				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"' while MonTables version is '"+AseConnectionUtils.versionIntToStr(_montablesVersionNum)+"'. Please check it's status with: sp_version";
+				String msg = "ASE Monitoring tables may be of a faulty version. ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"' while MonTables version is '"+Ver.versionIntToStr(_montablesVersionNum)+"'. Please check it's status with: sp_version";
 				if (_hasGui)
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
@@ -899,7 +899,7 @@ public class MonTablesDictionary
 			{
 				if (_aseVersionNum != _installmasterVersionNum)
 				{
-					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
+					String msg = "ASE 'installmaster' script may be of a faulty version. ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"' while 'installmaster' version is '"+Ver.versionIntToStr(_installmasterVersionNum)+"'. Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version.";
 					_logger.warn(msg);
 	
 					if (_hasGui)
@@ -908,7 +908,7 @@ public class MonTablesDictionary
 							"<html>" +
 							"ASE 'installmaster' script may be of a faulty version. <br>" +
 							"<br>" +
-							"ASE Version is '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"' while 'installmaster' version is '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. <br>" +
+							"ASE Version is '"+Ver.versionIntToStr(_aseVersionNum)+"' while 'installmaster' version is '"+Ver.versionIntToStr(_installmasterVersionNum)+"'. <br>" +
 							"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status with: sp_version. <br>" +
 							"<br>" +
 							"Do the following on the machine that hosts the ASE:<br>" +
@@ -930,8 +930,8 @@ public class MonTablesDictionary
 						if (config != null)
 						{
 							Object[] options = {
-									"ASE montables/installmaster Version " + AseConnectionUtils.versionIntToStr(_installmasterVersionNum),
-									"ASE binary Version "                  + AseConnectionUtils.versionIntToStr(_aseVersionNum)
+									"ASE montables/installmaster Version " + Ver.versionIntToStr(_installmasterVersionNum),
+									"ASE binary Version "                  + Ver.versionIntToStr(_aseVersionNum)
 									};
 							int answer = JOptionPane.showOptionDialog(MainFrame.getInstance(), 
 //								"ASE Binary and 'installmaster' is out of sync...\n" +
@@ -947,9 +947,9 @@ public class MonTablesDictionary
 							_trustMonTablesVersion = (answer == 0);
 
 							if (_trustMonTablesVersion)
-								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'. ASE Binary version was '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'.");
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'current installmaster version'. The used MDA table layout will be '"+Ver.versionIntToStr(_installmasterVersionNum)+"'. ASE Binary version was '"+Ver.versionIntToStr(_aseVersionNum)+"'.");
 							else
-								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '"+AseConnectionUtils.versionIntToStr(_aseVersionNum)+"'. ASE installmaster version was '"+AseConnectionUtils.versionIntToStr(_installmasterVersionNum)+"'.");
+								_logger.warn("ASE Binary and 'montables/installmaster' is out of sync, installmaster has not been applied. The user decided to use the 'ASE Binary version'. The used MDA table layout will be '"+Ver.versionIntToStr(_aseVersionNum)+"'. ASE installmaster version was '"+Ver.versionIntToStr(_installmasterVersionNum)+"'.");
 						}
 					}
 				}

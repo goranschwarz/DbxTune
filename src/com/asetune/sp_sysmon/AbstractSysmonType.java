@@ -7,6 +7,7 @@ import java.util.List;
 import com.asetune.cm.CountersModel;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.Ver;
 
 public abstract class AbstractSysmonType
 {
@@ -116,7 +117,7 @@ public abstract class AbstractSysmonType
 		
 		_aseVersion     = aseVersion;
 
-		_sysmon.setAseVersionStr   (AseConnectionUtils.versionIntToStr(aseVersion));
+		_sysmon.setAseVersionStr   (Ver.versionIntToStr(aseVersion));
 		_sysmon.setAseServerNameStr("UNKNOWN");
 		_sysmon.setRunDate         (null);
 		_sysmon.setSampleStartTime (null);

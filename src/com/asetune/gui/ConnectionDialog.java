@@ -112,6 +112,7 @@ import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 
 public class ConnectionDialog
@@ -2913,7 +2914,7 @@ if (_connProfileVisible_chk.isSelected())
 			if (currentVersion != newVersion)
 			{
 				String msg = "<html>" +
-						"Connecting to a different ASE Version, This is NOT supported now... (previousVersion='"+AseConnectionUtils.versionIntToStr(currentVersion)+"', connectToVersion='"+AseConnectionUtils.versionIntToStr(newVersion)+"'). <br>" +
+						"Connecting to a different ASE Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
 						"To connect to another ASE Version, you need to restart the application." +
 						"</html>";
 				if (AseTune.hasGUI())
