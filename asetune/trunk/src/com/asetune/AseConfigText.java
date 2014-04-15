@@ -302,7 +302,7 @@ public abstract class AseConfigText
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && aseVersion < needVersion)
 			{
-				_configStr = "This info is only available if the Server Version is above " + AseConnectionUtils.versionIntToStr(needVersion);
+				_configStr = "This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion);
 				return;
 			}
 

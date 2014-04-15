@@ -24,11 +24,11 @@ export CP=${CP}:$javaLibDir/jconn3.jar
 export CP=${CP}:$javaLibDir/jtds-1.2.7.jar
 export CP=${CP}:$javaLibDir/dsparser.jar
 export CP=${CP}:$javaLibDir/log4j-1.2.17.jar
-export CP=${CP}:$javaLibDir/h2-1.3.175.jar
+export CP=${CP}:$javaLibDir/h2-1.3.176.jar
 export CP=${CP}:$javaLibDir/wizard.jar
 export CP=${CP}:$javaLibDir/miglayout-swing-4.2.jar
 export CP=${CP}:$javaLibDir/miglayout-core-4.2.jar
-export CP=${CP}:$javaLibDir/swingx-all-1.6.4.jar
+export CP=${CP}:$javaLibDir/swingx-all-1.6.5-1.jar
 export CP=${CP}:$javaLibDir/jchart2d-3.2.2.jar
 export CP=${CP}:$javaLibDir/planviewer.jar
 export CP=${CP}:$javaLibDir/commons-cli-1.2.jar
@@ -39,6 +39,8 @@ export CP=${CP}:$javaLibDir/autocomplete.jar
 export CP=${CP}:$javaLibDir/rstaui.jar
 export CP=${CP}:$javaLibDir/jcommon-1.0.21.jar
 export CP=${CP}:$javaLibDir/jfreechart-1.0.17.jar
+export CP=${CP}:$javaLibDir/juniversalchardet-1.0.3.jar
+export CP=${CP}:$javaLibDir/DDLGen.jar
 
 #
 # Copy some stub file

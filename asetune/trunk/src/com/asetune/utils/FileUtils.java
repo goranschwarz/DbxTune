@@ -9,8 +9,14 @@ import java.io.InputStreamReader;
 
 import javax.swing.JOptionPane;
 
+import org.apache.log4j.Logger;
+import org.mozilla.universalchardet.UniversalDetector;
+
 public class FileUtils
 {
+	private static Logger _logger = Logger.getLogger(FileUtils.class);
+
+	
 	public static void copy(String from_name, String to_name) 
 	throws IOException
 	{
@@ -215,5 +221,107 @@ public class FileUtils
 
 	
 	
+//	private CodepageDetectorProxy _cpDetector = null;
+//	private CodepageDetectorProxy initCpDetector() 
+//	{
+//		CodepageDetectorProxy cpDetector = CodepageDetectorProxy.getInstance();
+//
+//		// Add the implementations of info.monitorenter.cpdetector.io.ICodepageDetector: 
+//		// This one is quick if we deal with unicode codepages: 
+//		cpDetector.add(new ByteOrderMarkDetector()); 
+//
+//		// The first instance delegated to tries to detect the meta charset attribut in html pages.
+//		cpDetector.add(new ParsingDetector(true)); // be verbose about parsing.
+//
+//		// This one does the tricks of exclusion and frequency detection, if first implementation is unsuccessful:
+//		cpDetector.add(JChardetFacade.getInstance()); // Another singleton.
+//		cpDetector.add(ASCIIDetector.getInstance()); // Fallback, see javadoc.
+//		
+//		return cpDetector;
+//	}
+
+//	public static String getFileEncoding(File file)
+//	{
+//		if (_cpDetector == null)
+//			_cpDetector = initCpDetector();
+//		java.nio.charset.Charset charset = null;
+//		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+//		charset = _cpDetector.detectCodepage(bis, 16384);
+//		bis.close();
+//		System.out.println("openFile: charset="+charset);
+//		System.out.println("openFile: charset="+charset.displayName());
+//		System.out.println("openFile: charset="+charset.name());
+//	
+//		return charset == null ? null : charset.toString()
+//}
+
+	/**
+	 * Get encoding a file is using, this so we can open/read the file with the correct charset. 
+	 * <p>
+	 * This is using JUniversialCharsetDetector http://code.google.com/p/juniversalchardet/<br>
+	 * <br>
+	 * juniversalchardet is a Java port of 'universalchardet', that is the encoding detector library of Mozilla.<br>
+     * The original code of universalchardet is available at <a HREF="http://lxr.mozilla.org/seamonkey/source/extensions/universalchardet/">http://lxr.mozilla.org/seamonkey/source/extensions/universalchardet/</a><br>
+     * Techniques used by universalchardet are described at <a HREF="http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html">http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html</a><br>
+     *  
+	 * @param filename filename to discover
+	 * @return name of the charset
+	 */
+	public static String getFileEncoding(String filename)
+	{
+		File f = new File(filename);
+		return getFileEncoding(f);
+	}
+	
+	/**
+	 * Get encoding a file is using, this so we can open/read the file with the correct charset. 
+	 * <p>
+	 * This is using JUniversialCharsetDetector http://code.google.com/p/juniversalchardet/<br>
+	 * <br>
+	 * juniversalchardet is a Java port of 'universalchardet', that is the encoding detector library of Mozilla.<br>
+     * The original code of universalchardet is available at <a HREF="http://lxr.mozilla.org/seamonkey/source/extensions/universalchardet/">http://lxr.mozilla.org/seamonkey/source/extensions/universalchardet/</a><br>
+     * Techniques used by universalchardet are described at <a HREF="http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html">http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html</a><br>
+     *  
+	 * @param file File to discover
+	 * @return name of the charset
+	 */
+	public static String getFileEncoding(File file)
+	{
+		String encoding = null;
+		try
+		{
+			byte[] buf = new byte[4096];
+			FileInputStream fis = new FileInputStream(file);
+
+			// Construct an instance of org.mozilla.universalchardet.UniversalDetector. 
+			UniversalDetector detector = new UniversalDetector(null);
+
+			// Read from the file until the detector is "happy" 
+			// Feed some data (typically several thousands bytes) to the detector by calling UniversalDetector.handleData(). 
+			int nread;
+			while ((nread = fis.read(buf)) > 0 && !detector.isDone())
+				detector.handleData(buf, 0, nread);
+
+			// Notify the detector of the end of data by calling UniversalDetector.dataEnd(). 
+			detector.dataEnd();
+
+			// Get the detected encoding name by calling UniversalDetector.getDetectedCharset(). 
+			encoding = detector.getDetectedCharset();
+			if ( encoding != null )
+				_logger.debug("getFileEncoding(): Detected encoding = " + encoding);
+			else
+				_logger.debug("getFileEncoding(): No encoding detected.");
+
+			// Don't forget to call UniversalDetector.reset() before you reuse the detector instance. 
+			detector.reset();
+			fis.close();
+		}
+		catch (IOException e)
+		{
+			_logger.debug("getFileEncoding(): Caught: "+e, e);
+		}
+
+		return encoding;
+	}
 
 }

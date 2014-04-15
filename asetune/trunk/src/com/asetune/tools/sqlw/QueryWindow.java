@@ -193,6 +193,7 @@ import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
+import com.asetune.utils.FileUtils;
 import com.asetune.utils.GoSyntaxException;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
@@ -1043,7 +1044,7 @@ public class QueryWindow
 						try
 						{
 							_query_txt.save();
-							_statusBar.setFilename(_query_txt.getFileFullPath());
+							_statusBar.setFilename(_query_txt.getFileFullPath(), _query_txt.getEncoding());
 							_statusBar.setFilenameDirty(_query_txt.isDirty());
 
 							// No need since we are shuting down
@@ -1483,7 +1484,7 @@ public class QueryWindow
 				displayQueryResults(sql, 0, false);
 		}
 		_query_txt.setDirty(false);
-		_statusBar.setFilename(_query_txt.getFileFullPath());
+		_statusBar.setFilename(_query_txt.getFileFullPath(), _query_txt.getEncoding());
 
 		// Try to load the input file.
 		if ( ! StringUtil.isNullOrBlank(inputFile) )
@@ -2939,8 +2940,9 @@ public class QueryWindow
 		try
 		{
 			FileLocation loc = FileLocation.create(file);
-			_query_txt.load(loc, null);
-			_statusBar.setFilename(_query_txt.getFileFullPath());
+			
+			_query_txt.load(loc, FileUtils.getFileEncoding(file));
+			_statusBar.setFilename(_query_txt.getFileFullPath(), _query_txt.getEncoding());
 			_statusBar.setFilenameDirty(_query_txt.isDirty());
 			checkOpenedFileType();
 			
@@ -2963,7 +2965,7 @@ public class QueryWindow
 		try
 		{
 			_query_txt.save();
-			_statusBar.setFilename(_query_txt.getFileFullPath());
+			_statusBar.setFilename(_query_txt.getFileFullPath(), _query_txt.getEncoding());
 			_statusBar.setFilenameDirty(_query_txt.isDirty());
 
 			if (_watchdogIsFileChanged != null)
@@ -3146,7 +3148,7 @@ public class QueryWindow
 			try
 			{
 				_query_txt.saveAs(loc);
-				_statusBar.setFilename(_query_txt.getFileFullPath());
+				_statusBar.setFilename(_query_txt.getFileFullPath(), _query_txt.getEncoding());
 				_statusBar.setFilenameDirty(_query_txt.isDirty());
 
 				addFileHistory(_query_txt.getFileFullPath());

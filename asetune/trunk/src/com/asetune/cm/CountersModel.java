@@ -59,6 +59,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -2165,7 +2166,7 @@ implements Cloneable, ITableTooltip
 	public String getServerVersionStr()
 	{
 		if ( ! isRuntimeInitialized() ) throw new RuntimeException("This can't be called before the CM has been connected to any monitored server.");
-		return AseConnectionUtils.versionIntToStr( getServerVersion() );
+		return Ver.versionIntToStr( getServerVersion() );
 	}
 
 	/** In here we could call getServerVersion() and decide what SQL syntax we should 
@@ -2696,7 +2697,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public String getDependsOnVersionStr()
 	{
-		return AseConnectionUtils.versionIntToStr( getDependsOnVersion() );
+		return Ver.versionIntToStr( getDependsOnVersion() );
 	}
 	public int getDependsOnVersion()
 	{
@@ -2709,7 +2710,7 @@ implements Cloneable, ITableTooltip
 
 	public String getDependsOnCeVersionStr()
 	{
-		return AseConnectionUtils.versionIntToStr( getDependsOnCeVersion() );
+		return Ver.versionIntToStr( getDependsOnCeVersion() );
 	}
 	public int getDependsOnCeVersion()
 	{
@@ -2812,7 +2813,7 @@ implements Cloneable, ITableTooltip
 		int srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		if (srvVersion < needSrvVersion)
 		{
-			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+AseConnectionUtils.versionIntToStr(srvVersion)+"', this procedure needs ASE Version '"+AseConnectionUtils.versionIntToStr(needSrvVersion)+"' to install.");
+			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+Ver.versionIntToStr(srvVersion)+"', this procedure needs ASE Version '"+Ver.versionIntToStr(needSrvVersion)+"' to install.");
 			return false;
 		}
 
