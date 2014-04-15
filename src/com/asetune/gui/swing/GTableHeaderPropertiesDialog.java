@@ -29,6 +29,7 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.Version;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class GTableHeaderPropertiesDialog
@@ -426,7 +427,7 @@ implements ActionListener, TableModelListener
 
 			boolean colIsVisible = tcx.isVisible();
 			String  columnName   = tcx.getHeaderValue() + "";
-			String  toolTip      = _originTable.getToolTipTextForColumn(columnName);
+			String  toolTip      = StringUtil.stripHtml(_originTable.getToolTipTextForColumn(columnName));
 
 
 			row = new Vector<Object>();
