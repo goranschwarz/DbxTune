@@ -234,8 +234,14 @@ public class QueryWindow
 	public final static String  PROPKEY_showAppNameInTitle     = PROPKEY_APP_PREFIX + "showAppNameInTitle";
 	public final static boolean DEFAULT_showAppNameInTitle     = true;
 
+	public final static String  PROPKEY_horizontalOrientation  = PROPKEY_APP_PREFIX + "horizontalOrientation";
+	public final static boolean DEFAULT_horizontalOrientation  = false;
+
+	public final static String  PROPKEY_commandPanelInToolbar  = PROPKEY_APP_PREFIX + "commandPanelInToolbar";
+	public final static boolean DEFAULT_commandPanelInToolbar  = false;
+
 	public final static String  PROPKEY_saveBeforeExecute      = PROPKEY_APP_PREFIX + "saveBeforeExecute";
-	public final static boolean DEFAULT_saveBeforeExecute      = true;
+	public final static boolean DEFAULT_saveBeforeExecute      = false;
 	
 	public final static String  PROPKEY_asPlainText            = PROPKEY_APP_PREFIX + "asPlainText";
 	public final static boolean DEFAULT_asPlainText            = false;
@@ -374,6 +380,16 @@ public class QueryWindow
 	private JButton           _appOptions_but             = new JButton("Options");
 	private JButton           _codeCompletionOpt_but      = new JButton(); 
 
+	private JPanel            _mainPane                   = new JPanel( new MigLayout("insets 0 0 0 0") );
+	private JPanel            _controlPane                = new JPanel( new MigLayout("insets 0 0 0 0") );
+//	private JPanel            _possibleCtrlPane           = new JPanel( new MigLayout("insets 0 0 0 0") );
+	private JPanel            _possibleCtrlPane           = new JPanel( new BorderLayout() );
+	private JPanel            _topPane                    = new JPanel( new BorderLayout() );
+	private JPanel            _bottomPane                 = new JPanel( new MigLayout("insets 0 0 0 0") );
+
+
+
+	private JSeparator        _cntrlPrefix_sep            = new JSeparator(SwingConstants.VERTICAL);
 	private JComboBox         _dbnames_cbx                = new JComboBox();
 	private JPanel            _resPanel                   = new JPanel( new MigLayout("insets 0 0 0 0, gap 0 0, wrap") );
 	private JScrollPane       _resPanelScroll             = new JScrollPane(_resPanel);
@@ -469,9 +485,11 @@ public class QueryWindow
 	private JMenuItem           _rs_dumpQueue_mi        = new JMenuItem("View Stable Queue Content...");
 	private JMenuItem           _rsWhoIsDown_mi         = new JMenuItem("Admin who_is_down");
 
-	private JMenu               _preferences_m          = new JMenu("Preferences");
-	private JCheckBoxMenuItem   _prefWinOnConnect_mi    = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
-	private JCheckBoxMenuItem   _prefShowAppNameInTitle_mi = new JCheckBoxMenuItem("Show '"+APP_NAME+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
+	private JMenu               _preferences_m              = new JMenu("Preferences");
+	private JCheckBoxMenuItem   _prefWinOnConnect_mi        = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
+	private JCheckBoxMenuItem   _prefShowAppNameInTitle_mi  = new JCheckBoxMenuItem("Show '"+APP_NAME+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
+	private JCheckBoxMenuItem   _prefSplitHorizontal_mi     = new JCheckBoxMenuItem("Editor and Output Windows side-by-side", DEFAULT_horizontalOrientation);
+	private JCheckBoxMenuItem   _prefPlaceCntrlInToolbar_mi = new JCheckBoxMenuItem("Place 'Execute' and other control buttons in the Toolbar", DEFAULT_commandPanelInToolbar);
 	//---------------------------------------
 
 	// Tools
@@ -832,6 +850,8 @@ public class QueryWindow
 			_view_m.add(_preferences_m);
 			_preferences_m.add(_prefWinOnConnect_mi);
 			_preferences_m.add(_prefShowAppNameInTitle_mi);
+			_preferences_m.add(_prefSplitHorizontal_mi);
+			_preferences_m.add(_prefPlaceCntrlInToolbar_mi);
 			
 			_prefShowAppNameInTitle_mi.addActionListener(new ActionListener()
 			{
@@ -841,6 +861,27 @@ public class QueryWindow
 					saveProps();
 				}
 			});
+			_prefSplitHorizontal_mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					saveProps();
+					reLayoutSomeStuff(_prefSplitHorizontal_mi.isSelected(), _prefPlaceCntrlInToolbar_mi.isSelected());
+					//SwingUtils.showInfoMessage(_window, "Restart is needed to take effect",	"<html>Please <b>restart</b> the application<br>It's needed for the change to take <b>FULL</b> effect.<br>Sorry for that...</html>");
+				}
+			});
+			_prefPlaceCntrlInToolbar_mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					saveProps();
+					reLayoutSomeStuff(_prefSplitHorizontal_mi.isSelected(), _prefPlaceCntrlInToolbar_mi.isSelected());
+					//SwingUtils.showInfoMessage(_window, "Restart is needed to take effect",	"<html>Please <b>restart</b> the application<br>It's needed for the change to take <b>FULL</b> effect.<br>Sorry for that...</html>");
+				}
+			});
+
 			
 			_ase_viewConfig_mi     .setVisible(false);
 			_rs_configChangedDdl_mi.setVisible(false);
@@ -888,7 +929,8 @@ public class QueryWindow
 			_toolbar.add(_cmdSql_but,      "hidemode 3");
 			_toolbar.add(_cmdRcl_but,      "hidemode 3");
 			_toolbar.add(_rsWhoIsDown_but, "hidemode 3");
-			_toolbar.add(new JLabel(),     "pushx, growx"); // Dummy entry to "grow" so next will be located to the right
+//			_toolbar.add(new JLabel(),     "pushx, growx"); // Dummy entry to "grow" so next will be located to the right
+			_toolbar.add(_possibleCtrlPane, "pushx, growx"); // Dummy entry to "grow" so next will be located to the right
 			_toolbar.add(_jvm_lbl,         "");
 
 			// Visibility for TOOLBAR components at startup
@@ -1180,6 +1222,18 @@ public class QueryWindow
 				"If this is disabled, the only the connected server name will be in the title.<br>" +
 				"</html>");
 
+		_prefPlaceCntrlInToolbar_mi.setToolTipText(
+				"<html>" +
+				"The 'Execute' the other buttons in that Panel can be embedded in the Toolbar at the top.<br>" +
+				"Note: restart is required.<br>" +
+				"</html>");
+
+		_prefSplitHorizontal_mi.setToolTipText(
+				"<html>" +
+				"Have the Command Input Window and the Output Window <i>side by side</i>.<br>" +
+				"Note: restart is required.<br>" +
+				"</html>");
+
 		try {_appOptions_but = createAppOptionButton(null);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'Application Options' button.",ex);}
 
@@ -1347,49 +1401,77 @@ public class QueryWindow
 		// Place the components within this window
 		Container contentPane = _jframe != null ? _jframe.getContentPane() : _jdialog.getContentPane();
 		contentPane.setLayout(new BorderLayout());
-		JPanel top    = new JPanel(new BorderLayout());
-		JPanel bottom = new JPanel(new MigLayout());
 		
-		setWatermarkAnchor(top);
+		setWatermarkAnchor(_topPane);
 		setWatermark();
 
-		_splitPane.setTopComponent(top);
-		_splitPane.setBottomComponent(bottom);
+		// Get some decisions how we should layout stuff
+		boolean horizontalOrientation = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_horizontalOrientation, DEFAULT_horizontalOrientation);
+		boolean cmdPanelInToolbar     = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_commandPanelInToolbar, DEFAULT_commandPanelInToolbar);
+		
+		// How should the command/output window be oriented
+		if (horizontalOrientation)
+			_splitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+		else
+			_splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+
+		_splitPane.setTopComponent(_topPane);
+		_splitPane.setBottomComponent(_bottomPane);
 		_splitPane.setContinuousLayout(true);
 //		_splitPane.setOneTouchExpandable(true);
 
 		if (winType == WindowType.CMDLINE_JFRAME)
 			contentPane.add(_toolbar, BorderLayout.NORTH);
-		contentPane.add(_splitPane);
+//		contentPane.add(_splitPane);
+		contentPane.add(_mainPane);
 
-//		top.add(_queryScroll, BorderLayout.CENTER);
-		top.add(_queryScroll, BorderLayout.CENTER);
-		top.add(_queryErrStrip, BorderLayout.LINE_END);
-//		top.add(_queryErrStrip, BorderLayout.LINE_START);
-		top.setMinimumSize(new Dimension(300, 100));
+//		_topPane.add(_queryScroll, BorderLayout.CENTER);
+		_topPane.add(_queryScroll, BorderLayout.CENTER);
+		_topPane.add(_queryErrStrip, BorderLayout.LINE_END);
+//		_topPane.add(_queryErrStrip, BorderLayout.LINE_START);
+		_topPane.setMinimumSize(new Dimension(300, 100));
 
 //		_queryErrStrip.setVisible(false);
 		_queryErrStrip.setVisible(true);
-		
-		bottom.add(_dbnames_cbx,           "split 8, hidemode 2");
-		bottom.add(_exec_but,              "");
-		bottom.add(_execGuiShowplan_but,   "");
-//		bottom.add(_rsInTabs,              "hidemode 2");
-//		bottom.add(_asPlainText,           "");
-//		bottom.add(_showRowCount,          "");
-		bottom.add(_appOptions_but,        "gap 30");
-		bottom.add(_setAseOptions_but,     "");
-		bottom.add(_codeCompletionOpt_but, "");
-//		bottom.add(_showplan,              "");
-		bottom.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
-		bottom.add(_copy_but,              "");
-		bottom.add(_nextErr_but,           "hidemode 2");
-		bottom.add(_prevErr_but,           "hidemode 2, wrap");
-		
-		bottom.add(_resPanelScroll,        "span 4, width 100%, height 100%, hidemode 3");
-		bottom.add(_resPanelTextScroll,    "span 4, width 100%, height 100%, hidemode 3");
-//		bottom.add(_msgline,               "dock south");
-		bottom.add(_statusBar,             "dock south");
+
+		// Add components to Control Panel
+		_controlPane.add(_cntrlPrefix_sep,       "grow, gap 30, hidemode 3");
+		_controlPane.add(_dbnames_cbx,           "hidemode 2");
+		_controlPane.add(_exec_but,              "");
+		_controlPane.add(_execGuiShowplan_but,   "");
+		_controlPane.add(_appOptions_but,        "gap 30");
+		_controlPane.add(_setAseOptions_but,     "");
+		_controlPane.add(_codeCompletionOpt_but, "");
+		_controlPane.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
+		_controlPane.add(_copy_but,              "");
+		_controlPane.add(_nextErr_but,           "hidemode 2");
+		_controlPane.add(_prevErr_but,           "hidemode 2, wrap");
+
+		// Add 
+		reLayoutSomeStuff(horizontalOrientation, cmdPanelInToolbar);
+			
+		_mainPane.add(_splitPane,         "dock center");
+		_mainPane.add(_statusBar,         "dock south");
+
+////		_bottomPane.add(_dbnames_cbx,           "split 8, hidemode 2");
+////		_bottomPane.add(_exec_but,              "");
+////		_bottomPane.add(_execGuiShowplan_but,   "");
+//////		_bottomPane.add(_rsInTabs,              "hidemode 2");
+//////		_bottomPane.add(_asPlainText,           "");
+//////		_bottomPane.add(_showRowCount,          "");
+////		_bottomPane.add(_appOptions_but,        "gap 30");
+////		_bottomPane.add(_setAseOptions_but,     "");
+////		_bottomPane.add(_codeCompletionOpt_but, "");
+//////		_bottomPane.add(_showplan,              "");
+////		_bottomPane.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
+////		_bottomPane.add(_copy_but,              "");
+////		_bottomPane.add(_nextErr_but,           "hidemode 2");
+////		_bottomPane.add(_prevErr_but,           "hidemode 2, wrap");
+//		
+//		_bottomPane.add(_resPanelScroll,        "span 4, width 100%, height 100%, hidemode 3");
+//		_bottomPane.add(_resPanelTextScroll,    "span 4, width 100%, height 100%, hidemode 3");
+////		_bottomPane.add(_msgline,               "dock south");
+////		_bottomPane.add(_statusBar,             "dock south");
 
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
@@ -1444,6 +1526,9 @@ public class QueryWindow
 
 		_exec_but           .setActionCommand(ACTION_EXECUTE);
 		_execGuiShowplan_but.setActionCommand(ACTION_EXECUTE_GUI_SHOWPLAN);
+
+		// Set how many items the DBList can have before a JScrollBar is visible
+		_dbnames_cbx.setMaximumRowCount(50);
 
 		// Refresh the database list (if ASE)
 		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
@@ -1533,6 +1618,36 @@ public class QueryWindow
 		}
 	}
 
+	private void reLayoutSomeStuff(boolean horizontalOrientation, boolean cmdPanelInToolbar)
+	{
+		_bottomPane.remove(_resPanelScroll);
+		_bottomPane.remove(_resPanelTextScroll);
+
+		_cntrlPrefix_sep.setVisible( horizontalOrientation || cmdPanelInToolbar );
+		
+		if ( horizontalOrientation )
+		{
+			_splitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+			_possibleCtrlPane.add(_controlPane);
+		}
+		else
+		{
+			_splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+			if (cmdPanelInToolbar)
+				_possibleCtrlPane.add(_controlPane);
+			else
+				_bottomPane.add(_controlPane,     "growx, pushx, wrap");
+		}
+			
+		_bottomPane.add(_resPanelScroll,        "span 4, width 100%, height 100%, hidemode 3");
+		_bottomPane.add(_resPanelTextScroll,    "span 4, width 100%, height 100%, hidemode 3");
+		
+		// maybe repaint
+		_toolbar.revalidate();
+		_splitPane.revalidate();
+		_bottomPane.revalidate();
+	}
+
 	/** Watchdog to check if files are changed */
 	protected WatchdogIsFileChanged _watchdogIsFileChanged = null;
 	protected WatchdogIsFileChanged createWatchdogIsFileChanged()
@@ -1551,6 +1666,8 @@ public class QueryWindow
 		_fSaveBeforeExec_mi        .setSelected( conf.getBooleanProperty(PROPKEY_saveBeforeExecute,      DEFAULT_saveBeforeExecute) );
 		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,  DEFAULT_restoreWinSizeForConn) );
 		_prefShowAppNameInTitle_mi .setSelected( conf.getBooleanProperty(PROPKEY_showAppNameInTitle,     DEFAULT_showAppNameInTitle) );
+		_prefPlaceCntrlInToolbar_mi.setSelected( conf.getBooleanProperty(PROPKEY_commandPanelInToolbar,  DEFAULT_commandPanelInToolbar) );
+		_prefSplitHorizontal_mi    .setSelected( conf.getBooleanProperty(PROPKEY_horizontalOrientation,  DEFAULT_horizontalOrientation) );
 		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,            DEFAULT_asPlainText) );
 		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,           DEFAULT_showRowCount) );
 		_limitRsRowsRead_chk       .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,        DEFAULT_limitRsRowsRead) );
@@ -1584,6 +1701,8 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_saveBeforeExecute,      _fSaveBeforeExec_mi        .isSelected());
 		conf.setProperty(PROPKEY_restoreWinSizeForConn,  _prefWinOnConnect_mi       .isSelected());
 		conf.setProperty(PROPKEY_showAppNameInTitle,     _prefShowAppNameInTitle_mi .isSelected());
+		conf.setProperty(PROPKEY_commandPanelInToolbar,  _prefPlaceCntrlInToolbar_mi.isSelected());
+		conf.setProperty(PROPKEY_horizontalOrientation,  _prefSplitHorizontal_mi    .isSelected());
 		conf.setProperty(PROPKEY_asPlainText,            _asPlainText_chk           .isSelected());
 		conf.setProperty(PROPKEY_showRowCount,           _showRowCount_chk          .isSelected());
 		conf.setProperty(PROPKEY_limitRsRowsRead,        _limitRsRowsRead_chk       .isSelected());	
@@ -8521,7 +8640,7 @@ public class QueryWindow
 	** BEGIN: implement WatchdogIsFileChanged
 	**----------------------------------------------------------------------*/ 
 	@Override
-	public void fileHasChanged(final File file)
+	public void fileHasChanged(final File file, final long savedLastModifiedTime)
 	{
 //		String changedFilename = file.toString();
 //		String filename = _statusBar.getFilename();
@@ -8531,6 +8650,20 @@ public class QueryWindow
 			@Override
 			public void run()
 			{
+				// Add some debug info to try to find out why the WatchDog fires while 
+				String debugStr = "";
+				if (true)
+				{
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+					debugStr = "<br><br><b>DEBUG INFO:</b><br><pre>" +
+							"in: file.lastModified()   = " + sdf.format(new Date(file.lastModified())) + "<br>" +
+							"in: savedLastModifiedTime = " + sdf.format(new Date(savedLastModifiedTime)) + "<br>" +
+							"diff in:                  = " + TimeUtils.msToTimeStr(file.lastModified() - savedLastModifiedTime) + "<br>" +
+							"isModifiedOutsideEditor() = "+ _query_txt.isModifiedOutsideEditor() + "<br>" +
+							"</pre>";
+				}
+
 				// remember the carret position so we can restore it when the file has been loaded
 				int saveAtRow      = _query_txt.getCaretLineNumber();
 				int saveAtCol      = _query_txt.getCaretOffsetFromLineStart();
@@ -8539,7 +8672,7 @@ public class QueryWindow
 //				Object[] buttons = {"Load Changes", "Not now", "Not Ever"};
 				Object[] buttons = {"Load Changes", "Not now"};
 				int answer = JOptionPane.showOptionDialog(_window, 
-						"Another application has updated the file "+file+"\nReload it?.",
+						"<html>Another application has updated the file "+file+"<br>Reload it?."+debugStr+"</html>",
 						"Reload file", 
 						JOptionPane.DEFAULT_OPTION,
 						JOptionPane.QUESTION_MESSAGE,

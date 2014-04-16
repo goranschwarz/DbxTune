@@ -11,7 +11,7 @@ public class WatchdogIsFileChanged
 	public interface WatchdogIsFileChangedChecker
 	{
 //		public void checkIfCurrentFileIsUpdated();
-		public void fileHasChanged(File file);
+		public void fileHasChanged(File file, long savedLastModifiedTime);
 	}
 
 	public final static int WATCHDOG_IS_FILE_CHANGED_SLEEP_TIME_MS = 5000; 
@@ -109,7 +109,7 @@ public class WatchdogIsFileChanged
 								{
 									_logger.debug("WATCHDOG: run(): FILE HAS CHANGED: _currentFile="+_currentFile);
 									
-									_checker.fileHasChanged(_currentFile);
+									_checker.fileHasChanged(_currentFile, _currentFileLastModified);
 									
 									// The above interface call might itself call setFile(), which might set _currentile to null
 									if (_currentFile != null)
