@@ -5,7 +5,6 @@ import java.sql.Timestamp;
 import java.util.List;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 

@@ -25,6 +25,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -36,8 +37,11 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -53,6 +57,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JWindow;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
@@ -1559,6 +1564,49 @@ public class SwingUtils
 				setEnabled((JPanel)comp, enable, disregard);
 		}
 	}
+
+	/**
+	 * Set focus to a good field or button
+	 */
+	public static void setFocus(final Component compToFocus)
+	{
+		// The components needs to be visible for the requestFocus()
+		// to work, so lets the EventThreda do it for us after the windows is visible.
+		Runnable deferredAction = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				compToFocus.requestFocus();
+			}
+		};
+		SwingUtilities.invokeLater(deferredAction);
+	}
+
+
+	/**
+	 * When pressing ESCAPE, what button should we press
+	 */
+	public static void installEscapeButton(JDialog window, final JButton pressThisOnEscape)
+	{
+		@SuppressWarnings("serial")
+		AbstractAction escAction = new AbstractAction() 
+		{
+			@Override
+			public void actionPerformed(ActionEvent evt) 
+			{
+				if (pressThisOnEscape != null) 
+					pressThisOnEscape.doClick(20);
+	        }
+		};
+
+		InputMap iMap = window.getRootPane().getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+		iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "escape");
+
+		ActionMap aMap = window.getRootPane().getActionMap();
+		aMap.put("escape", escAction); 
+	}
+
 
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
