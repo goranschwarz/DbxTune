@@ -4384,8 +4384,33 @@ public class QueryWindow
 				int lineNumberAdjust = 0;
 
 				// for some product LineNumber starts at 0, so lets just adjust for this in the calculated (script row ###)
-				if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName)) lineNumberAdjust = 1;
-				if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(_connectedToProductName)) lineNumberAdjust = 1;
+				if (    DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName)
+				     || DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(_connectedToProductName) )
+				{
+					lineNumberAdjust = 1;
+
+					// Parse SQL Anywhere messages that looks like: 
+					//     Msg 102, Level 15, State 0:
+					//     Line 0 (script row 884), Status 0, TranState 1:
+					//     SQL Anywhere Error -131: Syntax error near 'x' on line 4
+					// Get the last part 'on line #' as the lineNumberAdjust
+					if (msgText.matches(".*on line [0-9]+[ ]*.*"))
+					{
+						int startPos = msgText.indexOf("on line ");
+						if (startPos >= 0)
+						{
+							startPos += "on line ".length();
+							int endPos = msgText.indexOf(" ", startPos);
+							if (endPos <= 0)
+								endPos = msgText.length();
+							
+							String lineNumStr = msgText.substring(startPos, endPos);
+
+							try { lineNumberAdjust = Integer.parseInt(lineNumStr); }
+							catch(NumberFormatException ignore) {}
+						}
+					}
+				}
 
 				// print messages, take some specific actions
 				if (msgSeverity <= 10)
