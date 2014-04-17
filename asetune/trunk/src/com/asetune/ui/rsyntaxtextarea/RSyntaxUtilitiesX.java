@@ -104,6 +104,8 @@ public class RSyntaxUtilitiesX
 		JMenuItem mi;
 		JMenu     m;
 		
+		final RSyntaxTextArea syntaxTextArea = (textArea instanceof RSyntaxTextArea) ? (RSyntaxTextArea) textArea : null;
+
 		//--------------------------------
 		menu.addSeparator();
 
@@ -170,6 +172,38 @@ public class RSyntaxUtilitiesX
 				public void actionPerformed(ActionEvent e)
 				{
 					textArea.setHighlightCurrentLine( ! textArea.getHighlightCurrentLine() );
+				}
+			});
+			menu.add(mi);
+		}
+
+		//--------------------------------
+		// Visible Whitespace
+		if (syntaxTextArea != null)
+		{
+			mi = new JCheckBoxMenuItem("Visible Whitespace (space and tabs)", syntaxTextArea.isWhitespaceVisible());
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					syntaxTextArea.setWhitespaceVisible( ! syntaxTextArea.isWhitespaceVisible() );
+				}
+			});
+			menu.add(mi);
+		}
+
+		//--------------------------------
+		// Visible Whitespace
+		if (syntaxTextArea != null)
+		{
+			mi = new JCheckBoxMenuItem("Visible End Of Line Markers", syntaxTextArea.getEOLMarkersVisible());
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					syntaxTextArea.setEOLMarkersVisible( ! syntaxTextArea.getEOLMarkersVisible() );
 				}
 			});
 			menu.add(mi);

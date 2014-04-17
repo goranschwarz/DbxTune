@@ -298,6 +298,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>Show what encoding current file has (also before loading a file get/guess the file encoding, so it can be opened with the correct file encoding).</li>
        <li>Input and Output window, side by side: Enable/Disable Menu-&gt;View-&gt;Preferences-&gt;Editor and Output Window side-by-side</li>
        <li>Favorite SQL: Added some 'system' procedures that will be executed/created. (same as the Predefined SQL Statements in AseTune)</li>
+       <li>Right click menu in editor, added options: 'Visible Whitespace' and 'Visible End Of Line Markers'</li>
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>
@@ -371,6 +372,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<ul>
 	   <li>CmCachedProcSum - DDL Storage was made of faulty column changed from 'RequestCntDiff' to 'SumRequestCntDiff'</li>
 	   <li>The 'label_#' column in tables that stores Summary Graphs was previously varchar(30), this is now changed to varchar(60). It was already done in the 'create table', but in the 'alter table add label_#' it was missing.'</li>
+	   <li>When we check if the Cm* tables exists, also check if we are missing any columns, if so add them.<br>
+	       This could happen if we record information from 2 different ASE versions in the same database.</li>
 	</ul>
 	</LI>
 

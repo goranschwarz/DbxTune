@@ -664,6 +664,50 @@ public abstract class PersistWriterBase
 		return sbSql.toString();
 	}
 
+	/** Helper method to generate 'alter table ... add missingColName datatype null|not null'*/
+	public List<String> getAlterTableDdlString(Connection conn, String tabName, List<String> missingCols, int type, CountersModel cm)
+	throws SQLException
+	{
+		List<String> list = new ArrayList<String>();
+
+		ResultSetMetaData rsmd = cm.getResultSetMetaData();
+		
+		if ( rsmd == null )
+			throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+		if ( rsmd.getColumnCount() == 0 )
+			throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+
+		int cols = rsmd.getColumnCount();
+		for (int c=1; c<=cols; c++) 
+		{
+			// If the current columns is NOT missing continue to next column
+			if ( ! missingCols.contains(rsmd.getColumnLabel(c)) )
+				continue;
+				
+			boolean isDeltaOrPct = false;
+			if (type == DIFF)
+			{
+				if ( cm.isPctColumn(c-1) )
+					isDeltaOrPct = true;
+			}
+
+			if (type == RATE)
+			{
+				if ( cm.isDiffColumn(c-1) || cm.isPctColumn(c-1) )
+					isDeltaOrPct = true;
+			}
+
+			String colName = fill(qic+rsmd.getColumnLabel(c)+qic,       40);
+			String dtName  = fill(getDatatype(c, rsmd, isDeltaOrPct),   20);
+			String nullable= getNullable(c, rsmd, isDeltaOrPct);
+
+			list.add("alter table " + qic+tabName+qic + " add  " + colName + " " + dtName + " " + nullable);
+		}
+
+		return list;
+	}
+
+
 	/**
 	 * Helper method to generate a: "insert into TABNAME(c1,c2,c3) [values(?,?...)]"
 	 * @param type ABS | DIFF | RATE | SYSTEM_TYPE
