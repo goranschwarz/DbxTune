@@ -15,6 +15,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -1065,7 +1066,8 @@ public class PersistWriterJdbc
 		}
 		catch(SQLException e)
 		{
-			_logger.warn("Problems when executing sql statement: "+sql);
+			if (printErrors)
+				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
 			throw e;
 		}
 
@@ -1802,11 +1804,54 @@ public class PersistWriterJdbc
 
 		tabName = getTableName(type, cm, false);
 
+		ArrayList<String> existingCols = new ArrayList<String>();
 		rs = dbmd.getColumns(null, null, tabName, "%");
-		boolean tabExists = rs.next();
+		while (rs.next())
+			existingCols.add(rs.getString("COLUMN_NAME"));
+		boolean tabExists = existingCols.size() > 0;
 		rs.close();
 
-		if( ! tabExists )
+		// If table exists, check for missing columns, and add missing ones
+		// If table doesn't exists, create the table
+		if( tabExists )
+		{
+			ArrayList<String> missingCols = new ArrayList<String>();
+
+			// Get the CM's columns
+			ResultSetMetaData rsmd = cm.getResultSetMetaData();
+			
+			if ( rsmd == null )
+				throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
+			if ( rsmd.getColumnCount() == 0 )
+				throw new SQLException("NO Columns was found for CM '"+cm.getName()+"'.");
+
+			// Loop and add missing cols to missingCols array
+			int cols = rsmd.getColumnCount();
+			for (int c=1; c<=cols; c++) 
+			{
+				String colName = rsmd.getColumnLabel(c);
+				if ( ! existingCols.contains(colName) )
+					missingCols.add(colName);
+			}
+
+			// Well the storage table are missing some columns
+			// Lets alter the table and add them
+			if (missingCols.size() > 0)
+			{
+				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "' The following "+missingCols.size()+" column(s) where missing '"+missingCols+"', so lets add them.");
+
+				List<String> alterTableDdlList = getAlterTableDdlString(_conn, tabName, missingCols, type, cm);
+				for (String sqlAlterTable : alterTableDdlList)
+				{
+					_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "'. Executing SQL: "+sqlAlterTable);
+
+					dbDdlExec(sqlAlterTable);
+
+					incAlterTables();
+				}
+			}
+		}
+		else
 		{
 			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "'.");
 
@@ -2417,7 +2462,7 @@ public class PersistWriterJdbc
 			catch (SQLException e2)
 			{
 				isSevereProblem(e2);
-				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", SQL: "+sb.toString(), e2);
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", getSQLState()="+e2.getSQLState()+", ex.toString='"+e2.toString()+"', SQL: "+sb.toString(), e2);
 			}
 		}
 	}

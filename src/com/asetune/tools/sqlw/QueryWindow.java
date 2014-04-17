@@ -504,7 +504,6 @@ public class QueryWindow
 		return _startTime;
 	}
 	
-	
 	/**
 	 * Constructor for CommandLine parameters
 	 * @param cmd
@@ -6619,6 +6618,52 @@ public class QueryWindow
 	}
 	/*----------------------------------------------------------------------
 	** END: various output classes
+	**----------------------------------------------------------------------*/ 
+
+
+	/*----------------------------------------------------------------------
+	** BEGIN: Statistics
+	**----------------------------------------------------------------------*/ 
+	// NOTE: this is not yet used, but in the future... to send of when diconnects or exists
+	private int _execMainCount     = 0;
+	private int _execBatchCount    = 0;
+	private int _rsCount           = 0;
+	private int _rsRowsCount       = 0;
+	private int _sqlWarningCount   = 0;
+	private int _sqlExceptionCount = 0;
+
+	public void incExecMainCount()          { _execMainCount++; }
+	public void incExecBatchCount()         { _execBatchCount++; }
+	public void incRsCount()                { _rsCount++; }
+	public void incRsRowsCount()            { _rsRowsCount++; }
+	public void incSqlWarningCount()        { _sqlWarningCount++; }
+	public void incSqlExceptionCount()      { _sqlExceptionCount++; }
+
+	public void incExecMainCount    (int c) { _execMainCount     += c; }
+	public void incExecBatchCount   (int c) { _execBatchCount    += c; }
+	public void incRsCount          (int c) { _rsCount           += c; }
+	public void incRsRowsCount      (int c) { _rsRowsCount       += c; }
+	public void incSqlWarningCount  (int c) { _sqlWarningCount   += c; }
+	public void incSqlExceptionCount(int c) { _sqlExceptionCount += c; }
+
+	public int  getExecMainCount()          { return _execMainCount; }
+	public int  getExecBatchCount()         { return _execBatchCount; }
+	public int  getRsCount()                { return _rsCount; }
+	public int  getRsRowsCount()            { return _rsRowsCount; }
+	public int  getSqlWarningCount()        { return _sqlWarningCount; }
+	public int  getSqlExceptionCount()      { return _sqlExceptionCount; }
+
+	public void resetExecStatistics()
+	{
+		_execMainCount     = 0;
+		_execBatchCount    = 0;
+		_rsCount           = 0;
+		_rsRowsCount       = 0;
+		_sqlWarningCount   = 0;
+		_sqlExceptionCount = 0;
+	}
+	/*----------------------------------------------------------------------
+	** END: Statistics
 	**----------------------------------------------------------------------*/ 
 
 

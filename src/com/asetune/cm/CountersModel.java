@@ -1387,7 +1387,7 @@ implements Cloneable, ITableTooltip
 		else if (whatData == DATA_DIFF) data = _diffData;
 		else if (whatData == DATA_RATE) data = _rateData;
 		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData="+whatData);
 
 		if (data == null)
 			return null;
