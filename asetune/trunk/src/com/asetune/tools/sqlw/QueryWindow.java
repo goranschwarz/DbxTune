@@ -67,6 +67,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -325,6 +326,8 @@ public class QueryWindow
 	public static final String ACTION_EXECUTE                   = "EXECUTE";
 	public static final String ACTION_EXECUTE_GUI_SHOWPLAN      = "EXECUTE_GUI_SHOWPLAN";
 
+	public static final String ACTION_SPLITPANE_TOGGLE          = "SPLITPANE_TOGGLE";
+
 	public static final String ACTION_CMD_SQL                   = "CMD_SQL";
 	public static final String ACTION_CMD_RCL                   = "CMD_RCL";
 
@@ -380,6 +383,9 @@ public class QueryWindow
 	private JButton           _appOptions_but             = new JButton("Options");
 	private JButton           _codeCompletionOpt_but      = new JButton(); 
 
+	private JCheckBox         _splitPane_chk              = new JCheckBox();
+	private JSplitPane        _splitPane                  = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+
 	private JPanel            _mainPane                   = new JPanel( new MigLayout("insets 0 0 0 0") );
 	private JPanel            _controlPane                = new JPanel( new MigLayout("insets 0 0 0 0") );
 //	private JPanel            _possibleCtrlPane           = new JPanel( new MigLayout("insets 0 0 0 0") );
@@ -396,7 +402,6 @@ public class QueryWindow
 	private RTextScrollPane   _resPanelTextScroll         = new RTextScrollPane();
 //	private JLabel	          _msgline                    = new JLabel("");	     // For displaying messages
 	private StatusBar         _statusBar                  = new StatusBar();
-	private JSplitPane        _splitPane                  = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 	private int               _lastTabIndex               = -1;
 	private boolean           _closeConnOnExit            = true;
 	private static Font       _aseMsgFont                 = null;
@@ -865,9 +870,10 @@ public class QueryWindow
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					saveProps();
-					reLayoutSomeStuff(_prefSplitHorizontal_mi.isSelected(), _prefPlaceCntrlInToolbar_mi.isSelected());
-					//SwingUtils.showInfoMessage(_window, "Restart is needed to take effect",	"<html>Please <b>restart</b> the application<br>It's needed for the change to take <b>FULL</b> effect.<br>Sorry for that...</html>");
+					action_splitPaneToggle(e);
+//					saveProps();
+//					reLayoutSomeStuff(_prefSplitHorizontal_mi.isSelected(), _prefPlaceCntrlInToolbar_mi.isSelected());
+//					//SwingUtils.showInfoMessage(_window, "Restart is needed to take effect",	"<html>Please <b>restart</b> the application<br>It's needed for the change to take <b>FULL</b> effect.<br>Sorry for that...</html>");
 				}
 			});
 			_prefPlaceCntrlInToolbar_mi.addActionListener(new ActionListener()
@@ -920,9 +926,17 @@ public class QueryWindow
 //			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
 //			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
 
+			_splitPane_chk.setActionCommand(ACTION_SPLITPANE_TOGGLE);
+			_splitPane_chk.addActionListener(this);
+
+			_splitPane_chk .setIcon(        SwingUtils.readImageIcon(Version.class, "images/app_split_vertical.png"));
+			_splitPane_chk .setSelectedIcon(SwingUtils.readImageIcon(Version.class, "images/app_split_horizontal.png"));
+			_splitPane_chk .setToolTipText("Query and Output window top-bottom or side-by-side");
+			
 			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
 			_toolbar.add(_connect_but);
 			_toolbar.add(_disconnect_but);
+			_toolbar.add(_splitPane_chk);
 			_toolbar.add(new JSeparator(SwingConstants.VERTICAL), "grow");
 			_toolbar.add(_viewLogFile_but);
 			_toolbar.add(_cmdSql_but,      "hidemode 3");
@@ -1880,6 +1894,9 @@ public class QueryWindow
 		if (ACTION_DISCONNECT.equals(actionCmd))
 			action_disconnect(e);
 		
+		if (ACTION_SPLITPANE_TOGGLE.equals(actionCmd))
+			action_splitPaneToggle(e);
+		
 		if (ACTION_CLONE_CONNECT.equals(actionCmd))
 			action_cloneConnect(e);
 		
@@ -2792,6 +2809,17 @@ public class QueryWindow
 				_logger.error("Problems closing database connection.", ex);
 			}
 		}
+	}
+
+	private void action_splitPaneToggle(ActionEvent e)
+	{
+		Object source = e.getSource();
+		
+		if (_splitPane_chk.equals(source))          _prefSplitHorizontal_mi.setSelected(_splitPane_chk.isSelected());
+		if (_prefSplitHorizontal_mi.equals(source)) _splitPane_chk.setSelected(_prefSplitHorizontal_mi.isSelected());
+			
+		saveProps();
+		reLayoutSomeStuff(_prefSplitHorizontal_mi.isSelected(), _prefPlaceCntrlInToolbar_mi.isSelected());
 	}
 
 	private void action_cloneConnect(ActionEvent e)
