@@ -7978,6 +7978,12 @@ public class QueryWindow
 		});
 		popupMenu.add(openDialog);
 
+		// add Predefined SQL from AseTune
+		JMenu preDefinedSql = MainFrame.createPredefinedSqlMenu(QueryWindow.this);
+//		preDefinedSql.setText("<html>Predefined SQL Statements (same as in AseTune)</html>");
+		preDefinedSql.setText("<html>Execute some extra <i>system</i> stored procedures. <i>(if not exist; create it)</i></html>");
+		popupMenu.add(preDefinedSql);
+		
 		// add SEPARATOR
 		popupMenu.add( new JSeparator() );
 
