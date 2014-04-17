@@ -931,7 +931,12 @@ public class QueryWindow
 
 			_splitPane_chk .setIcon(        SwingUtils.readImageIcon(Version.class, "images/app_split_vertical.png"));
 			_splitPane_chk .setSelectedIcon(SwingUtils.readImageIcon(Version.class, "images/app_split_horizontal.png"));
-			_splitPane_chk .setToolTipText("Query and Output window top-bottom or side-by-side");
+			_splitPane_chk .setToolTipText("<html>Query Window and Output Window layout mode" +
+				"<ul>" +
+				"   <li>Top to Bottom - <i>default</i></li>" +
+				"   <li>Side by Side</li>" +
+				"</ul>" +
+				"</html>");
 			
 			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
 			_toolbar.add(_connect_but);
