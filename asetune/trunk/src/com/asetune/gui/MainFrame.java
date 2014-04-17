@@ -653,7 +653,7 @@ public class MainFrame
 		_tools_m.add(_aseAppTrace_mi);
 		_tools_m.add(_aseStackTraceAnalyzer_mi);
 		_tools_m.add(_ddlView_mi);
-		_preDefinedSql_m = createPredefinedSqlMenu();
+		_preDefinedSql_m = createPredefinedSqlMenu(null);
 		if (_preDefinedSql_m != null) _tools_m.add(_preDefinedSql_m);
 		_tools_m.add(_sqlQuery_mi);
 //		_tools_m.add(_lockTool_mi);
@@ -3467,17 +3467,19 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	}
 
 
-	public JMenu createPredefinedSqlMenu()
+	public static JMenu createPredefinedSqlMenu(QueryWindow sqlWindowInstance)
 	{
 		_logger.debug("createPredefinedSqlMenu(): called.");
 
 		JMenu menu = new JMenu("Predefined SQL Statements");
+		menu.setToolTipText("<html>This is a bunch of stored procedures...<br>If the prcocedure doesn't exist. It will be created.<br>The user you are logged in as need to have the correct priviliges to create procedues in sybsystemprocs.</html>");;
 		menu.setIcon(SwingUtils.readImageIcon(Version.class, "images/pre_defined_sql_statement.png"));
 
 		Configuration systmp = new Configuration();
 
 		//----- sp_list_unused_indexes.sql -----
-		systmp.setProperty("system.predefined.sql.01.name",                        "List unused indexes in all databases.");
+		systmp.setProperty("system.predefined.sql.01.name",                        "<html><b>sp_list_unused_indexes</b> - <i><font color=\"green\">List unused indexes in all databases.</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.01.name",                        "List unused indexes in all databases.");
 		systmp.setProperty("system.predefined.sql.01.execute",                     "exec sp_list_unused_indexes");
 		systmp.setProperty("system.predefined.sql.01.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.01.install.dbname",              "sybsystemprocs");
@@ -3488,7 +3490,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.01.install.needsRole",           "sa_role");
 
 		//----- sp_whoisw.sql -----
-		systmp.setProperty("system.predefined.sql.02.name",                        "sp_whoisw - Who Is Working (list SPID's that are doing stuff).");
+		systmp.setProperty("system.predefined.sql.02.name",                        "<html><b>sp_whoisw</b> - <i><font color=\"green\">Who Is Working (list SPID's that are doing stuff).</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.02.name",                        "sp_whoisw - Who Is Working (list SPID's that are doing stuff).");
 		systmp.setProperty("system.predefined.sql.02.execute",                     "exec sp_whoisw");
 		systmp.setProperty("system.predefined.sql.02.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.02.install.dbname",              "sybsystemprocs");
@@ -3499,7 +3502,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.02.install.needsRole",           "sa_role");
 
 		//----- sp_whoisb.sql -----
-		systmp.setProperty("system.predefined.sql.03.name",                        "sp_whoisb - Who Is Blocking (list info about SPID's taht are blocking other SPID's from running).");
+		systmp.setProperty("system.predefined.sql.03.name",                        "<html><b>sp_whoisb</b> - <i><font color=\"green\">Who Is Blocking (list info about SPID's taht are blocking other SPID's from running).</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.03.name",                        "sp_whoisb - Who Is Blocking (list info about SPID's taht are blocking other SPID's from running).");
 		systmp.setProperty("system.predefined.sql.03.execute",                     "exec sp_whoisb");
 		systmp.setProperty("system.predefined.sql.03.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.03.install.dbname",              "sybsystemprocs");
@@ -3510,7 +3514,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.03.install.needsRole",           "sa_role");
 
 		//----- sp_opentran.sql -----
-		systmp.setProperty("system.predefined.sql.04.name",                        "sp_opentran - List information about the SPID that is holding the oldest open transaction (using syslogshold).");
+		systmp.setProperty("system.predefined.sql.04.name",                        "<html><b>sp_opentran</b> - <i><font color=\"green\">List information about the SPID that is holding the oldest open transaction (using syslogshold).</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.04.name",                        "sp_opentran - List information about the SPID that is holding the oldest open transaction (using syslogshold).");
 		systmp.setProperty("system.predefined.sql.04.execute",                     "exec sp_opentran");
 		systmp.setProperty("system.predefined.sql.04.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.04.install.dbname",              "sybsystemprocs");
@@ -3521,7 +3526,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.04.install.needsRole",           "sa_role");
 
 		//----- sp_lock2.sql -----
-		systmp.setProperty("system.predefined.sql.05.name",                        "sp_lock2 - More or less the same as sp_lock, but uses 'table name' instead of 'table id'.");
+		systmp.setProperty("system.predefined.sql.05.name",                        "<html><b>sp_lock2</b> - <i><font color=\"green\">More or less the same as sp_lock, but uses 'table name' instead of 'table id'.</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.05.name",                        "sp_lock2 - More or less the same as sp_lock, but uses 'table name' instead of 'table id'.");
 		systmp.setProperty("system.predefined.sql.05.execute",                     "exec sp_lock2");
 		systmp.setProperty("system.predefined.sql.05.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.05.install.dbname",              "sybsystemprocs");
@@ -3532,7 +3538,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.05.install.needsRole",           "sa_role");
 
 		//----- sp_locksum.sql -----
-		systmp.setProperty("system.predefined.sql.06.name",                        "sp_locksum - Prints number of locks each SPID has.");
+		systmp.setProperty("system.predefined.sql.06.name",                        "<html><b>sp_locksum</b> - <i><font color=\"green\">Prints number of locks each SPID has.</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.06.name",                        "sp_locksum - Prints number of locks each SPID has.");
 		systmp.setProperty("system.predefined.sql.06.execute",                     "exec sp_locksum");
 		systmp.setProperty("system.predefined.sql.06.install.needsVersion",        "0");
 		systmp.setProperty("system.predefined.sql.06.install.dbname",              "sybsystemprocs");
@@ -3543,7 +3550,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.06.install.needsRole",           "sa_role");
 
 		//----- sp_spaceused2.sql -----
-		systmp.setProperty("system.predefined.sql.07.name",                        "sp_spaceused2 - List space and row used by each table in the current database");
+		systmp.setProperty("system.predefined.sql.07.name",                        "<html><b>sp_spaceused2</b> - <i><font color=\"green\">List space and row used by each table in the current database.</font></i></html>");
+//		systmp.setProperty("system.predefined.sql.07.name",                        "sp_spaceused2 - List space and row used by each table in the current database");
 		systmp.setProperty("system.predefined.sql.07.execute",                     "exec sp_spaceused2");
 //		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "15000");
 //		systmp.setProperty("system.predefined.sql.07.install.needsVersion",        "1500000");
@@ -3555,8 +3563,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.07.install.scriptName",          "sp_spaceused2.sql");
 		systmp.setProperty("system.predefined.sql.07.install.needsRole",           "sa_role");
 
-		createPredefinedSqlMenu(menu, "system.predefined.sql.", systmp);
-		createPredefinedSqlMenu(menu, "user.predefined.sql.",   null);
+		createPredefinedSqlMenu(menu, "system.predefined.sql.", systmp, sqlWindowInstance);
+		createPredefinedSqlMenu(menu, "user.predefined.sql.",   null,   sqlWindowInstance);
 
 		if ( menu.getMenuComponentCount() == 0 )
 		{
@@ -3572,9 +3580,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	 * @param menu   if null a new JMenuPopup will be created otherwise it will be appended to it
 	 * @param prefix prefix of the property string. Should contain a '.' at the end
 	 * @param conf
+	 * @param sqlWindowInstance can be null
 	 * @return
 	 */
-	private static JMenu createPredefinedSqlMenu(JMenu menu, String prefix, Configuration conf)
+	private static JMenu createPredefinedSqlMenu(JMenu menu, String prefix, Configuration conf, final QueryWindow sqlWindowInstance)
 	{
 		if (prefix == null)           throw new IllegalArgumentException("prefix cant be null.");
 		if (prefix.trim().equals("")) throw new IllegalArgumentException("prefix cant be empty.");
@@ -3689,22 +3698,37 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					Connection conn = null;
 					try
 					{
-						// Check that we are connected
-						if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+						if (sqlWindowInstance == null)
 						{
-							SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
-							return;
+							// Check that we are connected
+							if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+							{
+								SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
+								return;
+							}
+							// Get a new connection
+							conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-PreDefinedSql", null);
+							
+							// Check if the procedure exists (and create it if it dosn't)
+							if (doCheckCreate)
+								AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
+
+							// Open the SQL Window
+							QueryWindow qf = new QueryWindow(conn, sqlStr, null, true, WindowType.JFRAME, null);
+							qf.openTheWindow();
 						}
-						// Get a new connection
-						conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-PreDefinedSql", null);
+						else
+						{
+							// Get the Connection used by sqlWindow
+							conn = sqlWindowInstance.getConnection();
 
-						// Check if the procedure exists (and create it if it dosn't)
-						if (doCheckCreate)
-							AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
+							// Check if the procedure exists (and create it if it dosn't)
+							if (doCheckCreate)
+								AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
 
-						// Open the SQL Window
-						QueryWindow qf = new QueryWindow(conn, sqlStr, null, true, WindowType.JFRAME, null);
-						qf.openTheWindow();
+							// Execute the query
+							sqlWindowInstance.displayQueryResults(sqlStr, 0, false);
+						}
 					}
 					catch (Throwable t)
 					{
