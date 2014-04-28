@@ -114,6 +114,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
+	public static final String GRAPH_NAME_CONNECTION_RATE    = "ConnRateGraph";
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
 	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
@@ -131,7 +132,8 @@ extends CountersModel
 	{
 		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
 		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
-		String[] labels_connection       = new String[] { "UserConnections", "distinctLogins", "@@connections" };
+		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" };
+		String[] labels_connRate         = new String[] { "@@connections (rate)" };
 		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
 		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
 		String[] labels_openTran         = new String[] { "Seconds" };
@@ -156,6 +158,7 @@ extends CountersModel
 		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads));
 		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
 		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
+		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate));
 		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
 		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
 		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
@@ -293,6 +296,17 @@ extends CountersModel
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
+					"Connection Rate in ASE", 	          // Menu CheckBox text
+					"Connection Attemtps per Second (source @@connections)", // Label 
+					labels_connRate, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+				addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
@@ -1007,12 +1021,28 @@ extends CountersModel
 		//---------------------------------
 		if (GRAPH_NAME_CONNECTION.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[3];
+			Double[] arr = new Double[4];
 
 			arr[0] = this.getAbsValueAsDouble (0, "Connections");
 			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
 			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-			_logger.debug("updateGraphData(ConnectionsGraph): Connections='"+arr[0]+"', distinctLogins='"+arr[1]+"', aaConnections='"+arr[2]+"'.");
+			arr[3] = this.getRateValueAsDouble(0, "aaConnections");
+			_logger.debug("updateGraphData(ConnectionsGraph): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CONNECTION_RATE.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueAsDouble(0, "aaConnections");
+			_logger.debug("updateGraphData("+GRAPH_NAME_CONNECTION_RATE+"): aaConnections(Rate)='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDate(this.getTimestamp());

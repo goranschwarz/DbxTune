@@ -776,6 +776,7 @@ public class QueryWindow
 		init(conn, sql, inputFile, closeConnOnExit, winType, conf);
 	}
 
+	@SuppressWarnings("serial")
 	private void init(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		_windowType = winType;
@@ -1082,7 +1083,8 @@ public class QueryWindow
 			{
 				saveProps();
 				saveWinProps();
-				
+				sendExecStatistics();
+
 				if (_closeConnOnExit)
 					close();
 
@@ -1464,6 +1466,14 @@ public class QueryWindow
 		_controlPane.add(_copy_but,              "");
 		_controlPane.add(_nextErr_but,           "hidemode 2");
 		_controlPane.add(_prevErr_but,           "hidemode 2, wrap");
+
+		// Keyboard shortcut for next/prev error, hmmm it didn't work 
+//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_UP,   Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_PREV_ERROR);
+//		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_NEXT_ERROR);
+//
+//		_resPanel.getActionMap().put(ACTION_PREV_ERROR, new AbstractAction(ACTION_PREV_ERROR) { @Override public void actionPerformed(ActionEvent e) { _prevErr_but.doClick(); } });
+//		_resPanel.getActionMap().put(ACTION_NEXT_ERROR, new AbstractAction(ACTION_NEXT_ERROR) { @Override public void actionPerformed(ActionEvent e) { _nextErr_but.doClick(); } });
+
 
 		// Add 
 		reLayoutSomeStuff(horizontalOrientation, cmdPanelInToolbar);
@@ -2105,6 +2115,9 @@ public class QueryWindow
 		
 		_currentDbName              = null;
 		_oracleDbmsOutputIsEnabled  = false; // I don't think you need to disable it, hopefully it will be disabled when diconnecting
+
+		// Reset statistics
+		resetExecStatistics();
 
 		// mark code completion for refresh
 		if (_compleationProviderAbstract != null)
@@ -2755,6 +2768,7 @@ public class QueryWindow
 	private void action_disconnect(ActionEvent e)
 	{
 		saveWinProps();
+		sendExecStatistics();
 
 		_connectedDriverName        = null;
 		_connectedDriverVersion     = null;
@@ -4951,6 +4965,12 @@ public class QueryWindow
 						}
 					}
 					
+					// Increment Usage Statistics
+					if (sqle instanceof SQLException)
+						incSqlExceptionCount();
+					else
+						incSqlWarningCount();
+
 					// Add it to the progress dialog
 					progress.addMessage(sqle);
 
@@ -4969,6 +4989,9 @@ public class QueryWindow
 		// Vendor specific setting before we start to execute
 		enableOrDisableVendorSpecifics(conn);
 
+		
+		// Increment Usage Statistics
+		incExecMainCount();
 
 		// The script reader might throw Exception that we want to abort the whole executions on
 		try
@@ -5019,6 +5042,9 @@ public class QueryWindow
 					if (progress.isCancelled())
 						break;
 
+					// Increment Usage Statistics
+					incExecBatchCount();
+
 					try
 					{
 						int rowsAffected = 0;
@@ -5062,6 +5088,7 @@ public class QueryWindow
 	
 							if(hasRs)
 							{
+								incRsCount();
 								rsCount++;
 								_statusBar.setMsg("Reading resultset "+rsCount+".");
 								progress.setState("Reading resultset "+rsCount+".");
@@ -5156,6 +5183,7 @@ public class QueryWindow
 									int readCount = rstm.getReadCount();
         							if (readCount >= 0)
         							{
+        								incRsRowsCount(readCount);
         								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
         									_resultCompList.add( new JAseRowCount(readCount, sql) );
         							}
@@ -5175,6 +5203,7 @@ public class QueryWindow
 
 								if (rowsAffected >= 0)
 								{
+    								incIudRowsCount(rowsAffected);
 									_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
 
 									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
@@ -5222,6 +5251,11 @@ public class QueryWindow
 						if (_clientTiming_chk.isSelected() || sr.hasOption_printClientTiming())
 							_resultCompList.add( new JClientExecTime(execStartTime, execStopTime, execFinnishTime, startRowInSelection + sr.getSqlBatchStartLine() + 1, sql));
 	
+						// Increment Usage Statistics
+						incExecTimeTotal  (execFinnishTime - execStartTime);
+						incExecTimeSqlExec(execStopTime    - execStartTime);
+						incExecTimeRsRead (execFinnishTime - execStopTime);
+						
 						// Sleep for a while, if that's enabled
 						if (sr.getMultiExecWait() > 0)
 						{
@@ -5234,6 +5268,7 @@ public class QueryWindow
 					}
 					catch (SQLException ex)
 					{
+						incSqlExceptionCount();
 						progress.setSqlStatement(null);
 
 						// If something goes wrong, clear the message line
@@ -6658,42 +6693,68 @@ public class QueryWindow
 	** BEGIN: Statistics
 	**----------------------------------------------------------------------*/ 
 	// NOTE: this is not yet used, but in the future... to send of when diconnects or exists
-	private int _execMainCount     = 0;
-	private int _execBatchCount    = 0;
-	private int _rsCount           = 0;
-	private int _rsRowsCount       = 0;
-	private int _sqlWarningCount   = 0;
-	private int _sqlExceptionCount = 0;
+	private int  _execMainCount     = 0;
+	private int  _execBatchCount    = 0;
+	private long _execTimeTotal     = 0;
+	private long _execTimeSqlExec   = 0;
+	private long _execTimeRsRead    = 0;
+	private int  _rsCount           = 0;
+	private int  _rsRowsCount       = 0;
+	private int  _iudRowsCount      = 0;
+	private int  _sqlWarningCount   = 0;
+	private int  _sqlExceptionCount = 0;
 
-	public void incExecMainCount()          { _execMainCount++; }
-	public void incExecBatchCount()         { _execBatchCount++; }
-	public void incRsCount()                { _rsCount++; }
-	public void incRsRowsCount()            { _rsRowsCount++; }
-	public void incSqlWarningCount()        { _sqlWarningCount++; }
-	public void incSqlExceptionCount()      { _sqlExceptionCount++; }
+	public void incExecMainCount()           { _execMainCount++; }
+	public void incExecBatchCount()          { _execBatchCount++; }
+	public void incRsCount()                 { _rsCount++; }
+	public void incRsRowsCount()             { _rsRowsCount++; }
+	public void incIudRowsCount()            { _iudRowsCount++; }
+	public void incSqlWarningCount()         { _sqlWarningCount++; }
+	public void incSqlExceptionCount()       { _sqlExceptionCount++; }
 
-	public void incExecMainCount    (int c) { _execMainCount     += c; }
-	public void incExecBatchCount   (int c) { _execBatchCount    += c; }
-	public void incRsCount          (int c) { _rsCount           += c; }
-	public void incRsRowsCount      (int c) { _rsRowsCount       += c; }
-	public void incSqlWarningCount  (int c) { _sqlWarningCount   += c; }
-	public void incSqlExceptionCount(int c) { _sqlExceptionCount += c; }
+	public void incExecMainCount    (int  c) { _execMainCount     += c; }
+	public void incExecBatchCount   (int  c) { _execBatchCount    += c; }
+	public void incExecTimeTotal    (long t) { _execTimeTotal     += t; }
+	public void incExecTimeSqlExec  (long t) { _execTimeSqlExec   += t; }
+	public void incExecTimeRsRead   (long t) { _execTimeRsRead    += t; }
+	public void incRsCount          (int  c) { _rsCount           += c; }
+	public void incRsRowsCount      (int  c) { _rsRowsCount       += c; }
+	public void incIudRowsCount     (int  c) { _iudRowsCount      += c; }
+	public void incSqlWarningCount  (int  c) { _sqlWarningCount   += c; }
+	public void incSqlExceptionCount(int  c) { _sqlExceptionCount += c; }
 
-	public int  getExecMainCount()          { return _execMainCount; }
-	public int  getExecBatchCount()         { return _execBatchCount; }
-	public int  getRsCount()                { return _rsCount; }
-	public int  getRsRowsCount()            { return _rsRowsCount; }
-	public int  getSqlWarningCount()        { return _sqlWarningCount; }
-	public int  getSqlExceptionCount()      { return _sqlExceptionCount; }
+	public int  getExecMainCount()           { return _execMainCount; }
+	public int  getExecBatchCount()          { return _execBatchCount; }
+	public long getExecTimeTotal()           { return _execTimeTotal; }
+	public long getExecTimeSqlExec()         { return _execTimeSqlExec; }
+	public long getExecTimeRsRead()          { return _execTimeRsRead; }
+	public int  getRsCount()                 { return _rsCount; }
+	public int  getRsRowsCount()             { return _rsRowsCount; }
+	public int  getIudRowsCount()            { return _iudRowsCount; }
+	public int  getSqlWarningCount()         { return _sqlWarningCount; }
+	public int  getSqlExceptionCount()       { return _sqlExceptionCount; }
 
 	public void resetExecStatistics()
 	{
 		_execMainCount     = 0;
 		_execBatchCount    = 0;
+		_execTimeTotal     = 0;
+		_execTimeSqlExec   = 0;
+		_execTimeRsRead    = 0;
 		_rsCount           = 0;
 		_rsRowsCount       = 0;
+		_iudRowsCount      = 0;
 		_sqlWarningCount   = 0;
 		_sqlExceptionCount = 0;
+	}
+
+	public void sendExecStatistics()
+	{
+		// send of the counters
+		/* TODO */
+		
+		// At the end, reset the statistics
+		resetExecStatistics();
 	}
 	/*----------------------------------------------------------------------
 	** END: Statistics
