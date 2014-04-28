@@ -2,6 +2,9 @@ package com.asetune.gui;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -11,10 +14,23 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.asetune.Version;
 import com.asetune.gui.ConnectionProfile.JdbcEntry;
@@ -26,6 +42,8 @@ import com.asetune.utils.DbUtils;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.sun.org.apache.xml.internal.serialize.OutputFormat;
+import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 
 public class ConnectionProfileManager
 {
@@ -382,4 +400,208 @@ public class ConnectionProfileManager
     	
     	return newFileName;
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	 * 
+	 */
+	public void save()
+	{
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dBuilder;
+		try
+		{
+			dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.newDocument();
+			// add elements to Document
+			Element rootElement = doc.createElementNS("http://www.journaldev.com/employee", "Employees");
+			// append root element to document
+			doc.appendChild(rootElement);
+
+			// append first child element to root element
+			rootElement.appendChild(getEmployee(doc, "1", "Pankaj", "29", "Java Developer", "Male"));
+
+			// append second child
+			rootElement.appendChild(getEmployee(doc, "2", "Lisa", "35", "Manager", "Female"));
+
+			// for output to file, console
+			TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			Transformer transformer = transformerFactory.newTransformer();
+			// for pretty print
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			DOMSource source = new DOMSource(doc);
+
+			// write to console or file
+			StreamResult console = new StreamResult(System.out);
+			StreamResult file = new StreamResult(new File("/Users/pankaj/emps.xml"));
+
+			// write data
+			transformer.transform(source, console);
+			transformer.transform(source, file);
+			System.out.println("DONE");
+
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	private Node getEmployee(Document doc, String id, String name, String age, String role, String gender)
+	{
+		Element employee = doc.createElement("Employee");
+
+		// set id attribute
+		employee.setAttribute("id", id);
+
+		// create name element
+		employee.appendChild(getEmployeeElements(doc, employee, "name", name));
+
+		// create age element
+		employee.appendChild(getEmployeeElements(doc, employee, "age", age));
+
+		// create role element
+		employee.appendChild(getEmployeeElements(doc, employee, "role", role));
+
+		// create gender element
+		employee.appendChild(getEmployeeElements(doc, employee, "gender", gender));
+
+		return employee;
+	}
+
+	// utility method to create text node
+	private Node getEmployeeElements(Document doc, Element element, String name, String value)
+	{
+		Element node = doc.createElement(name);
+		node.appendChild(doc.createTextNode(value));
+		return node;
+	}
+
+	/**
+	 * @param unformattedXml - XML String
+	 * @return Properly formatted XML String
+	 */
+	public String format(String unformattedXml)
+	{
+		try
+		{
+			Document document = parseXmlFile(unformattedXml);
+
+			OutputFormat format = new OutputFormat(document);
+			format.setLineWidth(65);
+			format.setIndenting(true);
+			format.setIndent(2);
+			Writer out = new StringWriter();
+			XMLSerializer serializer = new XMLSerializer(out, format);
+			serializer.serialize(document);
+
+			return out.toString();
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+			return "";
+		}
+
+	}
+
+	/**
+	 * This function converts String XML to Document object
+	 * 
+	 * @param in - XML String
+	 * @return Document object
+	 */
+	private Document parseXmlFile(String in)
+	{
+		try
+		{
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			InputSource is = new InputSource(new StringReader(in));
+			return db.parse(is);
+		}
+		catch (ParserConfigurationException e)
+		{
+			throw new RuntimeException(e);
+		}
+		catch (SAXException e)
+		{
+			throw new RuntimeException(e);
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * Takes an XML Document object and makes an XML String. Just a utility function.
+	 * 
+	 * @param doc - The DOM document
+	 * @return the XML String
+	 */
+	public String makeXMLString(Document doc)
+	{
+		String xmlString = "";
+		if ( doc != null )
+		{
+			try
+			{
+				TransformerFactory transfac = TransformerFactory.newInstance();
+				Transformer trans = transfac.newTransformer();
+				trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+				trans.setOutputProperty(OutputKeys.INDENT, "yes");
+				StringWriter sw = new StringWriter();
+				StreamResult result = new StreamResult(sw);
+				DOMSource source = new DOMSource(doc);
+				trans.transform(source, result);
+				xmlString = sw.toString();
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		return xmlString;
+	}
+
+	public static void main(String args[])
+	{
+		ConnectionProfileManager formatter = new ConnectionProfileManager("");
+		String book = "<?xml version=\"1.0\"?><catalog><book id=\"bk101\"><author>Gambardella, Matthew</author><title>XML Developers Guide</title><genre>Computer</genre><price>44.95</price><publish_date>2000-10-01</publish_date><description>An in-depth look at creating applications with XML.</description></book><book id=\"bk102\"><author>Ralls, Kim</author><title>Midnight Rain</title><genre>Fantasy</genre><price>5.95</price><publish_date>2000-12-16</publish_date><description>A former architect battles corporate zombies, an evil sorceress, and her own childhood to become queen of the world.</description></book></catalog>";
+		System.out.println(formatter.format(book));
+	}
+
 }

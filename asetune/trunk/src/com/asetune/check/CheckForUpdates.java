@@ -102,6 +102,7 @@ public class CheckForUpdates
 
 	private   static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
 	private   static final String SQLWIN_CONNECT_INFO_URL        = "http://www.asetune.com/sqlw_connect_info.php";
+	private   static final String SQLWIN_USAGE_INFO_URL          = "http://www.asetune.com/sqlw_usage_info.php";           // NOTE: dosn't exists yet
 
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
