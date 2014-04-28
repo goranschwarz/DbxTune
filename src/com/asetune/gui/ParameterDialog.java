@@ -22,6 +22,7 @@ import javax.swing.UIManager;
 import net.miginfocom.swing.MigLayout;
 
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 public class ParameterDialog
 	extends JDialog
@@ -46,6 +47,10 @@ public class ParameterDialog
 		_inputMap = input;
 		initComponents();
 		pack();
+		
+		// Focus to 'OK', escape to 'CANCEL'
+		SwingUtils.installEscapeButton(this, _cancel);
+		SwingUtils.setFocus(_ok);
 	}
 
 
