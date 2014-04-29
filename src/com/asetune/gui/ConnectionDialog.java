@@ -245,6 +245,7 @@ public class ConnectionDialog
 	private JTextField         _aseSqlInit_txt         = new JTextField("");
 
 	private JCheckBox          _aseOptionSavePwd_chk            = new JCheckBox("Save password", true);
+	private JCheckBox          _aseOptionPwdEncryption_chk      = new JCheckBox("Encrypt password over the Network", true);
 	private JCheckBox          _aseOptionConnOnStart_chk        = new JCheckBox("Connect to this server on startup", false);
 	private JCheckBox          _aseOptionReConnOnFailure_chk    = new JCheckBox("Reconnect to server if connection is lost", true);
 //	private JCheckBox          _aseOptionUsedForNoGui_chk       = new JCheckBox("Use connection info above for no-gui mode", false);
@@ -1166,7 +1167,9 @@ if (_connProfileVisible_chk.isSelected())
 		_aseUser_txt  .setToolTipText("User name to use when logging in to the below ASE Server.");
 		_asePasswd_lbl.setToolTipText("Password to use when logging in to the below ASE Server");
 		_asePasswd_txt.setToolTipText("Password to use when logging in to the below ASE Server");
-		_aseOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
+		_aseOptionSavePwd_chk      .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
+		_aseOptionPwdEncryption_chk.setToolTipText("<html>Encrypt the password when sending it over the network<br>This will set jConnect option ENCRYPT_PASSWORD=true</html>");
+
 
 		
 		panel.add(_aseLoginIcon,  "");
@@ -1178,10 +1181,12 @@ if (_connProfileVisible_chk.isSelected())
 		panel.add(_asePasswd_lbl, "");
 		panel.add(_asePasswd_txt, "push, grow");
 
-		panel.add(_aseOptionSavePwd_chk, "skip");
+		panel.add(_aseOptionSavePwd_chk, "skip, split");
+		panel.add(_aseOptionPwdEncryption_chk, "");
 
 		// ADD ACTION LISTENERS
-		_asePasswd_txt.addActionListener(this);
+		_asePasswd_txt             .addActionListener(this);
+		_aseOptionPwdEncryption_chk.addActionListener(this);
 
 		// ADD FOCUS LISTENERS
 		_aseUser_txt  .addFocusListener(this);
@@ -1380,7 +1385,7 @@ if (_connProfileVisible_chk.isSelected())
 		_aseClientCharset_cbx.addItem("sjis");
 		_aseClientCharset_cbx.addItem("tis620");
 		_aseClientCharset_cbx.addItem("turkish8");
-		_aseClientCharset_cbx.addItem("unicode");
+//		_aseClientCharset_cbx.addItem("unicode");
 		_aseClientCharset_cbx.addItem("utf8");	}
 	
 	private JPanel createAseOptionsPanel()
@@ -3934,6 +3939,12 @@ if (_connProfileVisible_chk.isSelected())
 			}
 		}
 
+		// --- ASE: NETWORK ENCRYPTION ---
+		if (_aseOptionPwdEncryption_chk.equals(source))
+		{
+			action_nwPasswdEncryption();
+		}
+		
 		// --- ASE: CHECKBOX: USE SSH TUNNEL
 		if (_aseSshTunnel_chk.equals(source))
 		{
@@ -4626,6 +4637,20 @@ if (_connProfileVisible_chk.isSelected())
 		validateContents();
 	}
 
+	private void action_nwPasswdEncryption()
+	{
+		boolean encrypt = _aseOptionPwdEncryption_chk.isSelected();
+		
+		Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_aseOptions_txt.getText());
+
+		if (encrypt)
+			optionsMap.put("ENCRYPT_PASSWORD", "true");
+		else
+			optionsMap.remove("ENCRYPT_PASSWORD");
+
+		_aseOptions_txt.setText( StringUtil.toCommaStr(optionsMap, "=", ", ") );
+	}
+
 	private void updateConnectionProfile(int connType)
 	{
 //		// If the 'add on connect' option is not enabled, get out of here
@@ -5054,7 +5079,10 @@ if (_connProfileVisible_chk.isSelected())
 		conf.setProperty("conn.url.options",                    _aseOptions_txt.getText() );
 		conf.setProperty("conn.url.options."+hostPort,          _aseOptions_txt.getText() );
 
-		conf.setProperty("conn.savePassword",                   _aseOptionSavePwd_chk.isSelected() );
+		conf.setProperty("conn.savePassword",                             _aseOptionSavePwd_chk.isSelected() );
+		conf.setProperty("conn.savePassword."+hostPort,                   _aseOptionSavePwd_chk.isSelected() );
+		conf.setProperty("conn.passwordEncryptionOverNetwork",            _aseOptionPwdEncryption_chk.isSelected() );
+		conf.setProperty("conn.passwordEncryptionOverNetwork."+hostPort,  _aseOptionPwdEncryption_chk.isSelected() );
 		conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP,        _aseOptionConnOnStart_chk.isSelected() );
 		conf.setProperty(CONF_OPTION_RECONNECT_ON_FAILURE,      _aseOptionReConnOnFailure_chk.isSelected());
 
@@ -5269,6 +5297,10 @@ if (_connProfileVisible_chk.isSelected())
 		bol = conf.getBooleanProperty("conn.savePassword", true);
 		_aseOptionSavePwd_chk.setSelected(bol);
 		
+		bol = conf.getBooleanProperty("conn.passwordEncryptionOverNetwork", true);
+		_aseOptionPwdEncryption_chk.setSelected(bol);
+
+		
 		bol = conf.getBooleanProperty(CONF_OPTION_CONNECT_ON_STARTUP, false);
 		_aseOptionConnOnStart_chk.setSelected(bol); 
 
@@ -5387,6 +5419,7 @@ if (_connProfileVisible_chk.isSelected())
 		_jdbcSqlInit_txt.setText(conf.getProperty("jdbc.login.sql.init", "" ));
 //		conf.getProperty("jdbc.login.sql.init."+urlStr, "" );
 
+		action_nwPasswdEncryption();
 	}
 	private void getSavedWindowProps()
 	{
@@ -5475,6 +5508,12 @@ if (_connProfileVisible_chk.isSelected())
 		if (str != null)
 			_asePasswd_txt.setText(str);
 
+
+		// SavePassword and NetworkEncryptionOfPassword
+		_aseOptionSavePwd_chk      .setSelected(conf.getBooleanProperty("conn.savePassword."+hostPortStr,                  conf.getBooleanProperty("conn.savePassword", true)));
+		_aseOptionPwdEncryption_chk.setSelected(conf.getBooleanProperty("conn.passwordEncryptionOverNetwork."+hostPortStr, conf.getBooleanProperty("conn.passwordEncryptionOverNetwork", true)));
+		action_nwPasswdEncryption();
+		
 //		str = conf.getProperty("conn.password."+hostPortStr);
 //		if (str != null)
 //		{
