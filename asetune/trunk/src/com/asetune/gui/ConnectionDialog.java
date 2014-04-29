@@ -4667,20 +4667,21 @@ if (_connProfileVisible_chk.isSelected())
 			String key = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
 
 			ConnectionProfile.TdsEntry tds = new ConnectionProfile.TdsEntry(); 
-			tds._tdsIfile         = _aseIfile_txt .getText();
-			tds._tdsUsername      = _aseUser_txt  .getText();
-			tds._tdsPassword      = _asePasswd_txt.getText();
-			tds._tdsServer        = _aseServer_cbx.getSelectedItem().toString();
-			tds._tdsHosts         = _aseHost_txt  .getText();
-			tds._tdsPorts         = _asePort_txt  .getText();
-			tds._tdsDbname        = null;
-			tds._tdsLoginTimout   = Integer.parseInt(_aseLoginTimeout_txt.getText());
-			tds._tdsShhTunnelInfo = _aseSshTunnelInfo;
-			tds._tdsClientCharset = _aseClientCharset_cbx.getSelectedItem().toString();
-			tds._tdsSqlInit       = _aseSqlInit_txt.getText();
-			tds._tdsUrlOptions    = _aseOptions_txt.getText();
-			tds._tdsUseUrl        = _aseConnUrl_chk.isSelected();
-			tds._tdsUseUrlStr     = _aseConnUrl_txt.getText(); // actual URL if _aseConnUrl_chk.isSelected is true
+			tds._tdsIfile           = _aseIfile_txt .getText();
+			tds._tdsUsername        = _aseUser_txt  .getText();
+			tds._tdsPassword        = _asePasswd_txt.getText();
+			tds._tdsNwEncryptPasswd = _aseOptionPwdEncryption_chk.isSelected();
+			tds._tdsServer          = _aseServer_cbx.getSelectedItem().toString();
+			tds._tdsHosts           = _aseHost_txt  .getText();
+			tds._tdsPorts           = _asePort_txt  .getText();
+			tds._tdsDbname          = null;
+			tds._tdsLoginTimout     = Integer.parseInt(_aseLoginTimeout_txt.getText());
+			tds._tdsShhTunnelInfo   = _aseSshTunnelInfo;
+			tds._tdsClientCharset   = _aseClientCharset_cbx.getSelectedItem().toString();
+			tds._tdsSqlInit         = _aseSqlInit_txt.getText();
+			tds._tdsUrlOptions      = _aseOptions_txt.getText();
+			tds._tdsUseUrl          = _aseConnUrl_chk.isSelected();
+			tds._tdsUseUrlStr       = _aseConnUrl_txt.getText(); // actual URL if _aseConnUrl_chk.isSelected is true
 
 			ConnectionProfileManager.getInstance().possiblyAddChange(key, dbProduct, tds);
 		}
