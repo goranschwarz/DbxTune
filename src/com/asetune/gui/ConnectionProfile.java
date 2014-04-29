@@ -59,6 +59,7 @@ public class ConnectionProfile
 		public String        _tdsUsername      = null;
 		public String        _tdsPassword      = null;
 		public boolean       _tdsSavePassword  = true; // Should this be here???
+		public boolean       _tdsNwEncryptPasswd = true;
 		public String        _tdsServer        = null;
 //		public String        _tdsHost          = null;
 //		public int           _tdsPort          = -1;
@@ -129,9 +130,10 @@ public class ConnectionProfile
 	private static final String       XML_JDBC_ENTRY        = "JdbcEntry";
 	private static final String       XML_OFFLINE_ENTRY     = "OfflineEntry";
 
-	private static final String       XML_TDS_USERNAME          = "Username";
-	private static final String       XML_TDS_PASSWORD          = "Password";
-	private static final String       XML_TDS_SAVE_PASSWORD     = "SavePassword";
+	private static final String       XML_TDS_USERNAME            = "Username";
+	private static final String       XML_TDS_PASSWORD            = "Password";
+	private static final String       XML_TDS_SAVE_PASSWORD       = "SavePassword";
+	private static final String       XML_TDS_NW_ENCRYPT_PASSWORD = "EncryptPasswordOverNetwork";
 
 	private static final String       XML_TDS_SERVER_NAME       = "ServerName";
 	private static final String       XML_TDS_HOST_LIST         = "HostList";
