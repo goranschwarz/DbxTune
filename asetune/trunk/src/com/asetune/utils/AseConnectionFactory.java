@@ -1421,6 +1421,12 @@ public class AseConnectionFactory
 		if (url.indexOf("REQUEST_HA_SESSION=true") > 0)
 			emulateMultipleQueryRowSupport = false;
 
+		// allow {xxx} strings in jConnect
+		// JDBC uses {str} as special stuff (SQL Escape Sequences for JDBC)
+		// http://docs.oracle.com/cd/E13222_01/wls/docs91/jdbc_drivers/sqlescape.html
+		if (props.getProperty("ESCAPE_PROCESSING_DEFAULT") == null) 
+			props.put("ESCAPE_PROCESSING_DEFAULT", "false");
+
 		// IS_CLOSED_TEST=INTERNAL
 		// This means that isClosed() test does not send any SQL to server
 		// The INTERNAL setting means that jConnect will return true for isClosed() only when Connection.close() has been called, or when jConnect has detected an IOException that has disabled the Connection
