@@ -101,8 +101,9 @@ public class ResultSetTableModel
 			String columnName        = rsmd.getColumnName(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
 			String columnTypeNameGen = getColumnTypeName(rsmd, c);
-
-			String columnTypeNameRaw = rsmd.getColumnTypeName(c);
+			
+			String columnTypeNameRaw = "-unknown-";
+			try {  columnTypeNameRaw = rsmd.getColumnTypeName(c); } catch(SQLException ignore) {}; // sometimes this caused SQLException, especially for 'compute by' 
 			int    columnType        = rsmd.getColumnType(c);
 			int    columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
 
