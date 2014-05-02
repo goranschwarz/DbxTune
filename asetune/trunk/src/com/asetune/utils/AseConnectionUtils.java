@@ -1190,13 +1190,21 @@ public class AseConnectionUtils
 	 * @param conn
 	 * @return a int with the version number in the form:
 	 * <ul>
-	 *   <li>12503 for (12.5.0 ESD#3)</li>
-	 *   <li>12549 for (12.5.4 ESD#9)</li>
-	 *   <li>15031 for (15.0.3 ESD#1)</li>
-	 *   <li>15500 for (15.5)</li>
-	 *   <li>15502 for (15.5 ESD#2)</li>
+	 *   <li>125000000 for (12.5.0 ESD#3)</li>
+	 *   <li>125400900 for (12.5.4 ESD#9)</li>
+	 *   <li>150300100 for (15.0.3 ESD#1)</li>
+	 *   <li>155000000 for (15.5)</li>
+	 *   <li>155000200 for (15.5 ESD#2)</li>
+	 *   <li>157000402 for (15.7 ESD#4.2)</li>
+	 *   <li>157010000 for (15.7 SP100)</li>
+	 *   <li>160000101 for (16.0 SP01 PL01)</li>
 	 * </ul>
-	 * If the ESD level is above 9 it will still return 9 (otherwise it would wrap...)
+	 * It's a 9 digit number where 112344455<br>
+	 * 11 = Major Release: a 2 digit number<br>
+	 * 2 = Minor Release: a 1 digit number<br>
+	 * 3 = Maint Release: a 1 digit number<br>
+	 * 444 = Service Pack or ESD: a 3 digit number<br>
+	 * 55 = Patch Level or SUB ESD: a 2 digit number<br>
 	 */
 	public static int getAseVersionNumber(Connection conn)
 	{
