@@ -974,8 +974,12 @@ public class AseSqlScriptReader
 		private String  _currentRow         = null;
 
 //		private String  _regex              = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
-		private String  _regex              = "(begin|declare|create|alter)\\s+";
-		private Pattern _pattern            = Pattern.compile(_regex, Pattern.CASE_INSENSITIVE);
+
+		private String  _regex1             = "(begin|declare)\\s+";
+		private Pattern _pattern1           = Pattern.compile(_regex1, Pattern.CASE_INSENSITIVE);
+
+		private String  _regex2             = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
+		private Pattern _pattern2           = Pattern.compile(_regex2, Pattern.CASE_INSENSITIVE);
 
 		public SemiColonHelper()
 		{
@@ -1075,9 +1079,10 @@ public class AseSqlScriptReader
 				return;
 			}
 
-			// has begin|declare|create
+			// _pattern1: has (begin|declare)\\s+
+			// _pattern2: has (create|alter)\\s+(procedure|proc|trigger|view|function)
 			// Then start a SQL Block
-			if ( ! _inSqlBlock && _pattern.matcher(row).find())
+			if ( ! _inSqlBlock && ( _pattern1.matcher(row).find() || _pattern2.matcher(row).find() ) )
 			{
 				_inSqlBlock = true;
 			}
