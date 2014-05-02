@@ -444,8 +444,9 @@ public class StressConnect
 			"	rtrim(P.field_name) + '::' + convert(char(5), P.field_id - (select min(field_id) from sysmonitors where field_name = P.field_name)) as spinlock, \n" +
 			"	P.value as grabs,  \n" +
 			"	W.value as waits,  \n" +
-			"	(100 * W.value)/P.value as wait_percent, \n" +
-			"	S.value / W.value as spins_per_wait, S.value as total_spins, \n" +
+			"	(100 * W.value) / P.value as wait_percent, \n" +
+			"	S.value / W.value as spins_per_wait, \n" +
+			"   S.value as total_spins, \n" +
 			"	P.value / @xacts as grabs_per_xact \n" +
 			"from sysmonitors P, sysmonitors W, sysmonitors S \n" +
 			"where P.group_name = '"+spinP+"' \n" +

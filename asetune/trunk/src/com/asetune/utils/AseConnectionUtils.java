@@ -2366,7 +2366,7 @@ public class AseConnectionUtils
 	 * @param conn The connection to get active roles from
 	 * @return A List containing Strings of active role names
 	 */
-	public static List<String> getActiveRoles(Connection conn)
+	public static List<String> getActiveSystemRoles(Connection conn)
 	{
 		String sql = "select show_role()";
 		try
@@ -2395,6 +2395,40 @@ public class AseConnectionUtils
 			stmt.close();
 
 			_logger.debug("getRoles(roleList='"+roleList+"'.");
+			return roleList;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems when executing sql: "+sql, ex);
+			return null;
+		}
+	}
+
+
+
+	/**
+	 * Get all active roles this connection/login has activated
+	 * @param conn The connection to get active roles from
+	 * @return A List containing Strings of active role names
+	 */
+	public static List<String> getActiveRoles(Connection conn)
+	{
+		String sql = "exec sp_activeroles";
+		try
+		{
+			List<String> roleList = new LinkedList<String>();
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				String role = rs.getString(1);
+				if ( ! roleList.contains(role) )
+					roleList.add(role);
+			}
+			rs.close();
+			stmt.close();
+
+			_logger.debug("getActiveRoles(roleList='"+roleList+"'.");
 			return roleList;
 		}
 		catch (SQLException ex)

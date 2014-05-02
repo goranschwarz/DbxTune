@@ -437,7 +437,7 @@ extends CounterControllerAbstract
 
 		// Get active ASE Roles
 		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
-		_activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		_activeRoleList = AseConnectionUtils.getActiveSystemRoles(conn);
 		
 		// Get active Monitor Configuration
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);

@@ -316,7 +316,7 @@ public abstract class AseConfigText
 			// Check if we can get the configuration, due to enough rights/role based.
 			if (needRole != null)
 			{
-				List<String> hasRoles = AseConnectionUtils.getActiveRoles(conn);
+				List<String> hasRoles = AseConnectionUtils.getActiveSystemRoles(conn);
 
 				boolean haveRole = false;
 				for (String role : needRole)
