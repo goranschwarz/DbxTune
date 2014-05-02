@@ -1181,7 +1181,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 					_aseVersionStr = AseConnectionUtils.getAseVersionStr(_aseConn);
 
 					// Get list of active roles
-					_aseUserHasRoles = AseConnectionUtils.getActiveRoles(_aseConn);
+					_aseUserHasRoles = AseConnectionUtils.getActiveSystemRoles(_aseConn);
 
 					// Check if the SPID exists in there server
 					_spidExistsInAse = false;

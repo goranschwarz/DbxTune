@@ -193,7 +193,7 @@ extends CounterControllerAbstract
 		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
 	
 		// Get active ASE Roles
-		List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+		List<String> activeRoleList = AseConnectionUtils.getActiveSystemRoles(conn);
 //		_activeRoleList = AseConnectionUtils.getActiveRoles(conn);
 		
 		// Get active Monitor Configuration
