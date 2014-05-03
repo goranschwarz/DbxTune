@@ -2413,7 +2413,7 @@ public class AseConnectionUtils
 	 */
 	public static List<String> getActiveRoles(Connection conn)
 	{
-		String sql = "exec sp_activeroles";
+		String sql = "exec sp_activeroles 'expand_down'";
 		try
 		{
 			List<String> roleList = new LinkedList<String>();
