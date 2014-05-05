@@ -420,11 +420,11 @@ public class AseStackTraceAnalyzer
 				}
 				in.close();
 				
-				// Set count at root level
-				StackEntry seSpid   = _root._childMap.get("SPID");
-				StackEntry seKernel = _root._childMap.get("KERNEL");
-				if (seSpid != null && seKernel != null)
-					_root._count = seSpid._count + seKernel._count;
+				// Set count at root level (grab count at first level)
+				int rootLevelCount = 0;
+				for (String key : _root._childMap.keySet())
+					rootLevelCount += _root._childMap.get(key)._count;
+				_root._count = rootLevelCount;
 			}
 			catch (Exception e)
 			{
@@ -820,9 +820,13 @@ public class AseStackTraceAnalyzer
 			String pctValStr = "";
 			if (_root._count >= 0 && !this.equals(_root))
 			{
-				BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-				if ( pctVal.doubleValue() >= 0.1 )
-					pctValStr = " <i><font color=\"green\">(" + pctVal + "%)</font></i>";
+				try
+				{
+					BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					if ( pctVal.doubleValue() >= 0.1 )
+						pctValStr = " <i><font color=\"green\">(" + pctVal + "%)</font></i>";
+				}
+				catch (RuntimeException rte) {}
 			}
 
 			return "<html>" + 
