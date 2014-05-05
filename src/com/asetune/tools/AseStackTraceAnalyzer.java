@@ -16,6 +16,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -418,6 +419,12 @@ public class AseStackTraceAnalyzer
 					}
 				}
 				in.close();
+				
+				// Set count at root level
+				StackEntry seSpid   = _root._childMap.get("SPID");
+				StackEntry seKernel = _root._childMap.get("KERNEL");
+				if (seSpid != null && seKernel != null)
+					_root._count = seSpid._count + seKernel._count;
 			}
 			catch (Exception e)
 			{
@@ -809,13 +816,24 @@ public class AseStackTraceAnalyzer
 		{
 //			return _name + "(count=" + _count + ")";
 //			return _name + ":" + _count;
+
+			String pctValStr = "";
+			if (_root._count >= 0 && !this.equals(_root))
+			{
+				BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				if ( pctVal.doubleValue() >= 0.1 )
+					pctValStr = " <i><font color=\"green\">(" + pctVal + "%)</font></i>";
+			}
+
 			return "<html>" + 
 				(_isFilterFunctionMatch ? "<b>" : "") +
 				_name + 
 				(_isFilterFunctionMatch ? "</b>" : "") +
 				" : <b><font color=\"blue\">" + 
 				_count + 
-				"</font></b></html>";
+				"</font></b>" +
+				pctValStr +
+				"</html>";
 		}
 
 		@Override
