@@ -1,10 +1,14 @@
 package com.asetune.tools;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -14,25 +18,38 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeCellRenderer;
@@ -47,8 +64,13 @@ import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 
+import com.asetune.Version;
 import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.CollectionUtils;
@@ -125,13 +147,20 @@ public class AseStackTraceAnalyzer
 				BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
 				// keep stacks...
-				ArrayList<String> stackList = new ArrayList<String>();
+				ArrayList<String>     stackList     = new ArrayList<String>();
+				ArrayList<ObjectInfo> objectList    = new ArrayList<ObjectInfo>();
+				ArrayList<String>     sampleContent = new ArrayList<String>();
 
-				int sample = 0;
-				int engine = 0;
+				int    sample = 0;
+				int    engine = 0;
+				int    sampleStartRow = 0;
+				int    rowNum = 0;
 				String row;
 				while ((row = br.readLine()) != null)   
 				{
+					rowNum++;
+					sampleContent.add(row);
+
 					// Performing server sample: 500 iterations, 100ms interval, no registers
 					if (row.startsWith("Performing server sample: "))
 					{
@@ -149,8 +178,17 @@ public class AseStackTraceAnalyzer
 					}
 					else if (row.startsWith("---- Sample"))
 					{
+						// Remove last entry from the sampleContent
+						sampleContent.remove( sampleContent.size() - 1 );
+
 						// Reset and start new
-						stackList.clear();
+						stackList     = new ArrayList<String>();
+						objectList    = new ArrayList<ObjectInfo>();
+						sampleContent = new ArrayList<String>();
+						sampleStartRow = rowNum;
+
+						// add current row after the reset...
+						sampleContent.add(row);
 
 						try
 						{
@@ -170,12 +208,58 @@ public class AseStackTraceAnalyzer
 					}
 					else if (row.startsWith("******** End of stack trace"))
 					{
+						//******** End of stack trace, spid 2519, kpid 1275595420, suid 2127
+						//******** End of stack trace, kernel service process: kpid 1179666
+						int pos;
+						int kpid = -1;
+						int spid = -1;
+						int suid = -1;
+
 						// Close a stack
-						
 						if (row.startsWith("******** End of stack trace, spid"))
+						{
 							stackList.add("SPID");
+
+							// get spid
+							pos = row.indexOf(" spid ");
+							if (pos >= 0)
+							{
+								pos += " spid ".length();
+								try { spid = Integer.parseInt( row.substring(pos, row.indexOf(",", pos)) ); }
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid SPID '"+row+"', caught: "+nfe);}
+							}
+
+							// get kpid
+							pos = row.indexOf(" kpid ");
+							if (pos >= 0)
+							{
+								pos += " kpid ".length();
+								try { kpid = Integer.parseInt( row.substring(pos, row.indexOf(",", pos)) ); }
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid KPID '"+row+"', caught: "+nfe);}
+							}
+
+							// get suid
+							pos = row.indexOf(" suid ");
+							if (pos >= 0)
+							{
+								pos += " suid ".length();
+								try { suid = Integer.parseInt( row.substring(pos) ); }
+								catch(NumberFormatException nfe) {System.out.println("Parse-spid SUID '"+row+"', caught: "+nfe);}
+							}
+						}
 						else if (row.startsWith("******** End of stack trace, kernel"))
+						{
 							stackList.add("KERNEL");
+
+							// get kpid
+							pos = row.indexOf(" kpid ");
+							if (pos >= 0)
+							{
+								pos += " kpid ".length();
+								try { kpid = Integer.parseInt( row.substring(pos) ); }
+								catch(NumberFormatException nfe) {System.out.println("Parse-kpid KPID '"+row+"', caught: "+nfe);}
+							}
+						}
 
 						boolean addThis = true;
 						if (sample < _startRead)               addThis = false;
@@ -188,10 +272,12 @@ public class AseStackTraceAnalyzer
 								_logger.debug("ADD SAMPLE: -- sample ="+sample+", engine="+engine+". _start="+_startRead+", _stop="+_stopRead+", _engine="+_engine+": stack="+stackList);
 
 							Collections.reverse(stackList);
-							addStackEntry(stackList);
+							addStackEntry(stackList, sample, engine, kpid, spid, suid, sampleStartRow, rowNum, objectList, sampleContent);
 						}
 
-						stackList.clear();
+//						stackList     = new ArrayList<String>();
+//						objectList    = new ArrayList<ObjectInfo>();
+//						sampleContent = new ArrayList<String>();
 					}
 					else if (row.startsWith("pc: "))
 					{
@@ -221,6 +307,114 @@ public class AseStackTraceAnalyzer
 
 						if (f.length() > 0)
 							stackList.add(f);
+					}
+					else if (row.startsWith("-- dbid: ")) // parse for used table names (available using option: context=y)
+					{
+						// /home/sybase/gorans [1094]# cat stacktrace_Y160_20140505_153529.out | grep '\-\- dbid:'
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x155433048, des: 0x0x154ac0270
+						// -- dbid: 1, objid: 4, name: 'systypes', sdes: 0x0x1554336a0, des: 0x0x154b59af0
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x155433cf8, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x155434350, des: 0x0x154ac0270
+						// -- dbid: 1, objid: 329049177, name: 'spt_mda', sdes: 0x0x155398228, des: 0x0x154b24428
+						// -- dbid: 2, objid: -1179650, name: 'temp worktable', sdes: 0x0x155398880, des: 0x0x159217800
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b71c8, des: 0x0x154ac0270
+						// -- dbid: 1, objid: 4, name: 'systypes', sdes: 0x0x1553b7820, des: 0x0x154b59af0
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b7e78, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b84d0, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b8b28, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b9180, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b97d8, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553b9e30, des: 0x0x154ac0270
+						// -- dbid: 2, objid: -1245192, name: 'temp worktable', sdes: 0x0x1553ba488, des: 0x0x15921c000
+						// -- dbid: 2, objid: -1441793, name: 'temp worktable', sdes: 0x0x1554140a8, des: 0x0x15924e748
+						// -- dbid: 2, objid: -1441796, name: 'temp worktable', sdes: 0x0x155414700, des: 0x0x1591d2e78
+						// -- dbid: 2, objid: -1441794, name: 'temp worktable', sdes: 0x0x155414d58, des: 0x0x159195000
+						// -- dbid: 2, objid: -1441798, name: 'temp worktable', sdes: 0x0x1554153b0, des: 0x0x159250e90
+						// -- dbid: 2, objid: -1441797, name: 'temp worktable', sdes: 0x0x155416060, des: 0x0x1591fc920
+						// -- dbid: 2, objid: -1441795, name: 'temp worktable', sdes: 0x0x1554166b8, des: 0x0x1583d9e90
+						// -- dbid: 2, objid: -1441800, name: 'temp worktable', sdes: 0x0x155417368, des: 0x0x15923f000
+						// -- dbid: 2, objid: -1441801, name: 'temp worktable', sdes: 0x0x1554179c0, des: 0x0x15921c7c8
+						// -- dbid: 1, objid: 33, name: 'syslogins', sdes: 0x0x1553a8768, des: 0x0x154b4e4c8
+						// -- dbid: 1, objid: 49, name: 'sysloginroles', sdes: 0x0x1553a8dc0, des: 0x0x154b54948
+						// -- dbid: 1, objid: 21, name: 'sysattributes', sdes: 0x0x1553a9418, des: 0x0x154b605b8
+						// -- dbid: 1, objid: 329049177, name: 'spt_mda', sdes: 0x0x155398228, des: 0x0x154b24428
+						// -- dbid: 2, objid: -1179650, name: 'temp worktable', sdes: 0x0x155398880, des: 0x0x157cb6000
+						// -- dbid: 2, objid: -1441793, name: 'temp worktable', sdes: 0x0x1554140a8, des: 0x0x159215000
+						// -- dbid: 1, objid: 33, name: 'syslogins', sdes: 0x0x1554814c8, des: 0x0x154b4e4c8
+						// -- dbid: 1, objid: 329049177, name: 'spt_mda', sdes: 0x0x155398228, des: 0x0x154b24428
+						// -- dbid: 2, objid: -1179650, name: 'temp worktable', sdes: 0x0x155398880, des: 0x0x1591db000
+						// -- dbid: 1, objid: 329049177, name: 'spt_mda', sdes: 0x0x155549ce8, des: 0x0x154b24428
+						// -- dbid: 2, objid: -2097154, name: 'temp worktable', sdes: 0x0x15554a340, des: 0x0x159215000
+						// -- dbid: 1, objid: 33, name: 'syslogins', sdes: 0x0x1554bf408, des: 0x0x154b4e4c8
+						// -- dbid: 1, objid: 33, name: 'syslogins', sdes: 0x0x15551c2e8, des: 0x0x154b4e4c8
+						// -- dbid: 1, objid: 49, name: 'sysloginroles', sdes: 0x0x15551c940, des: 0x0x154b54948
+						// -- dbid: 1, objid: 48, name: 'syssrvroles', sdes: 0x0x15551cf98, des: 0x0x154b54300
+						// -- dbid: 1, objid: 33, name: 'syslogins', sdes: 0x0x1553c7708, des: 0x0x154b4e4c8
+						// -- dbid: 1, objid: 49, name: 'sysloginroles', sdes: 0x0x1553c7d60, des: 0x0x154b54948
+						// -- dbid: 1, objid: 48, name: 'syssrvroles', sdes: 0x0x1553c83b8, des: 0x0x154b54300
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d6168, des: 0x0x154ac0270
+						// -- dbid: 1, objid: 4, name: 'systypes', sdes: 0x0x1553d67c0, des: 0x0x154b59af0
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d6e18, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d7470, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d7ac8, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d8120, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d8778, des: 0x0x154ac0270
+						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x1553d8dd0, des: 0x0x154ac0270
+						// -- dbid: 2, objid: -1310728, name: 'temp worktable', sdes: 0x0x1553d9428, des: 0x0x159222800
+						String searchStr;
+						String endStr;
+						int    pos;
+						int    dbid  = -1;
+						int    objid = -1;
+						String name  = null;
+						String sdes  = null;
+
+						searchStr = " dbid: ";
+						endStr    = ",";
+						pos = row.indexOf(searchStr);
+						if (pos >= 0)
+						{
+							pos += searchStr.length();
+							try { dbid = Integer.parseInt( row.substring(pos, row.indexOf(endStr, pos)) ); }
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(dbid) '"+row+"', caught: "+rte);}
+						}
+
+						searchStr = " objid: ";
+						endStr    = ",";
+						pos = row.indexOf(searchStr);
+						if (pos >= 0)
+						{
+							pos += searchStr.length();
+							try { objid = Integer.parseInt( row.substring(pos, row.indexOf(endStr, pos)) ); }
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(objid) '"+row+"', caught: "+rte);}
+						}
+
+						searchStr = " name: '";
+						endStr    = "',";
+						pos = row.indexOf(searchStr);
+						if (pos >= 0)
+						{
+							pos += searchStr.length();
+							try { name = row.substring(pos, row.indexOf(endStr, pos)); }
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(name) '"+row+"', caught: "+rte);}
+						}
+
+						searchStr = " sdes: ";
+						endStr    = ",";
+						pos = row.indexOf(searchStr);
+						if (pos >= 0)
+						{
+							pos += searchStr.length();
+							try { sdes = row.substring(pos, row.indexOf(endStr, pos)); }
+							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(sdes) '"+row+"', caught: "+rte);}
+						}
+
+//						if (dbid != -1 && objid != -1 && name != null)
+						if (name != null)
+						{
+							ObjectInfo oi = new ObjectInfo(dbid, objid, name, sdes);
+							objectList.add(oi);
+						}
 					}
 				}
 				in.close();
@@ -326,11 +520,14 @@ public class AseStackTraceAnalyzer
 		private void sort(StackEntry se)
 		{
 			// do sorting on child map, based on _count
-			se._childMap = CollectionUtils.sortByValuesDesc(se._childMap, false);
+//			se._childMap = CollectionUtils.sortByValuesDesc(se._childMap, false);
+			se._childMap = CollectionUtils.sortByMapValue(se._childMap, false);
 
 			// do sorting on discard map, if it contains more than one entry
+//			if (se._functionStackStartDiscardMap.size() > 1 )
+//				se._functionStackStartDiscardMap = CollectionUtils.sortByValuesDesc(se._functionStackStartDiscardMap, false);
 			if (se._functionStackStartDiscardMap.size() > 1 )
-				se._functionStackStartDiscardMap = CollectionUtils.sortByValuesDesc(se._functionStackStartDiscardMap, false);
+				se._functionStackStartDiscardMap = CollectionUtils.sortByMapValue(se._functionStackStartDiscardMap, false);
 			
 			// Do sorting on any children
 			for (String name : se._childMap.keySet())
@@ -362,7 +559,7 @@ public class AseStackTraceAnalyzer
 			return false;
 		}
 
-		private void addStackEntry(ArrayList<String> stackList)
+		private void addStackEntry(ArrayList<String> stackList, int sample, int engine, int kpid, int spid, int suid, int sampleStartRow, int sampleEndRow, ArrayList<ObjectInfo> objectList, ArrayList<String> sampleContent)
 		{
 			StackEntry insertionPoint = _root;
 
@@ -384,7 +581,8 @@ public class AseStackTraceAnalyzer
 
 			boolean addToTree            = true;
 			boolean doFunctionStackStart = false;
-			String  stackStartStr        = "";    // if "stack start" is enabled, remember the different stackPath that called this function
+			String  stackStartStr        = "";
+			String  stackStartDiscardStr = "";    // if "stack start" is enabled, remember the different stackPath that called this function
 			if ( StringUtil.hasValue(_functionStackStart) )
 			{
 				addToTree            = false;
@@ -407,31 +605,117 @@ public class AseStackTraceAnalyzer
 
 				if (doFunctionStackStart && !addToTree)
 				{
-					stackStartStr += funcName + " -> ";
+					stackStartDiscardStr += funcName + " -> ";
 					if (funcName.equals(_functionStackStart))
 					{
 						addToTree = true;
 
 						// Increment the callers stack counter
-						Integer discardCount = _root._functionStackStartDiscardMap.get(stackStartStr);
+						Integer discardCount = _root._functionStackStartDiscardMap.get(stackStartDiscardStr);
 						if (discardCount == null)
 							discardCount = new Integer(0);
 						discardCount++;
-						_root._functionStackStartDiscardMap.put(stackStartStr, discardCount);
+						_root._functionStackStartDiscardMap.put(stackStartDiscardStr, discardCount);
 					}
 				}
 
 				if (addToTree)
 				{
-					insertionPoint = insertionPoint.insertEntry(_root, funcName);
+					stackStartStr += funcName;
+
+					insertionPoint = insertionPoint.insertEntry(_root, funcName, stackStartStr, stackList, sample, engine, kpid, spid, suid, sampleStartRow, sampleEndRow, objectList, sampleContent);
 					if (functionFilterMatch && matchFunctionFilter(funcName))
 						insertionPoint.setFilterFunctionMatch(true);
+
+					stackStartStr += " -> "; // add ' -> ' at the end, for next append...
 				}
 			}
 		}
 	}
 
+	@SuppressWarnings("unused")
+	private static class ObjectInfo
+	{
+		int     _dbid;
+		int     _objid;
+		String  _name;
+		String  _sdes;
+		boolean _isTempWorktable;
+		
+		public ObjectInfo(int dbid, int objectid, String name, String sdes)
+		{
+			_dbid  = dbid;
+			_objid = objectid;
+			_name  = name;
+			_sdes  = sdes;
+			
+			// Remove first 0x if there are duplicates
+			if (_sdes != null && _sdes.startsWith("0x0x"))
+				_sdes = _sdes.substring(2);
+			
+			_isTempWorktable = "temp worktable".equals(_name);
+		}
+		
+		@Override
+		public String toString()
+		{
+//			return _dbid + ":" + _objid + ":" + _name;
+			return _name + "(" + _dbid + ":" + _objid + ")";
+		}
+	}
 
+	@SuppressWarnings("unused")
+	private static class SampleEngineDetailes
+	{
+		int    _sample;
+		int    _engine;
+		int    _kpid;
+		int    _spid;
+		int    _suid;
+		int    _sampleStartRow;
+		int    _sampleEndRow;
+		String _stackStartStr;
+		ArrayList<String>     _stackList;
+		ArrayList<ObjectInfo> _objectList;
+		ArrayList<String>     _sampleContent;
+
+		public String getKey()
+		{
+			return _sample + ":" + _engine;
+		}
+		public static String getKey(int sample, int engine)
+		{
+			return sample + ":" + engine;
+		}
+
+		public SampleEngineDetailes(int sample, int engine, int kpid, int spid, int suid, int sampleStartRow, int sampleEndRow, String stackStartStr, ArrayList<String> stackList, ArrayList<ObjectInfo> objectList, ArrayList<String> sampleContent)
+		{
+			_sample         = sample;
+			_engine         = engine;
+			_kpid           = kpid;
+			_spid           = spid;
+			_suid           = suid;
+			_sampleStartRow = sampleStartRow;
+			_sampleEndRow   = sampleEndRow;
+			_stackStartStr  = stackStartStr;
+			_stackList      = stackList;
+			_objectList     = objectList;
+			_sampleContent  = sampleContent;
+		}
+		
+		public String getFullCallStack()
+		{
+			String stackPath = "";
+			for (String fname : _stackList)
+				stackPath += fname + " -> ";
+
+			// Remove last " -> "
+			if (stackPath.endsWith(" -> "))
+				stackPath = stackPath.substring(0, stackPath.length()-" -> ".length());
+
+			return stackPath;
+		}
+	}
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------
@@ -449,6 +733,11 @@ public class AseStackTraceAnalyzer
 		String _name = "";
 		int _depth = 0;
 		int _count = 0;
+		
+		int _maxSample = 0;
+		int _maxEngine = 0;
+		
+		LinkedHashMap<String, SampleEngineDetailes> _sampleEngineDetailes = new LinkedHashMap<String, AseStackTraceAnalyzer.SampleEngineDetailes>();
 
 		// What child functions has this function called
 		Map<String, StackEntry> _childMap = new LinkedHashMap<String, StackEntry>();
@@ -463,6 +752,9 @@ public class AseStackTraceAnalyzer
 		// Is used when FuctionMatching is used, true if this function matches the creteria
 		// This so we can make the font "bold" in the tree view
 		boolean _isFilterFunctionMatch = false;
+
+		// Stack so far
+		private String _stackStartStr;
 		
 		public StackEntry(StackEntry root, String name)
 		{
@@ -483,7 +775,7 @@ public class AseStackTraceAnalyzer
 			_isFilterFunctionMatch = match;
 		}
 
-		public StackEntry insertEntry(StackEntry root, String name)
+		public StackEntry insertEntry(StackEntry root, String name, String stackStartStr, ArrayList<String> stackList, int sample, int engine, int kpid, int spid, int suid, int sampleStartRow, int sampleEndRow, ArrayList<ObjectInfo> objectList, ArrayList<String> sampleContent)
 		{
 			StackEntry se = _childMap.get(name);
 			if (se == null)
@@ -493,8 +785,20 @@ public class AseStackTraceAnalyzer
 			}
 			se._count++;
 			se._depth = this._depth + 1;
+			se._stackStartStr = stackStartStr;
 			
+			SampleEngineDetailes sampleDetailes = new SampleEngineDetailes(sample, engine, kpid, spid, suid, sampleStartRow, sampleEndRow, stackStartStr, stackList, objectList, sampleContent);
+			_sampleEngineDetailes.put(sampleDetailes.getKey(), sampleDetailes);
+			
+			_maxSample = Math.max(_maxSample, sample);
+			_maxEngine = Math.max(_maxEngine, engine);
+					
 			return se;
+		}
+
+		public String getStackStartStr()
+		{
+			return _stackStartStr;
 		}
 
 		/**
@@ -523,6 +827,11 @@ public class AseStackTraceAnalyzer
 			return 0;
 //			return _count - o._count;
 		}
+
+		public SampleEngineDetailes getSampleEngineDetailes(int row, int col)
+		{
+			return _sampleEngineDetailes.get(SampleEngineDetailes.getKey(row, col));
+		}
 	}
 
 
@@ -538,7 +847,7 @@ public class AseStackTraceAnalyzer
 	 */
 	public static class AseStackTreeView
 	extends JFrame
-	implements ActionListener
+	implements ActionListener, MouseListener
 	{
 		private static final long serialVersionUID = 1L;
 		
@@ -564,6 +873,8 @@ public class AseStackTraceAnalyzer
 		private JTextField   _functionStackStart_txt = new JTextField();
 		private JCheckBox    _keepCppInstance_chk    = new JCheckBox("Preserve C++ Instance");
 
+		private JCheckBox    _tooltipStackMatrix_chk = new JCheckBox("Show Stack Matrix Overview on tooltip", true);
+
 		private JLabel       _tracefile_lbl          = new JLabel("sybmon file");
 		private JTextField   _tracefile_txt          = new JTextField();
 		private JButton      _tracefile_but          = new JButton("...");
@@ -577,6 +888,7 @@ public class AseStackTraceAnalyzer
 		private JButton      _sybmonExample_but      = new JButton("Example Script to do Stack Trace");
 
 		private JTree        _treeView               = null;
+		private JPopupMenu   _treeViewPopupMenu      = null;
 
 		private FocusableTip _panelFocusableTip        = null;
 		private boolean      _usePanelFocusableTooltip = true;
@@ -588,6 +900,7 @@ public class AseStackTraceAnalyzer
 		public AseStackTreeView(String stackfile)
 		{
 			super();
+
 			if (stackfile != null)
 			{
 				_tracefile_txt.setText(stackfile);
@@ -598,6 +911,17 @@ public class AseStackTraceAnalyzer
 		private void init()
 		{
 			setTitle("Simple ASE Stack Trace Viewer");
+
+			ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ase_stack_trace_tool.png");
+			ImageIcon icon32 = null; //= SwingUtils.readImageIcon(Version.class, "images/ase_stack_trace_tool_32.png");
+			if (icon16 != null || icon32 != null)
+			{
+				ArrayList<Image> iconList = new ArrayList<Image>();
+				if (icon16 != null) iconList.add(icon16.getImage());
+				if (icon32 != null) iconList.add(icon32.getImage());
+
+				setIconImages(iconList);
+			}
 
 			setLayout(new BorderLayout());
 			add(createTopPanel(),      BorderLayout.NORTH);
@@ -675,6 +999,8 @@ public class AseStackTraceAnalyzer
 			_functionStackStart_chk.setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
 			_functionStackStart_txt.setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
 			_keepCppInstance_chk   .setToolTipText("<html>Strip off or Keep the C++ instance. If function looks like '_$o1cexoL0.kpsched', if strip=true, it fill become 'kpsched'</html>"); 
+			
+			_tooltipStackMatrix_chk.setToolTipText("<html>Show some kind of <i>map</i> to show in what sample/engine this stacktrace is visible at.</html>");
 
 			_tracefile_lbl         .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>"); 
 			_tracefile_txt         .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>");
@@ -715,7 +1041,9 @@ public class AseStackTraceAnalyzer
 			panel.add(_functionStackStart_chk, "");
 			panel.add(_functionStackStart_txt, "push, grow, wrap");
 
-			panel.add(_keepCppInstance_chk,    "wrap");
+			panel.add(_keepCppInstance_chk,    "");
+			panel.add(new JLabel(),            "split, pushx, growx");
+			panel.add(_tooltipStackMatrix_chk, "wrap");
 
 			panel.add(_tracefile_lbl,          "");
 			panel.add(_tracefile_txt,          "split, push, grow");
@@ -773,8 +1101,12 @@ public class AseStackTraceAnalyzer
 
 			// Focus action listener
 
-			return panel;
+			_treeView.addMouseListener(this);
+			_treeViewPopupMenu = new JPopupMenu();
 			
+			_treeViewPopupMenu.add(new StackMatrixTableAction(this));
+
+			return panel;
 		}
 
 		/**
@@ -824,6 +1156,41 @@ public class AseStackTraceAnalyzer
 							{
 								StackEntry se = (StackEntry) lastPath;
 								tip = se._name;
+
+								boolean buildMatix = _tooltipStackMatrix_chk.isSelected();
+								if (buildMatix)
+								{
+									StringBuilder sb = new StringBuilder();
+									boolean[][] matrix = new boolean[se._maxSample+1][se._maxEngine+1];
+									for (SampleEngineDetailes sed : se._sampleEngineDetailes.values())
+										matrix[sed._sample][sed._engine] = true;
+									
+									sb.append("<html><b>Current stack:</b> <code>"+se._stackStartStr+"</code><br><b>Was found in following samples/engines</b><br>");
+									sb.append("<br>");
+
+									sb.append("<table border=1 cellspacing=1 cellpadding=0>");
+									sb.append("<tr> <th>Sample</th>");
+									for (int e=0; e<=se._maxEngine; e++)
+										sb.append("<th>E").append(e).append("</th>");
+									sb.append("</tr>");
+
+									for (int s=1; s<matrix.length; s++)
+									{
+										sb.append("<tr> <td>").append(s).append("</td>");
+										for (int e=0; e<matrix[s].length; e++)
+										{
+											sb.append("<td align=\"center\">");
+											if (matrix[s][e])
+												sb.append("<b><font color=\"red\">&bull;</font></b>");
+											sb.append("</td>");
+										}
+										sb.append("</tr>");
+									}
+									sb.append("</table>");
+									sb.append("</html>");
+									tip = sb.toString();
+								}
+
 								if (_functionStackStart_chk.isSelected())
 								{
 									tip = "<html>Stack Traces Start:" + se._name+"<br>";
@@ -984,42 +1351,772 @@ public class AseStackTraceAnalyzer
 		}
 
 		
+
+		/*---------------------------------------------------
+		** BEGIN: implementing MouseListener
+		**---------------------------------------------------
+		*/
+		@Override
+		public void mouseClicked(MouseEvent e)
+		{
+			if (SwingUtilities.isRightMouseButton(e)) 
+			{
+				int row = _treeView.getClosestRowForLocation(e.getX(), e.getY());
+				_treeView.setSelectionRow(row);
+				_treeViewPopupMenu.show(e.getComponent(), e.getX(), e.getY());
+			}
+		}
+
+		@Override
+		public void mousePressed(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e)
+		{
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e)
+		{
+		}
+		/*---------------------------------------------------
+		** END: implementing MouseListener
+		**---------------------------------------------------
+		*/
+
+		//-------------------------------------------------------------------
+		// Local ACTION classes
+		//-------------------------------------------------------------------
+		private class StackMatrixTableAction
+		extends AbstractAction
+		{
+			private static final long serialVersionUID = 1L;
+
+			private static final String NAME = "Open 'Stack Matrix Table'...";
+//			private static final String ICON = "images/delete.png";
+
+			private JFrame _owner = null;
+			public StackMatrixTableAction(JFrame owner)
+			{
+//				super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+				super(NAME);
+				_owner = owner;
+			}
+
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+//				System.out.println("source: "+e.getSource());
+//				System.out.println("     e: "+e);
+				TreePath path = _treeView.getSelectionPath();
+				if (path == null)
+					return;	
+
+//				String stackPath = "";
+//				Object[] oa = path.getPath();
+//				for (int i=0; i<oa.length; i++)
+//				{
+//					StackEntry se = (StackEntry) ((DefaultMutableTreeNode)oa[i]).getUserObject();
+//					stackPath += se._name + " -> ";
+//				}
+//				// Remove last " -> "
+//				if (stackPath.endsWith(" -> "))
+//					stackPath = stackPath.substring(0, stackPath.length()-" -> ".length());
+
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+				Object o = node.getUserObject();
+				if (o instanceof StackEntry)
+				{
+					StackEntry se = (StackEntry) o;
+//					System.out.println("     se: "+se);
+					
+					if (_stackDialog == null)
+						_stackDialog = new StackMatrixTableDialog(_owner);
+
+					_stackDialog.setStackEntry(se);
+					
+					_stackDialog.setVisible(true);
+				}
+			}
+		}
+		private StackMatrixTableDialog _stackDialog = null;
+		
+		@SuppressWarnings("unused")
+		private static class StackMatrixTableDialog
+		extends JDialog
+		implements ListSelectionListener, ActionListener
+		{
+			private static final long serialVersionUID = 1L;
+
+			private JFrame                _owner = null;
+
+			private JSplitPane            _splitPane = new JSplitPane();
+
+			private JPanel                _infoPane = new JPanel(new MigLayout());
+
+			private RSyntaxTextArea       _textArea = new RSyntaxTextArea();
+			private RTextScrollPane       _textScroll = new RTextScrollPane(_textArea);
+
+			private StackEntry            _se;
+			private GTable                _table;
+			private StackMatrixTableModel _tm;
+			private JScrollPane           _tableScroll;
+			
+//			public StackMatrixTableDialog(JFrame owner, StackMatrixTableModel tm)
+			public StackMatrixTableDialog(JFrame owner)
+			{
+				super(owner, "Stack Matrix Table", ModalityType.MODELESS);
+				
+				_owner = owner;
+//				_tm = tm;
+				
+				init();
+
+				addWindowListener(new WindowAdapter()
+				{
+					@Override
+					public void windowClosing(WindowEvent e)
+					{
+						saveProps();
+						dispose();
+					}
+				});
+
+				pack();
+				loadProps();
+				getSavedWindowProps();
+
+				SwingUtils.setSizeWithingScreenLimit(this, 5);
+			}
+
+			private JLabel     _openStackName_lbl = new JLabel("Open at Stack Path");
+			private JTextField _openStackName_txt = new JTextField();
+
+			private JLabel     _currStackName_lbl = new JLabel("Current Stack Path");
+			private JTextField _currStackName_txt = new JTextField();
+
+			private JLabel     _currSample_lbl    = new JLabel("Current Sample");
+			private JTextField _currSample_txt    = new JTextField(4);
+
+			private JLabel     _currEngine_lbl    = new JLabel("Current Engine");
+			private JTextField _currEngine_txt    = new JTextField(4);
+
+			private JLabel     _currKpid_lbl      = new JLabel("Current KPID");
+			private JTextField _currKpid_txt      = new JTextField(12);
+			private JComboBox  _currKpid_cbx      = new JComboBox();
+			private int        _currKpid          = -1;
+			private int        _lastKpid          = -1;
+
+			private JLabel     _currSpid_lbl      = new JLabel("Current SPID");
+			private JTextField _currSpid_txt      = new JTextField(5);
+			private JComboBox  _currSpid_cbx      = new JComboBox();
+
+			private JLabel     _currSuid_lbl      = new JLabel("Current SUID");
+			private JTextField _currSuid_txt      = new JTextField(5);
+			private JComboBox  _currSuid_cbx      = new JComboBox();
+
+			private JLabel     _currObjid_lbl     = new JLabel("Current Object ID's");
+			private JTextField _currObjid_txt     = new JTextField();
+			private JComboBox  _currObjid_cbx     = new JComboBox();
+
+
+			public void setOpenStackName(String stackPath)
+			{
+				_openStackName_txt.setText(stackPath);
+			}
+
+			public void setCurrentStackName(String stackPath)
+			{
+				_currStackName_txt.setText(stackPath);
+				_currStackName_txt.setCaretPosition(0);
+			}
+
+			public void setCurrentSample(int sample)
+			{
+				_currSample_txt.setText( sample < 0 ? "" : Integer.toString(sample));
+			}
+
+			public void setCurrentEngine(int engine)
+			{
+				_currEngine_txt.setText( engine < 0 ? "" : Integer.toString(engine));
+			}
+
+			public void setCurrentKpid(int kpid)
+			{
+				_currKpid = kpid;
+				_currKpid_txt.setText( kpid < 0 ? "" : Integer.toString(kpid));
+			}
+
+			public void setCurrentSpid(int spid)
+			{
+				_currSpid_txt.setText( spid < 0 ? "" : Integer.toString(spid));
+			}
+
+			public void setCurrentSuid(int suid)
+			{
+				_currSuid_txt.setText( suid < 0 ? "" : Integer.toString(suid));
+			}
+
+			private void setCurrentObjectInfo(ArrayList<ObjectInfo> objectList)
+			{
+				if (objectList == null)
+				{
+					_currObjid_txt.setText("");
+					return;
+				}
+
+//System.out.println("objectList.size="+objectList.size());
+//System.out.println("objectList     ="+objectList);
+				String oiStr = "";
+				for (ObjectInfo oi : objectList)
+					oiStr += oi.toString() + ", ";
+
+				// Remove last ", "
+				if (oiStr.length() > 2)
+					oiStr = oiStr.substring(0, oiStr.length() - ", ".length());
+
+				_currObjid_txt.setText(oiStr);
+			}
+
+
+			private void init()
+			{
+				setLayout(new BorderLayout());
+
+				_openStackName_txt.setEditable(false);
+				_currStackName_txt.setEditable(false);
+				_currSample_txt   .setEditable(false);
+				_currEngine_txt   .setEditable(false);
+				_currKpid_txt     .setEditable(false);
+				_currSpid_txt     .setEditable(false);
+				_currSuid_txt     .setEditable(false);
+				_currObjid_txt    .setEditable(false);
+				
+				_currKpid_cbx .setMaximumRowCount(50);
+				_currSpid_cbx .setMaximumRowCount(50);
+				_currSuid_cbx .setMaximumRowCount(50);
+				_currObjid_cbx.setMaximumRowCount(50);
+				
+				_currKpid_cbx .addActionListener(this);
+				_currSpid_cbx .addActionListener(this);
+				_currSuid_cbx .addActionListener(this);
+				_currObjid_cbx.addActionListener(this);
+
+//				_textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+				_textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+
+				_infoPane.add(_openStackName_lbl,        "");
+				_infoPane.add(_openStackName_txt,        "pushx, growx, wrap");
+				
+				_infoPane.add(_currStackName_lbl,        "");
+				_infoPane.add(_currStackName_txt,        "pushx, growx, wrap");
+				
+				_infoPane.add(_currSample_lbl,           "");
+				_infoPane.add(_currSample_txt,           "split");
+				_infoPane.add(_currEngine_lbl,           "gap 20");
+				_infoPane.add(_currEngine_txt,           "wrap");
+				
+				_infoPane.add(_currKpid_lbl,             "");
+				_infoPane.add(_currKpid_txt,             "split");
+				_infoPane.add(_currKpid_cbx,             "");
+				_infoPane.add(_currSpid_lbl,             "gap 20");
+				_infoPane.add(_currSpid_txt,             "");
+				_infoPane.add(_currSpid_cbx,             "");
+				_infoPane.add(_currSuid_lbl,             "gap 20");
+				_infoPane.add(_currSuid_txt,             "");
+				_infoPane.add(_currSuid_cbx,             "wrap");
+
+				_infoPane.add(_currObjid_lbl,            "");
+				_infoPane.add(_currObjid_txt,            "split, pushx, growx");
+				_infoPane.add(_currObjid_cbx,            "wrap");
+				
+				_table = new GTable();
+				_table.setSortable(false);
+//				_table.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+				_table.packAll(); // set size so that all content in all cells are visible
+//				_table.setColumnControlVisible(true);
+				_table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+				_table.setColumnSelectionAllowed(true);
+				_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+				_table.getSelectionModel().addListSelectionListener(this);                   // Change ROW
+				_table.getColumnModel().getSelectionModel().addListSelectionListener(this);  // CHange CELL
+//				setModel(_tm);
+
+				_table.addHighlighter(new ColorHighlighter(new HighlightPredicate()
+				{
+					@Override
+					public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+					{
+						SampleEngineDetailes sde = _tm._se.getSampleEngineDetailes(adapter.row+1, adapter.column-1);
+						if (sde != null && _currKpid == sde._kpid)
+							return true;
+						return false;
+					}
+				}, Color.ORANGE, null));
+				
+				_tableScroll = new JScrollPane(_table);
+				_splitPane.setTopComponent(_tableScroll);
+				_splitPane.setBottomComponent(_textScroll);
+				
+				add(_infoPane,  BorderLayout.NORTH);
+				add(_splitPane, BorderLayout.CENTER);
+
+				int divLoc = getSize().width / 2;
+				if (divLoc <= 10)
+					divLoc = 500;
+				_splitPane.setDividerLocation(divLoc);
+
+			}
+			
+//			public void setModel(StackMatrixTableModel tm)
+//			{
+//				_tm = tm;
+//				_table.setModel(_tm);
+//				_table.packAll();
+//				
+//				// get all KPID, SPID, SUID and it's count
+//				
+//			}
+			
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+
+				if (_currKpid_cbx.equals(source))
+				{
+					String str = _currKpid_cbx.getSelectedItem().toString();
+					str = str.substring("KPID = ".length(), str.indexOf(","));
+					try 
+					{
+						setCurrentKpid(Integer.parseInt(str));
+						_table.repaint();
+					} 
+					catch (NumberFormatException ignore) {}
+				}
+			}
+
+			public void setStackEntry(StackEntry se)
+			{
+				StackMatrixTableModel tm = new StackMatrixTableModel(se);
+				_tm = tm;
+				_table.setModel(_tm);
+				_table.getColumnModel().setColumnMargin(0);
+//				_table.packAll();
+				SwingUtils.calcColumnWidths(_table);
+
+				
+				setOpenStackName(se.getStackStartStr());
+
+				Map<Integer, Integer> kpidCount = new HashMap<Integer, Integer>();
+				Map<Integer, Integer> spidCount = new HashMap<Integer, Integer>();
+				Map<Integer, Integer> suidCount = new HashMap<Integer, Integer>();
+
+				Map<String, Integer> objidCount = new HashMap<String, Integer>();
+
+				// get all KPID, SPID, SUID and it's count
+				for (SampleEngineDetailes sed : se._sampleEngineDetailes.values())
+				{
+					Integer count;
+
+					// kpid
+					count = kpidCount.get(sed._kpid);
+					if (count == null)
+						kpidCount.put(sed._kpid, 1);
+					else
+						kpidCount.put(sed._kpid, count + 1);
+
+					// spid
+					count = spidCount.get(sed._spid);
+					if (count == null)
+						spidCount.put(sed._spid, 1);
+					else
+						spidCount.put(sed._spid, count + 1);
+
+					// suid
+					count = suidCount.get(sed._suid);
+					if (count == null)
+						suidCount.put(sed._suid, 1);
+					else
+						suidCount.put(sed._suid, count + 1);
+
+					// objid
+					for (ObjectInfo oi : sed._objectList)
+					{
+						String oiStr = oi.toString();
+						
+    					count = objidCount.get(oiStr);
+    					if (count == null)
+    						objidCount.put(oiStr, 1);
+    					else
+    						objidCount.put(oiStr, count + 1);
+					}
+				}
+
+				kpidCount  = CollectionUtils.sortByMapValue(kpidCount,  false);
+				spidCount  = CollectionUtils.sortByMapValue(spidCount,  false);
+				suidCount  = CollectionUtils.sortByMapValue(suidCount,  false);
+				objidCount = CollectionUtils.sortByMapValue(objidCount, false);
+				
+//				System.out.println("--kpid--Count-Map:" + StringUtil.toCommaStr(kpidCount));
+//				System.out.println("--spid--Count-Map:" + StringUtil.toCommaStr(spidCount));
+//				System.out.println("--suid--Count-Map:" + StringUtil.toCommaStr(suidCount));
+//				System.out.println("--objid-Count-Map:" + StringUtil.toCommaStr(objidCount));
+
+				_currKpid_cbx.removeActionListener(this);;
+				_currKpid_cbx.removeAllItems();
+				_currKpid_cbx.addActionListener(this);
+			    for(Entry<Integer, Integer> e : kpidCount.entrySet()) 
+			    {
+			        Integer key = e.getKey();
+			        Integer val = e.getValue();
+				    _currKpid_cbx.addItem("KPID = " + key + ", count = " + val);
+			    }
+
+				_currKpid_cbx.removeActionListener(this);;
+				_currSpid_cbx.removeAllItems();
+				_currKpid_cbx.addActionListener(this);
+			    for(Entry<Integer, Integer> e : spidCount.entrySet()) 
+			    {
+			        Integer key = e.getKey();
+			        Integer val = e.getValue();
+				    _currSpid_cbx.addItem("SPID = " + key + ", count = " + val);
+			    }
+
+				_currKpid_cbx.removeActionListener(this);;
+				_currSuid_cbx.removeAllItems();
+				_currKpid_cbx.addActionListener(this);
+			    for(Entry<Integer, Integer> e : suidCount.entrySet()) 
+			    {
+			        Integer key = e.getKey();
+			        Integer val = e.getValue();
+				    _currSuid_cbx.addItem("SUID = " + key + ", count = " + val);
+			    }
+
+			    _currObjid_cbx.removeActionListener(this);;
+			    _currObjid_cbx.removeAllItems();
+			    _currObjid_cbx.addActionListener(this);
+			    for(Entry<String, Integer> e : objidCount.entrySet()) 
+			    {
+			    	String  key = e.getKey();
+			        Integer val = e.getValue();
+			        _currObjid_cbx.addItem("OBJ = " + key + ", count = " + val);
+			    }
+			}
+
+			@Override
+			public void valueChanged(ListSelectionEvent e)
+			{
+				if (e.getValueIsAdjusting())
+					return;
+				int row = _table.getSelectionModel().getLeadSelectionIndex();
+				int col = _table.getColumnModel().getSelectionModel().getLeadSelectionIndex();
+				
+				// Adjust
+				row++;
+				col--;
+
+				StackMatrixTableModel tm = (StackMatrixTableModel)_table.getModel();
+				String text = tm.getSampleText(row, col);
+				_textArea.setText(text);
+				_textArea.setCaretPosition(0);
+				
+				SampleEngineDetailes sde = tm._se.getSampleEngineDetailes(row, col);
+				if (sde == null)
+				{
+					setCurrentStackName("");
+					setCurrentSample(-1);
+					setCurrentEngine(-1);
+					setCurrentKpid(-1);
+					setCurrentSpid(-1);
+					setCurrentSuid(-1);
+					setCurrentObjectInfo(null);
+				}
+				else
+				{
+					setCurrentStackName(sde.getFullCallStack());
+					setCurrentSample(sde._sample);
+					setCurrentEngine(sde._engine);
+					setCurrentKpid(sde._kpid);
+					setCurrentSpid(sde._spid);
+					setCurrentSuid(sde._suid);
+					setCurrentObjectInfo(sde._objectList);
+				}
+				
+				// request Repaint if we choose a new KPID
+				if (_currKpid != _lastKpid)
+					_table.repaint();
+
+				_lastKpid = _currKpid;
+				
+//				System.out.println(String.format("Lead: %d, %d. ", 
+//						_table.getSelectionModel().getLeadSelectionIndex(),
+//						_table.getColumnModel().getSelectionModel().getLeadSelectionIndex()));
+//
+//				System.out.print("Rows: ");
+//				for (int c : _table.getSelectedRows()) {
+//					System.out.print(String.format("%d, ", c));
+//				}
+//				System.out.println();
+//
+//				System.out.print("Columns: ");
+//				for (int c : _table.getSelectedColumns()) {
+//					System.out.print(String.format("%d, ", c));
+//				}
+//				System.out.println();
+			}
+
+			private void saveProps()
+			{
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null)
+				{
+					_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
+					return;
+				}
+				//----------------------------------
+				// Settings
+				//----------------------------------
+
+				//------------------
+				// WINDOW
+				//------------------
+				conf.setProperty("StackMatrixTable.dialog.window.width",  this.getSize().width);
+				conf.setProperty("StackMatrixTable.dialog.window.height", this.getSize().height);
+				conf.setProperty("StackMatrixTable.dialog.window.pos.x",  this.getLocationOnScreen().x);
+				conf.setProperty("StackMatrixTable.dialog.window.pos.y",  this.getLocationOnScreen().y);
+
+				conf.setProperty("StackMatrixTable.dialog.divLocation",   _splitPane.getDividerLocation());
+
+				conf.save();
+			}
+			
+			private void loadProps()
+			{
+			}
+			
+			private void getSavedWindowProps()
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				if (conf == null)
+				{
+					_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
+					return;
+				}
+
+				int width  = conf.getIntProperty("StackMatrixTable.dialog.window.width",  1024);
+				int height = conf.getIntProperty("StackMatrixTable.dialog.window.height", 768);
+				int x      = conf.getIntProperty("StackMatrixTable.dialog.window.pos.x",  -1);
+				int y      = conf.getIntProperty("StackMatrixTable.dialog.window.pos.y",  -1);
+				if (width != -1 && height != -1)
+				{
+					this.setSize(width, height);
+				}
+				if (x != -1 && y != -1)
+				{
+					if ( ! SwingUtils.isOutOfScreen(x, y, width, height) )
+						this.setLocation(x, y);
+				}
+				
+				int divLoc = conf.getIntProperty("StackMatrixTable.dialog.divLocation",  -1);
+				if (divLoc >= 0)
+					_splitPane.setDividerLocation(divLoc);
+			}
+		}
+
+		private static class StackMatrixTableModel
+		extends AbstractTableModel
+		{
+			private static final long serialVersionUID = 1L;
+
+//			private boolean _bySample = true;  // BySample or ByEngine on the X-axis (left-hand-side)
+			private StackEntry _se;
+			
+			private ArrayList<String>            _headers = new ArrayList<String>();
+//			private ArrayList<ArrayList<Object>> _rows    = new ArrayList<ArrayList<Object>>();
+			Boolean[][] _matrix;
+
+			public StackMatrixTableModel(StackEntry se)
+			{
+				_se = se;
+				init();
+			}
+			
+			public String getSampleText(int row, int col)
+			{
+				SampleEngineDetailes sed = _se.getSampleEngineDetailes(row, col);
+				if (sed == null)
+					return "None for row="+row+", col="+col;
+				
+//				System.out.println("SED _sample:               "+sed._sample);
+//				System.out.println("SED _engine:               "+sed._engine);
+//				System.out.println("SED _sampleStartRow:       "+sed._sampleStartRow);
+//				System.out.println("SED _sampleEndRow:         "+sed._sampleEndRow);
+//				System.out.println("SED _sampleContent.size(): "+sed._sampleContent.size());
+//				System.out.println("");
+
+				StringBuilder sb = new StringBuilder();
+				for (String str : sed._sampleContent)
+					sb.append(str).append("\n");
+				
+				return sb.toString();
+			}
+
+			private void init()
+			{
+//				boolean[][] matrix;
+
+//				if (_bySample)
+//				{
+					_matrix = new Boolean[_se._maxSample][_se._maxEngine+1];
+    				for (SampleEngineDetailes sed : _se._sampleEngineDetailes.values())
+    					_matrix[sed._sample-1][sed._engine] = true;
+
+    				_headers.add("Sample");
+    				String enginePrefix = "E";
+					for (int e=0; e<=_se._maxEngine; e++)
+					{
+						// Skip the 'E' prefix on engine number 10 and above
+						// when we have more that 32 engines (to save some space on the screen)
+						if (e >= 10 && _se._maxEngine > 32)
+							enginePrefix = "";
+	    				_headers.add(enginePrefix + e);
+					}
+//				}
+//				else
+//				{
+//					_matrix = new Boolean[_se._maxEngine+1][_se._maxSample+1];
+//    				for (SampleEngineDetailes sed : _se._sampleEngineDetailes.values())
+//    					_matrix[sed._engine][sed._sample] = true;
+//
+//    				_headers.add("Engine");
+//					for (int s=0; s<=_se._maxSample; s++)
+//	    				_headers.add("S"+s);
+//				}
+				
+			}
+
+			@Override
+			public int getRowCount()
+			{
+				return _matrix.length;
+			}
+
+			@Override
+			public int getColumnCount()
+			{
+				return _headers.size();
+			}
+
+			@Override
+			public String getColumnName(int column)
+			{
+				return _headers.get(column);
+			}
+			
+			@Override
+			public Class<?> getColumnClass(int columnIndex)
+			{
+				if (columnIndex == 0)
+					return Integer.class;
+
+				return Boolean.class;
+			}
+			
+			@Override
+			public Object getValueAt(int rowIndex, int columnIndex)
+			{
+				if (columnIndex == 0)
+					return rowIndex + 1;
+
+				// TODO Auto-generated method stub
+				return _matrix[rowIndex][columnIndex-1];
+			}
+		}
+
+
+		
 		private void showSybmonExampleScript()
 		{
 			String exampleStr =
-				"#!/bin/ksh\n" +
+				"#!/bin/bash\n" +
 				"\n" +
-				"#--- Setup environment if this is not done from the caller of the script \n" +
-				"#export DSQUERY=ase_server_name \n" +
-				"#export SYBASE=/opt/sybase15 \n" +
-				"#export SYBASE_ASE=ASE-15_0 \n" +
-				"#export SYBASE_OCS=OCS-15_0 \n" +
-				" \n" +
-				"#--- Setup LD_LIBRARY_PATH (Solaris, Linux), SHLIB (hp), LIBPATH (aix),  \n" + 
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH \n" +
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH \n" +
-				" \n" +
-				" \n" +
-				"echo 'Starting' \n" +
-				" \n" +
-				"ts=$(date +%Y%m%d_%H%M%S) \n" +
-				"logFile=\"stacktrace_${DSQUERY}_${ts}.out\" \n" +
-				" \n" +
-				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON \n" +
-				"catalog $SYBASE/$SYBASE_ASE \n" +
-				"attach $DSQUERY \n" +
-				"log on ${logFile} \n" +
-				"set display off \n" +
-				"sample count=500 interval=100 context=y \n" +
-				"log close \n" +
-				"quit \n" +
-				"SYBMON \n" +
-				" \n" +
-				"if [ ! -f sample_${dttm}.out ] \n" +
-				"then \n" +
-				"	echo 'An error occured. The file has not been created' \n" +
-				"	exit -1 \n" +
-				"fi \n" +
+				"#--- Use input params for setup\n" +
+				"export DSQUERY=${1:-$DSQUERY}\n" +
+				"\n" +
+				"#--- Setup/override environment if this is not done from the caller of the script\n" +
+				"#export DSQUERY=ase_server_name\n" +
+				"#export SYBASE=/opt/sybase\n" +
+				"#export SYBASE_ASE=ASE-15_0\n" +
+				"#export SYBASE_OCS=OCS-15_0\n" +
+				"\n" +
+				"#--- Setup LD_LIBRARY_PATH (Solaris, Linux), SHLIB (hp), LIBPATH (aix),\n" +
+				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH\n" +
+				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH\n" +
+				"\n" +
+				"#--- Setup how many times we should stacktrace 'sampleCount'\n" +
+				"#--- and the sleeptime between stacktraces 'sampleInterval'\n" +
+				"sampleCount=${2:-500}\n" +
+				"sampleInterval=${3:-100}\n" +
+				"secItWillTake=$(( ${sampleCount} * ${sampleInterval} / 1000 ))\n" +
+				"\n" +
+				"ts=$(date +%Y%m%d_%H%M%S)\n" +
+				"logFile=\"stacktrace_${DSQUERY}_${ts}.out\"\n" +
+				"\n" +
+				"if [ \"\" = \"$DSQUERY\" ]\n" +
+				"then\n" +
+				"        echo ''\n" +
+				"        echo \"Usage: $(basename $0) [servername] [sampleCount] [sampleInterval]\"\n" +
+				"        echo '   or environment variable DSQUERY has to be set.'\n" +
+				"        echo ''\n" +
+				"        exit 1\n" +
+				"fi\n" +
+				"\n" +
+				"echo ''\n" +
+				"echo '############################################################################################'\n" +
+				"echo 'Starting stacktrace of ASE'\n" +
+				"echo \"  servername      = ${DSQUERY}\"\n" +
+				"echo \"  sample count    = ${sampleCount}\"\n" +
+				"echo \"  sample interval = ${sampleInterval}\"\n" +
+				"echo ''\n" +
+				"echo \"  SYBASE          = ${SYBASE}\"\n" +
+				"echo \"  SYBASE_ASE      = ${SYBASE_ASE}\"\n" + 
+				"echo \"  SYBASE_OCS      = ${SYBASE_OCS}\"\n" + 
+				"echo \"  LD_LIBRARY_PATH = ${LD_LIBRARY_PATH}\"\n" + 
+				"echo ''\n" +
+				"echo \"This will take approx ${secItWillTake} seconds\"\n" +
+				"echo ''\n" +
+				"echo 'The result will be found in: '\n" +
+				"echo \"  directory = $(pwd)\"\n" +
+				"echo \"  logFile   = ${logFile}\"\n" +
+				"echo '############################################################################################'\n" +
+				"echo ''\n" +
+				"\n" +
+//				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON\n" +
+				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine << SYBMON\n" +
+				"\n" +
+				"catalog $SYBASE/$SYBASE_ASE\n" +
+				"attach $DSQUERY\n" +
+				"log on ${logFile}\n" +
+				"set display off\n" +
+				"sample count=${sampleCount} interval=${sampleInterval} context=y reg=n\n" +
+				"log close\n" +
+				"quit\n" +
+				"SYBMON\n" +
+				"\n" +
+				"if [ ! -f ${logFile} ]\n" +
+				"then\n" +
+				"        echo 'An error occured. The file has not been created'\n" +
+				"        exit -1\n" +
+				"fi\n" +
 				"";
 
 			// Top panel
@@ -1099,6 +2196,8 @@ public class AseStackTraceAnalyzer
 			conf.setProperty("AseStackTraceAnalyzer.info.functionStackStart.text",       _functionStackStart_txt.getText());
 			conf.setProperty("AseStackTraceAnalyzer.info.keepCppInstance.isSelected",    _keepCppInstance_chk.isSelected());
 
+			conf.setProperty("AseStackTraceAnalyzer.info.tooltip.show.stackMatrix",      _tooltipStackMatrix_chk.isSelected());
+
 			conf.setProperty("AseStackTraceAnalyzer.info.tracefile.text",                _tracefile_txt.getText());
 
 			//------------------
@@ -1134,6 +2233,8 @@ public class AseStackTraceAnalyzer
 			_functionStackStart_chk.setSelected(conf.getBooleanProperty("AseStackTraceAnalyzer.info.functionStackStart.isSelected", _functionStackStart_chk.isSelected()));
 			_functionStackStart_txt.    setText(conf.getProperty       ("AseStackTraceAnalyzer.info.functionStackStart.text",       _functionStackStart_txt.getText()));
 			_keepCppInstance_chk.   setSelected(conf.getBooleanProperty("AseStackTraceAnalyzer.info.keepCppInstance.isSelected",    _keepCppInstance_chk   .isSelected()));
+
+			_tooltipStackMatrix_chk.setSelected(conf.getBooleanProperty("AseStackTraceAnalyzer.info.tooltip.show.stackMatrix",      _tooltipStackMatrix_chk.isSelected()));
 
 			// If nothing has been passed in the constructor
 			if (StringUtil.isNullOrBlank(_tracefile_txt.getText()))
@@ -1178,7 +2279,7 @@ public class AseStackTraceAnalyzer
 		/*---------------------------------------------------
 		** END: implementing saveProps & loadProps
 		**---------------------------------------------------
-		*/	
+		*/
 	}
 	
 	
