@@ -48,6 +48,7 @@
 <A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=false" >SQL Window (first 300)</A>,
 <A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=true"  >WITH RESET</A>                            <BR>
 <A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=first"                  >SQL Window Connection Info (first 300)</A><BR>
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwUsageId=first"                 >SQL Window Usage Info (first 300)</A><BR>
 <BR>
 <h2>Admin:</h2>
 DB Cleanup:
@@ -86,6 +87,7 @@ DB Cleanup:
 	$rpt_sqlw_stat          = $_GET['sqlwStat'];
 	$rpt_sqlw_diffReset     = $_GET['sqlwDiffReset'];
 	$rpt_sqlw_ConnId        = $_GET['sqlwConnId'];
+	$rpt_sqlw_UsageId       = $_GET['sqlwUsageId'];
 
 	$del_deleteLogId        = $_GET['deleteLogId'];
 	$save_saveLogId         = $_GET['saveLogId'];
@@ -2088,6 +2090,48 @@ DB Cleanup:
 			}
 			htmlResultset($userIdCache, $result, "SQL Window Connection Info");
 		}
+
+		if ( $rpt_sqlw_UsageId == "first")
+		{
+			//------------------------------------------
+			// SQLW_USAGE_INFO ALL
+			//------------------------------------------
+			$sql = "
+				SELECT
+					sqlwCheckId,
+					serverAddTime,
+					clientTime,
+					userName,
+					connectId,
+					connTypeStr,
+					prodName,
+					srvVersionInt,
+					connectTime,
+					disconnectTime,
+					TIMEDIFF(disconnectTime, connectTime) as connectDuration,
+					execMainCount,
+					execBatchCount,
+					execTimeTotal,
+					execTimeSqlExec,
+					execTimeRsRead,
+					rsCount,
+					rsRowsCount,
+					iudRowsCount,
+					sqlWarningCount,
+					sqlExceptionCount
+				FROM sqlw_usage_info
+				ORDER BY sqlwCheckId desc
+				LIMIT 300
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "SQL Window Usage Info");
+		}
+
 		// a SPECIFIC SQLW session
 		if ( is_numeric($rpt_sqlw_ConnId) )
 		{
@@ -2122,6 +2166,43 @@ DB Cleanup:
 				die("Query to show fields from table failed");
 			}
 			htmlResultset($userIdCache, $result, "sqlw_connect_info on: $rpt_sqlw_ConnId");
+
+			//------------------------------------------
+			// sqlw_usage_info on ID
+			//------------------------------------------
+			$sql = "
+				SELECT
+					sqlwCheckId,
+					serverAddTime,
+					clientTime,
+					userName,
+					connectId,
+					connTypeStr,
+					prodName,
+					srvVersionInt,
+					connectTime,
+					disconnectTime,
+					TIMEDIFF(disconnectTime, connectTime) as connectDuration,
+					execMainCount,
+					execBatchCount,
+					execTimeTotal,
+					execTimeSqlExec,
+					execTimeRsRead,
+					rsCount,
+					rsRowsCount,
+					iudRowsCount,
+					sqlWarningCount,
+					sqlExceptionCount
+				FROM sqlw_usage_info
+				where sqlwCheckId = $rpt_sqlw_ConnId
+			";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "sqlw_usage_info on: $rpt_sqlw_ConnId");
 		}
 
 

@@ -282,3 +282,34 @@ CREATE TABLE sqlw_connect_info
 	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
 );
 
+
+CREATE TABLE sqlw_usage_info
+(
+	sqlwCheckId             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+	
+	connectId               int,
+
+	connTypeStr             varchar(30),	
+	prodName                varchar(30),
+	srvVersionInt           int,
+
+	connectTime             timestamp,
+	disconnectTime          timestamp,
+
+	execMainCount           int,
+	execBatchCount          int,
+	execTimeTotal           int,
+	execTimeSqlExec         int,
+	execTimeRsRead          int,
+	rsCount                 int,
+	rsRowsCount             int,
+	iudRowsCount            int,
+	sqlWarningCount         int,
+	sqlExceptionCount       int,
+
+	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
+);
+
