@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -57,6 +58,7 @@ public class StressConnect
 	public String     _statDoSpinMonPassword = "sybase";
 	public Connection _statDoSpinMonConn     = null;
 	public int        _statSrvVersion        = 0;
+	public boolean    _statExtraInfo         = false;
 	
 //	private DbMessageHandler _msgHandler = new DbMessageHandler();
 	
@@ -132,6 +134,9 @@ public class StressConnect
 					out.write("stat.doSpinMon.username = "+_statDoSpinMonUsername+"\n");
 					out.write("stat.doSpinMon.password = "+_statDoSpinMonPassword+"\n");
 					out.write("\n");
+					out.write("# Print some extra info: @@total_read, @@total_write, @@pack_received, @@pack_sent, @@packet_errors, @@total_errors\n");
+					out.write("stat.extraInfo = "+_statExtraInfo+"\n");
+					out.write("\n");
 
 					out.close();
 					
@@ -179,7 +184,7 @@ public class StressConnect
 		_statDoSpinMonRows     = config.getIntProperty    ("stat.doSpinMon.top",      _statDoSpinMonRows);
 		_statDoSpinMonUsername = config.getProperty       ("stat.doSpinMon.username", _statDoSpinMonUsername);
 		_statDoSpinMonPassword = config.getProperty       ("stat.doSpinMon.password", _statDoSpinMonPassword);
-		
+		_statExtraInfo         = config.getBooleanProperty("stat.extraInfo",          _statExtraInfo);
 		
 		System.out.println("############# CONFIGURATION ######################");
 		System.out.println("ase.host     = "+_host);
@@ -198,6 +203,7 @@ public class StressConnect
 		System.out.println("stat.sleepTime           = " + _statSleepTime);
 		System.out.println("stat.doSpinMon           = " + _statDoSpinMon);
 		System.out.println("stat.doSpinMon.top       = " + _statDoSpinMonRows);
+		System.out.println("stat.extraInfo           = " + _statExtraInfo);
 		System.out.println("##################################################");
 		System.out.println("");
 	}
@@ -263,9 +269,13 @@ public class StressConnect
 		long lastConnectFailed   = 0;
 		long lastConnectTime     = 0;
 		
-		int  lastAtAtConnections = 0;
+		SrvCounters lastSrvCounters = new SrvCounters();
 		if (_statDoSpinMonConn != null)
-			lastAtAtConnections = statGetAtAtConnections();
+			lastSrvCounters.refreshCounters(_statDoSpinMonConn);
+
+//		int  lastAtAtConnections = 0;
+//		if (_statDoSpinMonConn != null)
+//			lastAtAtConnections = statGetAtAtConnections();
 
 		while(true)
 		{
@@ -299,13 +309,25 @@ public class StressConnect
 			long connectFailed   = _statConnectFailed   - lastConnectFailed;
 			long connectTime     = _statConnectTime     - lastConnectTime;
 			
-			int  atAtConnectionsDiff = 0;
+//			int  atAtConnectionsDiff = 0;
+//			if (_statDoSpinMonConn != null)
+//			{
+//				int atAtConnectionsNow = statGetAtAtConnections();
+//
+//				atAtConnectionsDiff = atAtConnectionsNow - lastAtAtConnections;
+//				lastAtAtConnections = atAtConnectionsNow;
+//			}
+			SrvCounters srvCountersDiff = null;
 			if (_statDoSpinMonConn != null)
 			{
-				int atAtConnectionsNow = statGetAtAtConnections();
+				// Get new values from server
+				SrvCounters srvCountersNow  = new SrvCounters(_statDoSpinMonConn);
 
-				atAtConnectionsDiff = atAtConnectionsNow - lastAtAtConnections;
-				lastAtAtConnections = atAtConnectionsNow;
+				// Calculate difference since last poll
+				srvCountersDiff = srvCountersNow.diff(lastSrvCounters);
+
+				// Save for next loop
+				lastSrvCounters = srvCountersNow;
 			}
 
 			lastSampleTime      = System.currentTimeMillis();
@@ -316,17 +338,48 @@ public class StressConnect
 
 
 			// Print statistics
+			System.out.println("---------------------------------------------------------------------------------------------------- ");
 			System.out.println("----------------------------- threads='"+_numOfThreads+"', intervall='"+intervall+"' ------ at: " + timeNowStr);
+			System.out.println("---------------------------------------------------------------------------------------------------- ");
 			System.out.println("connectAttempts:             "+connectAttempts);
 			System.out.println("connectSuccess:              "+connectSuccess);
 			System.out.println("connectFailed:               "+connectFailed);
-			System.out.println("@@connections diff:          "+atAtConnectionsDiff);
+			if (srvCountersDiff != null)
+			{
+			System.out.println("@@connections   diff:        "+srvCountersDiff._connections);
+			if (_statExtraInfo)
+			{
+			System.out.println("@@total_read    diff:        "+srvCountersDiff._io_total_read);
+			System.out.println("@@total_write   diff:        "+srvCountersDiff._io_total_write);
+			System.out.println("@@pack_received diff:        "+srvCountersDiff._pack_received);
+			System.out.println("@@pack_sent     diff:        "+srvCountersDiff._pack_sent);
+			System.out.println("@@packet_errors diff:        "+srvCountersDiff._packet_errors);
+			System.out.println("@@total_errors  diff:        "+srvCountersDiff._total_errors);
+			}
+			}
 			System.out.println("connectTime:                 "+connectTime);
+			System.out.println("---------------------------------------------------------------------------------------------------- ");
 			System.out.println("connectAttempts per second:  "+connectAttempts     / (intervall/1000.0));
 			System.out.println("connectSuccess  per second:  "+connectSuccess      / (intervall/1000.0));
 			System.out.println("connectFailed   per second:  "+connectFailed       / (intervall/1000.0));
-			System.out.println("@@connections   per second:  "+atAtConnectionsDiff / (intervall/1000.0));
+			if (srvCountersDiff != null)
+			{
+			System.out.println("@@connections   per second:  "+srvCountersDiff._connections    / (intervall/1000.0));
+			if (_statExtraInfo)
+			{
+			System.out.println("@@total_read    per second:  "+srvCountersDiff._io_total_read  / (intervall/1000.0));
+			System.out.println("@@total_write   per second:  "+srvCountersDiff._io_total_write / (intervall/1000.0));
+			System.out.println("@@pack_received per second:  "+srvCountersDiff._pack_received  / (intervall/1000.0));
+			System.out.println("@@pack_sent     per second:  "+srvCountersDiff._pack_sent      / (intervall/1000.0));
+			System.out.println("@@packet_errors per second:  "+srvCountersDiff._packet_errors  / (intervall/1000.0));
+			System.out.println("@@total_errors  per second:  "+srvCountersDiff._total_errors   / (intervall/1000.0));
+			}
+			System.out.println("       ASE Total--CPU-Time: "+srvCountersDiff._calcCPUTime       + "%");
+			System.out.println("       ASE User---CPU-Time: "+srvCountersDiff._calcUserCPUTime   + "%");
+			System.out.println("       ASE System-CPU-Time: "+srvCountersDiff._calcSystemCPUTime + "%");
+			}
 			System.out.println("connectTime(ms) per connect: "+ ( connectSuccess > 0 ? connectTime/connectSuccess : "no-succesfull-connects"));
+			System.out.println("---------------------------------------------------------------------------------------------------- ");
 
 			if (_statDoSpinMon)
 			{
@@ -339,27 +392,163 @@ public class StressConnect
 
 //	--get cpu consumption via @@xxx
 
-	private int statGetAtAtConnections()
+	private class SrvCounters
 	{
-		String sql = "select @@connections";
-		int connections = 0;
-		
-		try
-		{
-			Statement stmnt = _statDoSpinMonConn.createStatement();
-			ResultSet rs = stmnt.executeQuery(sql);
-			while (rs.next())
-				connections = rs.getInt(1);
+		int _asePageSize;
+		int _cpu_busy;
+		int _cpu_io;
+		int _cpu_idle;
+		int _io_total_read;
+		int _io_total_write;
+		int _connections;
+		int _pack_received;
+		int _pack_sent;
+		int _packet_errors;
+		int _total_errors;
 
-			stmnt.close();
-			rs.close();
-		}
-		catch (SQLException e)
+		// calculated values are only available after diff calculation
+		double _calcCPUTime;
+		double _calcSystemCPUTime;
+		double _calcUserCPUTime;
+
+		public SrvCounters()
 		{
-			System.out.println("ERROR: statGetAtAtConnections() caught: "+e);
 		}
-		return connections;
+
+		public SrvCounters(Connection conn)
+		{
+			refreshCounters(conn);
+		}
+
+		public void refreshCounters(Connection conn)
+		{
+			String sql =
+					"select \n" +
+					"  asePageSize    = @@maxpagesize \n" +
+					", cpu_busy       = @@cpu_busy \n" +
+					", cpu_io         = @@io_busy \n" +
+					", cpu_idle       = @@idle \n" +
+					", io_total_read  = @@total_read \n" +
+					", io_total_write = @@total_write \n" +
+					", aaConnections  = @@connections \n" +
+					", pack_received  = @@pack_received \n" +
+					", pack_sent      = @@pack_sent \n" +
+					", packet_errors  = @@packet_errors \n" +
+					", total_errors   = @@total_errors \n" +
+					"";
+
+			try
+			{
+				Statement stmnt = conn.createStatement();
+				ResultSet rs = stmnt.executeQuery(sql);
+				int col = 1;
+				while (rs.next())
+				{
+					_asePageSize    = rs.getInt(col++);
+					_cpu_busy       = rs.getInt(col++);
+					_cpu_io         = rs.getInt(col++);
+					_cpu_idle       = rs.getInt(col++);
+					_io_total_read  = rs.getInt(col++);
+					_io_total_write = rs.getInt(col++);
+					_connections    = rs.getInt(col++);
+					_pack_received  = rs.getInt(col++);
+					_pack_sent      = rs.getInt(col++);
+					_packet_errors  = rs.getInt(col++);
+					_total_errors   = rs.getInt(col++);
+				}
+
+				stmnt.close();
+				rs.close();
+			}
+			catch (SQLException e)
+			{
+				System.out.println("ERROR: getCounters() SQL='"+sql+"', caught: "+e);
+			}
+		}
+		
+		public SrvCounters diff(SrvCounters in)
+		{
+			SrvCounters diffValues = new SrvCounters();
+			
+			SrvCounters c1 = this;
+			SrvCounters c2 = in;
+			
+			diffValues._asePageSize    = c2._asePageSize;
+			diffValues._cpu_busy       = c1._cpu_busy       - c2._cpu_busy;
+			diffValues._cpu_io         = c1._cpu_io         - c2._cpu_io;
+			diffValues._cpu_idle       = c1._cpu_idle       - c2._cpu_idle;
+			diffValues._io_total_read  = c1._io_total_read  - c2._io_total_read;
+			diffValues._io_total_write = c1._io_total_write - c2._io_total_write;
+			diffValues._connections    = c1._connections    - c2._connections;
+			diffValues._pack_received  = c1._pack_received  - c2._pack_received;
+			diffValues._pack_sent      = c1._pack_sent      - c2._pack_sent;
+			diffValues._packet_errors  = c1._packet_errors  - c2._packet_errors;
+			diffValues._total_errors   = c1._total_errors   - c2._total_errors;
+
+			// do PCT calculation for CPU values
+			Double cpuUser        = new Double(diffValues._cpu_busy);
+			Double cpuSystem      = new Double(diffValues._cpu_io);
+			Double cpuIdle        = new Double(diffValues._cpu_idle);
+			if (cpuUser != null && cpuSystem != null && cpuIdle != null)
+			{
+				double CPUTime   = cpuUser  .doubleValue() + cpuSystem.doubleValue() + cpuIdle.doubleValue();
+				double CPUUser   = cpuUser  .doubleValue();
+				double CPUSystem = cpuSystem.doubleValue();
+
+				BigDecimal calcCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal calcSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+				diffValues._calcCPUTime       = calcCPUTime      .doubleValue();
+				diffValues._calcSystemCPUTime = calcSystemCPUTime.doubleValue();
+				diffValues._calcUserCPUTime   = calcUserCPUTime  .doubleValue();
+			}
+			
+			return diffValues;
+		}
+
+//		public SrvCounters rate(int interval)
+//		{
+//			SrvCounters rateValues = new SrvCounters();
+//			
+//			rateValues._asePageSize    = this._asePageSize    / interval;
+//			rateValues._cpu_busy       = this._cpu_busy       / interval;
+//			rateValues._cpu_io         = this._cpu_io         / interval;
+//			rateValues._cpu_idle       = this._cpu_idle       / interval;
+//			rateValues._io_total_read  = this._io_total_read  / interval;
+//			rateValues._io_total_write = this._io_total_write / interval;
+//			rateValues._connections    = this._connections    / interval;
+//			rateValues._pack_received  = this._pack_received  / interval;
+//			rateValues._pack_sent      = this._pack_sent      / interval;
+//			rateValues._packet_errors  = this._packet_errors  / interval;
+//			rateValues._total_errors   = this._total_errors   / interval;
+//			
+//			return rateValues;
+//		}
+
 	}
+	
+//	private int statGetAtAtConnections()
+//	{
+//		String sql = "select @@connections";
+//		int connections = 0;
+//		
+//		try
+//		{
+//			Statement stmnt = _statDoSpinMonConn.createStatement();
+//			ResultSet rs = stmnt.executeQuery(sql);
+//			while (rs.next())
+//				connections = rs.getInt(1);
+//
+//			stmnt.close();
+//			rs.close();
+//		}
+//		catch (SQLException e)
+//		{
+//			System.out.println("ERROR: statGetAtAtConnections() caught: "+e);
+//		}
+//		return connections;
+//	}
 
 	private void spinMonReset()
 	{
