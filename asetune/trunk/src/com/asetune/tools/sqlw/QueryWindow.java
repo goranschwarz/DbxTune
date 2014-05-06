@@ -141,6 +141,7 @@ import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdates.SqlwConnectInfo;
+import com.asetune.check.CheckForUpdates.SqlwUsageInfo;
 import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
@@ -408,6 +409,7 @@ public class QueryWindow
 	private ArrayList<JComponent> _resultCompList         = null;
 	
 	private int         _srvVersion                       = 0;
+	private long        _connectedAtTime                  = 0;
 	private String      _connectedDriverName              = null;
 	private String      _connectedDriverVersion           = null;
 	private String      _connectedToProductName           = null;
@@ -751,6 +753,18 @@ public class QueryWindow
 			SwingUtilities.invokeLater(deferedAction);
 		}
 
+		// Install shutdown hook: used to send Usage Information
+		Runtime.getRuntime().addShutdownHook(new Thread()
+		{
+			@Override
+			public void run()
+			{
+				_logger.debug("----Start Shutdown Hook");
+				sendExecStatistics(true);
+				_logger.debug("----End Shutdown Hook");
+			}
+		});
+
 		// Now open the window
 		qw.openTheWindow();
 	}
@@ -776,7 +790,6 @@ public class QueryWindow
 		init(conn, sql, inputFile, closeConnOnExit, winType, conf);
 	}
 
-	@SuppressWarnings("serial")
 	private void init(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		_windowType = winType;
@@ -1083,7 +1096,7 @@ public class QueryWindow
 			{
 				saveProps();
 				saveWinProps();
-				sendExecStatistics();
+				sendExecStatistics(false);
 
 				if (_closeConnOnExit)
 					close();
@@ -2099,6 +2112,8 @@ public class QueryWindow
 		boolean showOfflineTab = true;
 		boolean showJdbcTab    = true;
 
+		_srvVersion                 = 0;
+		_connectedAtTime            = 0;
 		_connectedDriverName        = null;
 		_connectedDriverVersion     = null;
 		_connectedToProductName     = null;
@@ -2202,6 +2217,8 @@ public class QueryWindow
 		// Get product info
 		try	
 		{
+			_srvVersion                 = 0;
+			_connectedAtTime            = System.currentTimeMillis();
 			_connectedDriverName        = connDialog.getDriverName();
 			_connectedDriverVersion     = connDialog.getDriverVersion();
 			_connectedToProductName     = connDialog.getDatabaseProductName(); 
@@ -2768,8 +2785,10 @@ public class QueryWindow
 	private void action_disconnect(ActionEvent e)
 	{
 		saveWinProps();
-		sendExecStatistics();
+		sendExecStatistics(false);
 
+		_srvVersion                 = 0;
+		_connectedAtTime            = 0;
 		_connectedDriverName        = null;
 		_connectedDriverVersion     = null;
 		_connectedToProductName     = null;
@@ -4271,7 +4290,7 @@ public class QueryWindow
 			_resPanelScroll    .setVisible(false);
 			_resPanelTextScroll.setVisible(true);
 
-			_logger.trace("NO RS: "+_resultCompList.size());
+			_logger.trace("NO RS: "+ ( _resultCompList != null ? _resultCompList.size() : -1 ));
 
 			RSyntaxTextAreaX out = new RSyntaxTextAreaX();
 			RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
@@ -4966,10 +4985,10 @@ public class QueryWindow
 					}
 					
 					// Increment Usage Statistics
-					if (sqle instanceof SQLException)
-						incSqlExceptionCount();
-					else
+					if (sqle instanceof SQLWarning)
 						incSqlWarningCount();
+					else
+						incSqlExceptionCount();
 
 					// Add it to the progress dialog
 					progress.addMessage(sqle);
@@ -6748,10 +6767,31 @@ public class QueryWindow
 		_sqlExceptionCount = 0;
 	}
 
-	public void sendExecStatistics()
+	public void sendExecStatistics(boolean blockingCall)
 	{
 		// send of the counters
 		/* TODO */
+		SqlwUsageInfo sqlwUsageInfo = new SqlwUsageInfo();
+
+		sqlwUsageInfo.setConnType         (_connType);
+		sqlwUsageInfo.setSrvVersionInt    (_srvVersion);
+		sqlwUsageInfo.setProductName      (_connectedToProductName);
+
+		sqlwUsageInfo.setConnectTime      (_connectedAtTime);
+		sqlwUsageInfo.setDisconnectTime   (System.currentTimeMillis());
+		
+		sqlwUsageInfo.setExecMainCount    (_execMainCount);
+		sqlwUsageInfo.setExecBatchCount   (_execBatchCount);
+		sqlwUsageInfo.setExecTimeTotal    (_execTimeTotal);
+		sqlwUsageInfo.setExecTimeSqlExec  (_execTimeSqlExec);
+		sqlwUsageInfo.setExecTimeRsRead   (_execTimeRsRead);
+		sqlwUsageInfo.setRsCount          (_rsCount);
+		sqlwUsageInfo.setRsRowsCount      (_rsRowsCount);
+		sqlwUsageInfo.setIudRowsCount     (_iudRowsCount);
+		sqlwUsageInfo.setSqlWarningCount  (_sqlWarningCount);
+		sqlwUsageInfo.setSqlExceptionCount(_sqlExceptionCount);
+
+		CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
 		
 		// At the end, reset the statistics
 		resetExecStatistics();

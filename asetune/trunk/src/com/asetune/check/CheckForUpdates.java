@@ -151,10 +151,10 @@ public class CheckForUpdates
 
 	private final static int DEFAULT_TIMEOUT = 20*1000;
 
-//	static
-//	{
-//		_logger.setLevel(Level.DEBUG);
-//	}
+	static
+	{
+		_logger.setLevel(Level.DEBUG);
+	}
 
 	/*---------------------------------------------------
 	** BEGIN: constructors
@@ -769,368 +769,6 @@ public class CheckForUpdates
 
 
 	/**
-	 * Check for a later version of the software
-	 * @param owner A JFrame or similar
-	 * @param showNoUpgrade Even if no upgrade is available, show info about that in a GUI message.
-	 */
-	public static void noBlockCheckSqlWindow(final Component owner, final boolean showNoUpgrade, final boolean showFailure)
-	{
-		Runnable checkLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				CheckForUpdates chk = new CheckForUpdates();
-
-				// Go and check
-				chk.checkSqlWindow();
-
-				if (! chk.checkSucceed())
-				{
-					if (owner != null && showFailure)
-						CheckDialog.showDialog(owner, chk);
-
-					_logger.info("Check for latest version failed.");
-					return;
-				}
-
-				if (chk.hasUpgrade())
-				{
-					if (owner != null)
-						CheckDialog.showDialog(owner, chk);
-
-					_logger.info("New Upgrade is Available. New version is '"+chk.getNewAppVersionStr()+"' " +
-							"and can be downloaded here '"+chk.getDownloadUrl()+"'.");
-				}
-				else
-				{
-					if (showNoUpgrade)
-					{
-						if (owner != null)
-							CheckDialog.showDialog(owner, chk);
-					}
-
-//					if (chk.hasFeedback())
-//					{
-//						if (owner != null)
-//							CheckDialog.showDialog(owner, chk);
-//					}
-
-					if (chk.isResponseOfHtml())
-					{
-						if (owner != null)
-							CheckDialog.showDialog(owner, chk);
-					}
-					else
-					{
-						_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
-					}
-				}
-			}
-		};
-		Thread checkThread = new Thread(checkLater);
-		checkThread.setName("checkForUpdates");
-		checkThread.setDaemon(true);
-		checkThread.start();
-	}
-
-	/**
-	 * Go and check for updates
-	 */
-	public void checkSqlWindow()
-	{
-		// URS to use
-		String urlStr = SQLWIN_CHECK_UPDATE_URL;
-
-		_hasUpgrade   = false;
-		_checkSucceed = false;
-
-		// COMPOSE: parameters to send to HTTP server
-		QueryString urlParams = new QueryString();
-
-		Date timeNow = new Date(System.currentTimeMillis());
-		String clientTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
-
-		if (_logger.isDebugEnabled())
-			urlParams.add("debug",    "true");
-
-		String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - QueryWindow.getStartTime());
-
-		urlParams.add("clientCheckTime",     clientTime);
-
-		urlParams.add("clientSourceDate",     Version.getSourceDate());
-		urlParams.add("clientSourceVersion",  Version.getSourceRev());
-		urlParams.add("clientAppVersion",     Version.getVersionStr());
-//		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
-		urlParams.add("appStartupTime",       appStartupTime);
-
-		try
-		{
-			InetAddress addr = InetAddress.getLocalHost();
-
-			urlParams.add("clientHostName",          addr.getHostName());
-			urlParams.add("clientHostAddress",       addr.getHostAddress());
-			urlParams.add("clientCanonicalHostName", addr.getCanonicalHostName());
-
-		}
-		catch (UnknownHostException e)
-		{
-		}
-
-		urlParams.add("user_name",          System.getProperty("user.name"));
-		urlParams.add("user_home",          System.getProperty("user.home"));
-		urlParams.add("user_dir",           System.getProperty("user.dir"));
-		urlParams.add("user_country",       System.getProperty("user.country"));
-		urlParams.add("user_language",      System.getProperty("user.language"));
-		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
-		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
-		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
-//		urlParams.add("gui",                AseTune.hasGUI()+"");
-
-		urlParams.add("java_version",       System.getProperty("java.version"));
-		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
-		urlParams.add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
-		urlParams.add("sun_arch_data_model",System.getProperty("sun.arch.data.model"));
-		urlParams.add("java_home",          System.getProperty("java.home"));
-//		if (_useHttpPost)
-//			urlParams.add("java_class_path",System.getProperty("java.class.path"));
-//		else
-//			urlParams.add("java_class_path","discarded when using sendHttpParams()");
-		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
-		urlParams.add("os_name",            System.getProperty("os.name"));
-		urlParams.add("os_version",         System.getProperty("os.version"));
-		urlParams.add("os_arch",            System.getProperty("os.arch"));
-		urlParams.add("sun_desktop",        System.getProperty("sun.desktop"));
-		urlParams.add("-end-",              "-end-");
-
-		try
-		{
-			// SEND OFF THE REQUEST
-			InputStream in;
-			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams);
-			else
-				in = sendHttpParams(urlStr, urlParams);
-
-			//----------------------------------------------
-			// This is how a response would look like
-			//----------------------------------------------
-			// ACTION:UPGRADE:$ASETUNE_LATEST_VERSION_STR:$DOWNLOAD_URL"
-			// ACTION:NO-UPGRADE
-			//----------------------------------------------
-
-			_action        = "";
-			_newAppVersion = "";
-			_downloadUrl   = DEFAULT_DOWNLOAD_URL;
-			_whatsNewUrl   = DEFAULT_WHATSNEW_URL;
-
-			// Set default values for some stuff (which normally is for AseTune)
-			_sendConnectInfo      = true;
-			_sendMdaInfo          = false;
-			_sendMdaInfoBatchSize = 20;
-			_sendUdcInfo          = false;
-			_sendCounterUsageInfo = false;
-			_sendLogInfoWarning   = false;
-			_sendLogInfoError     = false;
-
-			_connectCount         = 0;
-
-			_sendLogInfoThreshold = 100;
-			_sendLogInfoCount     = 0;
-
-			// Read response
-			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
-			String line;
-			String responseLines = "";
-			boolean foundActionLine = false;
-			while ((line = lr.readLine()) != null)
-			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
-				responseLines += line;
-				if (line.startsWith("ACTION:"))
-				{
-					foundActionLine = true;
-					String[] sa = line.split(":");
-					for (int i=0; i<sa.length; i++)
-					{
-						_logger.debug("   - STRING["+i+"]='"+sa[i]+"'.");
-
-						if (i == 1) _action        = sa[1];
-						if (i == 2) _newAppVersion = sa[2];
-						if (i == 3) _downloadUrl   = sa[3];
-						if (i == 4) _whatsNewUrl   = sa[4];
-					}
-				}
-				if (line.startsWith("OPTIONS:"))
-				{
-					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
-					String options = line.substring("OPTIONS:".length());
-					_logger.debug("Receiving Options from server '"+options+"'.");
-					String[] sa = options.split(",");
-					for (int i=0; i<sa.length; i++)
-					{
-						String[] keyVal = sa[i].split("=");
-						if (keyVal.length == 2)
-						{
-							String key = keyVal[0].trim();
-							String val = keyVal[1].trim();
-							boolean bVal = val.equalsIgnoreCase("true");
-
-							if (key.equalsIgnoreCase("sendConnectInfo"))
-							{
-								_sendConnectInfo = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-							}
-//							else if (key.equalsIgnoreCase("sendUdcInfo"))
-//							{
-//								_sendUdcInfo = bVal;
-//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-//							}
-//							else if (key.equalsIgnoreCase("sendMdaInfo"))
-//							{
-//								_sendMdaInfo = bVal;
-//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-//							}
-//							else if (key.equalsIgnoreCase("sendMdaInfoBatchSize"))
-//							{
-//								try
-//								{
-//									int intVal = Integer.parseInt(val);
-//									_sendMdaInfoBatchSize = intVal;
-//									_logger.debug("Setting option '"+key+"' to '"+intVal+"'.");
-//								}
-//								catch (NumberFormatException ex)
-//								{
-//									_logger.warn("Problems reading option '"+key+"', with value '"+val+"'. Can't convert to Integer. Caught: "+ex);
-//								}
-//							}
-//							else if (key.equalsIgnoreCase("sendCounterUsageInfo"))
-//							{
-//								_sendCounterUsageInfo = bVal;
-//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-//							}
-							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
-							{
-								_sendLogInfoWarning = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-							}
-							else if (key.equalsIgnoreCase("sendLogInfoError"))
-							{
-								_sendLogInfoError = bVal;
-								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
-							}
-							else if (key.equalsIgnoreCase("sendLogInfoThreshold"))
-							{
-								try
-								{
-									_sendLogInfoThreshold = Integer.parseInt(val);
-									_logger.debug("Setting option '"+key+"' to '"+val+"'.");
-								}
-								catch (NumberFormatException e)
-								{
-									_logger.debug("NumberFormatException: Setting option '"+key+"' to '"+val+"'.");
-								}
-							}
-							else
-							{
-								_logger.debug("Unknown option '"+key+"' from server with value '"+val+"'.");
-							}
-						}
-						else
-							_logger.debug("Option '"+sa[i]+"' from server has strange key/valye.");
-					}
-				}
-				if (line.startsWith("FEEDBACK:"))
-				{
-					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
-					String feedback = line.substring("FEEDBACK:".length()).trim();
-					_logger.debug("Receiving feedback from server '"+feedback+"'.");
-
-					if ( ! "".equals(feedback) )
-					{
-						String[] sa = feedback.split(":");
-						for (int i=0; i<sa.length; i++)
-						{
-							if (i == 0) _feedbackDateStr = sa[0];
-							if (i == 1) _feedbackUrl     = sa[1];
-						}
-						try
-						{
-							SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-							_feedbackDate = sdf.parse(_feedbackDateStr);
-						}
-						catch (ParseException e)
-						{
-						}
-					}
-				}
-				if (line.startsWith("ERROR:"))
-				{
-					_logger.warn("When checking for new version, found an 'ERROR:' response row, which looked like '" + line + "'.");
-				}
-				if (line.startsWith("CHECK_ID_SQLW:"))
-				{
-					String actionResponse = line.substring( "CHECK_ID_SQLW:".length() ).trim();
-					try { _checkIdSqlW = Integer.parseInt(actionResponse); }
-					catch (NumberFormatException ignore) {}
-					_logger.debug("Received check_id='"+_checkIdSqlW+"' from update site.");
-				}
-			}
-			in.close();
-			_responseString = responseLines;
-
-			// if not empty, check that it starts with 'http://' otherwise add it to the start
-			if ( _downloadUrl != null && !_downloadUrl.trim().equals("") )
-			{
-				if ( ! _downloadUrl.startsWith("http://") )
-					_downloadUrl = "http://" + _downloadUrl;
-			}
-
-			// if not empty, check that it starts with 'http://' otherwise add it to the start
-			if ( _whatsNewUrl != null && !_whatsNewUrl.trim().equals("") )
-			{
-				if ( ! _whatsNewUrl.startsWith("http://") )
-					_whatsNewUrl = "http://" + _whatsNewUrl;
-			}
-
-			// if not empty, check that it starts with 'http://' otherwise add it to the start
-			if ( _feedbackUrl != null && !_feedbackUrl.trim().equals("") )
-			{
-				if ( ! _feedbackUrl.startsWith("http://") )
-					_feedbackUrl = "http://" + _feedbackUrl;
-			}
-
-			if (_action.equals("UPGRADE"))
-			{
-				_hasUpgrade = true;
-				_logger.debug("-UPGRADE-");
-				_logger.debug("-to:"+_newAppVersion);
-				_logger.debug("-at:"+_downloadUrl);
-				_logger.debug("-at:"+_whatsNewUrl);
-			}
-			else
-			{
-				_hasUpgrade = false;
-				_logger.debug("-NO-UPGRADE-");
-			}
-
-			if ( ! foundActionLine )
-			{
-				_logger.warn("When checking for new version, no 'ACTION:' response was found. The response rows was '" + responseLines + "'.");
-			}
-
-			_checkSucceed = true;
-		}
-		catch (IOException ex)
-		{
-			_logger.debug("When we checking for later version, we had problems", ex);
-		}
-	}
-
-
-
-
-	/**
 	 * @param connType ConnectionDialog.TDS_CONN | ConnectionDialog.OFFLINE_CONN
 	 * @param sshTunnelInfo 
 	 */
@@ -1381,206 +1019,6 @@ public class CheckForUpdates
 	}
 
 
-
-
-
-
-	/**
-	 * @param connType ConnectionDialog.TDS_CONN | ConnectionDialog.OFFLINE_CONN
-	 * @param sshTunnelInfo 
-	 */
-	public static void sendSqlwConnectInfoNoBlock(final SqlwConnectInfo sqlwConnInfo)
-	{
-		if ( ! _sendConnectInfo )
-		{
-			_logger.debug("Send 'Connect info' has been disabled.");
-			return;
-		}
-
-		Runnable doLater = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				CheckForUpdates connInfo = new CheckForUpdates();
-				connInfo.sendSqlwConnectInfo(sqlwConnInfo);
-
-				CheckForUpdates udcInfo = new CheckForUpdates();
-				udcInfo.sendUdcInfo();
-			}
-		};
-		Thread checkThread = new Thread(doLater);
-		checkThread.setName("sendConnectInfo");
-		checkThread.setDaemon(true);
-		checkThread.start();
-	}
-
-	/**
-	 * Send info on connection
-	 * @param sshTunnelInfo 
-	 */
-	public void sendSqlwConnectInfo(final SqlwConnectInfo sqlwConnInfo)
-	{
-		// URL TO USE
-		String urlStr = SQLWIN_CONNECT_INFO_URL;
-
-		if ( sqlwConnInfo == null )
-		{
-			_logger.error("Send 'SQLW Connect info' the input can't be null.");
-			return;
-		}
-
-		if ( ! _sendConnectInfo )
-		{
-			_logger.debug("Send 'Connect info' has been disabled.");
-			return;
-		}
-
-		if (_checkIdSqlW < 0)
-		{
-			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
-			return;
-		}
-
-		int connType = sqlwConnInfo._connType;
-		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN && connType != ConnectionDialog.JDBC_CONN)
-		{
-			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN | JDBC_CONN");
-			return;
-		}
-		
-		_connectCount++;
-
-		// COMPOSE: parameters to send to HTTP server
-		QueryString urlParams = new QueryString();
-
-		Date timeNow = new Date(System.currentTimeMillis());
-
-		String checkId          = _checkIdSqlW + "";
-		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
-
-		if (_logger.isDebugEnabled())
-			urlParams.add("debug",    "true");
-
-		urlParams.add("checkId",             checkId);
-		urlParams.add("clientTime",          clientTime);
-		urlParams.add("userName",            System.getProperty("user.name"));
-
-		urlParams.add("connectId",           _connectCount+"");
-		urlParams.add("connectType",         sqlwConnInfo.getConnTypeStr());
-
-		urlParams.add("prodName",            sqlwConnInfo.getProdName());
-		urlParams.add("prodVersionStr",      sqlwConnInfo.getProdVersionStr());
-
-		urlParams.add("jdbcDriverName",      sqlwConnInfo.getJdbcDriverName());
-		urlParams.add("jdbcDriverVersion",   sqlwConnInfo.getJdbcDriverVersion());
-		urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
-		urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
-
-		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
-		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
-		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
-		urlParams.add("srvCharsetName",      sqlwConnInfo.getSrvCharset());
-		urlParams.add("srvSortOrderName",    sqlwConnInfo.getSrvSortorder());
-
-		urlParams.add("sshTunnelInfo",       sqlwConnInfo.getSshTunnelInfoStr());
-
-		try
-		{
-			// SEND OFF THE REQUEST
-			InputStream in;
-			if (_useHttpPost)
-				in = sendHttpPost(urlStr, urlParams);
-			else
-				in = sendHttpParams(urlStr, urlParams);
-
-			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
-			String line;
-			String responseLines = "";
-			while ((line = lr.readLine()) != null)
-			{
-				_logger.debug("response line "+lr.getLineNumber()+": " + line);
-				responseLines += line;
-				if (line.startsWith("ERROR:"))
-				{
-					_logger.warn("When doing connection info 'ERROR:' response row, which looked like '" + line + "'.");
-				}
-				if (line.startsWith("DONE:"))
-				{
-				}
-				if (line.startsWith("SEND_MDA_INFO:"))
-				{
-					_logger.info("Received info to collect MDA Information.");
-					sendMdaInfoNoBlock();
-				}
-			}
-			in.close();
-			_responseString = responseLines;
-
-//			_checkSucceed = true;
-		}
-		catch (IOException ex)
-		{
-			_logger.debug("when trying to send connection info, we had problems", ex);
-		}
-	}
-
-	public static class SqlwConnectInfo
-	{
-		private final int           _connType; 
-		private final String        _connTypeStr;
-		private       String        _prodName          = "";
-		private       String        _prodVersionStr    = ""; // from jdbc metadata
-		private       String        _jdbcDriverName    = "";
-		private       String        _jdbcDriverVersion = "";
-		private       String        _jdbcDriver        = "";
-		private       String        _jdbcUrl           = "";
-		private       int           _srvVersionInt     = 0;
-		private       String        _srvName           = "";
-		private       String        _srvUser           = "";
-		private       String        _srvCharset        = "";
-		private       String        _srvSortorder      = "";
-		private       SshTunnelInfo _sshInfo           = null;
-
-		public SqlwConnectInfo(int connType)
-		{
-			_connType = connType;
-			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
-			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
-			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
-			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
-			
-		}
-		public int           getConnTypeInt      () { return _connType; }
-		public String        getConnTypeStr      () { return _connTypeStr       == null ? "UNKNOWN" : _connTypeStr; }
-		
-		public String        getProdName         () { return _prodName          == null ? "" : _prodName         .trim(); }
-		public String        getProdVersionStr   () { return _prodVersionStr    == null ? "" : _prodVersionStr   .trim(); }
-		public String        getJdbcDriverName   () { return _jdbcDriverName    == null ? "" : _jdbcDriverName   .trim(); }
-		public String        getJdbcDriverVersion() { return _jdbcDriverVersion == null ? "" : _jdbcDriverVersion.trim(); }
-		public String        getJdbcDriver       () { return _jdbcDriver        == null ? "" : _jdbcDriver       .trim(); }
-		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
-		public int           getSrvVersionInt    () { return _srvVersionInt; }
-		public String        getSrvName          () { return _srvName           == null ? "" : _srvName          .trim(); }
-		public String        getSrvUser          () { return _srvUser           == null ? "" : _srvUser          .trim(); }
-		public String        getSrvCharset       () { return _srvCharset        == null ? "" : _srvCharset       .trim(); }
-		public String        getSrvSortorder     () { return _srvSortorder      == null ? "" : _srvSortorder     .trim(); }
-		public SshTunnelInfo getSshTunnelInfo    () { return _sshInfo; }
-		public String        getSshTunnelInfoStr () { return _sshInfo           == null ? "" : _sshInfo.getInfoString(); }
-
-		public void setProdName         (String str)            { _prodName          = str; }
-		public void setProdVersionStr   (String str)            { _prodVersionStr    = str; }
-		public void setJdbcDriverName   (String str)            { _jdbcDriverName    = str; }
-		public void setJdbcDriverVersion(String str)            { _jdbcDriverVersion = str; }
-		public void setJdbcDriver       (String str)            { _jdbcDriver        = str; }
-		public void setJdbcUrl          (String str)            { _jdbcUrl           = str; }
-		public void setSrvVersionInt    (int    ver)            { _srvVersionInt     = ver; }
-		public void setSrvName          (String str)            { _srvName           = str; }
-		public void setSrvUser          (String str)            { _srvUser           = str; }
-		public void setSrvCharset       (String str)            { _srvCharset        = str; }
-		public void setSrvSortorder     (String str)            { _srvSortorder      = str; }
-		public void setSshTunnelInfo    (SshTunnelInfo sshInfo) { _sshInfo           = sshInfo; }
-	}
 
 
 
@@ -2525,6 +1963,838 @@ public class CheckForUpdates
 
 
 
+
+
+
+
+
+	/*----------------------------------------------------
+	**----------------------------------------------------
+	**---- SQL WINDOW ---- SQL WINDOW ---- SQL WINDOW ----
+	**----------------------------------------------------
+	**----------------------------------------------------
+	*/
+	/**
+	 * Check for a later version of the software
+	 * @param owner A JFrame or similar
+	 * @param showNoUpgrade Even if no upgrade is available, show info about that in a GUI message.
+	 */
+	public static void noBlockCheckSqlWindow(final Component owner, final boolean showNoUpgrade, final boolean showFailure)
+	{
+		Runnable checkLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				CheckForUpdates chk = new CheckForUpdates();
+
+				// Go and check
+				chk.checkSqlWindow();
+
+				if (! chk.checkSucceed())
+				{
+					if (owner != null && showFailure)
+						CheckDialog.showDialog(owner, chk);
+
+					_logger.info("Check for latest version failed.");
+					return;
+				}
+
+				if (chk.hasUpgrade())
+				{
+					if (owner != null)
+						CheckDialog.showDialog(owner, chk);
+
+					_logger.info("New Upgrade is Available. New version is '"+chk.getNewAppVersionStr()+"' " +
+							"and can be downloaded here '"+chk.getDownloadUrl()+"'.");
+				}
+				else
+				{
+					if (showNoUpgrade)
+					{
+						if (owner != null)
+							CheckDialog.showDialog(owner, chk);
+					}
+
+//					if (chk.hasFeedback())
+//					{
+//						if (owner != null)
+//							CheckDialog.showDialog(owner, chk);
+//					}
+
+					if (chk.isResponseOfHtml())
+					{
+						if (owner != null)
+							CheckDialog.showDialog(owner, chk);
+					}
+					else
+					{
+						_logger.info("You have got the latest release of '"+Version.getAppName()+"'.");
+					}
+				}
+			}
+		};
+		Thread checkThread = new Thread(checkLater);
+		checkThread.setName("checkForUpdates");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Go and check for updates
+	 */
+	public void checkSqlWindow()
+	{
+		// URS to use
+		String urlStr = SQLWIN_CHECK_UPDATE_URL;
+
+		_hasUpgrade   = false;
+		_checkSucceed = false;
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+		String clientTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - QueryWindow.getStartTime());
+
+		urlParams.add("clientCheckTime",     clientTime);
+
+		urlParams.add("clientSourceDate",     Version.getSourceDate());
+		urlParams.add("clientSourceVersion",  Version.getSourceRev());
+		urlParams.add("clientAppVersion",     Version.getVersionStr());
+//		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
+		urlParams.add("appStartupTime",       appStartupTime);
+
+		try
+		{
+			InetAddress addr = InetAddress.getLocalHost();
+
+			urlParams.add("clientHostName",          addr.getHostName());
+			urlParams.add("clientHostAddress",       addr.getHostAddress());
+			urlParams.add("clientCanonicalHostName", addr.getCanonicalHostName());
+
+		}
+		catch (UnknownHostException e)
+		{
+		}
+
+		urlParams.add("user_name",          System.getProperty("user.name"));
+		urlParams.add("user_home",          System.getProperty("user.home"));
+		urlParams.add("user_dir",           System.getProperty("user.dir"));
+		urlParams.add("user_country",       System.getProperty("user.country"));
+		urlParams.add("user_language",      System.getProperty("user.language"));
+		urlParams.add("user_timezone",      System.getProperty("user.timezone"));
+		urlParams.add("propfile",           Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename());
+		urlParams.add("userpropfile",       Configuration.getInstance(Configuration.USER_TEMP).getFilename());
+//		urlParams.add("gui",                AseTune.hasGUI()+"");
+
+		urlParams.add("java_version",       System.getProperty("java.version"));
+		urlParams.add("java_vm_version",    System.getProperty("java.vm.version"));
+		urlParams.add("java_vm_vendor",     System.getProperty("java.vm.vendor"));
+		urlParams.add("sun_arch_data_model",System.getProperty("sun.arch.data.model"));
+		urlParams.add("java_home",          System.getProperty("java.home"));
+//		if (_useHttpPost)
+//			urlParams.add("java_class_path",System.getProperty("java.class.path"));
+//		else
+//			urlParams.add("java_class_path","discarded when using sendHttpParams()");
+		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
+		urlParams.add("os_name",            System.getProperty("os.name"));
+		urlParams.add("os_version",         System.getProperty("os.version"));
+		urlParams.add("os_arch",            System.getProperty("os.arch"));
+		urlParams.add("sun_desktop",        System.getProperty("sun.desktop"));
+		urlParams.add("-end-",              "-end-");
+
+		try
+		{
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
+
+			//----------------------------------------------
+			// This is how a response would look like
+			//----------------------------------------------
+			// ACTION:UPGRADE:$ASETUNE_LATEST_VERSION_STR:$DOWNLOAD_URL"
+			// ACTION:NO-UPGRADE
+			//----------------------------------------------
+
+			_action        = "";
+			_newAppVersion = "";
+			_downloadUrl   = DEFAULT_DOWNLOAD_URL;
+			_whatsNewUrl   = DEFAULT_WHATSNEW_URL;
+
+			// Set default values for some stuff (which normally is for AseTune)
+			_sendConnectInfo      = true;
+			_sendMdaInfo          = false;
+			_sendMdaInfoBatchSize = 20;
+			_sendUdcInfo          = false;
+			_sendCounterUsageInfo = true;
+			_sendLogInfoWarning   = false;
+			_sendLogInfoError     = false;
+
+			_connectCount         = 0;
+
+			_sendLogInfoThreshold = 100;
+			_sendLogInfoCount     = 0;
+
+			// Read response
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			boolean foundActionLine = false;
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ACTION:"))
+				{
+					foundActionLine = true;
+					String[] sa = line.split(":");
+					for (int i=0; i<sa.length; i++)
+					{
+						_logger.debug("   - STRING["+i+"]='"+sa[i]+"'.");
+
+						if (i == 1) _action        = sa[1];
+						if (i == 2) _newAppVersion = sa[2];
+						if (i == 3) _downloadUrl   = sa[3];
+						if (i == 4) _whatsNewUrl   = sa[4];
+					}
+				}
+				if (line.startsWith("OPTIONS:"))
+				{
+					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
+					String options = line.substring("OPTIONS:".length());
+					_logger.debug("Receiving Options from server '"+options+"'.");
+					String[] sa = options.split(",");
+					for (int i=0; i<sa.length; i++)
+					{
+						String[] keyVal = sa[i].split("=");
+						if (keyVal.length == 2)
+						{
+							String key = keyVal[0].trim();
+							String val = keyVal[1].trim();
+							boolean bVal = val.equalsIgnoreCase("true");
+
+							if (key.equalsIgnoreCase("sendConnectInfo"))
+							{
+								_sendConnectInfo = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+//							else if (key.equalsIgnoreCase("sendUdcInfo"))
+//							{
+//								_sendUdcInfo = bVal;
+//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+//							}
+//							else if (key.equalsIgnoreCase("sendMdaInfo"))
+//							{
+//								_sendMdaInfo = bVal;
+//								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+//							}
+//							else if (key.equalsIgnoreCase("sendMdaInfoBatchSize"))
+//							{
+//								try
+//								{
+//									int intVal = Integer.parseInt(val);
+//									_sendMdaInfoBatchSize = intVal;
+//									_logger.debug("Setting option '"+key+"' to '"+intVal+"'.");
+//								}
+//								catch (NumberFormatException ex)
+//								{
+//									_logger.warn("Problems reading option '"+key+"', with value '"+val+"'. Can't convert to Integer. Caught: "+ex);
+//								}
+//							}
+							else if (key.equalsIgnoreCase("sendCounterUsageInfo"))
+							{
+								_sendCounterUsageInfo = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoWarning"))
+							{
+								_sendLogInfoWarning = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoError"))
+							{
+								_sendLogInfoError = bVal;
+								_logger.debug("Setting option '"+key+"' to '"+bVal+"'.");
+							}
+							else if (key.equalsIgnoreCase("sendLogInfoThreshold"))
+							{
+								try
+								{
+									_sendLogInfoThreshold = Integer.parseInt(val);
+									_logger.debug("Setting option '"+key+"' to '"+val+"'.");
+								}
+								catch (NumberFormatException e)
+								{
+									_logger.debug("NumberFormatException: Setting option '"+key+"' to '"+val+"'.");
+								}
+							}
+							else
+							{
+								_logger.debug("Unknown option '"+key+"' from server with value '"+val+"'.");
+							}
+						}
+						else
+							_logger.debug("Option '"+sa[i]+"' from server has strange key/valye.");
+					}
+				}
+				if (line.startsWith("FEEDBACK:"))
+				{
+					// OPTIONS: sendConnectInfo = true|false, sendUdcInfo = true|false, sendCounterUsageInfo = true|false
+					String feedback = line.substring("FEEDBACK:".length()).trim();
+					_logger.debug("Receiving feedback from server '"+feedback+"'.");
+
+					if ( ! "".equals(feedback) )
+					{
+						String[] sa = feedback.split(":");
+						for (int i=0; i<sa.length; i++)
+						{
+							if (i == 0) _feedbackDateStr = sa[0];
+							if (i == 1) _feedbackUrl     = sa[1];
+						}
+						try
+						{
+							SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+							_feedbackDate = sdf.parse(_feedbackDateStr);
+						}
+						catch (ParseException e)
+						{
+						}
+					}
+				}
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.warn("When checking for new version, found an 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("CHECK_ID_SQLW:"))
+				{
+					String actionResponse = line.substring( "CHECK_ID_SQLW:".length() ).trim();
+					try { _checkIdSqlW = Integer.parseInt(actionResponse); }
+					catch (NumberFormatException ignore) {}
+					_logger.debug("Received check_id='"+_checkIdSqlW+"' from update site.");
+				}
+			}
+			in.close();
+			_responseString = responseLines;
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _downloadUrl != null && !_downloadUrl.trim().equals("") )
+			{
+				if ( ! _downloadUrl.startsWith("http://") )
+					_downloadUrl = "http://" + _downloadUrl;
+			}
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _whatsNewUrl != null && !_whatsNewUrl.trim().equals("") )
+			{
+				if ( ! _whatsNewUrl.startsWith("http://") )
+					_whatsNewUrl = "http://" + _whatsNewUrl;
+			}
+
+			// if not empty, check that it starts with 'http://' otherwise add it to the start
+			if ( _feedbackUrl != null && !_feedbackUrl.trim().equals("") )
+			{
+				if ( ! _feedbackUrl.startsWith("http://") )
+					_feedbackUrl = "http://" + _feedbackUrl;
+			}
+
+			if (_action.equals("UPGRADE"))
+			{
+				_hasUpgrade = true;
+				_logger.debug("-UPGRADE-");
+				_logger.debug("-to:"+_newAppVersion);
+				_logger.debug("-at:"+_downloadUrl);
+				_logger.debug("-at:"+_whatsNewUrl);
+			}
+			else
+			{
+				_hasUpgrade = false;
+				_logger.debug("-NO-UPGRADE-");
+			}
+
+			if ( ! foundActionLine )
+			{
+				_logger.warn("When checking for new version, no 'ACTION:' response was found. The response rows was '" + responseLines + "'.");
+			}
+
+			_checkSucceed = true;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("When we checking for later version, we had problems", ex);
+		}
+	}
+
+
+
+
+
+
+
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+
+	public static class SqlwConnectInfo
+	{
+		private final int           _connType; 
+		private final String        _connTypeStr;
+		private       String        _prodName          = "";
+		private       String        _prodVersionStr    = ""; // from jdbc metadata
+		private       String        _jdbcDriverName    = "";
+		private       String        _jdbcDriverVersion = "";
+		private       String        _jdbcDriver        = "";
+		private       String        _jdbcUrl           = "";
+		private       int           _srvVersionInt     = 0;
+		private       String        _srvName           = "";
+		private       String        _srvUser           = "";
+		private       String        _srvCharset        = "";
+		private       String        _srvSortorder      = "";
+		private       SshTunnelInfo _sshInfo           = null;
+
+		public SqlwConnectInfo(int connType)
+		{
+			_connType = connType;
+			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
+			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
+			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
+			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
+		}
+		public int           getConnTypeInt      () { return _connType; }
+		public String        getConnTypeStr      () { return _connTypeStr       == null ? "UNKNOWN" : _connTypeStr; }
+		
+		public String        getProdName         () { return _prodName          == null ? "" : _prodName         .trim(); }
+		public String        getProdVersionStr   () { return _prodVersionStr    == null ? "" : _prodVersionStr   .trim(); }
+		public String        getJdbcDriverName   () { return _jdbcDriverName    == null ? "" : _jdbcDriverName   .trim(); }
+		public String        getJdbcDriverVersion() { return _jdbcDriverVersion == null ? "" : _jdbcDriverVersion.trim(); }
+		public String        getJdbcDriver       () { return _jdbcDriver        == null ? "" : _jdbcDriver       .trim(); }
+		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
+		public int           getSrvVersionInt    () { return _srvVersionInt; }
+		public String        getSrvName          () { return _srvName           == null ? "" : _srvName          .trim(); }
+		public String        getSrvUser          () { return _srvUser           == null ? "" : _srvUser          .trim(); }
+		public String        getSrvCharset       () { return _srvCharset        == null ? "" : _srvCharset       .trim(); }
+		public String        getSrvSortorder     () { return _srvSortorder      == null ? "" : _srvSortorder     .trim(); }
+		public SshTunnelInfo getSshTunnelInfo    () { return _sshInfo; }
+		public String        getSshTunnelInfoStr () { return _sshInfo           == null ? "" : _sshInfo.getInfoString(); }
+
+		public void setProdName         (String str)            { _prodName          = str; }
+		public void setProdVersionStr   (String str)            { _prodVersionStr    = str; }
+		public void setJdbcDriverName   (String str)            { _jdbcDriverName    = str; }
+		public void setJdbcDriverVersion(String str)            { _jdbcDriverVersion = str; }
+		public void setJdbcDriver       (String str)            { _jdbcDriver        = str; }
+		public void setJdbcUrl          (String str)            { _jdbcUrl           = str; }
+		public void setSrvVersionInt    (int    ver)            { _srvVersionInt     = ver; }
+		public void setSrvName          (String str)            { _srvName           = str; }
+		public void setSrvUser          (String str)            { _srvUser           = str; }
+		public void setSrvCharset       (String str)            { _srvCharset        = str; }
+		public void setSrvSortorder     (String str)            { _srvSortorder      = str; }
+		public void setSshTunnelInfo    (SshTunnelInfo sshInfo) { _sshInfo           = sshInfo; }
+	}
+
+	/**
+	 * @param connType ConnectionDialog.TDS_CONN | ConnectionDialog.OFFLINE_CONN
+	 * @param sshTunnelInfo 
+	 */
+	public static void sendSqlwConnectInfoNoBlock(final SqlwConnectInfo sqlwConnInfo)
+	{
+		if ( ! _sendConnectInfo )
+		{
+			_logger.debug("Send 'Connect info' has been disabled.");
+			return;
+		}
+
+		Runnable doLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				CheckForUpdates connInfo = new CheckForUpdates();
+				connInfo.sendSqlwConnectInfo(sqlwConnInfo);
+
+				CheckForUpdates udcInfo = new CheckForUpdates();
+				udcInfo.sendUdcInfo();
+			}
+		};
+		Thread checkThread = new Thread(doLater);
+		checkThread.setName("sendConnectInfo");
+		checkThread.setDaemon(true);
+		checkThread.start();
+	}
+
+	/**
+	 * Send info on connection
+	 * @param sshTunnelInfo 
+	 */
+	public void sendSqlwConnectInfo(final SqlwConnectInfo sqlwConnInfo)
+	{
+		// URL TO USE
+		String urlStr = SQLWIN_CONNECT_INFO_URL;
+
+		if ( sqlwConnInfo == null )
+		{
+			_logger.error("Send 'SQLW Connect info' the input can't be null.");
+			return;
+		}
+
+		if ( ! _sendConnectInfo )
+		{
+			_logger.debug("Send 'Connect info' has been disabled.");
+			return;
+		}
+
+		if (_checkIdSqlW < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send connection info, skipping this.");
+			return;
+		}
+
+		int connType = sqlwConnInfo._connType;
+		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN && connType != ConnectionDialog.JDBC_CONN)
+		{
+			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN | JDBC_CONN");
+			return;
+		}
+		
+		_connectCount++;
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId          = _checkIdSqlW + "";
+		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
+
+		urlParams.add("connectId",           _connectCount+"");
+		urlParams.add("connectType",         sqlwConnInfo.getConnTypeStr());
+
+		urlParams.add("prodName",            sqlwConnInfo.getProdName());
+		urlParams.add("prodVersionStr",      sqlwConnInfo.getProdVersionStr());
+
+		urlParams.add("jdbcDriverName",      sqlwConnInfo.getJdbcDriverName());
+		urlParams.add("jdbcDriverVersion",   sqlwConnInfo.getJdbcDriverVersion());
+		urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
+		urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
+
+		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
+		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
+		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
+		urlParams.add("srvCharsetName",      sqlwConnInfo.getSrvCharset());
+		urlParams.add("srvSortOrderName",    sqlwConnInfo.getSrvSortorder());
+
+		urlParams.add("sshTunnelInfo",       sqlwConnInfo.getSshTunnelInfoStr());
+
+		try
+		{
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams);
+			else
+				in = sendHttpParams(urlStr, urlParams);
+
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.warn("When doing connection info 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("DONE:"))
+				{
+				}
+				if (line.startsWith("SEND_MDA_INFO:"))
+				{
+					_logger.info("Received info to collect MDA Information.");
+					sendMdaInfoNoBlock();
+				}
+			}
+			in.close();
+			_responseString = responseLines;
+
+//			_checkSucceed = true;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("when trying to send connection info, we had problems", ex);
+		}
+	}
+
+
+
+
+
+
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+	//-------------------------------------------------------------------------------------
+
+	public static class SqlwUsageInfo
+	{
+		private int    _connType          = 0;
+		private String _prodName          = "";
+		private int    _srvVersionInt     = 0;
+
+		private long   _connectTime       = 0;
+		private long   _disconnectTime    = 0;
+
+		private int    _execMainCount     = 0;
+		private int    _execBatchCount    = 0;
+		private long   _execTimeTotal     = 0;
+		private long   _execTimeSqlExec   = 0;
+		private long   _execTimeRsRead    = 0;
+		private int    _rsCount           = 0;
+		private int    _rsRowsCount       = 0;
+		private int    _iudRowsCount      = 0;
+		private int    _sqlWarningCount   = 0;
+		private int    _sqlExceptionCount = 0;
+
+		
+		public void setConnType         (int    val) { _connType          = val; }
+		public void setProductName      (String val) { _prodName          = val; }
+		public void setSrvVersionInt    (int    val) { _srvVersionInt     = val; }
+
+		public void setConnectTime      (long   val) { _connectTime       = val; }
+		public void setDisconnectTime   (long   val) { _disconnectTime    = val; }
+		
+		public void setExecMainCount    (int    val) { _execMainCount     = val; }
+		public void setExecBatchCount   (int    val) { _execBatchCount    = val; }
+		public void setExecTimeTotal    (long   val) { _execTimeTotal     = val; }
+		public void setExecTimeSqlExec  (long   val) { _execTimeSqlExec   = val; }
+		public void setExecTimeRsRead   (long   val) { _execTimeRsRead    = val; }
+		public void setRsCount          (int    val) { _rsCount           = val; }
+		public void setRsRowsCount      (int    val) { _rsRowsCount       = val; }
+		public void setIudRowsCount     (int    val) { _iudRowsCount      = val; }
+		public void setSqlWarningCount  (int    val) { _sqlWarningCount   = val; }
+		public void setSqlExceptionCount(int    val) { _sqlExceptionCount = val; }
+
+
+		public int    getConnType         () { return _connType; }
+		public String getProductName      () { return _prodName; }
+		public int    getSrvVersionInt    () { return _srvVersionInt; }
+
+		public long   getConnectTime      () { return _connectTime; }
+		public long   getDisconnectTime   () { return _disconnectTime; }
+
+		public int    getExecMainCount    () { return _execMainCount; }
+		public int    getExecBatchCount   () { return _execBatchCount; }
+		public long   getExecTimeTotal    () { return _execTimeTotal; }
+		public long   getExecTimeSqlExec  () { return _execTimeSqlExec; }
+		public long   getExecTimeRsRead   () { return _execTimeRsRead; }
+		public int    getRsCount          () { return _rsCount; }
+		public int    getRsRowsCount      () { return _rsRowsCount; }
+		public int    getIudRowsCount     () { return _iudRowsCount; }
+		public int    getSqlWarningCount  () { return _sqlWarningCount; }
+		public int    getSqlExceptionCount() { return _sqlExceptionCount; }
+		
+		public String getConnTypeStr() 
+		{
+			if      (_connType == ConnectionDialog.TDS_CONN)     return "TDS";
+			else if (_connType == ConnectionDialog.OFFLINE_CONN) return "OFFLINE";
+			else if (_connType == ConnectionDialog.JDBC_CONN)    return "JDBC";
+			else                                                 return "UNKNOWN("+_connType+")";
+		}
+	}
+
+	/**
+	 */
+	private static int _sendSqlwCounterUsage_atConnectCount = 0;
+
+	/**
+	 * Send info on SQLW Usage Info
+	 */
+	public static void sendSqlwCounterUsageInfoNoBlock(final SqlwUsageInfo sqlwUsageInfo, boolean blockingCall)
+	{
+		if ( ! _sendCounterUsageInfo )
+		{
+			_logger.debug("Send 'Counter Usage Info' has been disabled.");
+			return;
+		}
+
+		Runnable doLater = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				if ( _sendSqlwCounterUsage_atConnectCount < _connectCount )
+				{
+					_sendSqlwCounterUsage_atConnectCount++;
+
+					CheckForUpdates chk = new CheckForUpdates();
+
+					// Go and check
+					chk.sendSqlwCounterUsageInfo(sqlwUsageInfo);
+				}
+				else
+				{
+					_logger.debug("sendSqlwUsageInfo, already done (_sendSqlwCounterUsage_atConnectCount="+_sendSqlwCounterUsage_atConnectCount+", _connectCount="+_connectCount+").");
+				}
+			}
+		};
+		if (blockingCall)
+		{
+			// if synchronous, just call the run method on current thread
+			doLater.run();
+		}
+		else
+		{
+			// no blocking call, start a thread that does it.
+			Thread checkThread = new Thread(doLater);
+			checkThread.setName("sendSqlwCounterUsageInfo");
+			checkThread.setDaemon(true);
+			checkThread.start();
+		}
+	}
+
+	/**
+	 * Send info on SQLW Usage Info
+	 */
+	private void sendSqlwCounterUsageInfo(final SqlwUsageInfo sqlwUsageInfo)
+	{
+		// URL TO USE
+		String urlStr = SQLWIN_USAGE_INFO_URL;
+
+		if ( sqlwUsageInfo == null )
+		{
+			_logger.error("Send SQLW 'Counter Usage info' the input can't be null.");
+			return;
+		}
+
+		if ( ! _sendCounterUsageInfo )
+		{
+			_logger.debug("Send SQLW 'Counter Usage Info' has been disabled.");
+			return;
+		}
+
+		if (_checkIdSqlW < 0)
+		{
+			_logger.debug("No checkId was discovered when trying to send SQLW 'Counter Usage info', skipping this.");
+			return;
+		}
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		if (conf == null)
+		{
+			_logger.debug("Configuration was null when trying to send SQlW 'Counter Usage info', skipping this.");
+			return;
+		}
+
+
+		// COMPOSE: parameters to send to HTTP server
+		QueryString urlParams = new QueryString();
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId          = _checkIdSqlW + "";
+		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+
+		String connectTime      = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(sqlwUsageInfo.getConnectTime());
+		String disconnectTime   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(sqlwUsageInfo.getDisconnectTime());
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("userName",            System.getProperty("user.name"));
+
+		urlParams.add("connectId",           _connectCount);
+
+		urlParams.add("connectType",         sqlwUsageInfo.getConnTypeStr());
+		urlParams.add("prodName",            sqlwUsageInfo.getProductName());
+		urlParams.add("srvVersionInt",       sqlwUsageInfo.getSrvVersionInt());
+
+		urlParams.add("connectTime",         connectTime);
+		urlParams.add("disconnectTime",      disconnectTime);
+		
+		urlParams.add("execMainCount",       sqlwUsageInfo.getExecMainCount());
+		urlParams.add("execBatchCount",      sqlwUsageInfo.getExecBatchCount());
+		urlParams.add("execTimeTotal",       sqlwUsageInfo.getExecTimeTotal());
+		urlParams.add("execTimeSqlExec",     sqlwUsageInfo.getExecTimeSqlExec());
+		urlParams.add("execTimeRsRead",      sqlwUsageInfo.getExecTimeRsRead());
+		urlParams.add("rsCount",             sqlwUsageInfo.getRsCount());
+		urlParams.add("rsRowsCount",         sqlwUsageInfo.getRsRowsCount());
+		urlParams.add("iudRowsCount",        sqlwUsageInfo.getIudRowsCount());
+		urlParams.add("sqlWarningCount",     sqlwUsageInfo.getSqlWarningCount());
+		urlParams.add("sqlExceptionCount",   sqlwUsageInfo.getSqlExceptionCount());
+
+		try
+		{
+			// If NOT in the "known" thread name, then it's a synchronous call, then lower the timeout value. 
+			int timeout = DEFAULT_TIMEOUT;
+			String threadName = Thread.currentThread().getName(); 
+			if ( ! "sendSqlwCounterUsageInfo".equals(threadName) )
+				timeout = 5000;
+
+			// SEND OFF THE REQUEST
+			InputStream in;
+			if (_useHttpPost)
+				in = sendHttpPost(urlStr, urlParams, timeout);
+			else
+				in = sendHttpParams(urlStr, urlParams, timeout);
+
+			LineNumberReader lr = new LineNumberReader(new InputStreamReader(in));
+			String line;
+			String responseLines = "";
+			while ((line = lr.readLine()) != null)
+			{
+				_logger.debug("response line "+lr.getLineNumber()+": " + line);
+				responseLines += line;
+				if (line.startsWith("ERROR:"))
+				{
+					_logger.warn("When doing connection info 'ERROR:' response row, which looked like '" + line + "'.");
+				}
+				if (line.startsWith("DONE:"))
+				{
+				}
+			}
+			in.close();
+			_responseString = responseLines;
+
+//			_checkSucceed = true;
+		}
+		catch (IOException ex)
+		{
+			_logger.debug("when trying to send sqlw 'Usage Info', we had problems", ex);
+		}
+		
+	}
+
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/*---------------------------------------------------
 	**---------------------------------------------------
 	**---- SUBCLASSES ---- SUBCLASES ---- SUBCLASES -----
@@ -2773,6 +3043,20 @@ public class CheckForUpdates
 			if (_query.length() > 0)
 				_query.append('&');
 			encode(name, value);
+		}
+
+		public synchronized void add(String name, int value)
+		{
+			if (_query.length() > 0)
+				_query.append('&');
+			encode(name, Integer.toString(value));
+		}
+
+		public synchronized void add(String name, long value)
+		{
+			if (_query.length() > 0)
+				_query.append('&');
+			encode(name, Long.toString(value));
 		}
 
 		private synchronized void encode(String name, String value)
