@@ -337,6 +337,7 @@ public class StressConnect
 		}
 	}
 
+//	--get cpu consumption via @@xxx
 
 	private int statGetAtAtConnections()
 	{
