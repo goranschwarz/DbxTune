@@ -160,6 +160,7 @@
 		doCleanup("delete from asemon_error_info2        where userName  in('gorans', 'i063783') ");
 		doCleanup("delete from sqlw_usage                where user_name in('gorans', 'i063783') ");
 		doCleanup("delete from sqlw_connect_info         where userName  in('gorans', 'i063783') ");
+		doCleanup("delete from sqlw_usage_info           where userName  in('gorans', 'i063783') ");
 
 		// doCleanup("delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");
 		// doCleanup("delete from asemon_udc_info");
@@ -298,6 +299,38 @@
 //doCleanup("
 //CREATE TABLE asemon_mda_info...
 //");
+doCleanup("drop table sqlw_usage_info");
+doCleanup("
+CREATE TABLE sqlw_usage_info
+(
+	sqlwCheckId             int,
+	serverAddTime           timestamp,
+	clientTime              timestamp,
+	userName                varchar(30),
+
+	connectId               int,
+
+	connTypeStr             varchar(30),
+	prodName                varchar(30),
+	srvVersionInt           int,
+
+	connectTime             timestamp,
+	disconnectTime          timestamp,
+
+	execMainCount           int,
+	execBatchCount          int,
+	execTimeTotal           int,
+	execTimeSqlExec         int,
+	execTimeRsRead          int,
+	rsCount                 int,
+	rsRowsCount             int,
+	iudRowsCount            int,
+	sqlWarningCount         int,
+	sqlExceptionCount       int,
+
+	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
+);
+");
 
 
 		// FIX VERSION for INT columns
@@ -500,6 +533,7 @@
 		describe("asemon_error_info_save");
 		describe("sqlw_usage");
 		describe("sqlw_connect_info");
+		describe("sqlw_usage_info");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
