@@ -102,7 +102,7 @@ public class CheckForUpdates
 
 	private   static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
 	private   static final String SQLWIN_CONNECT_INFO_URL        = "http://www.asetune.com/sqlw_connect_info.php";
-	private   static final String SQLWIN_USAGE_INFO_URL          = "http://www.asetune.com/sqlw_usage_info.php";           // NOTE: dosn't exists yet
+	private   static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.asetune.com/sqlw_counter_usage_info.php";
 
 	private static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
 	private static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
@@ -151,10 +151,10 @@ public class CheckForUpdates
 
 	private final static int DEFAULT_TIMEOUT = 20*1000;
 
-	static
-	{
-		_logger.setLevel(Level.DEBUG);
-	}
+//	static
+//	{
+//		_logger.setLevel(Level.DEBUG);
+//	}
 
 	/*---------------------------------------------------
 	** BEGIN: constructors
@@ -2671,7 +2671,7 @@ public class CheckForUpdates
 	private void sendSqlwCounterUsageInfo(final SqlwUsageInfo sqlwUsageInfo)
 	{
 		// URL TO USE
-		String urlStr = SQLWIN_USAGE_INFO_URL;
+		String urlStr = SQLWIN_COUNTER_USAGE_INFO_URL;
 
 		if ( sqlwUsageInfo == null )
 		{
