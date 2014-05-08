@@ -71,10 +71,10 @@ public class Recovery extends AbstractSysmonType
 
 		}
 
-		addReportHead ("  Checkpoints");
+		addReportHead2("  Checkpoints");
 		addReportLnPct("    # of Normal Checkpoints",  fld_NumOfNormalCheckpoints, fld_Total);
 		addReportLnPct("    # of Free Checkpoints",    fld_NumOfFreeCheckpoints,   fld_Total);
-		addReportLnSum();
+		addReportLnSum2();
 		addReportLnCnt("  Total Checkpoints",          fld_Total);
 		addReportLn();
 		addReportLnSec("  Avg Time per Normal Chkpt",  fld_AvgTimePerNormalChkpt, fld_NumOfNormalCheckpoints, 5);

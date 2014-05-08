@@ -28,11 +28,12 @@ public abstract class AbstractSysmonType
 	public int getNumXacts()     { return _sysmon.getNumXacts(); }
 	public int getNumElapsedMs() { return _sysmon.getNumElapsedMs(); }
 
-	protected int _fieldName_pos  = -1;
-	protected int _groupName_pos  = -1;
-	protected int _instanceid_pos = -1;
-	protected int _field_id_pos   = -1;
-	protected int _value_pos      = -1;
+	protected int _fieldName_pos   = -1;
+	protected int _groupName_pos   = -1;
+	protected int _instanceid_pos  = -1;
+	protected int _field_id_pos    = -1;
+	protected int _value_pos       = -1;
+	protected int _description_pos = -1;
 
 	private List<List<Object>> _data;
 
@@ -72,11 +73,12 @@ public abstract class AbstractSysmonType
 
 		_sysmon = sysmon;
 		
-		_fieldName_pos  = cm.findColumn("field_name");
-		_groupName_pos  = cm.findColumn("group_name");
-		_instanceid_pos = cm.findColumn("instanceid");
-		_field_id_pos   = cm.findColumn("field_id");
-		_value_pos      = cm.findColumn("value");
+		_fieldName_pos   = cm.findColumn("field_name");
+		_groupName_pos   = cm.findColumn("group_name");
+		_instanceid_pos  = cm.findColumn("instanceid");
+		_field_id_pos    = cm.findColumn("field_id");
+		_value_pos       = cm.findColumn("value");
+		_description_pos = cm.findColumn("description");
 
 		_sysmon.setNumElapsedMs( (int) cm.getSampleInterval() );
 
@@ -130,6 +132,13 @@ public abstract class AbstractSysmonType
 
 	public abstract void calc();
 
+	/**
+	 * Write a HEADER
+	 * <pre>
+	 * The Passed Parameter Text           per sec    per xact       count  % of total
+	 * ------------------------------- ----------- ----------- ----------- -----------
+	 * </pre>
+	 */
 	protected void addReportHead(String txt)
 	{
 		String headTxt = StringUtil.left(txt, 32, false);
@@ -137,6 +146,25 @@ public abstract class AbstractSysmonType
 		_reportText.append("------------------------------- ----------- ----------- ----------- -----------\n");
 	}
 
+	/**
+	 * Write a HEADER (2 spaces at the left)
+	 * <pre>
+	 *   The Passed Parameter Text           per sec    per xact       count  % of total
+	 *   ------------------------------- ----------- ----------- ----------- -----------
+	 * </pre>
+	 */
+	protected void addReportHead2(String txt)
+	{
+		String headTxt = StringUtil.left(txt, 32, false);
+		_reportText.append(headTxt).append(                "    per sec    per xact       count  % of total\n");
+		_reportText.append("  ----------------------------- ----------- ----------- ----------- -----------\n");
+	}
+
+	/**
+	 * <pre>
+	 *   - This section has not yet been implemented by AseTune...
+	 * </pre>
+	 */
 	protected void addReportLnNotYetImplemented()
 	{
 		_reportText.append("  - This section has not yet been implemented by AseTune...\n");
@@ -147,18 +175,68 @@ public abstract class AbstractSysmonType
 		_reportText.append("\n");
 	}
 	
+	/**
+	 * <pre>
+	 * this input parameter goes here
+	 * </pre>
+	 */
 	protected void addReportLn(String line)
 	{
 		_reportText.append(line);
 		_reportText.append("\n");
 	}
 
+	/**
+	 * Write Report Line Summary
+	 * <pre>
+	 * ------------------------------- ----------- ----------- -----------
+	 * </pre>
+	 */
 	protected void addReportLnSum()
 	{
 		_reportText.append("------------------------------- ----------- ----------- -----------\n");
 	}
 
+	/**
+	 * Write Report Line Summary (with 2 spaces to the left)
+	 * <pre>
+	 *   ----------------------------- ----------- ----------- -----------
+	 * </pre>
+	 */
+	protected void addReportLnSum2()
+	{
+		_reportText.append("  ----------------------------- ----------- ----------- -----------\n");
+	}
+
+	/**
+	 * Write COUNTER
+	 * <pre>
+	 *    input param goes here             ###           ###         ###       n/a
+	 * </pre>
+	 */
 	protected void addReportLnCnt(String name, int counter)
+	{
+		addReportLnCnt(name, counter, true);
+	}
+
+	/**
+	 * Write COUNTER Summary (same as addReportLnCnt but without the 'n/a' as the last col)
+	 * <pre>
+	 *    input param goes here             ###           ###         ###
+	 * </pre>
+	 */
+	protected void addReportLnCntSum(String name, int counter)
+	{
+		addReportLnCnt(name, counter, false);
+	}
+
+	/**
+	 * Write COUNTER (printNA==true: 'n/a' as the last col)
+	 * <pre>
+	 *    input param goes here             ###           ###         ###       n/a
+	 * </pre>
+	 */
+	private void addReportLnCnt(String name, int counter, boolean printNA)
 	{
 		int NumElapsedMs = _sysmon.getNumElapsedMs();
 		if (NumElapsedMs == 0)
@@ -175,6 +253,10 @@ public abstract class AbstractSysmonType
 		BigDecimal perTran = new BigDecimal(dPerTran).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		BigDecimal total   = new BigDecimal(dTotal)  .setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
+		String na = "";
+		if (printNA)
+			na = "n/a  ";
+			
         //|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
 		//|  -------------------------  ------------  ------------  ----------  ----------
 		String line = //"  " +
@@ -182,11 +264,17 @@ public abstract class AbstractSysmonType
 			StringUtil.right(perSec +"", 11) + " " +
 			StringUtil.right(perTran+"", 11) + " " +
 			StringUtil.right(counter+"", 11) + " " +
-			StringUtil.right("n/a  "   , 11);
+			StringUtil.right(na        , 11);
 
 		_reportText.append(line).append("\n");
 	}
 
+	/**
+	 * Write COUNTER with PERCENT Values
+	 * <pre>
+	 *    input param goes here             ###           ###         ###      ###.# %
+	 * </pre>
+	 */
 	protected void addReportLnPct(String name, int counter, int divideBy)
 	{
 		int NumElapsedMs = _sysmon.getNumElapsedMs();
@@ -218,6 +306,12 @@ public abstract class AbstractSysmonType
 		_reportText.append(line).append("\n");
 	}
 
+	/**
+	 * Write SINGLE COUNTER (not calculated per second, transaction)
+	 * <pre>
+	 *    input param goes here             n/a           n/a         ###       n/a %
+	 * </pre>
+	 */
 	protected void addReportLnSC(String name, int counter)
 	{
 		String line = //"  " +
@@ -230,10 +324,22 @@ public abstract class AbstractSysmonType
 		_reportText.append(line).append("\n");
 	}
 
+	/**
+	 * Write SINGLE COUNTER use Divide (not calculated per second, transaction)
+	 * <pre>
+	 *    input param goes here             n/a           n/a         ###       n/a %
+	 * </pre>
+	 */
 	protected void addReportLnScD(String name, int counter, int divideby, int scale)
 	{
 		addReportLnScDiv(name, counter, divideby, scale);
 	}
+	/**
+	 * Write SINGLE COUNTER use Divide (not calculated per second, transaction)
+	 * <pre>
+	 *    input param goes here             n/a           n/a         ###       n/a % 
+	 * </pre>
+	 */
 	protected void addReportLnScDiv(String name, int counter, int divideby, int scale)
 	{
 		double dCalc = 0;
@@ -251,6 +357,12 @@ public abstract class AbstractSysmonType
 
 		_reportText.append(line).append("\n");
 	}
+	/**
+	 * Summary per second
+	 * <pre>
+	 *    input param goes here        #.##### seconds 
+	 * </pre>
+	 */
 	protected void addReportLnSec(String name, int counter, int divideby, int scale)
 	{
 		double dCalc = 0;

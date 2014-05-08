@@ -139,7 +139,7 @@ extends CountersModel
 //		if (aseVersion >= 1570000)
 		if (aseVersion >= Ver.ver(15,7))
 			discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
-
+		
 		String sql =   
 			"SELECT \n" +
 			(isClusterEnabled ? "instanceid, \n" : "") +
@@ -155,6 +155,44 @@ extends CountersModel
 			"ORDER BY group_name, field_name" + (isClusterEnabled ? ", instanceid" : "") + "\n" +
 			optGoalPlan;
 
-		return sql;
+		
+		// ASE Devices
+		String vdevno = "d.vdevno";
+		if (aseVersion < Ver.ver(15,0))
+			vdevno = "convert(int, d.low/power(2,24))";
+
+		String sqlDevices = 
+			"\n" +
+			"------- Append device information \n" +
+			"select \n" +
+			"  field_name  = d.name, \n" +
+			"  group_name  = 'ase-device-info', \n" +
+			"  field_id    = "+vdevno+", \n" +
+			"  value       = "+vdevno+", \n" +
+			"  description = d.phyname \n" +
+			"from master.dbo.sysdevices d \n" +
+			"where d.cntrltype = 0 \n" +
+			"";
+
+		// @@kernelmode
+		String kernelmode = "convert(varchar(255), 'process')";
+		if (aseVersion >= Ver.ver(15,7))
+			kernelmode = "@@kernelmode";
+
+		String sqlGlobalVariableKernelmode =
+			"\n" +
+			"------- Append some global variables information \n" +
+			"select \n" +
+			"  field_name  = convert(varchar(100), '@@kernelmode'), \n" +
+			"  group_name  = 'ase-global-var', \n" +
+			"  field_id    = convert(int, 0), \n" +
+			"  value       = convert(int, 0), \n" +
+			"  description = "+kernelmode+" \n" +
+			"";
+				
+		return 
+			sql + 
+			sqlDevices + 
+			sqlGlobalVariableKernelmode;
 	}
 }

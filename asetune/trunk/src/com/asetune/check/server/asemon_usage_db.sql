@@ -313,3 +313,34 @@ CREATE TABLE sqlw_usage_info
 	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
 );
 
+
+-- not yet implemented
+-- below is a Andriod SDK: popup message
+-------------------------------------------
+-- Thanks for using Andriod SDK!
+-- 
+-- <color=red> We know you just want to get started, but please read this first. </color=red>
+-- 
+-- By choosing to send certain usage statistics to Google, you can help us to improve the Andriod SDK.
+-- These usage statistics lets use measure things like active usage of the SDK, and let us know things like which versions of the SDK are in use and which tools are the most popular with developers.
+-- This limited data is not associated with personel information about you, and is examined on an aggregate basis, and is maintained in accordance with the Google Privacy Policy. __Google Privacy Policy__
+-- [x] Send usage statistics to Google
+-- 
+-- If you later decide to change this setting, you can do so in the "ddms" tool under "File -> Preferences -> Usage Statistics"
+---------------------------------------------
+CREATE TABLE send_statistics_status
+(
+	serverAddTime           timestamp,
+	userName                varchar(30),
+	
+	appName                 varchar(30),
+	appVersion              varchar(30),
+	
+	clientCanonicalHostName varchar(60),
+	callerIpAddress         varchar(20),
+	
+	status                  int,
+
+	PRIMARY KEY (userName, appName, clientCanonicalHostName)
+);
+
