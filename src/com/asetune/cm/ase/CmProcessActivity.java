@@ -230,6 +230,7 @@ extends CountersModel
 			"select * into #monProcessActivity from master..monProcessActivity \n" +
 			"select * into #monProcess         from master..monProcess         \n" +
 			"select * into #monProcessNetIO    from master..monProcessNetIO    \n" +
+			"go \n" +
 			"\n";
 
 		String dropTempTables = 

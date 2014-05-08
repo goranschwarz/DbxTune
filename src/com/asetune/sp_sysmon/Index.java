@@ -190,7 +190,7 @@ public class Index extends AbstractSysmonType
 		}
 		
 
-		addReportHead ("  Nonclustered Maintenance");
+		addReportHead2("  Nonclustered Maintenance");
 		addReportLnCnt("    Ins/Upd Requiring Maint",   fld_NcIndexMaint_Ins_Upd_Requiring_Maint);
 		addReportLnCnt("      # of NC Ndx Maint",       fld_NcIndexMaint_Ins_Upd_Num_of_NC_Ndx_Maint);
 		addReportLnScD("      Avg NC Ndx Maint / Op",   fld_NcIndexMaint_Ins_Upd_Num_of_NC_Ndx_Maint, fld_NcIndexMaint_Ins_Upd_Requiring_Maint, 5);
@@ -216,12 +216,12 @@ public class Index extends AbstractSysmonType
 		addReportLnCnt("    Deadlocks",                 fld_PageShrinks_Deadlocks);
 		addReportLnCnt("    Deadlock Retries Exceeded", fld_PageShrinks_Deadlock_Retries_Exceeded);
 		addReportLn();
-		addReportHead ("  Index Scans");
+		addReportHead2("  Index Scans");
 		addReportLnPct("    Ascending Scans",           fld_IndexScans_Ascending_Scans,      fld_IndexScans_Total_Scans);
 		addReportLnPct("    DOL Ascending Scans",       fld_IndexScans_DOL_Ascending_Scans,  fld_IndexScans_Total_Scans);
 		addReportLnPct("    Descending Scans",          fld_IndexScans_Descending_Scans,     fld_IndexScans_Total_Scans);
 		addReportLnPct("    DOL Descending Scans",      fld_IndexScans_DOL_Descending_Scans, fld_IndexScans_Total_Scans);
-		addReportLnSum();
+		addReportLnSum2();
 		addReportLnCnt("    Total Scans",               fld_IndexScans_Total_Scans);
 	}
 }
