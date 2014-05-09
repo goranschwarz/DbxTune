@@ -752,6 +752,10 @@ public class Ver
 		testVersion(Ver.ver(16,0,1,1,1), "Adaptive Server Enterprise/16.0.1 SP1 PL1/EBF XXXX SMP /...");
 		testVersion(Ver.ver(16,0,1,1,1), "Adaptive Server Enterprise/16.0.1 SP01 PL01/EBF XXXX SMP /...");
 		testVersion(Ver.ver(16,1,0,1,1), "Adaptive Server Enterprise/16.1 SP01 PL01/EBF XXXX SMP /...");
+
+		// Some real life version strings for 16
+		testVersion(Ver.ver(16,0,0,0,0), "Adaptive Server Enterprise/16.0/EBF 22385 SMP/P/X64/Windows Server/asecepheus/3530/64-bit/FBO/Sun Feb 16 06:52:50 2014");
+		testVersion(Ver.ver(16,0,0,0,1), "Adaptive Server Enterprise/16.0 GA PL01/EBF 22544 SMP/P/x86_64/Enterprise Linux/ase160sp00pl01/3523/64-bit/FBO/Tue Apr 15 13:24:31 2014");
 	}
 	
 	private static boolean testVersion(int expectedIntVer, String verStr)
