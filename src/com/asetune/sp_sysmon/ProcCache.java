@@ -23,6 +23,7 @@ extends AbstractSysmonType
 		return "Procedure Cache";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

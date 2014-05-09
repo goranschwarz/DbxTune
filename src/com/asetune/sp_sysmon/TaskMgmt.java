@@ -23,6 +23,7 @@ extends AbstractSysmonType
 		return "Task Management";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

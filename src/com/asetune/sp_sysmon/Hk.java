@@ -22,6 +22,7 @@ public class Hk extends AbstractSysmonType
 		return "Housekeeper Task Activity";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

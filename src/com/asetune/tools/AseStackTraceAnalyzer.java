@@ -90,6 +90,9 @@ public class AseStackTraceAnalyzer
 	/** Different ways to be used when filtering on function names */
 	public enum FunctionFilterType {EXACT, INDEXOF, REGEXP};
 	
+	/** Different ways to be used when filtering on function names */
+	public enum SampleHighlightType {KPID, SPID, SUID};
+	
 	/**
 	 * Class that reads/parser a sybmon stack trace file
 	 * @author gorans
@@ -99,6 +102,10 @@ public class AseStackTraceAnalyzer
 		private String  _filename           = null;
 		private int     _sampleIterations   = 0;
 		private int     _sampleInterval     = 0;
+
+		private int     _actualSamples      = 0;
+		private int     _actualSampleSlots  = 0;
+		private int     _engineCount        = 0;
 
 		private int     _startRead          = 0;
 		private int     _stopRead           = Integer.MAX_VALUE;
@@ -112,10 +119,15 @@ public class AseStackTraceAnalyzer
 		private StackEntry _root            = new StackEntry(null, "root");
 
 
-		public int    getSampleIterations() { return _sampleIterations; }
-		public int    getSampleInterval()   { return _sampleInterval; }
-		public String getFile()             { return _filename; }
+		public int    getSampleIterations()    { return _sampleIterations; }
+		public int    getSampleInterval()      { return _sampleInterval; }
+		public String getFile()                { return _filename; }
 
+		public int    getActualSamples()       { return _actualSamples; }
+		public int    getActualSampleSlots()   { return _actualSampleSlots; }
+		public int    getExpectedSampleSlots() { return getSampleIterations() * getEngineCount(); }
+		public int    getEngineCount()         { return _engineCount; }
+		
 		public void setFile              (String filename)      { _filename           = filename; }
 		public void setFunctionFilter    (String  functionName) { _functionFilter     = functionName; }
 		public void setFunctionFilterType(FunctionFilterType t) { _functionFilterType = t; }
@@ -201,11 +213,19 @@ public class AseStackTraceAnalyzer
 							sample = Integer.parseInt(sa[2]);
 							engine = Integer.parseInt(sa[4]);
 
+							if (sample > _actualSamples)
+								_actualSamples = sample;
+							_actualSampleSlots++;
 						} 
 						catch(RuntimeException rte) 
 						{
 							_logger.warn("Problem parsing: sample & engine number. row='"+row+"', Caught="+rte);
 						}
+					}
+					else if (row.indexOf(" is offline and will not be sampled") >= 0)
+					{
+						// subtract offline engines from the "number of slots" counter
+						_actualSampleSlots--;
 					}
 					else if (row.startsWith("******** End of stack trace"))
 					{
@@ -267,6 +287,8 @@ public class AseStackTraceAnalyzer
 						if (sample > _stopRead)                addThis = false;
 						if (_engine >= 0 && _engine != engine) addThis = false;
 
+						_engineCount = Math.max(_engineCount, engine + 1); // engine number starts at 0, so lets add 1 here 
+
 						if (addThis)
 						{
 							if (_logger.isDebugEnabled())
@@ -309,7 +331,8 @@ public class AseStackTraceAnalyzer
 						if (f.length() > 0)
 							stackList.add(f);
 					}
-					else if (row.startsWith("-- dbid: ")) // parse for used table names (available using option: context=y)
+//					else if (row.startsWith("-- dbid: ")) // parse for used table names (available using option: context=y)
+					else if (row.indexOf("dbid: ") >= 0) // parse for used table names (available using option: context=y)
 					{
 						// /home/sybase/gorans [1094]# cat stacktrace_Y160_20140505_153529.out | grep '\-\- dbid:'
 						// -- dbid: 31514, objid: 546097955, name: 'spt_jdbc_datatype_info', sdes: 0x0x155433048, des: 0x0x154ac0270
@@ -370,7 +393,7 @@ public class AseStackTraceAnalyzer
 						String name  = null;
 						String sdes  = null;
 
-						searchStr = " dbid: ";
+						searchStr = "dbid: ";
 						endStr    = ",";
 						pos = row.indexOf(searchStr);
 						if (pos >= 0)
@@ -390,13 +413,21 @@ public class AseStackTraceAnalyzer
 							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(objid) '"+row+"', caught: "+rte);}
 						}
 
-						searchStr = " name: '";
-						endStr    = "',";
+//						searchStr = " name: '";
+//						endStr    = "',";
+						searchStr = " name: ";
+						endStr    = ",";
 						pos = row.indexOf(searchStr);
 						if (pos >= 0)
 						{
 							pos += searchStr.length();
-							try { name = row.substring(pos, row.indexOf(endStr, pos)); }
+							try { 
+								name = row.substring(pos, row.indexOf(endStr, pos));
+								if (name.startsWith("'"))
+									name = name.substring(1);
+								if (name.endsWith("'"))
+									name = name.substring(0, name.length()-1);
+							}
 							catch(RuntimeException rte) {_logger.warn("Problems Parse-object(name) '"+row+"', caught: "+rte);}
 						}
 
@@ -904,8 +935,13 @@ public class AseStackTraceAnalyzer
 		private JButton      _loadRefresh_but        = new JButton("Load/Refresh");
 		private JLabel       _sampleCount_lbl        = new JLabel("Number of samples in file");
 		private JTextField   _sampleCount_txt        = new JTextField();
+		private JTextField   _actualSampleCount_txt  = new JTextField();
 		private JLabel       _sampleSleep_lbl        = new JLabel("Sleep time between samples");
 		private JTextField   _sampleSleep_txt        = new JTextField();
+
+		private JLabel       _sampleSlots_lbl        = new JLabel("Sample Slots");
+		private JTextField   _expectedSampleSlots_txt= new JTextField();
+		private JTextField   _actualSampleSlots_txt  = new JTextField();
 
 		private JButton      _sybmonExample_but      = new JButton("Example Script to do Stack Trace");
 
@@ -1013,32 +1049,41 @@ public class AseStackTraceAnalyzer
 			_sampleEngine_lbl      .setToolTipText("<html>Only read stack traces for this engine number.<br>Engine start at 0<br>Default: read all engines.</html>"); 
 			_sampleEngine_txt      .setToolTipText("<html>Only read stack traces for this engine number.<br>Engine start at 0<br>Default: read all engines.</html>");
 
-			_functionFilter_chk    .setToolTipText("<html>Only read stack traces if it contains this function, or part of the function.<br>Java RegExp can be used.</html>"); 
-			_functionFilter_txt    .setToolTipText("<html>Only read stack traces if it contains this function, or part of the function.<br>Java RegExp can be used.</html>");
-			_funcFilterExact_rb    .setToolTipText("<html>Use <b>exact</b> matching: <code>funcname.equal(filterStr)</code></html>");
-			_funcFilterIndexOf_rb  .setToolTipText("<html>Use <b>index</b> matching: <code>funcname.indexOf(filterStr)</code></html>");
-			_funcFilterRegExp_rb   .setToolTipText("<html>Use <b>Java RegExp</b> matching: <code>funcname.matches(filterStr)</code></html>");
-			_functionStackStart_chk.setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
-			_functionStackStart_txt.setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
-			_keepCppInstance_chk   .setToolTipText("<html>Strip off or Keep the C++ instance. If function looks like '_$o1cexoL0.kpsched', if strip=true, it fill become 'kpsched'</html>"); 
+			_functionFilter_chk     .setToolTipText("<html>Only read stack traces if it contains this function, or part of the function.<br>Java RegExp can be used.</html>"); 
+			_functionFilter_txt     .setToolTipText("<html>Only read stack traces if it contains this function, or part of the function.<br>Java RegExp can be used.</html>");
+			_funcFilterExact_rb     .setToolTipText("<html>Use <b>exact</b> matching: <code>funcname.equal(filterStr)</code></html>");
+			_funcFilterIndexOf_rb   .setToolTipText("<html>Use <b>index</b> matching: <code>funcname.indexOf(filterStr)</code></html>");
+			_funcFilterRegExp_rb    .setToolTipText("<html>Use <b>Java RegExp</b> matching: <code>funcname.matches(filterStr)</code></html>");
+			_functionStackStart_chk .setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
+			_functionStackStart_txt .setToolTipText("<html>Use this <b>exact</b> function name as a root. The function calls \"above\" this function will not be displayed.</html>"); 
+			_keepCppInstance_chk    .setToolTipText("<html>Strip off or Keep the C++ instance. If function looks like '_$o1cexoL0.kpsched', if strip=true, it fill become 'kpsched'</html>"); 
 			
-			_tooltipStackMatrix_chk.setToolTipText("<html>Show some kind of <i>map</i> to show in what sample/engine this stacktrace is visible at.</html>");
+			_tooltipStackMatrix_chk .setToolTipText("<html>Show some kind of <i>map</i> to show in what sample/engine this stacktrace is visible at.</html>");
 
-			_tracefile_lbl         .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>"); 
-			_tracefile_txt         .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>");
-			_tracefile_but         .setToolTipText("<html>Open a file browser and choose a file.</html>"); 
+			_tracefile_lbl          .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>"); 
+			_tracefile_txt          .setToolTipText("<html>'sybmon' trace file to be read/parsed</html>");
+			_tracefile_but          .setToolTipText("<html>Open a file browser and choose a file.</html>"); 
 
-			_loadRefresh_but       .setToolTipText("<html>Load/Parse the selected file.</html>"); 
+			_loadRefresh_but        .setToolTipText("<html>Load/Parse the selected file.</html>"); 
 
-			_sampleCount_lbl       .setToolTipText("<html>How many Intervals did sybmon sample</html>"); 
-			_sampleCount_txt       .setToolTipText("<html>How many Intervals did sybmon sample</html>"); 
-			_sampleSleep_lbl       .setToolTipText("<html>How long time was it between the samples</html>"); 
-			_sampleSleep_txt       .setToolTipText("<html>How long time was it between the samples</html>"); 
+			_sampleCount_lbl        .setToolTipText("<html>How many Intervals was sybmon expected to sample</html>"); 
+			_sampleCount_txt        .setToolTipText("<html>How many Intervals was sybmon expected to sample</html>");
+			_actualSampleCount_txt  .setToolTipText("<html>How many Intervals did sybmon <b>actually</b> sample?   <br>If this is <b>lower</b> than the expected, check the source file... it is probably <b>not</b> complete.</html>");
+			
+			_sampleSleep_lbl        .setToolTipText("<html>How long time was it between the samples</html>"); 
+			_sampleSleep_txt        .setToolTipText("<html>How long time was it between the samples</html>"); 
 
-			_sybmonExample_but     .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
+			_sampleSlots_lbl        .setToolTipText("<html>how many <i>slots</i> where sampled.</html>"); 
+			_expectedSampleSlots_txt.setToolTipText("<html>how many <i>slots</i> did we <b>expect</b> to sampled?  <br><b>Formula:</b> <code>samples * engines</code></html>"); 
+			_actualSampleSlots_txt  .setToolTipText("<html>how many <i>slots</i> did we <b>actually</b> sample?   <br>If this is <b>lower</b> than the expected, check the source file... it is probably <b>not</b> complete.</html>"); 
 
-			_sampleCount_txt.setEditable(false);
-			_sampleSleep_txt.setEditable(false);
+			_sybmonExample_but      .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
+
+			_sampleCount_txt        .setEditable(false);
+			_actualSampleCount_txt  .setEditable(false);
+			_sampleSleep_txt        .setEditable(false);
+			_expectedSampleSlots_txt.setEditable(false);
+			_actualSampleSlots_txt  .setEditable(false);
 
 			ButtonGroup group = new ButtonGroup();
 			group.add(_funcFilterExact_rb);
@@ -1046,39 +1091,43 @@ public class AseStackTraceAnalyzer
 			group.add(_funcFilterRegExp_rb);
 
 			
-			panel.add(_sampleFilter_chk,       "");
-			panel.add(_sampleStart_lbl,        "span, split 6");
-			panel.add(_sampleStart_txt,        "w 50");
-			panel.add(_sampleStop_lbl,         "");
-			panel.add(_sampleStop_txt,         "w 50");
-			panel.add(_sampleEngine_lbl,       "");
-			panel.add(_sampleEngine_txt,       "w 50, wrap");
+			panel.add(_sampleFilter_chk,        "");
+			panel.add(_sampleStart_lbl,         "span, split 6");
+			panel.add(_sampleStart_txt,         "w 50");
+			panel.add(_sampleStop_lbl,          "");
+			panel.add(_sampleStop_txt,          "w 50");
+			panel.add(_sampleEngine_lbl,        "");
+			panel.add(_sampleEngine_txt,        "w 50, wrap");
 
-			panel.add(_functionFilter_chk,     "");
-			panel.add(_functionFilter_txt,     "split, push, grow");
-			panel.add(_funcFilterExact_rb,     "");
-			panel.add(_funcFilterIndexOf_rb,   "");
-			panel.add(_funcFilterRegExp_rb,    "wrap");
+			panel.add(_functionFilter_chk,      "");
+			panel.add(_functionFilter_txt,      "split, push, grow");
+			panel.add(_funcFilterExact_rb,      "");
+			panel.add(_funcFilterIndexOf_rb,    "");
+			panel.add(_funcFilterRegExp_rb,     "wrap");
 
-			panel.add(_functionStackStart_chk, "");
-			panel.add(_functionStackStart_txt, "push, grow, wrap");
+			panel.add(_functionStackStart_chk,  "");
+			panel.add(_functionStackStart_txt,  "push, grow, wrap");
 
-			panel.add(_keepCppInstance_chk,    "");
-			panel.add(new JLabel(),            "split, pushx, growx");
-			panel.add(_tooltipStackMatrix_chk, "wrap");
+			panel.add(_keepCppInstance_chk,     "");
+			panel.add(new JLabel(),             "split, pushx, growx");
+			panel.add(_tooltipStackMatrix_chk,  "wrap");
 
-			panel.add(_tracefile_lbl,          "");
-			panel.add(_tracefile_txt,          "split, push, grow");
-			panel.add(_tracefile_but,          "wrap");
+			panel.add(_tracefile_lbl,           "");
+			panel.add(_tracefile_txt,           "split, push, grow");
+			panel.add(_tracefile_but,           "wrap");
 
-			panel.add(_loadRefresh_but,        "");
-//			panel.add(new JLabel(),            "split, push, grow");
-			panel.add(_sampleCount_lbl,        "split");
-			panel.add(_sampleCount_txt,        "w 50");
-			panel.add(_sampleSleep_lbl,        "");
-			panel.add(_sampleSleep_txt,        "w 50");
-			panel.add(new JLabel(""),          "push, grow");
-			panel.add(_sybmonExample_but,      "wrap");
+			panel.add(_loadRefresh_but,         "");
+//			panel.add(new JLabel(),             "split, push, grow");
+			panel.add(_sampleCount_lbl,         "split");
+			panel.add(_sampleCount_txt,         "w 50");
+			panel.add(_actualSampleCount_txt,   "w 50");
+			panel.add(_sampleSleep_lbl,         "");
+			panel.add(_sampleSleep_txt,         "w 50");
+			panel.add(_sampleSlots_lbl,         "");
+			panel.add(_expectedSampleSlots_txt, "w 50");
+			panel.add(_actualSampleSlots_txt,   "w 50");
+			panel.add(new JLabel(""),           "push, grow");
+			panel.add(_sybmonExample_but,       "wrap");
 
 			// set action
 			_loadRefresh_but       .setActionCommand(ACTION_DO_PARSE);
@@ -1267,8 +1316,20 @@ public class AseStackTraceAnalyzer
 			_str = str;
 			if (_str != null)
 			{
-				_sampleCount_txt.setText(_str.getSampleIterations()+"");
-				_sampleSleep_txt.setText(_str.getSampleInterval()+"");
+				_sampleCount_txt        .setText(_str.getSampleIterations()+"");
+				_actualSampleCount_txt  .setText(_str.getActualSamples()+"");
+				_sampleSleep_txt        .setText(_str.getSampleInterval()+"");
+				_expectedSampleSlots_txt.setText(_str.getExpectedSampleSlots()+"");
+				_actualSampleSlots_txt  .setText(_str.getActualSampleSlots()+"");
+
+				// if we are "missing" samples, mark it as RED
+				_actualSampleCount_txt.setBackground(_sampleCount_txt.getBackground());
+				if (_str.getActualSamples() < _str.getSampleIterations())
+					_actualSampleCount_txt.setBackground(Color.RED);
+
+				_actualSampleSlots_txt.setBackground(_sampleCount_txt.getBackground());
+				if (_str.getActualSampleSlots() < _str.getExpectedSampleSlots())
+					_actualSampleSlots_txt.setBackground(Color.RED);
 
 				_treeView.setModel(_str.createTreeModel());
 			}
@@ -1296,6 +1357,9 @@ public class AseStackTraceAnalyzer
 				{
 					String newFile = fc.getSelectedFile().toString().replace('\\', '/');
 					_tracefile_txt.setText(newFile);
+					
+					// Load the file
+					_loadRefresh_but.doClick();
 				}
 			}
 
@@ -1469,6 +1533,9 @@ public class AseStackTraceAnalyzer
 				}
 			}
 		}
+
+		
+		
 		private StackMatrixTableDialog _stackDialog = null;
 		
 		@SuppressWarnings("unused")
@@ -1519,35 +1586,45 @@ public class AseStackTraceAnalyzer
 				SwingUtils.setSizeWithingScreenLimit(this, 5);
 			}
 
-			private JLabel     _openStackName_lbl = new JLabel("Open at Stack Path");
-			private JTextField _openStackName_txt = new JTextField();
+			private JLabel       _openStackName_lbl      = new JLabel("Open at Stack Path");
+			private JTextField   _openStackName_txt      = new JTextField();
 
-			private JLabel     _currStackName_lbl = new JLabel("Current Stack Path");
-			private JTextField _currStackName_txt = new JTextField();
+			private JLabel       _currStackName_lbl      = new JLabel("Current Stack Path");
+			private JTextField   _currStackName_txt      = new JTextField();
 
-			private JLabel     _currSample_lbl    = new JLabel("Current Sample");
-			private JTextField _currSample_txt    = new JTextField(4);
+			private JLabel       _currSample_lbl         = new JLabel("Current Sample");
+			private JTextField   _currSample_txt         = new JTextField(4);
 
-			private JLabel     _currEngine_lbl    = new JLabel("Current Engine");
-			private JTextField _currEngine_txt    = new JTextField(4);
+			private JLabel       _currEngine_lbl         = new JLabel("Current Engine");
+			private JTextField   _currEngine_txt         = new JTextField(4);
 
-			private JLabel     _currKpid_lbl      = new JLabel("Current KPID");
-			private JTextField _currKpid_txt      = new JTextField(12);
-			private JComboBox  _currKpid_cbx      = new JComboBox();
-			private int        _currKpid          = -1;
-			private int        _lastKpid          = -1;
+			private JLabel       _currKpid_lbl           = new JLabel("Current KPID");
+			private JTextField   _currKpid_txt           = new JTextField(12);
+			private JComboBox    _currKpid_cbx           = new JComboBox();
+			private int          _currKpid               = -1;
+			private int          _lastKpid               = -1;
 
-			private JLabel     _currSpid_lbl      = new JLabel("Current SPID");
-			private JTextField _currSpid_txt      = new JTextField(5);
-			private JComboBox  _currSpid_cbx      = new JComboBox();
+			private JLabel       _currSpid_lbl           = new JLabel("Current SPID");
+			private JTextField   _currSpid_txt           = new JTextField(5);
+			private JComboBox    _currSpid_cbx           = new JComboBox();
+			private int          _currSpid               = -1;
+			private int          _lastSpid               = -1;
 
-			private JLabel     _currSuid_lbl      = new JLabel("Current SUID");
-			private JTextField _currSuid_txt      = new JTextField(5);
-			private JComboBox  _currSuid_cbx      = new JComboBox();
+			private JLabel       _currSuid_lbl           = new JLabel("Current SUID");
+			private JTextField   _currSuid_txt           = new JTextField(5);
+			private JComboBox    _currSuid_cbx           = new JComboBox();
+			private int          _currSuid               = -1;
+			private int          _lastSuid               = -1;
 
-			private JLabel     _currObjid_lbl     = new JLabel("Current Object ID's");
-			private JTextField _currObjid_txt     = new JTextField();
-			private JComboBox  _currObjid_cbx     = new JComboBox();
+			
+			private JLabel       _sampleHighlight_lbl    = new JLabel("Highlight Cell(s) based on");
+			private JRadioButton _sampleHighlightKPID_rb = new JRadioButton("kpid", true);
+			private JRadioButton _sampleHighlightSPID_rb = new JRadioButton("spid", false);
+			private JRadioButton _sampleHighlightSUID_rb = new JRadioButton("suid", false);
+
+			private JLabel       _currObjid_lbl          = new JLabel("Current Object ID's");
+			private JTextField   _currObjid_txt          = new JTextField();
+			private JComboBox    _currObjid_cbx          = new JComboBox();
 
 
 			public void setOpenStackName(String stackPath)
@@ -1579,11 +1656,13 @@ public class AseStackTraceAnalyzer
 
 			public void setCurrentSpid(int spid)
 			{
+				_currSpid = spid;
 				_currSpid_txt.setText( spid < 0 ? "" : Integer.toString(spid));
 			}
 
 			public void setCurrentSuid(int suid)
 			{
+				_currSuid = suid;
 				_currSuid_txt.setText( suid < 0 ? "" : Integer.toString(suid));
 			}
 
@@ -1631,10 +1710,20 @@ public class AseStackTraceAnalyzer
 				_currSpid_cbx .addActionListener(this);
 				_currSuid_cbx .addActionListener(this);
 				_currObjid_cbx.addActionListener(this);
+				
+				_sampleHighlightKPID_rb.addActionListener(this);
+				_sampleHighlightSPID_rb.addActionListener(this);
+				_sampleHighlightSUID_rb.addActionListener(this);
 
 //				_textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 				_textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 
+				ButtonGroup group = new ButtonGroup();
+				group.add(_sampleHighlightKPID_rb);
+				group.add(_sampleHighlightSPID_rb);
+				group.add(_sampleHighlightSUID_rb);
+				
+				
 				_infoPane.add(_openStackName_lbl,        "");
 				_infoPane.add(_openStackName_txt,        "pushx, growx, wrap");
 				
@@ -1644,7 +1733,11 @@ public class AseStackTraceAnalyzer
 				_infoPane.add(_currSample_lbl,           "");
 				_infoPane.add(_currSample_txt,           "split");
 				_infoPane.add(_currEngine_lbl,           "gap 20");
-				_infoPane.add(_currEngine_txt,           "wrap");
+				_infoPane.add(_currEngine_txt,           "");
+				_infoPane.add(_sampleHighlight_lbl,      "gap 20");
+				_infoPane.add(_sampleHighlightKPID_rb,   "");
+				_infoPane.add(_sampleHighlightSPID_rb,   "");
+				_infoPane.add(_sampleHighlightSUID_rb,   "wrap");
 				
 				_infoPane.add(_currKpid_lbl,             "");
 				_infoPane.add(_currKpid_txt,             "split");
@@ -1678,11 +1771,33 @@ public class AseStackTraceAnalyzer
 					public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 					{
 						SampleEngineDetailes sde = _tm._se.getSampleEngineDetailes(adapter.row+1, adapter.column-1);
-						if (sde != null && _currKpid == sde._kpid)
-							return true;
+						
+						if (_sampleHighlightKPID_rb.isSelected())
+						{
+    						if (sde != null && _currKpid == sde._kpid)
+    							return true;
+    						return false;
+						}
+
+						if (_sampleHighlightSPID_rb.isSelected())
+						{
+    						if (sde != null && _currSpid == sde._spid)
+    							return true;
+    						return false;
+						}
+
+						if (_sampleHighlightSUID_rb.isSelected())
+						{
+    						if (sde != null && _currSuid == sde._suid)
+    							return true;
+    						return false;
+						}
+
 						return false;
 					}
 				}, Color.ORANGE, null));
+				
+//				_table.setDefaultRenderer(Boolean.class, new CheckBoxTableCellRenderer());
 				
 				_tableScroll = new JScrollPane(_table);
 				_splitPane.setTopComponent(_tableScroll);
@@ -1720,14 +1835,47 @@ public class AseStackTraceAnalyzer
 					try 
 					{
 						setCurrentKpid(Integer.parseInt(str));
+						_sampleHighlightKPID_rb.setSelected(true);
 						_table.repaint();
 					} 
 					catch (NumberFormatException ignore) {}
 				}
+
+				if (_currSpid_cbx.equals(source))
+				{
+					String str = _currSpid_cbx.getSelectedItem().toString();
+					str = str.substring("SPID = ".length(), str.indexOf(","));
+					try 
+					{
+						setCurrentSpid(Integer.parseInt(str));
+						_sampleHighlightSPID_rb.setSelected(true);
+						_table.repaint();
+					} 
+					catch (NumberFormatException ignore) {}
+				}
+
+				if (_currSuid_cbx.equals(source))
+				{
+					String str = _currSuid_cbx.getSelectedItem().toString();
+					str = str.substring("SUID = ".length(), str.indexOf(","));
+					try 
+					{
+						setCurrentSuid(Integer.parseInt(str));
+						_sampleHighlightSUID_rb.setSelected(true);
+						_table.repaint();
+					} 
+					catch (NumberFormatException ignore) {}
+				}
+				
+				if (_sampleHighlightKPID_rb.equals(source)) _table.repaint();
+				if (_sampleHighlightSPID_rb.equals(source)) _table.repaint();
+				if (_sampleHighlightSUID_rb.equals(source)) _table.repaint();
 			}
 
 			public void setStackEntry(StackEntry se)
 			{
+				String sampleHighligtType = getCurrentHighligtType();
+				
 				StackMatrixTableModel tm = new StackMatrixTableModel(se);
 				_tm = tm;
 				_table.setModel(_tm);
@@ -1803,9 +1951,9 @@ public class AseStackTraceAnalyzer
 				    _currKpid_cbx.addItem("KPID = " + key + ", count = " + val);
 			    }
 
-				_currKpid_cbx.removeActionListener(this);;
+				_currSpid_cbx.removeActionListener(this);;
 				_currSpid_cbx.removeAllItems();
-				_currKpid_cbx.addActionListener(this);
+				_currSpid_cbx.addActionListener(this);
 			    for(Entry<Integer, Integer> e : spidCount.entrySet()) 
 			    {
 			        Integer key = e.getKey();
@@ -1813,9 +1961,9 @@ public class AseStackTraceAnalyzer
 				    _currSpid_cbx.addItem("SPID = " + key + ", count = " + val);
 			    }
 
-				_currKpid_cbx.removeActionListener(this);;
+				_currSuid_cbx.removeActionListener(this);;
 				_currSuid_cbx.removeAllItems();
-				_currKpid_cbx.addActionListener(this);
+				_currSuid_cbx.addActionListener(this);
 			    for(Entry<Integer, Integer> e : suidCount.entrySet()) 
 			    {
 			        Integer key = e.getKey();
@@ -1832,6 +1980,8 @@ public class AseStackTraceAnalyzer
 			        Integer val = e.getValue();
 			        _currObjid_cbx.addItem("OBJ = " + key + ", count = " + val);
 			    }
+			    
+				setCurrentHighligtType(sampleHighligtType);
 			}
 
 			@Override
@@ -1873,12 +2023,17 @@ public class AseStackTraceAnalyzer
 					setCurrentObjectInfo(sde._objectList);
 				}
 				
-				// request Repaint if we choose a new KPID
-				if (_currKpid != _lastKpid)
-					_table.repaint();
+//				System.out.println("TABLE REPAINT: _currKpid != _lastKpid ("+_currKpid+"!="+_lastKpid+")   ||   _currSpid() != _lastSpid ("+_currSpid+"!="+_lastSpid+")   ||   _currSuid != _lastSuid ("+_currSuid+"!="+_lastSuid+")");
+
+				// request Repaint if we choose a new KPID, SPID or SUID
+				if (_sampleHighlightKPID_rb.isSelected() && _currKpid != _lastKpid) _table.repaint();
+				if (_sampleHighlightSPID_rb.isSelected() && _currSpid != _lastSpid) _table.repaint();
+				if (_sampleHighlightSUID_rb.isSelected() && _currSuid != _lastSuid) _table.repaint();
 
 				_lastKpid = _currKpid;
-				
+				_lastSpid = _currSpid;
+				_lastSuid = _currSuid;
+
 //				System.out.println(String.format("Lead: %d, %d. ", 
 //						_table.getSelectionModel().getLeadSelectionIndex(),
 //						_table.getColumnModel().getSelectionModel().getLeadSelectionIndex()));
@@ -1896,6 +2051,27 @@ public class AseStackTraceAnalyzer
 //				System.out.println();
 			}
 
+			private String getCurrentHighligtType()
+			{
+				SampleHighlightType highlightType = SampleHighlightType.KPID;
+				if (_sampleHighlightKPID_rb.isSelected()) highlightType = SampleHighlightType.KPID;
+				if (_sampleHighlightSPID_rb.isSelected()) highlightType = SampleHighlightType.SPID;
+				if (_sampleHighlightSUID_rb.isSelected()) highlightType = SampleHighlightType.SUID;
+
+				return highlightType.toString();
+			}
+	
+			private void setCurrentHighligtType(String type)
+			{
+				if (type != null)
+				{
+					SampleHighlightType highlightType = SampleHighlightType.valueOf(type);
+					if (highlightType == SampleHighlightType.KPID) _sampleHighlightKPID_rb.setSelected(true);
+					if (highlightType == SampleHighlightType.SPID) _sampleHighlightSPID_rb.setSelected(true);
+					if (highlightType == SampleHighlightType.SUID) _sampleHighlightSUID_rb.setSelected(true);
+				}
+			}
+			
 			private void saveProps()
 			{
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -1907,6 +2083,7 @@ public class AseStackTraceAnalyzer
 				//----------------------------------
 				// Settings
 				//----------------------------------
+				conf.setProperty("StackMatrixTable.sample.highlight.type", getCurrentHighligtType());
 
 				//------------------
 				// WINDOW
@@ -1923,8 +2100,17 @@ public class AseStackTraceAnalyzer
 			
 			private void loadProps()
 			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				if (conf == null)
+				{
+					_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
+					return;
+				}
+
+				// FunctionFilterType
+				setCurrentHighligtType( conf.getProperty("StackMatrixTable.sample.highlight.type", SampleHighlightType.KPID.toString()) );
 			}
-			
+
 			private void getSavedWindowProps()
 			{
 				Configuration conf = Configuration.getCombinedConfiguration();
@@ -1954,6 +2140,61 @@ public class AseStackTraceAnalyzer
 			}
 		}
 
+//		private static class CheckBoxTableCellRenderer extends JCheckBox implements TableCellRenderer
+//		{
+//
+//			private static final long serialVersionUID = 1L;
+//
+//			Border noFocusBorder;
+//			Border focusBorder;
+//
+//			public CheckBoxTableCellRenderer()
+//			{
+//				super();
+//				setOpaque(true);
+//				setBorderPainted(true);
+//				setHorizontalAlignment(SwingConstants.CENTER);
+//				setVerticalAlignment(SwingConstants.CENTER);
+//			}
+//
+//			@Override
+//			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+//			{
+//
+//				if ( isSelected )
+//				{
+//					setForeground(table.getSelectionForeground());
+//					setBackground(table.getSelectionBackground());
+//				}
+//				else
+//				{
+//					setForeground(table.getForeground());
+//					setBackground(table.getBackground());
+//				}
+//
+//				if ( hasFocus )
+//				{
+//					if ( focusBorder == null )
+//					{
+//						focusBorder = UIManager.getBorder("Table.focusCellHighlightBorder");
+//					}
+//					setBorder(focusBorder);
+//				}
+//				else
+//				{
+//					if ( noFocusBorder == null )
+//					{
+//						noFocusBorder = new EmptyBorder(1, 1, 1, 1);
+//					}
+//					setBorder(noFocusBorder);
+//				}
+//
+//				setSelected(Boolean.TRUE.equals(value));
+//				setVisible(Boolean.TRUE.equals(value));
+//				return this;
+//			}
+//		}
+		
 		private static class StackMatrixTableModel
 		extends AbstractTableModel
 		{

@@ -23,6 +23,7 @@ extends AbstractSysmonType
 		return "Transaction Management";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

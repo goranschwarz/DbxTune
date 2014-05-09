@@ -22,6 +22,7 @@ public class BasicCalc extends AbstractSysmonType
 		return "Basic";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{
