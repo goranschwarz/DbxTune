@@ -174,13 +174,23 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
-	<b>Enhancement:IO Controller</b><br>
+	<b>Enhancement: IO Controller</b><br>
 	Two new graphs
 	<ul>
 	   <li>Pending IO's, or number of outstanding IO's</li> 
 	   <li>Completed IO's per seconds</li> 
 	</ul>
 	Also removed column Pending from being difference calculated, it seems that it's a peek counter.
+	</LI>
+
+	<LI>
+	<b>Enhancement: Sysmon Raw</b><br>
+	Implemented 3 new sysmon sections
+	<ul>
+	   <li>Disk I/O Management</li> 
+	   <li>Network I/O Management</li> 
+	   <li>Monitor Access to Executing SQL</li> 
+	</ul>
 	</LI>
 
 	<LI>
@@ -237,6 +247,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Enhancement: View ASE Configuration</b><br>
 	Added 1 tab: ASE Config File - Tries to read the ASE configuration file. This will use CIS and needs configuration 'enable file access' to be enabled 
+	</LI>
+
+	<LI>
+	<b>Enhancement - Stacktrace analyzer</b><br>
+	Right click menu: Stack Matrix Table<br>
+	In the 'Stack Matrix Table' Dialog you can navigate within the stacktrace samples to: 
+	<ul>
+	   <li>Select a specific sample, then look at the <i>source</i> content in the stack file for that sample.</li>
+	   <li>Highlight what other samples the current KPID, SPID or SUID is active in.</li>
+	   <li>What KPID, SPID, SUID or TABLE-OBJECT is the most active within the whole sampled stacktrace session.</li>
+	</ul>
 	</LI>
 
 	<LI>

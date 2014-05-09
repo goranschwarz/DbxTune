@@ -23,6 +23,7 @@ extends AbstractSysmonType
 		return "Transaction Profile";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

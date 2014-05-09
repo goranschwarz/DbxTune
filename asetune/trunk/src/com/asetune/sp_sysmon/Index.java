@@ -22,6 +22,7 @@ public class Index extends AbstractSysmonType
 		return "Index Management";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

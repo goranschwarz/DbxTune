@@ -23,6 +23,7 @@ extends AbstractSysmonType
 		return "Memory";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

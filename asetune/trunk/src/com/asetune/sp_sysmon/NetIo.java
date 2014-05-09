@@ -22,6 +22,7 @@ public class NetIo extends AbstractSysmonType
 		return "Network I/O Management";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{
@@ -34,9 +35,6 @@ public class NetIo extends AbstractSysmonType
 
 		int      NumEngines        = _sysmon.getNumEngines();
 		String   kernelMode        =  "not-initialized";
-
-		int fld_xxx = 0;
-		int fld_yyy = 0;
 
 		int tmp_total = 0;
 

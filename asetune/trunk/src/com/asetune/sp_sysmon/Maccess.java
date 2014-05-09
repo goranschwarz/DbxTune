@@ -22,6 +22,7 @@ public class Maccess extends AbstractSysmonType
 		return "Monitor Access to Executing SQL";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{

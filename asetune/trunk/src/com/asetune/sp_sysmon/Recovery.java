@@ -22,6 +22,7 @@ public class Recovery extends AbstractSysmonType
 		return "Recovery Management";
 	}
 
+	@SuppressWarnings("unused")
 	@Override
 	public void calc()
 	{
