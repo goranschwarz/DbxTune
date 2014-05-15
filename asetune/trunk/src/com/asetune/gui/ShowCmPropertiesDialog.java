@@ -14,10 +14,12 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -52,6 +54,7 @@ extends JDialog implements ActionListener, ChangeListener
 
 	// Panel where most of the other stuff is sitting on, used for windows size calculation.
 	private JPanel             _xpanel                = null;
+	private JScrollPane        _xscroll               = null;
 
 	private JLabel             _cmShortName_lbl       = new JLabel("Short Name");
 	private JTextField         _cmShortName_txt       = new JTextField();
@@ -161,8 +164,10 @@ extends JDialog implements ActionListener, ChangeListener
 		setSize(size);
 
 		setLocationRelativeTo(owner);
-	}
 
+		scrollToTop();
+	}
+	
 	protected void initComponents()
 	{
 		setTitle("Properties: " + _cm.getName());
@@ -171,9 +176,9 @@ extends JDialog implements ActionListener, ChangeListener
 		panel.setLayout(new MigLayout("ins 0", "[fill]", ""));
 
 		_xpanel = init();
-		JScrollPane xscroll = new JScrollPane( _xpanel );
-		xscroll.getVerticalScrollBar()  .setUnitIncrement(16);
-		xscroll.getHorizontalScrollBar().setUnitIncrement(16);
+		_xscroll = new JScrollPane( _xpanel );
+		_xscroll.getVerticalScrollBar()  .setUnitIncrement(16);
+		_xscroll.getHorizontalScrollBar().setUnitIncrement(16);
 
 //		xscroll.setMinimumSize(new Dimension(500, 1000));
 //		xscroll.setPreferredSize(new Dimension(500, 1000));
@@ -190,7 +195,7 @@ extends JDialog implements ActionListener, ChangeListener
 //		xscroll.setMinimumSize  (new Dimension(width, height));
 		
 
-		panel.add(xscroll, "height 100%, wrap 15");
+		panel.add(_xscroll, "height 100%, wrap 15");
 //		panel.add(init(), "height 100%, wrap 15");
 		panel.add(_ok_but, "tag ok, gapright 15, bottom, right, pushx, wrap 15");
 		
@@ -590,5 +595,27 @@ extends JDialog implements ActionListener, ChangeListener
 		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, aseVersion, isCeEnabled));
 		if (_diffColsHighlight_chk.isSelected()) RTextUtility.markAll(_sqlExec, DIFF_COLOR, _cm.getDiffColumns());
 		if (_pctColsHighlight_chk .isSelected()) RTextUtility.markAll(_sqlExec, PCT_COLOR,  _cm.getPctColumns());
+		
+		scrollToTop();
+	}
+
+	private void scrollToTop()
+	{
+		if (_xscroll == null)
+			return;
+
+		// Defer the execution...
+		SwingUtilities.invokeLater(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				JScrollBar verticalScrollBar   = _xscroll.getVerticalScrollBar();
+				JScrollBar horizontalScrollBar = _xscroll.getHorizontalScrollBar();
+				
+				verticalScrollBar  .setValue(verticalScrollBar  .getMinimum());
+				horizontalScrollBar.setValue(horizontalScrollBar.getMinimum());
+			}
+		});
 	}
 }
