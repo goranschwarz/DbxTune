@@ -6,6 +6,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
@@ -74,7 +77,9 @@ extends TabularCntrPanel
 		boolean defaultOpt;
 		int     defaultIntOpt;
 
+		//-----------------------------------------
 		// RowCount
+		//-----------------------------------------
 		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_tabRowCount : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, CmObjectActivity.DEFAULT_sample_tabRowCount);
 		JCheckBox sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
 
@@ -104,7 +109,9 @@ extends TabularCntrPanel
 			}
 		});
 		
+		//-----------------------------------------
 		// Top Rows (top #)
+		//-----------------------------------------
 		defaultOpt    = conf == null ? CmObjectActivity.DEFAULT_sample_topRows      : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_topRows,      CmObjectActivity.DEFAULT_sample_topRows);
 		defaultIntOpt = conf == null ? CmObjectActivity.DEFAULT_sample_topRowsCount : conf.getIntProperty    (CmObjectActivity.PROPKEY_sample_topRowsCount, CmObjectActivity.DEFAULT_sample_topRowsCount);
 		final JCheckBox  sampleTopRows_chk      = new JCheckBox("Limit number of rows (top #)", defaultOpt);
@@ -175,11 +182,65 @@ extends TabularCntrPanel
 		});
 		
 		
+		//-----------------------------------------
+		// sanple system tables: traceon(3650)
+		//-----------------------------------------
+		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_systemTables : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_systemTables, CmObjectActivity.DEFAULT_sample_systemTables);
+		JCheckBox sampleSystemTables_chk = new JCheckBox("Include System Tables", defaultOpt);
+
+		sampleSystemTables_chk.setName(CmObjectActivity.PROPKEY_sample_systemTables);
+		sampleSystemTables_chk.setToolTipText("<html>" +
+				"Include system tables in the output<br>" +
+				"<b>Note 1</b>: This is enabled with dbcc traceon(3650).<br>" +
+				"<b>Note 2</b>: The traceflag 3650 is <b>not</b> checked/set before every sample, it's only set when this checkbox is touched.<br>" +
+				"</html>");
+
+		sampleSystemTables_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				boolean isSelected = ((JCheckBox)e.getSource()).isSelected();
+				
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmObjectActivity.PROPKEY_sample_systemTables, isSelected);
+				conf.save();
+
+
+//				FIXME:
+				String sql = isSelected ? "dbcc traceon(3650)" : "dbcc traceoff(3650)";
+				try
+				{
+					Connection conn = getCm().getCounterController().getMonConnection();
+					Statement stmnt = conn.createStatement();
+					stmnt.executeUpdate(sql);
+					stmnt.close();
+				}
+				catch (SQLException sqle)
+				{
+					String htmlMsg = "<html>"
+							+ "<h3>Problems toggling traceflag 3650</h3>"
+							+ "" + sqle.getMessage() + "<br>"
+							+ "</html>";
+					SwingUtils.showErrorMessage(CmObjectActivityPanel.this, "Problems setting on/off traceflag(3650)",htmlMsg, sqle);
+				}
+
+//				// This will force the CM to re-initialize the SQL statement.
+//				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+//				if (cm != null)
+//					cm.setSql(null);
+			}
+		});
+		
 		// LAYOUT
 		panel.add(sampleRowCount_chk,     "wrap");
 		
 		panel.add(sampleTopRows_chk,      "split");
 		panel.add(sampleTopRowsCount_txt, "wrap");
+
+		panel.add(sampleSystemTables_chk, "wrap");
 
 		return panel;
 	}

@@ -184,6 +184,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
+	<b>Enhancement: Spinlock Sum</b><br>
+	Handle counter overflow in a better way.<br>
+	Algorithm bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE<br>
+	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint 
+	</LI>
+
+	<LI>
+	<b>Enhancement: Objects Tab</b><br>
+	a new local checkbox 'Include System Tables'<br>
+	This checkbox sends 'dbcc trace{on|off}(3650)' to the server to include system tables in monOpenObjectActivity<br>
+	Note: it doesn't check if the traceflag is on/off for every sample, it just sends 'on/off' when you press the checkbox.<br>
+	When the Performance Counter initializes, it will set traceflag 3650 on if it was enabled last time you used AseTune (it will not turn it of)<br>  
+	</LI>
+
+	<LI>
 	<b>Enhancement: Sysmon Raw</b><br>
 	Implemented 3 new sysmon sections
 	<ul>

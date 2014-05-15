@@ -167,7 +167,7 @@ extends CountersModel
 		// sum(int) may cause: "Arithmetic overflow occurred"
 		// max int is: 2147483647, so if we sum several rows we may overflow the integer
 		// so on pre 15.0 use numeric instead, over 15.0 use bigint
-		String datatype    = "numeric(12,0)"; 
+		String datatype    = "numeric(19,0)"; // 19.0 is unsigned bigint, so lets use that... 
 		String optGoalPlan = "";
 
 //		if (aseVersion >= 15000)
@@ -260,20 +260,21 @@ extends CountersModel
 				restrictTmpSysmonitorsWhere = " and field_name not in("+disregardFields+")";
 			}
 		}
-	
+
+		// if 12.5.x: group_name = 'spinlock_p_0' or 'spinlock_w_0' or 'spinlock_s_0'  
+		// if 15.7.x: group_name = 'spinlock_p'   or 'spinlock_w'   or 'spinlock_s'  
+		String spinPostfix = "_0";
+		if (aseVersion >= Ver.ver(15,7))
+			spinPostfix = "";
+		
 		String sqlCreateTmpSysmonitors = 
 			"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p_0' "+restrictTmpSysmonitorsWhere+" \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w_0' "+restrictTmpSysmonitorsWhere+" \n" +
-			"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s_0' "+restrictTmpSysmonitorsWhere+" \n";
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
-			sqlCreateTmpSysmonitors =
-				"/*------ Copy 'spinlock_[p|w|s]' rows to local tempdb, this reduces IO in joins below -------*/ \n" +
-				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p' "+restrictTmpSysmonitorsWhere+" \n" +
-				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w' "+restrictTmpSysmonitorsWhere+" \n" +
-				"select field_name=convert(varchar(79),field_name), field_id, value "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s' "+restrictTmpSysmonitorsWhere+" \n";
+			"/*------ Deal with overflow by bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE -------*/ \n" +
+			"declare @int_max "+datatype+"    set @int_max =  2147483647 \n" +
+			"declare @int_min "+datatype+"    set @int_min = -2147483648 \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsP FROM master..sysmonitors WHERE group_name = 'spinlock_p"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsW FROM master..sysmonitors WHERE group_name = 'spinlock_w"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n" +
+			"select field_name=convert(varchar(79),field_name), field_id, value = CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert("+datatype+", value) END "+instanceid+" into #sysmonitorsS FROM master..sysmonitors WHERE group_name = 'spinlock_s"+spinPostfix+"' "+restrictTmpSysmonitorsWhere+" \n";
 		sqlCreateTmpSysmonitors += 
 			"-- A 'go' here will make the second batch optimize better \n" +
 			"go \n";
@@ -319,9 +320,9 @@ extends CountersModel
 			(isClusterEnabled ? "P.instanceid, \n" : "") +
 			"  spinName     = convert(varchar(50), P.field_name), \n" +
 			"  instances    = count(P.field_id), \n" +
-			"  grabs        = sum(convert("+datatype+",P.value)), \n" +
-			"  waits        = sum(convert("+datatype+",W.value)), \n" +
-			"  spins        = sum(convert("+datatype+",S.value)), \n" +
+			"  grabs        = sum(convert("+datatype+", P.value)), \n" +
+			"  waits        = sum(convert("+datatype+", W.value)), \n" +
+			"  spins        = sum(convert("+datatype+", S.value)), \n" +
 			"  contention   = convert(numeric(4,1), null), \n" +
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = convert(varchar(100), '') \n" +
@@ -359,9 +360,9 @@ extends CountersModel
 			(isClusterEnabled ? "P.instanceid, \n" : "") +
 			"  spinName     = convert(varchar(50), convert(varchar(40),P.field_name) + ' # ' + convert(varchar(5), P.field_id-N.start_id)), \n" +
 			"  instances    = convert(int,1), \n" +
-			"  grabs        = convert("+datatype+",P.value), \n" +
-			"  waits        = convert("+datatype+",W.value), \n" +
-			"  spins        = convert("+datatype+",S.value), \n" +
+			"  grabs        = convert("+datatype+", P.value), \n" +
+			"  waits        = convert("+datatype+", W.value), \n" +
+			"  spins        = convert("+datatype+", S.value), \n" +
 			"  contention   = convert(numeric(4,1), null), \n" +
 			"  spinsPerWait = convert(numeric(12,1), null), \n" +
 			"  description  = N.spin_desc \n" +

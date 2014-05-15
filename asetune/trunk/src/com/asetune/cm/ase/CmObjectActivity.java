@@ -133,6 +133,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_topRowsCount           = PROP_PREFIX + ".sample.topRows.count";
 	public static final int     DEFAULT_sample_topRowsCount           = 500;
 
+	public static final String  PROPKEY_sample_systemTables           = PROP_PREFIX + ".sample.systemTables";
+	public static final boolean DEFAULT_sample_systemTables           = false;
+
 	@Override
 	protected void registerDefaultValues()
 	{
@@ -143,6 +146,7 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_objectName,             DEFAULT_sample_objectName);
 		Configuration.registerDefaultValue(PROPKEY_sample_topRows,                DEFAULT_sample_topRows);
 		Configuration.registerDefaultValue(PROPKEY_sample_topRowsCount,           DEFAULT_sample_topRowsCount);
+		Configuration.registerDefaultValue(PROPKEY_sample_systemTables,           DEFAULT_sample_systemTables);
 	}
 	
 	private void addTrendGraphs()
@@ -233,6 +237,7 @@ extends CountersModel
 		lc.setProperty(PROPKEY_sample_tabRowCount,  conf.getBooleanProperty(PROPKEY_sample_tabRowCount,  DEFAULT_sample_tabRowCount));
 		lc.setProperty(PROPKEY_sample_topRows,      conf.getBooleanProperty(PROPKEY_sample_topRows,      DEFAULT_sample_topRows));
 		lc.setProperty(PROPKEY_sample_topRowsCount, conf.getIntProperty    (PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount));
+		lc.setProperty(PROPKEY_sample_systemTables, conf.getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables));
 		
 		return lc;
 	}
@@ -244,6 +249,7 @@ extends CountersModel
 		if (propName.equals(PROPKEY_sample_tabRowCount))  return "Sample Table Row Count using ASE functions row_count() and data_pages()";
 		if (propName.equals(PROPKEY_sample_topRows))      return "Get only first # rows (select top # ...) true or false";
 		if (propName.equals(PROPKEY_sample_topRowsCount)) return "Get only first # rows (select top # ...), number of rows";
+		if (propName.equals(PROPKEY_sample_systemTables)) return "Sample ASE System Tables, dbcc traceon(3650)";
 		return "";
 	}
 	@Override
@@ -252,7 +258,20 @@ extends CountersModel
 		if (propName.equals(PROPKEY_sample_tabRowCount))  return Boolean.class.getSimpleName();
 		if (propName.equals(PROPKEY_sample_topRows))      return Boolean.class.getSimpleName();
 		if (propName.equals(PROPKEY_sample_topRowsCount)) return Integer.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_systemTables)) return Boolean.class.getSimpleName();
 		return "";
+	}
+
+	@Override
+	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) 
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sample_systemTables = conf.getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables);
+		
+		if (sample_systemTables)
+			return "dbcc traceon(3650)";
+
+		return null;
 	}
 
 	@Override

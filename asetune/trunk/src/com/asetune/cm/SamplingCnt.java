@@ -1677,6 +1677,30 @@ extends CounterTableModel
 		}
 		else if (newColVal instanceof Integer)
 		{
+// Saving this code for future, the test shows that calculations is OK even with overflow counters...
+// 1: either I miss something here
+// 2: or Java handles this "auto-magically"
+//			// Deal with counter counter overflows by calculating the: prevSample(numbers-up-to-INT-MAX-value) + newSample(negativeVal - INT-MIN)
+//			if (newColVal.intValue() < 0 && prevColVal.intValue() >= 0)
+//			{
+////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
+////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
+////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
+////				diffColVal = new Integer( restVal + overflv );
+////System.out.println("restVal: "+restVal);
+////System.out.println("overflv: "+overflv);
+////System.out.println("=result: "+diffColVal);
+//
+//				// Or simplified (one-line)
+////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
+//
+//				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
+//				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
+//				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+//			}
+//			else
+//				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+			
 			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
 			if (diffColVal.intValue() < 0)
 				if (negativeDiffCountersToZero)
@@ -1853,5 +1877,57 @@ extends CounterTableModel
 		
 		sb.append("\n");
 		return sb.toString();
+	}
+
+	
+	
+	
+	//---------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------
+	// Basic test code for DIFF function
+	//---------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------
+	private static boolean testDiff(String test, Number expRes, Number prevVal, Number newVal)
+	{
+		Number res = diffColumnValue(prevVal, newVal, false, test, test);
+		
+		// Check Expected VALUE
+		if ( ! expRes.equals(res) )
+		{
+			System.out.println("testDiff(): " + test + ": FAULTY VALUE: returned value='"+res+"', expected return value='"+expRes+"'. prevVal='"+prevVal+"', newVal='"+newVal+"'.");
+			return false;
+		}
+		// Check Expected DATATYPE
+		if ( ! expRes.getClass().getName().equals(res.getClass().getName()) )
+		{
+			System.out.println("testDiff(): " + test + ": FAULTY OBJECT TYPE: returned obj='"+res.getClass().getName()+"', expected return obj='"+expRes.getClass().getName()+"'.");
+			return false;
+		}
+		System.out.println("testDiff(): " + test + ": OK.");
+		return true;
+	}
+	
+	public static void main(String[] args)
+	{ // 3646 + -3647
+		//                 expected value     firstSampleValue             secondSampleValue
+		testDiff("test-1", new Integer(10),   new Integer(10),             new Integer(20));
+		testDiff("test-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
+		testDiff("test-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
+		testDiff("test-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
+		testDiff("test-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
+		
+		testDiff("test-6", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
+		
+		
+		
+		// Basic algorithm: diff = SecondSample - FirstSample
+		// so 100 - 10 = 90
+		System.out.println("dummy test: this should result in 90 = " + new Integer( new Integer(100) - new Integer(10) ));
+
+		// lets try basic diff with counters that has overflow values ---          SecondSample               FirstSample
+		// ASE will cause 'Msg 3606: Arithmetic overflow occurred.'
+		System.out.println("dummy test: this should result in 3 = " + new Integer( new Integer(-2147483647) - new Integer(2147483646) ));
 	}
 }
