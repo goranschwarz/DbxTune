@@ -1654,6 +1654,10 @@ implements Runnable, ConnectionProvider
 		if (true) loadSessionCm(cm, CountersModel.DATA_DIFF, sampleTs);
 		if (true) loadSessionCm(cm, CountersModel.DATA_RATE, sampleTs);
 
+		CmIndicator cmInd = getIndicatorForCm(cmName);
+		if (cmInd != null)
+			cm.setIsCountersCleared(cmInd._isCountersCleared);
+
 		cm.setDataInitialized(true);
 		cm.fireTableStructureChanged();
 		if (cm.getTabPanel() != null)
@@ -1777,8 +1781,9 @@ implements Runnable, ConnectionProvider
 			ResultSetMetaData rsmd = rs.getMetaData();
 			int cols = rsmd.getColumnCount();
 			int row  = 0;
-			boolean hasSqlGuiRefreshTime   = cols >= 9;
-			boolean hasNonConfiguredFields = cols >= 12;
+			boolean hasSqlGuiRefreshTime    = cols >= 9;
+			boolean hasNonConfiguredFields  = cols >= 12;
+			boolean hasCounterClearedFields = cols >= 15;
 //FIXME: nonConfigCapture....cols both in the reader and writer
 //boolean nonConfigCapture
 //String  missingConfigParams
@@ -1798,16 +1803,18 @@ implements Runnable, ConnectionProvider
 				int       sqlRefreshTime      = hasSqlGuiRefreshTime ? rs.getInt(9)  : -1;
 				int       guiRefreshTime      = hasSqlGuiRefreshTime ? rs.getInt(10) : -1;
 				int       lcRefreshTime       = hasSqlGuiRefreshTime ? rs.getInt(11) : -1;
-				boolean   nonConfiguredMonitoringHappened     = (hasNonConfiguredFields ? rs.getInt   (12) : 0) > 0;
-				String    nonConfiguedMonitoringMissingParams =  hasNonConfiguredFields ? rs.getString(13) : null;
-				String    nonConfiguedMonitoringMessages      =  hasNonConfiguredFields ? rs.getString(14) : null;
+				boolean   nonConfiguredMonitoringHappened     = (hasNonConfiguredFields  ? rs.getInt   (12) : 0) > 0;
+				String    nonConfiguedMonitoringMissingParams =  hasNonConfiguredFields  ? rs.getString(13) : null;
+				String    nonConfiguedMonitoringMessages      =  hasNonConfiguredFields  ? rs.getString(14) : null;
+				boolean   isCountersCleared                   = (hasCounterClearedFields ? rs.getInt   (15) : 0) > 0;
 
 				// Map cmName from DB->Internal name if needed.
 				cmName = getNameTranslateDbToCm(cmName);
 				
 				CmIndicator cmInd = new CmIndicator(sessionStartTime, sessionSampleTime, cmName, type, graphCount, absRows, diffRows, rateRows, 
 						sqlRefreshTime, guiRefreshTime, lcRefreshTime,
-						nonConfiguredMonitoringHappened, nonConfiguedMonitoringMissingParams, nonConfiguedMonitoringMessages);
+						nonConfiguredMonitoringHappened, nonConfiguedMonitoringMissingParams, nonConfiguedMonitoringMessages,
+						isCountersCleared);
 
 				// Add it to the indicators map
 				_currentIndicatorMap.put(cmName, cmInd);
@@ -1891,6 +1898,8 @@ implements Runnable, ConnectionProvider
 		cm.setNonConfiguredMonitoringHappened     (cmInd._nonConfiguredMonitoringHappened);
 		cm.addNonConfiguedMonitoringMessage       (cmInd._nonConfiguedMonitoringMessages);
 		cm.setNonConfiguredMonitoringMissingParams(cmInd._nonConfiguedMonitoringMissingParams);
+
+		cm.setIsCountersCleared(cmInd._isCountersCleared);
 
 		cm.setDataInitialized(true);
 //		cm.fireTableStructureChanged();
@@ -2388,11 +2397,13 @@ implements Runnable, ConnectionProvider
 		public boolean   _nonConfiguredMonitoringHappened     = false;
 		public String    _nonConfiguedMonitoringMissingParams = null;
 		public String    _nonConfiguedMonitoringMessages      = null;
+		public boolean   _isCountersCleared                   = false;
 
 		public CmIndicator(Timestamp sessionStartTime, Timestamp sessionSampleTime, 
 		                   String cmName, int type, int graphCount, int absRows, int diffRows, int rateRows,
 		                   int sqlRefreshTime, int guiRefreshTime, int lcRefreshTime, 
-		                   boolean nonConfiguredMonitoringHappened, String nonConfiguedMonitoringMissingParams, String nonConfiguedMonitoringMessages)
+		                   boolean nonConfiguredMonitoringHappened, String nonConfiguedMonitoringMissingParams, String nonConfiguedMonitoringMessages,
+		                   boolean isCountersCleared)
 		{
 			_sessionStartTime                    = sessionStartTime;
 			_sessionSampleTime                   = sessionSampleTime;
@@ -2408,6 +2419,7 @@ implements Runnable, ConnectionProvider
 			_nonConfiguredMonitoringHappened     = nonConfiguredMonitoringHappened;
 			_nonConfiguedMonitoringMissingParams = nonConfiguedMonitoringMissingParams;
 			_nonConfiguedMonitoringMessages      = nonConfiguedMonitoringMessages;
+			_isCountersCleared                   = isCountersCleared;
 		}
 		
 		@Override
@@ -2428,6 +2440,7 @@ implements Runnable, ConnectionProvider
 			sb.append(", nonConfiguredMonitoringHappened=")     .append(_nonConfiguredMonitoringHappened);
 			sb.append(", nonConfiguedMonitoringMissingParams='").append(_nonConfiguedMonitoringMissingParams).append("'");
 			sb.append(", nonConfiguedMonitoringMessages='")     .append(_nonConfiguedMonitoringMessages)     .append("'");
+			sb.append(", isCountersCleared=")                   .append(_isCountersCleared);
 			return sb.toString();
 		}
 	}

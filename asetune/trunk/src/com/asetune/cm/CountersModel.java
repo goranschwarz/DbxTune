@@ -103,8 +103,10 @@ implements Cloneable, ITableTooltip
 	private String             _serverName        = "";
 	private Timestamp          _sampleTimeHead    = null;
 	private Timestamp          _counterClearTime  = null;
+	private boolean            _isCountersCleared = false;  // if counters has been cleared between previous sample and current sample. set in setCounterClearTime()
 	private Timestamp          _sampleTime        = null;
 	private long               _sampleInterval    = 0;
+
 	
 	// Individual timings of sample SQL, GUI LocalCalculation updates
 	private long               _sqlRefreshStartTime = 0;
@@ -270,6 +272,7 @@ implements Cloneable, ITableTooltip
 		_counterClearTime  = null;
 		_sampleTime        = null;
 		_sampleInterval    = 0;
+		_isCountersCleared = false;
 
 		// basic stuff
 		setInitialized(false);
@@ -523,6 +526,7 @@ implements Cloneable, ITableTooltip
 		c._serverName                 = this._serverName;
 		c._sampleTimeHead             = this._sampleTimeHead;
 		c._counterClearTime           = this._counterClearTime;
+		c._isCountersCleared          = this._isCountersCleared;
 		c._sampleTime                 = this._sampleTime;
 		c._sampleInterval             = this._sampleInterval;
 
@@ -906,10 +910,10 @@ implements Cloneable, ITableTooltip
 	public Timestamp getCounterClearTime() { return _counterClearTime; }
 	public Timestamp getSampleTime()       { return _sampleTime; }
 	public long      getSampleInterval()   { return _sampleInterval; }
+	public boolean   isCountersCleared()   { return _isCountersCleared; }
 
 	public void setServerName(String name)               { _serverName = name; }
 	public void setSampleTimeHead(Timestamp timeHead)    { _sampleTimeHead = timeHead; }
-	public void setCounterClearTime(Timestamp clearTime) { _counterClearTime = clearTime; }
 	public void setSampleTime(Timestamp time)            { _sampleTime = time; }
 	public void setSampleInterval(long interval)         { _sampleInterval = interval; }
 	public void setTimeInfo(Timestamp timeHead, Timestamp clearTime, Timestamp sampleTime, long intervall)
@@ -919,6 +923,33 @@ implements Cloneable, ITableTooltip
 		setSampleTime(sampleTime);
 		setSampleInterval(intervall);
 	}
+	public void setCounterClearTime(Timestamp clearTime) 
+	{
+		setIsCountersCleared(false);
+		
+		// if NOT first sample
+		if (_prevSample != null)
+		{
+			// counters hasn't been cleared previously and clearTime is passed 
+			if (_prevSample != null && _counterClearTime == null && clearTime != null)
+				setIsCountersCleared(true);
+
+			// New clear time is later than previous clearTime
+			if (_counterClearTime != null && clearTime != null)
+			{
+				if (clearTime.getTime() > _counterClearTime.getTime())
+					setIsCountersCleared(true);
+			}
+		}
+
+		_counterClearTime = clearTime; 
+	}
+
+	public void setIsCountersCleared(boolean isCountersCleared)
+	{
+		_isCountersCleared = isCountersCleared;
+	}
+
 
 	/** How many milliseconds did we spend on executing the SQL statement that fetched the performance counters */
 	public long getSqlRefreshTime()       { return _sqlRefreshTime; }
@@ -3656,7 +3687,7 @@ implements Cloneable, ITableTooltip
 			if (_prevSample != null)
 			{
 				// old sample is not null, so we can compute the diffs
-				tmpDiffData = SamplingCnt.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol);
+				tmpDiffData = SamplingCnt.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
 			}
 	
 			if (tmpDiffData == null)

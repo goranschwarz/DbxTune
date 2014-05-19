@@ -264,6 +264,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
 	private HashMap<String, String> _originToolTip = new HashMap<String, String>(); // <name><msg>
 
+	/** Color to be used when counters is cleared is used */
+	private static final Color COUNTERS_CLEARED_COLOR = Color.ORANGE;
+	
 	// implements singleton pattern
 //	private static CmSummaryPanel _instance = null;
 
@@ -1611,6 +1614,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			}
 		}
 		
+		//----------------------------------------------
+		// counters clear time: background color
+		//----------------------------------------------
+		if (cm.isCountersCleared())
+			_countersCleared_txt.setBackground(COUNTERS_CLEARED_COLOR);
+		else
+			_countersCleared_txt.setBackground(_atAtServerName_txt.getBackground());
+		// end: counters clear time: background color
+
 		//----------------------------------------------
 		// Check LOCK WAITS and, do notification
 		//----------------------------------------------
