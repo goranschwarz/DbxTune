@@ -103,10 +103,7 @@ extends RowFilter<TableModel, Integer>
 		_filterObj = null;
 
 		// build a regExp in case the cell value is a string
-		if (_filterVal == null || (_filterVal != null && _filterVal.trim().equals("")) )
-			_strPattern = Pattern.compile(".*");
-		else
-			_strPattern = Pattern.compile(_filterVal);
+		setStrPattern();
 
 		// This kicks off the "re-filtering" == show data.
 		if (_table.getRowSorter() != null)
@@ -155,6 +152,13 @@ extends RowFilter<TableModel, Integer>
 		return Collator.getInstance().compare(o1.toString(), o2.toString());
 	}
 
+	private void setStrPattern()
+	{
+		if (_filterVal == null || (_filterVal != null && _filterVal.trim().equals("")) )
+			_strPattern = Pattern.compile(".*");
+		else
+			_strPattern = Pattern.compile(_filterVal);
+	}
     
     /**
 	 * return true if the row matches the filter, eg will be displayed
@@ -206,6 +210,8 @@ extends RowFilter<TableModel, Integer>
 		{
 			if (_filterObj instanceof String)
 			{
+				if (_strPattern == null)
+					setStrPattern();
 				return _strPattern.matcher(cellValue.toString()).find();
 			}
 			return compare(cellValue, _filterObj) == 0;
@@ -214,6 +220,8 @@ extends RowFilter<TableModel, Integer>
 		{
 			if (_filterObj instanceof String)
 			{
+				if (_strPattern == null)
+					setStrPattern();
 				return !_strPattern.matcher(cellValue.toString()).find();
 			}
 			return compare(cellValue, _filterObj) != 0;
