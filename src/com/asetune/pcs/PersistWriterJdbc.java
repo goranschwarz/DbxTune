@@ -2011,6 +2011,7 @@ public class PersistWriterJdbc
 			sbSql.append(", ") .append(cm.hasNonConfiguredMonitoringHappened() ? 1 : 0);
 			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMissingParams()));
 			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMessage(false)));
+			sbSql.append(", ") .append(cm.isCountersCleared() ? 1 : 0);
 			sbSql.append(")");
 
 			dbExec(sbSql.toString());

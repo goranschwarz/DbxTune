@@ -187,7 +187,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: Spinlock Sum</b><br>
 	Handle counter overflow in a better way.<br>
 	Algorithm bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE<br>
-	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint 
+	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint <br>
+	Also at the client side, try to do a better job when the higher datatype (unsigned int) gets wrapped but NOT cleared.<br>
+    Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
+    Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br> 
 	</LI>
 
 	<LI>
@@ -206,6 +209,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	   <li>Network I/O Management</li> 
 	   <li>Monitor Access to Executing SQL</li> 
 	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: All Performance Counters</b><br>
+    If counters has been cleared (for example by sp_sysmon or someone else externally)<br>
+    Then set the field 'Clear time' background color to orange<br>
+    If we are viewing a recorded session, the colored field will instead be 'Head time' <br>
 	</LI>
 
 	<LI>

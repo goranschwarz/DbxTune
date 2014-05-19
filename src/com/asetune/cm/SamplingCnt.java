@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.ase.CmSpinlockSum;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -1510,8 +1511,9 @@ extends CounterTableModel
 //	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, int idKey1, int idKey2, int idKey3, Vector bitmapColsCalcDiff)
 	/**
 	 * [FIXME] Describe me
+	 * @param isCountersCleared 
 	 */
-	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkList, boolean[] isDiffCol)
+	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkList, boolean[] isDiffCol, boolean isCountersCleared)
 	{
 		// Initialize result structure
 		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
@@ -1588,7 +1590,7 @@ extends CounterTableModel
 
 						if ( newRowObj instanceof Number )
 						{
-							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt._negativeDiffCountersToZero, newSample._name, colName);
+							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt._negativeDiffCountersToZero, newSample._name, colName, isCountersCleared);
 							diffRow.add(diffValue);
 						}
 						else
@@ -1635,9 +1637,10 @@ extends CounterTableModel
 	 * @param newColVal current/new sample value
 	 * @param negativeDiffCountersToZero if the counter is less than 0, reset it to 0
 	 * @param counterSetName Used as a prefix for messages
+	 * @param isCountersCleared if counters has been cleared
 	 * @return the difference of the correct subclass of Number
 	 */
-	private static Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName)
+	private static Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
 	{
 		Number diffColVal = null;
 
@@ -1646,13 +1649,34 @@ extends CounterTableModel
 //	System.out.println(counterSetName+":   > colName="+StringUtil.left(colName,20)+", prevColVal="+prevColVal );
 //	System.out.println(counterSetName+":     colName="+StringUtil.left(colName,20)+", newColVal ="+newColVal );
 //}
+//System.out.println("diffColumnValue(): counterSetName='"+counterSetName+"', colName='"+colName+"'.");
 
 		if (newColVal instanceof BigDecimal)
 		{
 			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
 			if (diffColVal.doubleValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new BigDecimal(0);
+			{
+				// Do special stuff for diff counters on CmSpinlockSum and ASE is 12.5.x, then counters will be delivered as numeric(19,0)
+				// but is really signed int, then we need to check for wrapped signed int values
+				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
+				{
+// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
+					Number beforeReCalc = diffColVal;
+//					int  threshold      = 10000000;    // 10 000 000
+					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+
+//					if (prevColVal.doubleValue() > (maxUnsignedInt - threshold) && newColVal.doubleValue() < threshold)
+						diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1);
+					_logger.info("diffColumnValue(): CM='"+counterSetName+"', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.doubleValue()='"+newColVal.doubleValue()+"', prevColVal.doubleValue()='"+prevColVal.doubleValue()+"', beforeReCalc.doubleValue()='"+beforeReCalc.doubleValue()+"', diffColVal.doubleValue()='"+diffColVal.doubleValue()+"'.");
+				}
+
+				if (diffColVal.doubleValue() < 0)
+					if (negativeDiffCountersToZero)
+						diffColVal = new BigDecimal(0);
+			}
 		}
 		else if (newColVal instanceof Byte)
 		{
@@ -1710,8 +1734,28 @@ extends CounterTableModel
 		{
 			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
 			if (diffColVal.longValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Long(0);
+			{
+				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
+				// but is really signed int, then we need to check for wrapped signed int values
+				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
+				{
+// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
+					Number beforeReCalc = diffColVal;
+//					int  threshold      = 10000000;    // 10 000 000
+					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+					
+//					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
+						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
+					_logger.info("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
+				}
+
+				if (diffColVal.longValue() < 0)
+					if (negativeDiffCountersToZero)
+						diffColVal = new Long(0);
+			}
 		}
 		else if (newColVal instanceof Short)
 		{
@@ -1891,36 +1935,48 @@ extends CounterTableModel
 	//---------------------------------------------------------------------------------------------------
 	private static boolean testDiff(String test, Number expRes, Number prevVal, Number newVal)
 	{
-		Number res = diffColumnValue(prevVal, newVal, false, test, test);
+		Number res = diffColumnValue(prevVal, newVal, false, test, test, false);
 		
+		boolean ret = true;
+
 		// Check Expected VALUE
 		if ( ! expRes.equals(res) )
 		{
 			System.out.println("testDiff(): " + test + ": FAULTY VALUE: returned value='"+res+"', expected return value='"+expRes+"'. prevVal='"+prevVal+"', newVal='"+newVal+"'.");
-			return false;
+			ret = false;
 		}
+
 		// Check Expected DATATYPE
 		if ( ! expRes.getClass().getName().equals(res.getClass().getName()) )
 		{
 			System.out.println("testDiff(): " + test + ": FAULTY OBJECT TYPE: returned obj='"+res.getClass().getName()+"', expected return obj='"+expRes.getClass().getName()+"'.");
-			return false;
+			ret = false;
 		}
-		System.out.println("testDiff(): " + test + ": OK.");
-		return true;
+		
+		if (ret)
+			System.out.println("testDiff(): " + test + ": OK.");
+
+		return ret;
 	}
 	
 	public static void main(String[] args)
 	{ // 3646 + -3647
 		//                 expected value     firstSampleValue             secondSampleValue
-		testDiff("test-1", new Integer(10),   new Integer(10),             new Integer(20));
-		testDiff("test-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
-		testDiff("test-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
-		testDiff("test-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
-		testDiff("test-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
+		testDiff("test-int-1", new Integer(10),   new Integer(10),             new Integer(20));
+		testDiff("test-int-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
+		testDiff("test-int-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
+		testDiff("test-int-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
+		testDiff("test-int-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
 		
-		testDiff("test-6", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
+		testDiff("test-long-1", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
 		
+		testDiff("test-bd-1", new BigDecimal(10), new BigDecimal(10),    new BigDecimal(20));
 		
+		long maxUnsignedInt = 4294967295L; // 4 294 967 295
+		testDiff("this-should-fail",    new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000));
+		testDiff(CmSpinlockSum.CM_NAME, new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000)); // Special logic for CmSpinlockSum
+		testDiff("this-should-fail",    new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));
+		testDiff(CmSpinlockSum.CM_NAME, new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));       // Special logic for CmSpinlockSum
 		
 		// Basic algorithm: diff = SecondSample - FirstSample
 		// so 100 - 10 = 90

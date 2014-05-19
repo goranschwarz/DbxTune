@@ -530,6 +530,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"nonCfgMonHappened"     +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"nonCfgMonMissingParams"+qic,40)+" "+fill(getDatatype("varchar", 100, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"nonCfgMonMessages"     +qic,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"isCountersCleared"     +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_MON_TAB_DICT)
@@ -794,7 +795,8 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("lcRefreshTime")         .append(qic).append(", ");
 			sbSql.append(qic).append("nonCfgMonHappened")     .append(qic).append(", ");
 			sbSql.append(qic).append("nonCfgMonMissingParams").append(qic).append(", ");
-			sbSql.append(qic).append("nonCfgMonMessages")     .append(qic).append(" ");
+			sbSql.append(qic).append("nonCfgMonMessages")     .append(qic).append(", ");
+			sbSql.append(qic).append("isCountersCleared")     .append(qic).append(" ");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");

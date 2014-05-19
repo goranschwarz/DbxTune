@@ -237,6 +237,9 @@ implements
 	/** Color to be used when NON_CONFIGURED_MONITORING is used */
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
 	
+	/** Color to be used when counters is cleared is used */
+	private static final Color COUNTERS_CLEARED_COLOR = Color.ORANGE;
+	
 	// -------------------------------------------------
 
 	/*---------------------------------------------------
@@ -919,7 +922,8 @@ implements
 	{
 		setTimeInfo(null, null, null, 0);
 		resetCm(); // set it to tail mode (as it is when initializing the panel)
-		_topPanel.setBackground(_filterPanel.getBackground());
+		_topPanel     .setBackground(_filterPanel.getBackground());
+		_timeClear_txt.setBackground(_filterPanel.getBackground());
 	}
 
 	public void putTableClientProperty(Object key, Object value)
@@ -1811,7 +1815,7 @@ implements
 		_timeViewStored_lbl.setHorizontalTextPosition(JLabel.CENTER);
 
 		_timeClear_txt     .setToolTipText("If sp_sysmon is executed and clears the counters, it could be nice to know that...");
-		_timeHeadSample_txt.setToolTipText("This is the Head/Main sample time, which is when we started to sample all individual Performance Counters. Also this would be the time in the 'slider'");
+		_timeHeadSample_txt.setToolTipText("<html>This is the Head/Main sample time, which is when we started to sample all individual Performance Counters. Also this would be the time in the 'slider'<br>If this is ORANGE it means that underlying counters has been cleared (for instance by sp_sysmon).</html>");
 		_timeSample_txt    .setToolTipText("Date when the data showned in the table was sampled.");
 		_timeIntervall_txt .setToolTipText("Milliseconds since last sample period.");
 		_timePostpone_txt  .setToolTipText("<html>If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples.<br>tip: '10m' is 10 minutes, '24h' is 24 hours</html>");
@@ -3901,6 +3905,18 @@ implements
 				}
 				setWatermarkText("O f f l i n e  - D a t a");
 			}
+	
+			// Background Color for _timeClear_txt
+			if (_offlineCm != null && _offlineCm.isCountersCleared())
+			{
+				_timeHeadSample_txt.setBackground(COUNTERS_CLEARED_COLOR);
+				_timeClear_txt     .setBackground(COUNTERS_CLEARED_COLOR);
+			}
+			else
+			{
+				_timeHeadSample_txt.setBackground(_filterPanel.getBackground());
+				_timeClear_txt     .setBackground(_filterPanel.getBackground());
+			}
 		}
 		// NORMAL MODE
 		else if ( _tailMode )
@@ -4021,6 +4037,18 @@ implements
 					restoreOriginalToolTipText();
 				}
 				setWatermarkText(null);
+			}
+			
+			// Background Color for _timeClear_txt
+			if (_cm.isCountersCleared())
+			{
+				_timeHeadSample_txt.setBackground(COUNTERS_CLEARED_COLOR);
+				_timeClear_txt     .setBackground(COUNTERS_CLEARED_COLOR);
+			}
+			else
+			{
+				_timeHeadSample_txt.setBackground(_filterPanel.getBackground());
+				_timeClear_txt     .setBackground(_filterPanel.getBackground());
 			}
 		}
 		else
