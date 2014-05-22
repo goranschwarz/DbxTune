@@ -189,8 +189,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	Algorithm bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE<br>
 	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint <br>
 	Also at the client side, try to do a better job when the higher datatype (unsigned int) gets wrapped but NOT cleared.<br>
-    Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
-    Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br> 
+       Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
+       Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br> 
+    If the underlying counters are cleared, the sample interval is adjusted to reflect <b>when</b> the counters where cleared and the values will start at zero (as it's a counter reset)<br>
+    The goal is to eliminate problems with Counter Wrapping and Counter Resets...<br>
+    So even when it happens, the counters in the "difference calculated" values should reflect the actual DIFFERENCE from previous sample<br>
 	</LI>
 
 	<LI>

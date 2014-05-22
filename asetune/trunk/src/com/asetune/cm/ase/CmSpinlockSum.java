@@ -5,6 +5,8 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -26,7 +28,7 @@ import com.asetune.utils.Ver;
 public class CmSpinlockSum
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmSpinlockSum.class);
+	private static Logger        _logger          = Logger.getLogger(CmSpinlockSum.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmSpinlockSum.class.getSimpleName();
@@ -535,5 +537,132 @@ extends CountersModel
 				}
 			}
 		}
+	}
+
+	/**
+	 * if counters has been reset outside, shorten the sample interval
+	 */
+	@Override
+	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	{
+		// Sanity check if "isCountersCleared" is valid...
+		// get a known value we know will increment all the time from old/new value and compare
+		if (isCountersCleared)
+		{
+			// PK: spinName
+			String key = "default data cache"; // TODO: if ASE-CE we should try to get in "instance" as the first part of the key
+
+			Object oldVal = oldSample.getRowValue(key, "grabs");
+			Object newVal = newSample.getRowValue(key, "grabs");
+
+			if (oldVal != null && newVal != null)
+			{
+				if (oldVal instanceof Number && newVal instanceof Number)
+				{
+					// This will work here since "value" is converted to a unsigned int
+					isCountersCleared =  ((Number)newVal).longValue() < ((Number)oldVal).longValue();
+					
+					// should we set/reset the CM isCountersCleared or not...
+					//setIsCountersCleared(isCountersCleared);
+
+					_logger.debug(getName()+":computeDiffCnt(): CountersClearedCheck(after) PK='"+key+"', oldVal='"+oldVal+"', newVal='"+newVal+"', isCountersCleared="+isCountersCleared+".");
+				}
+			}
+		}
+
+		// Let super do all the work
+		SamplingCnt diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+		
+		// Adjust interval (make it shorter) if counters has been cleared
+		if (isCountersCleared && getCounterClearTime() != null)
+		{
+			long interval = getSampleTime().getTime() - getCounterClearTime().getTime();
+			newSample.setSampleInterval(interval);
+			diff     .setSampleInterval(interval);
+			//rate will grab the interval from diff
+			
+			setSampleInterval(interval);
+		}
+
+		return diff;
+	}
+
+	/**
+	 * called by CounterModel.computeDiffCnt() to calculate a specific "cell" 
+	 * <p>
+	 * in ASE 12.5.x datatype will be numeric(19,0), which in java becomes BigDecimal<br>
+	 * in ASE >= 15  datatype will be bigint,        which in java becomes Long<br>
+	 * <br>
+	 * So lets do special calculation on them
+	 */
+	@Override
+	protected Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
+	{
+		Number diffColVal = null;
+
+		// If counters has been cleared, simply return the new value... no need to do diff calculation, and if we do they will be wrong...
+		if (isCountersCleared)
+			return newColVal;
+
+		// ASE 12.5.x data
+		if (newColVal instanceof BigDecimal)
+		{
+			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
+			if (diffColVal.doubleValue() < 0)
+			{
+				// Do special stuff for diff counters on CmSpinlockSum and ASE is 12.5.x, then counters will be delivered as numeric(19,0)
+				// but is really signed int, then we need to check for wrapped signed int values
+				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+				if ( ! isCountersCleared )
+				{
+					Number beforeReCalc = diffColVal;
+//					int  threshold      = 10000000;    // 10 000 000
+					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+
+//					if (prevColVal.doubleValue() > (maxUnsignedInt - threshold) && newColVal.doubleValue() < threshold)
+						diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1);
+					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.doubleValue()='"+newColVal.doubleValue()+"', prevColVal.doubleValue()='"+prevColVal.doubleValue()+"', beforeReCalc.doubleValue()='"+beforeReCalc.doubleValue()+"', diffColVal.doubleValue()='"+diffColVal.doubleValue()+"'.");
+				}
+
+				if (diffColVal.doubleValue() < 0)
+					if (negativeDiffCountersToZero)
+						diffColVal = new BigDecimal(0);
+			}
+		}
+		// ASE >= 15.x data
+		else if (newColVal instanceof Long)
+		{
+			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+			if (diffColVal.longValue() < 0)
+			{
+				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
+				// but is really signed int, then we need to check for wrapped signed int values
+				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+				if ( ! isCountersCleared )
+				{
+					Number beforeReCalc = diffColVal;
+//					int  threshold      = 10000000;    // 10 000 000
+					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+					
+//					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
+						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
+					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
+				}
+
+				if (diffColVal.longValue() < 0)
+					if (negativeDiffCountersToZero)
+						diffColVal = new Long(0);
+			}
+		}
+		else
+		{
+			diffColVal = super.diffColumnValue(prevColVal, newColVal, negativeDiffCountersToZero, counterSetName, colName, isCountersCleared);
+		}
+
+		return diffColVal;
 	}
 }
