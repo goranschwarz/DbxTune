@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.cm.ase.CmSpinlockSum;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -109,7 +108,7 @@ extends CounterTableModel
 	 * @param cloneRows Should we clear or copy the data rows
 	 * @param name Set a new name to the created object 
 	 */
-	private SamplingCnt(SamplingCnt sc, boolean cloneRows, String name)
+	protected SamplingCnt(SamplingCnt sc, boolean cloneRows, String name)
 	{
 		_name                       = name;
 		_keysToRowid                = sc._keysToRowid;
@@ -312,6 +311,16 @@ extends CounterTableModel
 		return (int) _interval;
 	}
 
+	public void setSampleInterval(long interval)
+	{
+		_interval = interval;
+	}
+
+	public boolean getNegativeDiffCountersToZero()
+	{
+		return _negativeDiffCountersToZero;
+	}
+	
 	public void setColumnNames(List<String> cols)
 	{
 		_colNames = new ArrayList<String>(cols);
@@ -388,6 +397,13 @@ extends CounterTableModel
 			return false; // or should we: throw new IndexOutOfBoundsException("description");
 
 		return _colIsPk[colId];
+	}
+
+	public boolean hasPkCols()
+	{
+		if (_colIsPk == null)
+			return false;
+		return true;
 	}
 
 	private void checkWarnings(Statement st) 
@@ -1417,89 +1433,104 @@ extends CounterTableModel
 	{
 		return _rows.get(row);
 	}
-	
 
-	/**
-	 * [FIXME] Describe me
-	 * 
-	 * @param diff
-	 * @param isDiffCol
-	 * @param isPctCol
-	 * @return
-	 */
-	static public SamplingCnt computeRatePerSec(SamplingCnt diff, boolean[] isDiffCol, boolean[] isPctCol) 
+	public Object getRowValue(String key, String columnName)
 	{
-		// Initialize result structure
-		SamplingCnt rate  = new SamplingCnt(diff, false, diff._name+"-rate");
+		// Get column position
+		int colId = findColumn(columnName);
+		if (colId < 0)
+			return null;
 
-		// - Loop on all rows in the DIFF structure
-		// - Do calculations on them
-		// - And add them to the RATE structure
-		for (int rowId=0; rowId < diff.getRowCount(); rowId++) 
-		{
-			// Get the row from the DIFF structure
-			List<Object> diffRow = diff.getRow(rowId);
+		// Get the row
+		List<Object> row = getRow(key);
+		if (row == null)
+			return null;
 
-			// Create a new ROW "structure" for each row in the DIFF
-			List<Object> newRow = new ArrayList<Object>();
+		return row.get(colId);
+	}
 
-			for (int i=0; i<diff.getColumnCount(); i++) 
-			{
-				// Get the RAW object from the DIFF structure
-				Object originObject = diffRow.get(i);
 
-				// If the below IF statements is not true... keep the same object
-				Object newObject    = originObject;
-
-				// If PCT column DO nothing.
-				if ( isPctCol[i] ) 
-				{
-				}
-				// If this is a column that has DIFF calculation.
-				else if ( isDiffCol[i] ) 
-				{
-					double val = 0;
-
-					// What to do if we CANT DO DIVISION
-					if (diff._interval == 0)
-						newObject = "N/A";
-
-					// Calculate rate
-					if (originObject instanceof Number)
-					{
-						// Get the object as a Double value
-						if ( originObject instanceof Number )
-							val = ((Number)originObject).doubleValue();
-						else
-							val = Double.parseDouble( originObject.toString() );
-
-						// interval is in MilliSec, so val has to be multiplied by 1000
-						val = (val * 1000) / diff._interval;
-						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-
-						// Set the new object
-						newObject = newVal;
-					}
-					// Unsupported columns, skip the calculation
-					else
-					{
-						String colName = diff.getColumnName(i);
-						_logger.warn("CounterSampleSetName='"+diff._name+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
-						newObject = originObject;
-					}
-				}
-
-				// set the data in the new row
-				newRow.add(newObject);
-
-			} // end: row loop
-
-			rate.addRow(newRow);
-
-		} // end: all rows loop
-		
-		return rate;
-	}	
+//	/**
+//	 * [FIXME] Describe me
+//	 * 
+//	 * @param diff
+//	 * @param isDiffCol
+//	 * @param isPctCol
+//	 * @return
+//	 */
+//	static public SamplingCnt computeRatePerSec(SamplingCnt diff, boolean[] isDiffCol, boolean[] isPctCol) 
+//	{
+//		// Initialize result structure
+//		SamplingCnt rate  = new SamplingCnt(diff, false, diff._name+"-rate");
+//
+//		// - Loop on all rows in the DIFF structure
+//		// - Do calculations on them
+//		// - And add them to the RATE structure
+//		for (int rowId=0; rowId < diff.getRowCount(); rowId++) 
+//		{
+//			// Get the row from the DIFF structure
+//			List<Object> diffRow = diff.getRow(rowId);
+//
+//			// Create a new ROW "structure" for each row in the DIFF
+//			List<Object> newRow = new ArrayList<Object>();
+//
+//			for (int i=0; i<diff.getColumnCount(); i++) 
+//			{
+//				// Get the RAW object from the DIFF structure
+//				Object originObject = diffRow.get(i);
+//
+//				// If the below IF statements is not true... keep the same object
+//				Object newObject    = originObject;
+//
+//				// If PCT column DO nothing.
+//				if ( isPctCol[i] ) 
+//				{
+//				}
+//				// If this is a column that has DIFF calculation.
+//				else if ( isDiffCol[i] ) 
+//				{
+//					double val = 0;
+//
+//					// What to do if we CANT DO DIVISION
+//					if (diff._interval == 0)
+//						newObject = "N/A";
+//
+//					// Calculate rate
+//					if (originObject instanceof Number)
+//					{
+//						// Get the object as a Double value
+//						if ( originObject instanceof Number )
+//							val = ((Number)originObject).doubleValue();
+//						else
+//							val = Double.parseDouble( originObject.toString() );
+//
+//						// interval is in MilliSec, so val has to be multiplied by 1000
+//						val = (val * 1000) / diff._interval;
+//						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+//
+//						// Set the new object
+//						newObject = newVal;
+//					}
+//					// Unsupported columns, skip the calculation
+//					else
+//					{
+//						String colName = diff.getColumnName(i);
+//						_logger.warn("CounterSampleSetName='"+diff._name+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
+//						newObject = originObject;
+//					}
+//				}
+//
+//				// set the data in the new row
+//				newRow.add(newObject);
+//
+//			} // end: row loop
+//
+//			rate.addRow(newRow);
+//
+//		} // end: all rows loop
+//		
+//		return rate;
+//	}	
 	
 //	public SamplingCnt computeDiffCnt(SamplingCnt newSample)
 //	{
@@ -1509,283 +1540,283 @@ extends CounterTableModel
 	// computeDiffCnt : generate a new SamplingCnt, with computed differences on some columns
 	// bimapColsCalcDiff : Vector of Integers. For each col : 0 if not to compute, 1 if col must be computed
 //	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, int idKey1, int idKey2, int idKey3, Vector bitmapColsCalcDiff)
-	/**
-	 * [FIXME] Describe me
-	 * @param isCountersCleared 
-	 */
-	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkList, boolean[] isDiffCol, boolean isCountersCleared)
-	{
-		// Initialize result structure
-		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
-
-		long newTsMilli      = newSample._samplingTime.getTime();
-		long oldTsMilli      = oldSample._samplingTime.getTime();
-		int newTsNano        = newSample._samplingTime.getNanos();
-		int oldTsNano        = oldSample._samplingTime.getNanos();
-
-		// Check if TsMilli has really ms precision (not the case before JDK 1.4)
-		if ((newTsMilli - (newTsMilli / 1000) * 1000) == newTsNano / 1000000)
-			// JDK > 1.3.1
-			diffCnt._interval = newTsMilli - oldTsMilli;
-		else
-			diffCnt._interval = newTsMilli - oldTsMilli + (newTsNano - oldTsNano) / 1000000;
-
-		List<Object> newRow;
-		List<Object> oldRow;
-		List<Object> diffRow;
-		int oldRowId;
-
-		if (diffCnt._colIsPk == null)
-		{
-			// Special case, only one row for each sample, no key
-			oldRow = oldSample._rows.get(0);
-			newRow = newSample._rows.get(0);
-			diffRow = new ArrayList<Object>();
-			for (int i = 0; i < newSample.getColumnCount(); i++)
-			{
-				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
-			}
-			diffCnt._rows.add(diffRow);
-			return diffCnt;
-		}
-
-		// Keep a array of what rows that we access of the old values
-		// this will help us find out what rows we "deleted" from the previous to the new sample
-		// or actually rows that are no longer available in the new sample...
-		boolean oldSampleAccessArr[] = new boolean[oldSample.getRowCount()]; // default values: false
-
-		// Loop on all rows from the NEW sample
-		for (int newRowId = 0; newRowId < newSample.getRowCount(); newRowId++)
-		{
-			newRow = newSample.getRow(newRowId);
-			diffRow = new ArrayList<Object>();
-			
-			// get PK of the new row
-			String newPk = newSample.getPkValue(newRowId);
-
-			// Retreive old same row
-			oldRowId = oldSample.getRowNumberForPkValue(newPk);
-			
-			// if old Row EXISTS, we can do diff calculation
-			if (oldRowId != -1)
-			{
-				// Mark the row as "not deleted" / or "accessed"
-				if (oldRowId >= 0 && oldRowId < oldSampleAccessArr.length)
-					oldSampleAccessArr[oldRowId] = true;
-				
-				// Old row found, compute the diffs
-				oldRow = oldSample.getRow(oldRowId);
-				for (int i = 0; i < newSample.getColumnCount(); i++)
-				{
-					if ( ! isDiffCol[i] )
-						diffRow.add(newRow.get(i));
-					else
-					{
-						//checkType(oldSample, oldRowId, i, newSample, newRowId, i);
-						//if ((newRow.get(i)).getClass().toString().equals("class java.math.BigDecimal"))
-						Object oldRowObj = oldRow.get(i);
-						Object newRowObj = newRow.get(i);
-
-						String colName = newSample.getColumnName(i);
-
-						if ( newRowObj instanceof Number )
-						{
-							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt._negativeDiffCountersToZero, newSample._name, colName, isCountersCleared);
-							diffRow.add(diffValue);
-						}
-						else
-						{
-							_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'.");
-							diffRow.add(newRowObj);
-						}
-					}
-				}
-			} // end: old row was found
-			else
-			{
-				// Row was NOT found in previous sample, which means it's a "new" row for this sample.
-				// So we do not need to do DIFF calculation, just add the raw data...
-				for (int i = 0; i < newSample.getColumnCount(); i++)
-				{
-					diffRow.add(newRow.get(i));
-				}
-			}
-
-			diffCnt.addRow(diffRow);
-
-		} // end: row loop
-		
-		// What rows was DELETED from previous sample.
-		// meaning, rows in the previous sample that was NOT part of the new sample.
-		if (deletedRows != null)
-		{
-			for (int i=0; i<oldSampleAccessArr.length; i++)
-			{
-				if (oldSampleAccessArr[i] == false)
-				{
-					deletedRows.add(i);
-				}
-			}
-		}
-
-		return diffCnt;
-	}
-
-	/**
-	 * Do difference calculations newColVal - prevColVal
-	 * @param prevColVal previous sample value
-	 * @param newColVal current/new sample value
-	 * @param negativeDiffCountersToZero if the counter is less than 0, reset it to 0
-	 * @param counterSetName Used as a prefix for messages
-	 * @param isCountersCleared if counters has been cleared
-	 * @return the difference of the correct subclass of Number
-	 */
-	private static Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
-	{
-		Number diffColVal = null;
-
-//if (counterSetName.startsWith(SummaryPanel.CM_NAME))
-//{
-//	System.out.println(counterSetName+":   > colName="+StringUtil.left(colName,20)+", prevColVal="+prevColVal );
-//	System.out.println(counterSetName+":     colName="+StringUtil.left(colName,20)+", newColVal ="+newColVal );
-//}
-//System.out.println("diffColumnValue(): counterSetName='"+counterSetName+"', colName='"+colName+"'.");
-
-		if (newColVal instanceof BigDecimal)
-		{
-			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
-			if (diffColVal.doubleValue() < 0)
-			{
-				// Do special stuff for diff counters on CmSpinlockSum and ASE is 12.5.x, then counters will be delivered as numeric(19,0)
-				// but is really signed int, then we need to check for wrapped signed int values
-				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
-				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
-				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
-				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
-				{
-// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
-					Number beforeReCalc = diffColVal;
-//					int  threshold      = 10000000;    // 10 000 000
-					long maxUnsignedInt = 4294967295L; // 4 294 967 295
-
-//					if (prevColVal.doubleValue() > (maxUnsignedInt - threshold) && newColVal.doubleValue() < threshold)
-						diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1);
-					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.doubleValue()='"+newColVal.doubleValue()+"', prevColVal.doubleValue()='"+prevColVal.doubleValue()+"', beforeReCalc.doubleValue()='"+beforeReCalc.doubleValue()+"', diffColVal.doubleValue()='"+diffColVal.doubleValue()+"'.");
-				}
-
-				if (diffColVal.doubleValue() < 0)
-					if (negativeDiffCountersToZero)
-						diffColVal = new BigDecimal(0);
-			}
-		}
-		else if (newColVal instanceof Byte)
-		{
-			diffColVal = new Byte((byte) (newColVal.byteValue() - prevColVal.byteValue()));
-			if (diffColVal.intValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Byte("0");
-		}
-		else if (newColVal instanceof Double)
-		{
-			diffColVal = new Double(newColVal.doubleValue() - prevColVal.doubleValue());
-			if (diffColVal.doubleValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Double(0);
-		}
-		else if (newColVal instanceof Float)
-		{
-			diffColVal = new Float(newColVal.floatValue() - prevColVal.floatValue());
-			if (diffColVal.floatValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Float(0);
-		}
-		else if (newColVal instanceof Integer)
-		{
-// Saving this code for future, the test shows that calculations is OK even with overflow counters...
-// 1: either I miss something here
-// 2: or Java handles this "auto-magically"
-//			// Deal with counter counter overflows by calculating the: prevSample(numbers-up-to-INT-MAX-value) + newSample(negativeVal - INT-MIN)
-//			if (newColVal.intValue() < 0 && prevColVal.intValue() >= 0)
+//	/**
+//	 * [FIXME] Describe me
+//	 * @param isCountersCleared 
+//	 */
+//	static public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkList, boolean[] isDiffCol, boolean isCountersCleared)
+//	{
+//		// Initialize result structure
+//		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
+//
+//		long newTsMilli      = newSample._samplingTime.getTime();
+//		long oldTsMilli      = oldSample._samplingTime.getTime();
+//		int newTsNano        = newSample._samplingTime.getNanos();
+//		int oldTsNano        = oldSample._samplingTime.getNanos();
+//
+//		// Check if TsMilli has really ms precision (not the case before JDK 1.4)
+//		if ((newTsMilli - (newTsMilli / 1000) * 1000) == newTsNano / 1000000)
+//			// JDK > 1.3.1
+//			diffCnt._interval = newTsMilli - oldTsMilli;
+//		else
+//			diffCnt._interval = newTsMilli - oldTsMilli + (newTsNano - oldTsNano) / 1000000;
+//
+//		List<Object> newRow;
+//		List<Object> oldRow;
+//		List<Object> diffRow;
+//		int oldRowId;
+//
+//		if (diffCnt._colIsPk == null)
+//		{
+//			// Special case, only one row for each sample, no key
+//			oldRow = oldSample._rows.get(0);
+//			newRow = newSample._rows.get(0);
+//			diffRow = new ArrayList<Object>();
+//			for (int i = 0; i < newSample.getColumnCount(); i++)
 //			{
-////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
-////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
-////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
-////				diffColVal = new Integer( restVal + overflv );
-////System.out.println("restVal: "+restVal);
-////System.out.println("overflv: "+overflv);
-////System.out.println("=result: "+diffColVal);
-//
-//				// Or simplified (one-line)
-////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
-//
-//				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
-//				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
-//				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+//				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
 //			}
+//			diffCnt._rows.add(diffRow);
+//			return diffCnt;
+//		}
+//
+//		// Keep a array of what rows that we access of the old values
+//		// this will help us find out what rows we "deleted" from the previous to the new sample
+//		// or actually rows that are no longer available in the new sample...
+//		boolean oldSampleAccessArr[] = new boolean[oldSample.getRowCount()]; // default values: false
+//
+//		// Loop on all rows from the NEW sample
+//		for (int newRowId = 0; newRowId < newSample.getRowCount(); newRowId++)
+//		{
+//			newRow = newSample.getRow(newRowId);
+//			diffRow = new ArrayList<Object>();
+//			
+//			// get PK of the new row
+//			String newPk = newSample.getPkValue(newRowId);
+//
+//			// Retreive old same row
+//			oldRowId = oldSample.getRowNumberForPkValue(newPk);
+//			
+//			// if old Row EXISTS, we can do diff calculation
+//			if (oldRowId != -1)
+//			{
+//				// Mark the row as "not deleted" / or "accessed"
+//				if (oldRowId >= 0 && oldRowId < oldSampleAccessArr.length)
+//					oldSampleAccessArr[oldRowId] = true;
+//				
+//				// Old row found, compute the diffs
+//				oldRow = oldSample.getRow(oldRowId);
+//				for (int i = 0; i < newSample.getColumnCount(); i++)
+//				{
+//					if ( ! isDiffCol[i] )
+//						diffRow.add(newRow.get(i));
+//					else
+//					{
+//						//checkType(oldSample, oldRowId, i, newSample, newRowId, i);
+//						//if ((newRow.get(i)).getClass().toString().equals("class java.math.BigDecimal"))
+//						Object oldRowObj = oldRow.get(i);
+//						Object newRowObj = newRow.get(i);
+//
+//						String colName = newSample.getColumnName(i);
+//
+//						if ( newRowObj instanceof Number )
+//						{
+//							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt._negativeDiffCountersToZero, newSample._name, colName, isCountersCleared);
+//							diffRow.add(diffValue);
+//						}
+//						else
+//						{
+//							_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'.");
+//							diffRow.add(newRowObj);
+//						}
+//					}
+//				}
+//			} // end: old row was found
 //			else
-//				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
-			
-			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
-			if (diffColVal.intValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Integer(0);
-		}
-		else if (newColVal instanceof Long)
-		{
-			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
-			if (diffColVal.longValue() < 0)
-			{
-				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
-				// but is really signed int, then we need to check for wrapped signed int values
-				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
-				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
-				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
-				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
-				{
-// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
-					Number beforeReCalc = diffColVal;
-//					int  threshold      = 10000000;    // 10 000 000
-					long maxUnsignedInt = 4294967295L; // 4 294 967 295
-					
-//					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
-						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
-					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
-				}
+//			{
+//				// Row was NOT found in previous sample, which means it's a "new" row for this sample.
+//				// So we do not need to do DIFF calculation, just add the raw data...
+//				for (int i = 0; i < newSample.getColumnCount(); i++)
+//				{
+//					diffRow.add(newRow.get(i));
+//				}
+//			}
+//
+//			diffCnt.addRow(diffRow);
+//
+//		} // end: row loop
+//		
+//		// What rows was DELETED from previous sample.
+//		// meaning, rows in the previous sample that was NOT part of the new sample.
+//		if (deletedRows != null)
+//		{
+//			for (int i=0; i<oldSampleAccessArr.length; i++)
+//			{
+//				if (oldSampleAccessArr[i] == false)
+//				{
+//					deletedRows.add(i);
+//				}
+//			}
+//		}
+//
+//		return diffCnt;
+//	}
 
-				if (diffColVal.longValue() < 0)
-					if (negativeDiffCountersToZero)
-						diffColVal = new Long(0);
-			}
-		}
-		else if (newColVal instanceof Short)
-		{
-			diffColVal = new Short((short) (newColVal.shortValue() - prevColVal.shortValue()));
-			if (diffColVal.shortValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new Short("0");
-		}
-		else if (newColVal instanceof AtomicInteger)
-		{
-			diffColVal = new AtomicInteger(newColVal.intValue() - prevColVal.intValue());
-			if (diffColVal.intValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new AtomicInteger(0);
-		}
-		else if (newColVal instanceof AtomicLong)
-		{
-			diffColVal = new AtomicLong(newColVal.longValue() - prevColVal.longValue());
-			if (diffColVal.longValue() < 0)
-				if (negativeDiffCountersToZero)
-					diffColVal = new AtomicLong(0);
-		}
-		else
-		{
-			_logger.warn(counterSetName+": failure in diffColumnValue(colName='"+colName+"', prevColVal='"+prevColVal+"', newColVal='"+newColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', newColVal='"+newColVal.getClass().getName()+"'. Returning the new value instead.");
-			return newColVal;
-		}
-
-		return diffColVal;
-	}
+//	/**
+//	 * Do difference calculations newColVal - prevColVal
+//	 * @param prevColVal previous sample value
+//	 * @param newColVal current/new sample value
+//	 * @param negativeDiffCountersToZero if the counter is less than 0, reset it to 0
+//	 * @param counterSetName Used as a prefix for messages
+//	 * @param isCountersCleared if counters has been cleared
+//	 * @return the difference of the correct subclass of Number
+//	 */
+//	private static Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
+//	{
+//		Number diffColVal = null;
+//
+////if (counterSetName.startsWith(SummaryPanel.CM_NAME))
+////{
+////	System.out.println(counterSetName+":   > colName="+StringUtil.left(colName,20)+", prevColVal="+prevColVal );
+////	System.out.println(counterSetName+":     colName="+StringUtil.left(colName,20)+", newColVal ="+newColVal );
+////}
+////System.out.println("diffColumnValue(): counterSetName='"+counterSetName+"', colName='"+colName+"'.");
+//
+//		if (newColVal instanceof BigDecimal)
+//		{
+//			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
+//			if (diffColVal.doubleValue() < 0)
+//			{
+//				// Do special stuff for diff counters on CmSpinlockSum and ASE is 12.5.x, then counters will be delivered as numeric(19,0)
+//				// but is really signed int, then we need to check for wrapped signed int values
+//				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+//				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+//				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+//				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
+//				{
+//// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
+//					Number beforeReCalc = diffColVal;
+////					int  threshold      = 10000000;    // 10 000 000
+//					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+//
+////					if (prevColVal.doubleValue() > (maxUnsignedInt - threshold) && newColVal.doubleValue() < threshold)
+//						diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1);
+//					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', BigDecimal(ASE-numeric) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.doubleValue()='"+newColVal.doubleValue()+"', prevColVal.doubleValue()='"+prevColVal.doubleValue()+"', beforeReCalc.doubleValue()='"+beforeReCalc.doubleValue()+"', diffColVal.doubleValue()='"+diffColVal.doubleValue()+"'.");
+//				}
+//
+//				if (diffColVal.doubleValue() < 0)
+//					if (negativeDiffCountersToZero)
+//						diffColVal = new BigDecimal(0);
+//			}
+//		}
+//		else if (newColVal instanceof Byte)
+//		{
+//			diffColVal = new Byte((byte) (newColVal.byteValue() - prevColVal.byteValue()));
+//			if (diffColVal.intValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new Byte("0");
+//		}
+//		else if (newColVal instanceof Double)
+//		{
+//			diffColVal = new Double(newColVal.doubleValue() - prevColVal.doubleValue());
+//			if (diffColVal.doubleValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new Double(0);
+//		}
+//		else if (newColVal instanceof Float)
+//		{
+//			diffColVal = new Float(newColVal.floatValue() - prevColVal.floatValue());
+//			if (diffColVal.floatValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new Float(0);
+//		}
+//		else if (newColVal instanceof Integer)
+//		{
+//// Saving this code for future, the test shows that calculations is OK even with overflow counters...
+//// 1: either I miss something here
+//// 2: or Java handles this "auto-magically"
+////			// Deal with counter counter overflows by calculating the: prevSample(numbers-up-to-INT-MAX-value) + newSample(negativeVal - INT-MIN)
+////			if (newColVal.intValue() < 0 && prevColVal.intValue() >= 0)
+////			{
+//////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
+//////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
+//////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
+//////				diffColVal = new Integer( restVal + overflv );
+//////System.out.println("restVal: "+restVal);
+//////System.out.println("overflv: "+overflv);
+//////System.out.println("=result: "+diffColVal);
+////
+////				// Or simplified (one-line)
+//////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
+////
+////				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
+////				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
+////				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+////			}
+////			else
+////				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+//			
+//			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+//			if (diffColVal.intValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new Integer(0);
+//		}
+//		else if (newColVal instanceof Long)
+//		{
+//			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+//			if (diffColVal.longValue() < 0)
+//			{
+//				// Do special stuff for diff counters on CmSpinlockSum and ASE is above 15.x, then counters will be delivered as bigint
+//				// but is really signed int, then we need to check for wrapped signed int values
+//				// prevColVal is "near" UNSIGNED-INT-MAX and newColVal is "near" 0
+//				// Then do special calculation: (UNSIGNED-INT-MAX - prevColVal) + newColVal + 1      (+1 to handle passing value 0)
+//				// NOTE: we might also want to check COUNTER-RESET-DATE (if it has been done since last sample, then we can't trust the counters)
+//				if (CmSpinlockSum.CM_NAME.equals(counterSetName) && !isCountersCleared)
+//				{
+//// FIXME: move this code... or implement something that is more generic that check for a CM_NAME
+//					Number beforeReCalc = diffColVal;
+////					int  threshold      = 10000000;    // 10 000 000
+//					long maxUnsignedInt = 4294967295L; // 4 294 967 295
+//					
+////					if (prevColVal.longValue() > (maxUnsignedInt - threshold) && newColVal.longValue() < threshold)
+//						diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1);
+//					_logger.debug("diffColumnValue(): CM='"+counterSetName+"', Long(ASE-bigint) : CmSpinlockSum(colName='"+colName+"', isCountersCleared="+isCountersCleared+"):  AFTER: do special calc. newColVal.longValue()='"+newColVal.longValue()+"', prevColVal.longValue()='"+prevColVal.longValue()+"', beforeReCalc.longValue()='"+beforeReCalc.longValue()+"', diffColVal.longValue()='"+diffColVal.longValue()+"'.");
+//				}
+//
+//				if (diffColVal.longValue() < 0)
+//					if (negativeDiffCountersToZero)
+//						diffColVal = new Long(0);
+//			}
+//		}
+//		else if (newColVal instanceof Short)
+//		{
+//			diffColVal = new Short((short) (newColVal.shortValue() - prevColVal.shortValue()));
+//			if (diffColVal.shortValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new Short("0");
+//		}
+//		else if (newColVal instanceof AtomicInteger)
+//		{
+//			diffColVal = new AtomicInteger(newColVal.intValue() - prevColVal.intValue());
+//			if (diffColVal.intValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new AtomicInteger(0);
+//		}
+//		else if (newColVal instanceof AtomicLong)
+//		{
+//			diffColVal = new AtomicLong(newColVal.longValue() - prevColVal.longValue());
+//			if (diffColVal.longValue() < 0)
+//				if (negativeDiffCountersToZero)
+//					diffColVal = new AtomicLong(0);
+//		}
+//		else
+//		{
+//			_logger.warn(counterSetName+": failure in diffColumnValue(colName='"+colName+"', prevColVal='"+prevColVal+"', newColVal='"+newColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', newColVal='"+newColVal.getClass().getName()+"'. Returning the new value instead.");
+//			return newColVal;
+//		}
+//
+//		return diffColVal;
+//	}
 
 	
 	/**
@@ -1933,57 +1964,57 @@ extends CounterTableModel
 	//---------------------------------------------------------------------------------------------------
 	//---------------------------------------------------------------------------------------------------
 	//---------------------------------------------------------------------------------------------------
-	private static boolean testDiff(String test, Number expRes, Number prevVal, Number newVal)
-	{
-		Number res = diffColumnValue(prevVal, newVal, false, test, test, false);
-		
-		boolean ret = true;
-
-		// Check Expected VALUE
-		if ( ! expRes.equals(res) )
-		{
-			System.out.println("testDiff(): " + test + ": FAULTY VALUE: returned value='"+res+"', expected return value='"+expRes+"'. prevVal='"+prevVal+"', newVal='"+newVal+"'.");
-			ret = false;
-		}
-
-		// Check Expected DATATYPE
-		if ( ! expRes.getClass().getName().equals(res.getClass().getName()) )
-		{
-			System.out.println("testDiff(): " + test + ": FAULTY OBJECT TYPE: returned obj='"+res.getClass().getName()+"', expected return obj='"+expRes.getClass().getName()+"'.");
-			ret = false;
-		}
-		
-		if (ret)
-			System.out.println("testDiff(): " + test + ": OK.");
-
-		return ret;
-	}
-	
-	public static void main(String[] args)
-	{ // 3646 + -3647
-		//                 expected value     firstSampleValue             secondSampleValue
-		testDiff("test-int-1", new Integer(10),   new Integer(10),             new Integer(20));
-		testDiff("test-int-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
-		testDiff("test-int-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
-		testDiff("test-int-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
-		testDiff("test-int-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
-		
-		testDiff("test-long-1", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
-		
-		testDiff("test-bd-1", new BigDecimal(10), new BigDecimal(10),    new BigDecimal(20));
-		
-		long maxUnsignedInt = 4294967295L; // 4 294 967 295
-		testDiff("this-should-fail",    new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000));
-		testDiff(CmSpinlockSum.CM_NAME, new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000)); // Special logic for CmSpinlockSum
-		testDiff("this-should-fail",    new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));
-		testDiff(CmSpinlockSum.CM_NAME, new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));       // Special logic for CmSpinlockSum
-		
-		// Basic algorithm: diff = SecondSample - FirstSample
-		// so 100 - 10 = 90
-		System.out.println("dummy test: this should result in 90 = " + new Integer( new Integer(100) - new Integer(10) ));
-
-		// lets try basic diff with counters that has overflow values ---          SecondSample               FirstSample
-		// ASE will cause 'Msg 3606: Arithmetic overflow occurred.'
-		System.out.println("dummy test: this should result in 3 = " + new Integer( new Integer(-2147483647) - new Integer(2147483646) ));
-	}
+//	private static boolean testDiff(String test, Number expRes, Number prevVal, Number newVal)
+//	{
+//		Number res = diffColumnValue(prevVal, newVal, false, test, test, false);
+//		
+//		boolean ret = true;
+//
+//		// Check Expected VALUE
+//		if ( ! expRes.equals(res) )
+//		{
+//			System.out.println("testDiff(): " + test + ": FAULTY VALUE: returned value='"+res+"', expected return value='"+expRes+"'. prevVal='"+prevVal+"', newVal='"+newVal+"'.");
+//			ret = false;
+//		}
+//
+//		// Check Expected DATATYPE
+//		if ( ! expRes.getClass().getName().equals(res.getClass().getName()) )
+//		{
+//			System.out.println("testDiff(): " + test + ": FAULTY OBJECT TYPE: returned obj='"+res.getClass().getName()+"', expected return obj='"+expRes.getClass().getName()+"'.");
+//			ret = false;
+//		}
+//		
+//		if (ret)
+//			System.out.println("testDiff(): " + test + ": OK.");
+//
+//		return ret;
+//	}
+//	
+//	public static void main(String[] args)
+//	{ // 3646 + -3647
+//		//                 expected value     firstSampleValue             secondSampleValue
+//		testDiff("test-int-1", new Integer(10),   new Integer(10),             new Integer(20));
+//		testDiff("test-int-2", new Integer(1),    new Integer(2147483647),     new Integer(-2147483648));
+//		testDiff("test-int-3", new Integer(3),    new Integer(2147483646),     new Integer(-2147483647));
+//		testDiff("test-int-4", new Integer(7296), new Integer(2147480000),     new Integer(-2147480000));
+//		testDiff("test-int-5", new Integer(10),   new Integer(-2000),          new Integer(-1990));
+//		
+//		testDiff("test-long-1", new Long(21),      new Long(Long.MAX_VALUE-10), new Long(Long.MIN_VALUE+10));
+//		
+//		testDiff("test-bd-1", new BigDecimal(10), new BigDecimal(10),    new BigDecimal(20));
+//		
+//		long maxUnsignedInt = 4294967295L; // 4 294 967 295
+//		testDiff("this-should-fail",    new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000));
+//		testDiff(CmSpinlockSum.CM_NAME, new BigDecimal(2001), new BigDecimal(maxUnsignedInt-1000), new BigDecimal(1000)); // Special logic for CmSpinlockSum
+//		testDiff("this-should-fail",    new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));
+//		testDiff(CmSpinlockSum.CM_NAME, new Long(2001),       new Long(      maxUnsignedInt-1000), new Long(1000));       // Special logic for CmSpinlockSum
+//		
+//		// Basic algorithm: diff = SecondSample - FirstSample
+//		// so 100 - 10 = 90
+//		System.out.println("dummy test: this should result in 90 = " + new Integer( new Integer(100) - new Integer(10) ));
+//
+//		// lets try basic diff with counters that has overflow values ---          SecondSample               FirstSample
+//		// ASE will cause 'Msg 3606: Arithmetic overflow occurred.'
+//		System.out.println("dummy test: this should result in 3 = " + new Integer( new Integer(-2147483647) - new Integer(2147483646) ));
+//	}
 }

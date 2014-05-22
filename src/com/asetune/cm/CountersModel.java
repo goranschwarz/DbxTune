@@ -6,6 +6,7 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -3687,7 +3690,8 @@ implements Cloneable, ITableTooltip
 			if (_prevSample != null)
 			{
 				// old sample is not null, so we can compute the diffs
-				tmpDiffData = SamplingCnt.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
+//				tmpDiffData = SamplingCnt.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
+				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
 			}
 	
 			if (tmpDiffData == null)
@@ -3708,7 +3712,8 @@ implements Cloneable, ITableTooltip
 				localCalculation(_prevSample, tmpNewSample, tmpDiffData);
 	
 				// we got some data, compute the rates and update the data model
-				tmpRateData = SamplingCnt.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
+//				tmpRateData = SamplingCnt.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
+				tmpRateData = computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
 				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
 				localCalculationRatePerSec(tmpRateData);
@@ -3870,6 +3875,337 @@ implements Cloneable, ITableTooltip
 		
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
+
+	/**
+	 * Compute the difference between two samples
+	 * 
+	 * @param oldSample         Previous sample
+	 * @param newSample         Previous sample
+	 * @param deletedRows       if not null, a list of rowId's, that was part of oldSample but not part of newSample
+	 * @param pkCols            not used for the moment
+	 * @param isDiffCol         which columns should be difference calculated
+	 * @param isCountersCleared If the counters has been cleared 
+	 * @return
+	 */
+	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	{
+//		return SamplingCnt.computeDiffCnt(prevSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+		// Initialize result structure
+		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
+
+		long newTsMilli      = newSample.getSampleTime().getTime();
+		long oldTsMilli      = oldSample.getSampleTime().getTime();
+		int newTsNano        = newSample.getSampleTime().getNanos();
+		int oldTsNano        = oldSample.getSampleTime().getNanos();
+
+		// Check if TsMilli has really ms precision (not the case before JDK 1.4)
+		if ((newTsMilli - (newTsMilli / 1000) * 1000) == newTsNano / 1000000)
+			// JDK > 1.3.1
+			diffCnt.setSampleInterval(newTsMilli - oldTsMilli);
+		else
+			diffCnt.setSampleInterval(newTsMilli - oldTsMilli + (newTsNano - oldTsNano) / 1000000);
+
+		List<Object> newRow;
+		List<Object> oldRow;
+		List<Object> diffRow;
+		int oldRowId;
+
+		// Special case, only one row for each sample, no key
+		if ( ! diffCnt.hasPkCols() )
+		{
+			oldRow = oldSample.getRow(0);
+			newRow = newSample.getRow(0);
+			diffRow = new ArrayList<Object>();
+			for (int i = 0; i < newSample.getColumnCount(); i++)
+			{
+				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
+			}
+			diffCnt.addRow(diffRow);
+			return diffCnt;
+		}
+
+		// Keep a array of what rows that we access of the old values
+		// this will help us find out what rows we "deleted" from the previous to the new sample
+		// or actually rows that are no longer available in the new sample...
+		boolean oldSampleAccessArr[] = new boolean[oldSample.getRowCount()]; // default values: false
+
+		// Loop on all rows from the NEW sample
+		for (int newRowId = 0; newRowId < newSample.getRowCount(); newRowId++)
+		{
+			newRow = newSample.getRow(newRowId);
+			diffRow = new ArrayList<Object>();
+			
+			// get PK of the new row
+			String newPk = newSample.getPkValue(newRowId);
+
+			// Retreive old same row
+			oldRowId = oldSample.getRowNumberForPkValue(newPk);
+			
+			// if old Row EXISTS, we can do diff calculation
+			if (oldRowId != -1)
+			{
+				// Mark the row as "not deleted" / or "accessed"
+				if (oldRowId >= 0 && oldRowId < oldSampleAccessArr.length)
+					oldSampleAccessArr[oldRowId] = true;
+				
+				// Old row found, compute the diffs
+				oldRow = oldSample.getRow(oldRowId);
+				for (int i = 0; i < newSample.getColumnCount(); i++)
+				{
+					if ( ! isDiffCol[i] )
+						diffRow.add(newRow.get(i));
+					else
+					{
+						//checkType(oldSample, oldRowId, i, newSample, newRowId, i);
+						//if ((newRow.get(i)).getClass().toString().equals("class java.math.BigDecimal"))
+						Object oldRowObj = oldRow.get(i);
+						Object newRowObj = newRow.get(i);
+
+						String colName = newSample.getColumnName(i);
+
+						if ( newRowObj instanceof Number )
+						{
+							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt.getNegativeDiffCountersToZero(), newSample.getName(), colName, isCountersCleared);
+							diffRow.add(diffValue);
+						}
+						else
+						{
+							_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'.");
+							diffRow.add(newRowObj);
+						}
+					}
+				}
+			} // end: old row was found
+			else
+			{
+				// Row was NOT found in previous sample, which means it's a "new" row for this sample.
+				// So we do not need to do DIFF calculation, just add the raw data...
+				for (int i = 0; i < newSample.getColumnCount(); i++)
+				{
+					diffRow.add(newRow.get(i));
+				}
+			}
+
+			diffCnt.addRow(diffRow);
+
+		} // end: row loop
+		
+		// What rows was DELETED from previous sample.
+		// meaning, rows in the previous sample that was NOT part of the new sample.
+		if (deletedRows != null)
+		{
+			for (int i=0; i<oldSampleAccessArr.length; i++)
+			{
+				if (oldSampleAccessArr[i] == false)
+				{
+					deletedRows.add(i);
+				}
+			}
+		}
+
+		return diffCnt;
+	}
+
+	/**
+	 * Do difference calculations newColVal - prevColVal
+	 * 
+	 * @param prevColVal                 previous sample value
+	 * @param newColVal                  current/new sample value
+	 * @param negativeDiffCountersToZero if the counter is less than 0, reset it to 0
+	 * @param counterSetName             Used as a prefix for messages
+	 * @param isCountersCleared          if counters has been cleared
+	 * 
+	 * @return the difference of the correct subclass of Number
+	 */
+	protected Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
+	{
+		Number diffColVal = null;
+
+		if (newColVal instanceof BigDecimal)
+		{
+			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
+			if (diffColVal.doubleValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new BigDecimal(0);
+		}
+		else if (newColVal instanceof Byte)
+		{
+			diffColVal = new Byte((byte) (newColVal.byteValue() - prevColVal.byteValue()));
+			if (diffColVal.intValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Byte("0");
+		}
+		else if (newColVal instanceof Double)
+		{
+			diffColVal = new Double(newColVal.doubleValue() - prevColVal.doubleValue());
+			if (diffColVal.doubleValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Double(0);
+		}
+		else if (newColVal instanceof Float)
+		{
+			diffColVal = new Float(newColVal.floatValue() - prevColVal.floatValue());
+			if (diffColVal.floatValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Float(0);
+		}
+		else if (newColVal instanceof Integer)
+		{
+// Saving this code for future, the test shows that calculations is OK even with overflow counters...
+// 1: either I miss something here
+// 2: or Java handles this "auto-magically"
+//			// Deal with counter counter overflows by calculating the: prevSample(numbers-up-to-INT-MAX-value) + newSample(negativeVal - INT-MIN)
+//			if (newColVal.intValue() < 0 && prevColVal.intValue() >= 0)
+//			{
+////				// example prevColVal=2147483646, newColVal=-2147483647: The difference SHOULD BE: 3  
+////				int restVal = Integer.MAX_VALUE - prevColVal.intValue(); // get changes up to the overflow: 2147483647 - 2147483646 == 7 
+////				int overflv = newColVal.intValue() - Integer.MIN_VALUE;  // get changes after the overflow: -2147483647 - -2147483648 = 8
+////				diffColVal = new Integer( restVal + overflv );
+////System.out.println("restVal: "+restVal);
+////System.out.println("overflv: "+overflv);
+////System.out.println("=result: "+diffColVal);
+//
+//				// Or simplified (one-line)
+////				diffColVal = new Integer( (Integer.MAX_VALUE - prevColVal.intValue()) + (newColVal.intValue() - Integer.MIN_VALUE) );
+//
+//				// Deal with counter overflows by bumping up to a higher data type: and adding the negative delta on top of Integer.MAX_VALUE -------*/ 
+//				long newColVal_bumped = Integer.MAX_VALUE + (newColVal.longValue() - Integer.MIN_VALUE);
+//				diffColVal = new Integer( (int) newColVal_bumped - prevColVal.intValue() );
+//			}
+//			else
+//				diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+			
+			diffColVal = new Integer(newColVal.intValue() - prevColVal.intValue());
+			if (diffColVal.intValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Integer(0);
+		}
+		else if (newColVal instanceof Long)
+		{
+			diffColVal = new Long(newColVal.longValue() - prevColVal.longValue());
+			if (diffColVal.longValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Long(0);
+		}
+		else if (newColVal instanceof Short)
+		{
+			diffColVal = new Short((short) (newColVal.shortValue() - prevColVal.shortValue()));
+			if (diffColVal.shortValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new Short("0");
+		}
+		else if (newColVal instanceof AtomicInteger)
+		{
+			diffColVal = new AtomicInteger(newColVal.intValue() - prevColVal.intValue());
+			if (diffColVal.intValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new AtomicInteger(0);
+		}
+		else if (newColVal instanceof AtomicLong)
+		{
+			diffColVal = new AtomicLong(newColVal.longValue() - prevColVal.longValue());
+			if (diffColVal.longValue() < 0)
+				if (negativeDiffCountersToZero)
+					diffColVal = new AtomicLong(0);
+		}
+		else
+		{
+			_logger.warn(counterSetName+": failure in diffColumnValue(colName='"+colName+"', prevColVal='"+prevColVal+"', newColVal='"+newColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', newColVal='"+newColVal.getClass().getName()+"'. Returning the new value instead.");
+			return newColVal;
+		}
+
+		return diffColVal;
+	}
+
+
+	/**
+	 * Compute "rate" or increments per second
+	 * <p>
+	 * Use the difference calculated columns and divide it by the sample interval to achieve "rate per second" or "increments per second".
+	 * 
+	 * @param diffData  Data that already has been undergone difference calculations
+	 * @param isDiffCol what counters is difference calculated ones, which means that we need to do "rate" calculation
+	 * @param isPctCol  what counters is considered as percent calculated columns (do not do "rate" calculations on these)
+	 * 
+	 * @return a "rate" calculated object
+	 */
+	private SamplingCnt computeRatePerSec(SamplingCnt diffData, boolean[] isDiffCol, boolean[] isPctCol)
+	{
+//		return SamplingCnt.computeRatePerSec(diffData, isDiffCol, isPctCol);
+		// Initialize result structure
+		SamplingCnt rate  = new SamplingCnt(diffData, false, diffData._name+"-rate");
+
+		int sampleInterval = diffData.getSampleInterval();
+		
+		// - Loop on all rows in the DIFF structure
+		// - Do calculations on them
+		// - And add them to the RATE structure
+		for (int rowId=0; rowId < diffData.getRowCount(); rowId++) 
+		{
+			// Get the row from the DIFF structure
+			List<Object> diffRow = diffData.getRow(rowId);
+
+			// Create a new ROW "structure" for each row in the DIFF
+			List<Object> newRow = new ArrayList<Object>();
+
+			for (int i=0; i<diffData.getColumnCount(); i++) 
+			{
+				// Get the RAW object from the DIFF structure
+				Object originObject = diffRow.get(i);
+
+				// If the below IF statements is not true... keep the same object
+				Object newObject    = originObject;
+
+				// If PCT column DO nothing.
+				if ( isPctCol[i] ) 
+				{
+				}
+				// If this is a column that has DIFF calculation.
+				else if ( isDiffCol[i] ) 
+				{
+					double val = 0;
+
+					// What to do if we CANT DO DIVISION
+					if (sampleInterval == 0)
+						newObject = "N/A";
+
+					// Calculate rate
+					if (originObject instanceof Number)
+					{
+						// Get the object as a Double value
+						if ( originObject instanceof Number )
+							val = ((Number)originObject).doubleValue();
+						else
+							val = Double.parseDouble( originObject.toString() );
+
+						// interval is in MilliSec, so val has to be multiplied by 1000
+						val = (val * 1000) / sampleInterval;
+						BigDecimal newVal = new BigDecimal( val ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+						// Set the new object
+						newObject = newVal;
+					}
+					// Unsupported columns, skip the calculation
+					else
+					{
+						String colName = diffData.getColumnName(i);
+						_logger.warn("CounterSampleSetName='"+diffData._name+"', className='"+originObject.getClass().getName()+"' columns can't be 'rate' calculated. colName='"+colName+"', originObject='"+originObject+"', keeping this object.");
+						newObject = originObject;
+					}
+				}
+
+				// set the data in the new row
+				newRow.add(newObject);
+
+			} // end: row loop
+
+			rate.addRow(newRow);
+
+		} // end: all rows loop
+		
+		return rate;
+	}
+
 
 	/**
 	 * Called when a timeout has been found in the refreshGetData() method
