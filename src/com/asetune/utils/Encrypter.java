@@ -69,6 +69,9 @@ public class Encrypter
 	}
 	public String encrypt(String str)
 	{
+		if (str == null)
+			return null;
+
 		try
 		{
 			// Encode the string into bytes using utf-8

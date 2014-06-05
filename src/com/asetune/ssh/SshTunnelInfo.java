@@ -1,5 +1,9 @@
 package com.asetune.ssh;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 public class SshTunnelInfo
@@ -89,5 +93,46 @@ public class SshTunnelInfo
 			"SshHost='"      + sshHost        + ":" + sshPort   + "', " +
 			"SshUser='"      + sshUser        + "', " +
 			"SshInitOsCmd='" + sshInitOsCmd   + "'.";
+	}
+	
+	public String getConfigString(boolean hidePasswd)
+	{
+		LinkedHashMap<String, String> cfg = new LinkedHashMap<String, String>();
+		
+		cfg.put("isLocalPortGenerated", isLocalPortGenerated()+"");
+		cfg.put("LocalPort",            (isLocalPortGenerated() ? -1 : getLocalPort())+"");
+		cfg.put("LocalHost",            getLocalHost());
+		cfg.put("DestHost",             getDestHost());
+		cfg.put("DestPort",             getDestPort()+"");
+		cfg.put("SshHost",              getSshHost());
+		cfg.put("SshPort",              getSshPort()+"");
+		cfg.put("SshUsername",          getSshUsername());
+		cfg.put("SshPassword",          hidePasswd ? "**secret**" : Configuration.encryptPropertyValue("SshPassword", getSshPassword()));
+		cfg.put("SshInitOsCmd",         getSshInitOsCmd());
+		
+		return StringUtil.toCommaStr(cfg);
+	}
+	
+	public static SshTunnelInfo parseConfigString(String cfgStr)
+	{
+		if (StringUtil.isNullOrBlank(cfgStr))
+			return null;
+
+		Map<String, String> cfg = StringUtil.parseCommaStrToMap(cfgStr);
+		
+		SshTunnelInfo ti = new SshTunnelInfo();
+		
+		     ti.setLocalPortGenerated( "true".equalsIgnoreCase(cfg.get("isLocalPortGenerated")) );
+		try{ ti.setLocalPort(Integer.parseInt(cfg.get("LocalPort"))); } catch(NumberFormatException nfe) {}
+		     ti.setLocalHost(                 cfg.get("LocalHost") );
+		     ti.setDestHost(                  cfg.get("DestHost") );
+		try{ ti.setDestPort( Integer.parseInt(cfg.get("DestPort"))); } catch(NumberFormatException nfe) {}
+		     ti.setSshHost(                   cfg.get("SshHost") );
+		try{ ti.setSshPort(  Integer.parseInt(cfg.get("SshPort"))); } catch(NumberFormatException nfe) {}
+		     ti.setSshUsername(               cfg.get("SshUsername") );
+		     ti.setSshPassword(               Configuration.decryptPropertyValue("SshPassword", cfg.get("SshPassword")) );
+		     ti.setSshInitOsCmd(              cfg.get("SshInitOsCmd") );
+		
+		return ti;
 	}
 }

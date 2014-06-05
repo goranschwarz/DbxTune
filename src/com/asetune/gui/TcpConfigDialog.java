@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
+import javax.naming.NameNotFoundException;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -95,7 +96,7 @@ implements ActionListener, TableModelListener
 	private String  _lastChoosenTemplate   = "";
 	private boolean _isLoadingFromTemplate = false;
 
-	private String[]  _templateSystemArr = new String[] {
+	private static String[]  _templateSystemArr = new String[] {
 			"System Template - PCS ON - small", 
             "System Template - PCS ON - medium", 
             "System Template - PCS ON - large", 
@@ -637,6 +638,36 @@ implements ActionListener, TableModelListener
 		return list;
 	}
 
+	/**
+	 * get a list of system and user defined counter set templates
+	 * @return
+	 */
+	public static List<String> getSystemAndUserDefinedTemplateNames()
+	{
+		ArrayList<String> list = new ArrayList<String>();
+		
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// Load User Defined Templates
+		String propKey = "tcpConfigDialog.template.name.";
+		List<String> userTemplates = conf.getKeys(propKey);
+		Collections.sort(userTemplates);
+		for (String key : conf.getKeys(propKey))
+		{
+			String userTemplate = key.substring(propKey.length());
+			list.add(userTemplate);
+		}
+
+		// Load System Templates
+		for (String systemTemplate : _templateSystemArr)
+		{
+			if (systemTemplate.startsWith("System Template - PCS ON"))
+				list.add(systemTemplate);
+		}
+		
+		return list;
+	}
+
 	private void loadSystemAndUserDefinedTemplateNames()
 	{
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
@@ -792,6 +823,106 @@ implements ActionListener, TableModelListener
 		
 		return true;
 	}
+
+	/**
+	 * Set a specific template to the current CounterController
+	 * @param templateName
+	 */
+	public static boolean setTemplate(String templateName)
+	throws NameNotFoundException
+	{
+		if (templateName == null) return false;
+		if (templateName.trim().equals("")) return false;
+		if (templateName.trim().equals(NO_TEMPLATE_IS_SELECTED)) return false;
+		
+		Configuration tmpConf = Configuration.getCombinedConfiguration();
+		if (tmpConf == null)
+			return false;
+
+		PropPropEntry ppe = null;
+		if (templateName.startsWith("System Template"))
+		{
+			String[] sa = templateName.split(" - ");
+			String type = sa[1];
+			String name = sa[2];
+
+			if ("PCS ON".equals(type))
+			{
+				if      ("small" .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_SMALL;
+				else if ("medium".equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_MEDIUM;
+				else if ("large" .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_LARGE;
+				else if ("all"   .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_ON_ALL;
+			}
+			else if ("PCS OFF".equals(type))
+			{
+				if      ("small" .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_SMALL;
+				else if ("medium".equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_MEDIUM;
+				else if ("large" .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_LARGE;
+				else if ("all"   .equals(name)) ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_ALL;
+				else                            ppe = CounterSetTemplates.SYSTEM_TEMPLATE_PCS_OFF_SMALL;
+			}
+			if (ppe == null)
+				throw new NameNotFoundException("Can't find the SYSTEM TEMPLATE named '"+templateName+"'.");
+		}
+		else
+		{
+			String propKey = "tcpConfigDialog.template.name."+templateName;
+			String propVal = tmpConf.getProperty(propKey);
+			if (propVal == null)
+			{
+				_logger.warn("The key '"+propKey+"', can't be found in the file '"+tmpConf.getFilename()+"'.");
+				throw new NameNotFoundException("Can't find the USER DEFINED TEMPLATE named '"+templateName+"' in config file(s) '"+tmpConf.getFilename()+"'.");
+			}
+			ppe = new PropPropEntry(propVal);
+		}
+//		if (ppe == null)
+//			return false;
+
+		// LOAD foreach of the CM's
+		for (String name : ppe)
+		{
+			_logger.debug("setTemplate(): PPE: for name '"+name+"'.");
+			try
+			{
+				int     queryTimeout = ppe.getIntMandatoryProperty(    name, CounterSetTemplates.PROPKEY_queryTimeout);
+				int     postpone     = ppe.getIntMandatoryProperty(    name, CounterSetTemplates.PROPKEY_postpone);
+				boolean paused       = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_paused);
+				boolean bgPoll       = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_bg);
+				boolean resetNC20    = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_resetNC20);
+				boolean storePcs     = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_storePcs);
+				boolean pcsAbs       = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsAbs);
+				boolean pcsDiff      = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsDiff);
+				boolean pcsRate      = ppe.getBooleanMandatoryProperty(name, CounterSetTemplates.PROPKEY_pcsRate);
+				
+				CountersModel cm  = CounterController.getInstance().getCmByDisplayName(name);
+
+				if (cm == null)
+				{
+					_logger.warn("The cm named '"+name+"' can't be found in the 'CounterController' object, continuing with next cm.");
+					continue;
+				}
+
+				cm.setQueryTimeout(                 queryTimeout, true);
+				cm.setPostponeTime(                 postpone,   true);
+				cm.setPauseDataPolling(             paused,     true);
+				cm.setBackgroundDataPollingEnabled( bgPoll,     true);
+				cm.setNegativeDiffCountersToZero(   resetNC20,  true);
+
+				cm.setPersistCounters(    storePcs, true);
+				cm.setPersistCountersAbs( pcsAbs,   true);
+				cm.setPersistCountersDiff(pcsDiff,  true);
+				cm.setPersistCountersRate(pcsRate,  true);
+			}
+			catch (Exception e) 
+			{
+				_logger.error("Problem when setting Template '"+templateName+"', for CM '"+name+"', caught: "+e.getMessage());
+				return false;
+			}
+		}
+		
+		return true;
+	}
+
 
 	private PropPropEntry getPpeFromTable()
 	{

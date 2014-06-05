@@ -1652,7 +1652,21 @@ public class QueryWindow
 		if (winType == WindowType.CMDLINE_JFRAME)
 		{
 			_logger.info("Checking for new release...");
-			CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+			
+			// Create a thread that does this...
+			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+			// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+			Thread checkForUpdatesThread = new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+				}
+			}, "checkForUpdatesThread");
+			checkForUpdatesThread.setDaemon(true);
+			checkForUpdatesThread.start();
+//			CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
 
 			// Only start the watchdog if started from cmd line
 			_watchdogIsFileChanged = createWatchdogIsFileChanged();
@@ -2356,7 +2370,7 @@ public class QueryWindow
 
 
 				// Send connection info
-				SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+				final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
 				connInfo.setProdName         (_connectedToProductName);
 				connInfo.setProdVersionStr   (_connectedToProductVersion);
 				connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2373,8 +2387,22 @@ public class QueryWindow
 //				connInfo.setClientCharsetName(_connectedClientCharsetName); 
 //				connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
-				CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
-				
+//				CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+
+				// Create a thread that does this...
+				// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+				// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+				Thread checkForUpdatesThread = new Thread(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+					}
+				}, "checkForUpdatesThread");
+				checkForUpdatesThread.setDaemon(true);
+				checkForUpdatesThread.start();
+
 			} // end: connectionIsOk
 			else
 			{
@@ -2405,7 +2433,7 @@ public class QueryWindow
 			loadWinPropsForSrv(_conn.toString());
 
 			// Send connection info
-			SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2423,6 +2451,21 @@ public class QueryWindow
 //			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
 			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+
+			// Create a thread that does this...
+			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+			// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+			Thread checkForUpdatesThread = new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+				}
+			}, "checkForUpdatesThread");
+			checkForUpdatesThread.setDaemon(true);
+			checkForUpdatesThread.start();
+
 		}
 		else if ( connType == ConnectionDialog.JDBC_CONN)
 		{
@@ -2525,7 +2568,7 @@ public class QueryWindow
 			loadWinPropsForSrv(_connectedWithUrl);
 
 			// Send connection info
-			SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2543,6 +2586,20 @@ public class QueryWindow
 //			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
 			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+
+			// Create a thread that does this...
+			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+			// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+			Thread checkForUpdatesThread = new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+				}
+			}, "checkForUpdatesThread");
+			checkForUpdatesThread.setDaemon(true);
+			checkForUpdatesThread.start();
 		}
 		
 		// What Components should be enabled/visible
@@ -6767,11 +6824,11 @@ public class QueryWindow
 		_sqlExceptionCount = 0;
 	}
 
-	public void sendExecStatistics(boolean blockingCall)
+	public void sendExecStatistics(final boolean blockingCall)
 	{
 		// send of the counters
 		/* TODO */
-		SqlwUsageInfo sqlwUsageInfo = new SqlwUsageInfo();
+		final SqlwUsageInfo sqlwUsageInfo = new SqlwUsageInfo();
 
 		sqlwUsageInfo.setConnType         (_connType);
 		sqlwUsageInfo.setSrvVersionInt    (_srvVersion);
@@ -6791,8 +6848,27 @@ public class QueryWindow
 		sqlwUsageInfo.setSqlWarningCount  (_sqlWarningCount);
 		sqlwUsageInfo.setSqlExceptionCount(_sqlExceptionCount);
 
-		CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
-		
+		if (blockingCall)
+		{
+			CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+		}
+		else
+		{
+			// Create a thread that does this...
+			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+			// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+			Thread checkForUpdatesThread = new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+				}
+			}, "checkForUpdatesThread");
+			checkForUpdatesThread.setDaemon(true);
+			checkForUpdatesThread.start();
+		}
+
 		// At the end, reset the statistics
 		resetExecStatistics();
 	}

@@ -545,30 +545,36 @@ extends CountersModel
 	@Override
 	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
-		// Sanity check if "isCountersCleared" is valid...
-		// get a known value we know will increment all the time from old/new value and compare
-		if (isCountersCleared)
-		{
-			// PK: spinName
-			String key = "default data cache"; // TODO: if ASE-CE we should try to get in "instance" as the first part of the key
+// The below dosn't work if we don't have a counter that is predictive, like clock_ticks or similar
+// if we use a counter that *could* become bigger in the second sample, the below wont work
+// so for know trust the isCountersCleared input parameter, until I figure out a better way
 
-			Object oldVal = oldSample.getRowValue(key, "grabs");
-			Object newVal = newSample.getRowValue(key, "grabs");
-
-			if (oldVal != null && newVal != null)
-			{
-				if (oldVal instanceof Number && newVal instanceof Number)
-				{
-					// This will work here since "value" is converted to a unsigned int
-					isCountersCleared =  ((Number)newVal).longValue() < ((Number)oldVal).longValue();
-					
-					// should we set/reset the CM isCountersCleared or not...
-					//setIsCountersCleared(isCountersCleared);
-
-					_logger.debug(getName()+":computeDiffCnt(): CountersClearedCheck(after) PK='"+key+"', oldVal='"+oldVal+"', newVal='"+newVal+"', isCountersCleared="+isCountersCleared+".");
-				}
-			}
-		}
+//		// Sanity check if "isCountersCleared" is valid...
+//		// get a known value we know will increment all the time from old/new value and compare
+//		if (isCountersCleared)
+//		{
+//			// PK: spinName
+//			String key = "default data cache"; // TODO: if ASE-CE we should try to get in "instance" as the first part of the key
+//
+//			Object oldVal = oldSample.getRowValue(key, "grabs");
+//			Object newVal = newSample.getRowValue(key, "grabs");
+//
+//			if (oldVal != null && newVal != null)
+//			{
+//				if (oldVal instanceof Number && newVal instanceof Number)
+//				{
+//					// This will work here since "value" is converted to a unsigned int
+//					isCountersCleared =  ((Number)newVal).longValue() < ((Number)oldVal).longValue();
+//					
+//					// should we set/reset the CM isCountersCleared or not...
+//					//setIsCountersCleared(isCountersCleared);
+//
+//System.out.println(getName()+":computeDiffCnt(): CountersClearedCheck(after) PK='"+key+"', oldVal='"+oldVal+"', newVal='"+newVal+"', isCountersCleared="+isCountersCleared+".");
+//					_logger.debug(getName()+":computeDiffCnt(): CountersClearedCheck(after) PK='"+key+"', oldVal='"+oldVal+"', newVal='"+newVal+"', isCountersCleared="+isCountersCleared+".");
+//				}
+//			}
+//		}
+//System.out.println(getName()+":computeDiffCnt(): isCountersCleared="+isCountersCleared+".");
 
 		// Let super do all the work
 		SamplingCnt diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);

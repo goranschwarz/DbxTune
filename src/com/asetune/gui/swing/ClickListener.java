@@ -7,6 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 public class ClickListener extends MouseAdapter 
@@ -30,19 +31,22 @@ implements ActionListener
 	@Override
 	public void mouseClicked(MouseEvent e)
 	{
-		if ( e.getClickCount() > 2 )
-			return;
-
-		lastEvent = e;
-
-		if ( timer.isRunning() )
+		if (SwingUtilities.isLeftMouseButton(e)) 
 		{
-			timer.stop();
-			doubleClick(lastEvent);
-		}
-		else
-		{
-			timer.restart();
+    		if ( e.getClickCount() > 2 )
+    			return;
+    
+    		lastEvent = e;
+    
+    		if ( timer.isRunning() )
+    		{
+    			timer.stop();
+    			doubleClick(lastEvent);
+    		}
+    		else
+    		{
+    			timer.restart();
+    		}
 		}
 	}
 

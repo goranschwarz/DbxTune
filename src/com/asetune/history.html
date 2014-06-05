@@ -253,15 +253,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 	<LI>
 	<b>Enhancement: Connection Dialog</b><br>
-    Started to work on 'Connection Profile', this will make it a bit easier to connect...<br>
-    The idea is to remember a lot more information about this specific server<br>
+	Connection Profile: this will make it a bit easier to connect...<br>
+	A Tree View in a new panel, located to the left of the connection attributes can be enabled.<br> 
     The connection dialog will be used for both the AseTune and SqlWindow applications<br>
-    But it's a lot of work before this is complete<br>
-    To get a preview how it might look like, there are two buttons on the bottom left corner 
-    to enable/disable a tree view (which is static for the moment)<br>
-    The SSH Connection Stuff now also takes a 'init OS Command', so you can kick off a OS command when the SSH connects
-    this can then kick of a shell scripts, which may 'setup a new SSH Tunnel Connection chain' or setup some environment, or...<br>
-    Also: JCheckbox option to enable jConnect Password Encryption over the network<br>
+    To enable/disable the Tree View Panel, there are two buttons on the bottom left corner.<br> 
+    A Connection Profiles can also be selected from a Drop Down Box, called "Use Profile"<br>
+    New Connection Profiles is "automatically" created after a connection has been successfully established, it will ask you for
+    a name... if you change some attributes and connect, a dialog will be asking you if you want to save it or not.<br> 
+    Another way to Save/Create a Profile is by pressing 'Save Profile...'<br>  
+    * The SSH Connection Stuff now also takes a 'init OS Command', so you can kick off a OS command when the SSH connects
+      this can then kick of a shell scripts, which may 'setup a new SSH Tunnel Connection chain' or setup some environment, or...<br>
+    * JCheckbox option to enable jConnect Password Encryption over the network<br>
 	</LI>
 
 	<LI>
@@ -270,6 +272,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
     Show a popup that ask you if you want to add the entry to the interfaces file<br>
     If the current interfaces is not writable, then an option to copy the current interfaces to a local/private files will be displayed<br>
     If you open the interfaces file for EDIT, and it's not writable offer the above "copy option"<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+	Also added a new option "Use Counter Template", and a list of templates you can choose from...<br>
+	When using this option, the predefined template will be used, which mean you can have different predefined Performance
+	Counter Sets for different servers, and when you connect that Counter Template will automatically be used.<br>
+	Maintaining Template Sets is done in the existing dialog  'Settings for All Collector Tabs', which you can open by clicking 'Template Dialog'<br>
+	This dialog can also be reached "at any time" from the Main Menu-&gt;View-&gt;Change 'Performance Counter' Options... 
 	</LI>
 
 	<LI>
