@@ -558,9 +558,22 @@ public class AseTune
 		SplashWindow.drawProgress("Initializing..");
 
 		// Initialize this early...
-		// If it's initalized after any connect attempt we might have
+		// If it's initialized after any connect attempt we might have
 		// problems connecting to various destinations.
-		CheckForUpdates.init();
+//		CheckForUpdates.init();
+		// Create a thread that does this...
+		// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+		// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+		Thread checkForUpdatesThread = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				CheckForUpdates.init();
+			}
+		}, "checkForUpdatesThread");
+		checkForUpdatesThread.setDaemon(true);
+		checkForUpdatesThread.start();
 
 
 		SplashWindow.drawProgress("Initializing...");
@@ -763,7 +776,7 @@ public class AseTune
 
 					// Create the GUI
 					SplashWindow.drawProgress("Loading: Main Frame...");
-					MainFrame frame = new MainFrame();
+					final MainFrame frame = new MainFrame();
 
 					// Create and Start the "collector" thread
 					SplashWindow.drawProgress("Loading: Counter Models...");
@@ -789,7 +802,20 @@ public class AseTune
 					SplashWindow.drawProgress("Checking for new release...");
 					_logger.info("Checking for new release...");
 					//CheckForUpdates.noBlockCheck(frame, false, false);
-					CheckForUpdates.noBlockCheck(frame, false, true);
+//					CheckForUpdates.noBlockCheck(frame, false, true);
+					// Create a thread that does this...
+					// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
+					// My guess is that ProxyVole want's to unpack it's DDL, which takes time...
+					Thread checkForUpdatesThread = new Thread(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							CheckForUpdates.noBlockCheck(frame, false, true);
+						}
+					}, "checkForUpdatesThread");
+					checkForUpdatesThread.setDaemon(true);
+					checkForUpdatesThread.start();
 
 					// Start OutOfMemory check/thread
 					// Listeners has to be attached, which is done for example in MainFrame

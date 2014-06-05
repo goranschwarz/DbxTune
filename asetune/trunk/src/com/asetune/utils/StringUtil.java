@@ -20,6 +20,8 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import javax.swing.JComboBox;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -1044,6 +1046,23 @@ public class StringUtil
 	}
 
 	/**
+	 * Simply do Integer.parseInt(str), but if it fails (NumberFormatException), then return the default value
+	 * @param str           String to be converted
+	 * @param defaultValue  if "str" can't be converted (NumberFormatException), then return this value
+	 * @return a integer value
+	 */
+	public static int parseInt(String str, int defaultValue)
+	{
+		try
+		{
+			return Integer.parseInt(str);
+		}
+		catch (NumberFormatException nfe)
+		{
+			return defaultValue;
+		}
+	}
+	/**
 	 * returns a "safe" XML tag content string
 	 * <p>
 	 * if '&' or '<' exists in the passed string a CDATA substitution will be done.
@@ -1063,12 +1082,118 @@ public class StringUtil
 		if (inStr == null)
 			return null;
 		
-		if (inStr.indexOf('&') > 0 || inStr.indexOf('<') > 0)
+		if (inStr.indexOf('&') >= 0 || inStr.indexOf('<') >= 0)
 		{
 			return "<![CDATA[" + inStr + "]]>";
 		}
 		return inStr;
 	}
+
+	public static StringBuilder xmlAddAttributes(StringBuilder sb, Map<String, String> attributes)
+	{
+		if ( attributes == null || (attributes != null && attributes.size() == 0) ) 
+			return sb;
+
+		for (String key : attributes.keySet())
+		{
+			String val = attributes.get(key);
+			
+			sb.append(" ").append(key).append("=\"").append(val).append("\"");
+		}
+		return sb;
+	}
+
+	private static StringBuilder xmlAddAttributes(StringBuilder sb, String[] attributes)
+	{
+		if ( attributes == null || (attributes != null && attributes.length == 0) ) 
+			return sb;
+		if (attributes != null && (attributes.length % 2) != 0)
+			throw new IllegalArgumentException("Input parameter attributes must be a multiple of 2: key1, val1, key2, val2");
+
+		for (int i=0; i<attributes.length; i+=2)
+		{
+			String key = attributes[i];
+			String val = attributes[i+1];
+			
+			sb.append(" ").append(key).append("=\"").append(val).append("\"");
+		}
+		return sb;
+	}
+
+	public static StringBuilder xmlBeginTag(StringBuilder sb, int preSpaces, String tagName)
+	{
+		return xmlBeginTag(sb, preSpaces, tagName, (String[]) null);
+	}
+	
+	public static StringBuilder xmlBeginTag(StringBuilder sb, int preSpaces, String tagName, Map<String, String> attributes)
+	{
+		for (int i=0; i<preSpaces; i++)
+			sb.append(" ");
+
+		sb.append("<").append(tagName);
+		
+		if (attributes != null && attributes.size() > 0) 
+			xmlAddAttributes(sb, attributes);
+
+		sb.append(">\n");
+		return sb;
+	}
+
+	public static StringBuilder xmlBeginTag(StringBuilder sb, int preSpaces, String tagName, String... attributes)
+	{
+		if (attributes != null && (attributes.length % 2) != 0)
+			throw new IllegalArgumentException("Input parameter attributes must be a multiple of 2: key1, val1, key2, val2");
+
+		for (int i=0; i<preSpaces; i++)
+			sb.append(" ");
+
+		sb.append("<").append(tagName);
+		
+		if (attributes != null && attributes.length > 0) 
+			xmlAddAttributes(sb, attributes);
+
+		sb.append(">\n");
+		return sb;
+	}
+
+	public static StringBuilder xmlEndTag(StringBuilder sb, int preSpaces, String tagName)
+	{
+		for (int i=0; i<preSpaces; i++)
+			sb.append(" ");
+		return sb.append("</").append(tagName).append(">\n");
+	}
+
+	public static StringBuilder xmlTag(StringBuilder sb, int preSpaces, String tagName, boolean value)
+	{
+		return xmlTag(sb, preSpaces, tagName, Boolean.toString(value));
+	}
+	
+	public static StringBuilder xmlTag(StringBuilder sb, int preSpaces, String tagName, int value)
+	{
+		return xmlTag(sb, preSpaces, tagName, Integer.toString(value));
+	}
+	
+	public static StringBuilder xmlTag(StringBuilder sb, int preSpaces, String tagName, String value)
+	{
+		return xmlTag(sb, preSpaces, tagName, value, false);
+	}
+	
+	public static StringBuilder xmlTag(StringBuilder sb, int preSpaces, String tagName, String value, boolean addNullOrBlankValues)
+	{
+		if (StringUtil.isNullOrBlank(value) && !addNullOrBlankValues)
+			return sb;
+
+		for (int i=0; i<preSpaces; i++)
+			sb.append(" ");
+
+		value = StringUtil.xmlSafe(value);
+
+		if (value == null)
+			value = "";
+
+		return sb.append("<").append(tagName).append(">").append(value).append("</").append(tagName).append(">\n");
+	}
+
 
 	/**
 	 * if input string has \t, \f, \n or \r they will be escaped into \\t, \\f, \\n, \\r
@@ -1215,6 +1340,25 @@ public class StringUtil
 			break;
 		}
 		return line;
+	}
+
+	/**
+	 * Get a string representation of the selected item in a JComboBox<br>
+	 * If nothing is selected a empty string "" will be returned.
+	 * 
+	 * @param combo the combobox 
+	 * @return always a string (toString() on the selected object)
+	 */
+	public static String getSelectedItemString(JComboBox combo)
+	{
+		if (combo == null)
+			return null;
+		
+		Object o = combo.getSelectedItem();
+		if (o == null)
+			return "";
+		
+		return o.toString();
 	}
 
 	/////////////////////////////////////////////////////////////////////////////

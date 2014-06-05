@@ -633,9 +633,47 @@ extends Properties
 	 */
 	public static String encryptPropertyValue(String propName, String str)
 	{
+		if (str == null)
+			return null;
+
 		Encrypter propEncrypter = new Encrypter(encrypterBaseKey+propName);
 		String encryptedStr = propEncrypter.encrypt(str);
 		return ENCRYPTED_PREFIX + encryptedStr;
+	}
+
+	/** 
+	 * Decrypt a property value, most possibly a password.
+	 * 
+	 * @param propName Name of the property string to be used in the property file.
+	 * @param str      The string you want to decrypt (must starts with "encrypted:")
+	 * @return         The decrypted string 
+	 */
+	public static String decryptPropertyValue(String propName, String str)
+	{
+		if (str == null)
+			return null;
+
+		if (str.startsWith(ENCRYPTED_PREFIX))
+		{
+			str = str.substring( ENCRYPTED_PREFIX.length() );
+    
+    		Encrypter encrypter = new Encrypter(encrypterBaseKey+propName);
+    		str = encrypter.decrypt(str);
+		}
+		return str;
+	}
+	
+	/**
+	 * Check if the value starts with "encrypted:"
+	 * @param str
+	 * @return
+	 */
+	public static boolean isEncryptedValue(String str)
+	{
+		if (str == null)
+			return false;
+
+		return str.startsWith(ENCRYPTED_PREFIX);
 	}
 
 //	public Object setEncrypedProperty(String propName, String str)

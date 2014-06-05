@@ -650,6 +650,9 @@ public class SwingUtils
 
 	public static ImageIcon readImageIcon(Class<?> clazz, String filename)
 	{
+		if (StringUtil.isNullOrBlank(filename))
+			return null;
+
 //		URL url = MainFrame.class.getResource("images/" + filename);
 		URL url = clazz.getResource(filename);
 //		System.out.println("---->>>>>>>>>>>>>>>>>> Using the icon '"+url+"'.");
