@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -202,6 +203,39 @@ public class ConnectionProfileManager
 	{
 		if (StringUtil.isNullOrBlank(filename))
 			filename = Configuration.getCombinedConfiguration().getProperty(PROPKEY_STORAGE_FILE, DEFAULT_STORAGE_FILE);
+
+		// If the file doesn't exists
+		File f = new File(filename);
+		if ( ! f.exists() )
+		{
+			if (filename.equals(DEFAULT_STORAGE_FILE))
+			{
+				createStorageFile(filename);
+			}
+			else
+			{
+				String htmlMsg = 
+						"<html>"
+						+ "The Connection Dialog storage file '"+filename+"' doesn't exist!<br>"
+						+ "<br>"
+						+ "Do you want to create the above file and start to use that?"
+						+ "</html>";
+
+				int answer = JOptionPane.showConfirmDialog(null, htmlMsg, "File dosn't exist", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if ( answer == JOptionPane.YES_OPTION )
+				{
+					createStorageFile(filename);
+				}
+				else
+				{
+					RuntimeException ex = new RuntimeException("File '"+filename+"' not found (and 'create-new-file' was declined). Cant continue to parse the file.");
+					_logger.error("File '"+filename+"' not found (and 'create-new-file' was declined). Cant continue to parse the file.", ex);
+//					throw ex;
+					return;
+				}
+			}
+		}
+		_logger.info("Connection Profile Manager will use the file "+filename+" to store profile information.");
 
 		// Only set if it's a new name
 //		if ( ! filename.equals(_filename) )
@@ -1416,15 +1450,36 @@ public class ConnectionProfileManager
 		
 	}
 
+	/**
+	 * Creates a default layout of the Connection Profile XML storage file
+	 * 
+	 * @param filename
+	 */
+	private void createStorageFile(String filename)
+	{
+		File f = new File(filename);
+		if (f.exists())
+		{
+			_logger.error("ConnectionProfileManager.createStorageFile(): The file '"+filename+"' already exists, I will not overvrite it.");
+			return;
+		}
+		
+		_logger.info("Creating a new file '"+filename+"' for Connection Profile Manager to store profile information.");
+		save(filename, true);
+	}
+
+
 	public void save()
 	{
 		save(getFilename());
 	}
 
-	/**
-	 * 
-	 */
 	public void save(String filename)
+	{
+		save(getFilename(), false);
+	}
+
+	private void save(String filename, boolean writeTemplateFile)
 	{
 		if (StringUtil.isNullOrBlank(filename))
 			filename = getFilename();
@@ -1435,8 +1490,12 @@ public class ConnectionProfileManager
 
 		try
 		{
-			_logger.debug("ConnectionProfileManager.save(): saving a recovery file to '"+tmpRecoveryFilename+"', which will be deleted if no problems where found.");
-			FileUtils.copy(filename, tmpRecoveryFilename);
+			File f = new File(filename);
+			if (f.exists())
+			{
+				_logger.debug("ConnectionProfileManager.save(): saving a recovery file to '"+tmpRecoveryFilename+"', which will be deleted if no problems where found.");
+				FileUtils.copy(filename, tmpRecoveryFilename);
+			}
 
 			RandomAccessFile raf = new RandomAccessFile(filename, "rw");
 			FileChannel channel = raf.getChannel();
@@ -1468,43 +1527,69 @@ public class ConnectionProfileManager
 
 					//--------------------------------------
 					// Write Catalog Structure
-					if (_profileTreeRoot != null && _profileTreeRoot.getChildCount() > 0)
+					if (writeTemplateFile)
 					{
 						sb.setLength(0);
 						
-						sb.append("    <").append(XML_PROFILE_TREE).append(">\n");
-						sb.append(getXmlProfileTree(_profileTreeRoot, 2));
-						sb.append("    </").append(XML_PROFILE_TREE).append(">\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Production").append("\">\n");
+						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 						sb.append("\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Development").append("\">\n");
+						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
+						sb.append("\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Test").append("\">\n");
+						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 						
 						byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
 						channel.write(byteBuffer);
 					}
 					else
 					{
-						Exception error = new Exception("_profileTreeRoot.getChildCount()="+(_profileTreeRoot == null ? "null" : _profileTreeRoot.getChildCount())+", _profileTreeRoot="+_profileTreeRoot);
-						_logger.warn("ConnectionProfileManager trying to save to file '', but ROOT entry seems to 'empty'. For debug reasons, save a stacktrace", error);
+						if (_profileTreeRoot != null && _profileTreeRoot.getChildCount() > 0)
+						{
+							sb.setLength(0);
+							
+							sb.append("    <").append(XML_PROFILE_TREE).append(">\n");
+							sb.append(getXmlProfileTree(_profileTreeRoot, 2));
+							sb.append("    </").append(XML_PROFILE_TREE).append(">\n");
+							sb.append("\n");
+							
+							byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
+							channel.write(byteBuffer);
+						}
+						else
+						{
+							Exception error = new Exception("_profileTreeRoot.getChildCount()="+(_profileTreeRoot == null ? "null" : _profileTreeRoot.getChildCount())+", _profileTreeRoot="+_profileTreeRoot);
+							_logger.warn("ConnectionProfileManager trying to save to file '"+filename+"', but ROOT entry seems to 'empty'. For debug reasons, save a stacktrace", error);
+						}
 					}
 
 					//--------------------------------------
 					// Write TDS/JDBC/OFFLINE entries
-					for (ConnectionProfile entry : getProfiles().values())
+					if (writeTemplateFile)
 					{
-						sb.setLength(0);
-						
-						try
+						// If we want to write a DUMMY Connection entry, this is the place to do it.
+					}
+					else
+					{
+						for (ConnectionProfile entry : getProfiles().values())
 						{
-							sb.append(entry.toXml());
-							sb.append("\n");
+							sb.setLength(0);
+							
+							try
+							{
+								sb.append(entry.toXml());
+								sb.append("\n");
+							}
+							catch (Throwable t)
+							{
+								problemMap.put(entry.getName(), t);
+								_logger.error("Problems writing XML ENTRY for name='"+entry.getName()+"', type="+entry.getType()+", srvType="+entry.getSrvType()+" to file '"+filename+"'. Continuing with next entry. Caught: "+t, t);
+							}
+							
+							byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
+							channel.write(byteBuffer);
 						}
-						catch (Throwable t)
-						{
-							problemMap.put(entry.getName(), t);
-							_logger.error("Problems writing XML ENTRY for name='"+entry.getName()+"', type="+entry.getType()+", srvType="+entry.getSrvType()+" to file '"+filename+"'. Continuing with next entry. Caught: "+t, t);
-						}
-						
-						byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
-						channel.write(byteBuffer);
 					}
 
 					
