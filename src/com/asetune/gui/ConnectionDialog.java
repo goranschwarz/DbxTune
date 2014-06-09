@@ -514,6 +514,13 @@ public class ConnectionDialog
 		setLocationRelativeTo(owner);
 
 		getSavedWindowProps();
+		// Check size, if below minimum after "upgrade" using ConnectionProfile, make it approximate 150px bigger
+		size = getSize();
+		if (_connProfileVisible_chk.isSelected() && size.width < 675)
+		{
+			size.width += 150;
+			setSize(size);
+		}
 
 // TEMP CHANGED: THIS SHOULD BE DELETED... when the ConnectionProfile Works
 //if (_connProfileVisible_chk.isSelected())
