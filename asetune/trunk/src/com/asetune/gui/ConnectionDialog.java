@@ -6990,7 +6990,9 @@ public class ConnectionDialog
 					"<html>"
 					+ "<h3>Move a Connection Profile in the Tree</h3>"
 					+ "<br>"
-					+ "Use <b>Drag and drop</b> to move entries in the tree."
+					+ "Use <b>Drag and drop</b> to move entries in the tree.<br>"
+					+ "<br>"
+					+ "<b>Tip</b>: To move a Catalog with all it's content/children, you also need to select <b>all</b> children/profiles before starting the <i>drag</i> operation."
 					+ "</html>";
 			SwingUtils.showInfoMessage(ConnectionDialog.this, "Move", htmlMsg);
 		}
