@@ -14,6 +14,8 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import com.asetune.utils.StringUtil;
+
 /**
  * Grabbed from
  * http://www.coderanch.com/t/346509/GUI/java/JTree-drag-drop-tree-Java
@@ -25,9 +27,15 @@ public class TreeTransferHandler extends TransferHandler
 	protected DataFlavor                nodesFlavor;
 	protected DataFlavor[]              flavors = new DataFlavor[1];
 	protected DefaultMutableTreeNode[]  nodesToRemove;
+	protected boolean                   _allowCopy = false;
 
 	public TreeTransferHandler()
 	{
+		this(false);
+	}
+	public TreeTransferHandler(boolean allowCopy)
+	{
+		_allowCopy = allowCopy;
 		try
 		{
 			String mimeType = DataFlavor.javaJVMLocalObjectMimeType + ";class=\"" + javax.swing.tree.DefaultMutableTreeNode[].class.getName() + "\"";
@@ -39,6 +47,9 @@ public class TreeTransferHandler extends TransferHandler
 			System.out.println("ClassNotFound: " + e.getMessage());
 		}
 	}
+	
+	public void    setAllowCopy(boolean allow) { _allowCopy = allow; }
+	public boolean getAllowCopy()              { return _allowCopy; }
 
 	@Override
 	public boolean canImport(TransferHandler.TransferSupport support)
@@ -64,13 +75,27 @@ public class TreeTransferHandler extends TransferHandler
 				return false;
 			}
 		}
+		// Do not allow MOVE-action drops into nodes that does NOT allow children
+		int action = support.getDropAction();
+		if ( action == MOVE )
+		{
+			TreePath dest = dl.getPath();
+			DefaultMutableTreeNode target = (DefaultMutableTreeNode) dest.getLastPathComponent();
+			if ( ! target.getAllowsChildren() )
+				return false;
+		}
+		
 		// Do not allow MOVE-action drops if a non-leaf node is
 		// selected unless all of its children are also selected.
-		int action = support.getDropAction();
 		if ( action == MOVE )
 		{
 			return haveCompleteNode(tree);
 		}
+
+		// Do we allow copy or not 
+		if ( action == COPY && !_allowCopy)
+			return false;
+
 		// Do not allow a non-leaf node to be copied to a level
 		// which is less than its source level.
 		TreePath dest = dl.getPath();
