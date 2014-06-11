@@ -1591,21 +1591,21 @@ public class QueryWindow
 			// if no input file
 			if ( StringUtil.isNullOrBlank(inputFile) )
 			{
-				Runnable doLater = new Runnable()
-				{
-					@Override
-					public void run()
-					{
-						_query_txt.requestFocus();
-
-						String helper = "Write your SQL query here";
-						_query_txt.setText(helper);
-						_query_txt.setSelectionStart(0);
-						_query_txt.setSelectionEnd(helper.length());
-						_query_txt.setDirty(false);
-					}
-				};
-				SwingUtilities.invokeLater(doLater);
+//				Runnable doLater = new Runnable()
+//				{
+//					@Override
+//					public void run()
+//					{
+//						_query_txt.requestFocus();
+//
+//						String helper = "Write your SQL query here";
+//						_query_txt.setText(helper);
+//						_query_txt.setSelectionStart(0);
+//						_query_txt.setSelectionEnd(helper.length());
+//						_query_txt.setDirty(false);
+//					}
+//				};
+//				SwingUtilities.invokeLater(doLater);
 			}
 		}
 		else
@@ -2046,6 +2046,8 @@ public class QueryWindow
 		_fSaveAs_mi.setEnabled(isDirty);
 		
 		_statusBar.setEditorPos(_query_txt.getCaretLineNumber(), _query_txt.getCaretOffsetFromLineStart());
+
+		setWatermark();
 	}
 	/*---------------------------------------------------
 	** END: implementing CaretListener
@@ -8835,6 +8837,11 @@ public class QueryWindow
 				str = "@@trancount = " + _aseConnectionStateInfo._tranCount;
 				
 			setWatermarkText(str);
+		}
+		// NO Query text... 
+		else if ( _query_txt.getLineCount() < 10 && StringUtil.isNullOrBlank(_query_txt.getText()))
+		{
+			setWatermarkText("Write your SQL query here");
 		}
 		else
 		{
