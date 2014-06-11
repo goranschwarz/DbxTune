@@ -14,8 +14,6 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
-import com.asetune.utils.StringUtil;
-
 /**
  * Grabbed from
  * http://www.coderanch.com/t/346509/GUI/java/JTree-drag-drop-tree-Java

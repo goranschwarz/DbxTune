@@ -98,7 +98,9 @@ then
 	echo "Error: Use a higher java version."
 	echo "-----------------------------------------------------------------------"
 	echo "The java installation can be pointed out using the variable JAVA_HOME"
-	echo "Current JAVA_HOME variable is set to ${JAVA_HOME}"
+	echo "Current SQLW_JAVA_HOME    variable is set to ${SQLW_JAVA_HOME}"
+	echo "Current ASETUNE_JAVA_HOME variable is set to ${ASETUNE_JAVA_HOME}"
+	echo "Current JAVA_HOME         variable is set to ${JAVA_HOME}"
 	echo "-----------------------------------------------------------------------"
 	
 	exit 1

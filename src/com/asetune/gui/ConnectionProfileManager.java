@@ -6,7 +6,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -459,6 +458,16 @@ public class ConnectionProfileManager
 		return null;
 	}
 	
+	/**
+	 * Check if a node exists in the tree
+	 * @param nodeName name of a node
+	 * @return
+	 */
+	public boolean exists(String nodeName)
+	{
+		// TODO Auto-generated method stub
+		return getTreePath(nodeName) != null;
+	}
 	
 	/**
 	 * Get all saved ConnectionProfile objects
@@ -886,7 +895,7 @@ public class ConnectionProfileManager
 					// Add Profile
 					if (_profileNameQ1_rbt.isSelected())
 					{
-						String entry = _profileName_cbx.getSelectedItem()+"";
+						String entry = StringUtil.getSelectedItemString(_profileName_cbx);
 						_connProfile.setName(entry);
 
 						addProfile(_connProfile, true);
@@ -917,7 +926,7 @@ public class ConnectionProfileManager
 					// Add Server
 					if (_interfacesQ1_rbt.isSelected())
 					{
-						String entry = _profileName_cbx.getSelectedItem()+"";
+						String entry = StringUtil.getSelectedItemString(_interfacesName_cbx);
 						
 						boolean canWrite = FileUtils.canWrite(_sqlIniFileName);
 						if (canWrite)
