@@ -15,6 +15,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
@@ -151,14 +152,19 @@ public class ConnectionDialog
 	public static final String   PROPKEY_showDialogOnNoLocalPcsDrive = "ConnectionDialog.showDialog.pcs.noLocalDrive";
 	public static final boolean  DEFAULT_showDialogOnNoLocalPcsDrive = true;
 	
+	private static final String  PROPKEY_CONN_PROFILE_PANEL_VISIBLE  = "conn.panel.profile.isVisible";
 	private static final boolean DEFAULT_CONN_PROFILE_PANEL_VISIBLE  = true;
+	private static final String  PROPKEY_CONN_TABED_PANEL_VISIBLE    = "conn.panel.tabed.isVisible";
 	private static final boolean DEFAULT_CONN_TABED_PANEL_VISIBLE    = true;
 
 	static
 	{
-//		Configuration.registerDefaultValue(CONF_OPTION_RECONNECT_ON_FAILURE, DEFAULT_xxx); // FIXME
-//		Configuration.registerDefaultValue(CONF_OPTION_CONNECT_ON_STARTUP,   DEFAULT_xxx); // FIXME
-		Configuration.registerDefaultValue(PROPKEY_CONN_SSH_TUNNEL,          DEFAULT_CONN_SSH_TUNNEL);
+//		Configuration.registerDefaultValue(CONF_OPTION_RECONNECT_ON_FAILURE,   DEFAULT_xxx); // FIXME
+//		Configuration.registerDefaultValue(CONF_OPTION_CONNECT_ON_STARTUP,     DEFAULT_xxx); // FIXME
+		Configuration.registerDefaultValue(PROPKEY_CONN_SSH_TUNNEL,            DEFAULT_CONN_SSH_TUNNEL);
+
+		Configuration.registerDefaultValue(PROPKEY_CONN_PROFILE_PANEL_VISIBLE, DEFAULT_CONN_PROFILE_PANEL_VISIBLE);
+		Configuration.registerDefaultValue(PROPKEY_CONN_TABED_PANEL_VISIBLE,   DEFAULT_CONN_TABED_PANEL_VISIBLE);
 	}
 	
 	public  static final int   CANCEL           = 0;
@@ -5985,8 +5991,8 @@ public class ConnectionDialog
 
 		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk .isSelected())
 			conf.setProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
-		conf.setProperty("conn.panel.profile.visible",          _connProfileVisible_chk.isSelected());
-		conf.setProperty("conn.panel.tabed.visible",            _connTabbedVisible_chk .isSelected());
+		conf.setProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE,    _connProfileVisible_chk.isSelected());
+		conf.setProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE,      _connTabbedVisible_chk .isSelected());
 
 
 		String hostPort = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
@@ -6152,10 +6158,10 @@ public class ConnectionDialog
 			_lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
 		_connSplitPane.setDividerLocation(_lastKnownConnSplitPaneDividerLocation);
 
-		if ( ! conf.getBooleanProperty("conn.panel.profile.visible", DEFAULT_CONN_PROFILE_PANEL_VISIBLE) )
+		if ( ! conf.getBooleanProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE, DEFAULT_CONN_PROFILE_PANEL_VISIBLE) )
 			_connProfileVisible_chk.doClick();
 
-		if ( ! conf.getBooleanProperty("conn.panel.tabed.visible", DEFAULT_CONN_TABED_PANEL_VISIBLE) )
+		if ( ! conf.getBooleanProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE, DEFAULT_CONN_TABED_PANEL_VISIBLE) )
 			_connTabbedVisible_chk.doClick();
 
 		String str = null;
@@ -6950,17 +6956,25 @@ public class ConnectionDialog
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			// Open a dialog, and get the new name
-			String key1 = "Catalog Name";
+//			// Open a dialog, and get the new name
+//			String key1 = "Catalog Name";
+//
+//			LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+//			in.put(key1, "");
+//
+//			Map<String,String> results = ParameterDialog.showParameterDialog(ConnectionDialog.this, "Rename", in, false);
+//
+//			if (results != null)
+//			{
+//				String name = results.get(key1).trim();
+//				ConnectionProfileManager.getInstance().addCatalog(new ConnectionProfileCatalog(name));
+//			}
 
-			LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
-			in.put(key1, "");
-
-			Map<String,String> results = ParameterDialog.showParameterDialog(ConnectionDialog.this, "Rename", in, false);
-
-			if (results != null)
+			RenameOrAddDialog dialog = new RenameOrAddDialog(ConnectionDialog.this, null, "<html><b>Add a Catalog</b></html>");
+			dialog.setVisible(true);
+			if (dialog.pressedOk())
 			{
-				String name = results.get(key1).trim();
+				String name = dialog.getName();
 				ConnectionProfileManager.getInstance().addCatalog(new ConnectionProfileCatalog(name));
 			}
 		}
@@ -7036,22 +7050,34 @@ public class ConnectionDialog
 			}
 
 
-			// Open a dialog, and get the new name
-			String key1 = "New Name";
+//			// Open a dialog, and get the new name
+//			String key1 = "New Name";
+//
+//			LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+//			in.put(key1, name);
+//
+//			Map<String,String> results = ParameterDialog.showParameterDialog(ConnectionDialog.this, "Rename", in, false);
+//
+//			if (results != null)
+//			{
+//				String newName = results.get(key1).trim();
+//				if (catalogEntry != null) catalogEntry.setName(newName);
+//				if (profileEntry != null) profileEntry.setName(newName);
+//				
+//				((DefaultTreeModel)_connProfileTree.getModel()).nodeChanged(node);
+////				ConnectionProfileManager.getInstance().save();
+//			}
 
-			LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
-			in.put(key1, name);
-
-			Map<String,String> results = ParameterDialog.showParameterDialog(ConnectionDialog.this, "Rename", in, false);
-
-			if (results != null)
+			RenameOrAddDialog dialog = new RenameOrAddDialog(ConnectionDialog.this, name, "<html><b>Rename a Connection Profile</b></html>");
+			dialog.setVisible(true);
+			if (dialog.pressedOk())
 			{
-				String newName = results.get(key1).trim();
+				String newName = dialog.getName();
+
 				if (catalogEntry != null) catalogEntry.setName(newName);
 				if (profileEntry != null) profileEntry.setName(newName);
 				
 				((DefaultTreeModel)_connProfileTree.getModel()).nodeChanged(node);
-//				ConnectionProfileManager.getInstance().save();
 			}
 
 
@@ -7232,6 +7258,7 @@ public class ConnectionDialog
 		}
 	}
 
+
 	/*---------------------------------------------------
 	**---------------------------------------------------
 	**---------------------------------------------------
@@ -7240,6 +7267,142 @@ public class ConnectionDialog
 	**---------------------------------------------------
 	**---------------------------------------------------
 	*/
+	private class RenameOrAddDialog
+	extends JDialog
+	implements ActionListener
+	{
+		private static final long serialVersionUID = 1L;
+
+//		private JDialog      _owner       = null;
+		
+		private String       _oldName     = null;
+		private String       _newName     = null;
+		private boolean      _pressedOk   = false;
+		
+		private String       _htmlMsg     = "";
+
+		private JLabel       _name_head   = new JLabel();
+		private JLabel       _name_lbl    = new JLabel("Name");
+		private JTextField   _name_txt    = new JTextField(30);
+		private JLabel       _name_bussy  = new JLabel("The Name already exists, choose another one.");
+
+		private JButton      _ok_but     = new JButton("OK");
+		private JButton      _cancel_but = new JButton("Cancel");
+
+		public RenameOrAddDialog(JDialog owner, String oldName, String htmlMsg)
+		{
+			super(owner, oldName != null ? "Rename" : "Add", true);
+			
+//			_owner     = owner;
+			_oldName   = oldName;
+			_newName   = null;
+			_pressedOk = false;
+			
+			_htmlMsg   = htmlMsg;
+			if (_htmlMsg == null)
+				_htmlMsg = "";
+			
+			init();
+			pack();
+			setLocationRelativeTo(owner);
+
+			validateCompenents();
+
+			// Focus to 'OK', escape to 'CANCEL'
+			SwingUtils.installEscapeButton(this, _cancel_but);
+			SwingUtils.setFocus(_name_txt);
+		}
+		
+		public boolean pressedOk()
+		{
+			return _pressedOk;
+		}
+
+		@Override
+		public String getName()
+		{
+			return _newName;
+		}
+
+		private void init()
+		{
+
+			_name_bussy.setForeground(Color.RED);
+			_name_txt.addKeyListener(new KeyAdapter()
+			{
+				@Override
+				public void keyReleased(KeyEvent e)
+				{
+					validateCompenents();
+				}
+			});
+
+			_name_head.setText(_htmlMsg);
+
+			if (_oldName != null)
+				_name_txt .setText(_oldName);
+
+			setLayout(new MigLayout());
+
+			JPanel panel = new JPanel(new MigLayout());
+			panel.add(_name_head,  "span, wrap 20");
+			panel.add(_name_lbl,   "");
+			panel.add(_name_txt,   "pushx, growx, wrap");
+			panel.add(_name_bussy, "skip, pushx, growx, hidemode 3, wrap");
+    
+			add(panel,               "wrap");
+			add(_ok_but,             "split, tag ok");
+			add(_cancel_but,         "tag cancel");
+			
+			_name_txt  .addActionListener(this); // on enter: press OK
+
+			_ok_but    .addActionListener(this);
+			_cancel_but.addActionListener(this);
+		}
+
+		private void validateCompenents()
+		{
+			boolean enableOk = true;
+
+			String currentItem = _name_txt.getText();
+			boolean bussy = ConnectionProfileManager.getInstance().exists(currentItem);
+			_name_bussy.setVisible(bussy);
+
+			if (bussy)
+				enableOk = false;
+
+			_ok_but.setEnabled(enableOk);
+		}
+		
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			Object source = e.getSource();
+			
+			if (_name_txt.equals(source))
+			{
+				_ok_but.doClick();
+			}
+
+			if (_ok_but.equals(source))
+			{
+				_pressedOk = true;
+				_newName = _name_txt.getText();
+
+				setVisible(false);
+			} // end OK
+			
+			if (_cancel_but.equals(source))
+			{
+				_pressedOk = false;
+				_newName   = null;
+
+				setVisible(false);
+			}
+		}
+		
+	}
+
 	protected class LocalSrvComboBox
 	extends JComboBox
 	{
