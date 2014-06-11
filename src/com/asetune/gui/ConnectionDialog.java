@@ -934,7 +934,9 @@ public class ConnectionDialog
 			}
 		}
 		if ( ! exists )
+		{
 			cbx.addItem(item);
+		}
 		
 		cbx.setSelectedItem(item);
 	}
@@ -4066,8 +4068,8 @@ public class ConnectionDialog
 	 */
 	private boolean jdbcConnect(ConnectionProfile connProfile)
 	{
-		String jdbcDriver        = _jdbcDriver_cbx.getEditor().getItem().toString();
-		String jdbcUrl           = _jdbcUrl_cbx.getEditor().getItem().toString();
+		String jdbcDriver        = StringUtil.getSelectedItemString(_jdbcDriver_cbx);
+		String jdbcUrl           = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
 		String jdbcUser          = _jdbcUsername_txt.getText();
 		String jdbcPasswd        = _jdbcPassword_txt.getText();
 		String sqlInit           = _jdbcSqlInit_txt.getText();

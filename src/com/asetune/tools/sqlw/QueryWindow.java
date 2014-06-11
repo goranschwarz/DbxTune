@@ -198,6 +198,7 @@ import com.asetune.utils.Encrypter;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.GoSyntaxException;
 import com.asetune.utils.JavaVersion;
+import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.Logging;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.PropPropEntry;
@@ -727,6 +728,7 @@ public class QueryWindow
 			if (!cmd.hasOption('P') && asePassword == null)
 				asePassword = ConnectionDialog.getPasswordForServer(hostPortStr);
 
+			// FIXME: we should really try to fill in a ConnectionProfile instead of doing it the below way...
 			String tmpStr = "";
 			if (cmd.hasOption('U'))	tmpStr += ",aseUsername="  + aseUsername;
 			if (cmd.hasOption('P'))	tmpStr += ",asePassword="  + asePassword;
@@ -737,6 +739,9 @@ public class QueryWindow
 			if (cmd.hasOption('u'))	tmpStr += ",jdbcUrl="      + jdbcUrl;
 			if (cmd.hasOption('d'))	tmpStr += ",jdbcDriver="   + jdbcDriver;
 			if (cmd.hasOption('p'))	tmpStr += ",connProfile="  + connProfile;
+			// if we got URL but no driver, lets guess the driver, based on the URL
+			if (cmd.hasOption('u') && !cmd.hasOption('d'))
+				tmpStr += ",jdbcDriver="   + JdbcDriverHelper.guessDriverForUrl(jdbcUrl);
 			// remove first comma
 			tmpStr = tmpStr.substring(1);
 
@@ -2195,8 +2200,8 @@ public class QueryWindow
 					if ( ! isNull(ppe.getProperty(key, "jdbcUrl")) )
 					{
 						connDialog.setSelectedTab(ConnectionDialog.JDBC_CONN);
+						if (!isNull(ppe.getProperty(key, "jdbcDriver")))   connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver")); // do this first, it will trigger select action... which sets the URL to default value
 						if (!isNull(ppe.getProperty(key, "jdbcUrl")))      connDialog.setJdbcUrl(     ppe.getProperty(key, "jdbcUrl"));
-						if (!isNull(ppe.getProperty(key, "jdbcDriver")))   connDialog.setJdbcDriver(  ppe.getProperty(key, "jdbcDriver"));
 						if (!isNull(ppe.getProperty(key, "jdbcUsername"))) connDialog.setJdbcUsername(ppe.getProperty(key, "jdbcUsername"));
 						if (!isNull(ppe.getProperty(key, "jdbcPassword"))) connDialog.setJdbcPassword(ppe.getProperty(key, "jdbcPassword"));
 					}

@@ -271,6 +271,28 @@ public class JdbcDriverHelper
 	}
 
 
+	public static String guessDriverForUrl(String jdbcUrl)
+	{
+		if (StringUtil.isNullOrBlank(jdbcUrl))
+			return "";
+
+		if (jdbcUrl.startsWith("jdbc:odbc:"))                return "sun.jdbc.odbc.JdbcOdbcDriver";
+		if (jdbcUrl.startsWith("jdbc:sybase:Tds:"))          return "com.sybase.jdbc4.jdbc.SybDriver";
+		if (jdbcUrl.startsWith("jdbc:jtds:"))                return "net.sourceforge.jtds.jdbc.Driver";
+		if (jdbcUrl.startsWith("jdbc:h2:"))                  return "org.h2.Driver";
+		if (jdbcUrl.startsWith("jdbc:sap:"))                 return "com.sap.db.jdbc.Driver";
+		if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return "oracle.jdbc.OracleDriver";
+		if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return "com.microsoft.jdbc.sqlserver.SQLServerDriver";
+		if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+		if (jdbcUrl.startsWith("jdbc:postgresql:"))          return "org.postgresql.Driver";
+		if (jdbcUrl.startsWith("jdbc:mysql:"))               return "com.mysql.jdbc.Driver";
+		if (jdbcUrl.startsWith("jdbc:derby:"))               return "org.apache.derby.jdbc.ClientDriver";
+		if (jdbcUrl.startsWith("jdbc:derby:"))               return "org.apache.derby.jdbc.EmbeddedDriver";
+
+		return "";
+	}
+
+
 	private static class DriverWrapper implements Driver
 	{
 		private Driver	     _driver;
@@ -1836,7 +1858,6 @@ public class JdbcDriverHelper
 		// END: XML Parsing code
 		//----------------------------------------------------------
 	}
-
 
 //	public static void main(String[] args)
 //	{
