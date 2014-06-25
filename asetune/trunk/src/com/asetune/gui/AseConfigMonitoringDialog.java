@@ -91,7 +91,8 @@ public class AseConfigMonitoringDialog
 
 	private int                _aseVersionNum    = 0;
 	private boolean            _isClusterEnabled = false;
-
+	private boolean            _isXfsLicenseEnabled = true;
+	
 	/** Save tool tip in a Map so we can restore them later */
 	private ToolTipStore       _tts              = new ToolTipStore();
 
@@ -170,6 +171,9 @@ public class AseConfigMonitoringDialog
 	private SpinnerNumberModel _cfgMetricsPioMax_spm          = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
 	private JSpinner           _cfgMetricsPioMax_sp           = new JSpinner(_cfgMetricsPioMax_spm);
 
+	// TODO: Check that the License check WORKS on a 12.5.x server
+	private JCheckBox          _enableFileAccess_chk          = new JCheckBox("Enable ASE to Read OS Files");
+
 	// PANEL: ON-EXIT
 	private JRadioButton       _onExitDoNotDisable_rb         = new JRadioButton("Do Not Disable", true);
 	private JRadioButton       _onExitAutoDisable_rb          = new JRadioButton("Automatically");
@@ -208,6 +212,8 @@ public class AseConfigMonitoringDialog
 			{
 				_aseVersionNum    = AseConnectionUtils.getAseVersionNumber(_conn);
 				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
+
+				_isXfsLicenseEnabled = isXfsLicenseEnabled(_conn);
 
 				_logger.debug("init() Need to refresh the ASE Server version number, it is now '"+_aseVersionNum+"', isClusterEnabled="+_isClusterEnabled+".");
 			}
@@ -351,13 +357,15 @@ public class AseConfigMonitoringDialog
 		_statementPipeMaxMessages_sp     .putClientProperty(ASE_CONFIG, "statement pipe max messages"   );
 		_planTextPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "plan text pipe max messages"   );
 		_maxSqlTextMonitored_sp          .putClientProperty(ASE_CONFIG, "max SQL text monitored"        );
-
+		
 		_cfgCapMissingStatistics_chk     .putClientProperty(ASE_CONFIG, "capture missing statistics"    );
 		_cfgEnableMetricsCapture_chk     .putClientProperty(ASE_CONFIG, "enable metrics capture"        );
 		_cfgMetricsElapMax_sp            .putClientProperty(ASE_CONFIG, "metrics elap max"              );
 		_cfgMetricsExecMax_sp            .putClientProperty(ASE_CONFIG, "metrics exec max"              );
 		_cfgMetricsLioMax_sp             .putClientProperty(ASE_CONFIG, "metrics lio max"               );
 		_cfgMetricsPioMax_sp             .putClientProperty(ASE_CONFIG, "metrics pio max"               );
+
+		_enableFileAccess_chk            .putClientProperty(ASE_CONFIG, "enable file access"            );
 	}
 
 	private JPanel createMonitoringPanel()
@@ -408,6 +416,14 @@ public class AseConfigMonitoringDialog
 		_predefinedConfigs_cbx           .setToolTipText(_tts.add(_predefinedConfigs_cbx,            "A pre defined value set of the above configurations."));
 
 		_configurabelMemory_lbl          .setToolTipText(_tts.add(_configurabelMemory_lbl,           "Available memory to be used for additional configurations or 'data caches' etc. This memory is basically not used by the ASE, meaning it's \"waste\" and ready for usage by someone..."));
+
+		_enableFileAccess_chk            .setToolTipText(_tts.add(_enableFileAccess_chk,              
+				"<html>Let ASE access Operating System files.<br>"
+                + "With this enabled, the Configuration dialog can read the ASE Configuration file.<br>"
+                + "<code>sp_configure 'enable file access', 1</code><br>"
+                + "<br>"
+                + "<b>Note:</b> in ASE 12.5.x this needs a license... So if the license is not enabled, this option wont be enabled as well."
+                + "</html>"));
 
 		//--- LAYOUT
 		panel.add(_predefinedConfigs_lbl,            "");
@@ -553,6 +569,8 @@ public class AseConfigMonitoringDialog
 		
 		panel.add(_cfgMetricsPioMax_lbl,          "gapleft 50");
 		panel.add(_cfgMetricsPioMax_sp,           "right, pushx, wrap 10");
+
+		panel.add(_enableFileAccess_chk,          "wrap");
 
 		return panel;
 	}
@@ -781,6 +799,10 @@ public class AseConfigMonitoringDialog
 					if (_aseVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
+				else if ( comp.equals(_enableFileAccess_chk) )
+				{
+					comp.setEnabled(_isXfsLicenseEnabled);
+				}
 				else // All other components
 				{
 					comp.setEnabled(true);
@@ -931,6 +953,8 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
+			
+			_enableFileAccess_chk            .setSelected(false);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
@@ -973,6 +997,8 @@ public class AseConfigMonitoringDialog
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
+			_enableFileAccess_chk            .setSelected(true);
+
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
 //			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
@@ -1013,6 +1039,8 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
+
+			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
@@ -1055,6 +1083,8 @@ public class AseConfigMonitoringDialog
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(2048) );
 
+			_enableFileAccess_chk            .setSelected(true);
+
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
 //			_cfgMetricsElapMax_spm           .setValue( new Integer(0) );
@@ -1095,6 +1125,8 @@ public class AseConfigMonitoringDialog
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(4096) );
+
+			_enableFileAccess_chk            .setSelected(true);
 
 //			_cfgCapMissingStatistics_chk     .setSelected(false);
 //			_cfgEnableMetricsCapture_chk     .setSelected(false);
@@ -1217,7 +1249,7 @@ public class AseConfigMonitoringDialog
 				}
 			}
 			rs.close();
-			
+
 //			if (_aseVersionNum >= 15031) 
 //			if (_aseVersionNum >= 1503010)
 			if (_aseVersionNum >= Ver.ver(15,0,3,1))
@@ -1241,6 +1273,9 @@ public class AseConfigMonitoringDialog
 				_captureCompressionStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture compression statistics") > 0 );
 			}
 
+			// "enable file access"
+			_enableFileAccess_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "enable file access") > 0 );
+			
 			// How much memory are there left for re-configuration
 			rs = stmt.executeQuery(
 					"select additional_free_memory = str( ((max(b.value) - min(b.value)) / 512.0), 15,1 ) " +
@@ -1269,6 +1304,35 @@ public class AseConfigMonitoringDialog
 		}
 	}
 
+	private boolean isXfsLicenseEnabled(Connection conn)
+	{
+		if (conn == null)
+			return false;
+
+		if (_aseVersionNum >= Ver.ver(15,0))
+			return true;
+
+		int enabled = 0;
+		String sql = "select count(*) from master.dbo.monLicense where Name = 'ASE_XFS'";
+
+		Statement stmt = null;
+		ResultSet rs = null;
+		try
+		{
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				enabled = rs.getInt(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			AseConnectionUtils.showSqlExceptionMessage(this, msgDialogTitle, 
+					"Error when executing the following SQL statement: "+sql, e); 
+		}
+		return enabled > 0;
+	}
 
 	private void reInitializeDependantPerformanceCounters(String aseConfig, boolean newValue) 
 //	throws SQLException
@@ -1542,6 +1606,8 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "statement pipe max messages",    _statementPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "plan text pipe max messages",    _planTextPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "max SQL text monitored",         _maxSqlTextMonitored_sp);
+
+		checkAndSetAseConfig(conn, "enable file access",             _enableFileAccess_chk);
 
 		checkAndSetAseConfig(conn, "capture missing statistics",     _cfgCapMissingStatistics_chk);
 		checkAndSetAseConfig(conn, "enable metrics capture",         _cfgEnableMetricsCapture_chk);

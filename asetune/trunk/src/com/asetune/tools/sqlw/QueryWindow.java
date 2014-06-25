@@ -4405,6 +4405,7 @@ public class QueryWindow
 		}
 		
 
+//System.out.println("_connectedToProductName='"+_connectedToProductName+"'.");
 		try 
 		{
 			// are we still connected?
@@ -4426,7 +4427,7 @@ public class QueryWindow
 				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, getTranState);
 				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 			}
-			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
 			{
 				// Do nothing
 			}

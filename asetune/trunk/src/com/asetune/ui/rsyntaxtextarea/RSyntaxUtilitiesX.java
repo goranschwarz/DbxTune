@@ -446,6 +446,17 @@ public class RSyntaxUtilitiesX
 			}
 		}
 
+		@Override
+		public String getSelectedText()
+		{
+			String selectText = null;
+			
+			if (_textArea != null)
+				selectText = _textArea.getSelectedText();
+
+			return selectText;
+		}
+
 	}
 
 	/**

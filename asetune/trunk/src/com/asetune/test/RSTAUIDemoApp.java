@@ -291,4 +291,10 @@ public class RSTAUIDemoApp extends JFrame implements ActionListener, SearchListe
 		}
 
 	}
+
+	@Override
+	public String getSelectedText()
+	{
+		return null;
+	}
 }
