@@ -109,6 +109,7 @@ import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTree;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.gui.swing.TreeTransferHandler;
 import com.asetune.gui.swing.VerticalScrollPane;
@@ -784,9 +785,40 @@ public class ConnectionDialog
 		if (conn == null)
 			return null;
 
-		String str = conn.getMetaData().getDriverName();
-		_logger.debug("getDriverName() returns: '"+str+"'.");
-		return str; 
+		try
+		{
+			String str = conn.getMetaData().getDriverName();
+			_logger.debug("getDriverName() returns: '"+str+"'.");
+			return str; 
+		}
+		catch (SQLException e)
+		{
+			// If NO metadata installed, check if it's a Sybase Replication Server.
+			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+			if ( "JZ0SJ".equals(e.getSQLState()) )
+			{
+				try
+				{
+					String str = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("admin version");
+					while ( rs.next() )
+					{
+						str = rs.getString(1);
+						_logger.debug("getDriverName(): RepServer check, using version "+str);
+					}
+					rs.close();
+					stmt.close();
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+					//return "getDriverName(): CONSTANT-ReplicationServer";
+					return "jConnect (TM) for JDBC (TM)";
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			_logger.debug("getDriverName() Caught: "+e, e);
+			throw e;
+		}
 	}
 
 	/**
@@ -810,9 +842,40 @@ public class ConnectionDialog
 		if (conn == null)
 			return null;
 
-		String str = conn.getMetaData().getDriverVersion();
-		_logger.debug("getDriverVersion() returns: '"+str+"'.");
-		return str; 
+		try
+		{
+    		String str = conn.getMetaData().getDriverVersion();
+    		_logger.debug("getDriverVersion() returns: '"+str+"'.");
+    		return str; 
+		}
+		catch (SQLException e)
+		{
+			// If NO metadata installed, check if it's a Sybase Replication Server.
+			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+			if ( "JZ0SJ".equals(e.getSQLState()) )
+			{
+				try
+				{
+					String str = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("admin version");
+					while ( rs.next() )
+					{
+						str = rs.getString(1);
+						_logger.debug("getDriverVersion(): RepServer check, using version "+str);
+					}
+					rs.close();
+					stmt.close();
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+//					return "getDriverVersion(): CONSTANT-ReplicationServer";
+					return "jConnect (TM) for JDBC(TM)/unknown/getDriverVersion()/getSQLState()=JZ0SJ: Metadata accessor information was not found on this database";
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			_logger.debug("getDriverVersion() Caught: "+e, e);
+			throw e;
+		}
 	}
 
 	public int                      getConnectionType() { return _connectionType; }
@@ -1054,7 +1117,7 @@ public class ConnectionDialog
 //			root = cpRoot;
 
 //		_connProfileTree = new JTree(root);
-		_connProfileTree = new JTree(ConnectionProfileManager.getInstance().getConnectionProfileTreeModel(_desiredProductName));
+		_connProfileTree = new GTree(ConnectionProfileManager.getInstance().getConnectionProfileTreeModel(_desiredProductName));
 		_connProfileTree.setRootVisible(false);
 		_connProfileTree.setDragEnabled(true);  
 		_connProfileTree.setDropMode(DropMode.ON_OR_INSERT);
@@ -1519,7 +1582,7 @@ public class ConnectionDialog
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 
-		panel.add(new JLabel("NOT YET FULLY IMPLEMENTED AND TESTED"), "grow");
+//		panel.add(new JLabel("NOT YET FULLY IMPLEMENTED AND TESTED"), "grow");
 		panel.add(createJdbcPanel(),           "growx, pushx");
 		panel.add(createJdbcDriverInfoPanel(), "grow, push");
 		
