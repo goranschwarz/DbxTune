@@ -2467,7 +2467,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 	protected static boolean allowSquareBracketsAroundIdentifiers(String productName)
 	{
 		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName)) return true;
-		if (DbUtils.DB_PROD_NAME_MSSQL        .equals(productName)) return true;
+		if (DbUtils.DB_PROD_NAME_MSSQL     .equals(productName)) return true;
 		if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(productName)) return true;  // think so but not sure
 		if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(productName)) return true;  // think so but not sure
 

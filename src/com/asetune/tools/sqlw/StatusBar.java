@@ -481,14 +481,18 @@ public class StatusBar extends JPanel
 			String productNameShort = "";
 
 			if      (productName.equals(""))                              productNameShort = "";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE)) productNameShort = "ASE";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASA)) productNameShort = "ASA";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_SYBASE_IQ))  productNameShort = "IQ";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))  productNameShort = "RS";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_HANA))       productNameShort = "HANA";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_H2))         productNameShort = "H2";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_ORACLE))     productNameShort = "ORA";
-			else if (productName.equals(DbUtils.DB_PROD_NAME_MSSQL))      productNameShort = "MS-SQL";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) productNameShort = "ASE";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) productNameShort = "ASA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ))  productNameShort = "IQ";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))  productNameShort = "RS";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))       productNameShort = "HANA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))         productNameShort = "H2";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))     productNameShort = "ORA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))      productNameShort = "MS-SQL";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))     productNameShort = "DB2";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))    productNameShort = "DB2-MF";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))      productNameShort = "MySQL";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))      productNameShort = "DERBY";
 			else productNameShort = "UNKNOWN";
 			
 			return productNameShort;

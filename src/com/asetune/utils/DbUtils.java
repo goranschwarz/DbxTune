@@ -45,8 +45,20 @@ public class DbUtils
 		
 		for (int i=0; i<prodNameList.length; i++)
 		{
-			if (checkProductName.equals(prodNameList[i]))
+			String name = prodNameList[i];
+			if (name == null)
+				continue;
+
+			if (checkProductName.equals(name))
 				return true;
+
+			// Special stuff for DB2... since it's not a static value
+			// for DB2 Linux it looks like: 'DB2/LINUXX8664'
+			if (DB_PROD_NAME_DB2_UX.equals(name))
+			{
+				if (checkProductName.toLowerCase().startsWith(name.toLowerCase()))
+					return true;
+			}
 		}
 		return false;
 	}
@@ -444,6 +456,116 @@ public class DbUtils
 	//------------------------------------------------------------------------------
 
 	
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// BEGIN DB2 helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	
+	public static String getDb2Servername(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String retStr = UNKNOWN;
+		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME FROM SYSIBMADM.ENV_INST_INFO ei";
+
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim() + "/" + rs.getString(2).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting DB2 Server Instance Name. sql='"+sql+"', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getDb2Charset(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String retStr = UNKNOWN;
+		String sql    = "select VALUE from SYSIBMADM.DBCFG where NAME = 'codeset'";
+
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting DB2 Server CharacterSet. sql='"+sql+"', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getDb2Sortorder(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+		
+		return UNKNOWN;
+
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String retStr = UNKNOWN;
+//		String sql    = "select VALUE from NLS_DATABASE_PARAMETERS where PARAMETER = 'NLS_SORT'"; 
+//
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next())
+//			{
+//				retStr = rs.getString(1).trim();
+//			}
+//			rs.close();
+//			stmt.close();
+//
+//			return retStr;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When getting DB2 Server Sort Order. sql='"+sql+"', Caught exception.", e);
+//
+//			return UNKNOWN;
+//		}
+	}
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// END DB2 helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+
+
 	/**
 	 * Get various state about a ASE Connection
 	 */

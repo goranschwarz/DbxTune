@@ -53,20 +53,20 @@ public class ConnectionProfile
 	
 	public static SrvType getServerType(Type type, String productName)
 	{
-		if (DbUtils.DB_PROD_NAME_DB2_UX    .equals(productName)) return SrvType.JDBC_DB2_UX;
-		if (DbUtils.DB_PROD_NAME_DB2_ZOS   .equals(productName)) return SrvType.JDBC_DB2_ZOS;
-		if (DbUtils.DB_PROD_NAME_DERBY     .equals(productName)) return SrvType.JDBC_DERBY;
-		if (DbUtils.DB_PROD_NAME_H2        .equals(productName)) return SrvType.JDBC_H2;
-		if (DbUtils.DB_PROD_NAME_HANA      .equals(productName)) return SrvType.JDBC_HANA;
-		if (DbUtils.DB_PROD_NAME_HSQL      .equals(productName)) return SrvType.JDBC_HSQL;
-		if (DbUtils.DB_PROD_NAME_MSSQL     .equals(productName)) return SrvType.JDBC_MSSQL;
-		if (DbUtils.DB_PROD_NAME_MYSQL     .equals(productName)) return SrvType.JDBC_MYSQL;
-		if (DbUtils.DB_PROD_NAME_ORACLE    .equals(productName)) return SrvType.JDBC_ORACLE;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return SrvType.JDBC_DB2_UX;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return SrvType.JDBC_DB2_ZOS;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return SrvType.JDBC_DERBY;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return SrvType.JDBC_H2;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return SrvType.JDBC_HANA;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return SrvType.JDBC_HSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return SrvType.JDBC_MSSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return SrvType.JDBC_MYSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return SrvType.JDBC_ORACLE;
 		
-		if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(productName)) return SrvType.TDS_ASA;
-		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName)) return SrvType.TDS_ASE;
-		if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(productName)) return SrvType.TDS_IQ;
-		if (DbUtils.DB_PROD_NAME_SYBASE_RS .equals(productName)) return SrvType.TDS_RS;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return SrvType.TDS_ASA;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return SrvType.TDS_ASE;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return SrvType.TDS_IQ;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return SrvType.TDS_RS;
 
 		if (Type.TDS.equals(type))
 		{
