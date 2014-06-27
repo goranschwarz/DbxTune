@@ -523,20 +523,20 @@ public class ConnectionProfileManager
 
 	public static ImageIcon getIcon(String productName)
 	{
-		if      (DbUtils.DB_PROD_NAME_DB2_UX    .equals(productName)) return ICON_DB_PROD_NAME_DB2_UX;
-		else if (DbUtils.DB_PROD_NAME_DB2_ZOS   .equals(productName)) return ICON_DB_PROD_NAME_DB2_ZOS;
-		else if (DbUtils.DB_PROD_NAME_DERBY     .equals(productName)) return ICON_DB_PROD_NAME_DERBY;
-		else if (DbUtils.DB_PROD_NAME_H2        .equals(productName)) return ICON_DB_PROD_NAME_H2;
-		else if (DbUtils.DB_PROD_NAME_HANA      .equals(productName)) return ICON_DB_PROD_NAME_HANA;
-		else if (DbUtils.DB_PROD_NAME_HSQL      .equals(productName)) return ICON_DB_PROD_NAME_HSQL;
-		else if (DbUtils.DB_PROD_NAME_MSSQL     .equals(productName)) return ICON_DB_PROD_NAME_MSSQL;
-		else if (DbUtils.DB_PROD_NAME_MYSQL     .equals(productName)) return ICON_DB_PROD_NAME_MYSQL;
-		else if (DbUtils.DB_PROD_NAME_ORACLE    .equals(productName)) return ICON_DB_PROD_NAME_ORACLE;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return ICON_DB_PROD_NAME_DB2_UX;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return ICON_DB_PROD_NAME_DB2_ZOS;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return ICON_DB_PROD_NAME_DERBY;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return ICON_DB_PROD_NAME_H2;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return ICON_DB_PROD_NAME_HANA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return ICON_DB_PROD_NAME_HSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return ICON_DB_PROD_NAME_MSSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return ICON_DB_PROD_NAME_MYSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return ICON_DB_PROD_NAME_ORACLE;
 		
-		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(productName)) return ICON_DB_PROD_NAME_SYBASE_ASA;
-		else if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName)) return ICON_DB_PROD_NAME_SYBASE_ASE;
-		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ .equals(productName)) return ICON_DB_PROD_NAME_SYBASE_IQ;
-		else if (DbUtils.DB_PROD_NAME_SYBASE_RS .equals(productName)) return ICON_DB_PROD_NAME_SYBASE_RS;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return ICON_DB_PROD_NAME_SYBASE_ASA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return ICON_DB_PROD_NAME_SYBASE_ASE;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return ICON_DB_PROD_NAME_SYBASE_IQ;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return ICON_DB_PROD_NAME_SYBASE_RS;
 
 		return ICON_DB_PROD_NAME_OTHER;
 	}

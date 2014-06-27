@@ -165,6 +165,11 @@ public class JdbcDriverHelper
 		{
 			templates.add("jdbc:sqlserver://<host>:<port> ");
 		}
+		else if ("com.ibm.db2.jcc.DB2Driver".equals(driverName)) 
+		{
+			templates.add("jdbc:db2://<host>:<port>/<dbname>");
+			templates.add("jdbc:db2://<host>:50000");
+		}
 		else if ("org.postgresql.Driver".equals(driverName)) 
 		{
 			templates.add("jdbc:postgresql:database");
@@ -212,6 +217,7 @@ public class JdbcDriverHelper
 		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName))	return "Oracle JDBC Driver";
 		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver"; 
 		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server 2005 JDBC Driver"; 
+		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName))	return "IBM DB2 Driver";
 		else if ("org.postgresql.Driver"                       .equals(driverName))	return "Postgres JDBC Driver";
 		else if ("com.mysql.jdbc.Driver"                       .equals(driverName))	return "MySQL JDBC Driver";
 		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName))	return "Derby Embedded JDBC Driver";
@@ -242,6 +248,7 @@ public class JdbcDriverHelper
 		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
 		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
 		else if ("org.postgresql.Driver"                       .equals(driverName))	return "jdbc.postgresql.org";
+		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName))	return "www.ibm.com/software/data/db2";
 		else if ("com.mysql.jdbc.Driver"                       .equals(driverName))	return "www.mysql.com/products/connector";
 		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName))	return "db.apache.org/derby";
 		else if ("org.apache.derby.jdbc.ClientDriver"          .equals(driverName))	return "db.apache.org/derby";
@@ -262,6 +269,7 @@ public class JdbcDriverHelper
 		else if (jarName.equals ("ngdbc.jar"))          return "com.sap.db.jdbc.Driver";
 		else if (jarName.matches("ojdbc.*\\.jar"))      return "oracle.jdbc.OracleDriver";
 		else if (jarName.matches("sqljdbc.*\\.jar"))    return "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
+		else if (jarName.matches("db2jcc.*\\.jar"))     return "com.ibm.db2.jcc.DB2Driver";
 		else if (jarName.matches("postgresql.*\\.jar")) return "org.postgresql.Driver";
 		else if (jarName.equals ("mysql.jar"))          return "com.mysql.jdbc.Driver";
 		else if (jarName.equals ("derby.jar"))          return "org.apache.derby.jdbc.EmbeddedDriver";
@@ -284,6 +292,7 @@ public class JdbcDriverHelper
 		if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return "oracle.jdbc.OracleDriver";
 		if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return "com.microsoft.jdbc.sqlserver.SQLServerDriver";
 		if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+		if (jdbcUrl.startsWith("jdbc:db2:"))                 return "com.ibm.db2.jcc.DB2Driver";
 		if (jdbcUrl.startsWith("jdbc:postgresql:"))          return "org.postgresql.Driver";
 		if (jdbcUrl.startsWith("jdbc:mysql:"))               return "com.mysql.jdbc.Driver";
 		if (jdbcUrl.startsWith("jdbc:derby:"))               return "org.apache.derby.jdbc.ClientDriver";

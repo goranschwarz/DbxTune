@@ -757,6 +757,11 @@ public class ConnectionDialog
 		{
 			serverName = AseConnectionUtils.getAseServername(conn);
 		}
+		// DB2
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+		{
+			serverName = DbUtils.getDb2Servername(conn);
+		}
 		// UNKNOWN
 		else
 		{

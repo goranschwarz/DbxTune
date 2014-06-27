@@ -2536,6 +2536,20 @@ public class QueryWindow
 				_tooltipProviderAbstract = new ToolTipSupplierMsSql(_window, _compleationProviderAbstract, this);
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
+			// DB2
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Sortorder & charset
+				_connectedSrvCharset   = DbUtils.getDb2Charset(_conn);
+				_connectedSrvSortorder = DbUtils.getDb2Sortorder(_conn);
+
+				// Tooltip supplier
+				_tooltipProviderAbstract = new ToolTipSupplierOracle(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+			}
 			else
 			{
 				// Code Completion 
