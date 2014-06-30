@@ -471,7 +471,8 @@ public class DbUtils
 			return UNKNOWN;
 
 		String retStr = UNKNOWN;
-		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME FROM SYSIBMADM.ENV_INST_INFO ei";
+//		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME FROM SYSIBMADM.ENV_INST_INFO ei";
+		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME, (SELECT HOST_NAME FROM TABLE(SYSPROC.ENV_GET_SYS_INFO())) FROM SYSIBMADM.ENV_INST_INFO ei";
 
 		try
 		{
@@ -479,7 +480,7 @@ public class DbUtils
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				retStr = rs.getString(1).trim() + "/" + rs.getString(2).trim();
+				retStr = rs.getString(1).trim() + "/" + rs.getString(2).trim() + "@" + rs.getString(3).trim();
 			}
 			rs.close();
 			stmt.close();
