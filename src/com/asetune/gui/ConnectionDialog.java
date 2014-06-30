@@ -4211,6 +4211,8 @@ public class ConnectionDialog
 	 */
 	private Connection jdbcConnect(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo)
 	{
+		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
+
 		WaitForExecDialog wait = new WaitForExecDialog(this, "JDBC Connect...");
 		BgExecutor doWork = new BgExecutor(wait)
 		{
@@ -4235,7 +4237,8 @@ public class ConnectionDialog
 //					Class.forName(driver).newInstance();
 //					JdbcDriverHelper.newDriverInstance(driver);
 
-					Properties props = new Properties();
+					Properties props  = new Properties();
+				//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
 					props.put("user", user);
 					props.put("password", passwd);
 					
@@ -4246,7 +4249,18 @@ public class ConnectionDialog
 						{
 							String val = urlMap.get(key);
 							
-							props.put(key, val);
+							props .put(key, val);
+							props2.put(key, val);
+						}
+					}
+					
+					// Add specific JDBC Properties, for specific URL's, if not already specified
+					if (url.startsWith("jdbc:db2:"))
+					{
+						if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
+						{
+							props .put("retrieveMessagesFromServerOnGetMessage", "true");
+							props2.put("retrieveMessagesFromServerOnGetMessage", "true");
 						}
 					}
 
@@ -4255,9 +4269,11 @@ public class ConnectionDialog
 					StringBuilder sb = new StringBuilder();
 					sb.append( "<html>" );
 					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
-					sb.append( "<tr> <td><b>User:  </b></td> <td nowrap>").append( user   ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>Url:   </b></td> <td nowrap>").append( url    ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>Driver:</b></td> <td nowrap>").append( driver ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>User:  </b></td> <td nowrap>").append( user   ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>Url:   </b></td> <td nowrap>").append( url    ).append("</td> </tr>");
+					if (props2.size() > 0)
+						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>Driver:</b></td> <td nowrap>").append( driver ).append("</td> </tr>");
 					sb.append( "</table>" );
 					sb.append( "</html>" );
 
@@ -4348,13 +4364,15 @@ public class ConnectionDialog
 						loadDriverProblem = true;
 
 					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
-					sb.append( "<tr> <td><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
-					sb.append( "<tr> <td><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
+					if (props2.size() > 0)
+						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
+					sb.append( "<tr> <td nowrap><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
 					sb.append( "</table>" );
 					e = e.getNextException();
 				}
