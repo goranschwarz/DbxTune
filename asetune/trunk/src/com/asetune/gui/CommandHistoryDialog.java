@@ -16,6 +16,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -52,6 +53,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.RowFilter;
 import javax.swing.SpinnerNumberModel;
@@ -95,7 +97,7 @@ import com.asetune.utils.SwingUtils;
 public class CommandHistoryDialog
 extends JFrame
 //extends JDialog
-implements ChangeListener, ActionListener, FocusListener
+implements ChangeListener, ActionListener, FocusListener, KeyListener
 {
 	private static Logger _logger = Logger.getLogger(CommandHistoryDialog.class);
 	private static final long serialVersionUID = 1L;
@@ -119,7 +121,11 @@ implements ChangeListener, ActionListener, FocusListener
 	private SpinnerNumberModel   _historySize_spm        = new SpinnerNumberModel(DEFAULT_HISTORY_SIZE, 10, 99999, 10);
 	private JSpinner             _historySize_sp         = new JSpinner(_historySize_spm);
 
-	private JCheckBox            _showOnlyLocalCmds_cbx  = new JCheckBox("Show only local commands", DEFAULT_SHOW_ONLY_LOCAL_COMMANDS);
+	private JCheckBox            _showOnlyLocalCmds_chk  = new JCheckBox("Show only local commands", DEFAULT_SHOW_ONLY_LOCAL_COMMANDS);
+
+	private JLabel               _cmdTextFilter_lbl      = new JLabel("Filter");
+	private JTextField           _cmdTextFilter_txt      = new JTextField();
+	private JCheckBox            _cmdTextFilterInSensitive_chk = new JCheckBox("Case in-sensitive", DEFAULT_FILTER_CASE_IN_SENSITIVE);
 	
 	private JButton              _flashParent_but        = new JButton("Owner");
 
@@ -154,9 +160,11 @@ implements ChangeListener, ActionListener, FocusListener
 	private static final String  PROPKEY_FILE_SAVE_ENTRIES        = "CommandHistory.file.save.entries";
 	private static final int     DEFAULT_FILE_SAVE_ENTRIES        = 100;
 
-	private static final String  PROPKEY_ENTRY_LIMIT_SIZE        = "CommandHistory.entry.limit.size";
-	private static final int     DEFAULT_ENTRY_LIMIT_SIZE        = 5*1024; // 5KB
+	private static final String  PROPKEY_ENTRY_LIMIT_SIZE         = "CommandHistory.entry.limit.size";
+	private static final int     DEFAULT_ENTRY_LIMIT_SIZE         = 5*1024; // 5KB
 
+	private static final String  PROPKEY_FILTER_CASE_IN_SENSITIVE = "CommandHistory.filter.caseInSensitive";
+	private static final boolean DEFAULT_FILTER_CASE_IN_SENSITIVE = true;
 
 	private static final String  PROPKEY_showDialogWriteHistoryFail = "CommandHistory.showDialogOnWriteHistoryFail";
 
@@ -283,7 +291,10 @@ implements ChangeListener, ActionListener, FocusListener
 		_moveToLatestEntry_cbx.setToolTipText("<html>Automatically select the last executed entry in the history.</html>");
 		_historySize_lbl      .setToolTipText("<html>How many commands should be in the history list.<br> <b>Note</b>: Hidden entries will be included in this size.</html>");
 		_historySize_sp       .setToolTipText(_historySize_lbl.getToolTipText());
-		_showOnlyLocalCmds_cbx.setToolTipText("<html>Hide Commands executed from other SQL Windows Sessions.<br>Commands executed in other sessions will have a light-gray background color.</html>");
+		_showOnlyLocalCmds_chk.setToolTipText("<html>Hide Commands executed from other SQL Windows Sessions.<br>Commands executed in other sessions will have a light-gray background color.</html>");
+		_cmdTextFilter_lbl    .setToolTipText("<html>Use Regular expession to only show commands that contains the text.</html>");
+		_cmdTextFilter_txt    .setToolTipText(_cmdTextFilter_lbl.getToolTipText());
+		_cmdTextFilterInSensitive_chk.setToolTipText("<html>Should the regular expresion be case in-sensitive or sensitive<br>This simply adds '(?i)' at the start of the search text</html>");
 		_flashParent_but      .setToolTipText("<html>Blink/Flash parent window that opened this Command History Window<br>It's in the <i>owner</i> window any commands will be executed.</html>");
 
 
@@ -296,19 +307,27 @@ implements ChangeListener, ActionListener, FocusListener
 		panel.add(_historySize_lbl,        "gapleft 20");
 		panel.add(_historySize_sp,         "");
 
-		panel.add(_showOnlyLocalCmds_cbx,  "gapleft 20");
+		panel.add(_showOnlyLocalCmds_chk,  "gapleft 20");
+
+		panel.add(_cmdTextFilter_lbl,      "gapleft 20");
+		panel.add(_cmdTextFilter_txt,      "pushx, growx");
+		panel.add(_cmdTextFilterInSensitive_chk, "");
 		
-		panel.add(new JLabel(),            "pushx, growx"); // dummy to space out...
-		panel.add(_flashParent_but,        "");
+//		panel.add(new JLabel(),            "pushx, growx"); // dummy to space out...
+		panel.add(_flashParent_but,        "gapleft 20");
 
 		// Focus action listener
 		
 		// action
 		_exec_but             .addActionListener(this);
 		_moveToLatestEntry_cbx.addActionListener(this);
-		_showOnlyLocalCmds_cbx.addActionListener(this);
+		_showOnlyLocalCmds_chk.addActionListener(this);
+		_cmdTextFilter_txt    .addActionListener(this);
+		_cmdTextFilterInSensitive_chk.addActionListener(this);
 		_historySize_sp       .addChangeListener(this); // note: a change listener
 		_flashParent_but      .addActionListener(this);
+
+		_cmdTextFilter_txt    .addKeyListener(this);
 
 		// Action Commands
 //		_exec_but.setActionCommand(ACTION_EXECUTE);
@@ -430,6 +449,32 @@ implements ChangeListener, ActionListener, FocusListener
 					}
 				}
 				return tip;
+			}
+			
+			@Override
+			public void packAll()
+			{
+				// call super to do main work
+				super.packAll();
+				
+				// Parent would be a JScrollPane or similar, if we dont have a parent we cant continue.
+				if (getParent() == null)
+					return;
+
+				// Make COMMAND Text Column smaller, if it's there
+				int cmdColPos = -1;
+				int colsWidth = 0;
+				for (int c=0; c<getColumnCount(); c++)
+				{
+					if ( CommandsTableModel.TAB_HEADER[CommandsTableModel.TAB_POS_COMMAND].equals(getColumnName(c)))
+						cmdColPos = c;
+					else
+						colsWidth += getColumn(c).getPreferredWidth();
+				}
+
+				int maxWidth = getParent().getWidth() - colsWidth;
+				if (cmdColPos >= 0 && maxWidth > 0)
+					packColumn(cmdColPos, -1, maxWidth);
 			}
 		};
 
@@ -734,46 +779,10 @@ implements ChangeListener, ActionListener, FocusListener
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source    = e.getSource();
-//		String actionCmd = e.getActionCommand();
 		
-//		if (ACTION_EXECUTE.equals(actionCmd))
-//		{
-//			if (_owner != null)
-//			{
-//				String execStr = _cmd_txt.getSelectedText();
-//				if (StringUtil.isNullOrBlank(execStr))
-//					execStr = _cmd_txt.getText();
-//				
-//				_owner.historyExecute(execStr);
-//			}
-//		}
-		
-		if (_showOnlyLocalCmds_cbx.equals(source))
+		if (_showOnlyLocalCmds_chk.equals(source) || _cmdTextFilter_txt.equals(source) || _cmdTextFilterInSensitive_chk.equals(source))
 		{
-			String lookupFieldText = _owner.getSourceId();
-//			String sourceColName   = CommandsTableModel.TAB_HEADER[CommandsTableModel.TAB_POS_SOURCE];
-			int    sourceColPos    = _table.convertColumnIndexToView(CommandsTableModel.TAB_POS_SOURCE);
-			try
-			{
-		        if ( ! _showOnlyLocalCmds_cbx.isSelected() )
-				{
-					_table.setRowFilter(null);
-//					_table.getColumnExt(sourceColName).setVisible(true);
-				}
-				else
-				{
-					if (sourceColPos > 0)
-						_table.setRowFilter(RowFilter.regexFilter(lookupFieldText, sourceColPos));
-					else
-						_table.setRowFilter(RowFilter.regexFilter(lookupFieldText));
-
-//					_table.getColumnExt(sourceColName).setVisible(false);
-				}
-			} 
-			catch (PatternSyntaxException pse)
-			{
-				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '"+lookupFieldText+"'.");
-			}
+			setTableFilters();
 		}
 		
 		if (_historyFile_but.equals(source))
@@ -809,6 +818,68 @@ implements ChangeListener, ActionListener, FocusListener
 	{
 	}
 
+	@Override
+	public void keyTyped(KeyEvent e)
+	{
+		setTableFilters();
+	}
+	@Override public void keyPressed(KeyEvent e) {}
+	@Override public void keyReleased(KeyEvent e) {}
+
+	private void setTableFilters()
+	{
+		List<RowFilter<Object,Object>> filters = new ArrayList<RowFilter<Object,Object>>(2);
+//		filters.add(RowFilter.regexFilter("foo"));
+//		filters.add(RowFilter.regexFilter("bar"));
+//		RowFilter<Object,Object> andFilter = RowFilter.andFilter(filters);
+
+		if (_showOnlyLocalCmds_chk.isSelected())
+		{
+			String lookupFieldText = _owner.getSourceId();
+			int    sourceColPos    = _table.convertColumnIndexToView(CommandsTableModel.TAB_POS_SOURCE);
+			
+			try
+			{
+				if (sourceColPos > 0)
+					filters.add(RowFilter.regexFilter(lookupFieldText, sourceColPos));
+				else
+					filters.add(RowFilter.regexFilter(lookupFieldText));
+			} 
+			catch (PatternSyntaxException pse)
+			{
+				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '"+lookupFieldText+"'.");
+			}
+		}
+		
+		
+		if (StringUtil.hasValue(_cmdTextFilter_txt.getText()))
+		{
+			boolean caseInsensitive = _cmdTextFilterInSensitive_chk.isSelected();
+			String lookupFieldText = _cmdTextFilter_txt.getText();
+			int    sourceColPos    = _table.convertColumnIndexToView(CommandsTableModel.TAB_POS_COMMAND);
+
+			if (caseInsensitive)
+				lookupFieldText = "(?i)" + lookupFieldText;
+			try
+			{
+				if (sourceColPos > 0)
+					filters.add(RowFilter.regexFilter(lookupFieldText, sourceColPos));
+				else
+					filters.add(RowFilter.regexFilter(lookupFieldText));
+			} 
+			catch (PatternSyntaxException pse)
+			{
+				_logger.warn("JXTable: setRowFilter(): Incorrect pattern syntax '"+lookupFieldText+"'.");
+			}
+		}
+
+		// Set the filters...
+        if ( filters.isEmpty() )
+			_table.setRowFilter(null);
+		else
+			_table.setRowFilter(RowFilter.andFilter(filters));
+	}
+	
 	private void setComponentVisibility()
 	{
 		boolean visible = _table.getRowCount() > 0;
@@ -840,7 +911,8 @@ implements ChangeListener, ActionListener, FocusListener
 		//------------------
 		conf.setProperty(PROPKEY_MOVE_TO_LATEST_ENTRY,     _moveToLatestEntry_cbx.isSelected());
 		conf.setProperty(PROPKEY_HISTORY_SIZE,             _historySize_spm      .getNumber().intValue());
-		conf.setProperty(PROPKEY_SHOW_ONLY_LOCAL_COMMANDS, _showOnlyLocalCmds_cbx.isSelected());
+		conf.setProperty(PROPKEY_SHOW_ONLY_LOCAL_COMMANDS, _showOnlyLocalCmds_chk.isSelected());
+		conf.setProperty(PROPKEY_FILTER_CASE_IN_SENSITIVE, _cmdTextFilterInSensitive_chk.isSelected());
 		
 		
 		//------------------
@@ -872,9 +944,10 @@ implements ChangeListener, ActionListener, FocusListener
 		//------------------
 		// XXX
 		//------------------
-		_moveToLatestEntry_cbx.setSelected( conf.getBooleanProperty(PROPKEY_MOVE_TO_LATEST_ENTRY,     DEFAULT_MOVE_TO_LATEST_ENTRY));
-		_historySize_spm      .setValue(    conf.getIntProperty(    PROPKEY_HISTORY_SIZE,             DEFAULT_HISTORY_SIZE));
-//		_showOnlyLocalCmds_cbx.setSelected( conf.getBooleanProperty(PROPKEY_SHOW_ONLY_LOCAL_COMMANDS, DEFAULT_SHOW_ONLY_LOCAL_COMMANDS));
+		_moveToLatestEntry_cbx       .setSelected( conf.getBooleanProperty(PROPKEY_MOVE_TO_LATEST_ENTRY,     DEFAULT_MOVE_TO_LATEST_ENTRY));
+		_historySize_spm             .setValue(    conf.getIntProperty(    PROPKEY_HISTORY_SIZE,             DEFAULT_HISTORY_SIZE));
+//		_showOnlyLocalCmds_cbx       .setSelected( conf.getBooleanProperty(PROPKEY_SHOW_ONLY_LOCAL_COMMANDS, DEFAULT_SHOW_ONLY_LOCAL_COMMANDS));
+		_cmdTextFilterInSensitive_chk.setSelected( conf.getBooleanProperty(PROPKEY_FILTER_CASE_IN_SENSITIVE, DEFAULT_FILTER_CASE_IN_SENSITIVE));
 
 		_historySize_last   = ((Number)_historySize_spm.getValue()).intValue();
 	}
@@ -1079,6 +1152,7 @@ implements ChangeListener, ActionListener, FocusListener
 	{
 //		try
 //		{
+			@SuppressWarnings("resource")
 			RandomAccessFile raf = new RandomAccessFile(getFileName(), "rw");
 			FileChannel channel = raf.getChannel();
 
@@ -1212,6 +1286,7 @@ implements ChangeListener, ActionListener, FocusListener
 		try
 		{
 			_logger.warn("Writing a new history file '"+fileName+"'. Entries that will be written "+list.size()+".");
+			@SuppressWarnings("resource")
 			RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 			FileChannel channel = raf.getChannel();
 

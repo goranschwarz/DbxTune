@@ -352,7 +352,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
        <li>On errors, two buttons will be visible: 'next' and 'previous', which will move the cursor to the SQL Text where the error happened</li>
        <li>If you click on a (error) message in the output window, the cursor will be moved in the SQL Text, which was responsible for the error message.</li>
-       <li>If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
+       <li>Command History: If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
+       <li>Command History: added filter field to search the history</li>
+       <li>Command History: The Command column isn't "over sized" anymore... This simply means: it's less annoying when you have any wide commands in the history</li>
        <li>Added ASE Set option 'set statistics *_html', which enables/disables ALL options for HTML Statistics output.</li>
        <li>After the sql.ini/interfaces file has been changed via the "edit" button: Select the last edited entry as the new server.</li>
        <li>Client character set can be chosen via a ComboBox, it will simply update the 'URL Options' field.</li>
