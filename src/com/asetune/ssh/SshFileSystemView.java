@@ -10,8 +10,6 @@ import org.apache.log4j.Logger;
 
 import ch.ethz.ssh2.SFTPv3Client;
 
-import com.asetune.utils.StringUtil;
-
 // got the idea from: http://mindtreeinsight.sourceforge.net/ui/xref/com/mindtree/techworks/insight/download/sftpbrowse/SFTPRemoteFileSystemView.html
 // This needs A LOT MORE before it can be used
 // * create a SftpFile extends File object

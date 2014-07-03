@@ -1361,6 +1361,59 @@ public class StringUtil
 		return o.toString();
 	}
 
+	/**
+	 * Convert a Byte[] to string
+	 * @param prefix prefix the string with any value, for example "0x", null means no prefix
+	 * @param bytes the byte array
+	 * @return a string with the bye value representation
+	 */
+	public static String bytesToHex(String prefix, byte[] bytes)
+	{
+		return bytesToHex(prefix, bytes, false, Integer.MAX_VALUE);
+	}
+
+	/**
+	 * Convert a Byte[] to string
+	 * @param prefix prefix the string with any value, for example "0x", null means no prefix
+	 * @param bytes the byte array
+	 * @param toUpper if you want "abcdef" presented as "ABCDEF"
+	 * @return a string with the bye value representation
+	 */
+	public static String bytesToHex(String prefix, byte[] bytes, boolean toUpper)
+	{
+		return bytesToHex(prefix, bytes, toUpper, Integer.MAX_VALUE);
+	}
+
+	/**
+	 * Convert a Byte[] to string
+	 * @param prefix  prefix the string with any value, for example "0x", null means no prefix
+	 * @param bytes   the byte array
+	 * @param toUpper if you want "abcdef" presented as "ABCDEF"
+	 * @param max     Maximum number of bytes to translate before stop (max < 0 = Integer.MAX_VALUE)
+	 * @return a string with the bye value representation
+	 */
+	public static String bytesToHex(String prefix, byte[] bytes, boolean toUpper, int max)
+	{
+		if (bytes == null)
+			return null;
+		
+		if (max < 0)
+			max = Integer.MAX_VALUE;
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < bytes.length && i < max; i++)
+		{
+			if (toUpper)
+				sb.append(String.format("%02X", bytes[i])); // upper case ABCDEF
+			else
+				sb.append(String.format("%02x", bytes[i])); // lower case abcdef 
+		}
+		if (prefix != null)
+			sb.insert(0, prefix);
+
+		return sb.toString();
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
