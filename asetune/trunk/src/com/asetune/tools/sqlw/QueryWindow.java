@@ -151,6 +151,7 @@ import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -9106,6 +9107,9 @@ public class QueryWindow
 			{
 				private static final long serialVersionUID = 1L;
 
+				private boolean      _tabHeader_useFocusableTips = true;
+				private FocusableTip _tabHeader_focusableTip     = null;
+
 				@Override
 				public String getToolTipText(MouseEvent e)
 				{
@@ -9120,7 +9124,26 @@ public class QueryWindow
 					{
 						ResultSetTableModel rstm = (ResultSetTableModel) tm;
 						String tooltip = rstm.getToolTipTextForTableHeader(index);
-						return tooltip;
+
+						if (_tabHeader_useFocusableTips)
+						{
+    						if (tooltip != null) 
+    						{
+    							if (_tabHeader_focusableTip == null) 
+    								_tabHeader_focusableTip = new FocusableTip(this);
+    
+    							_tabHeader_focusableTip.toolTipRequested(e, tooltip);
+    						}
+    						// No tool tip text at new location - hide tip window if one is
+    						// currently visible
+    						else if (_tabHeader_focusableTip != null) 
+    						{
+    							_tabHeader_focusableTip.possiblyDisposeOfTipWindow();
+    						}
+    						return null;
+						}
+    					else
+    						return tooltip;
 					}
 					return null;
 				}

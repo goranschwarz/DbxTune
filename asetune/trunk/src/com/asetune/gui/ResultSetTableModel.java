@@ -38,14 +38,18 @@ public class ResultSetTableModel
 	public static final String  PROPKEY_BINERY_PREFIX = "ResultSetTableModel.binary.prefix";
 	public static final String  DEFAULT_BINERY_PREFIX = "0x";
 
+	public static final String  PROPKEY_BINARY_TOUPPER = "ResultSetTableModel.binary.toUpper";
+	public static final boolean DEFAULT_BINARY_TOUPPER = false;
+
 	public static final String  PROPKEY_PrintResultSetInfoLong = "ResultSetTableModel.print.rs.info.long";
 	public static final boolean DEFAULT_PrintResultSetInfoLong = false;
 
 	public static final String  PROPKEY_NULL_REPLACE = "ResultSetTableModel.replace.null.with";
 	public static final String  DEFAULT_NULL_REPLACE = "(NULL)";
 
-	private static final String BINARY_PREFIX = Configuration.getCombinedConfiguration().getProperty(PROPKEY_BINERY_PREFIX, DEFAULT_BINERY_PREFIX);;
-	private static final String NULL_REPLACE  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE,  DEFAULT_NULL_REPLACE);
+	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_BINERY_PREFIX,  DEFAULT_BINERY_PREFIX);;
+	private static final boolean BINARY_TOUPPER = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BINARY_TOUPPER, DEFAULT_BINARY_TOUPPER);;
+	private static final String  NULL_REPLACE   = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_NULL_REPLACE,   DEFAULT_NULL_REPLACE);
 
 	private int	_numcols;
 
@@ -192,9 +196,7 @@ public class ResultSetTableModel
 				case Types.BINARY:
 				case Types.VARBINARY:
 				case Types.LONGVARBINARY:
-					o = rs.getString(c);
-					if (o != null)
-						o = BINARY_PREFIX + o;
+					o = StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(c), BINARY_TOUPPER);
 					break;
 
 				case Types.DATE:
