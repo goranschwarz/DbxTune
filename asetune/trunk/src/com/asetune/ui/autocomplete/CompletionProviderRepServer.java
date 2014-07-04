@@ -18,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.autocomplete.ShorthandCompletion;
 import org.fife.ui.autocomplete.Util;
@@ -162,95 +161,96 @@ extends CompletionProviderAbstract
 		return new RepServerCellRenderer();
 	}
 
-	@Override
-	public DefaultCompletionProvider createTemplateProvider()
-	{
-		// A DefaultCompletionProvider is the simplest concrete implementation
-		// of CompletionProvider. This provider has no understanding of
-		// language semantics. It simply checks the text entered up to the
-		// caret position for a match against known completions. This is all
-		// that is needed in the majority of cases.
-		DefaultCompletionProvider provider = new DefaultCompletionProvider();
-
-		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		provider.addCompletion(new BasicCompletion(provider, "admin health"));
-		provider.addCompletion(new BasicCompletion(provider, "admin who_is_down"));
-		provider.addCompletion(new BasicCompletion(provider, "resume connection to "));
-		provider.addCompletion(new BasicCompletion(provider, "suspend connection to "));
-
-		// Add a couple of "shorthand" completions. These completions don't
-		// require the input text to be the same thing as the replacement text.
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"resume connection",  
-					"resume connection to <srv.db>\n" +
-					"\t--skip transaction \n" +
-					"\t--skip ## transaction /* skip first ## transactions  */\n" +
-					"\t--execute transaction /* executes system transaction */\n", 
-				"Full syntax of the resume connection"));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"suspend connection",  
-					"suspend connection to <srv.db>\n" +
-					"\t--with nowait /* suspends the connection without waiting for current DSI tran to complete */\n",
-				"Full syntax of the suspend connection"));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"sysadmin dump_queue",  
-					"sysadmin dump_queue, <dbid>, 0, -1, -2, -1, client\n",
-				"Dump first queue block, for an outbound queue."));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"connect rssd",  
-					"connect rssd\n" +
-					"go\n" +
-					"select * from rs_databases\n" +
-					"go\n" +
-					"disconnect\n" +
-					"go\n", 
-				"Connect to RSSD, SQL Statement, disconnect."));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"create connection ",  
-					"create connection to \"ACTIVE_ASE\".\"dbname\"\n" +
-					"\tset error class to \"rs_sqlserver_error_class\" \n" +
-					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
-					"\tset username \"dbname_maint\" \n" +
-					"\tset password \"dbname_maint_ps\" \n" +
-					"\t--set database_config_param to 'on' \n" +
-					"\twith log transfer on \n" +
-					"\tas active for <lsrv.db> \n", 
-				"Create ACTIVE WS Connection"));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"create connection ",  
-					"create connection to \"STANDBY_ASE\".\"dbname\"\n" +
-					"\tset error class to \"rs_sqlserver_error_class\" \n" +
-					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
-					"\tset username \"dbname_maint\" \n" +
-					"\tset password \"dbname_maint_ps\" \n" +
-					"\t--set database_config_param to 'on' \n" +
-					"\twith log transfer on \n" +
-					"\tas standby for <lsrv.db> \n" +
-					"\tuse dump marker \n", 
-				"Create STANDBY WS Connection"));
-
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"trace dsi_buf_dump on ",  
-				"trace 'on', 'dsi', 'dsi_buf_dump'",
-				"Turn ON: Write SQL statements executed by the DSI Threads to the RS log"));
-		provider.addCompletion(new ShorthandCompletion(provider, 
-				"trace dsi_buf_dump off ",  
-				"trace 'off', 'dsi', 'dsi_buf_dump'",
-				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
-
-//		addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
-
-		return provider;
-	}
-
-	protected void refreshCompletionForStaticCmds()
-	{
+//	@Override
+//	public DefaultCompletionProvider createTemplateProvider()
+//	{
+//		// A DefaultCompletionProvider is the simplest concrete implementation
+//		// of CompletionProvider. This provider has no understanding of
+//		// language semantics. It simply checks the text entered up to the
+//		// caret position for a match against known completions. This is all
+//		// that is needed in the majority of cases.
+//		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+//
+//		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
+//		provider.addCompletion(new BasicCompletion(provider, "admin health"));
+//		provider.addCompletion(new BasicCompletion(provider, "admin who_is_down"));
+//		provider.addCompletion(new BasicCompletion(provider, "resume connection to "));
+//		provider.addCompletion(new BasicCompletion(provider, "suspend connection to "));
+//
+//		// Add a couple of "shorthand" completions. These completions don't
+//		// require the input text to be the same thing as the replacement text.
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"resume connection",  
+//					"resume connection to <srv.db>\n" +
+//					"\t--skip transaction \n" +
+//					"\t--skip ## transaction /* skip first ## transactions  */\n" +
+//					"\t--execute transaction /* executes system transaction */\n", 
+//				"Full syntax of the resume connection"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"suspend connection",  
+//					"suspend connection to <srv.db>\n" +
+//					"\t--with nowait /* suspends the connection without waiting for current DSI tran to complete */\n",
+//				"Full syntax of the suspend connection"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"sysadmin dump_queue",  
+//					"sysadmin dump_queue, <dbid>, 0, -1, -2, -1, client\n",
+//				"Dump first queue block, for an outbound queue."));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"connect rssd",  
+//					"connect rssd\n" +
+//					"go\n" +
+//					"select * from rs_databases\n" +
+//					"go\n" +
+//					"disconnect\n" +
+//					"go\n", 
+//				"Connect to RSSD, SQL Statement, disconnect."));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"create connection ",  
+//					"create connection to \"ACTIVE_ASE\".\"dbname\"\n" +
+//					"\tset error class to \"rs_sqlserver_error_class\" \n" +
+//					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
+//					"\tset username \"dbname_maint\" \n" +
+//					"\tset password \"dbname_maint_ps\" \n" +
+//					"\t--set database_config_param to 'on' \n" +
+//					"\twith log transfer on \n" +
+//					"\tas active for <lsrv.db> \n", 
+//				"Create ACTIVE WS Connection"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"create connection ",  
+//					"create connection to \"STANDBY_ASE\".\"dbname\"\n" +
+//					"\tset error class to \"rs_sqlserver_error_class\" \n" +
+//					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
+//					"\tset username \"dbname_maint\" \n" +
+//					"\tset password \"dbname_maint_ps\" \n" +
+//					"\t--set database_config_param to 'on' \n" +
+//					"\twith log transfer on \n" +
+//					"\tas standby for <lsrv.db> \n" +
+//					"\tuse dump marker \n", 
+//				"Create STANDBY WS Connection"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"trace dsi_buf_dump on ",  
+//				"trace 'on', 'dsi', 'dsi_buf_dump'",
+//				"Turn ON: Write SQL statements executed by the DSI Threads to the RS log"));
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"trace dsi_buf_dump off ",  
+//				"trace 'off', 'dsi', 'dsi_buf_dump'",
+//				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
+//
+////		addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
+//
+//		return provider;
+//	}
+//
+//	@Override
+//	protected void refreshCompletionForStaticCmds()
+//	{
 //		resetStaticCompletion();
 //
 //		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
@@ -326,26 +326,122 @@ extends CompletionProviderAbstract
 //				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
 //
 ////		addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
-	}
+//	}
 
-	private static class ShorthandCompletionHtml
-	extends ShorthandCompletion
+
+	@Override
+	public List<CompletionTemplate> createCompletionTemplates()
 	{
+		ArrayList<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
+		
+		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
+		list.add( new CompletionTemplate( "admin health"));
+		list.add( new CompletionTemplate( "admin who_is_down"));
+		list.add( new CompletionTemplate( "resume connection to "));
+		list.add( new CompletionTemplate( "suspend connection to "));
 
-		public ShorthandCompletionHtml(CompletionProvider provider, String inputText, String replacementText, String shortDesc)
-		{
-			super(provider, inputText, replacementText, shortDesc);
-		}
-		@Override
-		public String toString()
-		{
-			String shortDesc = getShortDescription();
-			if (shortDesc==null) {
-				return getInputText();
-			}
-			return "<html>" + getInputText() + " -- <i><font color=\"green\">" + shortDesc + "</font></i></html>";
-		}
+		// Add a couple of "shorthand" completions. These completions don't
+		// require the input text to be the same thing as the replacement text.
+
+		list.add( new CompletionTemplate( 
+				"resume connection",  
+					"resume connection to <srv.db>\n" +
+					"\t--skip transaction \n" +
+					"\t--skip ## transaction /* skip first ## transactions  */\n" +
+					"\t--execute transaction /* executes system transaction */\n", 
+				"Full syntax of the resume connection"));
+
+		list.add( new CompletionTemplate( 
+				"suspend connection",  
+					"suspend connection to <srv.db>\n" +
+					"\t--with nowait /* suspends the connection without waiting for current DSI tran to complete */\n",
+				"Full syntax of the suspend connection"));
+
+		list.add( new CompletionTemplate( 
+				"sysadmin dump_queue",  
+					"sysadmin dump_queue, <dbid>, 0, -1, -2, -1, client\n",
+				"Dump first queue block, for an outbound queue."));
+
+		list.add( new CompletionTemplate( 
+				"connect rssd",  
+					"connect rssd\n" +
+					"go\n" +
+					"select * from rs_databases\n" +
+					"go\n" +
+					"disconnect\n" +
+					"go\n", 
+				"Connect to RSSD, SQL Statement, disconnect."));
+
+		list.add( new CompletionTemplate( 
+				"create logical connection ",  
+					"create logical connection to \"L_SRV\".\"dbname\"", 
+				"Create LOGICAL Connection"));
+
+		list.add( new CompletionTemplate( 
+				"create connection ",  
+					"create connection to \"ACTIVE_ASE\".\"dbname\"\n" +
+					"\tset error class to \"rs_sqlserver_error_class\" \n" +
+					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
+					"\tset username \"dbname_maint\" \n" +
+					"\tset password \"dbname_maint_ps\" \n" +
+					"\t--set database_config_param to 'on' \n" +
+					"\twith log transfer on \n" +
+					"\tas active for <lsrv.db> \n", 
+				"Create ACTIVE WS Connection"));
+
+		list.add( new CompletionTemplate( 
+				"create connection ",  
+					"create connection to \"STANDBY_ASE\".\"dbname\"\n" +
+					"\tset error class to \"rs_sqlserver_error_class\" \n" +
+					"\tset function string class to \"rs_sqlserver_function_class\" \n" +
+					"\tset username \"dbname_maint\" \n" +
+					"\tset password \"dbname_maint_ps\" \n" +
+					"\t--set database_config_param to 'on' \n" +
+					"\twith log transfer on \n" +
+					"\tas standby for <lsrv.db> \n" +
+					"\tuse dump marker \n", 
+				"Create STANDBY WS Connection"));
+
+		list.add( new CompletionTemplate( 
+				"trace dsi_buf_dump on ",  
+				"trace 'on', 'dsi', 'dsi_buf_dump'",
+				"Turn ON: Write SQL statements executed by the DSI Threads to the RS log"));
+		list.add( new CompletionTemplate( 
+				"trace dsi_buf_dump off ",  
+				"trace 'off', 'dsi', 'dsi_buf_dump'",
+				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
+
+		list.add(new CompletionTemplate("&lt;dbid&gt;",     "<dbid>",     "Translate a SRV.db to the repserver dbid"));
+		list.add(new CompletionTemplate("&lt;srv.db&gt;",   "<srv.db>",   "Get list of PHYSICAL databases configured in repserver"));
+		list.add(new CompletionTemplate("&lt;lsrv.db&gt;",  "<lsrv.db>",  "Get list of LOGICAL databases configured in repserver"));
+		list.add(new CompletionTemplate("&lt;sub&gt;",      "<sub>",      "Get list of Table SUBSCRIPTIONS created in repserver"));
+		list.add(new CompletionTemplate("&lt;repdef&gt;",   "<repdef>",   "Get list of Table REPLICATION DEFINITIONS created in repserver"));
+		list.add(new CompletionTemplate("&lt;dbsub&gt;",    "<dbsub>",    "Get list of DB SUBSCRIPTIONS created in repserver"));
+		list.add(new CompletionTemplate("&lt;dbrepdef&gt;", "<dbrepdef>", "Get list of DB REPLICATION DEFINITIONS created in repserver"));
+
+//		addCommandCompletion("aminCommand", "subcommand", "htmlShortDesc", "full template", "htmlLongDesc");
+		
+		return list;
 	}
+
+//	private static class ShorthandCompletionHtml
+//	extends ShorthandCompletion
+//	{
+//
+//		public ShorthandCompletionHtml(CompletionProvider provider, String inputText, String replacementText, String shortDesc)
+//		{
+//			super(provider, inputText, replacementText, shortDesc);
+//		}
+//		@Override
+//		public String toString()
+//		{
+//			String shortDesc = getShortDescription();
+//			if (shortDesc==null) {
+//				return getInputText();
+//			}
+//			return "<html>" + getInputText() + " -- <i><font color=\"green\">" + shortDesc + "</font></i></html>";
+//		}
+//	}
 
 	public void addRsCompletion(Completion c)
 	{

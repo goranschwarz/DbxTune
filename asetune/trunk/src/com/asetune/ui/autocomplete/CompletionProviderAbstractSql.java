@@ -1145,7 +1145,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		return table;
 	}
 
-	abstract protected void refreshCompletionForStaticCmds();
+//	abstract protected void refreshCompletionForStaticCmds();
 //	protected void refreshCompletionForStaticCmds()
 //	{
 //		_logger.error("CompletionProviderAbstractSql.refreshCompletionForStaticCmds() is called this SHOULD REALLY BE ABSTACT IN HERE...");
