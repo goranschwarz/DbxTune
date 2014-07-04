@@ -1,6 +1,8 @@
 package com.asetune.ui.autocomplete;
 
 import java.awt.Window;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.BasicCompletion;
@@ -76,30 +78,40 @@ extends CompletionProviderAbstractSql
 		return provider;
 	}
 
-	@Override
-	protected void refreshCompletionForStaticCmds()
-	{
+//	@Override
+//	protected void refreshCompletionForStaticCmds()
+//	{
 //		resetStaticCompletion();
 //
 //		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
 //		addStaticCompletion(new BasicCompletion(this, "SELECT * FROM "));
-	}
+//	}
+//
+//	@Override
+//	public DefaultCompletionProvider createTemplateProvider()
+//	{
+//		// A DefaultCompletionProvider is the simplest concrete implementation
+//		// of CompletionProvider. This provider has no understanding of
+//		// language semantics. It simply checks the text entered up to the
+//		// caret position for a match against known completions. This is all
+//		// that is needed in the majority of cases.
+//		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+//
+//		// Add completions for all Java keywords. A BasicCompletion is just
+//		// a straightforward word completion.
+//		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
+//
+//		return provider;
+//	}
 
 	@Override
-	public DefaultCompletionProvider createTemplateProvider()
+	public List<CompletionTemplate> createCompletionTemplates()
 	{
-		// A DefaultCompletionProvider is the simplest concrete implementation
-		// of CompletionProvider. This provider has no understanding of
-		// language semantics. It simply checks the text entered up to the
-		// caret position for a match against known completions. This is all
-		// that is needed in the majority of cases.
-		DefaultCompletionProvider provider = new DefaultCompletionProvider();
-
-		// Add completions for all Java keywords. A BasicCompletion is just
-		// a straightforward word completion.
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
-
-		return provider;
+		ArrayList<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
+		
+		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
+		list.add( new CompletionTemplate("SELECT * FROM "));
+		
+		return list;
 	}
-
 }

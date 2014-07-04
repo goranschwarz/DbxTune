@@ -124,9 +124,9 @@ extends CompletionProviderAbstractSql
 	//##############################################################################
 	//##############################################################################
 	//##############################################################################
-	@Override
-	protected void refreshCompletionForStaticCmds()
-	{
+//	@Override
+//	protected void refreshCompletionForStaticCmds()
+//	{
 //		resetStaticCompletion();
 //
 //		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
@@ -196,43 +196,119 @@ extends CompletionProviderAbstractSql
 //		// \exec  and \rpc templates
 //		addStaticCompletion(new ShorthandCompletion(this, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
 //		addStaticCompletion(new ShorthandCompletion(this, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-	}
+//	}
+
+//	@Override
+//	public DefaultCompletionProvider createTemplateProvider()
+//	{
+//		// A DefaultCompletionProvider is the simplest concrete implementation
+//		// of CompletionProvider. This provider has no understanding of
+//		// language semantics. It simply checks the text entered up to the
+//		// caret position for a match against known completions. This is all
+//		// that is needed in the majority of cases.
+//		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+//
+//		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
+//		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
+//		provider.addCompletion(new BasicCompletion(provider, "SELECT row_count(db_id()), object_id('') "));
+//		provider.addCompletion(new BasicCompletion(provider, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
+//		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTables ORDER BY TableName"));
+//		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
+//
+//		// Add a couple of "shorthand" completions. These completions don't
+//		// require the input text to be the same thing as the replacement text.
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",
+//				"/*  \n" +
+//				"** Below is commands/instructions to setup a log cache on a 2K server \n" +
+//				"** If you have another server page size, values needs to be changed \n" +
+//				"** select @@maxpagesize/1024 to get the servers page size \n" +
+//				"*/ \n" +
+//				"-- Create a cache that holds transaction log(s) \n" +
+//				"exec sp_cacheconfig 'log_cache', '500M', 'logonly', 'relaxed', 'cache_partition=1' \n" +
+//				" \n" +
+//				"-- Most of the memory should be in the 4K pool (2 pages per IO) \n" +
+//				"sp_poolconfig 'log_cache', '495M', '4K', '2K' -- size the 4K pool to #MB, grab memory from the 2K pool \n" +
+//				" \n" +
+//				"-- and maybe some in the 16K (8 pages) pool \n" +
+//				"-- sp_poolconfig 'log_cache', '#M', '16K', '2K'  \n" +
+//				" \n" +
+//				"-- To bind a database transaction log to a Named Cache, it has to be in single user mode \n" +
+//				"exec sp_dboption  'dbname', 'single', 'true' \n" +
+//				"exec sp_bindcache 'log_cache', 'dbname', 'syslogs' \n" +
+//				"exec sp_dboption  'dbname', 'single', 'false' \n" +
+//				" \n" +
+//				"-- Change the LOG IO SIZE (default is 4K or: 2 pages per IO) \n" +
+//				"--dbname..sp_logiosize '8' -- to use the 8K memory pool (4 pages per IO) \n" +
+//				"",
+//				"Create a 'log cache' and bind database(s) to it."));
+//
+//		provider.addCompletion(new ShorthandCompletion(provider, "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+//
+//		// monTables
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"monTables",  
+//				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
+//				"Get monitor tables in this system."));
+//		// monColumns
+//		provider.addCompletion(new ShorthandCompletion(provider, 
+//				"monColumns", 
+//				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
+//				"Get monitor tables and columns in this system."));
+//		
+//		// \exec  and \rpc templates
+//		provider.addCompletion(new ShorthandCompletion(provider, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		provider.addCompletion(new ShorthandCompletion(provider, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//
+//		return provider;
+//	}
 
 	@Override
-	public DefaultCompletionProvider createTemplateProvider()
+	public List<CompletionTemplate> createCompletionTemplates()
 	{
-		// A DefaultCompletionProvider is the simplest concrete implementation
-		// of CompletionProvider. This provider has no understanding of
-		// language semantics. It simply checks the text entered up to the
-		// caret position for a match against known completions. This is all
-		// that is needed in the majority of cases.
-		DefaultCompletionProvider provider = new DefaultCompletionProvider();
-
+		ArrayList<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
+		
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM "));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT row_count(db_id()), object_id('') "));
-		provider.addCompletion(new BasicCompletion(provider, "CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTables ORDER BY TableName"));
-		provider.addCompletion(new BasicCompletion(provider, "SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
+		list.add( new CompletionTemplate("SELECT * FROM "));
+		list.add( new CompletionTemplate("SELECT row_count(db_id()), object_id('') "));
+		list.add( new CompletionTemplate("CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
+		list.add( new CompletionTemplate("SELECT * FROM master..monTables ORDER BY TableName"));
+		list.add( new CompletionTemplate("SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
 
 		// Add a couple of "shorthand" completions. These completions don't
 		// require the input text to be the same thing as the replacement text.
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_helptext",        "exec sp_helptext 'procname', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
+		list.add( new CompletionTemplate( "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', '#G'",                                                  "Cache Size"));
+		list.add( new CompletionTemplate( "sp_cacheconfig",     "exec sp_cacheconfig 'default data cache', 'cache_partitions=#'",                                  "Cache Partitions"));
+		list.add( new CompletionTemplate( "sp_bindcache",       "exec sp_bindcache 'cache name', 'dbname' -- [,tab_name [,index_name]]",                           "Bind db/object to cache"));
+		list.add( new CompletionTemplate( "sp_unbindcache_all", "exec sp_unbindcache_all 'cache name'",                                                            "Unbind all from cache"));
+		list.add( new CompletionTemplate( "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'sizeM|G', 'toPool_K' --[,'fromPool_K']",                "Pool Size"));
+		list.add( new CompletionTemplate( "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'wash=size[P|K|M|G]'",                 "Pool Wash Size"));
+		list.add( new CompletionTemplate( "sp_poolconfig",      "exec sp_poolconfig 'default data cache', 'affected_poolK', 'local async prefetch limit=percent'", "Pool Local Async Prefetch Limit"));
+		list.add( new CompletionTemplate( "sp_configure",       "exec sp_configure 'memory'",                                                                      "Memory left for reconfigure"));
+		list.add( new CompletionTemplate( "sp_configure",       "exec sp_configure 'Monitoring'",                                                                  "Check Monitor configuration"));
+		list.add( new CompletionTemplate( "sp_configure",       "exec sp_configure 'nondefault'",                                                                  "Get changed configuration parameters"));
+		list.add( new CompletionTemplate( "sp_helptext",        "exec sp_helptext 'procname', NULL/*startRow*/, NULL/*numOfRows*/, 'showsql,linenumbers'",          "Get procedure text, with line numbers"));
+		list.add( new CompletionTemplate( "sp_helptext",        "exec sp_helptext 'procname', NULL, NULL, 'showsql,ddlgen'",                                        "Get procedure text, as DDL"));
 
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
+		list.add( new CompletionTemplate( "sp_password",        "sp_password caller_password, new_password [,login_name]",                                         "Change password"));
 
-		provider.addCompletion(new ShorthandCompletion(provider, "sp_cacheconfig",
+		list.add( new CompletionTemplate( "sp_cacheconfig",
 				"/*  \n" +
 				"** Below is commands/instructions to setup a log cache on a 2K server \n" +
 				"** If you have another server page size, values needs to be changed \n" +
@@ -257,28 +333,27 @@ extends CompletionProviderAbstractSql
 				"",
 				"Create a 'log cache' and bind database(s) to it."));
 
-		provider.addCompletion(new ShorthandCompletion(provider, "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
-		provider.addCompletion(new ShorthandCompletion(provider, "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
-		provider.addCompletion(new ShorthandCompletion(provider, "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		list.add( new CompletionTemplate( "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		list.add( new CompletionTemplate( "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
+		list.add( new CompletionTemplate( "threads", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
 
 		// monTables
-		provider.addCompletion(new ShorthandCompletion(provider, 
+		list.add( new CompletionTemplate( 
 				"monTables",  
 				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
 				"Get monitor tables in this system."));
 		// monColumns
-		provider.addCompletion(new ShorthandCompletion(provider, 
+		list.add( new CompletionTemplate( 
 				"monColumns", 
 				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
 		
 		// \exec  and \rpc templates
-		provider.addCompletion(new ShorthandCompletion(provider, "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		provider.addCompletion(new ShorthandCompletion(provider, "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
 
-		return provider;
+		return list;
 	}
-
 	/**
 	 * REFRESH miscellaneous
 	 */

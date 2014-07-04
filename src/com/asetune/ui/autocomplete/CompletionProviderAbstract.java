@@ -75,10 +75,15 @@ extends DefaultCompletionProvider
 
 	protected ConnectionProvider _connectionProvider = null;
 
+	protected List<CompletionTemplate> _completionTemplates = null;
+
 	public CompletionProviderAbstract(Window owner, ConnectionProvider connectionProvider)
 	{
 		_guiOwner           = owner;
 		_connectionProvider = connectionProvider;
+
+		// Create Completion templates
+		setCompletionTemplates(createCompletionTemplates());
 	}
 	
 //	/** Save completions that is added, since it's reseted if _needRefres */
@@ -106,6 +111,15 @@ extends DefaultCompletionProvider
 		
 		return _staticCompletionList;
 	}
+
+	protected void refreshCompletionForStaticCmds()
+	{
+		resetStaticCompletion();
+
+		for (CompletionTemplate ct : getCompletionTemplates())
+			this.addCompletion(ct.createCompletion(this));
+	}
+
 
 //	@Override
 //	public void addCompletion(Completion c)
@@ -363,9 +377,40 @@ extends DefaultCompletionProvider
 	 * Override this method to create a Completion Provider that delivers static content
 	 * @return
 	 */
+//	public DefaultCompletionProvider createTemplateProvider()
+//	{
+//		return new DefaultCompletionProvider();
+//	}
 	public DefaultCompletionProvider createTemplateProvider()
 	{
-		return new DefaultCompletionProvider();
+		DefaultCompletionProvider provider = new DefaultCompletionProvider();
+		
+		for (CompletionTemplate ct : getCompletionTemplates())
+			provider.addCompletion(ct.createCompletion(provider));
+
+		return provider;
+	}
+
+	/**
+	 * Override this method to create a Completion Template texts
+	 * @return
+	 */
+	public List<CompletionTemplate> createCompletionTemplates()
+	{
+		return new ArrayList<CompletionTemplate>();
+	}
+
+	public void setCompletionTemplates(List<CompletionTemplate> templates)
+	{
+		_completionTemplates = templates;
+	}
+
+	public List<CompletionTemplate> getCompletionTemplates()
+	{
+		if (_completionTemplates == null)
+			return new ArrayList<CompletionTemplate>();
+
+		return _completionTemplates;
 	}
 
 	/**
