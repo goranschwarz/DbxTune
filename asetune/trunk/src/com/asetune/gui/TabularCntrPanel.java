@@ -2085,6 +2085,11 @@ implements
 	{
 		// is active/visible
 //		Component activeTab = MainFrame.getActiveTab();
+		if (getCm() == null)
+			return false;
+		if (getCm().getGuiController() == null)
+			return false;
+
 		Component activeTab = getCm().getGuiController().getActiveTab(); // FIXME: why isn't GuiController available here...
 		if (this.equals(activeTab))
 			return true;

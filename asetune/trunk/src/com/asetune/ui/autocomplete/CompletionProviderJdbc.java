@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.autocomplete.BasicCompletion;
-import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
