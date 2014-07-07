@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$SQLW_LATEST_VERSION_SRC = 322;
-	$SQLW_LATEST_VERSION_STR = "3.3.0";
-	$SQLW_LATEST_VERSION_STR = "2013-06-28";
+	$SQLW_LATEST_VERSION_SRC = 419;
+	$SQLW_LATEST_VERSION_STR = "3.4.0";
+	$SQLW_LATEST_VERSION_STR = "2014-07-07";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL            = "www.asetune.com/history.html";
 	$SEND_OPTIONS            = "sendConnectInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
