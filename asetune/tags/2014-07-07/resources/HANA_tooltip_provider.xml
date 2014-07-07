@@ -1,0 +1,3323 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE doc [
+<!ENTITY sqlwCommands SYSTEM "sqlwCommands_tooltip_provider.xml">
+]>
+
+
+
+
+<!-- 
+==============================================================================================
+== BEGIN: README =============================================================================
+==============================================================================================
+If you add or change content of this file, please send the file or the changed/added entries to goran_schwarz@hotmail.com
+If you do, it will be part of the next release...
+
+Note 1: You can use HTML tabs in any of the tags if you think the output will look nicer.
+Note 2: Please also use <![CDATA[]]> tag in <Syntax> and the <Example> tag, otherwise the parser will look for tags in the Syntax and Example tags.
+
+Example: <Syntax><![CDATA[<pre>Some syntax description</pre>]]></Syntax>
+
+
+Description of tags:
+=======================================================
+<Entry>
+    <CmdName>     Used to match the current word against                                               </CmdName>
+    <Module>      Just a description of what "section" this belongs to (choose a prober section)       </Module>
+    <FromVersion> In what version was this command introduced                                          </FromVersion>   OPTIONAL
+    <Description> Descriptive text of what the command does                                            </Description>
+    <Syntax>      The Syntax the command can have                                                      </Syntax>
+    <Example>     If you want to provide a small example, or several ones...                           </Example>       OPTIONAL
+    <SeeAlso>     References to other commands                                                         </SeeAlso>       OPTIONAL
+</Entry>
+
+
+
+Example:
+=======================================================
+<Entry>
+    <CmdName>selectxxx</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>Get information from a table</Description>
+    <Syntax><![CDATA[<pre>select [all|distinct] select_list [from]...</pre>]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: <I>selects all columns from tab1 with <B>no</B> restrictions of the rows returned</I><BR>
+       <CODE>select * from tab1</CODE>
+   </LI>
+   <LI>
+       <B>Example 2</B>: <I>selects distinct values of column 'c1' from tab1 with restrictions in rows</I><BR>
+       <CODE>select distinct c1 from tab1 where c2 = 'val'</CODE>
+   </LI>
+   <LI>
+       <B>Example 3</B>: <I><FONT COLOR="green">Some other description, but in color green this time</FONT> then black again...</I><BR>
+       <CODE>select 'dummy value' as dummyColOne</CODE>
+   </LI>
+</UL>
+]]>
+    </Example>
+</Entry>
+
+==============================================================================================
+== END: README ===============================================================================
+==============================================================================================
+-->
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == START: ENTRIES ========================================================================== -->
+<!-- ============================================================================================ -->
+<Entries>
+
+<!-- ============================================================================================ -->
+<!-- == include: SQL Window Commands ============================================================ -->
+<!-- ============================================================================================ -->
+&sqlwCommands;
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Data Type Conversion Functions ========================================================== -->
+<!-- ============================================================================================ -->
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CAST</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Returns the value of an expression converted to a supplied data type.</Description>
+    <Syntax><![CDATA[ <pre> CAST (expression AS data_type)</pre>
+    <b>expression</b> - The expression to be converted. <br>
+    <b>data type</b> - The target data type. TINYINT | SMALLINT | INTEGER | BIGINT | DECIMAL | SMALLDECIMAL | REAL | DOUBLE | ALPHANUM | VARCHAR | NVARCHAR | DAYDATE | DATE | TIME | SECONDDATE | TIMESTAMP<br>
+    ]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CAST (7 AS VARCHAR) "cast" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>7</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_cast.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_ALPHANUM</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a given value to an ALPHANUM data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_ALPHANUM (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_ALPHANUM ('10') "to alphanum" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_alphanum.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_BIGINT</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a BIGINT data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_BIGINT (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_BIGINT ('10') "to bigint" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_bigint.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_BINARY</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a BINARY data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_BINARY (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_BINARY ('abc') "to binary" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>616263</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_binary.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_BLOB</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a BLOB data type. The argument value must be a binary string.</Description>
+    <Syntax><![CDATA[ <pre> TO_BLOB (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_BLOB (TO_BINARY('abcde')) "to blob" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>abcde</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_blob.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_CLOB</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a CLOB data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_CLOB (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_CLOB ('TO_CLOB converts the value to a CLOB data type') "to clob" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE> TO_CLOB converts the value to a CLOB data type</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_clob.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_DATE</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts a date string d into a DATE data type. If the format specifier is omitted, the conversion is performed using the date format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_date">Date Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_DATE (d [, format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_DATE('2010-01-12', 'YYYY-MM-DD') "to date" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2010-01-12</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_date.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_DATS</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a date string d into an ABAP DATE string with format 'YYYYMMDD'.</Description>
+    <Syntax><![CDATA[ <pre> TO_DATS (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_DATS ('2010-01-12') "abap date" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>20100112</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_dats.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_DECIMAL</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[
+        <p>Converts the value to a DECIMAL data type.</p>
+        <p>The precision is the total number of significant digits and can range from 1 to 34.</p>
+        <p>The scale is the number of digits from the decimal point to the least significant digit and can range from -6,111 to 6,176. This means that the scale specifies the range of the exponent in the decimal number from 10<sup>-6111</sup> to 10<sup>6176</sup>. If the scale is not specified, it defaults to 0. Scale is positive when the number has significant digits to the right of the decimal point, and negative when the number has significant digits to the left of the decimal point.</p>
+        <p>When precision and scale are not specified, DECIMAL becomes a floating-point decimal number. In this case, precision and scale can vary within the range described above, 1~34 for precision and -6,111~6,176 for scale depending on the stored value.</p>    
+    ]]></Description>
+    <Syntax><![CDATA[ <pre> TO_DECIMAL (value [, precision, scale])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_DECIMAL(7654321.888888, 10, 3) "to decimal" FROM DUMMY</CODE>  <BR>
+                <B>Result: </B> <CODE> 7654321.889</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_decimal.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_DOUBLE</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a DOUBLE (double precision) data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_DOUBLE (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT 3*TO_DOUBLE ('15.12') "to double" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>45.36</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_double.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_INT</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts the value to an INTEGER data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_INT (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_INT('10') "to int" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_int.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_INTEGER</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts the value to an INTEGER data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_INTEGER (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_INTEGER ('10') "to int" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_integer.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_NCLOB</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a NCLOB data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_NCLOB (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_NCLOB ('TO_NCLOB converts the value to a NCLOB data type') "to nclob" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE> TO_NCLOB converts the value to a NCLOB data type</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_nclob.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_NVARCHAR</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts the value to a NVARCHAR unicode character data type. If the format specifier is omitted, the conversion is performed using the date format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_date">Date Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_NVARCHAR (value [,format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_NVARCHAR(TO_DATE('2009/12/31'), 'YY-MM-DD') "to nchar" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>09-12-31</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_nvarchar.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_REAL</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts a value to a REAL (single precision) data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_REAL (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT 3*TO_REAL ('15.12') "to real" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>45.36000061035156</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_real.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_SECONDDATE</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts a date string d into a SECONDDATE data type. If the format specifier is omitted, the conversion is performed using the date format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_date">Date Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_SECONDDATE (d [, format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_SECONDDATE ('2010-01-11 13:30:00', 'YYYY-MM-DD HH24:MI:SS') "to seconddate" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2010-01-11 13:30:00.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_seconddate.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_SMALLDECIMAL</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts the value to a SMALLDECIMAL data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_SMALLDECIMAL (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_SMALLDECIMAL(7654321.89) "to smalldecimal" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>7654321.89</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_smalldecimal.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_SMALLINT</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts the value to a SMALLINT data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_SMALLINT (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_SMALLINT ('10') "to smallint" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_smallint.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_TIME</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts a time string t into the TIME data type. If the format specifier is omitted, the conversion is performed using the time format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_time">Time Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_TIME (t [, format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_TIME ('08:30 AM', 'HH:MI AM') "to time" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>08:30:00</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_time.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_TIMESTAMP</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts a date string d into the TIMESTAMP data type. If the format specifier is omitted, the conversion is performed using the date format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_date">Date Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_TIMESTAMP (d [, format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_TIMESTAMP ('2010-01-11 13:30:00', 'YYYY-MM-DD HH24:MI:SS') "to timestamp" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2010-01-11 13:30:00.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_timestamp.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_TINYINT</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description>Converts the value to a TINYINT data type.</Description>
+    <Syntax><![CDATA[ <pre> TO_TINYINT (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TO_TINYINT ('10') "to tinyint" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>10</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_tinyint.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TO_VARCHAR</CmdName>
+    <Module>Data Type Conversion Functions</Module>
+    <Description><![CDATA[Converts a given value to a VARCHAR character data type. If the format specifier is omitted, the conversion is performed using the date format model as explained in <A HREF="http://help.sap.com/hana/html/_csql_data_types.html#sql_data_types_datetime_format_date">Date Formats</A>.]]></Description>
+    <Syntax><![CDATA[ <pre> TO_VARCHAR (value [, format])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  TO_VARCHAR (TO_DATE('2009-12-31'), 'YYYY/MM/DD') "to char" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2009/12/31</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_to_varchar.html</SourceURL>
+</Entry>
+
+
+
+<!-- ============================================================================================ -->
+<!-- == DateTime Functions ====================================================================== -->
+<!-- ============================================================================================ -->
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ADD_DAYS</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the date d plus n days.</Description>
+    <Syntax><![CDATA[ <pre> ADD_DAYS (d, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ADD_DAYS (TO_DATE ('2009-12-05', 'YYYY-MM-DD'), 30) "add days" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2010-01-04</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_add_days.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ADD_MONTHS</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the date d plus n months.</Description>
+    <Syntax><![CDATA[ <pre> ADD_MONTHS (d, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ADD_MONTHS (TO_DATE ('2009-12-05', 'YYYY-MM-DD'), 1) "add months" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2010-01-05</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_add_months.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ADD_SECONDS</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the time t plus n seconds.</Description>
+    <Syntax><![CDATA[ <pre> ADD_SECONDS (t, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ADD_SECONDS (TO_TIMESTAMP ('2012-01-01 23:30:45'), 60*30) "add seconds" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2012-01-02 00:00:45.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_add_seconds.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ADD_YEARS</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the date d plus n years.</Description>
+    <Syntax><![CDATA[ <pre> ADD_YEARS (d, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ADD_YEARS (TO_DATE ('2009-12-05', 'YYYY-MM-DD'), 1) "add years" FROM DUMMY;</CODE>  <BR>
+                <B>Result: </B> <CODE>2010-12-05</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_add_years.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_DATE</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current local system date.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_DATE</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_DATE "current date" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2010-01-11</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_date.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_TIME</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current local system time.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_TIME</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_TIME "current time" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 17:37:37</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_time.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_TIMESTAMP</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current local system timestamp information.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_TIMESTAMP</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_TIMESTAMP "current timestamp" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-11 17:38:48.802</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_timestamp.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_UTCDATE</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current UTC date. The UTC stands for Coordinated Universal Time, also known as Greenwich Mean Time (GMT).</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_UTCDATE</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_UTCDATE "Coordinated Universal Date" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-11</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_utcdate.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_UTCTIME</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current UTC time.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_UTCTIME</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR>
+                <CODE> SELECT CURRENT_UTCTIME "Coordinated Universal Time" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 08:41:19</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_utctime.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_UTCTIMESTAMP</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current UTC timestamp.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_UTCTIMESTAMP</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_UTCTIMESTAMP "Coordinated Universal Timestamp" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-11 08:41:42.484</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_utctimestamp.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>DAYNAME</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the weekday in English for date d.</Description>
+    <Syntax><![CDATA[ <pre> DAYNAME (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  DAYNAME ('2011-05-30') "dayname" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>MONDAY</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_dayname.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>DAYOFMONTH</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer the day of the month for date d.</Description>
+    <Syntax><![CDATA[ <pre> DAYOFMONTH (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  DAYOFMONTH ('2011-05-30') "dayofmonth" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>30</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_dayofmonth.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>DAYOFYEAR</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer representation of the day of the year for date d.</Description>
+    <Syntax><![CDATA[ <pre> DAYOFYEAR (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  DAYOFYEAR ('2011-05-30') "dayofyear" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>150</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_dayofyear.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>DAYS_BETWEEN</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the number of days between d1 and d2.</Description>
+    <Syntax><![CDATA[ <pre> DAYS_BETWEEN (d1, d2)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT DAYS_BETWEEN (TO_DATE ('2009-12-05', 'YYYY-MM-DD'), TO_DATE('2010-01-05', 'YYYY-MM-DD')) "days between" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>31</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_days_between.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>EXTRACT</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Finds and returns the value of a specified datetime field from date d.</Description>
+    <Syntax><![CDATA[ <pre> EXTRACT ({YEAR | MONTH | DAY | HOUR | MINUTE | SECOND} FROM d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  EXTRACT (YEAR FROM TO_DATE ('2010-01-04', 'YYYY-MM-DD')) "extract" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2010</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_extract.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>HOUR</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer representation of the hour for time t.</Description>
+    <Syntax><![CDATA[ <pre> HOUR (t)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  HOUR ('12:34:56') "hour" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>12</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_hour.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ISOWEEK</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the ISO year and week numbers of date d. The week number is prefixed by the letter W.</Description>
+    <Syntax><![CDATA[ <pre> ISOWEEK (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ISOWEEK (TO_DATE('2011-05-30', 'YYYY-MM-DD')) "isoweek" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2011-W22</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SeeAlso> 
+        <![CDATA[ 
+        <UL> 
+            <LI>WEEK - <A HREF="http://help.sap.com/hana/html/sql_function_week.html">http://help.sap.com/hana/html/sql_function_week.html</A></LI>
+        </UL> 
+        ]]> 
+    </SeeAlso> 
+
+    <SourceURL>http://help.sap.com/hana/html/sql_function_isoweek.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LAST_DAY</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the date of the last day of the month that contains the date d.</Description>
+    <Syntax><![CDATA[ <pre> LAST_DAY (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT LAST_DAY (TO_DATE('2010-01-04', 'YYYY-MM-DD')) "last day" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-31</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_last_day.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LOCALTOUTC</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Convert the local time t from a timezone to the UTC(GMT) time</Description>
+    <Syntax><![CDATA[ <pre> LOCALTOUTC (t, timezone)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  LOCALTOUTC (TO_TIMESTAMP('2012-01-01 01:00:00', 'YYYY-MM-DD HH24:MI:SS'), 'EST') "localtoutc" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2012-01-01 06:00:00.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_localtoutc.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>MINUTE</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer representation of the minute for time t.</Description>
+    <Syntax><![CDATA[ <pre> MINUTE (t)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  MINUTE ('12:34:56') "minute" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>34</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_minute.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>MONTH</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the number of the month from date d.</Description>
+    <Syntax><![CDATA[ <pre> MONTH(d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  MONTH ('2011-05-30') "month" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>5</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_month.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>MONTHNAME</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the name of the month in English for date d.</Description>
+    <Syntax><![CDATA[ <pre> MONTHNAME(d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  MONTHNAME ('2011-05-30') "monthname" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>MAY</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_monthname.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>NEXT_DAY</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the date of the next day after date d.</Description>
+    <Syntax><![CDATA[ <pre> NEXT_DAY (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT NEXT_DAY (TO_DATE ('2009-12-31', 'YYYY-MM-DD')) "next day" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-01</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_next_day.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>NOW</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the current timestamp.</Description>
+    <Syntax><![CDATA[ <pre> NOW ()</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  NOW () "now" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2010-01-01 16:34:19.894</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_now.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>QUARTER</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the numerical year quarter of date d. The first quarter starts in the month specified by start_month. If start_month is not specified the first quarter is assumed to begin in January.</Description>
+    <Syntax><![CDATA[ <pre> QUARTER (d, [, start_month ])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  QUARTER (TO_DATE('2012-01-01', 'YYYY-MM-DD'), 2) "quarter" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2011-Q4</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_quarter.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SECOND</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer representation of the second for time t.</Description>
+    <Syntax><![CDATA[ <pre> SECOND (t)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  SECOND ('12:34:56') "second" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>56</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_second.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SECONDS_BETWEEN</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Computes the number of seconds between date arguments d1 and d2, which is semantically equal to d2 - d1.</Description>
+    <Syntax><![CDATA[ <pre> SECONDS_BETWEEN (d1, d2)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SECONDS_BETWEEN ('2009-12-05', '2010-01-05') "seconds between" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2678400</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_seconds_between.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>UTCTOLOCAL</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Convert the UTC(GMT) time t to the local time in a timezone</Description>
+    <Syntax><![CDATA[ <pre> UTCTOLOCAL (t, timezone)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  UTCTOLOCAL (TO_TIMESTAMP('2012-01-01 01:00:00', 'YYYY-MM-DD HH24:MI:SS'), 'EST') "utctolocal" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2011-12-31 20:00:00.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_utctolocal.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>WEEK</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the week number of date d.</Description>
+    <Syntax><![CDATA[ <pre> WEEK (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  WEEK (TO_DATE('2011-05-30', 'YYYY-MM-DD')) "week" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>23</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SeeAlso> 
+        <![CDATA[ 
+        <UL> 
+            <LI>ISOWEEK - <A HREF="http://help.sap.com/hana/html/sql_function_isoweek.html">http://help.sap.com/hana/html/sql_function_isoweek.html</A></LI>
+        </UL> 
+        ]]> 
+    </SeeAlso> 
+
+    <SourceURL>http://help.sap.com/hana/html/sql_function_week.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>WEEKDAY</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns an integer representation of the day of the week for date d. The return value ranges from 0 to 6, representing Monday(0) through to Sunday(6).</Description>
+    <Syntax><![CDATA[ <pre> WEEKDAY (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT WEEKDAY (TO_DATE ('2010-12-31', 'YYYY-MM-DD')) "week day" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>4</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_weekday.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>YEAR</CmdName>
+    <Module>DateTime Functions</Module>
+    <Description>Returns the year number of date d.</Description>
+    <Syntax><![CDATA[ <pre> YEAR (d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  YEAR (TO_DATE ('2011-05-30', 'YYYY-MM-DD')) "year" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>2011</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_year.html</SourceURL>
+</Entry>
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Number Functions ========================================================== -->
+<!-- ============================================================================================ -->
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ABS</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the absolute value of the numeric argument n.</Description>
+    <Syntax><![CDATA[ <pre> ABS (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ABS (-1) "absolute" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>1</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_abs.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ACOS</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the arc-cosine, in radians, of the numeric argument n between -1 and 1.</Description>
+    <Syntax><![CDATA[ <pre> ACOS (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ACOS (0.5) "acos" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1.0471975511965979</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_acos.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ASIN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the arc-sine, in radians, of the numeric argument n between -1 and 1.</Description>
+    <Syntax><![CDATA[ <pre> ASIN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ASIN (0.5) "asin" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.5235987755982989</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_asin.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ATAN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the arc-tangent, in radians, of the numeric argument n. The range of n is unlimited.</Description>
+    <Syntax><![CDATA[ <pre> ATAN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ATAN (0.5) "atan" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.4636476090008061</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_atan.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ATAN2</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the arc-tangent, in radians, of the ratio of two numbers n and m. This produces the same result as ATAN(n/m).</Description>
+    <Syntax><![CDATA[ <pre> ATAN2 (n, m)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ATAN2 (1.0, 2.0) "atan2" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.4636476090008061</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_atan2.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>BINTOHEX</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Converts a binary value to a hexadecimal value.</Description>
+    <Syntax><![CDATA[ <pre> BINTOHEX (expression)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT BINTOHEX('AB') "bintohex" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>4142</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_bintohex.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>BITAND</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Performs an AND operation on the bits of the arguments n and m. Both n and m must be non-negative integers. The BITAND function returns a result with BIGINT type.</Description>
+    <Syntax><![CDATA[ <pre> BITAND (n, m)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT BITAND (255, 123) "bitand" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>123</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_bitand.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CEIL</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the first integer that is greater or equal to the value n.</Description>
+    <Syntax><![CDATA[ <pre> CEIL (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CEIL (14.5) "ceiling" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>15</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ceil.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>COS</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the cosine of the angle, in radians, of the argument n.</Description>
+    <Syntax><![CDATA[ <pre> COS (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT COS (0.0) "cos" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_cos.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>COSH</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Computes the hyperbolic cosine of the argument n.</Description>
+    <Syntax><![CDATA[ <pre> COSH (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT COSH (0.5) "cosh" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1.1276259652063807</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_cosh.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>COT</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Computes the cotangent of a number n, where the argument is an angle expressed in radians.</Description>
+    <Syntax><![CDATA[ <pre> COT (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  COT (40) "cot" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> -0.8950829176379128</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_cot.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>EXP</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the result of the base of natural logarithms e raised to the power of the argument n.</Description>
+    <Syntax><![CDATA[ <pre> EXP (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT EXP (1.0) "exp" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2.718281828459045</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_exp.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>FLOOR</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the largest integer not greater than the numeric argument n.</Description>
+    <Syntax><![CDATA[ <pre> FLOOR (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT FLOOR (14.5) "floor" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 14</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_floor.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>GREATEST</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the greatest value among the arguments: n1, n2, ...</Description>
+    <Syntax><![CDATA[ <pre> GREATEST (n1 [, n2]...)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT GREATEST ('aa', 'ab', 'ba', 'bb') "greatest" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>bb</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_greatest.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>HEXTOBIN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Converts a hexadecimal value to a binary value.</Description>
+    <Syntax><![CDATA[ <pre> HEXTOBIN (value)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT HEXTOBIN ('1a') "hextobin" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1A</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_hextobin.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LEAST</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the least value among the arguments: n1, n2...</Description>
+    <Syntax><![CDATA[ <pre> LEAST (n1 [, n2]...)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT LEAST('aa', 'ab', 'ba', 'bb') "least" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>aa</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_least.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the natural logarithm of the argument n.</Description>
+    <Syntax><![CDATA[ <pre> LN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT LN (9) "ln" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 2.1972245773362196</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ln.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LOG</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the natural logarithm of a number n base b. Base b must be a positive value greater than 1 and n must be any positive value.</Description>
+    <Syntax><![CDATA[ <pre> LOG (b, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT LOG (10, 2) "log" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.30102999566398114</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_log.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>MOD</CmdName>
+    <Module>Number Functions</Module>
+    <Description>
+    <![CDATA[
+        <p>Returns the remainder of a number n divided by a divisor d.</p>
+        <p>When n is negative this function acts differently to the standard computational modulo operation.</p>
+        <p>The following explains example of what the MOD function returns as the result.</p>
+        <ul>
+            <li>If d is zero, then n is returned.</li>
+            <li>If n is greater than 0 and n is less than d, then n is returned.</li>
+            <li>If n is less than 0 and n is greater than d, then n is returned.</li>
+            <li>In other case that those mentioned above, remainder of the absolute value of n divided by the absolute value of d is used to calculate remainder. If n is less than 0, then the returned remainder from MOD is a negative number, and if n is greater than 0, then the returned remainder from MOD is a positive number.</li>
+        </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> MOD (n, d)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT MOD (15, 4) "modulus" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 3</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT MOD (-15, 4) "modulus" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> -3</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_mod.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>POWER</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Calculates the base number b raised to the power of an exponent e.</Description>
+    <Syntax><![CDATA[ <pre> POWER (b, e)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT POWER (2, 10) "power" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1024.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_power.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ROUND</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Rounds argument n to the specified pos amount of places after the decimal point.</Description>
+    <Syntax><![CDATA[ <pre> ROUND (n [, pos])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ROUND (16.16, 1) "round" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 16.2</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ROUND (16.16, -1) "round" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 20</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_round.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SIGN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the sign (positive or negative) of the numeric argument n. Returns 1 if n is a positive value,-1 if n is a negative value, and 0 if n is equal to zero.</Description>
+    <Syntax><![CDATA[ <pre> SIGN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SIGN (-15) "sign" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> -1</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_sign.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SIN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the sine of n, where the argument is an angle expressed in radians.</Description>
+    <Syntax><![CDATA[ <pre> SIN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SIN ( 3.141592653589793/2) "sine" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_sin.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SINH</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the hyperbolic sine of n, where the argument is an angle expressed in radians.</Description>
+    <Syntax><![CDATA[ <pre> SINH (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SINH (0.0) "sinh" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_sinh.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SQRT</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the square root of the argument n.</Description>
+    <Syntax><![CDATA[ <pre> SQRT (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SQRT (2) "sqrt" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 1.4142135623730951</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_sqrt.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TAN</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the tangent of n, where the argument is an angle expressed in radians.</Description>
+    <Syntax><![CDATA[ <pre> TAN (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TAN (0.0) "tan" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_tan.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TANH</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the hyperbolic tangent of the numeric argument n.</Description>
+    <Syntax><![CDATA[ <pre> TANH (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT TANH (1.0) "tanh" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 0.7615941559557649</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_tanh.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>UMINUS</CmdName>
+    <Module>Number Functions</Module>
+    <Description>Returns the negated value of the numeric argument n.</Description>
+    <Syntax><![CDATA[ <pre> UMINUS (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  UMINUS(-765) "uminus" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 765</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_uminus.html</SourceURL>
+</Entry>
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == String Functions ======================================================================== -->
+<!-- ============================================================================================ -->
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>ASCII</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the integer ASCII value of the first byte in a string c.</Description>
+    <Syntax><![CDATA[ <pre> ASCII(c)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT ASCII('Ant') "ascii" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>65</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ascii.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CHAR</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the character with the ASCII value of a number n.</Description>
+    <Syntax><![CDATA[ <pre> CHAR (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CHAR (65) || CHAR (110) || CHAR (116) "character" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>Ant </CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_char.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CONCAT</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns a combined string consisting of str1 followed by str2. The concatenation operator (||) is identical to this function.</Description>
+    <Syntax><![CDATA[ <pre> CONCAT (str1, str2)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CONCAT ('C', 'at') "concat" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>Cat</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_concat.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LCASE</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    Converts all characters in string str to lowercase. <BR>
+    <B>NOTE</B>: The LCASE function is identical to the LOWER function.
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> LCASE(str)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  LCASE ('TesT') "lcase" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>test</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_lcase.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LEFT</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the first n characters/bytes from the beginning of string str.</Description>
+    <Syntax><![CDATA[ <pre> LEFT (str, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  LEFT ('Hello', 3) "left" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>Hel</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_left.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LENGTH</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the number of characters in string str. For Large Object (LOB) types, this function returns the length of the object in bytes.</Description>
+    <Syntax><![CDATA[ <pre> LENGTH(str)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LENGTH ('length in char') "length" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>14</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LENGTH ('l') "length" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>1</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LENGTH ('') "length" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>0</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LENGTH (null) "length" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>NULL</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_length.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LOCATE</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the position of a substring needle within a string haystack. Returns 0 if needle is not found within haystack. Returns NULL if haystack or needle is NULL, or if haystack is an empty string.</Description>
+    <Syntax><![CDATA[ <pre> LOCATE (haystack, needle)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LOCATE ('length in char', 'char') "locate" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>11</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LOCATE ('length in char', 'length') "locate" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>1</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LOCATE ('length in char', 'zchar') "locate" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>0</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_locate.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LOWER</CmdName>
+    <Module>String Functions</Module>
+    <Description>Converts all characters in string str to lowercase. (Note: The LOWER function is identical to the LCASE function.)</Description>
+    <Syntax><![CDATA[ <pre> LOWER(str)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  LOWER ('AnT') "lower" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>ant</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_lower.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LPAD</CmdName>
+    <Module>String Functions</Module>
+    <Description>Pads the start of string str with spaces to make a string of n characters in length. If the pattern argument is provided string str will be padded using sequences of these characters until the required length is met.</Description>
+    <Syntax><![CDATA[ <pre> LPAD (str, n [, pattern])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LPAD ('end', 15, '12345') "lpad" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE> 123451234512end</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT 'X'||LPAD('end', 5, ' ')||'X' "lpad" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>X  endX</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_lpad.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>LTRIM</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    Returns string str, trimmed of all leading spaces.<BR>
+    If <CODE>remove_set</CODE> is specified, LTRIM removes all the characters contained in this set from the start of string str. <BR>
+    This process continues until a character not the in remove_set is reached.<BR>
+    <B>Note</B>: <CODE>remove_set</CODE> is treated as a <B>set of characters</B> and not as a search string.)
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> LTRIM (str [, remove_set])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT LTRIM ('babababAabend','ab') "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>Aabend</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT 'X'||LTRIM('   abc')||'X' "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>XabcX</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT LTRIM('123456789','123') "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>456789</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT LTRIM('321a456789','123a') "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>456789</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ltrim.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>NCHAR</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the Unicode character with the integer code number n.</Description>
+    <Syntax><![CDATA[ <pre> NCHAR (n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT NCHAR (65) "nchar" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>A</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_nchar.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>REPLACE</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Searches in original_string for all occurrences of search_string and replaces them with replace_string.</p>
+    <ul>
+        <li>If <CODE>original_string</CODE> is an empty string, then the result will be an empty string.</li>
+        <li>If two overlapping substrings match the <CODE>search_string</CODE> in the <CODE>original_string</CODE>, then only the first occurrence will be replaced.</li>
+        <li>If <CODE>original_string</CODE> does not contain any occurrence of <CODE>search_string</CODE>, then <CODE>original_string</CODE> will be returned unchanged.</li>
+        <li>If <CODE>original_string</CODE>, <CODE>search_string</CODE>, or <CODE>replace_string</CODE> are <CODE>NULL</CODE> then <CODE>NULL</CODE> is returned.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> REPLACE (original_string, search_string, replace_string)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT REPLACE ('DOWNGRADE DOWNWARD','DOWN', 'UP') "replace" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE> UPGRADE UPWARD</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT REPLACE ('DOWNGRADE DOWNWARD','DOWN', NULL) "replace" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE> NULL</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT REPLACE ('DOWNGRADE DOWNWARD','DOWN', '') "replace" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE> GRADE WARD</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_replace.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>RIGHT</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns the rightmost n characters/bytes of string str.</Description>
+    <Syntax><![CDATA[ <pre> RIGHT(str, n)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  RIGHT('HI0123456789', 3) "right" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>789 </CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_right.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>RPAD</CmdName>
+    <Module>String Functions</Module>
+    <Description>Pads the end of string str with spaces to make a string of n characters in length. If the pattern argument is provided string str will be padded using sequences of these characters until the required length is met.</Description>
+    <Syntax><![CDATA[ <pre> RPAD (str, n [, pattern])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT RPAD ('end', 15, '12345') "right padded" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>end123451234512</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT RPAD ('end', 6, '.') "right padded" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>end...</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT 'X'||RPAD ('end', 6, ' ')||'X' "right padded" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>Xend   X</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_rpad.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>RTRIM</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    Returns string str, trimmed of all trailing spaces.<BR>
+    If <CODE>remove_set</CODE> is specified,  RTRIM removes all the characters contained in this set from the end of string str. <BR>
+    This process continues until a character not the in remove_set is reached.<BR>
+    <B>Note</B>: <CODE>remove_set</CODE> is treated as a <B>set of characters</B> and not as a search string.)
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> RTRIM (str [,remove_set ])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT RTRIM ('endabAabbabab','ab') "rtrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>endabA</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT 'X'||RTRIM('   abc   ')||'X' "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>X   abcX</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT RTRIM('123456789','789') "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>123456</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT RTRIM('123456a789','987a') "ltrim" FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>123456</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_rtrim.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SUBSTR_AFTER</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns a substring of string str that follows the first occurrence of the pattern argument.</p>
+    <ul>
+        <li>If str does not contain the pattern substring, then an empty string is returned.</li>
+        <li>If pattern is an empty string, then str is returned.</li>
+        <li>If str or pattern is NULL, then NULL is returned.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> SUBSTR_AFTER (str, pattern)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT SUBSTR_AFTER ('Hello My Friend','My ') "substr after" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>Friend</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT 'X'||SUBSTR_AFTER ('Hello My Friend','My ')||'X' "substr after" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>XFriendX</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_substr_after.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SUBSTR_BEFORE </CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns a substring of string str before the first occurrence of the pattern argument in the target string.</p>
+    <ul>
+        <li>If str does not contain the pattern substring, then an empty string is returned.</li>
+        <li>If pattern is an empty string, then str is returned.</li>
+        <li>If str or pattern is NULL, then NULL is returned.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> SUBSTR_BEFORE (str, pattern)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <CODE> SELECT SUBSTR_BEFORE ('Hello My Friend','My') "substr before" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>Hello </CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <CODE>SELECT 'X'||SUBSTR_BEFORE ('Hello My Friend','My')||'X' "substr before" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>XHello X</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_substr_after.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SUBSTRING</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns a substring of string str starting from start_position within the string. SUBSTRING can return the remaining part of a string from the start_position or optionally, a number of characters set by the string_length parameter.</p>
+    <ul>
+        <li>If start_position is less than 0, then it is considered as 1.</li>
+        <li>If string_length is less than 1, then an empty string is returned.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> SUBSTRING (str, start_position [, string_length])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Middle of the string</I><BR>
+                                  <CODE> SELECT  SUBSTRING ('1234567890',4,2) "substring" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>45</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>First 2 characters</I><BR>
+                                  <CODE> SELECT  SUBSTRING ('1234567890',1,2) "substring" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>12</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>First 2 characters, with "out of bounds start"</I><BR>
+                                  <CODE> SELECT  SUBSTRING ('1234567890',0,2) "substring" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B>   <CODE>12</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>Empty input string, with a to long length specification</I><BR>
+                                  <CODE> SELECT  'X'||SUBSTRING ('',1,99)||'X' "substring" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>XX</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>End of String, with a to long length specification</I><BR>
+                                  <CODE> SELECT  'X'||SUBSTRING ('1234567890',9,99)||'X' "substring" FROM DUMMY</CODE> <BR>
+                <B>Result: </B>   <CODE>X90X</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_substring.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>TRIM</CmdName>
+    <Module>String Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns string str after removing leading and trailing spaces. The trimming operation is carried out either from the start (LEADING), end (TRAILING) or both(BOTH) ends of string str.</p>
+    <ul>
+        <li>If either str or trim_char are a null values, then a NULL is returned.</li>
+        <li>If no options are specified, TRIM removes both the leading and trailing substring trim_char from string str.</li>
+        <li>If trim_char is not specified, then a single blank space is used.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> TRIM ([[LEADING | TRAILING | BOTH] trim_char FROM] str )</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Trim blank from both the start/end of the string</I><BR> 
+                <CODE> SELECT  'X'||TRIM ('  123456789  ')||'X' FROM DUMMY</CODE> <BR>
+                <B>Result: </B> <CODE>X123456789X</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>Trim both the start/end of the string</I><BR> 
+                <CODE> SELECT  TRIM ('a' FROM 'aaa123456789aa') "trim both" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>123456789</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 1</B>: <I>Trim start of the string</I><BR> 
+                <CODE> SELECT  TRIM (LEADING 'a' FROM 'aaa123456789aa') "trim leading" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>123456789aa</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_trim.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>UCASE</CmdName>
+    <Module>String Functions</Module>
+    <Description>Converts all characters in string str to uppercase. (Note: The UCASE function is identical to the UPPER function.) </Description>
+    <Syntax><![CDATA[ <pre> UCASE (str)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT  UCASE ('Ant') "ucase" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>ANT</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ucase.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>UNICODE</CmdName>
+    <Module>String Functions</Module>
+    <Description>Returns an integer containing the Unicode code point of the first character in the string, or NULL if the first character is not a valid encoding.</Description>
+    <Syntax><![CDATA[ <pre> UNICODE(c)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT UNICODE ('#') "unicode" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>35</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_unicode.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>UPPER</CmdName>
+    <Module>String Functions</Module>
+    <Description>Converts all characters in string str to uppercase. (Note:     The UPPER function is identical to the UCASE function.)</Description>
+    <Syntax><![CDATA[ <pre> UPPER (str)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT UPPER ('Ant') "uppercase" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>ANT</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_upper.html</SourceURL>
+</Entry>
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Miscellaneous Functions  ================================================================ -->
+<!-- ============================================================================================ -->
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>COALESCE</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns the first non-NULL expression from a list. At least two expressions must be contained in expression_list, and all expressions must be comparable. The result will be NULL if all the arguments are NULL.</Description>
+    <Syntax><![CDATA[ <pre> COALESCE (expression_list)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <BR> 
+                <CODE> CREATE TABLE coalesce_example (ID INT PRIMARY KEY, A REAL, B REAL);</CODE> <BR>
+                <CODE> INSERT INTO coalesce_example VALUES(1, 100, 80);</CODE> <BR>
+                <CODE> INSERT INTO coalesce_example VALUES(2, NULL, 63);</CODE> <BR>
+                <CODE> INSERT INTO coalesce_example VALUES(3, NULL, NULL);</CODE> <BR>
+                <BR>
+                <CODE> SELECT id, a, b, COALESCE (a, b*1.1, 50.0) "coalesce" FROM coalesce_example;</CODE> <BR>
+                <BR>
+                <B>Result: </B>
+                <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+                    <tr> <th>ID</th> <th>A</th>     <th>B</th>    <th>coalesce </th>         </tr>
+                    <tr> <td>1</td>  <td>100.0</td> <td>80.0</td> <td>100.0 </td>            </tr>
+                    <tr> <td>2</td>  <td>NULL</td>  <td>63.0</td> <td>69.30000305175781 </td></tr>
+                    <tr> <td>3</td>  <td>NULL</td>  <td>NULL</td> <td>50.0 </td>             </tr>
+                </table>
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_coalesce.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_CONNECTION </CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns the id of the current connection.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_CONNECTION</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_CONNECTION "current connection" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>200278</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_connection.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_SCHEMA</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns a string containing the current schema name.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_SCHEMA</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT CURRENT_SCHEMA "current schema" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>SYSTEM</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_schema.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>CURRENT_USER</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns the current user name at the current statement context. This will be user name which is currently at the top of authorization stack.</Description>
+    <Syntax><![CDATA[ <pre> CURRENT_USER</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>showing basic function operation using SYSTEM user</I><BR> 
+                <CODE> SELECT CURRENT_USER "current user" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>SYSTEM</CODE> <BR>
+                <BR>
+            </LI> 
+            <LI> 
+                <B>Example 2</B>: <I>definer-mode procedure declared by USER_A</I><BR> 
+                <PRE>
+CREATE PROCEDURE USER_A.PROC1 LANGUAGE SQLSCRIPT SQL SECURITY DEFINER AS
+BEGIN
+    SELECT CURRENT_USER "current user" FROM DUMMY;
+END;
+
+-- USER_B executing USER_A.PROC1
+CALL USER_A.PROC1;</PRE>
+                <B>Result: </B> <CODE> USER_A</CODE> <BR>
+                <BR>
+            </LI> 
+            <LI> 
+                <B>Example 3</B>: <I>invoker-mode procedure declared by USER_A</I><BR> 
+                <PRE>
+CREATE PROCEDURE USER_A.PROC2 LANGUAGE SQLSCRIPT SQL SECURITY INVOKER AS
+BEGIN
+    SELECT CURRENT_USER "current user" FROM DUMMY;
+END;
+
+-- USER_B is executing USER_A.PROC
+CALL USER_A.PROC2;</PRE>
+                <B>Result: </B> <CODE> USER_B</CODE> <BR>
+                <BR>
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_current_user.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>GROUPING_ID</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>GROUPING_ID function can be used with GROUPING SETS to return multiple levels of aggregations in a single result set. GROUPING_ID returns an integer value to identify which grouping set each row belongs to. Each column in GROUPING_ID must be an element of the GROUPING SETS.</p>
+    <p>GROUPING_ID is assigned by converting the bit vector generated from GROUPING SETS to a decimal number by treating the bit vector as a binary number. When a bit vector is composed, 0 is assigned to each column specified in the GROUPING SETS and 1 otherwise in the order it appears in the GROUPING SETS. By treating the bit vector as a binary number, this function returns an integer value as the output.</p>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> GROUPING_ID(column_name_list)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <BR> 
+                <PRE>
+ SELECT customer, year, product, SUM(sales), GROUPING_ID(customer, year, product)
+ FROM guided_navi_tab
+ GROUP BY GROUPING SETS 
+ (
+   (customer, year, product),
+   (customer, year),
+   (customer, product),
+   (year, product),
+   (customer),
+   (year),
+   (product)
+ )
+                </PRE>
+                <B>Result: </B> <BR> 
+                <PRE>
+ CUSTOMER YEAR PRODUCT SUM(SALES) GROUPING_ID(CUSTOMER,YEAR,PRODUCT)
+ 1 C1 2009 P1 100 0
+ 2 C1 2010 P1 50 0
+ 3 C2 2009 P1 200 0
+ 4 C2 2010 P1 100 0
+ 5 C1 2009 P2 200 0
+ 6 C1 2010 P2 150 0
+ 7 C2 2009 P2 300 0
+ 8 C2 2010 P2 150 0
+ 9 C1 2009 a 300 1
+ 10 C1 2010 a 200 1
+ 11 C2 2009 a 500 1
+ 12 C2 2010 a 250 1
+ 13 C1 a P1 150 2
+ 14 C2 a P1 300 2
+ 15 C1 a P2 350 2
+ 16 C2 a P2 450 2
+ 17 a 2009 P1 300 4
+ 18 a 2010 P1 150 4
+ 19 a 2009 P2 500 4
+ 20 a 2010 P2 300 4
+ 21 C1 a a 500 3
+ 22 C2 a a 750 3
+ 23 a 2009 a 800 5
+ 24 a 2010 a 450 5
+ 25 a a P1 450 6
+ 26 a a P2 800 6
+ </PRE>
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_grouping_id.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>IFNULL</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns the first not NULL input expression.</p>
+    <ul>
+        <li>Returns expression1 if expression1 is not NULL.</li>
+        <li>Returns expression2 if expression1 is NULL.</li>
+        <li>Returns NULL if both input expressions are NULL.</li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> IFNULL (expression1, expression2)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT IFNULL ('diff', 'same') "ifnull" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>diff</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 2</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT IFNULL (NULL, 'same') "ifnull" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>same</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 3</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT IFNULL (NULL, NULL) "ifnull" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>NULL</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_ifnull.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>MAP</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Searches for an expression within a set of search values and returns the corresponding result.</p>
+    <ul>
+        <li>If the expression value is not found and default_result is defined, MAP returns default_result.</li>
+        <li>If the expression value is not found and default_result is not defined, MAP returns NULL.</li>
+    </ul>
+    <b>NOTE:</b> Search values and corresponding results are always provided in search-result pairs.
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> MAP (expression, search1, result1 [, search2, result2] ... [, default_result])</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Get entry 2 from the map</I><BR> 
+                <CODE> SELECT MAP(2, 0, 'Zero', 1, 'One', 2, 'Two', 3, 'Three', 'Default') "map" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>Two</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 2</B>: <I>Out-of-bound value from the map, use the default value</I><BR> 
+                <CODE> SELECT MAP(99, 0, 'Zero', 1, 'One', 2, 'Two', 3, 'Three', 'Default') "map" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>Default</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 3</B>: <I>Out-of-bound value without a default value, return null</I><BR> 
+                <CODE> SELECT MAP(99, 0, 'Zero', 1, 'One', 2, 'Two', 3, 'Three') "map" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>NULL</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_map.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>NULLIF</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>NULLIF compares the values of two input expressions. If the first expression equals the second expression, NULLIF returns NULL.</p>
+    <ul>
+        <li>If expression1 does not equal expression2, NULLIF returns expression1.</li>
+        <li>If expression2 is NULL, NULLIF returns expression1. </li>
+    </ul>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> NULLIF (expression1, expression2)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Not same value, return expression1</I><BR> 
+                <CODE> SELECT NULLIF ('diff', 'same') "nullif" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>diff</CODE> 
+            </LI> 
+            <LI> 
+                <B>Example 2</B>: <I>Same value, so return NULL</I><BR> 
+                <CODE> SELECT NULLIF('same', 'same') "nullif" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>NULL </CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_nullif.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SESSION_CONTEXT</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>
+    <![CDATA[
+    <p>Returns the value of session_variable assigned to the current user.</p>
+    <p>The session_variable accessed can either be predefined or user-defined. Predefined session variables that can be set by the client are 'APPLICATION', 'APPLICATIONUSER', and 'TRACEPROFILE'.</p>
+    <p>Session variables can be defined or modified using <a href="http://help.sap.com/hana/html/sql_set_session.html">SET [SESSION]</a> &lt;variable_name&gt; = &lt;value&gt; command, and unset using <a href="http://help.sap.com/hana/html/sql_unset_session.html">UNSET [SESSION]</a> &lt;variable_name&gt;.</p>
+    <p>SESSION_CONTEXT returns an NVARCHAR with a maximum length of 512 characters.</p>
+    ]]>
+    </Description>
+    <Syntax><![CDATA[ <pre> SESSION_CONTEXT(session_variable)</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Read session variables</I><BR> 
+                <CODE> SELECT SESSION_CONTEXT('APPLICATION') "session context" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>HDBStudio</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_session_context.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SESSION_USER</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns the user name of the current session.</Description>
+    <Syntax><![CDATA[ <pre> SESSION_USER</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>example showing basic function operation using SYSTEM user</I><BR> 
+                <CODE> SELECT SESSION_USER "session user" FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>SYSTEM</CODE> <BR>
+                <BR>
+            </LI> 
+            <LI> 
+                <B>Example 2</B>: <I>definer-mode procedure declared by USER_A</I><BR> 
+                <PRE>
+CREATE PROCEDURE USER_A.PROC1 LANGUAGE SQLSCRIPT SQL SECURITY DEFINER AS
+BEGIN
+    SELECT SESSION_USER "session user" FROM DUMMY;
+END;
+
+-- USER_B is executing USER_A.PROC
+CALL USER_A.PROC1; </PRE>
+                <B>Result: </B> <CODE> USER_B</CODE> <BR>
+                <BR>
+            </LI> 
+            <LI> 
+                <B>Example 3</B>: <I>invoker-mode procedure declared by USER_A</I><BR> 
+                <PRE>
+CREATE PROCEDURE USER_A.PROC2 LANGUAGE SQLSCRIPT SQL SECURITY INVOKER AS
+BEGIN
+    SELECT SESSION_USER "session user" FROM DUMMY;
+END;
+
+-- USER_B is executing USER_A.PROC
+CALL USER_A.PROC2; </PRE>
+                <B>Result: </B> <CODE> USER_B</CODE> <BR>
+                <BR>
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_session_user.html</SourceURL>
+</Entry>
+
+<!-- ============================ -->
+<Entry>
+    <CmdName>SYSUUID</CmdName>
+    <Module>Miscellaneous Functions</Module>
+    <Description>Returns the SYSUUID of the connected SAP HANA instance.</Description>
+    <Syntax><![CDATA[ <pre> SYSUUID</pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <UL> 
+            <LI> 
+                <B>Example 1</B>: <I>Simple example</I><BR> 
+                <CODE> SELECT SYSUUID FROM DUMMY;</CODE> <BR>
+                <B>Result: </B> <CODE>4DE3CD576C79511BE10000000A3C2220</CODE> 
+            </LI> 
+        </UL> 
+        ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/sql_function_sysuuid.html</SourceURL>
+</Entry>
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Window Functions  ======================================================================= -->
+<!-- ============================================================================================ -->
+
+<!-- ====NOTE: RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG has the same text, so change all ======================== -->
+<Entry>
+    <CmdName>RANK</CmdName>
+    <Module>Window Functions</Module>
+    <Description>
+    <![CDATA[
+    <BR>
+    The window function let users divide result sets of a query (or a logical partition of a query) into groups of rows called window partition. <br/>
+    A window partition is specified by one or more expressions in the OVER clause. <br/>
+    Window functions such as RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG must have ORDER BY clause in the OVER clause. <br/>
+    Result sets are first partitioned as specified by PARTITION BY clause, and then sorted by ORDER BY clause specification within the window partition. <br/>
+    Finally window functions are applied to each row within window partition boundaries.<br/>
+    Note that ORDER BY clause in OVER clause is only used to evaluate window function so that the order of resulting rows is non-deterministic if not specified by ORDER BY for SELECT. <br/>
+
+    <BR>
+    <FONT SIZE="3"><B>RANK()</B></FONT><BR>
+    Returns rank of a row within a partition, starting from 1. Returns duplicate values in the ranking sequence when there are ties between values.<BR>
+
+    <BR>
+    <FONT SIZE="3"><B>DENSE_RANK()</B></FONT><BR>
+    Returns ranking values without gaps.<BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>ROW_NUMBER()</B></FONT><BR>
+    Returns unique row number within a partition. p <BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>LEAD ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows after current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+
+    <BR>
+    <FONT SIZE="3"><B>LAG ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows before current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+    ]]>
+    </Description>
+    <Syntax>
+    <![CDATA[
+    <h3>Syntax:</h3>
+    <pre>
+ &lt;window_fuction&gt;             ::= &lt;window_function_type&gt; OVER ( [ PARTITION BY &lt;expression&gt;, ...] &lt;window_order_by_clause&gt;, ... ) 
+ &lt;window_function_type&gt;       ::= RANK() | DENSE_RANK() | ROW_NUMBER() | &lt;lead_lag_function&gt;
+ &lt;lead_lag_function&gt;          ::= { LEAD | LAG } ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )
+ &lt;window_order_by_clause&gt;     ::= ORDER BY {&lt;window_order_by_expression&gt;}
+ &lt;window_order_by_expression&gt; ::= &lt;expression&gt; [ASC | DESC] [NULLS FIRST | NULLS LAST ]
+    </pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <PRE>
+ create table T (class char(10), val int, offset int);
+ insert into T values('A', 1, 1);
+ insert into T values('A', 3, 3);
+ insert into T values('A', 5, null);
+ insert into T values('A', 5, 2);
+ insert into T values('A', 10, 0);
+ insert into T values('B', 1, 3);
+ insert into T values('B', 1, 1);
+ insert into T values('B', 7, 1);
+ 
+ select class, val, offset,
+  ROW_NUMBER()          over (partition by class order by val) as row_num,
+  RANK()                over (partition by class order by val) as rank,
+  DENSE_RANK()          over (partition by class order by val) as dense_rank,
+  LEAD(val)             over (partition by class order by val) as lead,
+  LEAD(val,offset,-val) over (partition by class order by val) as lead2,
+  LAG(val)              over (partition by class order by val) as lag,
+  LAG(val,offset,-val)  over (partition by class order by val) as lag2
+ from T;
+        </PRE>
+        The result of the query is shown below.
+        <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+            <tr bgcolor="#BFBFBF"> <td>class</td><td>val</td><td>offset </td><td>row_num</td><td>rank</td><td>dense_rank</td><td>lead</td><td>lead2</td><td>lag</td><td>lag2 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>3 </td><td>3 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>3 </td><td>3 </td><td>2 </td><td>2 </td><td>2 </td><td>5 </td><td>10 </td><td>1 </td><td>-3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>null </td><td>3 </td><td>3 </td><td>3 </td><td>5 </td><td>-5 </td><td>3 </td><td>-5 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>2 </td><td>4 </td><td>3 </td><td>3 </td><td>10 </td><td>-5 </td><td>5 </td><td>3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>10 </td><td>0 </td><td>5 </td><td>5 </td><td>4 </td><td>null</td><td>10 </td><td>5 </td><td>10 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>3 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>-1 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>1 </td><td>2 </td><td>1 </td><td>1 </td><td>7 </td><td>7 </td><td>1 </td><td>1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>7 </td><td>1 </td><td>3 </td><td>3 </td><td>2 </td><td>null</td><td>-7 </td><td>1 </td><td>1 </td></tr>
+        </table>
+    ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/_esql_functions_window.html</SourceURL>
+</Entry>
+
+<!-- ====NOTE: RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG has the same text, so change all ======================== -->
+<Entry>
+    <CmdName>DENSE_RANK</CmdName>
+    <Module>Window Functions</Module>
+    <Description>
+    <![CDATA[
+    <BR>
+    The window function let users divide result sets of a query (or a logical partition of a query) into groups of rows called window partition. <br/>
+    A window partition is specified by one or more expressions in the OVER clause. <br/>
+    Window functions such as RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG must have ORDER BY clause in the OVER clause. <br/>
+    Result sets are first partitioned as specified by PARTITION BY clause, and then sorted by ORDER BY clause specification within the window partition. <br/>
+    Finally window functions are applied to each row within window partition boundaries.<br/>
+    Note that ORDER BY clause in OVER clause is only used to evaluate window function so that the order of resulting rows is non-deterministic if not specified by ORDER BY for SELECT. <br/>
+
+    <BR>
+    <FONT SIZE="3"><B>RANK()</B></FONT><BR>
+    Returns rank of a row within a partition, starting from 1. Returns duplicate values in the ranking sequence when there are ties between values.<BR>
+
+    <BR>
+    <FONT SIZE="3"><B>DENSE_RANK()</B></FONT><BR>
+    Returns ranking values without gaps.<BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>ROW_NUMBER()</B></FONT><BR>
+    Returns unique row number within a partition. p <BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>LEAD ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows after current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+
+    <BR>
+    <FONT SIZE="3"><B>LAG ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows before current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+    ]]>
+    </Description>
+    <Syntax>
+    <![CDATA[
+    <h3>Syntax:</h3>
+    <pre>
+ &lt;window_fuction&gt;             ::= &lt;window_function_type&gt; OVER ( [ PARTITION BY &lt;expression&gt;, ...] &lt;window_order_by_clause&gt;, ... ) 
+ &lt;window_function_type&gt;       ::= RANK() | DENSE_RANK() | ROW_NUMBER() | &lt;lead_lag_function&gt;
+ &lt;lead_lag_function&gt;          ::= { LEAD | LAG } ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )
+ &lt;window_order_by_clause&gt;     ::= ORDER BY {&lt;window_order_by_expression&gt;}
+ &lt;window_order_by_expression&gt; ::= &lt;expression&gt; [ASC | DESC] [NULLS FIRST | NULLS LAST ]
+    </pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <PRE>
+ create table T (class char(10), val int, offset int);
+ insert into T values('A', 1, 1);
+ insert into T values('A', 3, 3);
+ insert into T values('A', 5, null);
+ insert into T values('A', 5, 2);
+ insert into T values('A', 10, 0);
+ insert into T values('B', 1, 3);
+ insert into T values('B', 1, 1);
+ insert into T values('B', 7, 1);
+ 
+ select class, val, offset,
+  ROW_NUMBER()          over (partition by class order by val) as row_num,
+  RANK()                over (partition by class order by val) as rank,
+  DENSE_RANK()          over (partition by class order by val) as dense_rank,
+  LEAD(val)             over (partition by class order by val) as lead,
+  LEAD(val,offset,-val) over (partition by class order by val) as lead2,
+  LAG(val)              over (partition by class order by val) as lag,
+  LAG(val,offset,-val)  over (partition by class order by val) as lag2
+ from T;
+        </PRE>
+        The result of the query is shown below.
+        <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+            <tr bgcolor="#BFBFBF"> <td>class</td><td>val</td><td>offset </td><td>row_num</td><td>rank</td><td>dense_rank</td><td>lead</td><td>lead2</td><td>lag</td><td>lag2 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>3 </td><td>3 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>3 </td><td>3 </td><td>2 </td><td>2 </td><td>2 </td><td>5 </td><td>10 </td><td>1 </td><td>-3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>null </td><td>3 </td><td>3 </td><td>3 </td><td>5 </td><td>-5 </td><td>3 </td><td>-5 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>2 </td><td>4 </td><td>3 </td><td>3 </td><td>10 </td><td>-5 </td><td>5 </td><td>3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>10 </td><td>0 </td><td>5 </td><td>5 </td><td>4 </td><td>null</td><td>10 </td><td>5 </td><td>10 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>3 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>-1 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>1 </td><td>2 </td><td>1 </td><td>1 </td><td>7 </td><td>7 </td><td>1 </td><td>1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>7 </td><td>1 </td><td>3 </td><td>3 </td><td>2 </td><td>null</td><td>-7 </td><td>1 </td><td>1 </td></tr>
+        </table>
+    ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/_esql_functions_window.html</SourceURL>
+</Entry>
+
+<!-- ====NOTE: RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG has the same text, so change all ======================== -->
+<Entry>
+    <CmdName>ROW_NUMBER</CmdName>
+    <Module>Window Functions</Module>
+    <Description>
+    <![CDATA[
+    <BR>
+    The window function let users divide result sets of a query (or a logical partition of a query) into groups of rows called window partition. <br/>
+    A window partition is specified by one or more expressions in the OVER clause. <br/>
+    Window functions such as RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG must have ORDER BY clause in the OVER clause. <br/>
+    Result sets are first partitioned as specified by PARTITION BY clause, and then sorted by ORDER BY clause specification within the window partition. <br/>
+    Finally window functions are applied to each row within window partition boundaries.<br/>
+    Note that ORDER BY clause in OVER clause is only used to evaluate window function so that the order of resulting rows is non-deterministic if not specified by ORDER BY for SELECT. <br/>
+
+    <BR>
+    <FONT SIZE="3"><B>RANK()</B></FONT><BR>
+    Returns rank of a row within a partition, starting from 1. Returns duplicate values in the ranking sequence when there are ties between values.<BR>
+
+    <BR>
+    <FONT SIZE="3"><B>DENSE_RANK()</B></FONT><BR>
+    Returns ranking values without gaps.<BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>ROW_NUMBER()</B></FONT><BR>
+    Returns unique row number within a partition. p <BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>LEAD ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows after current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+
+    <BR>
+    <FONT SIZE="3"><B>LAG ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows before current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+    ]]>
+    </Description>
+    <Syntax>
+    <![CDATA[
+    <h3>Syntax:</h3>
+    <pre>
+ &lt;window_fuction&gt;             ::= &lt;window_function_type&gt; OVER ( [ PARTITION BY &lt;expression&gt;, ...] &lt;window_order_by_clause&gt;, ... ) 
+ &lt;window_function_type&gt;       ::= RANK() | DENSE_RANK() | ROW_NUMBER() | &lt;lead_lag_function&gt;
+ &lt;lead_lag_function&gt;          ::= { LEAD | LAG } ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )
+ &lt;window_order_by_clause&gt;     ::= ORDER BY {&lt;window_order_by_expression&gt;}
+ &lt;window_order_by_expression&gt; ::= &lt;expression&gt; [ASC | DESC] [NULLS FIRST | NULLS LAST ]
+    </pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <PRE>
+ create table T (class char(10), val int, offset int);
+ insert into T values('A', 1, 1);
+ insert into T values('A', 3, 3);
+ insert into T values('A', 5, null);
+ insert into T values('A', 5, 2);
+ insert into T values('A', 10, 0);
+ insert into T values('B', 1, 3);
+ insert into T values('B', 1, 1);
+ insert into T values('B', 7, 1);
+ 
+ select class, val, offset,
+  ROW_NUMBER()          over (partition by class order by val) as row_num,
+  RANK()                over (partition by class order by val) as rank,
+  DENSE_RANK()          over (partition by class order by val) as dense_rank,
+  LEAD(val)             over (partition by class order by val) as lead,
+  LEAD(val,offset,-val) over (partition by class order by val) as lead2,
+  LAG(val)              over (partition by class order by val) as lag,
+  LAG(val,offset,-val)  over (partition by class order by val) as lag2
+ from T;
+        </PRE>
+        The result of the query is shown below.
+        <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+            <tr bgcolor="#BFBFBF"> <td>class</td><td>val</td><td>offset </td><td>row_num</td><td>rank</td><td>dense_rank</td><td>lead</td><td>lead2</td><td>lag</td><td>lag2 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>3 </td><td>3 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>3 </td><td>3 </td><td>2 </td><td>2 </td><td>2 </td><td>5 </td><td>10 </td><td>1 </td><td>-3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>null </td><td>3 </td><td>3 </td><td>3 </td><td>5 </td><td>-5 </td><td>3 </td><td>-5 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>2 </td><td>4 </td><td>3 </td><td>3 </td><td>10 </td><td>-5 </td><td>5 </td><td>3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>10 </td><td>0 </td><td>5 </td><td>5 </td><td>4 </td><td>null</td><td>10 </td><td>5 </td><td>10 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>3 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>-1 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>1 </td><td>2 </td><td>1 </td><td>1 </td><td>7 </td><td>7 </td><td>1 </td><td>1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>7 </td><td>1 </td><td>3 </td><td>3 </td><td>2 </td><td>null</td><td>-7 </td><td>1 </td><td>1 </td></tr>
+        </table>
+    ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/_esql_functions_window.html</SourceURL>
+</Entry>
+
+<!-- ====NOTE: RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG has the same text, so change all ======================== -->
+<Entry>
+    <CmdName>LEAD</CmdName>
+    <Module>Window Functions</Module>
+    <Description>
+    <![CDATA[
+    <BR>
+    The window function let users divide result sets of a query (or a logical partition of a query) into groups of rows called window partition. <br/>
+    A window partition is specified by one or more expressions in the OVER clause. <br/>
+    Window functions such as RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG must have ORDER BY clause in the OVER clause. <br/>
+    Result sets are first partitioned as specified by PARTITION BY clause, and then sorted by ORDER BY clause specification within the window partition. <br/>
+    Finally window functions are applied to each row within window partition boundaries.<br/>
+    Note that ORDER BY clause in OVER clause is only used to evaluate window function so that the order of resulting rows is non-deterministic if not specified by ORDER BY for SELECT. <br/>
+
+    <BR>
+    <FONT SIZE="3"><B>RANK()</B></FONT><BR>
+    Returns rank of a row within a partition, starting from 1. Returns duplicate values in the ranking sequence when there are ties between values.<BR>
+
+    <BR>
+    <FONT SIZE="3"><B>DENSE_RANK()</B></FONT><BR>
+    Returns ranking values without gaps.<BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>ROW_NUMBER()</B></FONT><BR>
+    Returns unique row number within a partition. p <BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>LEAD ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows after current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+
+    <BR>
+    <FONT SIZE="3"><B>LAG ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows before current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+    ]]>
+    </Description>
+    <Syntax>
+    <![CDATA[
+    <h3>Syntax:</h3>
+    <pre>
+ &lt;window_fuction&gt;             ::= &lt;window_function_type&gt; OVER ( [ PARTITION BY &lt;expression&gt;, ...] &lt;window_order_by_clause&gt;, ... ) 
+ &lt;window_function_type&gt;       ::= RANK() | DENSE_RANK() | ROW_NUMBER() | &lt;lead_lag_function&gt;
+ &lt;lead_lag_function&gt;          ::= { LEAD | LAG } ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )
+ &lt;window_order_by_clause&gt;     ::= ORDER BY {&lt;window_order_by_expression&gt;}
+ &lt;window_order_by_expression&gt; ::= &lt;expression&gt; [ASC | DESC] [NULLS FIRST | NULLS LAST ]
+    </pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <PRE>
+ create table T (class char(10), val int, offset int);
+ insert into T values('A', 1, 1);
+ insert into T values('A', 3, 3);
+ insert into T values('A', 5, null);
+ insert into T values('A', 5, 2);
+ insert into T values('A', 10, 0);
+ insert into T values('B', 1, 3);
+ insert into T values('B', 1, 1);
+ insert into T values('B', 7, 1);
+ 
+ select class, val, offset,
+  ROW_NUMBER()          over (partition by class order by val) as row_num,
+  RANK()                over (partition by class order by val) as rank,
+  DENSE_RANK()          over (partition by class order by val) as dense_rank,
+  LEAD(val)             over (partition by class order by val) as lead,
+  LEAD(val,offset,-val) over (partition by class order by val) as lead2,
+  LAG(val)              over (partition by class order by val) as lag,
+  LAG(val,offset,-val)  over (partition by class order by val) as lag2
+ from T;
+        </PRE>
+        The result of the query is shown below.
+        <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+            <tr bgcolor="#BFBFBF"> <td>class</td><td>val</td><td>offset </td><td>row_num</td><td>rank</td><td>dense_rank</td><td>lead</td><td>lead2</td><td>lag</td><td>lag2 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>3 </td><td>3 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>3 </td><td>3 </td><td>2 </td><td>2 </td><td>2 </td><td>5 </td><td>10 </td><td>1 </td><td>-3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>null </td><td>3 </td><td>3 </td><td>3 </td><td>5 </td><td>-5 </td><td>3 </td><td>-5 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>2 </td><td>4 </td><td>3 </td><td>3 </td><td>10 </td><td>-5 </td><td>5 </td><td>3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>10 </td><td>0 </td><td>5 </td><td>5 </td><td>4 </td><td>null</td><td>10 </td><td>5 </td><td>10 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>3 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>-1 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>1 </td><td>2 </td><td>1 </td><td>1 </td><td>7 </td><td>7 </td><td>1 </td><td>1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>7 </td><td>1 </td><td>3 </td><td>3 </td><td>2 </td><td>null</td><td>-7 </td><td>1 </td><td>1 </td></tr>
+        </table>
+    ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/_esql_functions_window.html</SourceURL>
+</Entry>
+
+<!-- ====NOTE: RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG has the same text, so change all ======================== -->
+<Entry>
+    <CmdName>LAG</CmdName>
+    <Module>Window Functions</Module>
+    <Description>
+    <![CDATA[
+    <BR>
+    The window function let users divide result sets of a query (or a logical partition of a query) into groups of rows called window partition. <br/>
+    A window partition is specified by one or more expressions in the OVER clause. <br/>
+    Window functions such as RANK, DENSE_RANK, ROW_NUMBER, LEAD, LAG must have ORDER BY clause in the OVER clause. <br/>
+    Result sets are first partitioned as specified by PARTITION BY clause, and then sorted by ORDER BY clause specification within the window partition. <br/>
+    Finally window functions are applied to each row within window partition boundaries.<br/>
+    Note that ORDER BY clause in OVER clause is only used to evaluate window function so that the order of resulting rows is non-deterministic if not specified by ORDER BY for SELECT. <br/>
+
+    <BR>
+    <FONT SIZE="3"><B>RANK()</B></FONT><BR>
+    Returns rank of a row within a partition, starting from 1. Returns duplicate values in the ranking sequence when there are ties between values.<BR>
+
+    <BR>
+    <FONT SIZE="3"><B>DENSE_RANK()</B></FONT><BR>
+    Returns ranking values without gaps.<BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>ROW_NUMBER()</B></FONT><BR>
+    Returns unique row number within a partition. p <BR>
+    
+    <BR>
+    <FONT SIZE="3"><B>LEAD ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows after current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+
+    <BR>
+    <FONT SIZE="3"><B>LAG ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )</B></FONT><BR>
+    Returns value of the 'offset' rows before current row. The 'offset' should be non-negative and default is 1. <BR>
+    If the offset crosses boundaries of the partition 'default' value is returned. If the 'default' is not specified null value is returned. <BR>
+    The 'offset' and 'default' are evaluated at current row. <BR>
+    ]]>
+    </Description>
+    <Syntax>
+    <![CDATA[
+    <h3>Syntax:</h3>
+    <pre>
+ &lt;window_fuction&gt;             ::= &lt;window_function_type&gt; OVER ( [ PARTITION BY &lt;expression&gt;, ...] &lt;window_order_by_clause&gt;, ... ) 
+ &lt;window_function_type&gt;       ::= RANK() | DENSE_RANK() | ROW_NUMBER() | &lt;lead_lag_function&gt;
+ &lt;lead_lag_function&gt;          ::= { LEAD | LAG } ( &lt;expression&gt; [, &lt;offset&gt; [, &lt;default_expression&gt;]] )
+ &lt;window_order_by_clause&gt;     ::= ORDER BY {&lt;window_order_by_expression&gt;}
+ &lt;window_order_by_expression&gt; ::= &lt;expression&gt; [ASC | DESC] [NULLS FIRST | NULLS LAST ]
+    </pre>]]></Syntax>
+    <Example> 
+        <![CDATA[ 
+        <PRE>
+ create table T (class char(10), val int, offset int);
+ insert into T values('A', 1, 1);
+ insert into T values('A', 3, 3);
+ insert into T values('A', 5, null);
+ insert into T values('A', 5, 2);
+ insert into T values('A', 10, 0);
+ insert into T values('B', 1, 3);
+ insert into T values('B', 1, 1);
+ insert into T values('B', 7, 1);
+ 
+ select class, val, offset,
+  ROW_NUMBER()          over (partition by class order by val) as row_num,
+  RANK()                over (partition by class order by val) as rank,
+  DENSE_RANK()          over (partition by class order by val) as dense_rank,
+  LEAD(val)             over (partition by class order by val) as lead,
+  LEAD(val,offset,-val) over (partition by class order by val) as lead2,
+  LAG(val)              over (partition by class order by val) as lag,
+  LAG(val,offset,-val)  over (partition by class order by val) as lag2
+ from T;
+        </PRE>
+        The result of the query is shown below.
+        <TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+            <tr bgcolor="#BFBFBF"> <td>class</td><td>val</td><td>offset </td><td>row_num</td><td>rank</td><td>dense_rank</td><td>lead</td><td>lead2</td><td>lag</td><td>lag2 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>3 </td><td>3 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>3 </td><td>3 </td><td>2 </td><td>2 </td><td>2 </td><td>5 </td><td>10 </td><td>1 </td><td>-3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>null </td><td>3 </td><td>3 </td><td>3 </td><td>5 </td><td>-5 </td><td>3 </td><td>-5 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>5 </td><td>2 </td><td>4 </td><td>3 </td><td>3 </td><td>10 </td><td>-5 </td><td>5 </td><td>3 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>A </td><td>10 </td><td>0 </td><td>5 </td><td>5 </td><td>4 </td><td>null</td><td>10 </td><td>5 </td><td>10 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>3 </td><td>1 </td><td>1 </td><td>1 </td><td>1 </td><td>-1 </td><td>null </td><td>-1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>1 </td><td>1 </td><td>2 </td><td>1 </td><td>1 </td><td>7 </td><td>7 </td><td>1 </td><td>1 </td></tr>
+            <tr bgcolor="#F0F0F0"> <td>B </td><td>7 </td><td>1 </td><td>3 </td><td>3 </td><td>2 </td><td>null</td><td>-7 </td><td>1 </td><td>1 </td></tr>
+        </table>
+    ]]> 
+    </Example> 
+    <SourceURL>http://help.sap.com/hana/html/_esql_functions_window.html</SourceURL>
+</Entry>
+
+
+
+
+
+</Entries>
+<!-- ============================================================================================ -->
+<!-- == END: ENTRIES ============================================================================ -->
+<!-- ============================================================================================ -->
+
+
+
+
+<!--
+===========================================================
+== Table 1: Table 1. Reserved Words
+===========================================================
+ALL
+ALTER
+AS
+BEFORE
+BEGIN
+BOTH
+CASE
+CHAR
+CONDITION
+CONNECT
+CROSS
+CUBE
+CURRENT_CONNECTION
+CURRENT_DATE
+CURRENT_SCHEMA
+CURRENT_TIME
+CURRENT_TIMESTAMP
+CURRENT_USER
+CURRENT_UTCDATE
+CURRENT_UTCTIME
+CURRENT_UTCTIMESTAMP
+CURRVAL
+CURSOR
+DECLARE
+DISTINCT
+ELSE
+ELSEIF
+ELSIF
+END
+EXCEPT
+EXCEPTION
+EXEC
+FOR
+FROM
+FULL
+GROUP
+HAVING
+IF
+IN
+INNER
+INOUT
+INTERSECT
+INTO
+IS
+JOIN
+LEADING
+LEFT
+LIMIT
+LOOP
+MINUS
+NATURAL
+NEXTVAL
+NULL
+ON
+ORDER
+OUT
+PRIOR
+RETURN
+RETURNS
+REVERSE
+RIGHT
+ROLLUP
+ROWID
+SELECT
+SET
+SQL
+START
+SYSDATE
+SYSTIME
+SYSTIMESTAMP
+SYSUUID
+TOP
+TRAILING
+UNION
+USING
+UTCDATE
+UTCTIME
+UTCTIMESTAMP
+VALUES
+WHEN
+WHERE
+WHILE
+WITH
+-->

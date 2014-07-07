@@ -1,0 +1,5619 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE doc [
+<!ENTITY sqlwCommands SYSTEM "sqlwCommands_tooltip_provider.xml">
+]>
+
+<!-- 
+==============================================================================================
+== BEGIN: README =============================================================================
+==============================================================================================
+If you add or change content of this file, please send the file or the changed/added entries to goran_schwarz@hotmail.com
+If you do, it will be part of the next release...
+
+Note 1: You can use HTML tabs in any of the tags if you think the output will look nicer.
+Note 2: Please also use <![CDATA[]]> tag in <Syntax> and the <Example> tag, otherwise the parser will look for tags in the Syntax and Example tags.
+
+Example: <Syntax><![CDATA[<pre>Some syntax description</pre>]]></Syntax>
+
+
+Description of tags:
+=======================================================
+<Entry>
+    <CmdName>     Used to match the current word against                                               </CmdName>
+    <Module>      Just a description of what "section" this belongs to (choose a prober section)       </Module>
+    <FromVersion> In what version was this command introduced                                          </FromVersion>   OPTIONAL
+    <Description> Descriptive text of what the command does                                            </Description>
+    <Syntax>      The Syntax the command can have                                                      </Syntax>
+    <Example>     If you want to provide a small example, or several ones...                           </Example>       OPTIONAL
+    <SeeAlso>     References to other commands                                                         </SeeAlso>       OPTIONAL
+</Entry>
+
+
+
+Example:
+=======================================================
+<Entry>
+    <CmdName>selectxxx</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>Get information from a table</Description>
+    <Syntax><![CDATA[<pre>select [all|distinct] select_list [from]...</pre>]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: <I>selects all columns from tab1 with <B>no</B> restrictions of the rows returned</I><BR>
+       <CODE>select * from tab1</CODE>
+   </LI>
+   <LI>
+       <B>Example 2</B>: <I>selects distinct values of column 'c1' from tab1 with restrictions in rows</I><BR>
+       <CODE>select distinct c1 from tab1 where c2 = 'val'</CODE>
+   </LI>
+   <LI>
+       <B>Example 3</B>: <I><FONT COLOR="green">Some other description, but in color green this time</FONT> then black again...</I><BR>
+       <CODE>select 'dummy value' as dummyColOne</CODE>
+   </LI>
+</UL>
+]]>
+    </Example>
+</Entry>
+
+==============================================================================================
+== END: README ===============================================================================
+==============================================================================================
+-->
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == START: ENTRIES ========================================================================== -->
+<!-- ============================================================================================ -->
+<Entries>
+
+<!-- ============================================================================================ -->
+<!-- == include: SQL Window Commands ============================================================ -->
+<!-- ============================================================================================ -->
+&sqlwCommands;
+
+
+<!-- ============================================================================================ -->
+<!-- == ESP ===================================================================================== -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>xp_cmdshell</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_cmdshell - Executes a native operating system command on the host system running Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_cmdshell command [, no_output]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_deletemail</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_deletemail - Deletes a message from the Adaptive Server message inbox. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_deletemail [msg_id]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_enumgroups</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_enumgroups - Displays groups for a specified Windows NT domain.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_enumgroups [domain_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_findnextmsg</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_findnextmsg - Retrieves the next message identifier from the Adaptive Server message inbox. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_findnextmsg @msg_id = @msg_id output [, type] [, unread_only = {true | false}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_logevent</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_logevent - Provides for logging a user-defined event in the Windows NT Event Log from within Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_logevent error_number, message [, type]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_readmail</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_readmail - Reads a message from the Adaptive Server message inbox. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_readmail [msg_id]
+     [, recipients output]
+     [, sender output]
+     [, date_received output]
+     [, subject output]
+     [, cc output]
+     [, message output]
+     [, attachments output]
+     [, suppress_attach = {true | false}]
+     [, peek = {true | false}]
+     [, unread = {true | false}]
+     [, msg_length output]
+     [, bytes_to_skip [output]]
+     [, type [output]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_sendmail</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_sendmail - Sends a message to the specified recipients. The message is either text or the results of a Transact-SQL query. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_sendmail recipient [; recipient] . . .
+     [, subject]
+     [, cc_recipient] . . .
+     [, bcc_recipient] . . .
+     [, {query | message}]
+     [, attachname]
+     [, attach_result = {true | false}]
+     [, echo_error = {true | false}]
+     [, include_file [, include_file] . . .]
+     [, no_column_header = {true | false}]
+     [, no_output = {true | false}]
+     [, width]
+     [, separator]
+     [, dbuser]
+     [, dbname]
+     [, type]
+     [, include_query = {true | false}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_startmail</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_startmail - Starts an Adaptive Server mail session. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_startmail [mail_user] [, mail_password]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>xp_stopmail</CmdName>
+    <Module>ESP</Module>
+    <Description>xp_stopmail - Stops an Adaptive Server mail session. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  xp_stopmail
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == System Procedures ======================================================================= -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>sp_activeroles</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_activeroles - Displays all active roles.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_activeroles [expand_down]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_add_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_add_qpgroup - Adds an abstract plan group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_add_qpgroup new_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_add_resource_limit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_add_resource_limit - Creates a limit on the number of server resources that can be used by an Adaptive Server login and/or an application to execute a query, query batch, or transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_add_resource_limit name, appname, rangename,
+     limittype, limitvalue [, enforced [, action
+     [,scope ]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_add_time_range</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_add_time_range - Adds a named time range to an Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_add_time_range name, startday, endday,
+     starttime, endtime
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addalias</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addalias - Allows an Adaptive Server user to be known in a database as another user.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addalias loginame, name_in_db
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addauditrecord</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addauditrecord - Allows users to enter user-defined audit records (comments) into the audit trail.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addauditrecord [text [, db_name [, obj_name [, owner_name [, dbid [, objid]]]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addaudittable</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addaudittable - Adds another system audit table after auditing is installed.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addaudittable devname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addengine</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addengine - Adds an engine to an existing engine group or, if the group does not exist, creates an engine group and adds the engine.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addengine engine_number, engine_group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addexeclass</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addexeclass - Creates or updates a user-defined execution class that you can bind to client applications, logins, and stored procedures.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addexeclass classname, priority, timeslice, engine_group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addextendedproc</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addextendedproc - Creates an extended stored procedure (ESP) in the master database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addextendedproc esp_name, dll_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addexternlogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addexternlogin - Creates an alternate login account and password to use when communicating with a remote server through Component Integration Services.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addexternlogin server, loginname, externname [,externpassword]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addgroup - Adds a group to a database. Groups are used as collective names in granting and revoking privileges.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addgroup grpname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addlanguage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addlanguage - Defines the names of the months and days for an alternate language and its date format.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addlanguage language, alias, months, shortmons, days, datefmt, datefirst
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addlogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addlogin - Adds a new user account to Adaptive Server; specifies the password expiration interval, the minimum password length, and the maximum number of failed logins allowed for a specified login at creation.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addlogin loginame, passwd [, defdb] [, deflanguage ] [, fullname ] [, passwdexp ] [, minpwdlen ] [, maxfailedlogins ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addmessage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addmessage - Adds user-defined messages to sysusermessages for use by stored procedure print and raiserror calls and by sp_bindmsg.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addmessage message_num, message_text [, language [, with_log [, replace]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addobjectdef</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addobjectdef - Specifies the mapping between a local table and an external storage location.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addobjectdef tablename, "objectdef" [,"objecttype"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addremotelogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addremotelogin - Authorizes a new remote server user by adding an entry to master.dbo.sysremotelogins.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addremotelogin remoteserver [, loginame [, remotename] ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addsegment</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addsegment - Defines a segment on a database device in a database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addsegment segname, dbname, devname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addserver</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addserver - Defines a remote server, or defines the name of the local server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addserver lname [, class [, pname]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addthreshold</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addthreshold - Creates a threshold to monitor space on a database segment. When free space on the segment falls below the specified level, Adaptive Server executes the associated stored procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_addthreshold dbname, segname, free_space, proc_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addtype</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addtype - Creates a user-defined datatype. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_addtype typename, phystype [(length) | (precision [, scale])] [, "identity" | nulltype]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_addumpdevice</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_addumpdevice - Adds a dump device to Adaptive Server. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_addumpdevice {"tape" | "disk"}, logicalname, physicalname [, tapesize]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_adduser</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_adduser - Adds a new user to the current database. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_adduser loginame [, name_in_db [, grpname]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_altermessage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_altermessage - Enables and disables the logging of a system-defined or user-defined message in the Adaptive Server error log.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_altermessage message_id, parameter, parameter_value
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_audit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_audit - Allows a System Security Officer to configure auditing options. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_audit option, login_name, object_name [,setting]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_autoconnect</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_autoconnect - Defines a passthrough connection to a remote server for a specific user, which allows the named user to enter passthrough mode automatically at login.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_autoconnect server, {true|false} [, loginame]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_bindcache</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_bindcache - Binds a database, table, index, text object, or image object to a data cache.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_bindcache cachename, dbname
+     [, [ownername.]tablename
+     [, indexname | "text only"]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_bindefault</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_bindefault - Binds a user-defined default to a column or user-defined datatype.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_bindefault defname, objname [, futureonly]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_bindexeclass</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_bindexeclass - Associates an execution class with a client application, login, or stored procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_bindexeclass "object_name", "object_type",
+     "scope", "classname"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_bindmsg</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_bindmsg - Binds a user message to a referential integrity constraint or check constraint.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_bindmsg constrname, msgid
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_bindrule</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_bindrule - Binds a rule to a column or user-defined datatype. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_bindrule rulename, objname [, futureonly]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_cacheconfig</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_cacheconfig - Creates, configures, reconfigures, and drops data caches, and provides information about them.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_cacheconfig [cachename [,"cache_size[P|K|M|G]" ]
+     [,logonly | mixed ] [,strict | relaxed ] ]
+     [, "cache_partition=[1|2|4|8|16|32|64]"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_cachestrategy</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_cachestrategy - Enables or disables prefetching (large I/O) and MRU cache replacement strategy for a table, index, text object, or image object.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_cachestrategy dbname, [ownername.]tablename
+     [, indexname | "text only" | "table only"
+     [, { prefetch | mru }, { "on" | "off"}]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_changedbowner</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_changedbowner - Changes the owner of a user database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_changedbowner loginame [, true ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_changegroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_changegroup - Changes a user's group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_changegroup grpname, username
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_checknames</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_checknames - Checks the current database for names that contain characters not in the 7-bit ASCII set.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_checknames
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_checkreswords</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_checkreswords - Detects and displays identifiers that are Transact-SQL reserved words.  Checks server names, device names, database names, segment names, user-defined datatypes, object names, column names, user names, login names, and remote login names.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_checkreswords [user_name_param]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_checksource</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_checksource - Checks for the existence of the source text of the compiled object.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_checksource [objname [, tabname [, username]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_chgattribute</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_chgattribute - Changes the max_rows_per_page, fillfactor, reservepagegap, or exp_row_size value for future space allocations of a table or an index; sets the concurrency_opt_threshold for a table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_chgattribute objname, {"max_rows_per_page" |
+     "fillfactor" | "reservepagegap" | "exp_row_size"
+     concurrency_opt_threshold }, optvalue
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_clearpsexe</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_clearpsexe - Clears the execution attributes of an Adaptive Server session that was set by sp_setpsexe.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_clearpsexe spid, exeattr
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_clearstats</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_clearstats - Initiates a new accounting period for all server users or for a specified user. Prints statistics for the previous period by executing sp_reportstats.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_clearstats [loginame]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_cmp_all_qplans</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_cmp_all_qplans - Compares all abstract plans in two abstract plan groups.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_cmp_all_qplans group1, group2 [, mode]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_cmp_qplans</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_cmp_qplans - Compares two abstract plans.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_cmp_qplans id1, id2
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_column_privileges</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_column_privileges - Returns permissions information for one or more columns in a table or view.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_column_privileges table_name [, table_owner [, table_qualifier [, column_name]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_columns</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_columns - Returns information about the type of data that can be stored in one or more columns.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_columns table_name [, table_owner ] [, table_qualifier] [, column_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_commonkey</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_commonkey - Defines a common key-columns that are frequently joined-between two tables or views.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_commonkey tabaname, tabbname, col1a, col1b [, col2a, col2b, ..., col8a, col8b]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_companion</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_companion - Performs cluster operations such as configuring Adaptive Server as a secondary companion in a high availability system and moving a companion server from one failover mode to another. sp_companion is run from the secondary companion.
+</Description>
+    <Syntax><![CDATA[<pre>
+  sp_companion
+     [server_name
+     {,configure
+             [,{with_proxydb | NULL}]
+             [,srvlogin]
+             [,server_password]
+             [,cluster_login]
+             [,cluspassword]]
+     | drop
+     | suspend
+     | resume
+     | prepare_failback
+     | do_advisory}
+                     {, all
+                     | help
+                     | group attribute_name
+                     | base attribute_name}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_configure</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_configure - Displays or changes configuration parameters. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_configure [configname [, configvalue] | group_name | non_unique_parameter_fragment] ["p|P|k|K|m|M|g|G"]]
+
+     Or,
+
+  sp_configure "configuration file", 0, {"write" | "read" | "verify" | "restore" } "file_name"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_copy_all_qplans</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_copy_all_qplans - Copies all plans for one abstract plan group to another group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_copy_all_qplans src_group, dest_group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_copy_qplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_copy_qplan - Copies one abstract plan to an abstract plan group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_copy_qplan src_id, dest_group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_countmetadata</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_countmetadata - Displays the number of indexes, objects, or databases in Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_countmetadata "configname" [, dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_cursorinfo</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_cursorinfo - Reports information about a specific cursor or all cursors that are active for your session.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_cursorinfo [{cursor_level | null}] [, cursor_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_databases</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_databases - Returns a list of databases in Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_databases
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_datatype_info</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_datatype_info - Returns information about a particular ODBC datatype or about all ODBC datatypes.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_datatype_info [data_type]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dboption</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dboption - Displays or changes database options.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dboption [dbname, optname, {true | false}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbrecovery_order</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dbrecovery_order - Specifies the order in which user databases are recovered and lists the user-defined recovery order of a database or all databases.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbrecovery_order [database_name [, rec_order [, force]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbremap</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dbremap - Forces Adaptive Server to recognize changes made by alter database.  Run this procedure only when instructed to do so by an Adaptive Server message.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbremap dbname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_defaultloc</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_defaultloc - Defines a default storage location for objects in a local database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_defaultloc dbname, {"defaultloc"| NULL} [, "defaulttype"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_depends</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_depends - Displays information about database object dependencies-the view(s), trigger(s), and procedure(s) in the database that depend on a specified table or view, and the table(s) and view(s) in the database on which the specified view, trigger, or procedure depends.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_depends objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_deviceattr</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_deviceattr - Changes the dsync setting of an existing database device file. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_deviceattr logicalname, optname, optvalue
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_diskdefault</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_diskdefault - Specifies whether or not a database device can be used for database storage if the user does not specify a database device or specifies default with the create database or alter database commands.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_diskdefault logicalname, {defaulton | defaultoff}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_displayaudit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_displayaudit - Displays the status of audit options. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_displayaudit ["procedure" | "object" | "login" | "database" | "global" | "default_object" | "default_procedure" [, "name"]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_displaylevel</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_displaylevel - Sets or shows which Adaptive Server configuration parameters appear in sp_configure output.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_displaylevel [loginame [, level]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_displaylogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_displaylogin - Displays information about a login account. Also displays information about the hierarchy tree above or below the login account when you so specify.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_displaylogin [loginame [, expand_up | expand_down]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_displayroles</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_displayroles - Displays all roles granted to another role, or displays the entire hierarchy tree of roles in table format.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_displayroles [grantee_name [, mode]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_drop_all_qplans</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_drop_all_qplans - Deletes all abstract plans in an abstract plan group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_drop_all_qplans name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_drop_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_drop_qpgroup - Drops an abstract plan group. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_drop_qpgroup group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_drop_qplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_drop_qplan - Drops an abstract plan.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_drop_qplan id
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_drop_resource_limit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_drop_resource_limit - Removes one or more resource limits from Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_drop_resource_limit {name, appname } [, rangename, limittype, enforced, action, scope]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_drop_time_range</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_drop_time_range - Removes a user-defined time range from Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_drop_time_range name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropalias</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropalias - Removes the alias user name identity established with sp_addalias.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropalias loginame
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropdevice</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropdevice - Drops an Adaptive Server database device or dump device.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropdevice logicalname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropengine</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropengine - Drops an engine from a specified engine group or, if the engine is the last one in the group, drops the engine group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropengine engine_number, engine_group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropexeclass</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropexeclass - Drops a user-defined execution class.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropexeclass classname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropextendedproc</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropextendedproc - Removes an extended stored procedure (ESP).</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropextendedproc esp_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropexternlogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropexternlogin - Drops the definition of a remote login previously defined by sp_addexternlogin.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropexternlogin remote_server [, login_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropglockpromote</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropglockpromote - Removes lock promotion values from a table or database. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropglockpromote {"database" | "table"}, objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropgroup - Drops a group from a database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropgroup grpname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropkey</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropkey - Removes from the syskeys table a key that had been defined using sp_primarykey, sp_foreignkey, or sp_commonkey.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropkey keytype, tabname [, deptabname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_droplanguage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_droplanguage - Drops an alternate language from the server and removes its row from master.dbo.syslanguages.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_droplanguage language [, dropmessages]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_droplogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_droplogin - Drops an Adaptive Server user login by deleting the user's entry from master.dbo.syslogins.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_droplogin loginame
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropmessage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropmessage - Drops user-defined messages from sysusermessages.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropmessage message_num [, language]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropobjectdef</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropobjectdef - Deletes the external storage mapping provided for a local object.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropobjectdef "object_name"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropremotelogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropremotelogin - Drops a remote user login. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropremotelogin remoteserver [, loginame [, remotename] ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_droprowlockpromote</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_droprowlockpromote - Removes row lock promotion threshold values from a database or table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_droprowlockpromote {"database" | "table"}, objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropsegment</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropsegment - Drops a segment from a database or unmaps a segment from a particular database device.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropsegment segname, dbname [, device]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropserver</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropserver - Drops a server from the list of known servers or drops remote logins and external logins in the same operation.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropserver server [, droplogins]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropthreshold</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropthreshold - Removes a free-space threshold from a segment.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropthreshold dbname, segname, free_space
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_droptype</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_droptype - Drops a user-defined datatype.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_droptype typename
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dropuser</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dropuser - Drops a user from the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dropuser name_in_db
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dumpoptimize</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_dumpoptimize - Specifies the amount of data dumped by Backup Server during the dump database operation.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dumpoptimize [ "archive_space =
+     {maximum | minimum | default }" ]
+     sp_dumpoptimize [ "reserved_threshold =
+     {nnn | default }" ]
+     sp_dumpoptimize [ "allocation_threshold =
+     {nnn | default }" ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_engine</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_engine - Enables you to bring an engine on- or offline </Description>
+    <Syntax><![CDATA[<pre>
+        sp_engine {["shutdown", engine_id] | [offline | can_offline] [, engine_id] | "online"}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_estspace</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_estspace - Estimates the amount of space required for a table and its indexes, and the time needed to create the index.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_estspace table_name, no_of_rows [, fill_factor [, cols_to_max [, textbin_len [, iosec]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_export_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_export_qpgroup - Exports all plans for a specified user and abstract plan group to a user table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_export_qpgroup usr, group, tab
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_extendsegment</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_extendsegment - Extends the range of a segment to another database device.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_extendsegment segname, dbname, devname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_extengine</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_extengine - Starts, stops, and displays information about EJB Server. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_extengine ejb_servername, {start | stop | status}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_familylock</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_familylock - Reports information about all the locks held by a family (coordinating process and its worker processes) executing a statement in parallel.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_familylock [fpid1 [, fpid2]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_find_qplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_find_qplan - Finds an abstract plan, given a pattern from the query text or plan text.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_find_qplan pattern [, group ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_fkeys</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_fkeys - Returns information about foreign key constraints created with the create table or alter table command in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_fkeys pktable_name [, pktable_owner]
+     [, pktable_qualifier] [, fktable_name]
+     [, fktable_owner] [, fktable_qualifier]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_flushstats</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_flushstats - Flushes statistics from in-memory storage to the systabstats system table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_flushstats objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_forceonline_db</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_forceonline_db - Provides access to all the pages in a database that were previously marked suspect by recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_forceonline_db dbname, {"sa_on" | "sa_off" | "all_users"}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_forceonline_object</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_forceonline_object - Provides access to an index previously marked suspect by recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_forceonline_object dbname, objname, indid, {sa_on | sa_off | all_users} [, no_print]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_forceonline_page</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_forceonline_page - Provides access to pages previously marked suspect by recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_forceonline_page dbname, pgid, {"sa_on" | "sa_off" | "all_users"}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_foreignkey</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_foreignkey - Defines a foreign key on a table or view in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_foreignkey tabname, pktabname, col1 [, col2] ... [, col8]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_freedll</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_freedll - Unloads a dynamic link library (DLL) that was previously loaded into XP Server memory to support the execution of an extended stored procedure (ESP).</Description>
+    <Syntax><![CDATA[<pre>
+  sp_freedll dll_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_getmessage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_getmessage - Retrieves stored message strings from sysmessages and sysusermessages for print and raiserror statements.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_getmessage message_num, result output [, language]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_grantlogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_grantlogin - Assigns Adaptive Server roles or default permissions to Windows NT users and groups when Integrated Security mode or Mixed mode (with Named Pipes) is active.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_grantlogin {login_name | group_name}
+     ["role_list" | default]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_ha_admin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_ha_admin - Performs administrative tasks on Adaptive Servers configured with Sybase Failover in a high availability system. sp_ha_admin is installed with the installhavss script on UNIX platforms or the insthasv script on Windows NT.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_ha_admnin [cleansessions | help]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_help</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_help - Reports information about a database object (any object listed in sysobjects) and about system or user-defined datatypes.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_help [objname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_help_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_help_qpgroup - Reports information on an abstract plan group. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_help_qpgroup [ group [, mode ]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_help_qplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_help_qplan - Reports information about an abstract plan. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_help_qplan id [, mode ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_help_resource_limit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_help_resource_limit - Reports on resource limits. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_help_resource_limit [name [, appname [, limittime [, limitday [, scope [, action]]]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpartition</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpartition - Lists the partition number, first page, control page, and number of data pages and summary size information for each partition in a partitioned table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpartition [table_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpcache</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpcache - Displays information about the objects that are bound to a data cache or the amount of overhead required for a specified cache size.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpcache {cache_name | "cache_size[P|K|M|G]"}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpconfig</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpconfig - Reports help information on configuration parameters. </Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpconfig "configname", ["size"]
+     sp_helpconfig "number of ccbs"
+     sp_helpconfig "caps per ccb"
+     sp_helpconfig "average cap size"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpconstraint</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpconstraint - Reports information about integrity constraints used in the specified tables.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpconstraint [objname] [, detail]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpdb</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpdb - Reports information about a particular database or about all databases.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpdb [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpdevice</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpdevice - Reports information about a particular device or about all Adaptive Server database devices and dump devices.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpdevice [devname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpextendedproc</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpextendedproc - Displays extended stored procedures (ESPs) in the current database, along with their associated DLL files.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpextendedproc [esp_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpexternlogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpexternlogin - Reports information about external login names.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpexternlogin [remote_server [, login_name]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpgroup - Reports information about a particular group or about all groups in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpgroup [grpname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpindex</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpindex - Reports information about the indexes created on a table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpindex objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpjava</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpjava - Displays information about Java classes and associated JARs that are installed in the database. Refer to Java in Adaptive Server Enterprise for more information about Java in the database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpjava ["class"[, java_class_name [, "detail" | "depends"]] | "jar" [, jar_name [, "depends"]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpjoins</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpjoins - Lists the columns in two tables or views that are likely join candidates.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpjoins lefttab, righttab
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpkey</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpkey - Reports information about a primary, foreign, or common key of a particular table or view, or about all keys in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpkey [tabname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helplanguage</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helplanguage - Reports information about a particular alternate language or about all languages.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helplanguage [language]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helplog</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helplog - Reports the name of the device that contains the first page of the transaction log.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helplog
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpobjectdef</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpobjectdef - Reports owners, objects, and type information for remote object definitions.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpobjectdef [object_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpremotelogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpremotelogin - Reports information about a particular remote server's logins or about all remote server logins.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpremotelogin [remoteserver [, remotename]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helprotect</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helprotect - Reports on permissions for database objects, users, groups, or roles.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helprotect [name [, username [, "grant" [,"none"|"granted"|"enabled"|role_name]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpsegment</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpsegment - Reports information about a particular segment or about all segments in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpsegment [segname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpserver</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpserver - Reports information about a particular remote server or about all remote servers.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpserver [server]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpsort</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpsort - Displays Adaptive Server's default sort order and character set.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpsort
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helptext</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helptext - Displays the source text of a compiled object.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helptext objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpthreshold</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpthreshold - Reports the segment, free-space value, status, and stored procedure associated with all thresholds in the current database or all thresholds for a particular segment.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpthreshold [segname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_helpuser</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_helpuser - Reports information about a particular user, group, or alias, or about all users, in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_helpuser [name_in_db]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_hidetext</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_hidetext - Hides the source text for the specified compiled object.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_hidetext [objname [, tabname [, username]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_import_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_import_qpgroup - Imports abstract plans from a user table into an abstract plan group.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_import_qpgroup tab, usr, group
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_indsuspect</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_indsuspect - Checks user tables for indexes marked as suspect during recovery following a sort order change.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_indsuspect [tab_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_listsuspect_db</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_listsuspect_db - Lists all databases that currently have offline pages because of corruption detected on recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_listsuspect_db
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_listsuspect_object</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_listsuspect_object - Lists all indexes in a database that are currently offline because of corruption detected on recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_listsuspect_object [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_listsuspect_page</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_listsuspect_page - Lists all pages in a database that are currently offline because of corruption detected on recovery.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_listsuspect_page [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_lock</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_lock - Reports information about processes that currently hold locks.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_lock [spid1 [, spid2]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_locklogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_locklogin - Locks an Adaptive Server account so that the user cannot log in or displays a list of all locked accounts.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_locklogin [loginame, "{lock | unlock}"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_logdevice</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_logdevice - Moves the transaction log of a database with log and data on the same device to a separate database device.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_logdevice dbname, devname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_loginconfig</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_loginconfig - Displays the value of one or all integrated security parameters. Windows NT only.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_loginconfig ["parameter_name"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_logininfo</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_logininfo - Displays all roles granted to Windows NT users and groups with sp_grantlogin.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_logininfo ["login_name" | "group_name"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_logiosize</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_logiosize - Changes the log I/O size used by Adaptive Server to a different memory pool when doing I/O for the transaction log of the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_logiosize ["default" | "size" | "all"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_modify_resource_limit</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_modify_resource_limit - Changes a resource limit by specifying a new limit value, or the action to take when the limit is exceeded, or both.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_modify_resource_limit {name, appname } , rangename , limittype , limitvalue , enforced , action , scope
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_modify_time_range</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_modify_time_range - Changes the start day, start time, end day, and/or end time associated with a named time range.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_modify_time_range name, startday, endday, starttime, endtime
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_modifylogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_modifylogin - Modifies the default database, default language, default role activation, or full name for an Adaptive Server login account.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_modifylogin account, column, value
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_modifystats</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_modifystats - Allows the SA to modify the statistics in sysstatistics.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_modifystats [database].[owner][table_name],
+     {column_name [, column_name] [,...]]},
+     REMOVE_SKEW_FROM_DENSITY
+
+       Or,
+
+  sp_modifystats [database].[owner][table_name],
+     {column_name [, column_name] [,...]]},
+     MODIFY_DENSITY,
+     {range | total},
+     {absolute | factor},
+     "value"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_modifythreshold</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_modifythreshold - Modifies a threshold by associating it with a different threshold procedure, free-space level, or segment name. You cannot use sp_modifythreshold to change the amount of free space or the segment name for the last-chance threshold.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_modifythreshold dbname, segname, free_space [, new_proc_name] [, new_free_space] [, new_segname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_monitor</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_monitor - Displays statistics about Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_monitor
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_monitorconfig</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_monitorconfig - Displays cache usage statistics regarding metadata descriptors for indexes, objects, and databases. sp_monitorconfig also reports statistics on auxiliary scan descriptors used for referential integrity queries, and usage statistics for transaction descriptors and DTX participants.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_monitorconfig "configname"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_object_stats</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_object_stats - Prints lock contention, lock wait-time, and deadlock statistics for tables and indexes.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_object_stats interval [, top_n [, dbname, objname [, rpt_option ]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_passthru</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_passthru - Allows the user to pass a SQL command buffer to a remote server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_passthru server, command, errcode, errmsg, rowcount [, arg1, arg2, ... argn]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_password</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_password - Adds or changes a password for an Adaptive Server login account.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_password caller_passwd, new_passwd [, loginame]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_pkeys</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_pkeys - Returns information about primary key constraints created with the create table or alter table command for a single table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_pkeys table_name [, table_owner] [, table_qualifier]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_placeobject</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_placeobject - Puts future space allocations for a table or index on a particular segment.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_placeobject segname, objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_plan_dbccdb</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_plan_dbccdb - Recommends suitable sizes for new dbccdb and dbccalt databases, lists suitable devices for dbccdb and dbccalt, and suggests a cache size and a suitable number of worker processes for the target database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_plan_dbccdb [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_poolconfig</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_poolconfig - Creates, drops, resizes, and provides information about memory pools within data caches.</Description>
+    <Syntax><![CDATA[<pre>
+  To create a memory pool in an existing cache, or to change pool size:
+     sp_poolconfig cache_name [, "mem_size[P|K|M|G]", "config_poolK" [, "affected_poolK"]]
+
+  To change a pool's wash size:
+     sp_poolconfig cache_name, "io_size", "wash=size[P|K|M|G]"
+
+  To change a pool's asynchronous prefetch percentage:
+     sp_poolconfig cache_name, "io_size", "local async prefetch limit=percent"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_primarykey</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_primarykey - Defines a primary key on a table or view.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_primarykey tabname, col1 [, col2, col3, ..., col8]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_processmail</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_processmail - Reads, processes, sends, and deletes messages in the Adaptive Server message inbox, using the xp_findnextmsg, xp_readmail, xp_sendmail, and xp_deletemail system extended stored procedures (ESPs).</Description>
+    <Syntax><![CDATA[<pre>
+  sp_processmail [subject] [, originator [, dbuser [, dbname [, filetype [, separator]]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_procqmode</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_procqmode - Displays the query processing mode of a stored procedure, view, or trigger.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_procqmode [object_name [, detail]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_procxmode</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_procxmode - Displays or changes the transaction modes associated with stored procedures.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_procxmode [procname [, tranmode]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_recompile</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_recompile - Causes each stored procedure and trigger that uses the named table to be recompiled the next time it runs.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_recompile objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_remap</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_remap - Remaps a stored procedure, trigger, rule, default, or view from releases later than 4.8 and prior to 10.0 to be compatible with releases 10.0 and later. Use sp_remap on pre-existing objects that the upgrade procedure failed to remap.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_remap objname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_remoteoption</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_remoteoption - Displays or changes remote login options.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_remoteoption [remoteserver [, loginame [, remotename [, optname [, optvalue]]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_remotesql</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_remotesql - Establishes a connection to a remote server, passes a query buffer to the remote server from the client, and relays the results back to the client.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_remotesql server, query [, query2, ... , query254]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_rename</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_rename - Changes the name of a user-created object or user-defined datatype in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_rename objname, newname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_rename_qpgroup</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_rename_qpgroup - Renames an abstract plan group</Description>
+    <Syntax><![CDATA[<pre>
+  sp_rename_qpgroup old_name, new_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_renamedb</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_renamedb - Changes the name of a user database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_renamedb dbname, newname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_reportstats</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_reportstats - Reports statistics on system usage.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_reportstats [loginame]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_revokelogin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_revokelogin - Revokes Adaptive Server roles and default permissions from Windows NT users and groups when Integrated Security mode or Mixed mode (with Named Pipes) is active.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_revokelogin {login_name | group_name}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_role</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_role - Grants or revokes roles to an Adaptive Server login account.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_role {"grant" | "revoke"}, rolename, loginame
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_sendmsg</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_sendmsg - Sends a message to a User Datagram Protocol (UDP) port.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_sendmsg ip_address, port_number, message
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_server_info</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_server_info - Returns a list of Adaptive Server attribute names and current values.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_server_info [attribute_id]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_serveroption</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_serveroption - Displays or changes remote server options.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_serveroption [server, optname, optvalue]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_set_qplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_set_qplan - Changes the text of the abstract plan of an existing plan without changing the associated query.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_set_qplan id, plan
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setlangalias</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setlangalias - Assigns or changes the alias for an alternate language.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setlangalias language, alias
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setpglockpromote</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setpglockpromote - Sets or changes the lock promotion thresholds for a database, for a table, or for Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setpglockpromote {"database" | "table"}, objname, new_lwm, new_hwm, new_pct
+  sp_setpglockpromote server, NULL, new_lwm, new_hwm, new_pct
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setpsexe</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setpsexe - Sets custom execution attributes for a session while the session is active.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setpsexe spid, exeattr, value
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setrowlockpromote</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setrowlockpromote - Sets or changes row-lock promotion thresholds for a datarows-locked table, for all datarows-locked tables in a database, or for all datarows- locked tables on a server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setrowlockpromote "server", NULL, new_lwm, new_hwm, new_pct
+  sp_setrowlockpromote {"database" | "table"}, objname, new_lwm, new_hwm, new_pct
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setsuspect_granularity</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setsuspect_granularity - Displays or sets the recovery fault isolation mode for a user database, which governs how recovery behaves when it detects data corruption.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setsuspect_granularity [dbname [, "database" | "page" [, "read_only"]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_setsuspect_threshold</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_setsuspect_threshold - Displays or sets the maximum number of suspect pages that Adaptive Server allows in a database before marking the entire database suspect.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_setsuspect_threshold [dbname [, threshold]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_showcontrolinfo</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_showcontrolinfo - Displays information about engine group assignments, bound client applications, logins, and stored procedures.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_showcontrolinfo [object_type, object_name, spid]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_showexeclass</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_showexeclass - Displays the execution class attributes and the engines in any engine group associated with the specified execution class.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_showexeclass [execlassname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_showplan</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_showplan - Displays the showplan output for any user connection for the current SQL statement or for a previous statement in the same batch.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_showplan spid, batch_id output, context_id output, stmt_num output
+  
+  To display the showplan output for the current SQL statement without specifying the batch_id, context_id, or stmt_num:
+  sp_showplan spid, null, null, null
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_showpsexe</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_showpsexe - Displays execution class, current priority, and affinity for all client sessions running on Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_showpsexe [spid]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_spaceused</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_spaceused - Displays estimates of the number of rows, the number of data pages, the size of indexes, and the space used by a specified table or by all tables in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_spaceused [objname [,1] ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_special_columns</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_special_columns - Returns the optimal set of columns that uniquely identify a row in a table or view; can also return a list of timestamp columns, whose values are automatically generated when any value in the row is updated by a transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_special_columns table_name [, table_owner] [, table_qualifier] [, col_type]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_sproc_columns</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_sproc_columns - Returns information about a stored procedure's input and return parameters.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_sproc_columns procedure_name [, procedure_owner] [, procedure_qualifier] [, column_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_ssladmin</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_ssladmin - Administration utility for SSL </Description>
+    <Syntax><![CDATA[<pre>
+  sp_ssladmin {[addcert, certificate_path, password] [dropcert, certificate_path] [lscert] [help]}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_statistics</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_statistics - Returns a list of indexes on a single table.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_statistics table_name [, table_owner] [, table_qualifier] [, index_name] [, is_unique]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_stored_procedures</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_stored_procedures - Returns information about one or more stored procedures.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_stored_procedures [sp_name [, sp_owner [, sp_qualifier]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_sysmon</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_sysmon - Displays performance information.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_sysmon begin_sample 
+  sp_sysmon { end_sample | interval } [, section [, applmon] ]
+  sp_sysmon { end_sample | interval } [, applmon ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_table_privileges</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_table_privileges - Returns privilege information for all columns in a table or view.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_table_privileges table_name [, table_owner [, table_qualifier]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_tables</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_tables - Returns a list of objects that can appear in a from clause.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_tables [table_name] [, table_owner] [, table_qualifier][, table_type]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_thresholdaction</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_thresholdaction - Executes automatically when the number of free pages on the log segment falls below the last-chance threshold, unless the threshold is associated with a different procedure. Sybase does not provide this procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  When a threshold is crossed, Adaptive Server passes the following parameters to the threshold procedure by position:
+  sp_thresholdaction @dbname, @segment_name, @space_left, @status
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_transactions</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_transactions - Reports information about active transactions.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_tranactions ["xid", xid_value] |
+     ["state", {"heuristic_commit" | "heuristic_abort"
+     | "prepared" | "indoubt"} [, "xactname"]] |
+     ["gtrid", gtrid_value]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindcache</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindcache - Unbinds a database, table, index, text object, or image object from a data cache.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindcache dbname [,[owner.]tablename [, indexname | "text only"]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindcache_all</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindcache_all - Unbinds all objects that are bound to a cache.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindcache_all cache_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindefault</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindefault - Unbinds a created default value from a column or from a user-defined datatype.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindefault objname [, futureonly]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindexeclass</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindexeclass - Removes the execution class attribute previously associated with an client application, login, or stored procedure for the specified scope.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindexeclass object_name, object_type, scope
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindmsg</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindmsg - Unbinds a user-defined message from a constraint.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindmsg constrname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_unbindrule</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_unbindrule - Unbinds a rule from a column or from a user-defined datatype.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_unbindrule objname [, futureonly]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_volchanged</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_volchanged - Notifies the Backup Server that the operator performed the requested volume handling during a dump or load.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_volchanged session_id, devname, action [, fname [, vname]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_who</CmdName>
+    <Module>System Procedure</Module>
+    <Description>sp_who - Reports information about all current Adaptive Server users and processes or about a particular user or process.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_who [loginame | "spid"]
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Transact-SQL ============================================================================ -->
+<!-- ============================================================================================ -->
+
+
+<Entry>
+    <CmdName>abs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>abs - Returns the absolute value of an expression.</Description>
+    <Syntax><![CDATA[<pre>
+  abs(numeric_expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>acos</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>acos - Returns the angle (in radians) whose cosine is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  acos(cosine)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>alter database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>alter database - Increases the amount of space allocated to a database.</Description>
+    <Syntax><![CDATA[<pre>
+  alter database database_name
+     [on {default | database_device } [= size]
+         [, database_device [= size]]...]
+     [log on { default | database_device } [ = size ]
+         [ , database_device [= size]]...]
+     [with override]
+     [for load]
+     [for proxy_update]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>alter role</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>alter role - Defines mutually exclusive relationships between roles; adds, drops, and changes passwords for roles; specifies the password expiration interval, the minimum password length, and the maximum number of failed logins allowed for a specified role</Description>
+    <Syntax><![CDATA[<pre>
+  alter role role1 { add | drop } exclusive {
+     membership | activation } role2
+     alter role role_name [add passwd "password" |
+     drop passwd] [lock | unlock]
+     alter role { role_name | "all overrides" }
+     set { passwd expiration | min passwd length |
+     max failed_logins } option_value
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>alter table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>alter table - Adds new columns to a table; drops or modifies existing columns; adds, changes, or drops constraints; changes properties of an existing table; enables or disables triggers on a table.</Description>
+    <Syntax><![CDATA[<pre>
+  alter table [[database.][owner].table_name
+     { add column_name datatype
+         [default {constant_expression | user | null}]
+         {identity | null | not null}
+             [off row | in row]
+         [ [constraint constraint_name]
+           { { unique | primary key }
+               [clustered | nonclustered] [asc | desc]
+               [with { fillfactor = pct,
+                       max_rows_per_page = num_rows,
+                       reservepagegap = num_pages }]
+               [on segment_name]
+             | references [[database.]owner.]ref_table
+                [(ref_column)]
+             | check (search_condition) ] ... }
+          [, next_column]...
+     | add {[constraint constraint_name]
+       {  unique | primary key}
+             [clustered | nonclustered]
+             (column_name [asc | desc]
+                [, column_name [asc | desc]...])
+             [with { fillfactor = pct,
+                     max_rows_per_page = num_rows,
+                     reservepagegap = num_pages}]
+             [on segment_name]
+        | foreign key (column_name [{, column_name}...])
+            references [[database.]owner.]ref_table
+              [(ref_column [{, ref_column}...])]
+        | check (search_condition)}
+     | drop {column_name [, column_name]...
+                 | constraint constraint_name }
+     | modify column_name datatype [null | not null]
+              [, next_column]...
+     | replace column_name
+         default { constant_expression | user | null}
+     | partition number_of_partitions
+     | unpartition
+     | { enable | disable } trigger
+     | lock {allpages | datarows | datapages } }
+     | with exp_row_size=num_bytes
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ascii</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>ascii - Returns the ASCII code for the first character in an expression.</Description>
+    <Syntax><![CDATA[<pre>
+  ascii(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>asin</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>asin - Returns the angle (in radians) whose sine is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  asin(sine)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>atan</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>atan - Returns the angle (in radians) whose tangent is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  atan(tangent)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>atn2</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>atn2 - Returns the angle (in radians) whose sine and cosine are specified.</Description>
+    <Syntax><![CDATA[<pre>
+  atn2(sine, cosine)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>avg</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>avg - Returns the numeric average of all (distinct) values.</Description>
+    <Syntax><![CDATA[<pre>
+  avg([all | distinct] expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>begin transaction</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>begin transaction - Marks the starting point of a user-defined transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  begin tran[saction] [transaction_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>begin...end</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>begin...end - Encloses a series of SQL statements so that control-of-flow language, such as if...else, can affect the performance of the whole group.</Description>
+    <Syntax><![CDATA[<pre>
+     begin
+        statement block
+     end
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>break</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>break - Causes an exit from a while loop. break is often activated by an if test.</Description>
+    <Syntax><![CDATA[<pre>
+  while logical_expression
+         statement
+     break
+         statement
+     continue
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>case</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>case - Supports conditional SQL expressions; can be used anywhere a value expression can be used.</Description>
+    <Syntax><![CDATA[<pre>
+     case
+             when search_condition then expression
+             [when search_condition then expression]...
+             [else expression]
+     end
+     case and values syntax:
+        case expression
+             when expression then expression
+             [when expression then expression]...
+             [else expression]
+     end
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ceiling</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>ceiling - Returns the smallest integer greater than or equal to the specified value.</Description>
+    <Syntax><![CDATA[<pre>
+  ceiling(value)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>char</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>char - Returns the character equivalent of an integer.</Description>
+    <Syntax><![CDATA[<pre>
+  char(integer_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>char_length</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>char_length - Returns the number of characters in an expression.</Description>
+    <Syntax><![CDATA[<pre>
+  char_length(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>charindex</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>charindex - Returns an integer representing the starting position of an expression.</Description>
+    <Syntax><![CDATA[<pre>
+  charindex(expression1, expression2)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>checkpoint</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>checkpoint - Writes all dirty pages (pages that have been updated since they were last written) to the database device.</Description>
+    <Syntax><![CDATA[<pre>
+  checkpoint
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>close</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>close - Deactivates a cursor.</Description>
+    <Syntax><![CDATA[<pre>
+  close cursor_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>coalesce</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>coalesce - Supports conditional SQL expressions; can be used anywhere a value expression can be used; alternative for a case expression.</Description>
+    <Syntax><![CDATA[<pre>
+  coalesce(expression, expression [, expression]...)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>col_length</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>col_length - Returns the defined length of a column.</Description>
+    <Syntax><![CDATA[<pre>
+  col_length(object_name, column_name)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>col_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>col_name - Returns the name of the column whose table and column IDs are specified.</Description>
+    <Syntax><![CDATA[<pre>
+  col_name(object_id, column_id[, database_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>commit</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>commit - Marks the ending point of a user-defined transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  commit [tran | transaction | work] [transaction_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>compare</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>compare - Allows you to directly compare two character strings based on alternate collation rules</Description>
+    <Syntax><![CDATA[<pre>
+  compare (char_expression1|uchar_expression1),
+     (char_expression2|uchar_expression2)
+     [,{collation_name | collation_ID}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>compute Clause</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>compute Clause - Generates summary values that appear as additional rows in the query results.</Description>
+    <Syntax><![CDATA[<pre>
+  start_of_select_statement
+     compute row_aggregate (column_name)
+         [, row_aggregate(column_name)]...
+     [by column_name [, column_name]...]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>connect to...disconnect</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>connect to...disconnect - Connects to the specified server and disconnects the connected server.</Description>
+    <Syntax><![CDATA[<pre>
+  connect to server_name
+     disconnect
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>continue</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>continue - Restarts the while loop. continue is often activated by an if test.</Description>
+    <Syntax><![CDATA[<pre>
+  while boolean_expression
+         statement
+     break
+         statement
+     continue
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>convert</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>convert - Returns the specified value, converted to another datatype or a different datetime display format.</Description>
+    <Syntax><![CDATA[<pre>
+  convert (datatype [(length) | (precision[, scale])]
+     [null | not null], expression [, style])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>cos</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>cos - Returns the cosine of the specified angle.</Description>
+    <Syntax><![CDATA[<pre>
+  cos(angle)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>cot</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>cot - Returns the cotangent of the specified angle.</Description>
+    <Syntax><![CDATA[<pre>
+  cot(angle)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>count</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>count - Returns the number of (distinct) non-null values or the number of selected rows.</Description>
+    <Syntax><![CDATA[<pre>
+  count([all | distinct] expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create database - Creates a new database.</Description>
+    <Syntax><![CDATA[<pre>
+  create database database_name
+     [on {default | database_device} [= size]
+         [, database_device [= size]]...]
+     [log on database_device [= size]
+         [, database_device [= size]]...]
+     [with {override | default_location = "pathname"}]
+     [for {load | proxy_update}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create default</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create default - Specifies a value to insert in a column (or in all columns of a user- defined datatype) if no value is explicitly supplied at insert time.</Description>
+    <Syntax><![CDATA[<pre>
+        create default [owner.]default_name
+        as constant_expression
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create existing table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create existing table - Creates a proxy table, then retrieves and stores metadata from a remote table and places the data into the proxy table. Allows you to map the proxy table to a table, view, or procedure at a remote location.</Description>
+    <Syntax><![CDATA[<pre>
+  create existing table table_name (column_list)
+     [ on segment_name ]
+     [ [ external {table | procedure} ] at pathname ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create function</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create function - Creates a user-defined function by adding a SQL wrapper to a Java method.</Description>
+    <Syntax><![CDATA[<pre>
+        ([sql_parameter_name sql_datatype [(Length)] | (precision [scale])]
+        ([, sql_parameter_name sql_datatype [(length) | (precision [, scale])]
+        returns sql_datatype
+        [(length)] | (precision [scale])]
+        modifies sql_datatype
+        returns null on null input
+        called on null input
+        [deterministic | not deterministic]
+        [exportable]
+        language java
+        parameter style java
+        external name java_method_name
+        [([java_datatype [, java_datatype...]])]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create index</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create index - Creates an index on one or more columns in a table.</Description>
+    <Syntax><![CDATA[<pre>
+  create [unique] [clustered | nonclustered]
+         index index_name
+     on [[database.]owner.]table_name
+           (column_name [asc | desc]
+             [, column_name [asc | desc]]...)
+     [with { fillfactor = pct,
+             max_rows_per_page = num_rows,
+             reservepagegap = num_pages,
+             consumers = x, ignore_dup_key, sorted_data,
+             [ignore_dup_row | allow_dup_row],
+             statistics using num_steps values  } ]
+     [on segment_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create plan</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create plan - Creates an abstract plan.</Description>
+    <Syntax><![CDATA[<pre>
+  create plan query plan
+             [into group_name]
+             [and set @new_id]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create procedure</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create procedure - Creates a stored procedure or an extended stored procedure (ESP) that can take one or more user-supplied parameters.</Description>
+    <Syntax><![CDATA[<pre>
+  create procedure [owner.]procedure_name[;number]
+     [[(]@parameter_name
+         datatype [(length) | (precision [, scale])]
+         [= default][output]
+     [, @parameter_name
+         datatype [(length) | (precision [, scale])]
+         [= default][output]]...[)]]
+     [with recompile]
+     as {SQL_statements | external name dll_name}
+
+            Or, if you are using create procedure with SQLJ,
+            the syntax is:
+
+create procedure - Creates a stored procedure or an extended
+        stored procedure (ESP) by adding a SQL wrapper to a
+        Java static method.
+
+  create procedure [owner.]sql_procedure_name
+     ([[in | out | inout] sql_parameter_name
+        sql_data_type[(length) | (precision [, scale])]
+    [, in | out | inout] sql_parameter_name
+        sql_data_type [(length) | (precision [, scale]) ...])
+    [modifies sql_data]
+    [dynamic result sets integer]
+    [deterministic | not deterministic]
+    language java
+    parameter sytle java
+    external name java_method_name
+        [([java_data_type[,java_data_type...]])]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create proxy_table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create proxy_table - Creates a proxy table without specifying a colunmn list Component Integration Services derives the column list from the metadata it obtains from the remote table.</Description>
+    <Syntax><![CDATA[<pre>
+  create proxy_table table_name [ external table ] at pathname
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create role</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create role - Creates a user-defined role; specifies the password expiration interval, the minimum password length, and the maximum number of failed logins allowed for a specified role at creation.</Description>
+    <Syntax><![CDATA[<pre>
+  create role role_name [ with passwd "password"
+     [, {"passwd expiration" | "min passwd length" |
+     "max failed_logins" } option_value ] ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create rule</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create rule - Specifies the domain of acceptable values for a particular column or for any column of a user-defined datatype.</Description>
+    <Syntax><![CDATA[<pre>
+  create rule [[and | or] access] [owner.]rule_name as condition_expression
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create schema</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create schema - Creates a new collection of tables, views, and permissions for a database user.</Description>
+    <Syntax><![CDATA[<pre>
+  create schema authorization authorization_name
+     create_oject_statement
+         [ create_object_statement ... ]
+     [ permission_statement ... ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create table - Creates new tables and optional integrity constraints.</Description>
+    <Syntax><![CDATA[<pre>
+  create table [database.[owner].]table_name
+     (column_name datatype
+         [default {constant_expression | user | null}]
+         {[{identity | null | not null}]
+                     [off row | in row]
+         [[constraint constraint_name]
+             {{unique | primary key}
+            [clustered | nonclustered] [asc | desc]
+            [with { fillfactor = pct,
+                      max_rows_per_page = num_rows, }
+                      reservepagegap = num_pages }]
+             [on segment_name]
+             | references [[database.]owner.]ref_table
+                 [(ref_column)]
+             | check (search_condition)}]}...
+      | [constraint constraint_name]
+         {{unique | primary key}
+             [clustered | nonclustered]
+             (column_name [asc | desc]
+                             [{, column_name [asc | desc]}...])
+             [with { fillfactor = pct
+                                max_rows_per_page = num_rows ,
+                                reservepagegap = num_pages } ]
+             [on segment_name]
+         |foreign key (column_name [{, column_name}...])
+             references [[database.]owner.]ref_table
+                 [(ref_column [{, ref_column}...])]
+          | check (search_condition) ... }
+     [{, {next_column | next_constraint}}...])
+     [lock {datarows | datapages | allpages }]
+     [with { max_rows_per_page = num_rows,
+                     exp_row_size = num_bytes,
+                     reservepagegap = num_pages,
+                     identity_gap = num_values } ]
+     [on segment_name]
+     [ [ external table ] at pathname ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create trigger</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create trigger - Creates a trigger, a type of stored procedure that is often used for enforcing integrity constraints. A trigger executes automatically when a user attempts a specified data modification statement on a specified table.</Description>
+    <Syntax><![CDATA[<pre>
+  create trigger [owner.]trigger_name
+     on [owner.]table_name
+     for {insert , update , delete}
+     as SQL_statements
+     Or, using the if update clause:
+     create trigger [owner.]trigger_name
+     on [owner.]table_name
+     for {insert , update}
+     as
+         [if update (column_name)
+             [{and | or} update (column_name)]...]
+             SQL_statements
+         [if update (column_name)
+             [{and | or} update (column_name)]...
+             SQL_statements]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>create view</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>create view - Creates a view, which is an alternative way of looking at the data in one or more tables.</Description>
+    <Syntax><![CDATA[<pre>
+  create view [owner.]view_name
+     [(column_name [, column_name]...)]
+     as select [distinct] select_statement
+     [with check option]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>curunreservedpgs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>curunreservedpgs - Returns the number of free pages in the specified disk piece.</Description>
+    <Syntax><![CDATA[<pre>
+  curunreservedpgs(dbid, lstart, unreservedpgs)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>data_pgs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>data_pgs - Returns the number of pages used by the specified table or index.</Description>
+    <Syntax><![CDATA[<pre>
+  data_pgs(object_id, {data_oam_pg_id | index_oam_pg_id})
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>datalength</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>datalength - Returns the actual length, in bytes, of the specified column or string.</Description>
+    <Syntax><![CDATA[<pre>
+  datalength(expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dateadd</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>dateadd - Returns the date produced by adding a given number of years, quarters, hours, or other date parts to the specified date.</Description>
+    <Syntax><![CDATA[<pre>
+  dateadd(date_part, integer, date)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>datediff</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>datediff - Returns the difference between two dates.</Description>
+    <Syntax><![CDATA[<pre>
+  datediff(datepart, date1, date2)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>datename</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>datename - Returns the name of the specified part of a datetime value.</Description>
+    <Syntax><![CDATA[<pre>
+  datename (datepart, date)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>datepart</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>datepart - Returns the integer value of the specified part of a datetime value.</Description>
+    <Syntax><![CDATA[<pre>
+  datepart(date_part, date)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>db_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>db_id - Returns the ID number of the specified database.</Description>
+    <Syntax><![CDATA[<pre>
+  db_id(database_name)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>db_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>db_name - Returns the name of the database whose ID number is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  db_name([database_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dbcc</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>Various DBCC (DataBase Consistency Checker) commands</Description>
+    <Syntax><![CDATA[<pre>
+dbcc checkalloc [(database_name [, fix | nofix])]
+     dbcc checkcatalog [(database_name)]
+     dbcc checkdb [(database_name [, skip_ncindex])]
+     dbcc checkstorage [(database_name)]
+     dbcc checktable({table_name|table_id}[, skip_ncindex])
+     dbcc checkverify [(database_name)]
+     dbcc complete_xact (xid, {"commit" | "rollback"})
+     dbcc forget_xact (xid)
+     dbcc dbrepair (database_name, dropdb)
+     dbcc engine( {offline , [enginenum] | "online" })
+     dbcc fix_text ({table_name | table_id})
+     dbcc indexalloc ({table_name | table_id}, index_id
+         [, {full | optimized | fast | null}
+         [, fix | nofix]])
+     dbcc rebuild_text (table [, column
+     [, text_page_number]])
+     dbcc reindex ({table_name | table_id})
+     dbcc tablealloc ({table_name | table_id}
+         [, {full | optimized | fast | null}
+         [, fix | nofix]])|
+     dbcc { traceon | traceoff } (flag [, flag ... ])
+     dbcc tune ( { ascinserts, {0 | 1 } , tablename |
+                             cleanup, {0 | 1 } |
+                             cpuaffinity, start_cpu {, on| off } |
+                             des_greedyalloc, dbid, object_name,
+                                     " { on|off }" |
+                             deviochar vdevno, "batch_size" |
+                             doneinproc { 0 | 1 } |
+                             maxwritedes, writes_per_batch } )
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>deallocate cursor</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>deallocate cursor - Makes a cursor inaccessible and releases all memory resources committed to that cursor.</Description>
+    <Syntax><![CDATA[<pre>
+  deallocate cursor cursor_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>declare</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>declare - Declares the name and type of local variables for a batch or procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  Variable declaration:
+     declare @variable_name datatype [, @variable_name datatype]...
+  Variable assignment:
+     select @variable = {expression | select_statement}
+     [, @variable = {expression | select_statement} ...]
+     [from table_list]
+     [where search_conditions]
+     [group by group_by_list]
+     [having search_conditions]
+     [order by order_by_list]
+     [compute function_list [by by_list]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>declare cursor</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>declare cursor - Defines a cursor.</Description>
+    <Syntax><![CDATA[<pre>
+  declare cursor_name cursor
+     for select_statement
+     [for {read only | update [of column_name_list]}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>degrees</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>degrees - Returns the size, in degrees, of an angle with the specified number of radians.</Description>
+    <Syntax><![CDATA[<pre>
+  degrees(numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>delete</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>delete - Removes rows from a table.</Description>
+    <Syntax><![CDATA[<pre>
+  delete [from]
+     [[database.]owner.]{view_name|table_name}
+     [where search_conditions]
+     [plan "abstract plan"]
+     delete [[database.]owner.]{table_name | view_name}
+     [from [[database.]owner.]{view_name [readpast]|
+         table_name [readpast]
+             [(index {index_name | table_name }
+             [ prefetch size ][lru|mru])]}
+      [, [[database.]owner.]{view_name [readpast]|
+         table_name [readpast]
+             [(index {index_name | table_name }
+             [ prefetch size ][lru|mru])]} ...]
+     [where search_conditions] ]
+     [plan "abstract plan"]
+     delete [from]
+     [[database.]owner.]{table_name|view_name}
+     where current of cursor_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>delete statistics</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>delete statistics - Removes statistics from the sysstatistics system table.</Description>
+    <Syntax><![CDATA[<pre>
+  delete [shared] statistics table_name [(column_name [, column_name]...)]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>difference</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>difference - Returns the difference between two soundex values.</Description>
+    <Syntax><![CDATA[<pre>
+  difference(char_expr1|uchar_expr1), (char_expr2|uchar_expr2)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk init</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk init - Makes a physical device or file usable by Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  disk init
+     name = "device_name" ,
+     physname = "physicalname" ,
+     [vdevno = virtual device number],
+     size = size of device
+     [, vstart = virtual address
+         , cntrltype = controller_number ]
+     [, dsync = {true|false}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk mirror</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk mirror - Creates a software mirror that immediately takes over when the primary device fails.</Description>
+    <Syntax><![CDATA[<pre>
+  disk mirror
+     name = "device_name" ,
+     mirror = "physicalname"
+     [, writes = { serial | noserial }]
+     [, contiguous ] (OpenVMS only)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk refit</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk refit - Rebuilds the master database's sysusages and sysdatabases system tables from information contained in sysdevices.</Description>
+    <Syntax><![CDATA[<pre>
+  disk refit
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk reinit</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk reinit - Rebuilds the master database's sysdevices system table. Use disk reinit as part of the procedure to restore the master database.</Description>
+    <Syntax><![CDATA[<pre>
+  disk reinit
+     name = "device name",
+     physname = "physicalname" ,
+     [vdevno = virtual_device_number] ,
+     size = size of device
+     [, vstart = virtual_address]
+     [, dsync = {true|false}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk remirror</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk remirror - Restarts disk mirroring after it is stopped by failure of a mirrored device or temporarily disabled by the disk unmirror command.</Description>
+    <Syntax><![CDATA[<pre>
+  disk remirror name = "device_name"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk resize</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk resize - Increases the size of the device by amount specified.</Description>
+    <Syntax><![CDATA[<pre>
+  disk resize
+    name = "device_name" ,
+    size = additional_space
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>disk unmirror</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>disk unmirror - Suspends disk mirroring initiated with the disk mirror command to allow hardware maintenance or the changing of a hardware device.</Description>
+    <Syntax><![CDATA[<pre>
+  disk unmirror
+     name = "device_name"
+     [ ,side = { "primary" | secondary }]
+     [ ,mode = { retain | remove }]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop database - Removes one or more databases from Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  drop database database_name [, database_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop default</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop default - Removes a user-defined default.</Description>
+    <Syntax><![CDATA[<pre>
+  drop default [owner.]default_name [, [owner.]default_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop function</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop function - Removes a SQLJ user-defined function.</Description>
+    <Syntax><![CDATA[<pre>
+  drop func[tion] [owner.]function_name [,[owner.]function_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop index</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop index - Removes an index from a table in the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  drop index table_name.index_name [, table_name.index_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop procedure</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop procedure - Removes a procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  drop proc[edure] [owner.]procedure_name [, [owner.]procedure_name] ...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop role</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop role - Drops a user-defined role.</Description>
+    <Syntax><![CDATA[<pre>
+  drop role role_name [with override]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop rule</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop rule - Removes a user-defined rule.</Description>
+    <Syntax><![CDATA[<pre>
+  drop rule [owner.]rule_name [, [owner.]rule_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop table - Removes a table definition and all of its data, indexes, triggers, and permissions from the database.</Description>
+    <Syntax><![CDATA[<pre>
+  drop table [[database.]owner.]table_name [, [[database.]owner.]table_name ]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop trigger</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop trigger - Removes a trigger.</Description>
+    <Syntax><![CDATA[<pre>
+  drop trigger [owner.]trigger_name [, [owner.]trigger_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>drop view</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>drop view - Removes one or more views from the current database.</Description>
+    <Syntax><![CDATA[<pre>
+  drop view [owner.]view_name [, [owner.]view_name]...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dump database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>dump database - Makes a backup of a database</Description>
+    <Syntax><![CDATA[<pre>
+  dump database database_name
+     to [compress::[compression_level::]]stripe_device
+        [at backup_server_name]
+        [density = density_value,
+         blocksize = number_bytes,
+         capacity = number_kilobytes,
+         dumpvolume = volume_name,
+         file = file_name]
+     [stripe on stripe_device [at backup_server_name]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]]
+     [[stripe on stripe_device [at backup_server_name]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]]...]
+     [with {
+          density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name,
+          [dismount | nodismount],
+          [nounload | unload],
+          retaindays = number_days,
+          [noinit | init],
+          notify = {client | operator_console}
+          } ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dump transaction</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>dump transaction - Makes a copy of a transaction log and removes the inactive portion.</Description>
+    <Syntax><![CDATA[<pre>
+  To make a routine log dump:
+     dump tran[saction] database_name
+     to [compress::[compression_level::]]stripe_device
+         [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]
+     [stripe on stripe_device [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]]
+     [[stripe on stripe_device [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name] ]...]
+     [with {
+         density = density_value,
+         blocksize = number_bytes,
+         capacity = number_kilobytes,
+         dumpvolume = volume_name,
+         file = file_name,
+         [dismount | nodismount],
+         [nounload | unload],
+         retaindays = number_days,
+         [noinit | init],
+         notify = {client | operator_console},
+         standby_access }]
+
+  To truncate the log without making a backup copy:
+     dump tran[saction] database_name
+     with truncate_only
+
+  To truncate a log that is filled to capacity. Use only as a last resort:
+     dump tran[saction] database_name
+     with no_log
+     To back up the log after a database device fails:
+     dump tran[saction] database_name
+     to [compress::[compression_level]]stripe_device
+         [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]
+     [stripe on stripe_device [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name]]
+     [[stripe on stripe_device [ at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          capacity = number_kilobytes,
+          dumpvolume = volume_name,
+          file = file_name] ]...]
+     [with {
+         density = density_value,
+         blocksize = number_bytes,
+         capacity = number_kilobytes,
+         dumpvolume = volume_name,
+         file = file_name,
+         [dismount | nodismount],
+         [nounload | unload],
+         retaindays = number_days,
+         [noinit | init],
+         no_truncate,
+         notify = {client | operator_console}}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>execute</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>execute - Runs a procedure or dynamically executes Transact-SQL commands</Description>
+    <Syntax><![CDATA[<pre>
+  [exec[ute]] [@return_status = ]
+     [[[server.]database.]owner.]procedure_name[;number]
+         [[@parameter_name =] value |
+             [@parameter_name =] @variable [output]
+         [,[@parameter_name =] value |
+             [@parameter_name =] @variable [output]...]]
+     [with recompile]
+     or
+     exec[ute] ("string" | char_variable
+     [+ "string" | char_variable]...)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>exp</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>exp - Returns the value that results from raising the constant e to the specified power.</Description>
+    <Syntax><![CDATA[<pre>
+  exp(approx_numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>fetch</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>fetch - Returns a row or a set of rows from a cursor result set.</Description>
+    <Syntax><![CDATA[<pre>
+  fetch cursor_name [ into fetch_target_list ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>floor</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>floor - Returns the largest integer that is less than or equal to the specified value.</Description>
+    <Syntax><![CDATA[<pre>
+  floor(numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>getdate</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>getdate - Returns the current system date and time.</Description>
+    <Syntax><![CDATA[<pre>
+  getdate()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>goto Label</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>goto Label - Branches to a user-defined label.</Description>
+    <Syntax><![CDATA[<pre>
+  label:
+     goto label
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>grant</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>grant - Assigns permissions to users or to user-defined roles. Assigns roles to users or system or user-defined roles.</Description>
+    <Syntax><![CDATA[<pre>
+  To grant permission to access database objects:
+     grant {all [privileges]| permission_list}
+     on { table_name [(column_list)]
+         | view_name[(column_list)]
+         | stored_procedure_name}
+     to {public | name_list | role_name}
+     [with grant option]
+
+  To grant permission to execute certain commands:
+     grant {all [privileges] | command_list}
+     to {public | name_list | role_name}
+     To grant a role to a user or a role:
+     grant {role role_granted [, role_granted ...]}
+     to grantee [, grantee...]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>grant dbcc</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>grant dbcc - Assigns permissions for dbcc commands</Description>
+    <Syntax><![CDATA[<pre>
+     grant dbcc {dbcc_command [on] {all | database_name}]
+     [, dbcc_command [on {all | database}],...]}
+     to {user_list | role_list}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>group by and having</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>group by and having Clauses - Used in select statements to divide a table into groups and to return only groups that match conditions in the having clause.</Description>
+    <Syntax><![CDATA[<pre>
+  Start of select statement
+     [group by [all] aggregate_free_expression
+     [, aggregate_free_expression]...]
+     [having search_conditions]
+     End of select statement
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>hextoint</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>hextoint - Returns the platform-independent integer equivalent of a hexadecimal string.</Description>
+    <Syntax><![CDATA[<pre>
+  hextoint (hexadecimal_string)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>host_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>host_id - Returns the host process ID or the client process.</Description>
+    <Syntax><![CDATA[<pre>
+  host_id()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>host_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>host_name - Returns the current host computer name of the client process.</Description>
+    <Syntax><![CDATA[<pre>
+  host_name()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>if...else</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>if...else - Imposes conditions on the execution of a SQL statement.</Description>
+    <Syntax><![CDATA[<pre>
+  if logical_expression [plan "abstract plan"]
+     statements
+     [else
+     [if logical_expression] [plan "abstract plan"]
+     statement]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>index_col</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>index_col - Returns the name of the indexed column in the specified table or view.</Description>
+    <Syntax><![CDATA[<pre>
+  index_col (object_name, index_id, key_# [, user_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>index_colorder</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>index_colorder - Returns the column order.</Description>
+    <Syntax><![CDATA[<pre>
+  index_colorder (object_name, index_id, key_# [, user_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>insert</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>insert - Adds new rows to a table or view.</Description>
+    <Syntax><![CDATA[<pre>
+  insert [into]
+     [database.[owner.]]{table_name|view_name}
+     [(column_list)]
+     {values (expression [, expression]...)
+         |select_statement [plan "abstract plan"] }
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>inttohex</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>inttohex - Returns the platform-independent hexadecimal equivalent of the specified integer.</Description>
+    <Syntax><![CDATA[<pre>
+  inttohex (integer_expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>is_sec_service_on</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>is_sec_service_on - Returns 1 if the security service is active and 0 if it is not.</Description>
+    <Syntax><![CDATA[<pre>
+  is_sec_service_on(security_service_nm)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>isnull</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>isnull - Substitutes the value specified in expression2 when expression1 evaluates to NULL.</Description>
+    <Syntax><![CDATA[<pre>
+  isnull(expression1, expression2)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>kill</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>kill - Kills a process.</Description>
+    <Syntax><![CDATA[<pre>
+  kill spid
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>lct_admin</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>lct_admin - Manages the last-chance threshold. Returns the current value of the last-chance threshold. Aborts transactions in a transaction log that has reached its last-chance threshold.</Description>
+    <Syntax><![CDATA[<pre>
+  lct_admin({{"lastchance" | "logfull" }, database_id
+     |"reserve", {log_pages | 0 }
+     | "abort", process-id [, database-id]})
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>license_enabled</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>license_enabled - Returns 1 if a feature's license is enabled, 0 if the license is not enabled, or null if you specify an invalid license name.</Description>
+    <Syntax><![CDATA[<pre>
+  license_enabled("ase_server" | "ase_ha" | "ase_dtm" | "ase_java" | "ase_asm")
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>load database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>load database - Loads a backup copy of a user database, including its transaction log, that was created with dump database.</Description>
+    <Syntax><![CDATA[<pre>
+  load database database_name
+     from [compress::]stripe_device [at backup_server_name ]
+         [density = density_value,
+         blocksize = number_bytes,
+         dumpvolume = volume_name,
+         file = file_name]
+     [stripe on stripe_device [at backup_server_name ]
+              [density = density_value,
+          blocksize = number_bytes,
+          dumpvolume = volume_name,
+          file = file_name]
+     [[stripe on stripe_device [at backup_server_name ]
+         [density = density_value,
+          blocksize = number_bytes,
+          dumpvolume = volume_name,
+          file = file_name]]...]
+     [with {
+         density = density_value,
+         blocksize = number_bytes,
+         dumpvolume = volume_name,
+         file = file_name,
+         [dismount | nodismount],
+         [nounload | unload],
+         listonly [= full],
+         headeronly,
+         notify = {client | operator_console}
+         }]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>load transaction</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>load transaction - Loads a backup copy of the transaction log that was created with the dump transaction command.</Description>
+    <Syntax><![CDATA[<pre>
+  load tran[saction] database_name
+     from [compress::]stripe_device [at backup_server_name]
+         [density = density_value,
+          blocksize = number_bytes,
+          dumpvolume = volume_name,
+          file = file_name]
+     [stripe on stripe_device [at backup_server_name]
+         [density = density_value,
+          blocksize = number_bytes,
+          dumpvolume = volume_name,
+          file = file_name]
+     [[stripe on stripe_device [at backup_server_name]
+         [density = density_value,
+          blocksize = number_bytes,
+          dumpvolume = volume_name,
+          file = file_name]]...]
+     [with {
+         density = density_value,
+         blocksize = number_bytes,
+         dumpvolume = volume_name,
+         file = file_name,
+         [dismount | nodismount],
+         [nounload | unload],
+         listonly [= full],
+         headeronly,
+         notify = {client | operator_console}
+         until_time = datetime}]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>lock table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>lock table - Explicitly locks a table within a transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  lock table table_name in {share | exclusive } mode [ wait [ numsecs ] | nowait ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>log</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>log - Returns the natural logarithm of the specified number.</Description>
+    <Syntax><![CDATA[<pre>
+  log(approx_numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>log10</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>log10 - Returns the base 10 logarithm of the specified number.</Description>
+    <Syntax><![CDATA[<pre>
+  log10(approx_numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>lower</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>lower - Returns the lowercase equivalent of the specified expression.</Description>
+    <Syntax><![CDATA[<pre>
+  lower(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ltrim</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>ltrim - Returns the specified expression, trimmed of leading blanks.</Description>
+    <Syntax><![CDATA[<pre>
+  ltrim(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>max</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>max - Returns the highest value in an expression.</Description>
+    <Syntax><![CDATA[<pre>
+  max(expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>min</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>min - Returns the lowest value in a column.</Description>
+    <Syntax><![CDATA[<pre>
+  min(expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>mount</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>mount - Use the mount command to attach the database to the destination or secondary Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+mount database all from <manifest file> [with listonly]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>mut_excl_roles</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>mut_excl_roles - Returns information about the mutual exclusivity between two roles.</Description>
+    <Syntax><![CDATA[<pre>
+  mut_excl_roles (role1, role2 [membership |
+     activation])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>nullif</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>nullif - Supports conditional SQL expressions; can be used anywhere a value expression can be used; alternative for a case expression.</Description>
+    <Syntax><![CDATA[<pre>
+  nullif(expression, expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>object_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>object_id - Returns the object ID of the specified object.</Description>
+    <Syntax><![CDATA[<pre>
+  object_id(object_name)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>object_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>object_name - Returns the name of the object whose object ID is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  object_name(object_id[, database_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>online database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>online database - Marks a database available for public use after a normal load sequence; if needed, upgrades a loaded database to the current release of Adaptive Server; brings a database online after loading a transaction log dumped with the standby_access option.</Description>
+    <Syntax><![CDATA[<pre>
+  online database database_name [for standby_access]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>open</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>open - Opens a cursor for processing.</Description>
+    <Syntax><![CDATA[<pre>
+  open cursor_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>order by Clause</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>order by Clause - Returns query results in the specified column(s) in sorted order.</Description>
+    <Syntax><![CDATA[<pre>
+  [Start of select statement]
+     [order by {[table_name.| view_name.]column_name
+         | select_list_number | expression} [asc | desc]
+     [,{[table_name.| view_name.] column_name
+           select_list_number|expression} [asc
+              |desc]]...]
+     [End of select statement]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>patindex</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>patindex - Returns the starting position of the first occurrence of a specified pattern.</Description>
+    <Syntax><![CDATA[<pre>
+  patindex("%pattern%", char_expr|uchar_expr [, using
+     {bytes | characters | chars} ] )
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>pi</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>pi - Returns the constant value 3.1415926535897936.</Description>
+    <Syntax><![CDATA[<pre>
+  pi()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>power</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>power - Returns the value that results from raising the specified number to a given power.</Description>
+    <Syntax><![CDATA[<pre>
+  power(value, power)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>prepare transaction</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>prepare transaction - Used by DB-Library in a two-phase commit application to see if a server is prepared to commit a transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  prepare tran[saction]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>print</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>print - Prints a user-defined message on the user's screen.</Description>
+    <Syntax><![CDATA[<pre>
+  print {format_string | @local_variable | @@global_variable} [, arg_list]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>proc_role</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>proc_role - Returns information about whether the user has been granted the specified role.</Description>
+    <Syntax><![CDATA[<pre>
+  proc_role ("role_name")
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ptn_data_pgs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>ptn_data_pgs - Returns the number of data pages used by a partition.</Description>
+    <Syntax><![CDATA[<pre>
+  ptn_data_pgs(object_id, partition_id)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>quiesce database</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>quiesce database - Suspends and resumes updates to a specified list of databases.</Description>
+    <Syntax><![CDATA[<pre>
+  quiesce database tag_name hold dbname [, dbname] ... [for external dump]
+     or
+  quiesce database tag_name release
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>radians</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>radians - Returns the size, in radians, of an angle with the specified number of degrees.</Description>
+    <Syntax><![CDATA[<pre>
+  radians(numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>raiserror</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>raiserror - Prints a user-defined error message on the user's screen and sets a system flag to record that an error condition has occurred.</Description>
+    <Syntax><![CDATA[<pre>
+  raiserror error_number
+     [{format_string | @local_variable}] [, arg_list]
+     [with errordata restricted_select_list]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>rand</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>rand - Returns a random value between 0 and 1, which is generated using the specified seed value.</Description>
+    <Syntax><![CDATA[<pre>
+  rand([integer])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>readtext</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>readtext - Reads text and image values, starting from a specified offset and reading a specified number of bytes or characters.</Description>
+    <Syntax><![CDATA[<pre>
+  readtext [[database.]owner.]table_name.column_name
+     text_pointer offset size
+     [holdlock | noholdlock] [readpast]
+     [using {bytes | chars | characters}]
+     [at isolation {
+             [ read uncommitted | 0 ] |
+             [ read committed | 1 ] |
+             [ repeatable read | 2 ]|
+             [ serializable | 3 ] } ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>reconfigure</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>reconfigure - The reconfigure command currently has no effect; it is included to allow existing scripts to run without modification. In previous releases, reconfigure was required after the system procedure sp_configure to implement new configuration parameter settings.</Description>
+    <Syntax><![CDATA[<pre>
+  reconfigure
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>remove java</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>remove java - Removes one or more Java-SQL classes, packages, or JARs from a database. Use when Java classes are installed in the database. Refer to Java in Adaptive Server Enterprise for more information.</Description>
+    <Syntax><![CDATA[<pre>
+  remove java
+     class class_name [, class_name]...
+     | package package_name [, package_name]...
+     | jar jar_name [, jar_name]...[retain classes]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>reorg</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>reorg - Reclaims unused space on pages, removes row forwarding, or rewrites all rows in the table to new pages, depending on the option used.</Description>
+    <Syntax><![CDATA[<pre>
+  reorg reclaim_space tablename [indexname] [with {resume, time = no_of_minutes}]
+  reorg forwarded_rows tablename [with {resume,time = no_of_minutes}]
+  reorg compact tablename [with {resume, time = no_of_minutes}]
+  reorg rebuild [ tablename | indexname ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>replicate</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>replicate - Returns a string consisting of the specified expression repeated a given number of times.</Description>
+    <Syntax><![CDATA[<pre>
+  replicate (char_expr|uchar_expr, integer_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>reserved_pgs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>reserved_pgs - Returns the number of pages allocated to the specified table or index, and reports pages used for internal structures.</Description>
+    <Syntax><![CDATA[<pre>
+  reserved_pgs(object_id, {doampg|ioampg})
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>return</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>return - Exits from a batch or procedure unconditionally and provides an optional return status. Statements following return are not executed.</Description>
+    <Syntax><![CDATA[<pre>
+  return [integer_expression] [plan "abstract plan"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>reverse</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>reverse - Returns the specified string with characters listed in reverse order.</Description>
+    <Syntax><![CDATA[<pre>
+  reverse(expression|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>revoke</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>revoke - Revokes permissions or roles from users or roles.</Description>
+    <Syntax><![CDATA[<pre>
+  To revoke permission to access database objects:
+     revoke [grant option for]
+     {all [privileges] | permission_list}
+     on { table_name [(column_list)]
+         | view_name [(column_list)]
+         | stored_procedure_name}
+     from {public | name_list | role_name}
+     [cascade]
+
+  To revoke permission to create database objects, execute set proxy, or execute set session authorization:
+     revoke {all [privileges] | command_list}
+     from {public | name_list | role_name}
+     To revoke a role from a user or another role:
+     revoke role {role_name [, role_name ...]} from
+     {grantee [, grantee ...]}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>revoke dbcc</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>revoke dbcc - revokes permissions for dbcc commands</Description>
+    <Syntax><![CDATA[<pre>
+  revoke dbcc {dbcc_command [on] {all | database_name}]
+     [, dbcc_command [on {all | database}],...]}
+     from {user_list | role_list}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>right</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>right - The rightmost part of the expression with the specified number of characters.</Description>
+    <Syntax><![CDATA[<pre>
+  right(expression, integer_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>role_contain</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>role_contain - Returns 1 if role2 contains role1.</Description>
+    <Syntax><![CDATA[<pre>
+  role_contain("role1", "role2")
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>role_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>role_id - Returns the system role ID of the role whose name you specify.</Description>
+    <Syntax><![CDATA[<pre>
+  role_id("role_name")
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>role_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>role_name - Returns the name of a role whose system role ID you specify.</Description>
+    <Syntax><![CDATA[<pre>
+  role_name(role_id)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>rollback</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>rollback - Rolls back a user-defined transaction to the named savepoint in the transaction or to the beginning of the transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  rollback [tran | transaction | work] [transaction_name | savepoint_name]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>rollback trigger</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>rollback trigger - Rolls back the work done in a trigger, including the data modification that caused the trigger to fire, and issues an optional raiserror statement.</Description>
+    <Syntax><![CDATA[<pre>
+  rollback trigger [with raiserror_statement]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>round</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>round - Returns the value of the specified number, rounded to a given number of decimal places.</Description>
+    <Syntax><![CDATA[<pre>
+  round(number, decimal_places)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>rowcnt</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>rowcnt - Returns an estimate of the number of rows in the specified table.</Description>
+    <Syntax><![CDATA[<pre>
+  rowcnt(sysindexes.doampg)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>rtrim</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>rtrim - Returns the specified expression, trimmed of trailing blanks.</Description>
+    <Syntax><![CDATA[<pre>
+  rtrim(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>save transaction</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>save transaction - Sets a savepoint within a transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  save transaction savepoint_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>select</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>select - Retrieves rows from database objects.</Description>
+    <Syntax><![CDATA[<pre>
+  select  ::=
+     select   [ all | distinct ] select_list
+     [into_clause]
+     [from_clause]
+     [where_clause]
+     [group_by_clause]
+     [having_clause]
+     [order_by_clause]
+     [compute_clause]
+     [read_only_clause]
+     [isolation_clause]
+     [browse_clause]
+     [plan_clause]
+     select_list ::=
+     For details, see "Keywords and options" in the SAG
+     into_clause ::=
+     into [[database.]owner.]table_name
+     [  lock {datarows | datapages | allpages } ]
+     [ with into_option [, into_option] ...]
+   into_option ::=
+   | max_rows_per_page = num_rows
+   | exp_row_size = num_bytes
+   | reservepagegap = num_pages
+   | identity_gap = gap
+     from_clause ::=
+     from table_reference [,table_reference]...
+     table_reference ::=
+     table_view_name | ANSI_join
+     table_view_name ::=
+        [[database.]owner.] {table_name | view_name}
+        [as] [correlation_name]
+        [index {index_name | table_name }]
+        [parallel [degree_of_parallelism]]
+        [prefetch size ][lru | mru]}
+        [holdlock | noholdlock]
+        [readpast]
+        [shared]
+        ANSI_join ::=
+        table_reference join_type join table_reference join_condition
+        join_type ::= inner | left [outer] | right [outer]
+        join_conditions ::= on search_conditions
+     where_clause ::=
+     where search_conditions
+     group_by_clause ::=
+     group by [all] aggregate_free_expression
+     [, aggregate_free_expression]...
+     having_clause ::=
+     having search_conditions
+     order_by_clause ::=
+     order by sort_clause [, sort_clause]...
+        sort_clause ::=
+        { [[[database.]owner.]{table_name.|view_name.}]column_name
+        | select_list_number | expression }
+        [asc | desc]
+     compute_clause ::=
+     compute row_aggregate(column_name)
+     [, row_aggregate(column_name)]...
+     [by column_name [, column_name]...]
+     read_only_clause ::=
+     for {read only | update [of column_name_list]}
+     isolation_clause ::=
+     at isolation
+             { read uncommitted | 0 }
+             | { read committed | 1 }
+             | { repeatable read | 2  }
+             | { serializable | 3  }
+     browse_clause ::=
+     for browse
+     plan_clause ::=
+     plan "abstract plan"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>set</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>set - Sets Adaptive Server query-processing options for the duration of the user's work session; sets some options inside a trigger or stored procedure.</Description>
+    <Syntax><![CDATA[<pre>
+  set ansinull {on | off}
+  set ansi_permissions {on | off}
+  set arithabort [arith_overflow | numeric_truncation] {on | off}
+  set arithignore [arith_overflow] {on | off}
+  set {chained, close on endtran, nocount, noexec, parseonly, procid, self_recursion, showplan, sort_resources} {on | off}
+  set char_convert {off | on [with {error | no_error}] | charset [with {error | no_error}]}
+  set cis_rpc_handling {on | off}
+  set [clientname client_name | clienthostname host_name | clientapplname application_name]
+  set cursor rows number for cursor_name
+  set {datefirst number, dateformat format, language language}
+  set fipsflagger {on | off}
+  set flushmessage {on | off}
+  set forceplan {on | off}
+  set identity_insert [database.[owner.]]table_name {on | off}
+  set jtc {on | off}
+  set lock { wait [ numsecs ] | nowait }
+  set offsets {select, from, order, compute, table, procedure, statement, param, execute} {on | off}
+  set parallel_degree number
+  set plan {dump | load } [group_name] {on | off}
+  set plan exists check {on | off}
+  set plan replace {on | off}
+  set prefetch [on|off]
+  set process_limit_action {abort | quiet | warning}
+  set proxy login_name
+  set quoted_identifier {on | off}
+  set role {"sa_role" | "sso_role" | "oper_role" | role_name [with passwd "password"]} {on | off}
+  set {rowcount number, textsize number}
+  set scan_parallel_degree number
+  set session authorization login_name
+  set sort_merge {on | off}
+  set statistics {io, subquerycache, time} {on | off}
+  set statistics simulate { on | off }
+  set strict_dtm_enforcement {on | off}
+  set string_rtruncation {on | off}
+  set table count number
+  set textsize {number}
+  set transaction isolation level { [ read uncommitted | 0 ] | [ read committed | 1 ] | [ repeatable read | 2 ] | [ serializable | 3 ] }
+  set transactional_rpc {on | off}
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>setuser</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>setuser - Allows a Database Owner to impersonate another user.</Description>
+    <Syntax><![CDATA[<pre>
+  setuser ["user_name"]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>show_role</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>show_role - Shows the login's currently active system-defined roles.</Description>
+    <Syntax><![CDATA[<pre>
+  show_role()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>show_sec_services</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>show_sec_services - Lists the security services that are active for the session.</Description>
+    <Syntax><![CDATA[<pre>
+  show_sec_services()
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>shutdown</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>shutdown - Shuts down the Adaptive Server from which the command is issued, its local Backup Server, or a remote Backup Server. This command can be issued only by a System Administrator.</Description>
+    <Syntax><![CDATA[<pre>
+  shutdown [srvname] [with {wait | nowait}]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sign</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>sign - Returns the sign (+1 for positive, 0, or -1 for negative) of the specified value.</Description>
+    <Syntax><![CDATA[<pre>
+  sign(numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sin</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>sin - Returns the sine of the specified angle (in radians).</Description>
+    <Syntax><![CDATA[<pre>
+  sin(approx_numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sortkey</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>sortkey - Generates values that can be used to order results based on collation behavior, which allows you to work with character collation behaviors beyond the default set of Latin-character-based dictionary sort orders and case or accent sensitivity.</Description>
+    <Syntax><![CDATA[<pre>
+  sortkey (char_expression|uchar_expression [,{collation_name | collation_ID}])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>soundex</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>soundex - Returns a 4-character code representing the way an expression sounds.</Description>
+    <Syntax><![CDATA[<pre>
+  soundex(char_expr|uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>space</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>space - Returns a string consisting of the specified number of single-byte spaces.</Description>
+    <Syntax><![CDATA[<pre>
+  space(integer_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqrt</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>sqrt - Returns the square root of the specified number.</Description>
+    <Syntax><![CDATA[<pre>
+  sqrt(approx_numeric)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>str</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>str - Returns the character equivalent of the specified number.</Description>
+    <Syntax><![CDATA[<pre>
+  str(approx_numeric [, length [, decimal] ])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>stuff</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>stuff - Returns the string formed by deleting a specified number of characters from one string and replacing them with another string.</Description>
+    <Syntax><![CDATA[<pre>
+  stuff(char_expr1|uchar_expr1, start, length, char_expr2|uchar_expr2)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>substring</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>substring - Returns the string formed by extracting the specified number of characters from another string.</Description>
+    <Syntax><![CDATA[<pre>
+  substring(expression, start, length)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sum</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>sum - Returns the total of the values.</Description>
+    <Syntax><![CDATA[<pre>
+  sum([all | distinct] expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>suser_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>suser_id - Returns the server user's ID number from the syslogins table.</Description>
+    <Syntax><![CDATA[<pre>
+  suser_id([server_user_name])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>suser_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>suser_name - Returns the name of the current server user or the user whose server ID is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  suser_name([server_user_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>syb_sendmsg</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>syb_sendmsg - Sends a message to a User Datagram Protocol (UDP) port.</Description>
+    <Syntax><![CDATA[<pre>
+  syb_sendmsg ip_address, port_number, message
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>tan</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>tan - Returns the tangent of the specified angle (in radians).</Description>
+    <Syntax><![CDATA[<pre>
+  tan(angle)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>textptr</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>textptr - Returns a pointer to the first page of a text or image column.</Description>
+    <Syntax><![CDATA[<pre>
+  textptr(column_name)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>textvalid</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>textvalid - Returns 1 if the pointer to the specified text column is valid; 0 if it is not.</Description>
+    <Syntax><![CDATA[<pre>
+  textvalid("table_name.column_name", textpointer)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>to_unichar</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>to_unichar - Returns a unichar expression having the value of the integer expression.</Description>
+    <Syntax><![CDATA[<pre>
+  to_unichar (integer_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>truncate table</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>truncate table - Removes all rows from a table.</Description>
+    <Syntax><![CDATA[<pre>
+  truncate table [[database.]owner.]table_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>tsequal</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>tsequal - Compares timestamp values to prevent update on a row that has been modified since it was selected for browsing.</Description>
+    <Syntax><![CDATA[<pre>
+  tsequal(browsed_row_timestamp, stored_row_timestamp)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>uhighsurr</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>uhighsurr - Returns 1 if the Unicode value at position start is the high half of a surrogate pair (which should appear first in the pair). Returns 0 otherwise.</Description>
+    <Syntax><![CDATA[<pre>
+  uhighsurr(uchar_expr,start)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ulowsurr</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>ulowsurr - Returns 1 if the Unicode value at position start is the low half of a surrogate pair (which should appear second in the pair). Returns 0 otherwise.</Description>
+    <Syntax><![CDATA[<pre>
+  ulowsurr(uchar_expr,start)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>union Operator</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>union Operator - Returns a single result set that combines the results of two or more queries. Duplicate rows are eliminated from the result set unless the all keyword is specified.</Description>
+    <Syntax><![CDATA[<pre>
+  select select_list [into clause]
+             [from clause] [where clause]
+             [group by clause] [having clause]
+     [union [all]
+         select select_list
+             [from clause] [where clause]
+             [group by clause] [having clause] ]...
+     [order by clause]
+     [compute clause]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>unmount</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>unmount - unmount command shuts down the database and drops it from the Adaptive Server. Devices are also deactivated and dropped.</Description>
+    <Syntax><![CDATA[<pre>
+unmount database <dbname list> to <manifest file>
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>update</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>update - Changes data in existing rows, either by adding data or by modifying existing data.</Description>
+    <Syntax><![CDATA[<pre>
+  update [[database.]owner.]{table_name | view_name}
+     set [[[database.]owner.]{table_name.|view_name.}]
+         column_name1 =
+             {expression1|NULL|(select_statement)} |
+         variable_name1 =
+             {expression1|NULL|(select_statement)}
+         [, column_name2 =
+             {expression2|NULL|(select_statement)}]... |
+         [, variable_name2 =
+             {expression2|NULL|(select_statement)}]...
+
+     [from [[database.]owner.]{view_name [readpast]|
+         table_name [readpast]
+             [(index {index_name | table_name }
+             [ prefetch size ][lru|mru])]}
+          [,[[database.]owner.]{view_name [readpast]|
+         table_name [readpast]
+             [(index {index_name | table_name }
+             [ prefetch size ][lru|mru])]}]
+     ...]
+     [where search_conditions]
+     [plan "abstract plan"]
+     update [[database.]owner.]{table_name | view_name}
+     set [[[database.]owner.]{table_name.|view_name.}]
+         column_name1 =
+            {expression1|NULL|(select_statement)} |
+         variable_name1 =
+             {expression1|NULL|(select_statement)}
+         [, column_name2 =
+            {expression2|NULL|(select_statement)}]... |
+         [, variable_name2 =
+             {expression2|NULL|(select_statement)}]...
+     where current of cursor_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>update all statistics</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>update all statistics - Updates all statistics information for a given table.</Description>
+    <Syntax><![CDATA[<pre>
+  update all statistics table_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>update partition statistics</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>update partition statistics - Updates information about the number of pages in each partition for a partitioned table.</Description>
+    <Syntax><![CDATA[<pre>
+  update partition statistics table_name [partition_number]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>update statistics</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>update statistics - The update statistics commands create statistics, if there are no statistics for a particular column, or replaces existing statistics if they already exist. The statistics are stored in the system tables systabstats and sysstatistics</Description>
+    <Syntax><![CDATA[<pre>
+  update statistics table_name
+             [ [index_name] | [( column_list ) ] ]
+             [using step values]
+             [with consumers = consumers ]
+  update index statistics table_name [index_name]
+             [using step values]
+             [with consumers = consumers ]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>upper</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>upper - Returns the uppercase equivalent of the specified string.</Description>
+    <Syntax><![CDATA[<pre>
+  upper(char_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>uscalar</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>uscalar - Returns the Unicode scalar value for the first Unicode character in an expression..</Description>
+    <Syntax><![CDATA[<pre>
+  uscalar(uchar_expr)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>use</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>use - Specifies the database with which you want to work.</Description>
+    <Syntax><![CDATA[<pre>
+  use database_name
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>used_pgs</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>used_pgs - Returns the number of pages used by a table or index. For an all-pages-locked table with a clustered index, it returns the sum of the table and index pages.</Description>
+    <Syntax><![CDATA[<pre>
+  used_pgs(object_id, doampg, ioampg)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>user</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>user - Returns the name of the current user.</Description>
+    <Syntax><![CDATA[<pre>
+  user
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>user_id</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>user_id - Returns the ID number of the specified user or of the current user in the database.</Description>
+    <Syntax><![CDATA[<pre>
+  user_id([user_name])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>user_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>user_name - Returns the name within the database of the specified user or of the current user.</Description>
+    <Syntax><![CDATA[<pre>
+  user_name([user_id])
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>valid_name</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>valid_name - Returns 0 if the specified string is not a valid identifier or a number other than 0 if the string is a valid identifier.</Description>
+    <Syntax><![CDATA[<pre>
+  valid_name(character_expression)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>valid_user</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>valid_user - Returns 1 if the specified ID is a valid user or alias in at least one database on this Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  valid_user(server_user_id)
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>waitfor</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>waitfor - Specifies a specific time, a time interval, or an event for the execution of a statement block, stored procedure, or transaction.</Description>
+    <Syntax><![CDATA[<pre>
+  waitfor { delay time | time time | errorexit | processexit | mirrorexit }
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>where Clause</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>where Clause - Sets the search conditions in a select, insert, update, or delete statement.</Description>
+    <Syntax><![CDATA[<pre>
+  Search conditions immediately follow the keyword where in a select,
+     insert, update, or delete statement. If you use more than one search
+     condition in a single statement, connect the conditions with and or or.
+     where [not] expression comparison_operator expression
+     where [not] expression [not] like "match_string" [escape "escape_character"]
+     where [not] expression is [not] null
+     where [not] expression [not] between expression and expression
+     where [not] expression [not] in ({value_list | subquery})
+     where [not] exists (subquery)
+     where [not] expression comparison_operator
+     {any | all} (subquery)
+     where [not] column_name join_operator column_name
+     where [not] logical_expression
+     where [not] expression {and | or} [not] expression
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>while</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>while - Sets a condition for the repeated execution of a statement or statement block. The statement(s) are executed repeatedly, as long as the specified condition is true.</Description>
+    <Syntax><![CDATA[<pre>
+  while logical_expression [plan "abstract plan"]
+          statement
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>writetext</CmdName>
+    <Module>Transact-SQL</Module>
+    <Description>writetext - Permits minimally logged, interactive updating of an existing text or image column.</Description>
+    <Syntax><![CDATA[<pre>
+  writetext [[database.]owner.]table_name.column_name text_pointer [readpast] [with log] data
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == UNIX Utility ============================================================================ -->
+<!-- ============================================================================================ -->
+
+
+<Entry>
+    <CmdName>backupserver</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>backupserver - The executable form of the Backup Server program.</Description>
+    <Syntax><![CDATA[<pre>
+  backupserver
+      [-Cserver_connections]
+      [-Sb_servername]
+      [-Iinterfaces_file]
+      [-eerror_log_file]
+      [-Msybmultbuf_binary]
+      [-Nnetwork_connections]
+      [-Ttrace_value]
+      [-LSybase_language_name]
+      [-JSybase_character_set_name]
+      [-Pactive_service_threads]
+      [-ctape_config_file]
+      [-A]
+      [-s]
+      [-D]
+      [-Vversion_number]
+      [-p]
+      [-m]
+or
+  backupserver -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>bcp</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>bcp - Copies a database table to or from an operating system file in a user-specified format.</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for bcp, bcp_r, & bcp_dce
+  bcp [[database_name.]owner.][view_name | table_name [:partition_id]] {in
+     out} datafile
+      [-c] [-E] [-n] [-N] [-X]
+      [-a display_charset]
+      [-A packet_size]
+      [-b batchsize]
+      [-e errfile]
+      [-f formatfile]
+      [-F firstrow]
+      [-g id_start_value]
+      [-I interfaces_file]
+      [-J client_charset]
+      [-L lastrow]
+      [-m maxerrors]
+      [-P password]
+      [-q datafile_charset]
+      [-r row_terminator]
+      [-R remote_server_principal]
+      [-S server]
+      [-t field_terminator]
+      [-T text_or_image_size]
+      [-U username]
+      [-z language]
+     or
+     bcp -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>certauth</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>certauth - converts a server certificate request to a Certificate Authority-signed certificate</Description>
+    <Syntax><![CDATA[<pre>
+  certauth
+      [-r]
+      [-C caCert file]
+      [-Q request file name]
+      [-K caKey file name]
+      [-O signed Cert file name]
+      [-P ca password]
+      [-T valid time]
+or
+  certauth -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>certpk12</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>certpk12 - import or export a PKCS#12 file </Description>
+    <Syntax><![CDATA[<pre>
+  certpk12
+      {-O pkcs file | -I pkcs file}
+      [-v]
+      [-C Certificate file]
+      [-K Key file]
+      [-P Key password]
+      [-E pkcs12 password]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>certreq</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>certreq - Creates a server certificate request and corresponding private key</Description>
+    <Syntax><![CDATA[<pre>
+  certreq
+      [-F input file]
+      [-R request file]
+      [-K PK file]
+      [-P password]
+      [-v]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>charset</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>charset - Loads the character sets and sort order files.</Description>
+    <Syntax><![CDATA[<pre>
+  charset
+      [-P password]
+      [-S server]
+      [-I interface]
+      sort order
+      [charset]
+or
+  charset -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>cobpre</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>cobpre - Precompiler for ESQL/COBOL</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for cobpre and cobpre_r
+      [-B compatiblity mode]
+      [-C compiler]
+      [-D database]
+      [-F fips level]
+      [-G isql file name]
+      [-I include path name]
+      [-J charset locale name]
+      [-K syntax level]
+      [-L [listing file name]
+      [-N interface file name]
+      [-O target file name]
+      [-P password]
+      [-S server name]
+        [-T tag]
+      [-U userid]
+      [-V version number]
+      [-X application name]
+      [-Z [language locale name] [@options file]
+      [-a] [-b] [-c] [-d] [-e] [-f] [-h] [-m] [-p] [-q] [-r] [-v] [-w] [-x] [-w]
+     filename[.ext]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>cpre</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>cpre - Precompiler for ESQL/C</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for cpre and cpre_r
+      [-B compatiblity mode]
+      [-C compiler]
+      [-D database]
+      [-F fips level]
+      [-G isql file name]
+      [-I include path name]
+      [-J charset locale name]
+      [-K syntax level]
+      [-L [listing file name]
+      [-N interface file name]
+      [-O target file name]
+      [-P password]
+      [-S server name]
+        [-T tag]
+      [-U userid]
+      [-V version number]
+      [-X application name]
+      [-Z [language locale name] [@options file]
+      [-a] [-b] [-c] [-d] [-f] [-h] [-l] [-m] [-p] [-r] [-v] [-w] [-x] [-w]
+     filename[.ext]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dataserver</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>dataserver - The executable form of the Adaptive Server program.</Description>
+    <Syntax><![CDATA[<pre>
+  dataserver
+     [-f] [-g] [-G] [-h] [-H] [-m] [-q] [-v] [-X]
+     [-a path to CAPs directive file]
+     [-b master device size [k|K|m|M|g|G]]
+     [-c configuration file for server]
+     [-d device name]
+     [-e path to error log]
+     [-i interfaces file directory]
+     [-K keytab file]
+     [-L config file name for connectivity]
+     [-M shared memory repository directory]
+     [-p sa login name]
+     [-r mirror disk name]
+     [-s server name]
+     [-T trace flag]
+     [-u sa/sso name]
+     [-w master | model database]
+     [-y [password]]
+     [-z page size [k|K]]
+
+     The -b parameter is only used to build the master device.
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dataxtr</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>dataxtr - GUI data migration</Description>
+    <Syntax><![CDATA[<pre>
+  dataxtr
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>ddlgen</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>ddlgen - A Java-based tool that generates the data definition language (DDL) of all server- and database-level objects in Adaptive Server</Description>
+    <Syntax><![CDATA[<pre>
+  ddlgen
+      [-Uuser_name]
+      [-ppassword]
+      [-Sserver_name]
+      [-Tobject_type]
+      [-Nobject_name]
+      [-Ooutput_file_name]
+      [-Ddatabase_name]
+      [-Eerror_log_file]
+      [-Xextended_object_value]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>defncopy</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>defncopy - Copies definitions for specified views, rules, defaults, trigger or procedures from a database to an operating system file or from an operating system file to a database.</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for defncopy, defncopy_r, & defncopy_dce
+  defncopy
+      [-X]
+      [-a display_charset]
+      [-I interfaces_file]
+      [-J [client_charset]]
+      [-K key tab]
+      [-P password]
+      [-R remote_server_principal]
+      [-S [server]]
+      [-U username]
+      [-V security option]
+      [-z language]
+      [-Z security mechanism]
+      {in filename dbname | out filename dbname
+        [owner.]objectname [[owner.]objectname...] }
+or
+  defncopy -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dscp</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>dscp - Allows you to view and edit server entries in the interfaces file from the command line.</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for dscp and dscp_r
+  dscp [-p]
+or
+  dscp -v
+
+  To exit from dscp:  quit or exit
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dsedit</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>dsedit - Allows you to view and edit server entries in the interfaces file using a graphical user interface based on X11/Motif.</Description>
+    <Syntax><![CDATA[<pre>
+  dsedit
+or
+  dsedit -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>extractjava</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>extractjava - Copies a retained JAR and the classes it contains from an Adaptive Server into a client file.</Description>
+    <Syntax><![CDATA[<pre>
+  extractjava
+     -j jar name
+     -f file name
+     [ -S server name ]
+     [ -U user name ]
+     [ -P password ]
+     [ -D database name]
+     [ -I interfaces file ]
+     [ -a display charset ]
+     [ -J client charset ]
+     [ -z language ]
+     [ -t timeout] [-v] [-h]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>installjava</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>installjava - Installs a JAR from a client file into an Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  installjava
+     -f file name
+     [-new | -update]
+     [-j  jar name]
+     [-S server name]
+     [-U user name]
+     [-P password]
+     [-D database name]
+     [-I interfaces file]
+     [-a display charset]
+     [-J client charset]
+     [-z language]
+     [-t timeout] [-v] [-h]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>isql</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>isql - Interactive SQL parser to Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  Following is syntax for isql, isql_r, and isql_dce.
+  isql [-b] [-e] [-F] [-n] [-p] [-Q] [-v] [-X] [-Y]
+     [-a display_charset]
+     [-A packet size]
+     [-c cmdend]
+     [-D database]
+     [-E editor]
+     [-h header]
+     [-H hostname]
+     [-i inputfile]
+     [-I interfaces file]
+     [-J client charset
+     [-K keytab file]
+     [-l login timeout]
+     [-m errorlevel]
+     [-M label name label value]
+     [-o outputfile]
+     [-P password]
+     [-R remote server principal]
+     [-s column separator]
+     [-S server name]
+     [-t timeout]
+     [-U username]
+     [-V[security options]]
+     [-w column width]
+     [-z locale name]
+     [-Z security mechanism]
+or
+  isql -v
+
+  - To terminate a command:  go
+  - To clear the query buffer:  reset
+  - To call the default editor:  vi
+  - To execute an operating system command:  !! command
+  - To exit from isql:  quit or exit
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>langinstall</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>langinstall - Installs a new language in an Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  langinstall
+      [-S server name]
+      [-P password]
+      [-R release number]
+      [-I path to interfaces file]
+      language character_set
+or
+  langinstall -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>optdiag</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>optdiag - Displays optimizer statistics or loads updated statistics into system tables.</Description>
+    <Syntax><![CDATA[<pre>
+  optdiag [ binary ] [simulate ] statistics
+      { -i input_file |
+        database[.owner[.[table[.column]]]]
+        [-o output file] }
+      [-U user name]
+      [-T trace value]
+      [-P password]
+      [-I interfaces file]
+      [-S server name]
+      [-v]
+      [-h]
+      [-s]
+      [-z language]
+      [-J client charset]
+      [-a display charset]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>pwdcrypt</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>pwdcrypt - encrypts the LDAP password for insertion in the libtcl.cfg file</Description>
+    <Syntax><![CDATA[<pre>
+  pwdcrypt
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>showserver</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>showserver - Shows the Adaptive Servers and Backup Servers that are current running on the local machine.</Description>
+    <Syntax><![CDATA[<pre>
+  showserver
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqlloc</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>sqlloc - Installs and modifies languages, character sets, and sort order defaults for Adaptive Server using a graphical user interface based on X11/Motif.</Description>
+    <Syntax><![CDATA[<pre>
+  sqlloc
+      [-S server]
+      [-U user]
+      [-P password]
+      [-s Sybase directory]
+      [-I interfaces_file]
+      [-r resource_file]
+or
+  sqlloc -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqllocres</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>sqllocres - Installs and modifies languages, character sets, and sort order defaults for Adaptive Server, using a resource file.</Description>
+    <Syntax><![CDATA[<pre>
+  sqllocres
+      [-S server]
+      [-U user]
+      [-P password]
+      [-s Sybase directory]
+      [-I interfaces file]
+      [-r resource file]
+or
+  sqllocres -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqlupgrade</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>sqlupgrade - Upgrades your currently installed release of Adaptive Server to the newest release using a graphical user interface based on X11/Motif.</Description>
+    <Syntax><![CDATA[<pre>
+  sqlupgrade
+      [-s Sybase directory]
+      [-r resource file]
+or
+  sqlupgrade -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqlupgraderes</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>sqlupgraderes - Upgrades your currently installed release of Adaptive Server to the newest release using resource files.</Description>
+    <Syntax><![CDATA[<pre>
+  sqlupgraderes
+      [-s Sybase directory]
+      [-r resource file]
+or
+  sqlupgraderes -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>srvbuild</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>srvbuild - Creates a new Adaptive Server, Backup Server, Monitor Server, or Server with default or user-specified values for key configuration attributes using a graphical user interface based on X11/Motif.</Description>
+    <Syntax><![CDATA[<pre>
+  srvbuild
+      [-s Sybase directory]
+      [-I interfaces file]
+      [-r resource file]
+or
+  srvbuild -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>srvbuildres</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>srvbuildres - Creates, using resource files, a new Adaptive Server, Backup Server, Monitor Server, or XP Server with default or user-specified values for key configuration attributes.</Description>
+    <Syntax><![CDATA[<pre>
+  srvbuildres
+      [-s Sybase directory]
+      [-I interfaces file]
+      [-r resource file]
+or
+  srvbuildres -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>startserver</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>startserver - Starts an Adaptive Server and/or a Backup Server.</Description>
+    <Syntax><![CDATA[<pre>
+  startserver [[-f runserverfile] [-m]] ...
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sybload</CmdName>
+    <Module>UNIX Utility</Module>
+    <Description>sybload - Uploads Sybase products from the distribution media and builds the Sybase installation directory.</Description>
+    <Syntax><![CDATA[<pre>
+  sybload [-D]
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Windows NT Utility ====================================================================== -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>bcksrvr</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>bcksrvr - The executable form of the Backup Server program.</Description>
+    <Syntax><![CDATA[<pre>
+  bcksrvr
+      [-Cserver_connections]
+      [-Sb_servername]
+      [-Isqlini_filename]
+      [-eerror_log_file]
+      [-Msybmbuf_binary]
+      [-Nnetwork_connections]
+      [-Ttrace_value]
+      [-LSybase_language_name]
+      [-JSybase_character_set_name]
+      [-Pactive_service_threads]
+      [-Vversion_number]
+or
+  bcksrvr -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>bcp</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>bcp - Copies a database to or from an operating system file in a user-specified format.</Description>
+    <Syntax><![CDATA[<pre>
+  bcp [[database_name.]owner.][view_name | table_name[:partition_id]] {in | out} datafile
+      [-c] [-E] [-n] [-X]
+      [-a display_charset]
+      [-A size]
+      [-b batchsize]
+      [-e errfile]
+      [-f formatfile]
+      [-F firstrow]
+      [-g id_start_value]
+      [-I interfaces_file]
+      [-J client_charset]
+      [-L lastrow]
+      [-m maxerrors]
+      [-P password]
+      [-q datafile_charset]
+      [-r row_terminator]
+      [-R remote_server_principal]
+      [-S server]
+      [-t field_terminator]
+      [-T text_or_image_size]
+      [-U username]
+      [-z language]
+or
+  bcp -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>bldmastr</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>bldmastr - Builds the master device and creates the master, model, and sybsystemdb databases on the device.</Description>
+    <Syntax><![CDATA[<pre>
+  bldmastr
+      [-d physicalname]
+      [-c cntrltype]
+      [-s size]
+      [-m]
+      [-x
+or
+  bldmastr -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>charset</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>charset - Loads the character sets and sort order files.</Description>
+    <Syntax><![CDATA[<pre>
+  charset
+      [-P password]
+      [-S server]
+      [-I interface]
+      sort order
+      [charset]
+or
+  charset -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>defncopy</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>defncopy - Copies definitions for specified views, rules, defaults, triggers, or procedures from a database to an operating system file or from an operating system file to a database.</Description>
+    <Syntax><![CDATA[<pre>
+  The following is the syntax for defncopy, defncopy_r & defncopy_dce.
+  defncopy
+      [-U username]
+      [-P password]
+      [-S server]
+      [-I sqlini_file]
+      [-a display_charset]
+      [-J client_charset]
+      [-z language]
+      [-X]
+      {in filename dbname | out filename dbname
+        [owner.]objectname [[owner.]objectname]...}
+or
+  defncopy -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>dsedit</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>dsedit - Creates and modifies network connection information in the interfaces file.</Description>
+    <Syntax><![CDATA[<pre>
+  dsedit
+or
+  dsedit -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>extrjava</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>extrjava - Copies a retained JAR and the classes it contains from an Adaptive Server into a client file.</Description>
+    <Syntax><![CDATA[<pre>
+  extrtjava
+     -j jar_name
+     -f file_name
+     [ -S server ]
+     [ -U username ]
+     [ -P password ]
+     [ -D database ]
+     [ -I interfaces_file ]
+     [ -a display_charset ]
+     [ -J client_charset ]
+     [ -z language ]
+     [ -t timeout] [-v]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>instjava</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>instjava - Installs a JAR from a client file into an Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  instjava
+     -f file_name
+     [ -new | -update ]
+     [ -j  jar_name]
+     [ -S server ]
+     [ -U username ]
+     [ -P password ]
+     [ -D database ]
+     [ -I interfaces_file ]
+     [ -a display_charset ]
+     [ -J client_charset ]
+     [ -z language ]
+     [ -t timeout] [-v]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>isql</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>isql - Interactive SQL parser to Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  isql [-b] [-e] [-F] [-n] [-p] [-X] [-Y]
+     [-a display_charset]
+     [-A size]
+     [-c cmdend]
+     [-D database]
+     [-E editor]
+     [-h headers]
+     [-H hostname]
+     [-i inputfilename]
+     [-I interfaces_file]
+     [-J client_charset]
+     [-l login_timeout]
+     [-m errorlevel]
+     [-o outputfilename]
+     [-P password]
+     [-R remote_server_principal]
+     [-s colseparator]
+     [-S server]
+     [-t timeout]
+     [-U username]
+     [-w columnwidth]
+     [-z language]
+or
+  isql -v
+
+  - To terminate a command:  go
+  - To clear the query buffer:  reset
+  - To call the default editor:  vi
+  - To execute an operating system command:  !! command
+  - To exit from isql:  quit or exit
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>langinst</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>langinst - Installs one new language on Adaptive Server.</Description>
+    <Syntax><![CDATA[<pre>
+  langinst
+      [-S server]
+      [-I sqlini_file]
+      [-P password]
+      [-R release_number]
+      language character_set
+or
+  langinst -v
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>optdiag</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>optdiag - Displays optimizer statistics or loads updated statistics into system tables.</Description>
+    <Syntax><![CDATA[<pre>
+  optdiag [ binary ] [simulate ] statistics
+      { -i input_file | database[.owner[.[table[.column]]]]
+       [-o output_file] }
+      [-U user_name]
+      [-P password]
+      [-I interfaces_file]
+      [-S server]
+      [-v]
+      [-h]
+      [-s]
+      [-T flag_value]
+      [-z language]
+      [-J client_charset]
+      [-a display_charset]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sqlsrvr</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>sqlsrvr - The executable form of the Adaptive Server program.</Description>
+    <Syntax><![CDATA[<pre>
+  sqlsrvr
+     [-f] [-g] [-G] [-h] [-H] [-m] [-P] [-q] [-v] [-X]
+     [-a path to CAPs directive file]
+     [-b master device size]
+     [-c configuration file for server]
+     [-d device name]
+     [-e path to error log]
+     [-i sql.ini file directory]
+     [-K keytab file]
+     [-L config file name for connectivity]
+     [-M shared memory repository directory]
+     [-p sa login name]
+     [-r mirror disk name]
+     [-s server name]
+     [-T trace flag]
+     [-u sa/sso name]
+     [-w master | model database]
+     [-z page size]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>srvmgr</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>srvmgr - Starts, pauses, and stops Adaptive Server, Backup Server, and Adaptive Server Monitor as Windows NT services.</Description>
+    <Syntax><![CDATA[<pre>
+  srvmgr
+     Or double-click the Services Manager icon in the Sybase for Windows NT
+     program group.
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>wdllvers</CmdName>
+    <Module>Windows NT Utility</Module>
+    <Description>wdllvers - Provides the following information about the Sybase DLLs (dynamic link libraries) loaded into memory:  DLL name, DLL usage count, DLL file size, DLL file date, Directory path from which the DLL was loaded</Description>
+    <Syntax><![CDATA[<pre>
+  wdllvers
+
+  Or double-click the WDLLVERS icon in the Sybase for Windows program group.
+    </pre>]]></Syntax>
+</Entry>
+
+
+
+
+
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == dbcc Procedure ========================================================================== -->
+<!-- ============================================================================================ -->
+
+<Entry>
+    <CmdName>sp_dbcc_alterws</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_alterws - Changes the size of the specified workspace to a specified value, and initializes the workspace.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_alterws dbname, wsname, "wssize[K|M]"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_configreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_configreport - Generates a report that describes the configuration information used by the dbcc checkstorage operation for the specified database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_configreport [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_createws</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_createws - Creates a workspace of the specified type and size on the specified segment and database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_createws dbname, segname, [wsname], wstype, "wssize[K|M]"
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_deletedb</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_deletedb - Deletes from dbccdb all the information related to the specified target database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_deletedb [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_deletehistory</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_deletehistory - Deletes the results of dbcc checkstorage operations performed on the target database before the specified date and time.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_deletehistory [cutoffdate [, dbname]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_differentialreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_differentialreport - Generates a report that highlights the changes in I/O statistics and faults that took place between two dbcc operations.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_differentialreport [dbname [, objectname]], [db_op] [, "date1" [, "date2"]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_evaluatedb</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_evaluatedb - Recomputes configuration information for the target database and compares it to the current configuration information.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_evaluatedb [dbname]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_faultreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_faultreport - Generates a report covering fault statistics for the dbcc checkstorage operations performed for the specified object in the target database on the specified date.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_faultreport [report_type [, dbname [, objectname [, date ]]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_fullreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_fullreport - Runs sp_dbcc_summaryreport, sp_dbcc_configreport, sp_dbcc_statisticsreport, and sp_dbcc_faultreport short for database..object_name on or before the specified date.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_fullreport [dbname [, objectname [, date]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_runcheck</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_runcheck - Runs dbcc checkstorage on the specified database, then runs sp_dbcc_summaryreport or a report you specify.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_runcheck dbname [, user_proc]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_statisticsreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_statisticsreport - Generates an allocation statistics report on the specified object in the target database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_statisticsreport [dbname [, objectname [, date]]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_summaryreport</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_summaryreport - Generates a summary report on the specified database.</Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_summaryreport [dbname [, op_name]]
+    </pre>]]></Syntax>
+</Entry>
+
+<Entry>
+    <CmdName>sp_dbcc_updateconfig</CmdName>
+    <Module>dbcc Procedure</Module>
+    <Description>sp_dbcc_updateconfig - Updates the dbcc_config table in dbccdb with the configuration information of the target database.
+    </Description>
+    <Syntax><![CDATA[<pre>
+  sp_dbcc_updateconfig dbname, type, "str1" [, "str2"]
+    </pre>]]></Syntax>
+</Entry>
+
+
+</Entries>
+<!-- ============================================================================================ -->
+<!-- == END: ENTRIES ============================================================================ -->
+<!-- ============================================================================================ -->
