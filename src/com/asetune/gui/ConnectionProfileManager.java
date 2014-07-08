@@ -117,6 +117,7 @@ public class ConnectionProfileManager
 
 	// SAP products
 	public static final ImageIcon ICON_DB_PROD_NAME_HANA             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hana_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_MAXDB            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_maxdb_16.png");
 
 	// JDBC products
 	public static final ImageIcon ICON_DB_PROD_NAME_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_16.png");
@@ -528,6 +529,7 @@ public class ConnectionProfileManager
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return ICON_DB_PROD_NAME_DERBY;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return ICON_DB_PROD_NAME_H2;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return ICON_DB_PROD_NAME_HANA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return ICON_DB_PROD_NAME_MAXDB;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return ICON_DB_PROD_NAME_HSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return ICON_DB_PROD_NAME_MSSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return ICON_DB_PROD_NAME_MYSQL;
@@ -547,6 +549,7 @@ public class ConnectionProfileManager
 		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_DERBY;
 		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_H2;
 		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_HANA;
+		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_MAXDB;
 		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_HSQL;
 		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_MSSQL;
 		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_MYSQL;

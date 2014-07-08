@@ -31,6 +31,7 @@ public class ConnectionProfile
 		TDS_UNDEFINED, // if profile was saved without ever have been connected to
 
 		JDBC_HANA,
+		JDBC_MAXDB,
 		JDBC_H2,
 		JDBC_HSQL,
 		JDBC_MSSQL,
@@ -58,6 +59,7 @@ public class ConnectionProfile
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return SrvType.JDBC_DERBY;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return SrvType.JDBC_H2;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return SrvType.JDBC_HANA;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return SrvType.JDBC_MAXDB;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return SrvType.JDBC_HSQL;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return SrvType.JDBC_MSSQL;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return SrvType.JDBC_MYSQL;
