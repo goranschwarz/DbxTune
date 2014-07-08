@@ -747,6 +747,11 @@ public class ConnectionDialog
 		{
 			serverName = DbUtils.getHanaServername(conn);
 		}
+		// MaxDB
+		else if (DbUtils.DB_PROD_NAME_MAXDB.equals(currentDbProductName))
+		{
+			serverName = DbUtils.getMaxDbServername(conn);
+		}
 		// ORACLE
 		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
 		{

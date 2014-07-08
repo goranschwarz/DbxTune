@@ -151,6 +151,11 @@ public class JdbcDriverHelper
 			templates.add("jdbc:sap://<host>:3##15 (replace## with instance_number)");
 			templates.add("jdbc:sap://<host>:30015");
 		}
+		else if ("com.sap.dbtech.jdbc.DriverSapDB".equals(driverName)) 
+		{
+			templates.add("jdbc:sapdb://<host>/<database_name>");
+			templates.add("jdbc:sapdb://<host>[:<port>]/<database_name>[?<opt1>[&<opt>]...]");
+		}
 		else if ("oracle.jdbc.OracleDriver".equals(driverName)) 
 		{
 			templates.add("jdbc:oracle:thin:@//[HOST][:PORT]/SERVICE");
@@ -214,6 +219,7 @@ public class JdbcDriverHelper
 		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName))	return "jTDS JDBC Driver";
 		else if ("org.h2.Driver"                               .equals(driverName))	return "H2 JDBC Driver";
 		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName))	return "SAP HANA JDBC Driver";
+		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName))	return "SAP MaxDB JDBC Driver";
 		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName))	return "Oracle JDBC Driver";
 		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver"; 
 		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server 2005 JDBC Driver"; 
@@ -244,6 +250,7 @@ public class JdbcDriverHelper
 		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName))	return "jtds.sourceforge.net";
 		else if ("org.h2.Driver"                               .equals(driverName))	return "www.h2database.com";
 		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName))	return "www.sap.com/HANA";
+		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName))	return "maxdb.sap.com";
 		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName))	return "www.oracle.com/technetwork/database/features/jdbc";
 		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
 		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
@@ -267,6 +274,7 @@ public class JdbcDriverHelper
 		else if (jarName.matches("jtds-.*\\.jar"))      return "net.sourceforge.jtds.jdbc.Driver";
 		else if (jarName.matches("h2-.*\\.jar"))        return "org.h2.Driver";
 		else if (jarName.equals ("ngdbc.jar"))          return "com.sap.db.jdbc.Driver";
+		else if (jarName.equals ("sapdbc.jar.jar"))     return "com.sap.dbtech.jdbc.DriverSapDB";
 		else if (jarName.matches("ojdbc.*\\.jar"))      return "oracle.jdbc.OracleDriver";
 		else if (jarName.matches("sqljdbc.*\\.jar"))    return "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
 		else if (jarName.matches("db2jcc.*\\.jar"))     return "com.ibm.db2.jcc.DB2Driver";
@@ -289,6 +297,7 @@ public class JdbcDriverHelper
 		if (jdbcUrl.startsWith("jdbc:jtds:"))                return "net.sourceforge.jtds.jdbc.Driver";
 		if (jdbcUrl.startsWith("jdbc:h2:"))                  return "org.h2.Driver";
 		if (jdbcUrl.startsWith("jdbc:sap:"))                 return "com.sap.db.jdbc.Driver";
+		if (jdbcUrl.startsWith("jdbc:sapdb:"))               return "com.sap.dbtech.jdbc.DriverSapDB";
 		if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return "oracle.jdbc.OracleDriver";
 		if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return "com.microsoft.jdbc.sqlserver.SQLServerDriver";
 		if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return "com.microsoft.sqlserver.jdbc.SQLServerDriver";

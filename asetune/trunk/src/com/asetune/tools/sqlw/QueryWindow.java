@@ -2509,6 +2509,20 @@ public class QueryWindow
 				_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, this);
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
+			// MaxDB
+			else if (DbUtils.DB_PROD_NAME_MAXDB.equals(_connectedToProductName))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Sortorder & charset
+				_connectedSrvCharset   = DbUtils.getMaxDbCharset(_conn);
+				_connectedSrvSortorder = DbUtils.getMaxDbSortorder(_conn);
+
+				// Tooltip supplier
+				_tooltipProviderAbstract = new ToolTipSupplierHana(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+			}
 			// ORACLE
 			else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
 			{

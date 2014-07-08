@@ -22,6 +22,7 @@ public class DbUtils
 	public static final String DB_PROD_NAME_SYBASE_RS  = "Replication Server";
 	public static final String DB_PROD_NAME_H2         = "H2";
 	public static final String DB_PROD_NAME_HANA       = "HDB";
+	public static final String DB_PROD_NAME_MAXDB      = "SAP DB";
 
 	public static final String DB_PROD_NAME_HSQL       = "HSQL Database Engine"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_MSSQL      = "Microsoft SQL Server"; // got this from web, so might not be correct
@@ -567,6 +568,118 @@ public class DbUtils
 	//------------------------------------------------------------------------------
 
 
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// BEGIN MaxDB helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	
+	public static String getMaxDbServername(Connection conn)
+	{
+//		final String UNKNOWN = "UNKNOWN";
+		return "";
+
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String retStr = UNKNOWN;
+////		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME FROM SYSIBMADM.ENV_INST_INFO ei";
+//		String sql    = "SELECT CURRENT SERVER as DBNAME, ei.INST_NAME, (SELECT HOST_NAME FROM TABLE(SYSPROC.ENV_GET_SYS_INFO())) FROM SYSIBMADM.ENV_INST_INFO ei";
+//
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next())
+//			{
+//				retStr = rs.getString(1).trim() + "/" + rs.getString(2).trim() + "@" + rs.getString(3).trim();
+//			}
+//			rs.close();
+//			stmt.close();
+//
+//			return retStr;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When getting DB2 Server Instance Name. sql='"+sql+"', Caught exception.", e);
+//
+//			return UNKNOWN;
+//		}
+	}
+
+	public static String getMaxDbCharset(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+		return UNKNOWN;
+
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String retStr = UNKNOWN;
+//		String sql    = "select VALUE from SYSIBMADM.DBCFG where NAME = 'codeset'";
+//
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next())
+//			{
+//				retStr = rs.getString(1).trim();
+//			}
+//			rs.close();
+//			stmt.close();
+//
+//			return retStr;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When getting DB2 Server CharacterSet. sql='"+sql+"', Caught exception.", e);
+//
+//			return UNKNOWN;
+//		}
+	}
+
+	public static String getMaxDbSortorder(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+		return UNKNOWN;
+
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String retStr = UNKNOWN;
+//		String sql    = "select VALUE from NLS_DATABASE_PARAMETERS where PARAMETER = 'NLS_SORT'"; 
+//
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next())
+//			{
+//				retStr = rs.getString(1).trim();
+//			}
+//			rs.close();
+//			stmt.close();
+//
+//			return retStr;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When getting DB2 Server Sort Order. sql='"+sql+"', Caught exception.", e);
+//
+//			return UNKNOWN;
+//		}
+	}
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// END MaxDB helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+
+	
 	/**
 	 * Get various state about a ASE Connection
 	 */
