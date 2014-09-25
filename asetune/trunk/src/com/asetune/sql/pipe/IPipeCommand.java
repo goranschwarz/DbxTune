@@ -4,8 +4,9 @@ public interface IPipeCommand
 {
 	public String getConfig();
 	
-	public void open() throws Exception;
-	public void doPipe(Object input) throws Exception;
-	public void doEndPoint(Object input) throws Exception;
-	public void close();
+	public void   open() throws Exception;
+	public void   doPipe(Object input) throws Exception;
+	public void   doEndPoint(Object input) throws Exception;
+	public Object getEndPointResult(String type);
+	public void   close();
 }

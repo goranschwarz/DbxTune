@@ -2135,6 +2135,22 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException ignore) { /*ignore*/ }
 		
+		// TODO: Instead of getting the CM.getResultSetMetaData() we might want to use
+//		TableInfo storageTableInfo = new TableInfo(); // note TableInfo needs to be created
+//		try
+//		{
+//			ResultSet colRs = _conn.getMetaData().getColumns(null, null, tabName, "%");
+//			while (colRs.next())
+//			{
+//				String colName = colRs.getString(4); // COLUMN_NAME 
+//				int    colType = colRs.getInt   (5); // DATA_TYPE:  SQL type from java.sql.Types 
+//				int    colSize = colRs.getInt   (7); // COLUMN_SIZE
+//				
+//				tableInfo.add(colName, colType, colSize);
+//			}
+//		}
+//		catch (SQLException ignore) { /*ignore*/ }
+		
 		try
 		{
 			String sql = getTableInsertStr(whatData, cm, true);
@@ -2200,6 +2216,9 @@ public class PersistWriterJdbc
 					else if (colObj != null && colObj instanceof String)
 					{
 						String str = (String)colObj;
+
+						// TODO: instead of the cm.rsmd we can use "storageTableInfo"
+						// this needs to be implemented first
 
 						// if str length is longer than column length, truncate the value...
 						if (rsmd != null)

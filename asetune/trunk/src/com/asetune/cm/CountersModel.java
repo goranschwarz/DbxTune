@@ -3114,7 +3114,8 @@ implements Cloneable, ITableTooltip
 			else if (e instanceof SQLException)
 				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
 			else
-				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
+				_logger.warn("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
+				//_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
 		}
 	}
 

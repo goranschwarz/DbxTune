@@ -228,8 +228,8 @@ extends CountersModel
 
 			if (o_SPID instanceof Number && o_ContextID instanceof Number)
 			{
-				Integer spid         = (Integer)o_SPID;
-				Integer contextId    = (Integer)o_ContextID;
+				Integer spid         = ((Number)o_SPID     ).intValue();
+				Integer contextId    = ((Number)o_ContextID).intValue();
 				Integer maxContextId = _maxContextIdPerSpid.get(spid);
 
 				if (maxContextId == null)
@@ -247,7 +247,7 @@ extends CountersModel
 			
 			if (o_SPID instanceof Number)
 			{
-				Integer spid         = (Integer)o_SPID;
+				Integer spid         = ((Number)o_SPID).intValue();
 				Integer maxContextId = _maxContextIdPerSpid.get(spid);
 
 				newSample.setValueAt(maxContextId, rowId, pos_MaxContextID);

@@ -293,7 +293,8 @@ extends CountersModel
 //		String TotalIOs = "TotalIOs = (Reads + Writes)";
 //		if (aseVersion > 15000) 
 //			TotalIOs = "TotalIOs = (convert(bigint,Reads) + convert(bigint,Writes))";
-		String TotalIOs = "(Reads + Writes)";
+//		String TotalIOs = "(Reads + Writes)";
+		String TotalIOs = "(convert(numeric(10,0),Reads) + convert(numeric(10,0),Writes))"; // due to "Arithmetic overflow occurred" in 12.5.x
 //		if (aseVersion > 15000) 
 //		if (aseVersion > 1500000) 
 		if (aseVersion > Ver.ver(15,0)) 

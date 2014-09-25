@@ -41,6 +41,17 @@ extends PipeCommandAbstract
 //	private String _destHost      = null;
 //	private String _destport      = null;
 	private int    _destBatchSize = 0;
+
+	
+	//-----------------------
+	// Paremeter type to getEndPointResult
+	//-----------------------
+	public static final String rowsSelected = "rowsSelected";
+	public static final String rowsInserted = "rowsInserted";
+
+
+	private int    _rowsSelected  = 0;
+	private int    _rowsInserted  = 0;
 	
 	public PipeCommandBcp(String input)
 	throws PipeCommandException
@@ -131,11 +142,34 @@ extends PipeCommandAbstract
 		TransferTable tt = new TransferTable(_destDb, _destTable, _destUser, _destPasswd, _destServer, _destBatchSize);
 		
 		tt.open();
-		tt.doTransfer( (ResultSet) input );
+		tt.doTransfer( (ResultSet) input, this );
 		tt.close();
 	}
-	
-	
+
+	/**
+	 * Get 'rowsSelected' from the select statement or 'rowsInserted' of the INSERT command. 
+	 * @return an integer of the desired type
+	 */
+	@Override
+	public Object getEndPointResult(String type)
+	{
+		if (type == null)
+			throw new IllegalArgumentException("Input argument/type cant be null.");
+		
+		if (rowsSelected.equals(type))
+		{
+			return _rowsSelected;
+		}
+		else if (rowsInserted.equals(type))
+		{
+			return _rowsInserted;
+		}
+		else
+		{
+			throw new IllegalArgumentException("Input argument/type '"+type+"' is unknown. Known types '"+rowsSelected+"', '"+rowsInserted+"'.");
+		}
+	}
+
 	@Override 
 	public String getConfig()
 	{
@@ -262,7 +296,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			_conn.close();
 		}
 
-		public int doTransfer(ResultSet sourceRs)
+		public int doTransfer(ResultSet sourceRs, PipeCommandBcp pipeCmd)
 		throws Exception
 		{
 			int sourceNumCols = -1;
@@ -341,6 +375,8 @@ System.out.println("INSERT SQL: "+insertSql);
 				batchCount++;
 				totalCount++;
 
+				pipeCmd._rowsSelected++;
+
 				// for each column in source set it to the output
 				for (int c=1; c<sourceNumCols+1; c++)
 				{
@@ -361,6 +397,7 @@ System.out.println("ROW: "+totalCount+" - Problems setting column c="+c+", sourc
 				}
 
 				pstmt.addBatch();
+				pipeCmd._rowsInserted++;
 
 				if (_batchSize > 0 && batchCount >= _batchSize )
 				{

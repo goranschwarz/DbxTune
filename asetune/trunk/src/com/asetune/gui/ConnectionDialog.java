@@ -3728,7 +3728,7 @@ public class ConnectionDialog
 						pcsProps.put(PersistWriterJdbc.PROP_jdbcDriver,   entry._pcsWriterDriver);
 						pcsProps.put(PersistWriterJdbc.PROP_jdbcUrl,      entry._pcsWriterUrl);
 						pcsProps.put(PersistWriterJdbc.PROP_jdbcUsername, entry._pcsWriterUsername);
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcPassword, entry._pcsWriterPassword);
+						pcsProps.put(PersistWriterJdbc.PROP_jdbcPassword, entry._pcsWriterPassword == null ? "" : entry._pcsWriterPassword); // do not write NULL objects to the HashTable, then it's NullPointerException 
 	
 						pcsProps.put(PersistWriterJdbc.PROP_startH2NetworkServer, entry._pcsWriterStartH2asNwServer);
 	

@@ -28,4 +28,10 @@ implements IPipeCommand
 	{
 	}
 
+	@Override
+	public Object getEndPointResult(String type)
+	{
+		return null;
+	}
+
 }

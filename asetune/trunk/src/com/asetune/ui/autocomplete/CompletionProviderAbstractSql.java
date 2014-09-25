@@ -674,6 +674,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		if ( "exec".equalsIgnoreCase(prevWord1) || "execute".equalsIgnoreCase(prevWord1) || "call".equalsIgnoreCase(prevWord1) )
 		{
 //System.out.println(">>> in: Complete STORED PROCS");
+//System.out.println("SqlObjectName: "+etId);
 			ArrayList<Completion> procList = new ArrayList<Completion>();
 
 			// OTHER_DB_LOOKUP: Procedures in other databases, do lookup "on the fly"
@@ -722,46 +723,52 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 			if (etId.isSchemaQualifiedObject()) // SCHEMA.OBJECT
 			{
 //System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject");
+//System.out.println("_dbComplList:    "+_dbComplList);
 
-				// If the dbname/catalog exists, then do SCHEMA lookup in that database.
-				for (SqlDbCompletion dc : _dbComplList)
-				{
-					DbInfo di = dc._dbInfo;
-					if (etId._schName.equalsIgnoreCase(di._dbName))
-					{
-						// use the local schemas (in current database)
-						if (etId._schName.equalsIgnoreCase(_currentCatalog))
-						{
+//				// If the dbname/catalog exists, then do SCHEMA lookup in that database.
+//				for (SqlDbCompletion dc : _dbComplList)
+//				{
+//					DbInfo di = dc._dbInfo;
+//System.out.println("etId._schName='"+etId._schName+"', di._dbName='"+di._dbName+"', _currentCatalog='"+_currentCatalog+"'.");
+//					if (etId._schName.equalsIgnoreCase(di._dbName))
+//					{
+//						// use the local schemas (in current database)
+//						if (etId._schName.equalsIgnoreCase(_currentCatalog))
+//						{
 //System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject: IN CURRENT DATABASE");
-							// lets return all schemas/owners
-							for (String schemaName : _schemaNames)
-								procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, etId._schName+"."+schemaName) );
-							
-							// Also return all objects... MATCHING the SCHEMA
-							// Add matching procedures in local database
-							for (SqlProcedureCompletion pc : _procedureComplList)
-							{
-								ProcedureInfo pi = pc._procInfo;
-								if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName) && etId._schName.equalsIgnoreCase(pi._procSchema)) 
-									procList.add(pc);
-							}
-						}
-						else // Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)
-						{
+//							// lets return all schemas/owners
+//							for (String schemaName : _schemaNames)
+//								procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, etId._schName+"."+schemaName) );
+//							
+//							// Also return all objects... MATCHING the SCHEMA
+//							// Add matching procedures in local database
+//							for (SqlProcedureCompletion pc : _procedureComplList)
+//							{
+//								ProcedureInfo pi = pc._procInfo;
+//								if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName) && etId._schName.equalsIgnoreCase(pi._procSchema)) 
+//									procList.add(pc);
+//							}
+//						}
+//						else // Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)
+//						{
 //System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject: Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)");
-							Connection conn = _connectionProvider.getConnection();
-							if (conn == null)
-								return null;
+//							Connection conn = _connectionProvider.getConnection();
+//							if (conn == null)
+//								return null;
+//
+//							List<Completion> list = getSchemaListWithGuiProgress(conn, etId._schName, etId._objName);
+//							if ( list != null && ! list.isEmpty() )
+//								procList.addAll(list);
+//						}
+//
+//						return procList;
+//					}
+//				}
+				
+				// Try another way
+				return getProcedureCompletionsFromSchema(_procedureComplList, etId._schName, etId._objName);
 
-							List<Completion> list = getSchemaListWithGuiProgress(conn, etId._schName, etId._objName);
-							if ( list != null && ! list.isEmpty() )
-								procList.addAll(list);
-						}
-
-						return procList;
-					}
-				}
-			}
+			} // end: SCHEMA.OBJECT
 
 			// Add matching procedures in local database
 			// but NOT if current working database is "sybsystemprocs" and input text starts with sp_
@@ -867,7 +874,7 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 				String objNamePattern = colName;
 //System.out.println("IN LOCAL SCHEMA: schema='"+tabAliasName+"', objNamePattern='"+objNamePattern+"'.");
 				// do completion, but only for tables in a specific schema
-				return getCompletionsFromSchema(completions, tabAliasName, objNamePattern);
+				return getTableCompletionsFromSchema(completions, tabAliasName, objNamePattern);
 			}
 			else // alias is NOT in the "locals" schemas (so hopefully it's a column, but we will discover that...)
 			{
@@ -1042,33 +1049,48 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		return str;
 	}
 
-    protected List<Completion> getCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
+	protected List<Completion> getTableCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
 	{
-    	ArrayList<Completion> retComp = new ArrayList<Completion>();
-    	for (Completion c : completions)
-    	{
-    		if (c instanceof SqlTableCompletion)
-    		{
-    			SqlTableCompletion tabComp = (SqlTableCompletion) c;
-    			if (schemaName.equalsIgnoreCase(tabComp._tableInfo._tabSchema))
-    				retComp.add(c);
-    		}
-    	}
+		ArrayList<Completion> retComp = new ArrayList<Completion>();
+		for (Completion c : completions)
+		{
+			if (c instanceof SqlTableCompletion)
+			{
+				SqlTableCompletion tabComp = (SqlTableCompletion) c;
+				if (schemaName.equalsIgnoreCase(tabComp._tableInfo._tabSchema))
+					retComp.add(c);
+			}
+		}
+		return getCompletionsFrom(retComp, lastPart);
+	}
+	
+	protected List<Completion> getProcedureCompletionsFromSchema(List<SqlProcedureCompletion> ComplList, String schemaName, String lastPart)
+	{
+		ArrayList<Completion> retComp = new ArrayList<Completion>();
+		for (Completion c : ComplList)
+		{
+			if (c instanceof SqlProcedureCompletion)
+			{
+				SqlProcedureCompletion procComp = (SqlProcedureCompletion) c;
+				if (schemaName.equalsIgnoreCase(procComp._procInfo._procSchema))
+					retComp.add(c);
+			}
+		}
 		return getCompletionsFrom(retComp, lastPart);
 	}
 
-    /**
-     * An attempt to minimal parse the text to find out what table name a alias has.<br>
-     * This is just a DUMMY, a real parse should be used instead. The problem with various
-     * SQL Parsers is that they throws exception if the syntax is faulty...<br>
-     * But when composing a SQL using completion the statement is "not yet complete" and ready
-     * to send to the server, therefore the syntax will be "off" 
-     *  
-     * @param comp            The text component
-     * @param alias           The alias name to search for a table name
-     * @param stripPrefix     If table name looks like 'dbo.t1' -> strip off all prefixes and return 't1'
-     * @return The Table name, if nothing is found the input alias will be returned.
-     */
+	/**
+	 * An attempt to minimal parse the text to find out what table name a alias has.<br>
+	 * This is just a DUMMY, a real parse should be used instead. The problem with various
+	 * SQL Parsers is that they throws exception if the syntax is faulty...<br>
+	 * But when composing a SQL using completion the statement is "not yet complete" and ready
+	 * to send to the server, therefore the syntax will be "off" 
+	 *  
+	 * @param comp            The text component
+	 * @param alias           The alias name to search for a table name
+	 * @param stripPrefix     If table name looks like 'dbo.t1' -> strip off all prefixes and return 't1'
+	 * @return The Table name, if nothing is found the input alias will be returned.
+	 */
 	public String getTableNameForAlias(JTextComponent comp, String alias, boolean stripPrefix)
 	{
 		String table = alias;
@@ -1181,26 +1203,26 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		// get current catalog/dbName
 		_currentCatalog = conn.getCatalog();
 
-		if (_logger.isDebugEnabled())
+		if (false || _logger.isDebugEnabled())
 		{
-			_logger.debug("getCatalogSeparator:            "+dbmd.getCatalogSeparator());
-			_logger.debug("getCatalogTerm:                 "+dbmd.getCatalogTerm());
-			_logger.debug("getDefaultTransactionIsolation: "+dbmd.getDefaultTransactionIsolation());
-			_logger.debug("getProcedureTerm:               "+dbmd.getProcedureTerm());
-			_logger.debug("getSchemaTerm:                  "+dbmd.getSchemaTerm());
-			_logger.debug("getSearchStringEscape:          "+dbmd.getSearchStringEscape());
-			_logger.debug("getSQLKeywords:                 "+dbmd.getSQLKeywords());
-			_logger.debug("getNumericFunctions:            "+dbmd.getNumericFunctions());
-			_logger.debug("getSQLStateType:                "+dbmd.getSQLStateType());
-			_logger.debug("getStringFunctions:             "+dbmd.getStringFunctions());
-			_logger.debug("getSystemFunctions:             "+dbmd.getSystemFunctions());
-			_logger.debug("getTimeDateFunctions:           "+dbmd.getTimeDateFunctions());
-			_logger.debug("getURL:                         "+dbmd.getURL());
-			_logger.debug("getCatalogs\n"             +new ResultSetTableModel(dbmd.getCatalogs(),              "getCatalogs").toTableString());
-			_logger.debug("getSchemas\n"              +new ResultSetTableModel(dbmd.getSchemas(),               "getSchemas").toTableString());
-//			_logger.debug("getClientInfoProperties\n" +new ResultSetTableModel(dbmd.getClientInfoProperties(),  "getClientInfoProperties").toTableString());
-//			_logger.debug("getTableTypes\n"           +new ResultSetTableModel(dbmd.getTableTypes(),            "getTableTypes").toTableString());
-//			_logger.debug("getTypeInfo\n"             +new ResultSetTableModel(dbmd.getTypeInfo(),              "getTypeInfo").toTableString());
+			_logger.info("getCatalogSeparator:            "+dbmd.getCatalogSeparator());
+			_logger.info("getCatalogTerm:                 "+dbmd.getCatalogTerm());
+			_logger.info("getDefaultTransactionIsolation: "+dbmd.getDefaultTransactionIsolation());
+			_logger.info("getProcedureTerm:               "+dbmd.getProcedureTerm());
+			_logger.info("getSchemaTerm:                  "+dbmd.getSchemaTerm());
+			_logger.info("getSearchStringEscape:          "+dbmd.getSearchStringEscape());
+			_logger.info("getSQLKeywords:                 "+dbmd.getSQLKeywords());
+			_logger.info("getNumericFunctions:            "+dbmd.getNumericFunctions());
+			_logger.info("getSQLStateType:                "+dbmd.getSQLStateType());
+			_logger.info("getStringFunctions:             "+dbmd.getStringFunctions());
+			_logger.info("getSystemFunctions:             "+dbmd.getSystemFunctions());
+			_logger.info("getTimeDateFunctions:           "+dbmd.getTimeDateFunctions());
+			_logger.info("getURL:                         "+dbmd.getURL());
+			_logger.info("getCatalogs\n"             +new ResultSetTableModel(dbmd.getCatalogs(),              "getCatalogs").toTableString());
+			_logger.info("getSchemas\n"              +new ResultSetTableModel(dbmd.getSchemas(),               "getSchemas").toTableString());
+//			_logger.info("getClientInfoProperties\n" +new ResultSetTableModel(dbmd.getClientInfoProperties(),  "getClientInfoProperties").toTableString());
+//			_logger.info("getTableTypes\n"           +new ResultSetTableModel(dbmd.getTableTypes(),            "getTableTypes").toTableString());
+//			_logger.info("getTypeInfo\n"             +new ResultSetTableModel(dbmd.getTypeInfo(),              "getTypeInfo").toTableString());
 		}		
 
 		if (DbUtils.DB_PROD_NAME_H2.equals(_dbProductName))
@@ -2620,14 +2642,14 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 		
 		public String getType()
 		{
-			if (_tableInfo == null)
-				return "";
+			if (_tableInfo          == null) return "";
+			if (_tableInfo._tabType == null) return "";
 			return _tableInfo._tabType;
 		}
 		public String getName()
 		{
-			if (_tableInfo == null)
-				return "";
+			if (_tableInfo          == null) return "";
+			if (_tableInfo._tabName == null) return "";
 			return _tableInfo._tabName;
 		}
 
@@ -2707,20 +2729,20 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 
 		public String getType()
 		{
-			if (_procInfo == null)
-				return "";
+			if (_procInfo           == null) return "";
+			if (_procInfo._procType == null) return "";
 			return _procInfo._procType;
 		}
 		public String getName()
 		{
-			if (_procInfo == null)
-				return "";
+			if (_procInfo           == null) return "";
+			if (_procInfo._procName == null) return "";
 			return _procInfo._procName;
 		}
 		public String getRemark()
 		{
-			if (_procInfo == null)
-				return "";
+			if (_procInfo             == null) return "";
+			if (_procInfo._procRemark == null) return "";
 			return _procInfo._procRemark;
 		}
 
@@ -3533,20 +3555,20 @@ SqlObjectName etId = new SqlObjectName(enteredText);
 //		}
 
 		public boolean hasCatalogName() { return ! StringUtil.isNullOrBlank(_catName); }
-		public boolean hasScemaName()   { return ! StringUtil.isNullOrBlank(_schName); }
+		public boolean hasSchemaName()  { return ! StringUtil.isNullOrBlank(_schName); }
 		public boolean hasObjectName()  { return ! StringUtil.isNullOrBlank(_objName); }
 
 		/** true if it has CatalogName and SchemaName and ObjectName
 		 * @return hasCatalogName() && hasScemaName() */
-		public boolean isFullyQualifiedObject()  { return hasCatalogName() && hasScemaName(); }
+		public boolean isFullyQualifiedObject()  { return hasCatalogName() && hasSchemaName(); }
 		
 		/** true if it has schemaName and objectName, but NOT catalogName <br>
 		 *  @return !hasCatalogName() && hasScemaName() */
-		public boolean isSchemaQualifiedObject()  { return !hasCatalogName() && hasScemaName(); }
+		public boolean isSchemaQualifiedObject()  { return !hasCatalogName() && hasSchemaName(); }
 		
 		/** true if it has objectName, but NOT catalogName and schemaName <br>
 		 *  @return !hasCatalogName() && !hasScemaName() */
-		public boolean isSimpleQualifiedObject()  { return !hasCatalogName() && !hasScemaName(); }
+		public boolean isSimpleQualifiedObject()  { return !hasCatalogName() && !hasSchemaName(); }
 		
 		@Override
 		public String toString() 

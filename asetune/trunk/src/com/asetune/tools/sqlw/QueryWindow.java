@@ -153,12 +153,14 @@ import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
+import com.asetune.sql.pipe.PipeCommandBcp;
 import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.tools.NormalExitException;
@@ -378,6 +380,8 @@ public class QueryWindow
 	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
 	private JCheckBoxMenuItem _oracleEnableDbmsOutput_chk = new JCheckBoxMenuItem("Oracle Enable DBMS Output", DEFAULT_oracleEnableDbmsOutput);
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
+	private JCheckBoxMenuItem _rsTrimStrings_chk          = new JCheckBoxMenuItem("Trim String values", ResultSetTableModel.DEFAULT_StringTrim);
+	private JCheckBoxMenuItem _rsShowRowNumber_chk        = new JCheckBoxMenuItem("Show Row Number", ResultSetTableModel.DEFAULT_ShowRowNumber);
 	private boolean           _appendResults_scriptReader = false;
 	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
 	private JCheckBoxMenuItem _jdbcAutoCommit_chk         = new JCheckBoxMenuItem("JDBC AutoCommit", DEFAULT_jdbcAutoCommit);
@@ -770,6 +774,9 @@ public class QueryWindow
 				_logger.debug("----End Shutdown Hook");
 			}
 		});
+
+		// Install our own EventQueue handler, to handle/log strange exceptions in the event dispatch thread
+		EventQueueProxy.install();
 
 		// Now open the window
 		qw.openTheWindow();
@@ -1397,6 +1404,14 @@ public class QueryWindow
 				"<html>" +
 				"Open a dialog where you can change the string used to send a SQL Batch to the server." +
 				"</html>");
+		_rsTrimStrings_chk.setToolTipText(
+				"<html>" +
+				"Do you want to remove leading/trailing blanks from datatypes that is treated as a string." +
+				"</html>");
+		_rsShowRowNumber_chk.setToolTipText(
+				"<html>" +
+				"Add a row number as first column when displaying data." +
+				"</html>");
 //		_copy_but    .setToolTipText("<html>Copy All resultsets to clipboard, tables will be into ascii format.</html>");
 //		_query_txt   .setToolTipText("<html>" +
 //									"Put your SQL query here.<br>" +
@@ -1723,24 +1738,26 @@ public class QueryWindow
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
-		_lastFileNameSaveMax =                   conf.getIntProperty(    PROPKEY_lastFileNameSaveMax,    DEFAULT_lastFileNameSaveMax);
-		_fSaveBeforeExec_mi        .setSelected( conf.getBooleanProperty(PROPKEY_saveBeforeExecute,      DEFAULT_saveBeforeExecute) );
-		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,  DEFAULT_restoreWinSizeForConn) );
-		_prefShowAppNameInTitle_mi .setSelected( conf.getBooleanProperty(PROPKEY_showAppNameInTitle,     DEFAULT_showAppNameInTitle) );
-		_prefPlaceCntrlInToolbar_mi.setSelected( conf.getBooleanProperty(PROPKEY_commandPanelInToolbar,  DEFAULT_commandPanelInToolbar) );
-		_prefSplitHorizontal_mi    .setSelected( conf.getBooleanProperty(PROPKEY_horizontalOrientation,  DEFAULT_horizontalOrientation) );
-		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,            DEFAULT_asPlainText) );
-		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,           DEFAULT_showRowCount) );
-		_limitRsRowsRead_chk       .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,        DEFAULT_limitRsRowsRead) );
-		_showSentSql_chk           .setSelected( conf.getBooleanProperty(PROPKEY_showSentSql,            DEFAULT_showSentSql) );
-		_printRsInfo_chk           .setSelected( conf.getBooleanProperty(PROPKEY_printRsInfo,            DEFAULT_printRsInfo) );
-		_clientTiming_chk          .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,           DEFAULT_clientTiming) );
-		_useSemicolonHack_chk      .setSelected( conf.getBooleanProperty(PROPKEY_useSemicolonHack,       DEFAULT_useSemicolonHack) );
-		_oracleEnableDbmsOutput_chk.setSelected( conf.getBooleanProperty(PROPKEY_oracleEnableDbmsOutput, DEFAULT_oracleEnableDbmsOutput) );
-		_appendResults_chk         .setSelected( conf.getBooleanProperty(PROPKEY_appendResults,          DEFAULT_appendResults) );
-		_getObjectTextOnError_chk  .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,   DEFAULT_getObjectTextOnError) );
-		_jdbcAutoCommit_chk        .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,         DEFAULT_jdbcAutoCommit) );
-		_jdbcAutoCommit_chk        .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,     DEFAULT_jdbcAutoCommitShow) );
+		_lastFileNameSaveMax =                   conf.getIntProperty(    PROPKEY_lastFileNameSaveMax,               DEFAULT_lastFileNameSaveMax);
+		_fSaveBeforeExec_mi        .setSelected( conf.getBooleanProperty(PROPKEY_saveBeforeExecute,                 DEFAULT_saveBeforeExecute) );
+		_prefWinOnConnect_mi       .setSelected( conf.getBooleanProperty(PROPKEY_restoreWinSizeForConn,             DEFAULT_restoreWinSizeForConn) );
+		_prefShowAppNameInTitle_mi .setSelected( conf.getBooleanProperty(PROPKEY_showAppNameInTitle,                DEFAULT_showAppNameInTitle) );
+		_prefPlaceCntrlInToolbar_mi.setSelected( conf.getBooleanProperty(PROPKEY_commandPanelInToolbar,             DEFAULT_commandPanelInToolbar) );
+		_prefSplitHorizontal_mi    .setSelected( conf.getBooleanProperty(PROPKEY_horizontalOrientation,             DEFAULT_horizontalOrientation) );
+		_asPlainText_chk           .setSelected( conf.getBooleanProperty(PROPKEY_asPlainText,                       DEFAULT_asPlainText) );
+		_showRowCount_chk          .setSelected( conf.getBooleanProperty(PROPKEY_showRowCount,                      DEFAULT_showRowCount) );
+		_limitRsRowsRead_chk       .setSelected( conf.getBooleanProperty(PROPKEY_limitRsRowsRead,                   DEFAULT_limitRsRowsRead) );
+		_showSentSql_chk           .setSelected( conf.getBooleanProperty(PROPKEY_showSentSql,                       DEFAULT_showSentSql) );
+		_printRsInfo_chk           .setSelected( conf.getBooleanProperty(PROPKEY_printRsInfo,                       DEFAULT_printRsInfo) );
+		_rsTrimStrings_chk         .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_StringTrim,    ResultSetTableModel.DEFAULT_StringTrim) );
+		_rsShowRowNumber_chk       .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_ShowRowNumber, ResultSetTableModel.DEFAULT_ShowRowNumber) );
+		_clientTiming_chk          .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,                      DEFAULT_clientTiming) );
+		_useSemicolonHack_chk      .setSelected( conf.getBooleanProperty(PROPKEY_useSemicolonHack,                  DEFAULT_useSemicolonHack) );
+		_oracleEnableDbmsOutput_chk.setSelected( conf.getBooleanProperty(PROPKEY_oracleEnableDbmsOutput,            DEFAULT_oracleEnableDbmsOutput) );
+		_appendResults_chk         .setSelected( conf.getBooleanProperty(PROPKEY_appendResults,                     DEFAULT_appendResults) );
+		_getObjectTextOnError_chk  .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,              DEFAULT_getObjectTextOnError) );
+		_jdbcAutoCommit_chk        .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,                    DEFAULT_jdbcAutoCommit) );
+		_jdbcAutoCommit_chk        .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,                DEFAULT_jdbcAutoCommitShow) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
 		_favoriteCmdFilenameSql = conf.getProperty(PROPKEY_favoriteCmdFileNameSql, DEFAULT_favoriteCmdFileNameSql);
@@ -1758,28 +1775,30 @@ public class QueryWindow
 		if (_windowType == null || ( _windowType != null && _windowType != WindowType.CMDLINE_JFRAME) )
 			return;
 			
-		conf.setProperty(PROPKEY_lastFileNameSaveMax,    _lastFileNameSaveMax);
-		conf.setProperty(PROPKEY_saveBeforeExecute,      _fSaveBeforeExec_mi        .isSelected());
-		conf.setProperty(PROPKEY_restoreWinSizeForConn,  _prefWinOnConnect_mi       .isSelected());
-		conf.setProperty(PROPKEY_showAppNameInTitle,     _prefShowAppNameInTitle_mi .isSelected());
-		conf.setProperty(PROPKEY_commandPanelInToolbar,  _prefPlaceCntrlInToolbar_mi.isSelected());
-		conf.setProperty(PROPKEY_horizontalOrientation,  _prefSplitHorizontal_mi    .isSelected());
-		conf.setProperty(PROPKEY_asPlainText,            _asPlainText_chk           .isSelected());
-		conf.setProperty(PROPKEY_showRowCount,           _showRowCount_chk          .isSelected());
-		conf.setProperty(PROPKEY_limitRsRowsRead,        _limitRsRowsRead_chk       .isSelected());	
-		conf.setProperty(PROPKEY_showSentSql,            _showSentSql_chk           .isSelected());
-		conf.setProperty(PROPKEY_printRsInfo,            _printRsInfo_chk           .isSelected());
-		conf.setProperty(PROPKEY_clientTiming,           _clientTiming_chk          .isSelected());
-		conf.setProperty(PROPKEY_useSemicolonHack,       _useSemicolonHack_chk      .isSelected());
-		conf.setProperty(PROPKEY_oracleEnableDbmsOutput, _oracleEnableDbmsOutput_chk.isSelected());
-		conf.setProperty(PROPKEY_appendResults,          _appendResults_chk         .isSelected());
-		conf.setProperty(PROPKEY_getObjectTextOnError,   _getObjectTextOnError_chk  .isSelected());
-		conf.setProperty(PROPKEY_jdbcAutoCommit,         _jdbcAutoCommit_chk        .isSelected());
-		conf.setProperty(PROPKEY_jdbcAutoCommitShow,     _jdbcAutoCommit_chk        .isVisible());
+		conf.setProperty(PROPKEY_lastFileNameSaveMax,               _lastFileNameSaveMax);
+		conf.setProperty(PROPKEY_saveBeforeExecute,                 _fSaveBeforeExec_mi        .isSelected());
+		conf.setProperty(PROPKEY_restoreWinSizeForConn,             _prefWinOnConnect_mi       .isSelected());
+		conf.setProperty(PROPKEY_showAppNameInTitle,                _prefShowAppNameInTitle_mi .isSelected());
+		conf.setProperty(PROPKEY_commandPanelInToolbar,             _prefPlaceCntrlInToolbar_mi.isSelected());
+		conf.setProperty(PROPKEY_horizontalOrientation,             _prefSplitHorizontal_mi    .isSelected());
+		conf.setProperty(PROPKEY_asPlainText,                       _asPlainText_chk           .isSelected());
+		conf.setProperty(PROPKEY_showRowCount,                      _showRowCount_chk          .isSelected());
+		conf.setProperty(PROPKEY_limitRsRowsRead,                   _limitRsRowsRead_chk       .isSelected());	
+		conf.setProperty(PROPKEY_showSentSql,                       _showSentSql_chk           .isSelected());
+		conf.setProperty(PROPKEY_printRsInfo,                       _printRsInfo_chk           .isSelected());
+		conf.setProperty(ResultSetTableModel.PROPKEY_StringTrim,    _rsTrimStrings_chk         .isSelected());
+		conf.setProperty(ResultSetTableModel.PROPKEY_ShowRowNumber, _rsShowRowNumber_chk       .isSelected());
+		conf.setProperty(PROPKEY_clientTiming,                      _clientTiming_chk          .isSelected());
+		conf.setProperty(PROPKEY_useSemicolonHack,                  _useSemicolonHack_chk      .isSelected());
+		conf.setProperty(PROPKEY_oracleEnableDbmsOutput,            _oracleEnableDbmsOutput_chk.isSelected());
+		conf.setProperty(PROPKEY_appendResults,                     _appendResults_chk         .isSelected());
+		conf.setProperty(PROPKEY_getObjectTextOnError,              _getObjectTextOnError_chk  .isSelected());
+		conf.setProperty(PROPKEY_jdbcAutoCommit,                    _jdbcAutoCommit_chk        .isSelected());
+		conf.setProperty(PROPKEY_jdbcAutoCommitShow,                _jdbcAutoCommit_chk        .isVisible());
 		
-		conf.setProperty(PROPKEY_historyFileName,        _cmdHistoryFilename);
-		conf.setProperty(PROPKEY_favoriteCmdFileNameSql, _favoriteCmdFilenameSql);
-		conf.setProperty(PROPKEY_favoriteCmdFileNameRcl, _favoriteCmdFilenameRcl);
+		conf.setProperty(PROPKEY_historyFileName,                   _cmdHistoryFilename);
+		conf.setProperty(PROPKEY_favoriteCmdFileNameSql,            _favoriteCmdFilenameSql);
+		conf.setProperty(PROPKEY_favoriteCmdFileNameRcl,            _favoriteCmdFilenameRcl);
 
 		conf.save();
 	}
@@ -2313,10 +2332,10 @@ public class QueryWindow
 					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
 
 					// Sortorder & charset
-					//_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
-					//_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
+					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
+					_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
 
-					// JDBC Specific statuses DO NOT TDO THIS FOR REPSERVER
+					// JDBC Specific statuses DO NOT DO THIS FOR REPSERVER
 					//_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
 					//_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 					
@@ -2486,7 +2505,7 @@ public class QueryWindow
 			// Get specific stuff for various products
 			
 			// H2
-			if (DbUtils.DB_PROD_NAME_H2.equals(_connectedToProductName))
+			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_H2))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2496,7 +2515,7 @@ public class QueryWindow
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// HANA
-			else if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2510,7 +2529,7 @@ public class QueryWindow
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// MaxDB
-			else if (DbUtils.DB_PROD_NAME_MAXDB.equals(_connectedToProductName))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2524,7 +2543,7 @@ public class QueryWindow
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// ORACLE
-			else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2538,7 +2557,7 @@ public class QueryWindow
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
 			// MS-SQL
-			else if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -2580,7 +2599,7 @@ public class QueryWindow
 			//---------------------------------------------------
 			// Connection STATE information
 			//---------------------------------------------------
-			if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
+			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 			{
 				// Connection info status: USE ASE stuff...
 				setDbNames();
@@ -2690,6 +2709,8 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(false);
 			_showSentSql_chk           .setEnabled(false);
 			_printRsInfo_chk           .setEnabled(false);
+			_rsTrimStrings_chk         .setEnabled(false);
+			_rsShowRowNumber_chk       .setEnabled(false);
 			_clientTiming_chk          .setEnabled(false);
 			_useSemicolonHack_chk      .setEnabled(false);
 			_oracleEnableDbmsOutput_chk.setEnabled(false);
@@ -2742,6 +2763,8 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsTrimStrings_chk         .setEnabled(true);
+				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
@@ -2771,6 +2794,8 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsTrimStrings_chk         .setEnabled(true);
+				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
@@ -2793,6 +2818,8 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(true);
 				_showSentSql_chk           .setEnabled(true);
 				_printRsInfo_chk           .setEnabled(true);
+				_rsTrimStrings_chk         .setEnabled(true);
+				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
 				_oracleEnableDbmsOutput_chk.setEnabled(true);
@@ -2815,6 +2842,8 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
+			_rsTrimStrings_chk         .setEnabled(true);
+			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
 			_useSemicolonHack_chk      .setEnabled(true);
 			_oracleEnableDbmsOutput_chk.setEnabled(true);
@@ -2840,6 +2869,8 @@ public class QueryWindow
 			_limitRsRowsReadDialog_mi  .setEnabled(true);
 			_showSentSql_chk           .setEnabled(true);
 			_printRsInfo_chk           .setEnabled(true);
+			_rsTrimStrings_chk         .setEnabled(true);
+			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
 			_useSemicolonHack_chk      .setEnabled(true);
 			_oracleEnableDbmsOutput_chk.setEnabled(true);
@@ -2854,7 +2885,7 @@ public class QueryWindow
 			_statusBar.setServerInfo(srvInfo);
 		}
 		
-		if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_ORACLE))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 		{
 			_oracleEnableDbmsOutput_chk.setVisible(true);
 		}
@@ -2916,6 +2947,8 @@ public class QueryWindow
 				_limitRsRowsReadDialog_mi  .setEnabled(false);
 				_showSentSql_chk           .setEnabled(false);
 				_printRsInfo_chk           .setEnabled(false);
+				_rsTrimStrings_chk         .setEnabled(false);
+				_rsShowRowNumber_chk       .setEnabled(false);
 				_clientTiming_chk          .setEnabled(false);
 				_useSemicolonHack_chk      .setEnabled(false);
 				_oracleEnableDbmsOutput_chk.setEnabled(false);
@@ -4191,33 +4224,37 @@ public class QueryWindow
 
 		// create pupup depending on what we are connected to
 		String propPostfix = "";
-		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_connectedToProductName))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
 		{
 			propPostfix = "ase.";
 		}
-		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
 		{
 			propPostfix = "rs.";
 		}
-		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA))
 		{
 			propPostfix = "asa.";
 		}
-		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ))
 		{
 			propPostfix = "iq.";
 		}
-		else if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
 		{
 			propPostfix = "hana.";
 		}
-		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 		{
 			propPostfix = "mssql.";
 		}
-		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 		{
 			propPostfix = "ora.";
+		}
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+		{
+			propPostfix = "db2.";
 		}
 		else
 		{
@@ -4923,7 +4960,8 @@ public class QueryWindow
 				_cstmnt = conn.prepareCall(_sql);
 
 				// Register the return-status
-				_cstmnt.registerOutParameter(1, Types.INTEGER);
+				if (_doReturnCode)
+					_cstmnt.registerOutParameter(1, Types.INTEGER);
 
 				// Set RPC Parameters
 				if (_rpcParams != null)
@@ -5134,7 +5172,7 @@ public class QueryWindow
 			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
-				progress.setState("Sending SQL to ASE for statement " + sr.getSqlBatchNumber());
+				progress.setState("Sending SQL to server for statement " + sr.getSqlBatchNumber() + ", starting at row "+sr.getSqlBatchStartLine());
 
 				// This can't be part of the for loop, then it just stops if empty row
 				if ( StringUtil.isNullOrBlank(sql) )
@@ -5186,8 +5224,8 @@ public class QueryWindow
 						// calculate the execution time
 						long execStopTime = System.currentTimeMillis();
 	
-						progress.setState("Waiting for ASE to deliver resultset.");
-						_statusBar.setMsg("Waiting for ASE to deliver resultset.");
+						progress.setState("Waiting for Server to return resultset.");
+						_statusBar.setMsg("Waiting for Server to return resultset.");
 			
 						// iterate through each result set
 						int rsCount = 0;
@@ -5220,6 +5258,14 @@ public class QueryWindow
 								if (pipeCmd != null && pipeCmd.isBcp())
 								{
 									pipeCmd.getCmd().doEndPoint(rs);
+
+									int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
+									int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
+									incRsRowsCount(rowsSelected);
+									incIudRowsCount(rowsInserted);
+
+    								if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+    									_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
 								}
 								else
 								{
@@ -5285,7 +5331,7 @@ public class QueryWindow
 										if (rstm.wasAbortedAfterXRows())
 											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
 									}
-								}
+								} // end: normal read result set
 			
 								// Append, messages and Warnings to _resultCompList, if any
 								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
@@ -5389,7 +5435,7 @@ public class QueryWindow
 
 						// when NOT using jConnect, I can't downgrade a SQLException to a SQLWarning
 						// so we will always end up here (for the moment)
-						// Try to read the SQLException and figgure out on whet line it happened + mark that line with an error
+						// Try to read the SQLException and figure out on what line it happened + mark that line with an error
 						errorReportingVendorSqlException(ex, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
 
 						// Add the information to the output window
@@ -5444,7 +5490,8 @@ public class QueryWindow
 			}
 			_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, errorInfo);
 			for (int p=0; p<_query_txt.getParserCount(); p++)
-				_query_txt.forceReparsing(p);
+				try { _query_txt.forceReparsing(p); } catch (Throwable ignore) {} // protect from errors in RSyntaxTextArea
+
 
 			// Show/hide error buttons
 			boolean showErrorButtons = errorInfo.size() > 0;
@@ -5979,8 +6026,9 @@ public class QueryWindow
 	{
 //		if ( _useAltExecTermStr_chk.isSelected() )
 //		{
-			if (DbUtils.DB_PROD_NAME_HANA  .equals(productName)) return "/";
-			if (DbUtils.DB_PROD_NAME_ORACLE.equals(productName)) return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))   return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE)) return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX)) return "/";
 //		}
 		return null;
 	}
@@ -5990,7 +6038,7 @@ public class QueryWindow
 	private void enableOrDisableVendorSpecifics(Connection conn)
 	{
 		// Setup Oracle specific stuff
-		if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 		{
 			if ( _oracleEnableDbmsOutput_chk.isSelected() )
 			{
@@ -6036,7 +6084,7 @@ public class QueryWindow
 	private void readVendorSpecificResults(Connection conn, SqlProgressDialog progress, String sql)
 	{
 		// Get Oracle specific DBMS_OUTPUT  messages
-		if (DbUtils.DB_PROD_NAME_ORACLE.equals(_connectedToProductName) && _oracleEnableDbmsOutput_chk.isSelected())
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE) && _oracleEnableDbmsOutput_chk.isSelected())
 		{
 			progress.setState("Getting Oracle: DBMS_OUTPUT");
 
@@ -6149,8 +6197,10 @@ public class QueryWindow
 		}
 
 		_query_txt.getDocument().putProperty(ParserProperties.DB_MESSAGES, errorInfo);
-		for (int p=0; p<_query_txt.getParserCount(); p++)
-			_query_txt.forceReparsing(p);
+		
+		// do the "repaint" of the GUI later
+//		for (int p=0; p<_query_txt.getParserCount(); p++)
+//			try { _query_txt.forceReparsing(p); } catch (Throwable ignore) {} // protect from errors in RSyntaxTextArea
 	}
 
 
@@ -6686,6 +6736,12 @@ public class QueryWindow
 			String prodName = productName; 
 			if (DbUtils.DB_PROD_NAME_HANA.equals(productName)) prodName = "HANA";
 
+//SQLException xxx = ex;
+//while (xxx != null)
+//{
+//	System.out.println("XXXX:" + prodName + ": ErrorCode "+xxx.getErrorCode()+", SQLState "+xxx.getSQLState()+", ExceptionClass: " + xxx.getClass().getName() + "\n");
+//	xxx = xxx.getNextException();
+//}
 //System.out.println("JSQLExceptionMessage: prodName='"+prodName+"'.");
 //ex.printStackTrace();
 			return prodName + ": ErrorCode "+ex.getErrorCode()+", SQLState "+ex.getSQLState()+", ExceptionClass: " + ex.getClass().getName() + "\n"
@@ -7687,6 +7743,8 @@ public class QueryWindow
 		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b> - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
 		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
 		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
+		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>           - <i><font color=\"green\">Do you want to remove leading/trailing blanks from \"strings\"</html>");
+		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>              - <i><font color=\"green\">Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
 		_clientTiming_chk          .setText("<html><b>Client Timing</b>                - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
 		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>        - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
 		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b>    - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
@@ -7706,6 +7764,8 @@ public class QueryWindow
 		popupMenu.add(_limitRsRowsReadDialog_mi);
 		popupMenu.add(_showSentSql_chk);
 		popupMenu.add(_printRsInfo_chk);
+		popupMenu.add(_rsTrimStrings_chk);
+		popupMenu.add(_rsShowRowNumber_chk);
 		popupMenu.add(_clientTiming_chk);
 		popupMenu.add(_useSemicolonHack_chk);
 		popupMenu.add(_sqlBatchTermDialog_mi);
@@ -7763,6 +7823,26 @@ public class QueryWindow
 
 					saveProps();
 				}
+			}
+		});
+		
+		// Action CheckBox: _rsTrimStrings_chk
+		_rsTrimStrings_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		
+		// Action CheckBox: _rsShowRowNumber_chk
+		_rsShowRowNumber_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
 			}
 		});
 		
@@ -9097,15 +9177,23 @@ public class QueryWindow
 				}
 			});
 
-			// PINK = spid is BLOCKED by some other user
+			// NULL Values: SET BACKGROUND COLOR
 			addHighlighter( new ColorHighlighter(new HighlightPredicate()
 			{
 				@Override
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
+					// Check NULL value
 					String cellValue = adapter.getString();
 					if (cellValue == null || ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(cellValue))
 						return true;
+					
+					// Check ROWID Column
+					int mcol = adapter.convertColumnIndexToModel(adapter.column);
+					String colName = adapter.getColumnName(mcol);
+					if (mcol == 0 && ResultSetTableModel.ROW_NUMBER_COLNAME.equals(colName))
+						return true;
+
 					return false;
 				}
 			}, NULL_VALUE_COLOR, null));

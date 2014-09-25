@@ -23,32 +23,33 @@
 <BODY>
 
 <h1>Choose a Specific Report Below</h1>
-<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=false"  >Summary Report, Start Count, NO RESET '<code>usageDiff</code>'</A>   <i>(check column '<code>lastPollTime</code>' to work out what '<code>usageDiff</code>' is from)</i> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=true"   >Summary Report, Start Count, WITH RESET '<code>usageDiff</code>'</A> <i>(only for admin, <b>so please do not use</b>)</i> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_os=true"                     >Summary Report, OS Count</A>              <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_country=true"                >Summary Report, Country Count</A>         <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_version=true"                >Summary Report, Version Count</A>         <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true"                 >Summary Report, ASE Version Count</A>     <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_user=true"                   >Summary Report, on User</A>               <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=false"              >Summary Report, Start Count</A>,
+<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=true"               >WITH RESET</A> <i>(WITH RESET is only for admin users, <b>so please do not use</b>)</i> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_os=true"                                 >Summary Report, OS Count</A>              <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_country=true"                            >Summary Report, Country Count</A>         <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_version=true&summary_version_clear=false">Summary Report, Version Count</A>,
+<A HREF="http://www.asemon.se/usage_report.php?summary_version=true&summary_version_clear=true" >WITH RESET</A>                 <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true"                             >Summary Report, ASE Version Count</A>     <BR>
+<A HREF="http://www.asemon.se/usage_report.php?summary_user=true"                               >Summary Report, on User</A>               <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?conn=first"                          >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.asemon.se/usage_report.php?conn=all">ALL</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?conn=first"                                      >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.asemon.se/usage_report.php?conn=all">ALL</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?mda=all"                             >MDA Table/Column Info, for various ASE Versions</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?mda=all"                                         >MDA Table/Column Info, for various ASE Versions</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?udc=true"                            >User Defined Counters Info Report</A>     <BR>
+<A HREF="http://www.asemon.se/usage_report.php?udc=true"                                        >User Defined Counters Info Report</A>     <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=first"                         >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> -or- <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmEngines">CmEngines</A>, <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmObjectActivity">CmObjectActivity</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?usage=first"                                     >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> -or- <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmEngines">CmEngines</A>, <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmObjectActivity">CmObjectActivity</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"                       >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"                     >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=first"                   >Timeout Info Report (first 500)</A>            -or- <A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=all">ALL</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"                                   >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"                                 >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
+<A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=first"                               >Timeout Info Report (first 500)</A>            -or- <A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=all">ALL</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?full=true"                           >Full Report (first 300)</A>               <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sap=true"                            >SAP Systems Report (first 300)</A>        <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=false" >SQL Window (first 300)</A>,
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=true"  >WITH RESET</A>                            <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=first"                  >SQL Window Connection Info (first 300)</A><BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwUsageId=first"                 >SQL Window Usage Info (first 300)</A><BR>
+<A HREF="http://www.asemon.se/usage_report.php?full=true"                                       >Full Report (first 300)</A>               <BR>
+<A HREF="http://www.asemon.se/usage_report.php?sap=true"                                        >SAP Systems Report (first 300)</A>        <BR>
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=false"     >SQL Window (first 300)</A>,
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=true"      >WITH RESET</A>                            <BR>
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=first"                      >SQL Window Connection Info (first 300)</A><BR>
+<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwUsageId=first"                     >SQL Window Usage Info (first 300)</A><BR>
 <BR>
 <h2>Admin:</h2>
 DB Cleanup:
@@ -65,55 +66,56 @@ DB Cleanup:
 	//------------------------------------------
 	// Below is properties sent by the client, vstuff them into local variables
 	//------------------------------------------
-	$debug                  = $_GET['debug'];
-	$rpt_summary_count      = $_GET['summary_count'];
-	$rpt_summary_diffReset  = $_GET['diffReset'];
-	$rpt_summary_os         = $_GET['summary_os'];
-	$rpt_summary_country    = $_GET['summary_country'];
-	$rpt_summary_version    = $_GET['summary_version'];
-	$rpt_summary_asever     = $_GET['summary_asever'];
-	$rpt_summary_user       = $_GET['summary_user'];
-	$rpt_conn               = $_GET['conn'];
-	$rpt_mda                = $_GET['mda'];
-	$rpt_udc                = $_GET['udc'];
-	$rpt_usage              = $_GET['usage'];
-	$rpt_usage_cmName       = $_GET['cmName'];
-	$rpt_errorInfo          = $_GET['errorInfo'];
-	$rpt_timeoutInfo        = $_GET['timeoutInfo'];
-	$rpt_full               = $_GET['full'];
-	$rpt_sap                = $_GET['sap'];
+	$debug                     = $_GET['debug'];
+	$rpt_summary_count         = $_GET['summary_count'];
+	$rpt_summary_diffReset     = $_GET['diffReset'];
+	$rpt_summary_os            = $_GET['summary_os'];
+	$rpt_summary_country       = $_GET['summary_country'];
+	$rpt_summary_version       = $_GET['summary_version'];
+	$rpt_summary_version_clear = $_GET['summary_version_clear'];
+	$rpt_summary_asever        = $_GET['summary_asever'];
+	$rpt_summary_user          = $_GET['summary_user'];
+	$rpt_conn                  = $_GET['conn'];
+	$rpt_mda                   = $_GET['mda'];
+	$rpt_udc                   = $_GET['udc'];
+	$rpt_usage                 = $_GET['usage'];
+	$rpt_usage_cmName          = $_GET['cmName'];
+	$rpt_errorInfo             = $_GET['errorInfo'];
+	$rpt_timeoutInfo           = $_GET['timeoutInfo'];
+	$rpt_full                  = $_GET['full'];
+	$rpt_sap                   = $_GET['sap'];
 
-	$rpt_sqlw               = $_GET['sqlw'];
-	$rpt_sqlw_stat          = $_GET['sqlwStat'];
-	$rpt_sqlw_diffReset     = $_GET['sqlwDiffReset'];
-	$rpt_sqlw_ConnId        = $_GET['sqlwConnId'];
-	$rpt_sqlw_UsageId       = $_GET['sqlwUsageId'];
+	$rpt_sqlw                  = $_GET['sqlw'];
+	$rpt_sqlw_stat             = $_GET['sqlwStat'];
+	$rpt_sqlw_diffReset        = $_GET['sqlwDiffReset'];
+	$rpt_sqlw_ConnId           = $_GET['sqlwConnId'];
+	$rpt_sqlw_UsageId          = $_GET['sqlwUsageId'];
 
-	$del_deleteLogId        = $_GET['deleteLogId'];
-	$save_saveLogId         = $_GET['saveLogId'];
+	$del_deleteLogId           = $_GET['deleteLogId'];
+	$save_saveLogId            = $_GET['saveLogId'];
 
-	$mda_deleteVersion      = versionFix($_GET['mda_deleteVersion']);
-	$mda_verifyVersion      = versionFix($_GET['mda_verifyVersion']);
-	$mda_lowVersion         = versionFix($_GET['mda_lowVersion']);
-	$mda_highVersion        = versionFix($_GET['mda_highVersion']);
-	$mda_isCluster          = $_GET['mda_isCluster'];
+	$mda_deleteVersion         = versionFix($_GET['mda_deleteVersion']);
+	$mda_verifyVersion         = versionFix($_GET['mda_verifyVersion']);
+	$mda_lowVersion            = versionFix($_GET['mda_lowVersion']);
+	$mda_highVersion           = versionFix($_GET['mda_highVersion']);
+	$mda_isCluster             = $_GET['mda_isCluster'];
 
-	$ipDesc_key             = $_GET['ipDesc_key'];
-	$ipDesc_val             = $_GET['ipDesc_val'];
+	$ipDesc_key                = $_GET['ipDesc_key'];
+	$ipDesc_val                = $_GET['ipDesc_val'];
 
-	$userId_key             = $_GET['userId_key'];
-	$userId_val             = $_GET['userId_val'];
-	$userId_query           = $_GET['userId_query'];
+	$userId_key                = $_GET['userId_key'];
+	$userId_val                = $_GET['userId_val'];
+	$userId_query              = $_GET['userId_query'];
 
 	// sub command
-	$rpt_onDomain            = $_GET['onDomain'];
-	$rpt_onUser              = $_GET['onUser'];
-	$rpt_onId                = $_GET['onId'];
-	$rpt_getAppStartsForIp   = $_GET['getAppStartsForIp'];
-	$rpt_getConnectForIp     = $_GET['getConnectForIp'];
-	$rpt_getConnectForDomain = $_GET['getConnectForDomain'];
+	$rpt_onDomain               = $_GET['onDomain'];
+	$rpt_onUser                 = $_GET['onUser'];
+	$rpt_onId                   = $_GET['onId'];
+	$rpt_getAppStartsForIp      = $_GET['getAppStartsForIp'];
+	$rpt_getConnectForIp        = $_GET['getConnectForIp'];
+	$rpt_getConnectForDomain    = $_GET['getConnectForDomain'];
 
-	$rpt_userName            = $_GET['userName'];
+	$rpt_userName               = $_GET['userName'];
 
 
 //	if ( $rpt_userName != "" )
@@ -987,25 +989,67 @@ DB Cleanup:
 	//-------------------------------------------
 	// SUMMARY REPORT, VERSION COUNT
 	//-------------------------------------------
+	//mysql_query("CREATE TABLE sumAseTuneVersionNow (clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+	//mysql_query("CREATE TABLE sumAseTuneVersionPriv(clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+
 	if ( $rpt_summary_version == "true" )
 	{
-		$sql = "
+		//----------- Trunacte NOW table and pupulate it again
+		mysql_query("TRUNCATE TABLE sumAseTuneVersionNow") or die("ERROR: " . mysql_error());
+		mysql_query("INSERT INTO    sumAseTuneVersionNow(clientAsemonVersion, usageCount, lastUsedSrvDate, pollTime)
 			SELECT
-				clientAsemonVersion, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
+				clientAsemonVersion,
+				count(*),
+				max(serverAddTime),
+				NOW()
 			FROM asemon_usage
 			GROUP BY
 				clientAsemonVersion
 			ORDER BY
 				clientAsemonVersion desc
-			";
+			") or die("ERROR: " . mysql_error());
 
-		// sending query
-		$result = mysql_query($sql);
+		//----------- GET RESULTS & PRINT IT
+		$result = mysql_query("
+			SELECT
+				n.clientAsemonVersion,
+				n.usageCount AS usageNow,
+				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+				n.lastUsedSrvDate,
+				p.pollTime AS lastPollTime
+			FROM sumAseTuneVersionNow n LEFT JOIN sumAseTuneVersionPriv p ON n.clientAsemonVersion = p.clientAsemonVersion
+			ORDER BY 3 desc, 4 desc");
+
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Version Count");
+
+		//----------- Move NOW table into PREV
+		if ( $rpt_summary_version_clear == "true" )
+		{
+			mysql_query("TRUNCATE TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysql_error());
+			mysql_query("INSERT INTO    sumAseTuneVersionPriv (SELECT * FROM sumAseTuneVersionNow)") or die("ERROR: " . mysql_error());
+		}
+
+//		$sql = "
+//			SELECT
+//				clientAsemonVersion, count(*) as usageCount, max(serverAddTime) as lastUsedSrvDate
+//			FROM asemon_usage
+//			GROUP BY
+//				clientAsemonVersion
+//			ORDER BY
+//				clientAsemonVersion desc
+//			";
+//
+//		// sending query
+//		$result = mysql_query($sql);
+//		if (!$result) {
+//			echo mysql_errno() . ": " . mysql_error() . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		htmlResultset($userIdCache, $result, "Summary Report, Version Count");
 	}
 
 	//-------------------------------------------

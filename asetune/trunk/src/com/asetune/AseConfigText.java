@@ -729,6 +729,12 @@ public abstract class AseConfigText
 	{
 		@Override public    ConfigType getConfigType()                     { return ConfigType.AseMonitorConfig; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_monitorconfig 'all'"; }
+		@Override public    List<String> needRole()
+		{ 
+			List<String> list = new ArrayList<String>();
+			list.add(AseConnectionUtils.SA_ROLE);
+			return list;
+		}
 	}
 	
 	public static class HelpSort extends AseConfigText
