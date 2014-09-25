@@ -447,7 +447,8 @@ extends Properties
 	public int getIntProperty(String propName, String defaultValue)
 	{
 		String val = getProperty(propName, defaultValue);
-		if (val != null && val.equals(""))
+//		if (val != null && val.equals(""))
+		if (StringUtil.isNullOrBlank(val))
 			val = defaultValue;
 		return Integer.parseInt(val);
 	}
@@ -479,7 +480,8 @@ extends Properties
 	public long getLongProperty(String propName, String defaultValue)
 	{
 		String val = getProperty(propName, defaultValue);
-		if (val != null && val.equals(""))
+//		if (val != null && val.equals(""))
+		if (StringUtil.isNullOrBlank(val))
 			val = defaultValue;
 		return Long.parseLong(val);
 	}

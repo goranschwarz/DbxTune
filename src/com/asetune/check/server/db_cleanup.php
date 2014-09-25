@@ -217,6 +217,9 @@
 		//doCleanup("delete from asemon_error_info         where logMessage  like 'The DDL Storage queue has % entries. The persistent writer might not keep in pace.%' ");
 		//doCleanup("delete from asemon_error_info         where logMessage  like 'The persistent queue has % entries. The persistent writer might not keep in pace.%' ");
 
+		//doCleanup("delete from asemon_error_info         where logMessage  like 'Problem when re-connecting to monitored server%' ");
+		//doCleanup("delete from asemon_error_info         where logMessage  like '% : 701 There is not enough procedure cache to run this procedure, trigger%' ");
+
 		// Cleanup (ALL) error information
 		//doCleanup("delete from asemon_error_info");
 		//doCleanup("delete from asemon_error_info2");
@@ -227,6 +230,11 @@
 //doCleanup("delete from asemon_error_info         where logMessage  like '%' ");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
+	}
+	else if ( $doAction == "errors_old_versions" )
+	{
+		doCleanup("delete from asemon_error_info  where appVersion <> '3.4.0' ");
+		doCleanup("delete from asemon_error_info2 where appVersion <> '3.4.0' ");
 	}
 	else if ( $doAction == "dbmaint" )
 	{
@@ -559,6 +567,9 @@ CREATE TABLE sqlw_usage_info
 	//-----
 	echo "<h1>Closing database</h1>\n";
 	mysql_close() or die("ERROR: " . mysql_error());
+
+	echo "<h2>Other options</h2>\n";
+	echo "    <A HREF=\"http://www.asemon.se/db_cleanup.php?doAction=errors_old_versions\" >Cleanup old versions errors: != '3.4.0'</A>\n";
 ?>
 <BR>
 -END-

@@ -1907,8 +1907,8 @@ System.out.println("NO RESULT SET ");
 						return null;
 					}
 
-//					progress.setState("Waiting for ASE to deliver resultset.");
-					_statusBar.setMsg("Waiting for RS to deliver resultset.");
+//					progress.setState("Waiting for Server to return resultset.");
+					_statusBar.setMsg("Waiting for Server to return resultset.");
 			
 					_statusBar.setMsg("Reading resultset.");
 			

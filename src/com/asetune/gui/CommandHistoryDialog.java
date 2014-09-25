@@ -53,6 +53,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.RowFilter;
@@ -112,7 +113,8 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 
 	private JPanel               _statusBarPanel         = null;
 	private JButton              _historyFile_but        = new JButton("...");
-	private JLabel               _historyFile_lbl        = new JLabel();
+//	private JLabel               _historyFile_lbl        = new JLabel();
+	private JTextArea            _historyFile_txt        = new JTextArea();
 
 	private JButton              _exec_but               = new JButton("Exec");
 	private JCheckBox            _moveToLatestEntry_cbx  = new JCheckBox("Move to Latest Entry", DEFAULT_MOVE_TO_LATEST_ENTRY);
@@ -647,8 +649,13 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 		
-		_historyFile_lbl.setToolTipText("<html>History file used for the moment. Press <i>button on the left</i> to change history file.</html>");
+//		_historyFile_lbl.setToolTipText("<html>History file used for the moment. Press <i>button on the left</i> to change history file.</html>");
 		_historyFile_but.setToolTipText(HISTORY_FILE_TOOLTIP_TEMPLATE);
+
+		_historyFile_txt.setToolTipText("<html>History file used for the moment. Press <i>button on the left</i> to change history file.</html>");
+		_historyFile_txt.setEditable(false);
+		_historyFile_txt.setBackground( _historySize_lbl.getBackground() );
+		_historyFile_txt.setFont(       _historySize_lbl.getFont() );
 
 		// History file button
 		_historyFile_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/command_history_file.png"));
@@ -657,7 +664,8 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		_historyFile_but.setMargin( new Insets(0,0,0,0) );
 
 		panel.add(_historyFile_but, "");
-		panel.add(_historyFile_lbl, "pushx, growx");
+//		panel.add(_historyFile_lbl, "pushx, growx");
+		panel.add(_historyFile_txt, "pushx, growx");
 		
 		_historyFile_but.addActionListener(this);
 
@@ -991,7 +999,8 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	{
 		_historyFileName = filename;
 		_historyFile_but.setToolTipText( HISTORY_FILE_TOOLTIP_TEMPLATE.replace("HISTORY_FILE_NAME", filename) );
-		_historyFile_lbl.setText(filename);
+//		_historyFile_lbl.setText(filename);
+		_historyFile_txt.setText(filename);
 		
 		_owner.saveHistoryFilename(_historyFileName);
 		

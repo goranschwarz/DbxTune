@@ -47,10 +47,17 @@ public class ResultSetTableModel
 	public static final String  PROPKEY_NULL_REPLACE = "ResultSetTableModel.replace.null.with";
 	public static final String  DEFAULT_NULL_REPLACE = "(NULL)";
 
-	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_BINERY_PREFIX,  DEFAULT_BINERY_PREFIX);;
-	private static final boolean BINARY_TOUPPER = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BINARY_TOUPPER, DEFAULT_BINARY_TOUPPER);;
-	private static final String  NULL_REPLACE   = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_NULL_REPLACE,   DEFAULT_NULL_REPLACE);
+	public static final String  PROPKEY_StringTrim = "ResultSetTableModel.string.trim";
+	public static final boolean DEFAULT_StringTrim = true;
 
+	public static final String  PROPKEY_ShowRowNumber = "ResultSetTableModel.show.rowNumber";
+	public static final boolean DEFAULT_ShowRowNumber = false;
+
+	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_BINERY_PREFIX,  DEFAULT_BINERY_PREFIX);
+	private static final boolean BINARY_TOUPPER = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BINARY_TOUPPER, DEFAULT_BINARY_TOUPPER);
+	private static final String  NULL_REPLACE   = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_NULL_REPLACE,   DEFAULT_NULL_REPLACE);
+	public  static final String  ROW_NUMBER_COLNAME = "row#";
+	
 	private int	_numcols;
 
 	private ArrayList<String>            _rsmdColumnName        = new ArrayList<String>();  // rsmd.getColumnName(c); 
@@ -70,6 +77,9 @@ public class ResultSetTableModel
 	private boolean                      _cancelled             = false;
 	private int                          _abortedAfterXRows     = -1;
 
+	private boolean                      _stringTrim            = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_StringTrim,     DEFAULT_StringTrim);
+	private boolean                      _showRowNumber         = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ShowRowNumber,  DEFAULT_ShowRowNumber);
+
 	/**
 	 * This constructor creates a TableModel from a ResultSet.  
 	 **/
@@ -86,9 +96,10 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
-		_allowEdit = editable;
-		_name      = name;
-		_pipeCmd   = pipeCommand;
+		_allowEdit     = editable;
+		_name          = name;
+		_pipeCmd       = pipeCommand;
+//		_showRowNumber = showRowNumber;
 
 		if (_name != null)
 			_name = _name.replace('\n', ' '); // remove newlines in name
@@ -96,6 +107,18 @@ public class ResultSetTableModel
 		int maxDisplaySize = 32768;
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
+
+		if (_showRowNumber)
+		{
+			_rsmdColumnLabel      .add(ROW_NUMBER_COLNAME);
+			_rsmdColumnName       .add(ROW_NUMBER_COLNAME);
+			_rsmdColumnType       .add(new Integer(java.sql.Types.INTEGER));
+			_rsmdColumnTypeStr    .add("--sqlw-generated-rowid--");
+			_rsmdColumnClassName  .add("java.lang.Integer");
+			_rsmdColumnTypeName   .add("int");
+			_rsmdColumnTypeNameStr.add("int");
+			_displaySize          .add(new Integer(10));
+		}
 
 		ResultSetMetaData rsmd = rs.getMetaData();
 		_numcols = rsmd.getColumnCount() + 1;
@@ -181,45 +204,50 @@ public class ResultSetTableModel
 
 			// Read all columns for a row and add it to the structure
 			ArrayList<Object> row = new ArrayList<Object>();
+			if (_showRowNumber)
+				row.add(new Integer(_readCount));
+
 			for (int c=1; c<_numcols; c++)
 			{
 //				Object o = rs.getObject(c);
-				Object o = null;
-				int type = _rsmdColumnType.get(c-1);
+				int type = _rsmdColumnType.get( _showRowNumber ? c : c-1);  // if _showRowNumber entry 0 is "row#" entry
+				Object o = getDataValue(rs, c, type);
 
-				switch(type)
-				{
-				case Types.CLOB:
-					o = rs.getString(c);
-					break;
-
-				case Types.BINARY:
-				case Types.VARBINARY:
-				case Types.LONGVARBINARY:
-					o = StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(c), BINARY_TOUPPER);
-					break;
-
-				case Types.DATE:
-					o = rs.getDate(c);
-					break;
-
-				case Types.TIME:
-					o = rs.getTime(c);
-					break;
-
-				case Types.TIMESTAMP:
-					o = rs.getTimestamp(c);
-					break;
-
-				default:
-						o = rs.getObject(c);
-						break;
-				}
+//				switch(type)
+//				{
+//				case Types.CLOB:
+//					o = rs.getString(c);
+//					break;
+//
+//				case Types.BINARY:
+//				case Types.VARBINARY:
+//				case Types.LONGVARBINARY:
+//					o = StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(c), BINARY_TOUPPER);
+//					break;
+//
+//				case Types.DATE:
+//					o = rs.getDate(c);
+//					break;
+//
+//				case Types.TIME:
+//					o = rs.getTime(c);
+//					break;
+//
+//				case Types.TIMESTAMP:
+//					o = rs.getTimestamp(c);
+//					break;
+//
+//				default:
+//						o = rs.getObject(c);
+//						break;
+//				}
 				
-				if (o instanceof String)
-					row.add(((String)o).trim());
-				else
-					row.add(o);
+                // Do we want to remove leading/trailing blanks
+				if (o instanceof String && _stringTrim)
+					o = ((String)o).trim();
+
+				// Add the column data to the current row array list
+				row.add(o);
 				
 				// NOTE: What about oracles Types.XXXX that is not supported, should we trust that they can do toString(), which I know some can't do.
 				//       WHAT TO DO with those things ?????
@@ -241,15 +269,15 @@ public class ResultSetTableModel
 		// add 2 chars for BINARY types
 		for (int c=0; c<(_numcols-1); c++)
 		{
-			int type = _rsmdColumnType.get(c);
+			int type = _rsmdColumnType.get( _showRowNumber ? c+1 : c );
 
 			switch(type)
 			{
 			case Types.BINARY:
 			case Types.VARBINARY:
 			case Types.LONGVARBINARY:
-				int size = _displaySize.get(c);
-				_displaySize.set(c, new Integer(size + BINARY_PREFIX.length()));
+				int size = _displaySize.get( _showRowNumber ? c+1 : c );
+				_displaySize.set( (_showRowNumber ? c+1 : c), new Integer(size + BINARY_PREFIX.length()));
 				break;
 			}
 
@@ -259,6 +287,59 @@ public class ResultSetTableModel
 
 		if (progress != null)
 			progress.setState(originProgressState + " Read done, rows "+_readCount);
+	}
+
+	private Object getDataValue(ResultSet rs, int col, int jdbcSqlType) 
+	throws SQLException
+	{
+		// Return the "object" via getXXX method for "known" datatypes
+		switch (jdbcSqlType)
+		{
+		case java.sql.Types.BIT:           return rs.getBoolean(col);
+		case java.sql.Types.TINYINT:       return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.SMALLINT:      return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.INTEGER:       return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.BIGINT:        return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.FLOAT:         return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.REAL:          return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.DOUBLE:        return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.NUMERIC:       return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.DECIMAL:       return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.CHAR:          return rs.getString(col);
+		case java.sql.Types.VARCHAR:       return rs.getString(col);
+		case java.sql.Types.LONGVARCHAR:   return rs.getString(col);
+		case java.sql.Types.DATE:          return rs.getDate(col);
+		case java.sql.Types.TIME:          return rs.getTime(col);
+		case java.sql.Types.TIMESTAMP:     return rs.getTimestamp(col);
+		case java.sql.Types.BINARY:        return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
+		case java.sql.Types.VARBINARY:     return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
+		case java.sql.Types.LONGVARBINARY: return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
+		case java.sql.Types.NULL:          return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.OTHER:         return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.JAVA_OBJECT:   return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.DISTINCT:      return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.STRUCT:        return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.ARRAY:         return rs.getObject(col);   // use OBJECT
+//		case java.sql.Types.BLOB:          return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.BLOB:          return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
+		case java.sql.Types.CLOB:          return rs.getString(col);
+		case java.sql.Types.REF:           return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.DATALINK:      return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.BOOLEAN:       return rs.getBoolean(col);
+
+		//------------------------- JDBC 4.0 -----------------------------------
+		case java.sql.Types.ROWID:         return rs.getObject(col);   // use OBJECT
+		case java.sql.Types.NCHAR:         return rs.getString(col);
+		case java.sql.Types.NVARCHAR:      return rs.getString(col);
+		case java.sql.Types.LONGNVARCHAR:  return rs.getString(col);
+		case java.sql.Types.NCLOB:         return rs.getString(col);
+		case java.sql.Types.SQLXML:        return rs.getString(col);
+
+		//------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			//return rs.getObject(col);
+			return rs.getString(col);
+		}
 	}
 
 	/** 
@@ -369,8 +450,11 @@ public class ResultSetTableModel
 				}
 				if (    columnType == java.sql.Types.CHAR 
 				     || columnType == java.sql.Types.VARCHAR 
+				     || columnType == java.sql.Types.NCHAR
+				     || columnType == java.sql.Types.NVARCHAR
 				     || columnType == java.sql.Types.BINARY
-				     || columnType == java.sql.Types.VARBINARY )
+				     || columnType == java.sql.Types.VARBINARY
+				   )
 				{
 					int columnDisplaySize = rsmd.getColumnDisplaySize(col);
 
@@ -383,7 +467,7 @@ public class ResultSetTableModel
 		{
 			// Can we "compose" the datatype from the JavaType and DisplaySize???
 			//columnTypeName = guessDataType(columnType, rsmd.getColumnDisplaySize(c));
-			columnTypeName = "unhandled-datatype";
+			columnTypeName = "unhandled-jdbc-datatype";
 
 			try
 			{
@@ -435,7 +519,7 @@ public class ResultSetTableModel
 //				case java.sql.Types.DATALINK:     return "-DATALINK-";
 				case java.sql.Types.BOOLEAN:      return "bit";
 				default:
-					columnTypeName = "unhandled-datatype";
+					columnTypeName = "unknown-jdbc-datatype("+columnType+")";;
 				}
 			}
 			catch (SQLException e1)
@@ -447,40 +531,85 @@ public class ResultSetTableModel
 
 	public static String getColumnJavaSqlTypeName(int columnType)
 	{
+//		switch (columnType)
+//		{
+//		case java.sql.Types.BIT:          return "java.sql.Types.BIT";
+//		case java.sql.Types.TINYINT:      return "java.sql.Types.TINYINT";
+//		case java.sql.Types.SMALLINT:     return "java.sql.Types.SMALLINT";
+//		case java.sql.Types.INTEGER:      return "java.sql.Types.INTEGER";
+//		case java.sql.Types.BIGINT:       return "java.sql.Types.BIGINT";
+//		case java.sql.Types.FLOAT:        return "java.sql.Types.FLOAT";
+//		case java.sql.Types.REAL:         return "java.sql.Types.REAL";
+//		case java.sql.Types.DOUBLE:       return "java.sql.Types.DOUBLE";
+//		case java.sql.Types.NUMERIC:      return "java.sql.Types.NUMERIC";
+//		case java.sql.Types.DECIMAL:      return "java.sql.Types.DECIMAL";
+//		case java.sql.Types.CHAR:         return "java.sql.Types.CHAR";
+//		case java.sql.Types.VARCHAR:      return "java.sql.Types.VARCHAR";
+//		case java.sql.Types.LONGVARCHAR:  return "java.sql.Types.LONGVARCHAR";
+//		case java.sql.Types.DATE:         return "java.sql.Types.DATE";
+//		case java.sql.Types.TIME:         return "java.sql.Types.TIME";
+//		case java.sql.Types.TIMESTAMP:    return "java.sql.Types.TIMESTAMP";
+//		case java.sql.Types.BINARY:       return "java.sql.Types.BINARY";
+//		case java.sql.Types.VARBINARY:    return "java.sql.Types.VARBINARY";
+//		case java.sql.Types.LONGVARBINARY:return "java.sql.Types.LONGVARBINARY";
+//		case java.sql.Types.NULL:         return "java.sql.Types.NULL";
+//		case java.sql.Types.OTHER:        return "java.sql.Types.OTHER";
+//		case java.sql.Types.JAVA_OBJECT:  return "java.sql.Types.JAVA_OBJECT";
+//		case java.sql.Types.DISTINCT:     return "java.sql.Types.DISTINCT";
+//		case java.sql.Types.STRUCT:       return "java.sql.Types.STRUCT";
+//		case java.sql.Types.ARRAY:        return "java.sql.Types.ARRAY";
+//		case java.sql.Types.BLOB:         return "java.sql.Types.BLOB";
+//		case java.sql.Types.CLOB:         return "java.sql.Types.CLOB";
+//		case java.sql.Types.REF:          return "java.sql.Types.REF";
+//		case java.sql.Types.DATALINK:     return "java.sql.Types.DATALINK";
+//		case java.sql.Types.BOOLEAN:      return "java.sql.Types.BOOLEAN";
+//		default:
+//			return "unknown-datatype("+columnType+")";
+//		}
 		switch (columnType)
 		{
-		case java.sql.Types.BIT:          return "java.sql.Types.BIT";
-		case java.sql.Types.TINYINT:      return "java.sql.Types.TINYINT";
-		case java.sql.Types.SMALLINT:     return "java.sql.Types.SMALLINT";
-		case java.sql.Types.INTEGER:      return "java.sql.Types.INTEGER";
-		case java.sql.Types.BIGINT:       return "java.sql.Types.BIGINT";
-		case java.sql.Types.FLOAT:        return "java.sql.Types.FLOAT";
-		case java.sql.Types.REAL:         return "java.sql.Types.REAL";
-		case java.sql.Types.DOUBLE:       return "java.sql.Types.DOUBLE";
-		case java.sql.Types.NUMERIC:      return "java.sql.Types.NUMERIC";
-		case java.sql.Types.DECIMAL:      return "java.sql.Types.DECIMAL";
-		case java.sql.Types.CHAR:         return "java.sql.Types.CHAR";
-		case java.sql.Types.VARCHAR:      return "java.sql.Types.VARCHAR";
-		case java.sql.Types.LONGVARCHAR:  return "java.sql.Types.LONGVARCHAR";
-		case java.sql.Types.DATE:         return "java.sql.Types.DATE";
-		case java.sql.Types.TIME:         return "java.sql.Types.TIME";
-		case java.sql.Types.TIMESTAMP:    return "java.sql.Types.TIMESTAMP";
-		case java.sql.Types.BINARY:       return "java.sql.Types.BINARY";
-		case java.sql.Types.VARBINARY:    return "java.sql.Types.VARBINARY";
-		case java.sql.Types.LONGVARBINARY:return "java.sql.Types.LONGVARBINARY";
-		case java.sql.Types.NULL:         return "java.sql.Types.NULL";
-		case java.sql.Types.OTHER:        return "java.sql.Types.OTHER";
-		case java.sql.Types.JAVA_OBJECT:  return "java.sql.Types.JAVA_OBJECT";
-		case java.sql.Types.DISTINCT:     return "java.sql.Types.DISTINCT";
-		case java.sql.Types.STRUCT:       return "java.sql.Types.STRUCT";
-		case java.sql.Types.ARRAY:        return "java.sql.Types.ARRAY";
-		case java.sql.Types.BLOB:         return "java.sql.Types.BLOB";
-		case java.sql.Types.CLOB:         return "java.sql.Types.CLOB";
-		case java.sql.Types.REF:          return "java.sql.Types.REF";
-		case java.sql.Types.DATALINK:     return "java.sql.Types.DATALINK";
-		case java.sql.Types.BOOLEAN:      return "java.sql.Types.BOOLEAN";
+		case java.sql.Types.BIT:           return "java.sql.Types.BIT";
+		case java.sql.Types.TINYINT:       return "java.sql.Types.TINYINT";
+		case java.sql.Types.SMALLINT:      return "java.sql.Types.SMALLINT";
+		case java.sql.Types.INTEGER:       return "java.sql.Types.INTEGER";
+		case java.sql.Types.BIGINT:        return "java.sql.Types.BIGINT";
+		case java.sql.Types.FLOAT:         return "java.sql.Types.FLOAT";
+		case java.sql.Types.REAL:          return "java.sql.Types.REAL";
+		case java.sql.Types.DOUBLE:        return "java.sql.Types.DOUBLE";
+		case java.sql.Types.NUMERIC:       return "java.sql.Types.NUMERIC";
+		case java.sql.Types.DECIMAL:       return "java.sql.Types.DECIMAL";
+		case java.sql.Types.CHAR:          return "java.sql.Types.CHAR";
+		case java.sql.Types.VARCHAR:       return "java.sql.Types.VARCHAR";
+		case java.sql.Types.LONGVARCHAR:   return "java.sql.Types.LONGVARCHAR";
+		case java.sql.Types.DATE:          return "java.sql.Types.DATE";
+		case java.sql.Types.TIME:          return "java.sql.Types.TIME";
+		case java.sql.Types.TIMESTAMP:     return "java.sql.Types.TIMESTAMP";
+		case java.sql.Types.BINARY:        return "java.sql.Types.BINARY";
+		case java.sql.Types.VARBINARY:     return "java.sql.Types.VARBINARY";
+		case java.sql.Types.LONGVARBINARY: return "java.sql.Types.LONGVARBINARY";
+		case java.sql.Types.NULL:          return "java.sql.Types.NULL";
+		case java.sql.Types.OTHER:         return "java.sql.Types.OTHER";
+		case java.sql.Types.JAVA_OBJECT:   return "java.sql.Types.JAVA_OBJECT";
+		case java.sql.Types.DISTINCT:      return "java.sql.Types.DISTINCT";
+		case java.sql.Types.STRUCT:        return "java.sql.Types.STRUCT";
+		case java.sql.Types.ARRAY:         return "java.sql.Types.ARRAY";
+		case java.sql.Types.BLOB:          return "java.sql.Types.BLOB";
+		case java.sql.Types.CLOB:          return "java.sql.Types.CLOB";
+		case java.sql.Types.REF:           return "java.sql.Types.REF";
+		case java.sql.Types.DATALINK:      return "java.sql.Types.DATALINK";
+		case java.sql.Types.BOOLEAN:       return "java.sql.Types.BOOLEAN";
+
+		//------------------------- JDBC 4.0 -----------------------------------
+		case java.sql.Types.ROWID:         return "java.sql.Types.ROWID";
+		case java.sql.Types.NCHAR:         return "java.sql.Types.NCHAR";
+		case java.sql.Types.NVARCHAR:      return "java.sql.Types.NVARCHAR";
+		case java.sql.Types.LONGNVARCHAR:  return "java.sql.Types.LONGNVARCHAR";
+		case java.sql.Types.NCLOB:         return "java.sql.Types.NCLOB";
+		case java.sql.Types.SQLXML:        return "java.sql.Types.SQLXML";
+
+		//------------------------- UNHANDLED TYPES  ---------------------------
 		default:
-			return "unknown-datatype("+columnType+")";
+			return "unknown-jdbc-datatype("+columnType+")";
 		}
 	}
 
@@ -600,6 +729,9 @@ public class ResultSetTableModel
 	 */
 	public String getToolTipTextForTableHeader(int index)
 	{
+		if (_showRowNumber && index == 0)
+			return "<html>Column '<b><code>"+ROW_NUMBER_COLNAME+"</code></b>' is not part of the actual Result Set, it has been added when reading the data.</html>";
+
 		StringBuilder sb = new StringBuilder();
 		sb.append("<HTML>");
 		
@@ -713,14 +845,21 @@ public class ResultSetTableModel
 		int headCols = header1.size();
 		int numColsInRs = _numcols - 1; // _numcols starts at 1
 
+		int startAt = 0;
+		if (_showRowNumber)
+		{
+			startAt = 1;
+			numColsInRs++;
+		}
+		
 		// Fill in 1 row for each column in the ResultSet
 		ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
-		for (int c=0; c<numColsInRs; c++)
+		for (int c=startAt; c<numColsInRs; c++)
 		{
 			ArrayList<String> row = new ArrayList<String>();
 			rows.add(row);
 
-			        row.add( "" + (c+1) );
+			        row.add( "" + (_showRowNumber ? c : c+1) ); // _showRowNumber == skip first column... 
 			        row.add( "" + _rsmdColumnLabel      .get(c) );
 			if (ld) row.add( "" + _rsmdColumnName       .get(c)  );
 			        row.add( "" + _rsmdColumnTypeStr    .get(c) );

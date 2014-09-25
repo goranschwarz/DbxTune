@@ -22,6 +22,76 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2014-mm-dd</H2>
+<UL>
+	<LI>
+	<b>Enhancement: NAME - CmName</b><br>
+	xxx<br>
+	</LI>
+
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+       <li>Get sort order and character set when connection to a RepServer</li>
+       <li>\rpc \exec \call commands handles return codes in a better way</li>
+       <li>go | bcp ...: return how many rows was actually transferred by the BCP.</li>
+       <li>Command History: you can now copy the file name from the status bar</li>
+       <li></li>
+       <li></li>
+       <li></li>
+       <li></li>
+       <li></li>
+
+       <li>More options in the "Options" button (to the right of "exec" button)</li>
+       <ul>
+           <li>Show Row Number    - Add a Row Number as first column 'row#' when displaying data</li>
+           <li>Trim String values - Do you want to remove leading/trailing blanks from "strings"</li>
+           <li></li>
+       </ul>
+
+       <li>Bug fix: in Code Completions with respect to SCHEMA prefixes and stored procedures</li>
+       <li>Bug fix: better handling of getting the correct object CLOB=getString(), BLOB=convertToHex(), etc...</li>
+
+       <li>Probably a bunch of more stuff that I have forgot</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Devices - CmDeviceIO</b><br>
+	For ASE 12.5.x TotalIOs: convert to mumeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Databases - CmOpenDatabases</b><br>
+	Check if user are authorized to select on master..syslogshold, if not columns OldestTran* to static values<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Procedure Call Stack - CmProcCallStack</b><br>
+	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: sp_monitorconfig - CmSpMonitorConfig, and 'View ASE Configuration'</b><br>
+	now checks for SA_ROLE before calling sp_monitorconfig<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: name - CmName</b><br>
+	xxx<br> 
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version x.x.x,      Component: xxx</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2014-07-07</H2>
 <UL>
 	<LI>

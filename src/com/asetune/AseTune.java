@@ -26,6 +26,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
+import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
@@ -773,6 +774,10 @@ public class AseTune
 					// Set the Exception handler for the AWT/Swing Event Dispatch Thread
 					// This will simply write the information to Log4J...
 					SwingExceptionHandler.register();
+
+					// Install our own EventQueue handler, to handle/log strange exceptions in the event dispatch thread
+					// More or less the same thing as the above, we will have to see what handler we will use at-the-end-of-the-day
+					EventQueueProxy.install();
 
 					// Create the GUI
 					SplashWindow.drawProgress("Loading: Main Frame...");

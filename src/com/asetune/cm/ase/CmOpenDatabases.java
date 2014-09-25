@@ -8,6 +8,8 @@ import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -21,6 +23,7 @@ import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -30,7 +33,7 @@ import com.asetune.utils.Ver;
 public class CmOpenDatabases
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmOpenDatabases.class);
+	private static Logger        _logger          = Logger.getLogger(CmOpenDatabases.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmOpenDatabases.class.getSimpleName();
@@ -292,6 +295,16 @@ extends CountersModel
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
+		boolean canDoSelectOnSyslogshold = true;
+
+		if (isRuntimeInitialized())
+		{
+			// Check if we can do select on syslogshold
+			canDoSelectOnSyslogshold = AseConnectionUtils.canDoSelectOnTable(conn, "master.dbo.syslogshold");
+			if ( ! canDoSelectOnSyslogshold )
+				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"'. Problems accessing 'master.dbo.syslogshold' table, columns starting with 'OldestTran*' will not hold valid data.");
+		}
+
 		if (isClusterEnabled)
 		{
 			cols1 += "od.InstanceID, ";
@@ -359,6 +372,25 @@ extends CountersModel
 		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
 
+		String OldestTranStartTime  = "OldestTranStartTime  = h.starttime, \n";
+		String OldestTranInSeconds  = "OldestTranInSeconds  = CASE WHEN datediff(day, h.starttime, getdate()) > 20 THEN -1 ELSE  datediff(ss, h.starttime, getdate()) END, \n"; // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+		String OldestTranName       = "OldestTranName       = h.name, \n";
+		String OldestTranSpid       = "OldestTranSpid       = h.spid, \n";
+		String SPID                 = "SPID                 = h.spid, \n";
+		String OldestTranProg       = "OldestTranProg       = (select p.program_name from master..sysprocesses p where h.spid = p.spid), \n";
+		String OldestTranPage       = "OldestTranPage       = h.page,\n";
+
+		if ( ! canDoSelectOnSyslogshold )
+		{
+			OldestTranStartTime  = "OldestTranStartTime  = convert(datetime,    null), \n";
+			OldestTranInSeconds  = "OldestTranInSeconds  = convert(int,         -1), \n";
+			OldestTranName       = "OldestTranName       = convert(varchar(80), ''), \n";
+			OldestTranSpid       = "OldestTranSpid       = convert(int,         -1), \n";
+			SPID                 = "SPID                 = convert(int,         -1), \n";
+			OldestTranProg       = "OldestTranProg       = convert(varchar(30), ''), \n";
+			OldestTranPage       = "OldestTranPage       = convert(int,         -1), \n";
+		}
+
 		cols1 += "od.DBName, od.DBID, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
 		         "AppendLogContPct = CASE \n" +
 		         "                      WHEN od.AppendLogRequests > 0 \n" +
@@ -370,13 +402,13 @@ extends CountersModel
 		         LogSizeUsedPct + DataSizeUsedPct +
 		         DataSizeInMb + DataSizeFreeInMb + DataSizeFreeInMbDiff + 
 		         "od.TransactionLogFull, " + SuspendedProcesses + "\n" +
-		         "OldestTranStartTime = h.starttime, \n" + 
-		         "OldestTranInSeconds = CASE WHEN datediff(day, h.starttime, getdate()) > 20 THEN -1 ELSE  datediff(ss, h.starttime, getdate()) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-		         "OldestTranName      = h.name, \n" + 
-		         "OldestTranSpid      = h.spid, \n" + 
-		         "SPID                = h.spid, \n" + 
-		         "OldestTranProg      = (select p.program_name from master..sysprocesses p where h.spid = p.spid), \n" + 
-		         "OldestTranPage      = h.page,\n" + 
+		         OldestTranStartTime +
+		         OldestTranInSeconds +
+		         OldestTranName      + 
+		         OldestTranSpid      + 
+		         SPID                + 
+		         OldestTranProg      + 
+		         OldestTranPage      + 
 		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +
 		         "od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
 		cols2 += "";
@@ -403,6 +435,16 @@ extends CountersModel
 			"  and h.name != '$replication_truncation_point' \n" + 
 			"order by od.DBName \n" +
 			"";
+		// If we don't have permission on syslogshold, then make the SELECT statement simpler
+		if ( ! canDoSelectOnSyslogshold )
+		{
+			sql = 
+				"select " + cols + "\n" +
+				"from master..monOpenDatabases od \n" +
+				"where od.DBID in (select db.dbid from master..sysdatabases db readpast where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
+				"order by od.DBName \n" +
+				"";
+		}
 
 		return sql;
 	}

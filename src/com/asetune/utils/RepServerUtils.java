@@ -1,5 +1,6 @@
 package com.asetune.utils;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -838,6 +839,58 @@ public class RepServerUtils
 			_logger.error(msg + AseConnectionUtils.sqlExceptionToString(sqle));
 			throw sqle;
 		}
+	}
+
+	public static String getRsCharset(Connection conn)
+	{
+//		String cmd = "\\rpc sp_serverinfo ? :(string='server_csname')";
+
+		String retStr = "-unknown-";
+
+		try
+		{
+			CallableStatement stmt = conn.prepareCall("{call sp_serverinfo ?}");
+			stmt.setString(1, "server_csname");;
+//			stmt.registerOutParameter(1, java.sql.Types.INTEGER);
+			
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next())
+				retStr = rs.getString(1);
+
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Problem occurred when getting CHARSET from Replication Server. Caught: " + e);
+		}
+		return retStr;
+	}
+
+	public static String getRsSortorder(Connection conn)
+	{
+//		String cmd = "\\rpc sp_serverinfo ? :(string='server_soname')";
+
+		String retStr = "-unknown-";
+
+		try
+		{
+			CallableStatement stmt = conn.prepareCall("{call sp_serverinfo ?}");
+			stmt.setString(1, "server_soname");;
+//			stmt.registerOutParameter(1, java.sql.Types.INTEGER);
+			
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next())
+				retStr = rs.getString(1);
+
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Problem occurred when getting SORT-ORDER from Replication Server. Caught: " + e);
+		}
+		return retStr;
 	}
 
 	public static void main(String[] args)

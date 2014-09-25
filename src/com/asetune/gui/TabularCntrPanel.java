@@ -1138,6 +1138,10 @@ implements
 
 	public void copyTable(int formatType, boolean copySampleInfo, boolean copyTableHeaders, String columnSeparator)
 	{
+		copyTable(formatType, copySampleInfo, copyTableHeaders, columnSeparator, false);
+	}
+	public void copyTable(int formatType, boolean copySampleInfo, boolean copyTableHeaders, String columnSeparator, boolean onlySelectedRow)
+	{
 		if ( _dataTable == null || (_dataTable != null && _dataTable.getRowCount() == 0) )
 		{
 			_logger.debug("copyTable(): no rows in the data table, return.");
@@ -1217,7 +1221,14 @@ implements
 				extraColData = new String[] { cm.getServerName(), cm.getSampleTime() + "", cm.getSampleInterval() + "" };
 			}
 //			sb.append(SwingUtils.tableToString(tm, true, extraColNames, extraColData));
-			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData));
+//			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData));
+			
+			// if onlySelectedRow and no rows is selected: a empty tables will be copied
+			int rowsToCopy[] = null;
+			if (onlySelectedRow)
+				rowsToCopy = _dataTable.getSelectedRows();
+
+			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData, -1, -1, rowsToCopy));
 		}
 
 		String data = sb.toString();
@@ -1365,6 +1376,44 @@ implements
 		copyRow.setActionCommand(TablePopupFactory.ENABLE_MENU_IF_ON_A_ROW);
 
 		popup.add(copyRow);
+
+		JMenu copyRowFmtTab = new JMenu("Ascii Table Format");
+		copyRowFmtTab.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+
+		menuItem = new JMenuItem("Header Info + Prefixed Data Rows with(ServerName, SampleTime, SampleIntervall)");
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				copyTable(2, true, true, ": ", true);
+			}
+		});
+		copyRowFmtTab.add(menuItem);
+
+		menuItem = new JMenuItem("Header Info + Data Rows in the Table");
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				copyTable(2, false, true, ": ", true);
+			}
+		});
+		copyRowFmtTab.add(menuItem);
+
+		menuItem = new JMenuItem("Only Data Rows in the Table");
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				copyTable(2, false, false, ": ", true);
+			}
+		});
+		copyRowFmtTab.add(menuItem);
+		copyRow.add(copyRowFmtTab);
+		
 
 		menuItem = new JMenuItem("Tab separator (\\t), With Column Names");
 		menuItem.addActionListener(new ActionListener()
