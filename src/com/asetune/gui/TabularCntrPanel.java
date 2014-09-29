@@ -89,6 +89,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.DockUndockManagement;
 import com.asetune.gui.swing.EmptyTableModel;
+import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPaneWindowProps;
 import com.asetune.gui.swing.GTable;
@@ -106,7 +107,7 @@ import com.asetune.xmenu.TablePopupFactory;
 
 
 public class TabularCntrPanel 
-extends JPanel 
+extends GPanel 
 implements 
 	DockUndockManagement, // from GTabbedPane
 	GTabbedPane.ShowProperties, 

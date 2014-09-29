@@ -47,6 +47,7 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -189,8 +190,131 @@ public class GTabbedPane
 	** END: Methods for multi level GTabbedPane
 	**--------------------------------------------------- */
 
-    
-    
+
+	/*---------------------------------------------------
+	** BEGIN: Methods for Focusable ToolTip
+	**--------------------------------------------------- */
+	public static final String FOCUSABLE_TIPS_PROPERTY				= "RSTA.focusableTips";
+
+	/** Whether "focusable" tool tips are used instead of standard ones. */
+	private boolean _useFocusableTips = true;
+
+	/** The last focusable tip displayed. */
+	private FocusableTip _focusableTip = null;
+	
+	private int _useFocusableTipAboveSize = 1000;
+
+	/**
+	 * Returns whether "focusable" tool tips are used instead of standard
+	 * ones.  Focusable tool tips are tool tips that the user can click on,
+	 * resize, copy from, and click links in.
+	 *
+	 * @return Whether to use focusable tool tips.
+	 * @see #setUseFocusableTips(boolean)
+	 * @see FocusableTip
+	 */
+	public boolean getUseFocusableTips() 
+	{
+		return _useFocusableTips;
+	}
+
+	/**
+	 * Sets whether "focusable" tool tips are used instead of standard ones.
+	 * Focusable tool tips are tool tips that the user can click on,
+	 * resize, copy from, and clink links in.
+	 *
+	 * @param use Whether to use focusable tool tips.
+	 * @see #getUseFocusableTips()
+	 * @see FocusableTip
+	 */
+	public void setUseFocusableTips(boolean use) 
+	{
+		if (use != _useFocusableTips) 
+		{
+			_useFocusableTips = use;
+			firePropertyChange(FOCUSABLE_TIPS_PROPERTY, !use, use);
+		}
+	}
+
+	/**
+	 * returns true if we should use focusable tooltip for this text
+	 * 
+	 * @param toolTipText The tooltip text
+	 * @return true if to use focusable tooltip
+	 */
+	public boolean getUseFocusableTipForText(String toolTipText)
+	{
+		int ttLen = 0;
+		if (toolTipText != null)
+			ttLen = toolTipText.length();
+
+		if (ttLen > _useFocusableTipAboveSize)
+			return true;
+
+		return false;
+	}
+
+	/**
+	 * Text size limit (in bytes) when we should use focusable tooltip or not 
+	 * @param size if tooltip is above this size, then use focusable tooltip
+	 */
+	public void setUseFocusableTipsSize(int size) 
+	{
+		_useFocusableTipAboveSize = size;
+	}
+
+	/**
+	 * Returns the tool tip to display for a mouse event at the given
+	 * location.  This method is overridden to give a registered parser a
+	 * chance to display a tool tip (such as an error description when the
+	 * mouse is over an error highlight).
+	 *
+	 * @param e The mouse event.
+	 */
+	@Override
+	public String getToolTipText(MouseEvent e) 
+	{
+		// Check parsers for tool tips first.
+		String text = super.getToolTipText(e);
+
+		// Do we want to use "focusable" tips?
+		if (getUseFocusableTips() && getUseFocusableTipForText(text)) 
+		{
+			if (text != null) 
+			{
+				if (_focusableTip == null) 
+					_focusableTip = new FocusableTip(this);
+
+				_focusableTip.toolTipRequested(e, text);
+			}
+			// No tool tip text at new location - hide tip window if one is
+			// currently visible
+			else if (_focusableTip != null) 
+			{
+				_focusableTip.possiblyDisposeOfTipWindow();
+			}
+			return null;
+		}
+
+		return text; // Standard tool tips
+	}
+
+	@Override
+	public String getToolTipText() 
+	{
+		return super.getToolTipText();
+	}
+	@Override
+	public void setToolTipText(String text)
+	{
+		super.setToolTipText(text);
+	}
+
+	/*---------------------------------------------------
+	** END: Methods for Focusable ToolTip
+	**--------------------------------------------------- */
+
+	
     /*---------------------------------------------------
 	** BEGIN: Methods for multi level GTabbedPane
 	**--------------------------------------------------- */

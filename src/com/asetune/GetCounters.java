@@ -1413,17 +1413,17 @@ extends CounterControllerAbstract
 			mtd.addColumn("sysmonitors",  "id",           "The internal ID of the spinlock, for most cases this would just be a 'number' that identifies the spinlock if the spinlock itself are 'partitioned', meaning the spinlocks itselv are partitioned using some kind of 'hash' algorithm or simular.");
 
 			// Add all "known" counter name descriptions
-			mtd.addSpinlockDescription("tablockspins",           "xxxx: tablockspins,  'lock table spinlock ratio'");
-			mtd.addSpinlockDescription("fglockspins",            "xxxx: fglockspins,   'lock spinlock ratio'");
-			mtd.addSpinlockDescription("addrlockspins",          "xxxx: addrlockspins, 'lock address spinlock ratio'");
-			mtd.addSpinlockDescription("Resource->rdesmgr_spin", "xxxx: Object Manager Spinlock Contention");
-			mtd.addSpinlockDescription("Des Upd Spinlocks",      "xxxx: Object Spinlock Contention");
-			mtd.addSpinlockDescription("Ides Spinlocks",         "xxxx: Index Spinlock Contention");
-			mtd.addSpinlockDescription("Ides Chain Spinlocks",   "xxxx: Index Hash Spinlock Contention");
-			mtd.addSpinlockDescription("Pdes Spinlocks",         "xxxx: Partition Spinlock Contention");
-			mtd.addSpinlockDescription("Pdes Chain Spinlocks",   "xxxx: Partition Hash Spinlock Contention");
-//			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
-//			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
+			mtd.addSpinlockDescription("tablockspins",              "xxxx: tablockspins,  'lock table spinlock ratio'");
+			mtd.addSpinlockDescription("fglockspins",               "xxxx: fglockspins,   'lock spinlock ratio'");
+			mtd.addSpinlockDescription("addrlockspins",             "xxxx: addrlockspins, 'lock address spinlock ratio'");
+			mtd.addSpinlockDescription("Resource->rdesmgr_spin",    "Object Manager Spinlock Contention");
+			mtd.addSpinlockDescription("Des Upd Spinlocks",         "Object Spinlock Contention");
+			mtd.addSpinlockDescription("Ides Spinlocks",            "Index Spinlock Contention");
+			mtd.addSpinlockDescription("Ides Chain Spinlocks",      "Index Hash Spinlock Contention");
+			mtd.addSpinlockDescription("Pdes Spinlocks",            "Partition Spinlock Contention");
+			mtd.addSpinlockDescription("Pdes Chain Spinlocks",      "Partition Hash Spinlock Contention");
+			mtd.addSpinlockDescription("Resource->rproccache_spin", "Procedure Cache Spinlock");
+			mtd.addSpinlockDescription("Resource->rprocmgr_spin",   "Procedure Cache Manager Spinlock");
 //			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
 //			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
 			

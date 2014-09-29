@@ -1,5 +1,6 @@
 package com.asetune.cm.ase;
 
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -35,10 +36,11 @@ extends CountersModel
 
 	public static final String   CM_NAME          = CmSpinlockActivity.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Spinlock Act";
-	public static final String   HTML_DESC        = 
-		"<html>" +
-		"Spinlock Activity based on the MDA Table monSpinlockActivity introduced in ASE 15.7 ESD#2<br>" +
-		"</html>";
+//	public static final String   HTML_DESC        = 
+//		"<html>" +
+//		"Spinlock Activity based on the MDA Table monSpinlockActivity introduced in ASE 15.7 ESD#2<br>" +
+//		"</html>";
+	public static final String   HTML_DESC        = CmSpinlockSum.HTML_DESC.replaceFirst("<CODE>master.dbo.sysmonitors</CODE>", "<CODE>master.dbo.monSpinlockActivity</CODE> introduced in ASE 15.7 ESD#2.");
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
@@ -356,5 +358,17 @@ extends CountersModel
 				}
 			}
 		}
+	}
+	
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		String tooltip = CmSpinlockSum.getToolTipTextOnTableCell(this, e, colName, cellValue, modelRow, modelCol);
+
+		// If nothing was found, call super
+		if (tooltip == null)
+			tooltip = super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+
+		return tooltip;
 	}
 }
