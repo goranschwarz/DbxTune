@@ -1,5 +1,6 @@
 package com.asetune.cm.ase;
 
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.LinkedList;
@@ -34,11 +35,244 @@ extends CountersModel
 	public static final String   CM_NAME          = CmSpinlockSum.class.getSimpleName();
 	public static final String   SHORT_NAME       = "Spinlock Sum";
 	public static final String   HTML_DESC        = 
-		"<html>" +
-		"<p>What spinlocks do we have contention on.</p>" +
-		"This could be a bit heavy to use when there is a 'low' refresh interval.<br>" +
-		"For the moment consider this as <b>experimental</b>." +
-		"</html>";
+//		"<html>" +
+//		"<p>What spinlocks do we have contention on.</p>" +
+//		"This could be a bit heavy to use when there is a 'low' refresh interval.<br>" +
+//		"For the moment consider this as <b>experimental</b>." +
+//		"</html>";
+
+			"<HTML> \n" +
+			"What spinlocks do we have contention on.<BR> \n " +
+			"Based on table <CODE>master.dbo.sysmonitors</CODE>.<BR> \n" +
+			"<BR> \n" +
+			"<B>Note</B>: The origin text for below information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+			"<B>Note</B>: To check for <I>possible solutions</I> for some known spinlock contentions, see: at the end of this information<BR> \n" +
+			" \n" +
+			"<H1>Spinlocks and CPU usage in SAP ASE</H1> \n" +
+			" \n" +
+			"<H2>Purpose</H2> \n" +
+			"The purpose of this page is to clarify the understanding of how SAP ASE uses spinlocks and what the effects on overall CPU usage may be. \n" +
+			" \n" +
+			"<H2>Overview</H2> \n" +
+			"Often high CPU  in SAP ASE can be traced to spinlock usage. This page will show how to identify that condition and suggest ways to tune ASE. \n" +
+			" \n" +
+			"<H2>What is a Spinlock?</H2> \n" +
+			"<UL> \n" +
+			"    <LI>In a multi-engine server synchronization mechanisms are needed to protect shared resources<BR> \n" +
+			"        &#9830; ASE uses spinlocks as one of its synchronization mechanisms<BR> \n" +
+			"        &#9830; A spinlock is a data structure with a field that can only be updated atomically (that is, only one engine at a time can make changes to it).<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>When a task modifies a data item which is shared it must first hold a spinlock<BR> \n" +
+			"        &#9830; Shared items are such things as run queues, data cache page lists, lock structures, etc.<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>The spinlock prevents another task from modifying the value at the same time<BR> \n" +
+			"        &#9830; This of course assumes that the other task also performs its access under the protection of a spinlock<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>A task needing a spinlock will <I>spin</I> (block) until the lock is granted<BR> \n" +
+			"        &#9830; When multiple engines are spinning at the same time CPU usage can rise substantially.<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>Spinlocks must be as fast and efficient as possible<BR> \n" +
+			"        &#9830; In order to reduce contention a process which loops typically acquires and releases its spinlock each time through the loop.<BR> \n" +
+			"        &#9830; Therefore the spinlock code is written in platform-specific assembly language.<BR> \n" +
+			"    </LI> \n" +
+			"</UL> \n" +
+			" \n" +
+			" \n" +
+			"<H2>Comparison of Spinlocks to Other Synchronization Mechanisms</H2> \n" +
+			"<P> \n" +
+			"<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1> \n" +
+			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TH>Type                       </TH> <TH>Complexity</TH> <TH>CPU overhead</TH> <TH>Wait time            </TH> </TR> \n" +
+			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Spinlock                   </TD> <TD>Low       </TD> <TD>High        </TD> <TD>Very low             </TD> </TR> \n" +
+			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Latch                      </TD> <TD>Moderate  </TD> <TD>Low         </TD> <TD>Should be small      </TD> </TR> \n" +
+			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Table/page/row/address Lock</TD> <TD>High      </TD> <TD>Low         </TD> <TD>Can vary considerably</TD> </TR> \n" +
+			"</TABLE> \n" +
+			"</P> \n" +
+			" \n" +
+			" \n" +
+			"<H2>Spinlocks and CPU Usage</H2> \n" +
+			"<UL> \n" +
+			"    <LI>Spids trying to get a spinlock will never yield the engine until they have it.<BR> \n" +
+			"        So one spid, waiting on a spinlock, will cause 100% user busy on one engine until it gets the spinlock. \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>Spinlock contention percentage is measured as waits/grabs<BR> \n" +
+			"        Example: 10,000 grabs with 3,000 waits = 30% contention \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>For looking at performance issues, <B>use total spins</B>, not contention<BR> \n" +
+			"        Example: Assume two spinlocks<BR> \n" +
+			"        &#9830; One had 100 grabs with 40 waits and 200 spins = 40% contention<BR> \n" +
+			"        &#9830; Second had 100,000 grabs with 400 waits and 20,000 spins = 4% contention<BR> \n" +
+			"        The second used up more many cpu cycles spinning, even though contention was lower.<BR> \n" +
+			"        We should then look at tuning for the second example, not the first.<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI> \n" +
+			"    As more engines spin on the same spinlock, the wait time and number of spins increases; sometimes geometrically \n" +
+			"    </LI> \n" +
+			"</UL> \n" +
+			" \n" +
+			" \n" +
+			"<H2>Troubleshooting Spinlocks</H2> \n" +
+			"<UL> \n" +
+			"    <LI>Spinlock contention/spinning is one of the major causes of high CPU</LI> \n" +
+			"    <LI>Step 1 is determining if, in fact, the high cpu is being caused by spinlock usage.</LI> \n" +
+			"    <LI>Step 2 is determining which spinlock or spinlocks are causing the condition.</LI> \n" +
+			"    <LI>Step 3 is determining what tuning to use to help reduce the problem.</LI> \n" +
+			"</UL> \n" +
+			"<B>Note</B>: You will never get to 0% spinlock contention unless you only run with one engine. That is, do not think that spinlock contention can be eliminated. It can only possibly be reduced. \n" +
+			" \n" +
+			"<H2>Step 1 - Checking for spinlock contention/spinning</H2> \n" +
+			"<UL> \n" +
+			"    <LI>Using sp_sysmon (or AseTune) to determine if high cpu is due to spinlocks</LI> \n" +
+			"    <LI>Check \"CPU Busy\" (or \"User Busy\" in 15.7 Threaded Mode).</LI> \n" +
+			"    <LI>If engines  are not showing high busy% then spinlocks are not a big issue.</LI> \n" +
+			"    <LI>Check \"Total Cache Hits\" in the \"Data Cache Management\" section.<BR> \n" +
+			"        If the cache hits per second is high, and goes up with cpu busy %, then you likely are looking at table scanning/query plans and not spinlocks. \n" +
+			"    </LI> \n" +
+			"    <LI>In general, if cpu usage increases but measurements of throughput such as committed xacts, cache hits, lock requests, scans, etc. go down then it is very possible that spinlock usage is an issue \n" +
+			"</UL> \n" +
+			" \n" +
+			"<H2>Step 2 - which spinlock or spinlocks are causing the contention?</H2> \n" +
+			"<UL> \n" +
+			"    <LI>Using sp_sysmon, if AseTune 'Spinlock Sum/Act' check column 'description'.</LI>\n" +
+			" \n" +
+			"    <LI>There are several spinlocks listed, but only contention % is shown<BR> \n" +
+			"        &diams; Object Manager Spinlock Contention<BR> \n" +
+			"        &diams; Object Spinlock Contention<BR> \n" +
+			"        &diams; Index Spinlock Contention<BR> \n" +
+			"        &diams; Index Hash Spinlock Contention<BR> \n" +
+			"        &diams; Partition Spinlock Contention<BR> \n" +
+			"        &diams; Partition Hash Spinlock Contention<BR> \n" +
+			"        &diams; Lock Hashtables Spinlock Contention<BR> \n" +
+			"        &diams; Data Caches Spinlock Contention<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>High contention on any of these may indicate a problem<BR> \n" +
+			"        But, you may have contention on other spinlocks not reported in sp_sysmon \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>Using MDA table monSpinockActivity<BR> \n" +
+			"        This table was added in 15.7  ESD#2 \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>Query using standard SQL.</LI> \n" +
+			"</UL> \n" +
+			" \n" +
+			"One possible query showing the top 10 spinlocks by number of spins over a one-minute interval<BR> \n" +
+			"Or in AseTune: right click on the GUI \"tab\" for \"Spinlock Sum\" and choose Properties to see the SQL Statement used<BR> \n" +
+			"<PRE> \n" +
+			"    select * into #t1 from monSpinlockActivity \n" +
+			" \n" +
+			"    waitfor delay \"00:01:00\" \n" +
+			" \n" +
+			"    select * into #t2 from monSpinlockActivity \n" +
+			" \n" +
+			"    select top 10 \n" +
+			"        convert(char(30),a.SpinlockName) as SpinlockName, \n" +
+			"        (b.Grabs - a.Grabs) as Grabs, (b.Spins - a.Spins) as Spins, \n" +
+			"        (b.Waits – a.Waits) as Waits, \n" +
+			"        case when a.Grabs = b.Grabs then 0.00 else convert (numeric(5,2),(100.0 * (b.Waits - a.Waits))/(b.Grabs - a.Grabs)) end as Contention \n" +
+			"    from #t1 a, #t2 b \n" +
+			"    where a.SpinlockName = b.SpinlockName \n" +
+			"    order by 3 desc \n" +
+			"</PRE> \n" +
+			" \n" +
+			"<H3>Possible Issues with monSpinlockActivity</H3> \n" +
+			"<UL> \n" +
+			"    <LI>Spinlocks with multiple instances will get aggregated<BR> \n" +
+			"        For example, all default data cache partition spinlocks will show up as one line<BR> \n" +
+			"        This can make it impossible to see if just one cache partition is causing the problem<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>You must set the 'enable spinlock monitoring' configuration variable<BR> \n" +
+			"        Tests show that this adds about a 1 percent overhead to a busy server.<BR> \n" +
+			"    </LI> \n" +
+			" \n" +
+			"    <LI>monSpinlockActivity  does show the current and last owner KPIDs. This can be useful to check if certain processes are the ones heavily hitting certain spinlocks.</LI> \n" +
+			"</UL> \n" +
+			" \n" +
+			" \n" +
+			"<H2>Step 3 - what tuning to can be done to help reduce the problem</H2> \n" +
+			"<UL> \n" +
+			"    <LI>This is going to depend a great deal on which spinlock(s) the high spins are on.</LI> \n" +
+			"    <LI>Note as well that it is quite possible to reduce contention on one spinlock only to have it increase on another</LI> \n" +
+			"</UL> \n" +
+			" \n" +
+			"<H2>Some of the more common spinlocks and possible remedies</H2> \n" +
+			"	<H3>Object Manager Spinlock (Resource->rdesmgr_spin)</H3> \n" +
+			"	<UL> \n" +
+			"		<LI>Make sure that sufficient ‘number of open objects’ have been configured.</LI> \n" +
+			"       <LI>Identify <I>hot</I> objects by using monOpenObjectActivity. In AseTune - Performance Counter: Object/Access -&gt; Objects</LI> \n" +
+			"		<LI>Use dbcc tune (des_bind) to bind the hot objects to the DES cache.</LI> \n" +
+			"		<LI>The reason this works is that the spinlock is used to protect the DES keep count in order to make sure an in-use DES does not get scavenged. When the DES is bound that whole process gets skipped.</LI> \n" +
+			"	</UL> \n" +
+			" \n" +
+			"    <H3>Data Cache spinlocks</H3> \n" +
+			"    <UL> \n" +
+			"        <LI>The best single method to reduce data cache spinlock usage is to increae the number of partitions in the data cache.</LI> \n" +
+			"        <LI>Note that if a cache can be set to \"relaxed LRU\" the spinlock usage may be decreased dramatically. <BR> \n" +
+			"            This is because the relaxed LRU cache does not maintain the LRU->MRU chain, and so does not need to grab the spinlock to move pages to the MRU side. \n" +
+			"        </LI> \n" +
+			"        <LI>There are definite requirements for this to help (a cache that has high turnover is a very poor candidate for relaxed LRU).</LI> \n" +
+			"    </UL> \n" +
+			" \n" +
+			"    <H3>Procedure Cache Spinlock (Resource->rproccache_spin)</H3> \n" +
+			"    <UL> \n" +
+			"        <LI>This spinlock is used when allocating or freeing pages from the global procedure cache memory pool (this includes statement cache).</LI> \n" +
+			"        <LI>Some possible causes include<BR> \n" +
+			"            &diams; Proc cache too small – procs and statements being frequently removed/replaced.<BR> \n" +
+			"            &diams; Procedure recompilations<BR> \n" +
+			"            &diams; Large scale allocations<BR> \n" +
+			"        </LI> \n" +
+			"        <LI>To reduce pressure on the spinlock</LI> \n" +
+			"        <LI>Eliminate the cause(s) for procedure recompilations (maybe TF 299)</LI> \n" +
+			"        <LI>If you are running a version prior to ASE 15.7 ESD#4 <B>upgrade</B>. <BR>" +
+			"            ASE 15.7 ESD#4 and 4.2 have some fixes to hold the spinlock for less time." +
+			"        </LI> \n" +
+			"        <LI>Trace flags 753 and 757 can help reduce large-scale allocations</LI> \n" +
+			"        <LI>In ASE versions past 15.7 SP100, use the configuration option \"enable large chunk elc\".</LI> \n" +
+			"        <LI>Use dbcc proc_cache(free_unused) as temporary help to reduce spinlock/cpu usage.</LI> \n" +
+			"    </UL> \n" +
+			" \n" +
+			"    <H3>Procedure Cache Manager Spinlock (Resource->rprocmgr_spin)</H3> \n" +
+			"    <UL> \n" +
+			"        <LI>This spinlock is used whenever moving procedures and dynamic SQL into or out of procedure cache.</LI> \n" +
+			"        <LI>This spinlock was also used prior to ASE 15.7 ESD#1 when updating the memory accounting structures (pmctrl).<BR> \n" +
+			"            &diams; Due to contention a separate spinlock was created.<BR> \n" +
+			"        </LI> \n" +
+			"        <LI>Causes of high contention include:<BR> \n" +
+			"            &diams; Heavy use of dynamic SQL<BR> \n" +
+			"            &diams; Procedure cache sized too small<BR> \n" +
+			"        </LI> \n" +
+			"        <LI>Possible remedies are the same as for rproccache_spin</LI> \n" +
+			"    </UL> \n" +
+			" \n" +
+			"    <H3>Lock Manager spinlocks (fglockspins , addrlockspins, tablockspins)</H3> \n" +
+			"    <UL> \n" +
+			"        <LI>These spinlocks are used to protect the lock manager hashtables.</LI> \n" +
+			"        <LI>If the lock HWMs are set too high, that means more locks and more contention</LI> \n" +
+			"        <LI>Configuration tunables are the primary way to address this<BR> \n" +
+			"            &diams; lock spinlock ratio<BR> \n" +
+			"            &diams; lock address spinlock ratio<BR> \n" +
+			"            &diams; lock table spinlock ratio<BR> \n" +
+			"            &diams; lock hashtable size<BR> \n" +
+			"        </LI> \n" +
+			"    </UL> \n" +
+			" \n" +
+			"<H2>What not to do</H2> \n" +
+			"<UL> \n" +
+			"        <LI><B>Resist the urge to add more engines because cpu is high</B><BR> \n" +
+			"            &diams; Adding additional engines when the high cpu busy is caused by spinlock contention will only make matter worse<BR> \n" +
+			"            &diams; Adding more \"spinners\" will simply increase the amount of time it takes each spid to obtain the spinlock, slowing things down even more.<BR> \n" +
+			"        </LI> \n" +
+			"</UL> \n" +
+			"</HTML> \n" +
+			"";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
@@ -671,4 +905,175 @@ extends CountersModel
 
 		return diffColVal;
 	}
+
+
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		String tooltip = CmSpinlockSum.getToolTipTextOnTableCell(this, e, colName, cellValue, modelRow, modelCol);
+
+		// If nothing was found, call super
+		if (tooltip == null)
+			tooltip = super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+
+		return tooltip;
+	}
+
+	/**
+	 * This one is also used from CmSpinlockActivity, thats why it's static
+	 * 
+	 * @param cm
+	 * @param e
+	 * @param colName
+	 * @param cellValue
+	 * @param modelRow
+	 * @param modelCol
+	 * @return
+	 */
+	public static String getToolTipTextOnTableCell(CountersModel cm, MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		if (cm == null)
+			return null;
+
+		if (    "spinName"    .equals(colName) || "description".equals(colName)   // CmSpinlockSum 
+		     || "SpinlockName".equals(colName) || "Description".equals(colName) ) // CmSpinlockActivity
+		{
+			boolean source_isSpinlockSum = "CmSpinlockSum".equals(cm.getName());
+			
+			int type_mpos        = cm.findColumn(source_isSpinlockSum ? "type"     : "Type");
+			int spinName_mpos    = cm.findColumn(source_isSpinlockSum ? "spinName" : "SpinlockName");
+
+			if (type_mpos >= 0 && spinName_mpos >= 0)
+			{
+				String type     = (String) cm.getValueAt(modelRow, type_mpos);
+				String spinName = (String) cm.getValueAt(modelRow, spinName_mpos);
+				
+				// Data Cache spinlocks
+				if ("CACHE".equals(type))
+				{
+					return
+    						"<HTML>" +
+    						"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+    						"<UL> \n" +
+    						"    <LI>The best single method to reduce data cache spinlock usage is to increae the number of partitions in the data cache.</LI> \n" +
+    						"    <LI>Note that if a cache can be set to \"relaxed LRU\" the spinlock usage may be decreased dramatically. <BR> \n" +
+    						"        This is because the relaxed LRU cache does not maintain the LRU->MRU chain, and so does not need to grab the spinlock to move pages to the MRU side. \n" +
+    						"    </LI> \n" +
+    						"    <LI>There are definite requirements for this to help (a cache that has high turnover is a very poor candidate for relaxed LRU).</LI> \n" +
+    						"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+    						"</HTML>";
+				}
+
+				// Data Cache spinlocks, but on the individual CACHELET
+				if ("CACHELET".equals(type))
+				{
+					return
+    						"<HTML>" +
+    						"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+    						"<UL> \n" +
+    						"    <LI>The best single method to reduce data cache spinlock usage is to increae the number of partitions in the data cache.</LI> \n" +
+    						"    <LI>Note that if a cache can be set to \"relaxed LRU\" the spinlock usage may be decreased dramatically. <BR> \n" +
+    						"        This is because the relaxed LRU cache does not maintain the LRU->MRU chain, and so does not need to grab the spinlock to move pages to the MRU side. \n" +
+    						"    </LI> \n" +
+    						"    <LI>There are definite requirements for this to help (a cache that has high turnover is a very poor candidate for relaxed LRU).</LI> \n" +
+    						"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+    						"</HTML>";
+				}
+				
+				// Object Manager Spinlock (Resource->rdesmgr_spin)
+				if ("Resource->rdesmgr_spin".equals(spinName))
+				{
+					return 
+    						"<HTML>" +
+    						"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+    						"<UL> \n" +
+    						"    <LI>Make sure that sufficient \"number of open objects\" have been configured.</LI> \n" +
+    						"    <LI>Identify <I>hot</I> objects by using monOpenObjectActivity. In AseTune - Performance Counter: Object/Access -&gt; Objects</LI> \n" +
+    						"    <LI>Use dbcc tune (des_bind) to bind the hot objects to the DES cache.</LI> \n" +
+    						"    <LI>The reason this works is that the spinlock is used to protect the DES keep count in order to make sure an in-use DES does not get scavenged. When the DES is bound that whole process gets skipped.</LI> \n" +
+    						"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+    						"</HTML>";
+				}
+
+				// Procedure Cache Spinlock (Resource->rproccache_spin)
+				if ("Resource->rproccache_spin".equals(spinName))
+				{
+					return
+    						"<HTML>" +
+    						"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+    						"<UL> \n" +
+    						"    <LI>This spinlock is used when allocating or freeing pages from the global procedure cache memory pool (this includes statement cache).</LI> \n" +
+    						"    <LI>Some possible causes include<BR> \n" +
+    						"        &diams; Proc cache too small – procs and statements being frequently removed/replaced.<BR> \n" +
+    						"        &diams; Procedure recompilations<BR> \n" +
+    						"        &diams; Large scale allocations<BR> \n" +
+    						"    </LI> \n" +
+    						"    <LI>To reduce pressure on the spinlock</LI> \n" +
+    						"    <LI>Eliminate the cause(s) for procedure recompilations (maybe TF 299)</LI> \n" +
+    						"    <LI>If you are running a version prior to ASE 15.7 ESD#4 <B>upgrade</B>. <BR>" +
+    						"        ASE 15.7 ESD#4 and 4.2 have some fixes to hold the spinlock for less time." +
+    						"    </LI> \n" +
+    						"    <LI>Trace flags 753 and 757 can help reduce large-scale allocations</LI> \n" +
+    						"    <LI>In ASE versions past 15.7 SP100, use the configuration option \"enable large chunk elc\".</LI> \n" +
+    						"    <LI>Use dbcc proc_cache(free_unused) as temporary help to reduce spinlock/cpu usage.</LI> \n" +
+    						"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+    						"</HTML>";
+				}
+
+				// Procedure Cache Manager Spinlock (Resource->rprocmgr_spin)
+				if ("Resource->rprocmgr_spin".equals(spinName))
+				{
+					return
+							"<HTML>" +
+							"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+							"<UL> \n" +
+							"    <LI>This spinlock is used whenever moving procedures and dynamic SQL into or out of procedure cache.</LI> \n" +
+							"    <LI>This spinlock was also used prior to ASE 15.7 ESD#1 when updating the memory accounting structures (pmctrl).<BR> \n" +
+							"        &diams; Due to contention a separate spinlock was created.<BR> \n" +
+							"    </LI> \n" +
+							"    <LI>Causes of high contention include:<BR> \n" +
+							"        &diams; Heavy use of dynamic SQL<BR> \n" +
+							"        &diams; Procedure cache sized too small<BR> \n" +
+							"    </LI> \n" +
+							"    <LI>Possible remedies are the same as for rproccache_spin</LI> \n" +
+							"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+							"</HTML>";
+				}
+
+				// Lock Manager spinlocks (fglockspins , addrlockspins, tablockspins)
+				if ("fglockspins".equals(spinName) || "addrlockspins".equals(spinName) || "tablockspins".equals(spinName))
+				{
+					return
+    						"<HTML>" +
+    						"<H3>What tuning can be done to help reduce the problem</H3> \n" +
+    						"<UL> \n" +
+    						"    <LI>These spinlocks are used to protect the lock manager hashtables.</LI> \n" +
+    						"    <LI>If the lock HWMs are set too high, that means more locks and more contention</LI> \n" +
+    						"    <LI>Configuration tunables are the primary way to address this<BR> \n" +
+    						"        &diams; lock spinlock ratio<BR> \n" +
+    						"        &diams; lock address spinlock ratio<BR> \n" +
+    						"        &diams; lock table spinlock ratio<BR> \n" +
+    						"        &diams; lock hashtable size<BR> \n" +
+    						"    </LI> \n" +
+    						"</UL> \n" +
+    						"<B>Note</B>:   Its quite possible to reduce contention on one spinlock only to have it increase on another <BR> \n" +
+    						"<B>Source</B>: The origin text for above information can be found at: <A HREF=\"http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE\">http://wiki.scn.sap.com/wiki/display/SYBASE/Spinlocks+and+CPU+usage+in+SAP+ASE</A> <BR> \n" +
+    						"</HTML>";
+				}
+			}
+		} // end: spinName, description
+
+		return null;
+	}
+
 }

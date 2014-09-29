@@ -18,6 +18,8 @@ public class GPanel extends JPanel
 
 	/** The last focusable tip displayed. */
 	private FocusableTip _focusableTip = null;
+	
+	private int _useFocusableTipAboveSize = 1000;
 
 	//--------------------------------------------------------
 	// BEGIN: constructors
@@ -47,7 +49,7 @@ public class GPanel extends JPanel
 	/**
 	 * Called by constructors to initialize common properties
 	 */
-	protected void init() 
+	private void init() 
 	{
 //		ToolTipManager toolTipManager = ToolTipManager.sharedInstance();
 //		toolTipManager.registerComponent(this);
@@ -91,6 +93,33 @@ public class GPanel extends JPanel
 	}
 
 	/**
+	 * returns true if we should use focusable tooltip for this text
+	 * 
+	 * @param toolTipText The tooltip text
+	 * @return true if to use focusable tooltip
+	 */
+	public boolean getUseFocusableTipForText(String toolTipText)
+	{
+		int ttLen = 0;
+		if (toolTipText != null)
+			ttLen = toolTipText.length();
+
+		if (ttLen > _useFocusableTipAboveSize)
+			return true;
+
+		return false;
+	}
+
+	/**
+	 * Text size limit (in bytes) when we should use focusable tooltip or not 
+	 * @param size if tooltip is above this size, then use focusable tooltip
+	 */
+	public void setUseFocusableTipsSize(int size) 
+	{
+		_useFocusableTipAboveSize = size;
+	}
+
+	/**
 	 * Returns the tool tip to display for a mouse event at the given
 	 * location.  This method is overridden to give a registered parser a
 	 * chance to display a tool tip (such as an error description when the
@@ -105,7 +134,7 @@ public class GPanel extends JPanel
 		String text = super.getToolTipText(e);
 
 		// Do we want to use "focusable" tips?
-		if (getUseFocusableTips()) 
+		if (getUseFocusableTips() && getUseFocusableTipForText(text)) 
 		{
 			if (text != null) 
 			{
@@ -125,6 +154,7 @@ public class GPanel extends JPanel
 
 		return text; // Standard tool tips
 	}
+
 	@Override
 	public String getToolTipText() 
 	{

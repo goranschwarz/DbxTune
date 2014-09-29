@@ -309,10 +309,17 @@ public class ConnectionProfileManager
 //				_profileTreeRoot.add(new DefaultMutableTreeNode(connProfile));
 			if ( getTreePath(connProfile) == null )
 			{
-				_profileTreeModel.insertNodeInto(
-						new DefaultMutableTreeNode(connProfile), 
-						_profileTreeRoot, 
-						_profileTreeRoot.getChildCount());
+				try
+				{
+					_profileTreeModel.insertNodeInto(
+							new DefaultMutableTreeNode(connProfile), 
+							_profileTreeRoot, 
+							_profileTreeRoot.getChildCount());
+				}
+				catch (Throwable t) 
+				{
+					_logger.warn("Problems Add a ConnectionProfile named '"+connProfile.getName()+"'. Trying to continuing anyway... Caught: "+t, t);
+				}
 			}
 		}
 //		save();

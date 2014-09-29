@@ -79,6 +79,8 @@ import org.jdesktop.swingx.JXEditorPane;
 import org.jdesktop.swingx.JXErrorPane;
 import org.jdesktop.swingx.error.ErrorInfo;
 
+import com.asetune.gui.swing.GPanel;
+
 public class SwingUtils
 {
 	private static Logger _logger = Logger.getLogger(SwingUtils.class);
@@ -670,6 +672,20 @@ public class SwingUtils
 	public static JPanel createPanel(String title, boolean createBorder) 
 	{
 		JPanel panel = new JPanel();
+		if (createBorder)
+		{
+			Border border = BorderFactory.createTitledBorder(title);
+			panel.setBorder(border);
+//			panel.setAlignmentX(110);
+//			panel.setAlignmentY(110);
+		}
+		return panel;
+	}
+
+	/** helper method to create a GPanel */
+	public static GPanel createGPanel(String title, boolean createBorder) 
+	{
+		GPanel panel = new GPanel();
 		if (createBorder)
 		{
 			Border border = BorderFactory.createTitledBorder(title);
