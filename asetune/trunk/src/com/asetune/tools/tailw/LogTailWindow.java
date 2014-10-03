@@ -906,7 +906,7 @@ PropertyConfigurator.configure(log4jProps);
 		
 		stopTail();
 
-		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+		int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024);
 		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
 
 		String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());

@@ -638,7 +638,7 @@ public class AseTune
 		// check if sufficient memory has been configured.
 		// [FIXME] what is appropriate default value here.
 		String needMemInMBStr = "32";
-		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024; // jdk 1.4 or higher
+		int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024); // jdk 1.4 or higher
 		int needMemInMB = Integer.parseInt( appProps.getProperty("minMemoryLimitInMB", needMemInMBStr) );
 		if (maxConfigMemInMB < needMemInMB)
 		{

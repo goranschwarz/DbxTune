@@ -1791,7 +1791,7 @@ public class MainFrame
 			else
 				System.gc();
 
-			int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+			int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024);
 			int mbLeftAfterGc = Memory.getMemoryLeftInMB();
 
 			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
@@ -1830,7 +1830,7 @@ public class MainFrame
 
 				if (memLeft < GetCountersGui.DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
 				{
-					int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+					int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024);
 
 					_optDoGcAfterRefresh_mi.doClick();
 
