@@ -53,9 +53,9 @@ implements ActionListener, FocusListener, CaretListener
 
 	private static final String WIZ_NAME = "SQL-Statements";
 	private static final String WIZ_DESC = "SQL Statement(s)";
-	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init.";
-	private static final String WIZ_HELP2 = "SQL Statements that will be executed on refresh.";
-	private static final String WIZ_HELP3 = "SQL Statements that will be executed on close.";
+	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init. (for example: create some work tables, set ASE options, etc...)";
+	private static final String WIZ_HELP2 = "SQL Statements that will be executed on refresh. (should produce a resultset)";
+	private static final String WIZ_HELP3 = "SQL Statements that will be executed on close. (for example: drop tables created in init)";
 
 	private static final String NEED_VERSION_DEFAULT = "Works on all ASE versions";
 	private static final String NEED_VERSION_TOOLTIP = "<html>" + 
@@ -159,7 +159,7 @@ implements ActionListener, FocusListener, CaretListener
 		add( new MultiLineLabel(WIZ_HELP1), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlInit_txt, "growx, pushx, wrap");
 
-		button = new JButton("Open above in SQL Window");
+		button = new JButton("Test/Edit above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_OPEN");
 		add(button, "span, align right, wrap 10");
@@ -171,7 +171,7 @@ implements ActionListener, FocusListener, CaretListener
 		add(_needVersion_lbl, "split, width 80lp!");
 		add(_needVersion_txt, "split, growx, pushx");
 
-		button = new JButton("Open above in SQL Window");
+		button = new JButton("Test/Edit above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_REFRESH");
 		add(button, "align right, wrap");
@@ -190,7 +190,7 @@ implements ActionListener, FocusListener, CaretListener
 		add( new MultiLineLabel(WIZ_HELP3), "wmin 100, span, pushx, growx, wrap" );
 		add(_sqlClose_txt, "growx, pushx, wrap");
 
-		button = new JButton("Open above in SQL Window");
+		button = new JButton("Test/Edit above in SQL Window");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_TEST_SQL_CLOSE");
 		add(button, "span, align right, wrap 10");
