@@ -273,8 +273,11 @@ public class QueryWindow
 	public final static String  PROPKEY_useSemicolonHack       = PROPKEY_APP_PREFIX + "useSemicolonHack";
 	public final static boolean DEFAULT_useSemicolonHack       = false;
 	
-	public final static String  PROPKEY_oracleEnableDbmsOutput = PROPKEY_APP_PREFIX + "oracleEnableDbmsOutput";
-	public final static boolean DEFAULT_oracleEnableDbmsOutput = false;
+	public final static String  PROPKEY_enableDbmsOutput       = PROPKEY_APP_PREFIX + "enableDbmsOutput";
+	public final static boolean DEFAULT_enableDbmsOutput       = false;
+	
+	public final static String  PROPKEY_enableDbmsInitSize     = PROPKEY_APP_PREFIX + "enableDbmsInitSize";
+	public final static int     DEFAULT_enableDbmsInitSize     = 1000000;
 	
 	public final static String  PROPKEY_getObjectTextOnError   = PROPKEY_APP_PREFIX + "getObjectTextOnError";
 	public final static boolean DEFAULT_getObjectTextOnError   = true;
@@ -378,7 +381,7 @@ public class QueryWindow
 	private JCheckBoxMenuItem _printRsInfo_chk            = new JCheckBoxMenuItem("Print ResultSet Info", DEFAULT_printRsInfo);
 	private JCheckBoxMenuItem _clientTiming_chk           = new JCheckBoxMenuItem("Time SQL Statement", DEFAULT_clientTiming);
 	private JCheckBoxMenuItem _useSemicolonHack_chk       = new JCheckBoxMenuItem("Use Semicolon as Alternative SQL Send", DEFAULT_useSemicolonHack);
-	private JCheckBoxMenuItem _oracleEnableDbmsOutput_chk = new JCheckBoxMenuItem("Oracle Enable DBMS Output", DEFAULT_oracleEnableDbmsOutput);
+	private JCheckBoxMenuItem _enableDbmsOutput_chk       = new JCheckBoxMenuItem("Oracle/DB2 Enable DBMS Output", DEFAULT_enableDbmsOutput);
 	private JCheckBoxMenuItem _appendResults_chk          = new JCheckBoxMenuItem("Append Results", DEFAULT_appendResults);
 	private JCheckBoxMenuItem _rsTrimStrings_chk          = new JCheckBoxMenuItem("Trim String values", ResultSetTableModel.DEFAULT_StringTrim);
 	private JCheckBoxMenuItem _rsShowRowNumber_chk        = new JCheckBoxMenuItem("Show Row Number", ResultSetTableModel.DEFAULT_ShowRowNumber);
@@ -432,7 +435,7 @@ public class QueryWindow
 	private String      _connectedClientCharsetDesc       = null;
 	
 	private String      _currentDbName                    = null; // probably only maintained for ASE
-	private boolean     _oracleDbmsOutputIsEnabled        = false; // only maintained for Oracle
+	private boolean     _dbmsOutputIsEnabled              = false; // only maintained for Oracle & DB2
 
 	/** if DB returns a error message, stop executions */
 	private boolean     _abortOnDbMessages                = false;
@@ -1378,11 +1381,11 @@ public class QueryWindow
 				"</tr>" +// END complex row
 				"</table>" +
 				"</html>");
-		_oracleEnableDbmsOutput_chk.setToolTipText(
+		_enableDbmsOutput_chk.setToolTipText(
 				"<html>" +
 				"Enable DBMS OUTPUT trace statements to be received at the client.<br>" +
-				"At start we will execute: <code>sys.dbms_output.enable(1000000)</code><br>" +
-				"For each SQL 'batch' sent, we will execute: <code>sys.dbms_output.get_line</code><br>" +
+				"At start we will execute: <code>dbms_output.enable("+ Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_enableDbmsInitSize, DEFAULT_enableDbmsInitSize) +")</code><br>" +
+				"For each SQL 'batch' sent, we will execute: <code>dbms_output.get_line</code><br>" +
 				"</html>");
 		_appendResults_chk.setToolTipText(
 				"<html>" +
@@ -1753,7 +1756,7 @@ public class QueryWindow
 		_rsShowRowNumber_chk       .setSelected( conf.getBooleanProperty(ResultSetTableModel.PROPKEY_ShowRowNumber, ResultSetTableModel.DEFAULT_ShowRowNumber) );
 		_clientTiming_chk          .setSelected( conf.getBooleanProperty(PROPKEY_clientTiming,                      DEFAULT_clientTiming) );
 		_useSemicolonHack_chk      .setSelected( conf.getBooleanProperty(PROPKEY_useSemicolonHack,                  DEFAULT_useSemicolonHack) );
-		_oracleEnableDbmsOutput_chk.setSelected( conf.getBooleanProperty(PROPKEY_oracleEnableDbmsOutput,            DEFAULT_oracleEnableDbmsOutput) );
+		_enableDbmsOutput_chk      .setSelected( conf.getBooleanProperty(PROPKEY_enableDbmsOutput,                  DEFAULT_enableDbmsOutput) );
 		_appendResults_chk         .setSelected( conf.getBooleanProperty(PROPKEY_appendResults,                     DEFAULT_appendResults) );
 		_getObjectTextOnError_chk  .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,              DEFAULT_getObjectTextOnError) );
 		_jdbcAutoCommit_chk        .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,                    DEFAULT_jdbcAutoCommit) );
@@ -1790,7 +1793,7 @@ public class QueryWindow
 		conf.setProperty(ResultSetTableModel.PROPKEY_ShowRowNumber, _rsShowRowNumber_chk       .isSelected());
 		conf.setProperty(PROPKEY_clientTiming,                      _clientTiming_chk          .isSelected());
 		conf.setProperty(PROPKEY_useSemicolonHack,                  _useSemicolonHack_chk      .isSelected());
-		conf.setProperty(PROPKEY_oracleEnableDbmsOutput,            _oracleEnableDbmsOutput_chk.isSelected());
+		conf.setProperty(PROPKEY_enableDbmsOutput,                  _enableDbmsOutput_chk      .isSelected());
 		conf.setProperty(PROPKEY_appendResults,                     _appendResults_chk         .isSelected());
 		conf.setProperty(PROPKEY_getObjectTextOnError,              _getObjectTextOnError_chk  .isSelected());
 		conf.setProperty(PROPKEY_jdbcAutoCommit,                    _jdbcAutoCommit_chk        .isSelected());
@@ -2170,7 +2173,7 @@ public class QueryWindow
 		_connectedClientCharsetDesc = null;
 		
 		_currentDbName              = null;
-		_oracleDbmsOutputIsEnabled  = false; // I don't think you need to disable it, hopefully it will be disabled when diconnecting
+		_dbmsOutputIsEnabled        = false; // I don't think you need to disable it, hopefully it will be disabled when disconnecting
 
 		// Reset statistics
 		resetExecStatistics();
@@ -2713,7 +2716,7 @@ public class QueryWindow
 			_rsShowRowNumber_chk       .setEnabled(false);
 			_clientTiming_chk          .setEnabled(false);
 			_useSemicolonHack_chk      .setEnabled(false);
-			_oracleEnableDbmsOutput_chk.setEnabled(false);
+			_enableDbmsOutput_chk      .setEnabled(false);
 			_appendResults_chk         .setEnabled(false);
 			_getObjectTextOnError_chk  .setEnabled(false);
 			_jdbcAutoCommit_chk        .setEnabled(false);
@@ -2767,7 +2770,7 @@ public class QueryWindow
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
-				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_enableDbmsOutput_chk      .setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
 				_jdbcAutoCommit_chk        .setEnabled(true);
@@ -2798,7 +2801,7 @@ public class QueryWindow
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
-				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_enableDbmsOutput_chk      .setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
 				_jdbcAutoCommit_chk        .setEnabled(true);
@@ -2822,7 +2825,7 @@ public class QueryWindow
 				_rsShowRowNumber_chk       .setEnabled(true);
 				_clientTiming_chk          .setEnabled(true);
 				_useSemicolonHack_chk      .setEnabled(true);
-				_oracleEnableDbmsOutput_chk.setEnabled(true);
+				_enableDbmsOutput_chk      .setEnabled(true);
 				_appendResults_chk         .setEnabled(true);
 				_getObjectTextOnError_chk  .setEnabled(true);
 				_jdbcAutoCommit_chk        .setEnabled(true);
@@ -2846,7 +2849,7 @@ public class QueryWindow
 			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
 			_useSemicolonHack_chk      .setEnabled(true);
-			_oracleEnableDbmsOutput_chk.setEnabled(true);
+			_enableDbmsOutput_chk      .setEnabled(true);
 			_appendResults_chk         .setEnabled(true);
 			_getObjectTextOnError_chk  .setEnabled(true);
 			_jdbcAutoCommit_chk        .setEnabled(true);
@@ -2873,7 +2876,7 @@ public class QueryWindow
 			_rsShowRowNumber_chk       .setEnabled(true);
 			_clientTiming_chk          .setEnabled(true);
 			_useSemicolonHack_chk      .setEnabled(true);
-			_oracleEnableDbmsOutput_chk.setEnabled(true);
+			_enableDbmsOutput_chk      .setEnabled(true);
 			_appendResults_chk         .setEnabled(true);
 			_getObjectTextOnError_chk  .setEnabled(true);
 			_jdbcAutoCommit_chk        .setEnabled(true);
@@ -2885,13 +2888,13 @@ public class QueryWindow
 			_statusBar.setServerInfo(srvInfo);
 		}
 		
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX))
 		{
-			_oracleEnableDbmsOutput_chk.setVisible(true);
+			_enableDbmsOutput_chk.setVisible(true);
 		}
 		else
 		{
-			_oracleEnableDbmsOutput_chk.setVisible(false);
+			_enableDbmsOutput_chk.setVisible(false);
 		}
 
 		// MS SQL
@@ -2927,8 +2930,8 @@ public class QueryWindow
 		_connectedClientCharsetName = null;
 		_connectedClientCharsetDesc = null;
 
-		_currentDbName             = null;
-		_oracleDbmsOutputIsEnabled = false; // Mark this as false, it will be marked as true when executing...
+		_currentDbName              = null;
+		_dbmsOutputIsEnabled        = false; // Mark this as false, it will be marked as true when executing...
 
 		if (_conn != null)
 		{
@@ -2951,7 +2954,7 @@ public class QueryWindow
 				_rsShowRowNumber_chk       .setEnabled(false);
 				_clientTiming_chk          .setEnabled(false);
 				_useSemicolonHack_chk      .setEnabled(false);
-				_oracleEnableDbmsOutput_chk.setEnabled(false);
+				_enableDbmsOutput_chk      .setEnabled(false);
 				_appendResults_chk         .setEnabled(false);
 				_getObjectTextOnError_chk  .setEnabled(false);
 				_jdbcAutoCommit_chk        .setEnabled(false);
@@ -5172,7 +5175,7 @@ public class QueryWindow
 			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
-				progress.setState("Sending SQL to server for statement " + sr.getSqlBatchNumber() + ", starting at row "+sr.getSqlBatchStartLine());
+				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
 
 				// This can't be part of the for loop, then it just stops if empty row
 				if ( StringUtil.isNullOrBlank(sql) )
@@ -6038,38 +6041,40 @@ public class QueryWindow
 	private void enableOrDisableVendorSpecifics(Connection conn)
 	{
 		// Setup Oracle specific stuff
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX))
 		{
-			if ( _oracleEnableDbmsOutput_chk.isSelected() )
+			if ( _enableDbmsOutput_chk.isSelected() )
 			{
-				if ( ! _oracleDbmsOutputIsEnabled )
+				if ( ! _dbmsOutputIsEnabled )
 				{
 					try
 					{
-						CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.enable(?) }");
-						stmt.setInt(1, 1000000);
+						CallableStatement stmt = conn.prepareCall("{call dbms_output.enable(?) }");
+						
+						int initSize = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_enableDbmsInitSize, DEFAULT_enableDbmsInitSize);
+						stmt.setInt(1, initSize);
 						stmt.execute();
 
-						_logger.info("Enabling Oracle DBMS_OUTPUT, suceeded");
-						_oracleDbmsOutputIsEnabled = true;
+						_logger.info("Enabling Oracle/DB2 DBMS_OUTPUT, suceeded");
+						_dbmsOutputIsEnabled = true;
 					}
 					catch (Exception e)
 					{
-						_logger.warn("Problem occurred while trying to enable Oracle DBMS_OUTPUT. Caught:" + e);
+						_logger.warn("Problem occurred while trying to enable Oracle/DB2 DBMS_OUTPUT. Caught:" + e);
 					}
 				}
 			}
 			else // not selected, check if it has been disabled otherwise do it
 			{
-				if ( _oracleDbmsOutputIsEnabled )
+				if ( _dbmsOutputIsEnabled )
 				{
 					try
 					{
-						CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.disable }");
+						CallableStatement stmt = conn.prepareCall("{call dbms_output.disable }");
 						stmt.execute();
 
 						_logger.info("Disabling Oracle DBMS_OUTPUT, suceeded");
-						_oracleDbmsOutputIsEnabled = false;
+						_dbmsOutputIsEnabled = false;
 					}
 					catch (Exception e)
 					{
@@ -6083,14 +6088,14 @@ public class QueryWindow
 	/** Read vendor specific results */
 	private void readVendorSpecificResults(Connection conn, SqlProgressDialog progress, String sql)
 	{
-		// Get Oracle specific DBMS_OUTPUT  messages
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE) && _oracleEnableDbmsOutput_chk.isSelected())
+		// Get Oracle/DB2 specific DBMS_OUTPUT  messages
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX) && _enableDbmsOutput_chk.isSelected())
 		{
 			progress.setState("Getting Oracle: DBMS_OUTPUT");
 
 			try
 			{
-				CallableStatement stmt = conn.prepareCall("{call sys.dbms_output.get_line(?,?)}");
+				CallableStatement stmt = conn.prepareCall("{call dbms_output.get_line(?,?)}");
 				stmt.registerOutParameter(1, java.sql.Types.VARCHAR);
 				stmt.registerOutParameter(2, java.sql.Types.NUMERIC);
 				int status = 0;
@@ -6100,12 +6105,12 @@ public class QueryWindow
 					String msg = stmt.getString(1);
 					status = stmt.getInt(2);
 
-					_logger.debug("Oracle DBMS_OUTPUT.GET_LINE: status=" + status + ", msg='" + msg + "'.");
+					_logger.debug("Oracle/DB2 DBMS_OUTPUT.GET_LINE: status=" + status + ", msg='" + msg + "'.");
 					if (msg != null)
-						_resultCompList.add(new JOracleDbmsOuputMessage(msg, sql));
+						_resultCompList.add(new JDbmsOuputMessage(msg, sql, _connectedToProductName));
 
 				} while (status == 0);
-				_logger.debug("End of Oracle DBMS_OUTPUT!");
+				_logger.debug("End of Oracle/DB2 DBMS_OUTPUT!");
 				stmt.close();
 			}
 			catch (Exception e)
@@ -6713,14 +6718,21 @@ public class QueryWindow
 		@SuppressWarnings("unused") public Object getExecFinnishTime() { return _execFinnishTime; }
 	}
 
-	private static class JOracleDbmsOuputMessage
+	private static class JDbmsOuputMessage
 	extends JAseMessage
 	{
 		private static final long serialVersionUID = 1L;
-
-		public JOracleDbmsOuputMessage(String message, String originSql)
+		
+		private static String getDbmsType(String connectedToProductName)
 		{
-			super("Oracle DBMS_OUTPUT: "+message, originSql);
+			if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE)) return "Oracle";
+			if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX)) return "DB2";
+			return "Oracle/DB2";
+		}
+
+		public JDbmsOuputMessage(String message, String originSql, String connectedToProductName)
+		{
+			super(getDbmsType(connectedToProductName)+" DBMS_OUTPUT.GET_LINE(): "+message, originSql);
 
 			setForeground(ColorUtils.VERY_DARK_BLUE);
 		}
@@ -6919,6 +6931,10 @@ public class QueryWindow
 
 	public void sendExecStatistics(final boolean blockingCall)
 	{
+		// If connectionType isn't initialized, no need to send
+		if (_connType < 0)
+			return;
+
 		// send of the counters
 		/* TODO */
 		final SqlwUsageInfo sqlwUsageInfo = new SqlwUsageInfo();
@@ -7736,21 +7752,21 @@ public class QueryWindow
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i> 'go plain'</html>");
-		_appendResults_chk         .setText("<html><b>Append Results</b>               - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i> 'go append'</html>");
-		_showRowCount_chk          .setText("<html><b>Row Count</b>                    - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i> 'go rowc'</html>");
+		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                 - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i> 'go plain'</html>");
+		_appendResults_chk         .setText("<html><b>Append Results</b>                - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i> 'go append'</html>");
+		_showRowCount_chk          .setText("<html><b>Row Count</b>                     - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i> 'go rowc'</html>");
 		_limitRsRowsRead_chk       .setText("SET_LATER: _limitRsRowsRead_chk");
-		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b> - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
-		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>     - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
-		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>         - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
-		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>           - <i><font color=\"green\">Do you want to remove leading/trailing blanks from \"strings\"</html>");
-		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>              - <i><font color=\"green\">Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
-		_clientTiming_chk          .setText("<html><b>Client Timing</b>                - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
-		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>        - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
-		_oracleEnableDbmsOutput_chk.setText("<html><b>Oracle Enable DBMS Output</b>    - <i><font color=\"green\">Receive Orace DBMS Output trace statements.</font></i></html>");
-		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>            - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
-		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>     - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
-		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>              - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
+		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b>  - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
+		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>      - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
+		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>          - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
+		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>            - <i><font color=\"green\">Do you want to remove leading/trailing blanks from \"strings\"</html>");
+		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>               - <i><font color=\"green\">Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
+		_clientTiming_chk          .setText("<html><b>Client Timing</b>                 - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
+		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>         - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
+		_enableDbmsOutput_chk      .setText("<html><b>Enable dbms_output.get_line</b>   - <i><font color=\"green\">Receive Oracle/DB2 DBMS Output trace statements.</font></i></html>");
+		_rsInTabs_chk              .setText("<html><b>Resultset in Tabs</b>             - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>      - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
+		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>               - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
 		_sqlBatchTermDialog_mi     .setText("SET_LATER: _sqlBatchTermDialog_mi");
 
 		// For dialogs set special icon
@@ -7769,14 +7785,14 @@ public class QueryWindow
 		popupMenu.add(_clientTiming_chk);
 		popupMenu.add(_useSemicolonHack_chk);
 		popupMenu.add(_sqlBatchTermDialog_mi);
-		popupMenu.add(_oracleEnableDbmsOutput_chk);
+		popupMenu.add(_enableDbmsOutput_chk);
 		popupMenu.add(_rsInTabs_chk);
 		popupMenu.add(_getObjectTextOnError_chk);
 		popupMenu.add(_jdbcAutoCommit_chk);
 //		popupMenu.add(new JSeparator());
 		
 		// Set default visibility
-		_oracleEnableDbmsOutput_chk.setVisible(false);
+		_enableDbmsOutput_chk.setVisible(false);
 
 		// Action MenuItem: _limitRsRowsReadDialog_mi
 		_limitRsRowsReadDialog_mi.addActionListener(new ActionListener()

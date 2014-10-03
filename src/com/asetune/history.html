@@ -30,7 +30,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
-	<b>Enhancement: CmSpinlockSum, CmSpinlockAct - Spinlock Sum, Spinlock Act</b><br>
+	<b>Enhancement: Spinlock Sum, Spinlock Act - CmSpinlockSum, CmSpinlockAct</b><br>
 	Added Tooltip on the panel with a description of what spinlock is and how they can be solved.<br>
 	Added Tooltip when hovering over table cells for 'spinName' and 'description' and possible solution for this specific spinlock.<br>
 	</LI>
@@ -42,7 +42,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>\rpc \exec \call commands handles return codes in a better way</li>
        <li>go | bcp ...: return how many rows was actually transferred by the BCP.</li>
        <li>Command History: you can now copy the file name from the status bar</li>
-       <li></li>
+       <li>Option: Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
        <li></li>
        <li></li>
        <li></li>
@@ -64,7 +64,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 	<LI>
 	<b>Bug fix: Devices - CmDeviceIO</b><br>
-	For ASE 12.5.x TotalIOs: convert to mumeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
+	For ASE 12.5.x TotalIOs: convert to numeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
 	</LI>
 
 	<LI>
