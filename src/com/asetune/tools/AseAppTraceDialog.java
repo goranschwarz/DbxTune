@@ -1872,7 +1872,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 //		
 ////		System.gc();
 //
-//		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+//		int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024);
 //		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
 //
 //		// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead
@@ -1907,7 +1907,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		
 		stopTrace();
 
-		int maxConfigMemInMB = (int) Runtime.getRuntime().maxMemory() / 1024 / 1024;
+		int maxConfigMemInMB = (int) (Runtime.getRuntime().maxMemory() / 1024 / 1024);
 		int mbLeftAfterGc = Memory.getMemoryLeftInMB();
 
 		// OK, this is non-modal, but the OK button doesnt work, fix this later, and use the X on the window instead

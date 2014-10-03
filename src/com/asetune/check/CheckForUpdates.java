@@ -448,7 +448,7 @@ public class CheckForUpdates
 			urlParams.add("java_class_path",System.getProperty("java.class.path"));
 		else
 			urlParams.add("java_class_path","discarded when using sendHttpParams()");
-		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
+		urlParams.add("memory",             (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB");
 		urlParams.add("os_name",            System.getProperty("os.name"));
 		urlParams.add("os_version",         System.getProperty("os.version"));
 		urlParams.add("os_arch",            System.getProperty("os.arch"));
@@ -2102,7 +2102,7 @@ public class CheckForUpdates
 //			urlParams.add("java_class_path",System.getProperty("java.class.path"));
 //		else
 //			urlParams.add("java_class_path","discarded when using sendHttpParams()");
-		urlParams.add("memory",             Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB");
+		urlParams.add("memory",             (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB");
 		urlParams.add("os_name",            System.getProperty("os.name"));
 		urlParams.add("os_version",         System.getProperty("os.version"));
 		urlParams.add("os_arch",            System.getProperty("os.arch"));

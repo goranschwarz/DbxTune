@@ -182,6 +182,6 @@ public class Logging
 			_logger.info("Logfile used for "+Version.getAppName()+" will be '"+logfile+"'.");
 
 		// Print out the memory configuration
-		_logger.debug("Total memory that can be used by this JVM is " + Runtime.getRuntime().maxMemory()   / 1024 / 1024 + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
+		_logger.debug("Total memory that can be used by this JVM is " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
 	}
 }

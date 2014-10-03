@@ -42,7 +42,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>\rpc \exec \call commands handles return codes in a better way</li>
        <li>go | bcp ...: return how many rows was actually transferred by the BCP.</li>
        <li>Command History: you can now copy the file name from the status bar</li>
-       <li>Option: Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
        <li></li>
        <li></li>
        <li></li>
@@ -52,6 +51,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <ul>
            <li>Show Row Number    - Add a Row Number as first column 'row#' when displaying data</li>
            <li>Trim String values - Do you want to remove leading/trailing blanks from "strings"</li>
+           <li>Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
            <li></li>
        </ul>
 
@@ -80,6 +80,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: sp_monitorconfig - CmSpMonitorConfig, and 'View ASE Configuration'</b><br>
 	now checks for SA_ROLE before calling sp_monitorconfig<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Memory check</b><br>
+	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br> 
 	</LI>
 
 	<LI>
