@@ -4838,7 +4838,7 @@ public class QueryWindow
 		throws SQLException
 		{
 			_useCallableStatement = false;
-			_sql = sql;
+			_sql = sql.trim();
 			
 			// Should we try to make a RPC call to the server
 			if ( _sql.startsWith("\\exec ") || _sql.startsWith("\\rpc ") || _sql.startsWith("\\call ") )
@@ -4941,7 +4941,7 @@ public class QueryWindow
 				}
 				if (questionMarkCount != _rpcParams.size())
 				{
-					String rpcParamSpec        = ":( {int|string} = val [ out] [,...] )";
+					String rpcParamSpec        = ":( {{int|string} = val [ out] | [ora_rs]} [,...] )";
 					String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out )";
 					String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 					
@@ -4973,10 +4973,11 @@ public class QueryWindow
 					for (RpcParam param : _rpcParams)
 					{
 						pos++; // first pos will be 2, since #1 is used as return status
-						_cstmnt.setObject(pos, param._val, param._sqlType);
 
 						if (param._isOutput)
 							_cstmnt.registerOutParameter(pos, param._sqlType);
+						else
+							_cstmnt.setObject(pos, param._val, param._sqlType);
 					}
 				}
 			}
@@ -4987,7 +4988,7 @@ public class QueryWindow
 			}
 		}
 
-		public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList) 
+		public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList, boolean asPlainText) 
 		throws SQLException
 		{
 			if (_useCallableStatement)
@@ -5010,12 +5011,49 @@ public class QueryWindow
 						if (param._isOutput)
 						{
 							Object outParamVal = _cstmnt.getObject(pos);
-							resultCompList.add( new JAseProcRetParam(pos-posAdjust, outParamVal, param._sqlType, _sql) );
-						}
-					}
+
+							// If OUTput parameter is ORACLE SYS_REFCURSOR, then read the ResultSet
+							if (    outParamVal != null 
+							     && outParamVal instanceof ResultSet 
+							     && param._sqlType == RpcParam.ORACLE_CURSOR_TYPE
+							   )
+							{
+								ResultSet rs = (ResultSet) outParamVal;
+
+								// For the moment, don't support pipe/filters etc... just make this simple
+								if (asPlainText)
+								{
+									ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
+									
+									resultCompList.add(new JPlainResultSet(rstm));
+								}
+								else
+								{
+									// Convert the ResultSet into a TableModel, which fits on a JTable
+									ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
+				
+									// Create the JTable, using the just created TableModel/ResultSet
+									JXTable tab = new ResultSetJXTable(rstm);
+									tab.setSortable(true);
+									tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+									tab.packAll(); // set size so that all content in all cells are visible
+									tab.setColumnControlVisible(true);
+									tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+	
+									// Add the JTable to a list for later use
+									resultCompList.add(tab);
+								}
+							}
+							else
+							{
+								resultCompList.add( new JAseProcRetParam(pos-posAdjust, outParamVal, param._sqlType, _sql) );
+							}
+						} // end: isOutput parameter
+					}// end: loop RpcParam
 				}
 			}
-		}
+		} // end: method
+
 	} // end: class SqlStatementInfo
 
 	
@@ -5024,12 +5062,36 @@ public class QueryWindow
 		private int     _sqlType  = Types.OTHER;
 		private Object  _val      = null;
 		private boolean _isOutput = false;
-		
+
+		 /**
+		  * The SQL TYPE for an Oracle CURSOR in a Oracle Stored Procedure.
+		  * This duplicates the OracleTypes.CURSOR, but with this constant 
+		  * we do not need to import com.oracle.* jars into this project.
+		  * However this class is still 100% dependent on Oracle at runtime 
+		  * and cannot be unit tested without Oracle.
+		  */
+		private static int ORACLE_CURSOR_TYPE = -10;
+
 		public static RpcParam parseEntry(String entry)
 		{
+			if (entry == null)
+				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', is NULL.");
+
+			boolean isOracleResultSetOutputParameter = entry.trim().equalsIgnoreCase("ora_rs");
+
+			if (isOracleResultSetOutputParameter)
+			{
+				RpcParam p = new RpcParam();
+				p._isOutput = true;
+				p._sqlType  = ORACLE_CURSOR_TYPE; 
+				p._val      = null;
+
+				return p;
+			}
+
 			int eqPos   = entry.indexOf('=');
 			if (eqPos == -1)
-				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', no equal char is found. Expecting: int|string = value");
+				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', no equal char is found. Expecting: 'int|string = value' or 'ora_rs'");
 			String type = entry.substring(0, eqPos).trim();
 			String val  = entry.substring(eqPos+1).trim();
 			
@@ -5057,7 +5119,7 @@ public class QueryWindow
 
 			String[] tmp = rpcParamsStr.split(",");
 			if ( tmp.length == 1 && StringUtil.isNullOrBlank(tmp[0]) )
-				throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: int|string = value");
+				throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|string = value' or 'ora_rs'.");
 
 			for (int i=0; i<tmp.length; i++)
 			{
@@ -5396,7 +5458,7 @@ public class QueryWindow
 						progress.setState("No more results for this batch");
 	
 						// Read RPC returnCode and output parameters, if it was a RPC and any retCode and/or params exists
-						sqlStmntInfo.readRpcReturnCodeAndOutputParameters(_resultCompList);
+						sqlStmntInfo.readRpcReturnCodeAndOutputParameters(_resultCompList, _asPlainText_chk.isSelected());
 	
 						// Append, messages and Warnings to _resultCompList, if any
 						putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
@@ -5430,6 +5492,8 @@ public class QueryWindow
 					}
 					catch (SQLException ex)
 					{
+						_logger.debug("Caught SQL Exception, get the stacktrace if in debug mode...", ex);
+
 						incSqlExceptionCount();
 						progress.setSqlStatement(null);
 
@@ -5451,6 +5515,12 @@ public class QueryWindow
 							isConnectionOk = false;
 							break;
 						}
+
+						// If we want to STOP if we get any errors...
+						// Then we should return the origin Exception
+						// NOTE: THIS HAS NOT BEEN TESTED
+//						if (_abortOnDbMessages)
+//							throw ex;
 					}
 
 				} // end: 'go 10'
@@ -6823,7 +6893,7 @@ public class QueryWindow
 		}
 	}
 	
-	private class JPlainResultSet 
+	private static class JPlainResultSet 
 	extends JTextArea
 	{
 		private static final long serialVersionUID = 1L;
