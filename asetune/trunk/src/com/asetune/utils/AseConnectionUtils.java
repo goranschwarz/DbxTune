@@ -465,6 +465,33 @@ public class AseConnectionUtils
 	}
 
 	/**
+	 * If SQLExceptions has been down graded to SQLWarnings in the jConnect message handler, but
+	 * we still want to throw an SQLException if we find any "warnings" that is above severity 10 
+	 *
+	 * @param sqlw
+	 * @return
+	 * @throws SQLException
+	 */
+	public static void checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(SQLWarning sqlw)
+	throws SQLException
+	{
+		while (sqlw != null)
+		{
+			if (sqlw instanceof EedInfo)
+			{
+				EedInfo eed = (EedInfo) sqlw;
+				if (eed.getSeverity() > 10)
+					throw sqlw;
+				
+//				throw new SybSQLException(sqlw.getMessage(), sqlw.getSQLState(), sqlw.getErrorCode(), 
+//						eed.getState(), eed.getSeverity(), eed.getServerName(), eed.getProcedureName(), eed.getLineNumber(), eed.getEedParams(), eed.getTranState(), eed.getStatus());
+			}
+			
+			sqlw = sqlw.getNextWarning();
+		}
+	}
+
+	/**
 	 * Get a message string that looks like the one got from Sybase 'isql' utility
 	 * @param sqe a SQLException object
 	 * @return A String, even if no SQLException is present, return a empty string.
@@ -479,7 +506,7 @@ public class AseConnectionUtils
 		{
 			if(sqe instanceof EedInfo)
 			{
-				// Error is using the addtional TDS error data.
+				// Error is using the additional TDS error data.
 				EedInfo eedi = (EedInfo) sqe;
 				if(eedi.getSeverity() > 10)
 				{
@@ -1088,7 +1115,7 @@ public class AseConnectionUtils
 //	}
 	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
 	{
-		String exMsg    = getMessageFromSQLException(sqlex, true);
+		String exMsg    = getMessageFromSQLException(sqlex, true, "010HA"); // 010HA: The server denied your request to use the high-availability feature. Please reconfigure your database, or do not request a high-availability session.
 		String exMsgRet = getMessageFromSQLException(sqlex, false);
 
 		String extraInfo = ""; 
@@ -1112,10 +1139,10 @@ public class AseConnectionUtils
 		{
 			extraInfo  = "<br>" +
 					"<b>Try a Workaround for the problem, SQL State 'JZ0IB'</b><br>" +
-					"In the Connection Dialog, in the field 'URL Option' specify:<br>" +
-					"<font size=\"4\">" +
-					"  <code>CHARSET=iso_1</code><br>" +
-					"</font>" +
+					"<ul>" + 
+					"  <li>In the Connection Dialog, in the field 'URL Option' specify: <font size=\"4\"><code>CHARSET=iso_1</code></font></li>" +
+					"  <li>Or simply choose '<font size=\"4\"><code>iso_1</code></font>' in the 'Client Charset' DropBox.</li>" +
+					"</ul>" + 
 					"<i>This will hopefully get you going, but characters might not converted correctly</i><br>" +
 					"<br>" +
 					"Below is all Exceptions that happened during the login attempt.<br>" +
@@ -1126,7 +1153,7 @@ public class AseConnectionUtils
 			"<html>" +
 			  msg + "<br>" +
 			  extraInfo + 
-			  "<br>" + 
+//			  "<br>" + 
 //			  exMsg.replace("\n", "<br>") + 
 			  exMsg + 
 			"</html>"; 
@@ -1136,25 +1163,43 @@ public class AseConnectionUtils
 		return exMsgRet;
 	}
 
-	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags) 
+	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags, String... discardSqlState) 
 	{
 		StringBuffer sb = new StringBuffer("");
 		if (htmlTags)
 			sb.append("<UL>");
 
+		ArrayList<String> discardedMessages = null;
+
 		boolean first = true;
 		while (sqlex != null)
 		{
-			if (first)
-				first = false;
-			else
-				sb.append( "\n" );
+			boolean discardThis = false;
+			for (String sqlState : discardSqlState)
+			{
+				if (sqlState.equals(sqlex.getSQLState()))
+					discardThis = true;
+			}
 
-			if (htmlTags)
-				sb.append("<LI>");
-			sb.append( sqlex.getMessage() );
-			if (htmlTags)
-				sb.append("</LI>");
+			if (discardThis)
+			{
+				if (discardedMessages == null)
+					discardedMessages = new ArrayList<String>();
+				discardedMessages.add( sqlex.getMessage() );
+			}
+			else
+			{
+    			if (first)
+    				first = false;
+    			else
+    				sb.append( "\n" );
+    
+    			if (htmlTags)
+    				sb.append("<LI>");
+    			sb.append( sqlex.getMessage() );
+    			if (htmlTags)
+    				sb.append("</LI>");
+			}
 
 			sqlex = sqlex.getNextException();
 		}
@@ -1162,6 +1207,24 @@ public class AseConnectionUtils
 		if (htmlTags)
 			sb.append("</UL>");
 
+		if (discardedMessages != null)
+		{
+			sb.append(htmlTags ? "<BR><BR><B>Note</B>:" : "\nNote: ");
+			sb.append("The following messages was also found but, they are not as important as above messages.").append(htmlTags ? "<br>" : "\n");
+			if (htmlTags)
+				sb.append("<HR NOSHADE>").append("<UL>");
+			for (String msg : discardedMessages)
+			{
+    			if (htmlTags)
+    				sb.append("<LI>");
+    			sb.append( msg );
+    			if (htmlTags)
+    				sb.append("</LI>");
+			}
+			if (htmlTags)
+				sb.append("</UL>");
+		}
+		
 		return sb.toString();
 	}
 
@@ -3420,7 +3483,7 @@ public class AseConnectionUtils
 	 */
 	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean getTranState)
 	{
-		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
+		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount, tranchained=@@tranchained";
 		if (getTranState)
 			sql += ", transtate=@@transtate";
 
@@ -3434,20 +3497,51 @@ public class AseConnectionUtils
 
 			while(rs.next())
 			{
-				csi._dbname    = rs.getString(1);
-				csi._spid      = rs.getInt   (2);
-				csi._username  = rs.getString(3);
-				csi._susername = rs.getString(4);
-				csi._tranCount = rs.getInt   (5);
-				csi._tranState = getTranState ? rs.getInt(6) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
+				csi._dbname      = rs.getString(1);
+				csi._spid        = rs.getInt   (2);
+				csi._username    = rs.getString(3);
+				csi._susername   = rs.getString(4);
+				csi._tranCount   = rs.getInt   (5);
+				csi._tranChained = rs.getInt   (6);
+				csi._tranState   = getTranState ? rs.getInt(7) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
 			}
+
+//			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
+//			rs = stmnt.executeQuery(sql);
+//			while(rs.next())
+//			{
+//				csi._lockCount = rs.getInt(1);
+//			}
+			sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
+				+ " from master.dbo.syslocks "
+				+ " where spid = @@spid	"
+				+ " group by dbid, id, type ";
+			
+			csi._lockCount = 0;
+			csi._lockList.clear();
+
+			rs = stmnt.executeQuery(sql);
+			while(rs.next())
+			{
+				String dbname    = rs.getString(1);
+				String tableName = rs.getString(2);
+				int    lockType  = rs.getInt   (3);
+				int    lockCount = rs.getInt   (4);
+
+				csi._lockCount += lockCount;
+				csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+			}
+
 			rs.close();
 			stmnt.close();
+
 		}
 		catch (SQLException sqle)
 		{
 			_logger.error("Error in getAseConnectionStateInfo() problems executing sql='"+sql+"'.", sqle);
 		}
+
+//		select count(*) from master.dbo.syslogshold where spid = @@spid
 
 		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', user_name()='"+csi._username+"', suser_name()='"+csi._susername+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
 		return csi;
@@ -3459,12 +3553,15 @@ public class AseConnectionUtils
 	public static class ConnectionStateInfo
 	{
 		/** _current* below is only maintained if we are connected to ASE */
-		public String _dbname    = "";
-		public int    _spid      = -1;
-		public String _username  = "";
-		public String _susername = "";
-		public int    _tranState = -1;
-		public int    _tranCount = -1;
+		public String _dbname      = "";
+		public int    _spid        = -1;
+		public String _username    = "";
+		public String _susername   = "";
+		public int    _tranState   = -1;
+		public int    _tranCount   = -1;
+		public int    _tranChained = -1;
+		public int    _lockCount   = -1;
+		public List<LockRecord> _lockList = new ArrayList<LockRecord>();
 
 		// Transaction SQL states for DONE flavors
 		//
@@ -3581,8 +3678,131 @@ public class AseConnectionUtils
 					return "TSQL_UNKNOWN_STATE("+state+")";
 			}
 		}
+		
+		/** 
+		 * @return "" if no locks, otherwise a HTML TABLE, with the headers: DB, Table, Type, Count
+		 */
+		public String getLockListTableAsHtmlTable()
+		{
+			if (_lockList.size() == 0)
+				return "";
+
+			StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
+			sb.append("<TR> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
+			for (LockRecord lr : _lockList)
+			{
+				sb.append("<TR>");
+				sb.append("<TD>").append(lr._dbname   ).append("</TD>");
+				sb.append("<TD>").append(lr._tableName).append("</TD>");
+				sb.append("<TD>").append(lr._lockType ).append("</TD>");
+				sb.append("<TD>").append(lr._lockCount).append("</TD>");
+				sb.append("</TR>");
+			}
+			sb.append("</TABLE>");
+			return sb.toString();
+		}
+	}
+	public static class LockRecord
+	{
+		public String _dbname    = "";
+		public String _tableName = "";
+		public String _lockType  = "";
+		public int    _lockCount = 0;
+
+//		public LockRecord(String dbname, String tableName, String lockType, int lockCount)
+//		{
+//			_dbname    = dbname;
+//			_tableName = tableName;
+//			_lockType  = lockType;
+//			_lockCount = lockCount;
+//		}
+
+		public LockRecord(String dbname, String tableName, int lockType, int lockCount)
+		{
+			_dbname    = dbname;
+			_tableName = tableName;
+			_lockType  = getAseLockType(lockType);
+			_lockCount = lockCount;
+		}
 	}
 
+	public static String getAseLockType(int type)
+	{
+		// below values grabbed from ASE 15.7 SP102: 
+		//            select 'case '+convert(char(5),number)+': return "'+name+'";' from master..spt_values where type in ('L') and number != -1
+		switch (type)
+		{
+		case 1   : return "Ex_table";
+		case 2   : return "Sh_table";
+		case 3   : return "Ex_intent";
+		case 4   : return "Sh_intent";
+		case 5   : return "Ex_page";
+		case 6   : return "Sh_page";
+		case 7   : return "Update_page";
+		case 8   : return "Ex_row";
+		case 9   : return "Sh_row";
+		case 10  : return "Update_row";
+		case 11  : return "Sh_nextkey";
+		case 257 : return "Ex_table-blk";
+		case 258 : return "Sh_table-blk";
+		case 259 : return "Ex_intent-blk";
+		case 260 : return "Sh_intent-blk";
+		case 261 : return "Ex_page-blk";
+		case 262 : return "Sh_page-blk";
+		case 263 : return "Update_page-blk";
+		case 264 : return "Ex_row-blk";
+		case 265 : return "Sh_row-blk";
+		case 266 : return "Update_row-blk";
+		case 267 : return "Sh_nextkey-blk";
+		case 513 : return "Ex_table-demand";
+		case 514 : return "Sh_table-demand";
+		case 515 : return "Ex_intent-demand";
+		case 516 : return "Sh_intent-demand";
+		case 517 : return "Ex_page-demand";
+		case 518 : return "Sh_page-demand";
+		case 519 : return "Update_page-demand";
+		case 520 : return "Ex_row-demand";
+		case 521 : return "Sh_row-demand";
+		case 522 : return "Update_row-demand";
+		case 523 : return "Sh_nextkey-demand";
+		case 769 : return "Ex_table-demand-blk";
+		case 770 : return "Sh_table-demand-blk";
+		case 771 : return "Ex_intent-demand-blk";
+		case 772 : return "Sh_intent-demand-blk";
+		case 773 : return "Ex_page-demand-blk";
+		case 774 : return "Sh_page-demand-blk";
+		case 775 : return "Update_page-demand-blk";
+		case 776 : return "Ex_row-demand-blk";
+		case 777 : return "Sh_row-demand-blk";
+		case 778 : return "Update_row-demand-blk";
+		case 779 : return "Sh_nextkey-demand-blk";
+		case 1025: return "Ex_table-request";
+		case 1026: return "Sh_table-request";
+		case 1027: return "Ex_intent-request";
+		case 1028: return "Sh_intent-request";
+		case 1029: return "Ex_page-request";
+		case 1030: return "Sh_page-request";
+		case 1031: return "Update_page-request";
+		case 1032: return "Ex_row-request";
+		case 1033: return "Sh_row-request";
+		case 1034: return "Update_row-request";
+		case 1035: return "Sh_nextkey-request";
+		case 1537: return "Ex_table-demand-request";
+		case 1538: return "Sh_table-demand-request";
+		case 1539: return "Ex_intent-demand-request";
+		case 1540: return "Sh_intent-demand-request";
+		case 1541: return "Ex_page-demand-request";
+		case 1542: return "Sh_page-demand-request";
+		case 1543: return "Update_page-demand-request";
+		case 1544: return "Ex_row-demand-request";
+		case 1545: return "Sh_row-demand-request";
+		case 1546: return "Update_row-demand-request";
+		case 1547: return "Sh_nextkey-demand-request";
+		}
+		return "unknown("+type+")";
+	}
+
+	
 	/**
 	 * Check if we can do a simple select on the provided table.
 	 * <p>
@@ -3614,10 +3834,10 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.warn("Problems doing simple SQL '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			_logger.warn("Authoritization problems when checking simple select on table '"+tableName+"'. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
 			return false;
 		}
 	}
-	
+
 }
 

@@ -12,11 +12,13 @@ import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 
 import com.asetune.Version;
-import com.asetune.ui.autocomplete.CompletionProviderAbstractSql.SqlColumnCompletion;
-import com.asetune.ui.autocomplete.CompletionProviderAbstractSql.SqlDbCompletion;
-import com.asetune.ui.autocomplete.CompletionProviderAbstractSql.SqlProcedureCompletion;
-import com.asetune.ui.autocomplete.CompletionProviderAbstractSql.SqlSchemaCompletion;
-import com.asetune.ui.autocomplete.CompletionProviderAbstractSql.SqlTableCompletion;
+import com.asetune.ui.autocomplete.completions.BasicCompletionX;
+import com.asetune.ui.autocomplete.completions.SavedCacheCompletionWarning;
+import com.asetune.ui.autocomplete.completions.SqlColumnCompletion;
+import com.asetune.ui.autocomplete.completions.SqlDbCompletion;
+import com.asetune.ui.autocomplete.completions.SqlProcedureCompletion;
+import com.asetune.ui.autocomplete.completions.SqlSchemaCompletion;
+import com.asetune.ui.autocomplete.completions.SqlTableCompletion;
 import com.asetune.utils.SwingUtils;
 
 public class SqlCellRenderer
@@ -25,6 +27,8 @@ extends DefaultListCellRenderer
 	private static final long serialVersionUID = 1L;
 
 	public final static ImageIcon ICON_UNKNOWN_TYPE     = SwingUtils.readImageIcon(Version.class, "images/cc_unknown_type.png");
+
+	public final static ImageIcon ICON_CC_SAVE_WARNING  = SwingUtils.readImageIcon(Version.class, "images/cc_save_warning.png");
 
 	public final static ImageIcon ICON_TEMPLATE         = SwingUtils.readImageIcon(Version.class, "images/cc_template.png");
 
@@ -58,8 +62,18 @@ extends DefaultListCellRenderer
 
 		if (value instanceof BasicCompletion && component instanceof JLabel)
 		{
-			JLabel          label = (JLabel)component;
-			BasicCompletion bc    = (BasicCompletion)value;
+			JLabel           label = (JLabel)component;
+			BasicCompletion  bc    = (BasicCompletion)value;
+			
+			Icon icon = getIcon(bc);
+			if (icon != null)
+				label.setIcon(icon);
+		}
+
+		if (value instanceof BasicCompletionX && component instanceof JLabel)
+		{
+			JLabel           label = (JLabel)component;
+			BasicCompletionX bc    = (BasicCompletionX)value;
 			
 			Icon icon = getIcon(bc);
 			if (icon != null)
@@ -123,6 +137,11 @@ extends DefaultListCellRenderer
 //		{
 //			return ICON_TEMPLATE;
 //		}
+		else if (completion instanceof SavedCacheCompletionWarning)
+		{
+			return ICON_CC_SAVE_WARNING;
+		}
+
 		return ICON_TEMPLATE;
 //		return ICON_UNKNOWN_TYPE;
 	}

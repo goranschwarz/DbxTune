@@ -45,7 +45,7 @@ implements PropertyChangeListener, ActionListener
 	private static Logger _logger = Logger.getLogger(SqlProgressDialog.class);
 	private static final long serialVersionUID = 1L;
 
-	private JLabel           _allSql_lbl            = new JLabel("Executing SQL at ASE Server", JLabel.CENTER);
+	private JLabel           _allSql_lbl            = new JLabel("Executing SQL at Server", JLabel.CENTER);
 	private JLabel           _msg_lbl               = new JLabel("Messages for current SQL Batch", JLabel.CENTER);
 
 	private Connection       _conn                  = null;
@@ -385,8 +385,8 @@ implements PropertyChangeListener, ActionListener
 					}
 					catch(SQLException ex)
 					{
-						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to ASE: "+ex, ex);
-//						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to ASE (conn will be closed): "+ex, ex);
+						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server: "+ex, ex);
+//						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server (conn will be closed): "+ex, ex);
 
 						// Close the Connection
 						//try {     _conn.close(); }

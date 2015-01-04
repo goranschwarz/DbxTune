@@ -9,6 +9,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 
@@ -77,6 +79,7 @@ implements PropertyChangeListener, ActionListener
 	private static Logger _logger = Logger.getLogger(WaitForExecDialog.class);
 	private static final long serialVersionUID = 1L;
 
+	private Object          _notEdtRetObj    = null; // used as a placeholder for return object if, call to execAndWait wasn't made on the Event Dispatch Thread
 	private BgExecutor      _execClass       = null;
 	private boolean         _normalExit      = false; // set to true when the SwingWorker ends
 
@@ -216,37 +219,26 @@ implements PropertyChangeListener, ActionListener
 		if (_logger.isDebugEnabled())
 			_logger.debug("WaitForExecDialog.setState('"+string+"');");
 
-		_state_lbl.setText(string);
-//		if (SwingUtilities.isEventDispatchThread())
-//		{
-//			_state_lbl.setText(string);
-//		}
-//		else
-//		{
-//			Runnable doAsEdt = new Runnable()
-//			{
-//				@Override
-//				public void run()
-//				{
-//					_state_lbl.setText(string);
-//				}
-//			};
-////			SwingUtilities.invokeLater(doAsEdt);
-//			try
-//			{
-//				SwingUtilities.invokeAndWait(doAsEdt);
-//			}
-//			catch (InterruptedException e)
-//			{
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//			catch (InvocationTargetException e)
-//			{
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
+//		_state_lbl.setText(string);
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			_state_lbl.setText(string);
+		}
+		else
+		{
+			Runnable doAsEdt = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					_state_lbl.setText(string);
+				}
+			};
+//			SwingUtilities.invokeLater(doAsEdt);
+			try { SwingUtilities.invokeAndWait(doAsEdt); }
+			catch (InterruptedException e)      { _logger.info("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: "+e); }
+			catch (InvocationTargetException e) { _logger.warn("CallWrapper.setState(), calling SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+		}
 	}
 	
 	/**
@@ -283,6 +275,7 @@ implements PropertyChangeListener, ActionListener
 	{
 		return execAndWait(execClass, 0);
 	}
+
 	/**
 	 * Execute the input <code>Runnable</code> in background using <code>SwingWorker</code>
 	 * while the <code>Runnable</code> is executing this dialog will be visible.<br>
@@ -296,7 +289,46 @@ implements PropertyChangeListener, ActionListener
 	 * @param graceTime  if the executions takes less than X ms, then the GUI wont be showed.
 	 */
 	// FIXME: add method execAndWaitWithThrow or similar, that throws Exception or Throwable
-	public Object execAndWait(final BgExecutor execClass, int graceTime)
+	public Object execAndWait(final BgExecutor execClass, final int graceTime)
+	{
+		if ( SwingUtilities.isEventDispatchThread() )
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
+				
+//System.out.println("WaitForExecDialog.execAndWait(): -normal- executed on EDT thread... _label="+_label.getText());
+			return internal_execAndWait(execClass, graceTime);
+		}
+		else
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
+				
+//System.out.println("WaitForExecDialog.execAndWait(): -NOT-EXECUTED-ON-EDT-THREAD- do:invokeAndWait(): caller thread='"+Thread.currentThread().getName()+"'. _label="+_label.getText());
+			Runnable doRun = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					_notEdtRetObj = internal_execAndWait(execClass, graceTime);
+				}
+			};
+
+			try { SwingUtilities.invokeAndWait(doRun); }
+			catch (InterruptedException e)      { _logger.info("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e); }
+			catch (InvocationTargetException e) { _logger.warn("WaitForExecDialog.execAndWait() was executed using not EDT Thread (thread='"+Thread.currentThread().getName()+"'), and called SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+
+			return _notEdtRetObj;
+		}
+	}
+
+	/**
+	 * Internally used and called by execAndWait(final BgExecutor execClass, final int graceTime)
+	 * @param execClass
+	 * @param graceTime
+	 * @return
+	 */
+	private Object internal_execAndWait(final BgExecutor execClass, final int graceTime)
 	{
 		_execClass = execClass;
 
@@ -313,7 +345,7 @@ implements PropertyChangeListener, ActionListener
 					Object retObject = _execClass.doWork();
 					if (_execClass.hasException())
 						_logger.info("WaitForExecDialog:(at try block) has problems when doing it's work.", _execClass.getException());
-						
+
 					return retObject;
 				} 
 				catch (Throwable t) 
@@ -323,15 +355,9 @@ implements PropertyChangeListener, ActionListener
 				}
 				return null;
 			}
-	
 		};
 		doBgThread.addPropertyChangeListener(this);
 		doBgThread.execute();
-
-		boolean canDoCancel = _execClass.canDoCancel();
-		if (_conn != null && _conn instanceof SybConnection)
-			canDoCancel = true;
-		_cancel_but.setVisible(canDoCancel);
 
 		// Do not show Wait GUI at once, if it's a fast execution, we do not need to show...
 		if (graceTime > 0)
@@ -340,11 +366,12 @@ implements PropertyChangeListener, ActionListener
 			long startTime = System.currentTimeMillis();
 			while (System.currentTimeMillis() - startTime < graceTime )
 			{
-				// if the bg job is done, get out of here
+				// if the BackGround job is done, get out of here
 				if ( doBgThread.isDone() )
 					break;
 	
 				// Sleep for 10ms, get out of here if we are interrupted.
+				// or we can do a _someLockObject.wait(timeout)... and _someLockObject.notify() from the SwingWorker.done() method.
 				try { Thread.sleep(10); }
 				catch (InterruptedException ignore) { break; }
 			}
@@ -353,6 +380,12 @@ implements PropertyChangeListener, ActionListener
 		//the dialog will be visible until the SwingWorker is done
 		if ( ! doBgThread.isDone() )
 		{
+			boolean canDoCancel = _execClass.canDoCancel();
+			if (_conn != null && _conn instanceof SybConnection)
+				canDoCancel = true;
+			_cancel_but.setVisible(canDoCancel);
+
+			// Show the wait dialog
 			setVisible(true);
 		}
 

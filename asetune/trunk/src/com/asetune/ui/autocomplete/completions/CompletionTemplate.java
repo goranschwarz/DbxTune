@@ -1,4 +1,4 @@
-package com.asetune.ui.autocomplete;
+package com.asetune.ui.autocomplete.completions;
 
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;

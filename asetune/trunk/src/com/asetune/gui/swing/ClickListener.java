@@ -13,7 +13,8 @@ import javax.swing.Timer;
 public class ClickListener extends MouseAdapter 
 implements ActionListener
 {
-	private final static int clickInterval = (Integer) Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
+	// 500 is the default on Windows, so if the value isn't found, use that
+	private final static int clickInterval = Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval") == null ? 500 : (Integer) Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
 
 	MouseEvent lastEvent;
 	Timer      timer;

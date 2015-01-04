@@ -84,6 +84,8 @@
 		<copy file="sqlw.sh"                                           toFile="${dist}/sqlw.sh"/>
 		<copy file="tailw.bat"                                         toFile="${dist}/tailw.bat"/>
 		<copy file="tailw.sh"                                          toFile="${dist}/tailw.sh"/>
+<!--		<copy file="iqtune.bat"                                        toFile="${dist}/iqtune.bat"/>                  -->
+<!--		<copy file="iqtune.sh"                                         toFile="${dist}/iqtune.sh"/>                   -->
 		<copy file="${src}/com/asetune/history.html"                   toFile="${dist}/history.html"/>
 		<copy file="${src}/com/asetune/images/asetune_splash.jpg"      toFile="${dist}/lib/asetune_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.gif"     toFile="${dist}/lib/asetune_icon_32.gif"/>
@@ -91,6 +93,7 @@
 		<copy file="${src}/com/asetune/images/asetune_icon_32.png"     toFile="${dist}/lib/asetune_icon_32.png"/>
 		<copy file="${src}/com/asetune/images/sqlw_splash.jpg"         toFile="${dist}/lib/sqlw_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/sql_query_window_32.png" toFile="${dist}/lib/sqlw_icon_32.png"/>
+		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"       toFile="${dist}/lib/iqtune_splash.jpg"/>
 		<copy todir="${dist}/lib">
 			<fileset dir="lib">
 				<include name="*.jar"/>

@@ -2562,6 +2562,7 @@ public class CheckForUpdates
 		private long   _execTimeTotal     = 0;
 		private long   _execTimeSqlExec   = 0;
 		private long   _execTimeRsRead    = 0;
+		private long   _execTimeOther     = 0;
 		private int    _rsCount           = 0;
 		private int    _rsRowsCount       = 0;
 		private int    _iudRowsCount      = 0;
@@ -2581,6 +2582,7 @@ public class CheckForUpdates
 		public void setExecTimeTotal    (long   val) { _execTimeTotal     = val; }
 		public void setExecTimeSqlExec  (long   val) { _execTimeSqlExec   = val; }
 		public void setExecTimeRsRead   (long   val) { _execTimeRsRead    = val; }
+		public void setExecTimeOther    (long   val) { _execTimeOther     = val; }
 		public void setRsCount          (int    val) { _rsCount           = val; }
 		public void setRsRowsCount      (int    val) { _rsRowsCount       = val; }
 		public void setIudRowsCount     (int    val) { _iudRowsCount      = val; }
@@ -2600,6 +2602,7 @@ public class CheckForUpdates
 		public long   getExecTimeTotal    () { return _execTimeTotal; }
 		public long   getExecTimeSqlExec  () { return _execTimeSqlExec; }
 		public long   getExecTimeRsRead   () { return _execTimeRsRead; }
+		public long   getExecTimeOther    () { return _execTimeOther; }
 		public int    getRsCount          () { return _rsCount; }
 		public int    getRsRowsCount      () { return _rsRowsCount; }
 		public int    getIudRowsCount     () { return _iudRowsCount; }
@@ -2731,6 +2734,7 @@ public class CheckForUpdates
 		urlParams.add("execTimeTotal",       sqlwUsageInfo.getExecTimeTotal());
 		urlParams.add("execTimeSqlExec",     sqlwUsageInfo.getExecTimeSqlExec());
 		urlParams.add("execTimeRsRead",      sqlwUsageInfo.getExecTimeRsRead());
+		urlParams.add("execTimeOther",       sqlwUsageInfo.getExecTimeOther());
 		urlParams.add("rsCount",             sqlwUsageInfo.getRsCount());
 		urlParams.add("rsRowsCount",         sqlwUsageInfo.getRsRowsCount());
 		urlParams.add("iudRowsCount",        sqlwUsageInfo.getIudRowsCount());

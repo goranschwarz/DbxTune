@@ -19,11 +19,16 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.parser.QueryWindowMessageParser;
+import com.asetune.ui.autocomplete.completions.CompletionTemplate;
+import com.asetune.ui.autocomplete.completions.DbInfo;
+import com.asetune.ui.autocomplete.completions.ProcedureInfo;
+import com.asetune.ui.autocomplete.completions.ProcedureParameterInfo;
+import com.asetune.ui.autocomplete.completions.TableColumnInfo;
+import com.asetune.ui.autocomplete.completions.TableInfo;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.ConnectionProvider;
-import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class CompletionProviderAse
@@ -346,8 +351,14 @@ extends CompletionProviderAbstractSql
 				"Get monitor tables and columns in this system."));
 		
 		// \exec  and \rpc templates
-		list.add( new CompletionTemplate( "exec", "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "exec",    "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "\\exec",  "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "rpc",     "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "\\rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "call",    "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "\\call",  "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+		list.add( new CompletionTemplate( "prep",    "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
+		list.add( new CompletionTemplate( "\\prep",  "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
 
 		return list;
 	}
@@ -417,6 +428,12 @@ extends CompletionProviderAbstractSql
 	protected List<DbInfo> refreshCompletionForDbs(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
+		return refreshCompletionForDbs(conn, waitDialog, false);
+	}
+
+	protected List<DbInfo> refreshCompletionForDbs(Connection conn, WaitForExecDialog waitDialog, boolean simple)
+	throws SQLException
+	{
 //System.out.println("ASE: refreshCompletionForDbs()");
 		waitDialog.setState("Getting ASE Database information");
 
@@ -441,36 +458,51 @@ extends CompletionProviderAbstractSql
 		}
 
 
-		ArrayList<DbInfo> dbInfoList = new ArrayList<DbInfo>();
+		List<DbInfo> dbInfoList = new ArrayList<DbInfo>();
 
 		String sql = "exec sp_helpdb";
 
-		Statement stmnt = conn.createStatement();
-		ResultSet rs = stmnt.executeQuery(sql);
-		while(rs.next())
+		if (simple)
+			sql = "select name, db_size='unknown', dbid, owner=suser_name(suid), created=crdate, status='unknown' from master.dbo.sysdatabases";
+
+		try
 		{
-			DbInfo di = new DbInfo();
-
-			di._dbName     = rs.getString("name");
-			di._dbSize     = rs.getString("db_size");
-			di._dbId       = rs.getInt   ("dbid");
-			di._dbOwner    = rs.getString("owner");
-			di._dbCrDate   = rs.getString("created");
-			di._dbType     = "User Database";
-			di._dbRemark   = rs.getString("status");;
-
-			if      (di._dbName.startsWith("sybsystem")) di._dbType = "System Database";
-			else if (di._dbName.equals("master"))        di._dbType = "System Database";
-			else if (di._dbName.equals("model"))         di._dbType = "System Database";
-			else if (di._dbName.indexOf("tempdb") >= 0)  di._dbType = "Temporary Database"; // hhmm a bit ugly
-
-			dbInfoList.add(di);
-
-			if (waitDialog.wasCancelPressed())
-				return dbInfoList;
+    		Statement stmnt = conn.createStatement();
+    		ResultSet rs = stmnt.executeQuery(sql);
+    		while(rs.next())
+    		{
+    			DbInfo di = new DbInfo();
+    
+    			di._dbName     = rs.getString("name");
+    			di._dbSize     = rs.getString("db_size");
+    			di._dbId       = rs.getInt   ("dbid");
+    			di._dbOwner    = rs.getString("owner");
+    			di._dbCrDate   = rs.getString("created");
+    			di._dbType     = "User Database";
+    			di._dbRemark   = rs.getString("status");;
+    
+    			if      (di._dbName.startsWith("sybsystem")) di._dbType = "System Database";
+    			else if (di._dbName.equals("master"))        di._dbType = "System Database";
+    			else if (di._dbName.equals("model"))         di._dbType = "System Database";
+    			else if (di._dbName.indexOf("tempdb") >= 0)  di._dbType = "Temporary Database"; // hhmm a bit ugly
+    
+    			dbInfoList.add(di);
+    
+    			if (waitDialog.wasCancelPressed())
+    				return dbInfoList;
+    		}
+    		rs.close();
+    		stmnt.close();
 		}
-		rs.close();
-		stmnt.close();
+		catch (SQLException e)
+		{
+			// If already in "simple" mode, lets throw the exception
+			if (simple)
+				throw e;
+
+			// If we are in "full" mode, calling sp_helpdb and we FAILED, try to do it in the "simple" way...
+			return refreshCompletionForDbs(conn, waitDialog, true);
+		}
 
 		return dbInfoList;
 	}
@@ -479,50 +511,50 @@ extends CompletionProviderAbstractSql
 	//##############################################################################
 	//##############################################################################
 	//##############################################################################
-	/**
-	 * REFRESH schema list
-	 */
-	@Override
-	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
-	throws SQLException
-	{
-		final String stateMsg = "Getting Schema information";
-		waitDialog.setState(stateMsg);
-
-		ArrayList<SchemaInfo> schemaInfoList = new ArrayList<SchemaInfo>();
-
-		String catalog = "";
-		if (catalogName != null)
-			catalog = catalogName + ".dbo.";
-		
-		if (schemaName != null)
-		{
-			schemaName = schemaName.replace('*', '%').trim();
-			if ( ! schemaName.endsWith("%") )
-				schemaName += "%";
-		}
-
-		String sql = "select name from "+catalog+"sysusers where suid > 0 and name like '"+schemaName+"'";
-
-		Statement stmnt = conn.createStatement();
-		ResultSet rs = stmnt.executeQuery(sql);
-		while(rs.next())
-		{
-			SchemaInfo si = new SchemaInfo();
-
-			si._cat  = StringUtil.isNullOrBlank(catalogName) ? _currentCatalog :  catalogName;
-			si._name = rs.getString(1);
-
-			schemaInfoList.add(si);
-
-			if (waitDialog.wasCancelPressed())
-				return schemaInfoList;
-		}
-		rs.close();
-		stmnt.close();
-
-		return schemaInfoList;
-	}
+//	/**
+//	 * REFRESH schema list
+//	 */
+//	@Override
+//	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
+//	throws SQLException
+//	{
+//		final String stateMsg = "Getting Schema information";
+//		waitDialog.setState(stateMsg);
+//
+//		ArrayList<SchemaInfo> schemaInfoList = new ArrayList<SchemaInfo>();
+//
+//		String catalog = "";
+//		if (catalogName != null)
+//			catalog = catalogName + ".dbo.";
+//		
+//		if (schemaName != null)
+//		{
+//			schemaName = schemaName.replace('*', '%').trim();
+//			if ( ! schemaName.endsWith("%") )
+//				schemaName += "%";
+//		}
+//
+//		String sql = "select name from "+catalog+"sysusers where suid > 0 and name like '"+schemaName+"'";
+//
+//		Statement stmnt = conn.createStatement();
+//		ResultSet rs = stmnt.executeQuery(sql);
+//		while(rs.next())
+//		{
+//			SchemaInfo si = new SchemaInfo();
+//
+//			si._cat  = StringUtil.isNullOrBlank(catalogName) ? _currentCatalog :  catalogName;
+//			si._name = rs.getString(1);
+//
+//			schemaInfoList.add(si);
+//
+//			if (waitDialog.wasCancelPressed())
+//				return schemaInfoList;
+//		}
+//		rs.close();
+//		stmnt.close();
+//
+//		return schemaInfoList;
+//	}
 
 	//##############################################################################
 	//##############################################################################

@@ -67,6 +67,48 @@ go [#1 [wait #2]] [ | {grep | egrep | bcp} ]
 </Entry>
 
 
+<!-- == \prep =================================== -->
+<Entry>
+    <CmdName>prep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a statement (via PreparedStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\prep FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \call =================================== -->
+<Entry>
+    <CmdName>call</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure (via CallableStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\call FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
 <!-- == \exec =================================== -->
 <Entry>
     <CmdName>exec</CmdName>

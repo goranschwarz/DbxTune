@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 import javax.swing.JComboBox;
@@ -180,6 +182,9 @@ public class StringUtil
 	{
 		ArrayList<String> list = new ArrayList<String>();
 
+		if (str == null)
+			return list;
+
 		String[] sa = str.split(",");
 		for (String se : sa)
 			list.add(se.trim());
@@ -196,6 +201,9 @@ public class StringUtil
 	public static Set<String> parseCommaStrToSet(String str)
 	{
 		LinkedHashSet<String> set = new LinkedHashSet<String>();
+
+		if (str == null)
+			return set;
 
 		String[] sa = str.split(",");
 		for (String se : sa)
@@ -1414,6 +1422,271 @@ public class StringUtil
 		return sb.toString();
 	}
 
+	/**
+	 * Convert a hexadecimal string into bytes (if the String starts with 0x it will be removed)
+	 * @param hexStr
+	 * @return
+	 */
+	public static byte[] hexToBytes(String hexStr)
+	{
+		if (hexStr.startsWith("0x"))
+			hexStr = hexStr.substring(2);
+
+		int len = hexStr.length();
+		byte[] data = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) 
+		{
+			data[i / 2] = (byte) ((Character.digit(hexStr.charAt(i), 16) << 4) + Character.digit(hexStr.charAt(i+1), 16));
+		}
+		return data;		
+	}
+
+	/**
+	 * Split on commas (,) but if a commas is found inside quotes (" or ') then treat that comma to be part of the string
+	 * <p>
+	 * It allows both single(') and double quotes(") to start/terminate a string.<br>
+	 * Example:<br>
+	 * <pre>
+	 *      splitOnCommasAllowQuotes("a, b, c, 'd,d,d', 'It''s a str', \"e,f,g\", \"now that's \"\"strange\"\".\"");
+	 *      returns 7 elements: [a][b][c]['d,d,d']['It''s a str']["e,f,g"]["now that's ""strange""."]
+	 * </pre> 
+	 * to unquote a string see {@link #unquote(String str)}
+	 * <p>
+	 * 
+	 * @param input a comma separated String
+	 * @param trim if you want any leading/trailing blanks before/after the commas to be trimmed away.
+	 * @return A List of Strings 
+	 * 
+	 */
+	public static List<String> splitOnCommasAllowQuotes(String input, boolean trim)
+	{
+		List<String> tokensList = new ArrayList<String>();
+		if (input == null)
+			return tokensList;
+
+		char startQuoteChar = 0;
+		boolean inQuotes = false;
+		StringBuilder b = new StringBuilder();
+
+		char[] ca = input.toCharArray();
+		char c, pc, nc;
+		for (int i=0; i<ca.length; i++)
+		{
+			c = ca[i];
+			pc = i==0 ? 0 : ca[i-1]; // previous char
+			nc = i+1 < ca.length ? ca[i+1] : 0; // next char
+
+			if (c == '"' || c == '\'')
+			{
+				if ( ! inQuotes )
+				{
+					inQuotes = true;
+					startQuoteChar = c;
+				}
+				else
+				{
+					// handle empty strings: str='',str2=''
+					if (pc == startQuoteChar)
+						inQuotes = false;
+
+					// handle empty strings: 'it''s true 2sq'''''
+					if (c == startQuoteChar && nc != startQuoteChar && pc != startQuoteChar)
+						inQuotes = false;
+				}
+				
+				b.append(c);
+			}
+			else if (c == ',')
+			{
+				if ( inQuotes )
+				{
+					b.append(c);
+				}
+				else
+				{
+					tokensList.add( trim ? b.toString().trim() : b.toString() );
+					b = new StringBuilder();
+				}
+			}
+			else
+			{
+				b.append(c);
+			}
+		}
+		tokensList.add( trim ? b.toString().trim() : b.toString() );
+		
+		return tokensList;
+	}
+
+	/**
+	 * Remove any leading trailing (and embedded) quotes from a string
+	 * <p>
+	 * <pre>
+	 *       'd,d,d'                   => d,d,d
+	 *       'It''s a str'             => It's a str
+	 *       "now that's ""strange""." => now that's "strange".
+	 *       none quoted str           => none quoted str
+	 * </pre>
+	 * @param str The string to unquote
+	 * @return the unquoted string
+	 */
+	public static String unquote(String str)
+	{
+		if (str == null)           return null;
+
+		// If first char isn't: single-quote or double-quote, just return
+		str = str.trim();
+		if (str.charAt(0) != '\'' && str.charAt(0) != '"') 
+			return str; 
+
+		StringBuilder b = new StringBuilder();
+
+		char[] ca = str.toCharArray();
+		char startQuoteChar = ca[0];
+		char c, pc;
+		boolean justSkippedDoubleQuote = false;
+		for (int i=1; i<ca.length-1; i++) // start 1 char in, stop 1 char from end
+		{
+			c  = ca[i];
+			pc = i<=1 ? 0 : ca[i-1]; // prev char (on first loop pc is 0)
+
+			if (c == startQuoteChar && pc == startQuoteChar && !justSkippedDoubleQuote)
+			{
+				justSkippedDoubleQuote = true;
+				continue;
+			}
+			justSkippedDoubleQuote = false;
+			
+			b.append(c);
+		}
+
+		
+		return b.toString();
+	}
+
+	/**
+	 * Crack a command line.
+	 *
+	 * @param toProcess  the command line to process
+	 * @return the command line broken into strings. An empty or null toProcess parameter results in a zero sized array
+	 *         
+	 * NOTE: code was borrowed from Apache Commons Library, but it was made private...
+	 */
+	public static String[] translateCommandline(final String toProcess) 
+	{
+		if (toProcess == null || toProcess.length() == 0) 
+		{
+			// no command? no string
+			return new String[0];
+		}
+
+		// parse with a simple finite state machine
+		final int normal = 0;
+		final int inQuote = 1;
+		final int inDoubleQuote = 2;
+		int state = normal;
+		final StringTokenizer tok = new StringTokenizer(toProcess, "\"\' ", true);
+		final ArrayList<String> list = new ArrayList<String>();
+		StringBuilder current = new StringBuilder();
+		boolean lastTokenHasBeenQuoted = false;
+
+		while (tok.hasMoreTokens()) 
+		{
+			final String nextTok = tok.nextToken();
+
+			switch (state) 
+			{
+			case inQuote:
+				if ("\'".equals(nextTok)) 
+				{
+					lastTokenHasBeenQuoted = true;
+					state = normal;
+				} 
+				else 
+				{
+					current.append(nextTok);
+				}
+				break;
+
+			case inDoubleQuote:
+				if ("\"".equals(nextTok)) 
+				{
+					lastTokenHasBeenQuoted = true;
+					state = normal;
+				} 
+				else 
+				{
+					current.append(nextTok);
+				}
+				break;
+
+			default:
+				if ("\'".equals(nextTok)) 
+				{
+					state = inQuote;
+				} 
+				else if ("\"".equals(nextTok)) 
+				{
+					state = inDoubleQuote;
+				} 
+				else if (" ".equals(nextTok)) 
+				{
+					if (lastTokenHasBeenQuoted || current.length() != 0) 
+					{
+						list.add(current.toString());
+						current = new StringBuilder();
+					}
+				} 
+				else 
+				{
+					current.append(nextTok);
+				}
+				lastTokenHasBeenQuoted = false;
+				break;
+			}
+		}
+
+		if (lastTokenHasBeenQuoted || current.length() != 0) 
+		{
+			list.add(current.toString());
+		}
+
+		if (state == inQuote || state == inDoubleQuote) 
+		{
+			throw new IllegalArgumentException("Unbalanced quotes in " + toProcess);
+		}
+
+		final String[] args = new String[list.size()];
+		return list.toArray(args);
+	}
+
+	public static String bytesToHuman(long size)
+	{
+		return bytesToHuman(size, null);
+	}
+	public static String bytesToHuman(long size, String fmt)
+	{
+		if (fmt == null)
+			fmt = "#.##";
+		
+		long Kb = 1  * 1024;
+		long Mb = Kb * 1024;
+		long Gb = Mb * 1024;
+		long Tb = Gb * 1024;
+		long Pb = Tb * 1024;
+		long Eb = Pb * 1024;
+
+		if (size <  Kb)                 return new DecimalFormat(fmt).format(        size     ) + " byte";
+		if (size >= Kb && size < Mb)    return new DecimalFormat(fmt).format((double)size / Kb) + " KB";
+		if (size >= Mb && size < Gb)    return new DecimalFormat(fmt).format((double)size / Mb) + " MB";
+		if (size >= Gb && size < Tb)    return new DecimalFormat(fmt).format((double)size / Gb) + " GB";
+		if (size >= Tb && size < Pb)    return new DecimalFormat(fmt).format((double)size / Tb) + " TB";
+		if (size >= Pb && size < Eb)    return new DecimalFormat(fmt).format((double)size / Pb) + " PB";
+		if (size >= Eb)                 return new DecimalFormat(fmt).format((double)size / Eb) + " EB";
+
+		return "???";
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -1422,6 +1695,11 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("string='',str='x,y',str3='''', int=99,int=null", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
+
+		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("1,2,'a,b,c', 'it''s true 2sq'''''", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
+		System.out.println("unquote(): " + StringUtil.unquote("'it''s 2 single-quotes'''''") ); // |it's 2 single-quotes''|
+		System.exit(0);
 		
 		System.out.println("countLines():" + StringUtil.countLines("one") );
 		System.out.println("countLines():" + StringUtil.countLines("1 \n 2 \r\n 3 \r 4 \n 5") );

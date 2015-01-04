@@ -68,6 +68,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.6.jar
 
 export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/jdbc_drivers/*
 export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}

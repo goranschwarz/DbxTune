@@ -181,6 +181,14 @@ grant exec on decodeIndexKeyArray to public
 go
 
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('decodeIndexKeyArray')) is not null)
+	print "Creating function '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "decodeIndexKeyArray"
+else
+	print "Creating function '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "decodeIndexKeyArray"
+go
+
 
 
 
@@ -250,6 +258,14 @@ go
 grant exec on sp_list_unused_indexes_in_db to public
 go
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_list_unused_indexes_in_db')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_list_unused_indexes_in_db"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_list_unused_indexes_in_db"
+go
+
 
 
 
@@ -313,9 +329,16 @@ go
 grant exec on sp_list_unused_indexes to public
 go
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_list_unused_indexes')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_list_unused_indexes"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_list_unused_indexes"
+go
+
 use master
 go
 --sp_list_unused_indexes
 go
-
 

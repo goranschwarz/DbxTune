@@ -978,7 +978,8 @@ public class AseSqlScriptReader
 		private String  _regex1             = "(begin|declare)\\s+";
 		private Pattern _pattern1           = Pattern.compile(_regex1, Pattern.CASE_INSENSITIVE);
 
-		private String  _regex2             = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
+//		private String  _regex2             = "(create|alter)\\s+(procedure|proc|trigger|view|function)";
+		private String  _regex2             = "(create(\\s+or\\s+replace)?|alter)\\s+(procedure|proc|trigger|view|function)";
 		private Pattern _pattern2           = Pattern.compile(_regex2, Pattern.CASE_INSENSITIVE);
 
 		public SemiColonHelper()

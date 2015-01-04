@@ -6,6 +6,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
+import com.asetune.utils.StringUtil;
+
 /**
  * This one should be able to parse a bunch of things.<br>
  * and also several pipes... cmd | cmd | cmd
@@ -42,6 +44,7 @@ extends PipeCommandAbstract
 	public PipeCommandGrep(String input)
 	throws PipeCommandException
 	{
+		super(input);
 		parse(input);
 	}
 
@@ -98,7 +101,9 @@ extends PipeCommandAbstract
 //		_type = _type | TYPE_RESULTSET;
 //		_type = _type | TYPE_MSG;
 
-		if (input.startsWith("grep ") || input.startsWith("egrep "))
+		if (    input.startsWith("grep ")  || input.equals("grep") 
+		     || input.startsWith("egrep ") || input.equals("egrep")
+		   )
 		{
 			String params = input.substring(input.indexOf(' ') + 1).trim();
 
@@ -165,7 +170,8 @@ extends PipeCommandAbstract
 	private CommandLine parseCmdLine(String args)
 	throws PipeCommandException
 	{
-		return parseCmdLine(args.split(" "));
+		return parseCmdLine(StringUtil.translateCommandline(args));
+//		return parseCmdLine(args.split(" "));
 	}
 	private CommandLine parseCmdLine(String[] args)
 	throws PipeCommandException

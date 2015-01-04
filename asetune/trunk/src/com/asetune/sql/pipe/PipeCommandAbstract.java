@@ -5,6 +5,19 @@ implements IPipeCommand
 {
 //	abstract public IPipeCommand parse(String input) throws PipeCommandException;
 
+	protected String _cmdStr = null;
+	
+	public PipeCommandAbstract(String input)
+	{
+		_cmdStr = input;
+	}
+
+	@Override 
+	public String getCmdStr()
+	{
+		return _cmdStr;
+	}
+
 	@Override abstract public String getConfig();
 	
 	@Override

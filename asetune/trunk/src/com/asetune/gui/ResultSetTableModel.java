@@ -3,15 +3,19 @@
  */
 package com.asetune.gui;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
 
 import org.apache.log4j.Logger;
 
@@ -59,7 +63,7 @@ public class ResultSetTableModel
 	public  static final String  ROW_NUMBER_COLNAME = "row#";
 	
 	private int	_numcols;
-
+	
 	private ArrayList<String>            _rsmdColumnName        = new ArrayList<String>();  // rsmd.getColumnName(c); 
 	private ArrayList<String>            _rsmdColumnLabel       = new ArrayList<String>();  // rsmd.getColumnLabel(c); 
 	private ArrayList<Integer>           _rsmdColumnType        = new ArrayList<Integer>(); // rsmd.getColumnType(c); 
@@ -68,6 +72,7 @@ public class ResultSetTableModel
 	private ArrayList<String>            _rsmdColumnTypeNameStr = new ArrayList<String>();  // kind of 'SQL' datatype: this.getColumnTypeName(rsmd, c);
 	private ArrayList<String>            _rsmdColumnClassName   = new ArrayList<String>();  // rsmd.getColumnClassName(c);
 	private ArrayList<Integer>           _displaySize           = new ArrayList<Integer>(); // Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+	private Class[]          _classType             = null; // first found class of value, which wasn't null
 	private ArrayList<ArrayList<Object>> _rows                  = new ArrayList<ArrayList<Object>>();
 	private int                          _readCount             = 0;
 	private SQLWarning                   _sqlWarning            = null;
@@ -80,6 +85,16 @@ public class ResultSetTableModel
 	private boolean                      _stringTrim            = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_StringTrim,     DEFAULT_StringTrim);
 	private boolean                      _showRowNumber         = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ShowRowNumber,  DEFAULT_ShowRowNumber);
 
+	private int                          _readResultSetTime     = -1;
+	
+	/** Set the name of this table model, could be used for debugging or other tracking purposes */
+	public void setName(String name) { _name = name; }
+
+	/** Get the name of this table model, could be used for debugging or other tracking purposes */
+	public String getName() { return _name; }
+
+	public int getResultSetReadTime() { return _readResultSetTime; }
+	
 	/**
 	 * This constructor creates a TableModel from a ResultSet.  
 	 **/
@@ -91,22 +106,28 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
 	throws SQLException
 	{
-		this(rs, true, name, -1, false, null, null);
+		this(rs, editable, name, -1, false, null, null);
 	}
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
+		long startTime = System.currentTimeMillis();
+
 		_allowEdit     = editable;
-		_name          = name;
+		setName(name);
 		_pipeCmd       = pipeCommand;
 //		_showRowNumber = showRowNumber;
 
-		if (_name != null)
-			_name = _name.replace('\n', ' '); // remove newlines in name
+		if (getName() != null)
+			setName(getName().replace('\n', ' ')); // remove newlines in name
 
 		int maxDisplaySize = 32768;
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
+
+		ResultSetMetaData rsmd = rs.getMetaData();
+		_numcols = rsmd.getColumnCount() + 1;
+		_classType = new Class[_numcols + (_showRowNumber ? 1 : 0)];
 
 		if (_showRowNumber)
 		{
@@ -118,10 +139,9 @@ public class ResultSetTableModel
 			_rsmdColumnTypeName   .add("int");
 			_rsmdColumnTypeNameStr.add("int");
 			_displaySize          .add(new Integer(10));
+			_classType[0]         = Integer.class;
 		}
 
-		ResultSetMetaData rsmd = rs.getMetaData();
-		_numcols = rsmd.getColumnCount() + 1;
 		for (int c=1; c<_numcols; c++)
 		{
 			String columnLabel       = rsmd.getColumnLabel(c);
@@ -145,7 +165,7 @@ public class ResultSetTableModel
 				}
 				else
 				{
-					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+_name+"'");
+					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
 					columnDisplaySize = maxDisplaySize;
 				}
 			}
@@ -212,6 +232,14 @@ public class ResultSetTableModel
 //				Object o = rs.getObject(c);
 				int type = _rsmdColumnType.get( _showRowNumber ? c : c-1);  // if _showRowNumber entry 0 is "row#" entry
 				Object o = getDataValue(rs, c, type);
+
+				// Set class to be returned with the method: getColumnClass()
+				if (o != null)
+				{
+					int c2 = c + (_showRowNumber ? 1 : 0);
+					if (_classType[c2] == null)
+						_classType[c2] = o.getClass();
+				}
 
 //				switch(type)
 //				{
@@ -287,6 +315,8 @@ public class ResultSetTableModel
 
 		if (progress != null)
 			progress.setState(originProgressState + " Read done, rows "+_readCount);
+		
+		_readResultSetTime = (int) (System.currentTimeMillis() - startTime);
 	}
 
 	private Object getDataValue(ResultSet rs, int col, int jdbcSqlType) 
@@ -320,7 +350,6 @@ public class ResultSetTableModel
 		case java.sql.Types.DISTINCT:      return rs.getObject(col);   // use OBJECT
 		case java.sql.Types.STRUCT:        return rs.getObject(col);   // use OBJECT
 		case java.sql.Types.ARRAY:         return rs.getObject(col);   // use OBJECT
-//		case java.sql.Types.BLOB:          return rs.getObject(col);   // use OBJECT
 		case java.sql.Types.BLOB:          return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
 		case java.sql.Types.CLOB:          return rs.getString(col);
 		case java.sql.Types.REF:           return rs.getObject(col);   // use OBJECT
@@ -365,6 +394,61 @@ public class ResultSetTableModel
 		return _abortedAfterXRows;
 	}
     
+	/**
+	 * Set new data content for the table model.
+	 * 
+	 * @param rstm the new Data rows
+	 * @param merge If you want to "merge" current data with the one supplied
+	 * 
+	 * @throws ModelMissmatchException if the data model doesn't has the same structure (number of columns, column names, etc) 
+	 */
+	public void setModelData(ResultSetTableModel rstm, boolean merge)
+	throws ModelMissmatchException
+	{
+		// Check column count
+		if (getColumnCount() != rstm.getColumnCount())
+			throw new ModelMissmatchException("Column COUNT missmatch. current count="+getColumnCount()+", passed count="+rstm.getColumnCount());
+		
+		// Check column name differences
+		for (int i=0; i<getColumnCount(); i++)
+		{
+			if ( ! _rsmdColumnLabel.get(i).equals(rstm._rsmdColumnLabel.get(i)) )
+				throw new ModelMissmatchException("Column NAME missmatch. current columns="+_rsmdColumnLabel+", passed columns="+rstm._rsmdColumnLabel);
+		}
+
+		// Check column data type differences
+		for (int i=0; i<getColumnCount(); i++)
+		{
+			if ( ! _rsmdColumnTypeStr.get(i).equals(rstm._rsmdColumnTypeStr.get(i)) )
+				throw new ModelMissmatchException("Column DATATYPE missmatch. current jdbcDataTypes="+_rsmdColumnTypeStr+", passed jdbcDataTypes="+rstm._rsmdColumnTypeStr);
+		}
+
+		if (merge == false)
+		{
+//			fireTableRowsDeleted(0, _rows.size()-1);
+//			_rows = rstm._rows;
+//			fireTableRowsInserted(0, _rows.size()-1);
+			
+//			_rows = rstm._rows;
+//			fireTableRowsUpdated(0, _rows.size()-1);
+
+			_rows = rstm._rows;
+//			_rows.clear();
+//			_rows.addAll(rstm._rows);
+			fireTableDataChanged();
+		}
+		else
+		{
+//			int firstRow = _rows.size() + 1;
+//			int lastRow  = _rows.size() + rstm._rows.size();
+
+			_rows.addAll(rstm._rows);
+
+//			fireTableRowsInserted(firstRow, lastRow);
+			fireTableDataChanged();
+		}
+	}
+
     
 //	/** apply pipe cmd filter */
 //	private boolean addRow(ArrayList<Object> row)
@@ -607,11 +691,70 @@ public class ResultSetTableModel
 		case java.sql.Types.NCLOB:         return "java.sql.Types.NCLOB";
 		case java.sql.Types.SQLXML:        return "java.sql.Types.SQLXML";
 
+		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
+		case -10:                          return "oracle.jdbc.OracleTypes.CURSOR";
+
 		//------------------------- UNHANDLED TYPES  ---------------------------
 		default:
 			return "unknown-jdbc-datatype("+columnType+")";
 		}
 	}
+
+// The below has not been tested... probably needs more work
+//	private Class<?> getColumnJavaSqlClass(int colid)
+//	{
+//		int columnType = _rsmdColumnType.get(colid);
+//
+//		switch (columnType)
+//		{
+//		case java.sql.Types.BIT:           return Boolean.class;
+//		case java.sql.Types.TINYINT:       return Integer.class;
+//		case java.sql.Types.SMALLINT:      return Integer.class;
+//		case java.sql.Types.INTEGER:       return Integer.class;
+//		case java.sql.Types.BIGINT:        return Long.class;
+//		case java.sql.Types.FLOAT:         return Float.class;
+//		case java.sql.Types.REAL:          return Float.class;
+//		case java.sql.Types.DOUBLE:        return Double.class;
+//		case java.sql.Types.NUMERIC:       return BigDecimal.class;
+//		case java.sql.Types.DECIMAL:       return BigDecimal.class;
+//		case java.sql.Types.CHAR:          return String.class;
+//		case java.sql.Types.VARCHAR:       return String.class;
+//		case java.sql.Types.LONGVARCHAR:   return String.class;
+//		case java.sql.Types.DATE:          return java.sql.Date.class;
+//		case java.sql.Types.TIME:          return java.sql.Time.class;
+//		case java.sql.Types.TIMESTAMP:     return java.sql.Timestamp.class;
+//		case java.sql.Types.BINARY:        return String.class;
+//		case java.sql.Types.VARBINARY:     return String.class;
+//		case java.sql.Types.LONGVARBINARY: return String.class;
+//		case java.sql.Types.NULL:          return Object.class;
+//		case java.sql.Types.OTHER:         return Object.class;
+//		case java.sql.Types.JAVA_OBJECT:   return Object.class;
+//		case java.sql.Types.DISTINCT:      return Object.class;
+//		case java.sql.Types.STRUCT:        return Object.class;
+//		case java.sql.Types.ARRAY:         return Object.class;
+//		case java.sql.Types.BLOB:          return java.sql.Blob.class;
+//		case java.sql.Types.CLOB:          return java.sql.Clob.class;
+//		case java.sql.Types.REF:           return Object.class;
+//		case java.sql.Types.DATALINK:      return Object.class;
+//		case java.sql.Types.BOOLEAN:       return Boolean.class;
+//
+//		//------------------------- JDBC 4.0 -----------------------------------
+//		case java.sql.Types.ROWID:         return Object.class;
+//		case java.sql.Types.NCHAR:         return String.class;
+//		case java.sql.Types.NVARCHAR:      return String.class;
+//		case java.sql.Types.LONGNVARCHAR:  return String.class;
+//		case java.sql.Types.NCLOB:         return String.class;
+//		case java.sql.Types.SQLXML:        return String.class;
+//
+//		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
+//		case -10:                          return Object.class;
+//
+//		//------------------------- UNHANDLED TYPES  ---------------------------
+//		default:
+//			return Object.class;
+//		}
+//	}
+
 
 //	public List<SQLWarning> getSQLWarningList()
 //	{
@@ -665,12 +808,23 @@ public class ResultSetTableModel
 		if (getRowCount() == 0)
 			return Object.class;
 
-		Object o = getValueAt(0, colid);
-		Class<?> clazz = o!=null ? o.getClass() : Object.class;
-		if (o instanceof Timestamp)
-			return Object.class;
-		else
-			return clazz;
+		// Get _classType (which is first row with NOT NULL values... if all rows is NULL, then Object.class will be returned...
+		Class<?> clazz = _classType[colid+1];
+		if (clazz == null)
+			clazz = Object.class;
+		return clazz;
+
+		// So maybe the best thing would be to return a hard coded value based on the java.sql.Types
+//		return getColumnJavaSqlClass(colid);
+		
+		// Get first row... and the type of that... but if it's null... it will return object, which isn't good enough
+//		Object o = getValueAt(0, colid);
+//		Class<?> clazz = o!=null ? o.getClass() : Object.class;
+//		return clazz;
+//		if (o instanceof Timestamp)
+//			return Object.class;
+//		else
+//			return clazz;
 //		return o!=null ? o.getClass() : Object.class;
 	}
 
@@ -935,6 +1089,11 @@ public class ResultSetTableModel
 	//////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////
 
+	public int getSqlType(int column)
+	{
+		return _rsmdColumnType.get(column).intValue();
+	}
+
 	public int getColumnDisplaySize(int column)
 	{
 		return _displaySize.get(column).intValue();
@@ -1014,7 +1173,7 @@ public class ResultSetTableModel
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
-		sb.append("<table border='1'>\n");
+		sb.append("<table border=1>\n");
 		int cols = getColumnCount();
 		int rows = getRowCount();
 		
@@ -1041,4 +1200,224 @@ public class ResultSetTableModel
 
 		return sb.toString();
 	}
+
+	/**
+	 * Get 1 rows as a HTML Table. <br>
+	 * Left column is column names (in bold)<br>
+	 * Right column is cow content
+	 * 
+	 * @param mrow
+	 * @return
+	 */
+	public String toHtmlTableString(int mrow, boolean borders)
+	{
+		StringBuilder sb = new StringBuilder(1024);
+
+		int cols = getColumnCount();
+		String border = borders ? " border=1" : " border=0";
+
+		// One row for every column
+		sb.append("<table").append(border).append(">\n");
+		for (int c=0; c<cols; c++)
+		{
+			sb.append("<tr>");
+			sb.append("<td nowrap><b>").append(getColumnName(c))  .append("</b></td>");
+			sb.append("<td nowrap>")   .append(getValueAt(mrow,c)).append("</td>");
+			sb.append("</tr>\n");
+		}
+		sb.append("</table>\n");
+
+		return sb.toString();
+	}
+	
+
+	
+	//------------------------------------------------------------
+	//-- BEGIN: getValueAsXXXXX using column name
+	//          more methods will be added as they are needed
+	//------------------------------------------------------------
+	public String getValueAsString(int mrow, String colName)
+	{
+		return getValueAsString(mrow, colName, true);
+	}
+	public String getValueAsString(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		return o.toString();
+	}
+
+	public Short getValueAsShort(int mrow, String colName)
+	{
+		return getValueAsShort(mrow, colName, true);
+	}
+	public Short getValueAsShort(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).shortValue();
+
+		try
+		{
+			return Short.parseShort(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Short value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Integer getValueAsInteger(int mrow, String colName)
+	{
+		return getValueAsInteger(mrow, colName, true);
+	}
+	public Integer getValueAsInteger(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).intValue();
+
+		try
+		{
+			return Integer.parseInt(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Integer value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Long getValueAsLong(int mrow, String colName)
+	{
+		return getValueAsLong(mrow, colName, true);
+	}
+	public Long getValueAsLong(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue();
+
+		try
+		{
+			return Long.parseLong(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Long value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Timestamp getValueAsTimestamp(int mrow, String colName)
+	{
+		return getValueAsTimestamp(mrow, colName, true);
+	}
+	public Timestamp getValueAsTimestamp(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Timestamp)
+			return ((Timestamp)o);
+
+		try
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat();
+			java.util.Date date = sdf.parse(o.toString());
+			return new Timestamp(date.getTime());
+		}
+		catch(ParseException e)
+		{
+			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public BigDecimal getValueAsBigDecimal(int mrow, String colName)
+	{
+		return getValueAsBigDecimal(mrow, colName, true);
+	}
+	public BigDecimal getValueAsBigDecimal(int mrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(mrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof BigDecimal)
+			return ((BigDecimal)o);
+
+		try
+		{
+			return new BigDecimal(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Object getValueAsObject(int mrow, String colName)
+	{
+		return getValueAsObject(mrow, colName, true);
+	}
+	public Object getValueAsObject(int mrow, String colName, boolean caseSensitive)
+	{
+//		int col_pos = findViewColumn(colName, caseSensitive);
+//		if (col_pos < 0)
+//			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+
+		TableModel tm = this;
+//		int mrow = convertRowIndexToModel(mrow);
+//		int mcol = convertColumnIndexToModel(col_pos);
+		int mcol = -1;
+
+		// get column pos from the model, if it's hidden in the JXTable
+		for (int c=0; c<tm.getColumnCount(); c++) 
+		{
+			if ( caseSensitive ? colName.equals(tm.getColumnName(c)) : colName.equalsIgnoreCase(tm.getColumnName(c)) ) 
+			{
+				mcol = c;
+				break;
+			}
+		}
+		if (mcol < 0)
+			throw new RuntimeException("Can't find column '"+colName+"' in TableModel named '"+getName()+"'.");
+		
+//System.out.println("getValueAsObject(mrow="+mrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
+		Object o = tm.getValueAt(mrow, mcol);
+
+		if (tm instanceof ResultSetTableModel)
+		{
+			if (o != null && o instanceof String)
+			{
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+					return null;
+			}
+		}
+		return o;
+	}
+	//------------------------------------------------------------
+	//-- END: getValueAsXXXXX using column name
+	//------------------------------------------------------------
 }

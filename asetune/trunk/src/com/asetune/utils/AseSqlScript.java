@@ -129,6 +129,7 @@ implements SybMessageHandler
 		catch(ClassNotFoundException e)
 		{
 			//return null;
+			_logger.error("Problems reading file '"+filename+"'. at class '"+className+"'. Caught: "+e, e);
 		}
 	}
 
@@ -146,10 +147,15 @@ implements SybMessageHandler
 				execute(br);
 				br.close();
 			}
+			else
+			{
+				_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. The URL was null, returned from clazz.getResource(filename)");
+			}
 		}
 		catch(IOException e)
 		{
 //			return null;
+			_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. Caught: "+e, e);
 		}
 	}
 

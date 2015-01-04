@@ -16,7 +16,7 @@ import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
-import com.asetune.tools.sqlw.QueryWindow;
+import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.utils.SwingUtils;
 
 public class QueryWindowMessageParser
@@ -49,10 +49,10 @@ extends AbstractParser
 		// The DB_MESSAGES property is set at the end of QueryWindow.displayQueryResults()
 		// after all/any messages has been traversed
 		@SuppressWarnings("unchecked")
-		List<QueryWindow.JAseMessage> dbMessages = (List<QueryWindow.JAseMessage>) doc.getProperty(ParserProperties.DB_MESSAGES);
+		List<JAseMessage> dbMessages = (List<JAseMessage>) doc.getProperty(ParserProperties.DB_MESSAGES);
 		if (dbMessages != null)
 		{
-			for (QueryWindow.JAseMessage msg : dbMessages)
+			for (JAseMessage msg : dbMessages)
 			{
 				int line = msg.getScriptRow() - 1;
 				int col  = msg.getScriptCol(); // this would be the *offset* not on the line but the whole document

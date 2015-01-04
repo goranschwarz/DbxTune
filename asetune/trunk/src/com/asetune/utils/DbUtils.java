@@ -1,6 +1,8 @@
 package com.asetune.utils;
 
+import java.awt.Component;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -8,8 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import javax.swing.JOptionPane;
+
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
 
 public class DbUtils
@@ -62,6 +67,313 @@ public class DbUtils
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Simply calls conn.getMetaData().getDatabaseProductName() to get the ProductName<br>
+	 * If SQLException a "" blank string will be returned.
+	 * @param conn
+	 * @return The product name (or "" on SQLExceptions)
+	 */
+	public static String getProductName(Connection conn)
+	{
+		if (conn == null)
+			throw new RuntimeException("DbUtils.setAutoCommit() conn=null, So I can't continue");
+
+		try
+		{
+			DatabaseMetaData md = conn.getMetaData();
+			return md.getDatabaseProductName();
+		}
+		catch (SQLException ex)
+		{
+			return "";
+		}
+	}
+
+	/**
+	 * Calls getAutoCommit(), but catches errors<br>
+	 * If errors true will be returned, since that is the normal default for JDBC
+	 * @return
+	 */
+	public static boolean getAutoCommitNoThrow(Connection conn, String dbVendorName)
+	{
+		try
+		{
+			return getAutoCommit(conn, dbVendorName);
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Problems when calling getAutoCommit(). Caught: "+e);
+			return true;
+		}
+	}
+
+	/**
+	 * Local method to get AutoCommit, in jConnect the value seems to be cached... <br>
+	 * so if you change it at the server with 'set chained on|off' the return value might be changed.
+	 * @return true=inAutoCommit(un-chained-mode), false=notInAutoCommit(chained-mode)
+	 * @throws SQLException
+	 */
+	public static boolean getAutoCommit(Connection conn, String dbVendorName)
+	throws SQLException
+	{
+		boolean isAutoCommit = true; // well this is the default...
+		
+		// Go and get the vendor if not specified
+		if (StringUtil.isNullOrBlank(dbVendorName))
+			dbVendorName = getProductName(conn);
+
+		if (DbUtils.isProductName(dbVendorName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+		{
+			int atatTranChained = -1;				
+			
+			Statement stmnt = conn.createStatement();
+			ResultSet rs    = stmnt.executeQuery("select @@tranchained");
+			while (rs.next())
+				atatTranChained = rs.getInt(1);
+
+			rs.close();
+			stmnt.close();
+
+			if (atatTranChained != -1)
+				isAutoCommit = (atatTranChained == 0 ? true : false);
+		}
+		else
+		{
+			isAutoCommit = conn.getAutoCommit();
+		}
+		
+		return isAutoCommit;
+	}
+
+	/**
+	 * Sets the AutoCommit value<br>
+	 * But before, check the current mode (based on extended logic, for ASE get @@tranchained instead of getAutoCommit())<br>
+	 * If there is problems, ask a question how to proceed (Commit/Rollback/Cancel)<br>
+	 * <br>
+	 * NOTE: The GUI handler will simply be null...
+	 *  
+	 * @param conn          The connection to do it on
+	 * @param dbVendorName  Vendor name, so we can do this differently based on what type we are connected to
+	 * @param toValue       set AutoCommit to the value
+	 * @param calledFrom    If this fail, what extra message do you want to have in the dialog (html tags can be used)
+	 * 
+	 * @return              The value which was set. (fetched with extended getAutoCommit())
+	 */
+	public static boolean setAutoCommit(Connection conn, String dbVendorName, boolean toValue, String calledFrom)
+	{
+		return setAutoCommit(conn, dbVendorName, null, toValue, calledFrom);
+	}
+
+	/**
+	 * Sets the AutoCommit value<br>
+	 * But before, check the current mode (based on extended logic, for ASE get @@tranchained instead of getAutoCommit())<br>
+	 * If there is problems, ask a question how to proceed (Commit/Rollback/Cancel)
+	 *  
+	 * @param conn          The connection to do it on
+	 * @param dbVendorName  Vendor name, so we can do this differently based on what type we are connected to
+	 * @param owner         GUI handle, if we got oen (null can be passed)
+	 * @param toValue       set AutoCommit to the value
+	 * @param calledFrom    If this fail, what extra message do you want to have in the dialog (html tags can be used)
+	 * 
+	 * @return              The value which was set. (fetched with extended getAutoCommit())
+	 */
+	public static boolean setAutoCommit(Connection conn, String dbVendorName, Component owner, boolean toValue, String calledFrom)
+	{
+		if (conn == null)
+			throw new RuntimeException("DbUtils.setAutoCommit() conn=null, So I can't continue");
+
+		if (calledFrom == null)
+			calledFrom = "";
+		
+		// Go and get the vendor if not specified
+		if (StringUtil.isNullOrBlank(dbVendorName))
+			dbVendorName = getProductName(conn);
+
+		try 
+		{
+			// The jConnect driver seems to "cache" AutoCommit value, so if it's changed at the server side, the getAutoCommit() seems to show wrong value
+			boolean isAutoCommit = getAutoCommit(conn, dbVendorName);
+			if (isAutoCommit != toValue)
+			{
+				_logger.info("Setting JDBC AutoCommit to: " + toValue + (toValue ? " (unchained/normal mode)" : " (chained mode)") );
+
+				if (DbUtils.isProductName(dbVendorName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("setAutoCommit("+dbVendorName+"): Special logic for Sybase ASE.");
+
+					Statement stmnt = conn.createStatement();
+					stmnt.executeUpdate(toValue ? "set chained off" : "set chained on"); // set chained on|off: true=OFF, false=ON
+
+					// If jConnect has MessageHandler, the exception might be down graded to warnings... so check for this... and Throw that as an Exception
+					AseConnectionUtils.checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(stmnt.getWarnings());
+					AseConnectionUtils.checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(conn.getWarnings());
+
+					stmnt.close();
+				}
+				else
+				{
+					conn.setAutoCommit(toValue);
+				}
+			}
+		}
+		catch (SQLException ex)
+		{
+			// If it failed, for Sybase ASE: get lockCount, if it holds locks: prompt COMMIT/ROLLBACK+setAutoCommit() else COMMIT+setAutoCommit()
+			String sybLockHtmlTable = null;
+			int sybLockCount = -1;
+			if (DbUtils.isProductName(dbVendorName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+			{
+				String sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
+						+ " from master.dbo.syslocks "
+						+ " where spid = @@spid	"
+						+ " group by dbid, id, type ";
+				
+//				String sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
+				try 
+				{
+					sybLockCount = 0;
+
+//					StringBuilder sb = new StringBuilder("<TABLE BORDER=1 style=\"background-color:#FFFFE0;color:black;border:1px solid #BDB76B;\"");
+//					sb.append("<TR style=\"background-color:#BDB76B;color:white;\"> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
+					StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
+					sb.append("<TR> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
+
+					Statement stmnt = conn.createStatement();
+					ResultSet rs = stmnt.executeQuery(sql); // set chained on|off: true=OFF, false=ON
+					while (rs.next())
+					{
+						sybLockCount++;
+//						sybLockCount = rs.getInt(1);
+						sb.append("<TR>");
+						sb.append("<TD>").append(                                  rs.getString(1)) .append("</TD>");
+						sb.append("<TD>").append(                                  rs.getString(2)) .append("</TD>");
+						sb.append("<TD>").append(AseConnectionUtils.getAseLockType(rs.getInt   (3))).append("</TD>");
+						sb.append("<TD>").append(                                  rs.getString(4)) .append("</TD>");
+						sb.append("</TR>");
+					}
+					rs.close();
+					sb.append("</TABLE>");
+					sb.append("<BR>");
+					sb.insert(0, "User <b>holds "+sybLockCount+" locks</b> in the server. Below is a summary table with current locks.<br>");
+					sybLockHtmlTable = sb.toString();
+
+					// If jConnect has MessageHandler, the exception might be down graded to warnings... so check for this... and Throw that as an Exception
+					AseConnectionUtils.checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(stmnt.getWarnings());
+					AseConnectionUtils.checkSqlWarningsAndThrowSqlExceptionIfSeverityIsAbove10(conn.getWarnings());
+
+					stmnt.close();
+				}
+				catch (SQLException ex2) { _logger.warn("Problem checking if we are holding locks in the server. SQL='"+sql+"'. Caught: "+ex2); }
+			}
+
+			// IF ASE and Lock Count is 0: simply do COMMIT and try to setAutoCommit() again
+			if (sybLockCount == 0)
+			{
+				_logger.info("setAutoCommit(): problems, but when examin the syslocks, the current SPID holds NO locks. So I will COMMIT and try setAutoCommit("+toValue+") again. BTW Exception Caught when trying setAutoCommit("+toValue+") the first time: "+ex.getMessage().replace('\n', ' '));
+				try
+				{
+					conn.commit();
+					conn.setAutoCommit(toValue);
+				}
+				catch(SQLException ex2)
+				{
+					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, Problems issuing JDBC setAutoCommit("+toValue+") on the connection.", ex);
+				}
+			}
+			else // NOT SYBASE ASE or spid is holding locks...
+			{
+    			String htmlMsg = "<html>"
+    					+ "Problems issuing JDBC setAutoCommit(<b>"+toValue+"</b>) on the connection<br>"
+    					+ "<br>"
+    					+ calledFrom + (StringUtil.isNullOrBlank(calledFrom) ? "" : "<br><br>") // Add newlines if a text was provided
+    					+ (sybLockHtmlTable == null ? "" : sybLockHtmlTable)
+    					+ "<b>SQLException</b>: "
+    					+ "<table BORDER=0 CELLSPACING=1 CELLPADDING=0>"
+    					+ "  <tr> <td><b>Error:   </b></td> <td>&nbsp;<code>" + ex.getErrorCode()                     + "</code></td> </tr>"
+    					+ "  <tr> <td><b>SQLState:</b></td> <td>&nbsp;<code>" + ex.getSQLState()                      + "</code></td> </tr>"
+    					+ "  <tr> <td><b>Message: </b></td> <td>&nbsp;<code>" + ex.getMessage().replace("\n", "<br>") + "</code></td> </tr>"
+    					+ "</table>"
+    					+ "<br>"
+    					+ "My guess is that some <i>explicit</i> or <i>implicit</i> change was done on the system<br>"
+    					+ "Please try one of the below methods to solve the issue."
+    					+ "<ul>"
+    					+ "  <li>Commit - Will commit current transaction and then retry the setAutoCommit(<b>"+toValue+"</b>)</li>"
+    					+ "  <li>Rollback - Will rollback current transaction and then retry the setAutoCommit(<b>"+toValue+"</b>)</li>"
+    					+ "  <li>Cancel - Will simply do nothing and just continues.</li>"
+    					+ "</ul>"
+    					+ "</html>";
+    			Object[] buttons = {"Commit and Retry", "Rollback and Retry", "Cancel"};
+    			int answer = JOptionPane.showOptionDialog(owner, 
+    					htmlMsg,
+    					"Problems issuing JDBC setAutoCommit", 
+    					JOptionPane.DEFAULT_OPTION,
+    					JOptionPane.QUESTION_MESSAGE,
+    					null,
+    					buttons,
+    					buttons[0]);
+    
+    			// 0=COMMIT / 1=ROLLBACK 
+    			if (answer == 0 || answer == 1) 
+    			{
+    				try
+    				{
+    					if (answer == 0)
+    						conn.commit();
+    					else
+    						conn.rollback();
+    						
+    					conn.setAutoCommit(toValue);
+    				}
+    				catch(SQLException ex2)
+    				{
+    					SwingUtils.showErrorMessage(owner, "setAutoCommit problem", "Sorry, there were still Problems issuing JDBC setAutoCommit("+toValue+") on the connection.", ex);
+    				}
+    			}
+    			// CANCEL
+    			else 
+    			{
+    			}
+			}
+		} // end: catch
+
+		// Get the current value of AutoCommit
+		return getAutoCommitNoThrow(conn, dbVendorName);
+	}
+
+	/**
+	 * Get server name for various vendors
+	 * @param conn
+	 * @param dbProductName
+	 * @return
+	 */
+	public static String getDatabaseServerName(Connection conn, String dbProductName)
+	{
+		if (conn == null)
+			return "";
+
+		String srvName = null;
+		try
+		{
+			if (StringUtil.isNullOrBlank(dbProductName))
+				dbProductName = ConnectionDialog.getDatabaseProductName(conn);
+			
+			srvName = ConnectionDialog.getDatabaseServerName(conn);
+		}
+		catch (SQLException ignore) {}
+
+		if (StringUtil.isNullOrBlank(srvName))
+		{
+			try { srvName = conn.getMetaData().getURL(); }
+			catch (Throwable ignore) {}
+
+//			if (StringUtil.isNullOrBlank(srvName))
+//				srvName = conn.toString();
+		}
+
+		return srvName;
 	}
 
 	/**
@@ -450,6 +762,61 @@ public class DbUtils
 			return UNKNOWN;
 		}
 	}
+	/**
+	 * NOTE: <b>not yet tested</b><br>
+	 * Get a stored procedure or function text
+	 * 
+	 * @param conn       Connection to the database
+	 * @param objectName Name of the procedure/view/trigger... in the form SCHEMA.OBJNAME
+	 * @return Text of the procedure/view/trigger...
+	 */
+	public static String getOracleObjectText(Connection conn,String objectName)
+	{
+		String returnText = null;
+		
+		if (conn == null)                return null;
+		if (objectName == null)          return null;
+		if (objectName.indexOf(".") < 0) return null;
+
+		// split schema and object name
+		int firstDot = objectName.indexOf(".");
+		String schema = objectName.substring(0, firstDot).trim().toUpperCase();
+		String name   = objectName.substring(firstDot+1).trim().toUpperCase();
+
+
+		//--------------------------------------------
+		// GET OBJECT TEXT
+		String sql =
+			"SELECT text \n" +
+			"FROM all_source \n" +
+			"WHERE owner = '"+schema+"' \n" +
+			"  AND name  = '"+name+"' \n" +
+			"ORDER BY line \n";
+		try
+		{
+			StringBuilder sb = new StringBuilder();
+
+			Statement statement = conn.createStatement();
+			ResultSet rs = statement.executeQuery(sql);
+			while(rs.next())
+			{
+				String textPart = rs.getString(1);
+				sb.append(textPart);
+			}
+			rs.close();
+			statement.close();
+
+			if (sb.length() > 0)
+				returnText = sb.toString();
+		}
+		catch (SQLException e)
+		{
+			returnText = null;
+			_logger.warn("Problems getting text for Oracle object '"+objectName+"'. Caught: "+e); 
+		}
+
+		return returnText;
+	}
 	//------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------
 	// END Oracle helper methods
@@ -764,9 +1131,9 @@ public class DbUtils
 	}
 	public static void main(String[] args)
 	{
-	    test(0,  0, null);
-	    test(1,  1, "");
-	    test(2,  1, " ");
+		test(0,  0, null);
+		test(1,  1, "");
+		test(2,  1, " ");
 		test(3,  1, "--askjdhgads"); 
 		test(4,  2, "--askjdhgads\n XXX"); 
 		test(5,  3, "\n\n\n");

@@ -2599,10 +2599,14 @@ public class GTabbedPane
 					return;
 				}
 
-				JOptionPane.showMessageDialog(this, 
-					"The tab named '"+tabName+"' Can't be UnDocked.\n" +
-					"It needs to be a JPanel or implements the interface 'DockUndockManagement'.", 
-					"UnDock", JOptionPane.ERROR_MESSAGE);
+				if (tabName != null)
+				{
+					JOptionPane.showMessageDialog(this, 
+						"The tab named '"+tabName+"' Can't be UnDocked.\n" +
+						"It needs to be a JPanel or implements the interface 'DockUndockManagement'.", 
+						"UnDock", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
 				return;
 			} // end: double-click
 		} // end: left-click
@@ -2836,6 +2840,9 @@ public class GTabbedPane
 				SpecialTabPainter stp = (SpecialTabPainter)tabComp;
 
 				Rectangle r = getUI().getTabBounds(this, tabIndex);
+				// Special fix for Mac and Java 8... bug: https://bugs.openjdk.java.net/browse/JDK-8050817
+				if (r == null)
+					r = new Rectangle(0, 0, 16, 16);
 				Graphics g = this.getGraphics().create(r.x, r.y, r.width, r.height);
 
 				stp.paintTabHeader((Graphics2D)g);

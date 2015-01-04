@@ -9,4 +9,6 @@ public interface IPipeCommand
 	public void   doEndPoint(Object input) throws Exception;
 	public Object getEndPointResult(String type);
 	public void   close();
+
+	public String getCmdStr();
 }

@@ -19,7 +19,7 @@ import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
 
 import com.asetune.parser.ParserProperties;
-import com.asetune.tools.sqlw.QueryWindow;
+import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
@@ -116,10 +116,10 @@ implements ToolTipSupplier
 		// First check parents tooltip, it might be a parser tooltip, hhhmmmmm this didn't work..
 		// HACK: loop the DB_MESSAGES if any in the Document
 		@SuppressWarnings("unchecked")
-		List<QueryWindow.JAseMessage> dbMessages = (List<QueryWindow.JAseMessage>) textArea.getDocument().getProperty(ParserProperties.DB_MESSAGES);
+		List<JAseMessage> dbMessages = (List<JAseMessage>) textArea.getDocument().getProperty(ParserProperties.DB_MESSAGES);
 		if (dbMessages != null)
 		{
-			for (QueryWindow.JAseMessage msg : dbMessages)
+			for (JAseMessage msg : dbMessages)
 			{
 				if ( (currentLine + 1) == msg.getScriptRow() )
 					return msg.getFullMsgTextHtml();

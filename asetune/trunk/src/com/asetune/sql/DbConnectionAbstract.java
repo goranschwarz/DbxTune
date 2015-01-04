@@ -17,6 +17,7 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
 
@@ -640,7 +641,7 @@ implements Connection
 	
 	public static String showSqlExceptionMessage(Component owner, String title, String msg, SQLException sqlex) 
 	{
-		String exMsg    = getMessageFromSQLException(sqlex, true);
+		String exMsg    = getMessageFromSQLException(sqlex, true, "010HA"); // 010HA: The server denied your request to use the high-availability feature. Please reconfigure your database, or do not request a high-availability session.
 		String exMsgRet = getMessageFromSQLException(sqlex, false);
 
 		String extraInfo = ""; 
@@ -678,7 +679,7 @@ implements Connection
 			"<html>" +
 			  msg + "<br>" +
 			  extraInfo + 
-			  "<br>" + 
+//			  "<br>" + 
 //			  exMsg.replace("\n", "<br>") + 
 			  exMsg + 
 			"</html>"; 
@@ -688,25 +689,43 @@ implements Connection
 		return exMsgRet;
 	}
 
-	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags) 
+	public static String getMessageFromSQLException(SQLException sqlex, boolean htmlTags, String... discardSqlState) 
 	{
 		StringBuffer sb = new StringBuffer("");
 		if (htmlTags)
 			sb.append("<UL>");
 
+		ArrayList<String> discardedMessages = null;
+
 		boolean first = true;
 		while (sqlex != null)
 		{
-			if (first)
-				first = false;
-			else
-				sb.append( "\n" );
+			boolean discardThis = false;
+			for (String sqlState : discardSqlState)
+			{
+				if (sqlState.equals(sqlex.getSQLState()))
+					discardThis = true;
+			}
 
-			if (htmlTags)
-				sb.append("<LI>");
-			sb.append( sqlex.getMessage() );
-			if (htmlTags)
-				sb.append("</LI>");
+			if (discardThis)
+			{
+				if (discardedMessages == null)
+					discardedMessages = new ArrayList<String>();
+				discardedMessages.add( sqlex.getMessage() );
+			}
+			else
+			{
+    			if (first)
+    				first = false;
+    			else
+    				sb.append( "\n" );
+    
+    			if (htmlTags)
+    				sb.append("<LI>");
+    			sb.append( sqlex.getMessage() );
+    			if (htmlTags)
+    				sb.append("</LI>");
+			}
 
 			sqlex = sqlex.getNextException();
 		}
@@ -714,6 +733,24 @@ implements Connection
 		if (htmlTags)
 			sb.append("</UL>");
 
+		if (discardedMessages != null)
+		{
+			sb.append(htmlTags ? "<BR><BR><B>Note</B>:" : "\nNote: ");
+			sb.append("The following messages was also found but, they are not as important as above messages.").append(htmlTags ? "<br>" : "\n");
+			if (htmlTags)
+				sb.append("<HR NOSHADE>").append("<UL>");
+			for (String msg : discardedMessages)
+			{
+    			if (htmlTags)
+    				sb.append("<LI>");
+    			sb.append( msg );
+    			if (htmlTags)
+    				sb.append("</LI>");
+			}
+			if (htmlTags)
+				sb.append("</UL>");
+		}
+		
 		return sb.toString();
 	}
 

@@ -11,9 +11,12 @@ import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -26,6 +29,8 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -37,6 +42,7 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
@@ -671,7 +677,17 @@ public class SwingUtils
 	/** helper method to create a JPanel */
 	public static JPanel createPanel(String title, boolean createBorder) 
 	{
+		return createPanel(title, createBorder, null);
+	}
+
+	/** helper method to create a JPanel */
+	public static JPanel createPanel(String title, boolean createBorder, LayoutManager layoutManager) 
+	{
 		JPanel panel = new JPanel();
+		
+		if (layoutManager != null)
+			panel.setLayout(layoutManager);
+
 		if (createBorder)
 		{
 			Border border = BorderFactory.createTitledBorder(title);
@@ -1627,6 +1643,93 @@ public class SwingUtils
 	}
 
 
+	/**
+	 * Get a new Dimension object and keep the aspect ratio based on the boundary<br>
+	 * So if you want to resize an image or whatever area from a large area to a smaller but wants to
+	 * keep the aspect ratio of the area...
+	 * 
+	 * @param originArea Current size of an image or a area
+	 * @param boundary The boundary which the are should fit in
+	 * @return a Dimension keeping the aspect ratio of the inputArea
+	 */
+	public static Dimension getScaledDimension(Dimension originArea, Dimension boundary)
+	{
+
+		int originWidth = originArea.width;
+		int originHight = originArea.height;
+		int boundWidth  = boundary.width;
+		int boundHeight = boundary.height;
+		int newWidth    = originWidth;
+		int newHeight   = originHight;
+
+		// first check if we need to scale width
+		if ( originWidth > boundWidth )
+		{
+			// scale width to fit
+			newWidth = boundWidth;
+			// scale height to maintain aspect ratio
+			newHeight = (newWidth * originHight) / originWidth;
+		}
+
+		// then check if we need to scale even with the new height
+		if ( newHeight > boundHeight )
+		{
+			// scale height to fit instead
+			newHeight = boundHeight;
+			// scale width to maintain aspect ratio
+			newWidth = (newHeight * originWidth) / originHight;
+		}
+
+		return new Dimension(newWidth, newHeight);
+	}	
+
+	/**
+	 * Create a byte array of a IconImage
+	 * 
+	 * @param iconImage
+	 * @return a byte[] if problems it will ruturn null
+	 */
+	public static byte[] toBytArray(ImageIcon iconImage)
+	{
+		try
+		{
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write(toBufferedImage(iconImage), "jpg", baos );
+			return baos.toByteArray();
+		}
+		catch (IOException ignore) {}
+		return null;
+	}
+
+	/**
+	 * Create a BufferedImage from a ImageIcon
+	 * 
+	 * @param iconImage
+	 * @return
+	 */
+	public static BufferedImage toBufferedImage(ImageIcon iconImage)
+	{
+		return toBufferedImage(iconImage.getImage());
+	}
+
+	/**
+	 * Create a BufferedImage from a image
+	 * 
+	 * @param image
+	 * @return
+	 */
+	public static BufferedImage toBufferedImage(final Image image)
+	{
+		if ( image instanceof BufferedImage )
+			return (BufferedImage) image;
+
+		BufferedImage bi = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2 = bi.createGraphics();
+		g2.drawImage(image, 0, 0, null);
+		return bi;
+	}
+
+	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE

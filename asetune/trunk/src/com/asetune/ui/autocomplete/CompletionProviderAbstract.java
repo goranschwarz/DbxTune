@@ -1,20 +1,33 @@
 package com.asetune.ui.autocomplete;
 
 import java.awt.Window;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.ListCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 
+import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.Util;
 import org.fife.ui.rtextarea.RTextArea;
 
+import com.asetune.Version;
+import com.asetune.ui.autocomplete.completions.AbstractCompletionX;
+import com.asetune.ui.autocomplete.completions.CompletionTemplate;
+import com.asetune.ui.autocomplete.completions.SavedCacheCompletionWarning;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -22,6 +35,8 @@ import com.asetune.utils.ConnectionProvider;
 public abstract class CompletionProviderAbstract
 extends DefaultCompletionProvider
 {
+	private static Logger _logger = Logger.getLogger(CompletionProviderAbstract.class);
+
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = "code.completion.lookup.static.cmds.info";
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_MISC_INFO                     = "code.completion.lookup.misc.info";
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_DATABASE_INFO                 = "code.completion.lookup.database.info";
@@ -31,6 +46,11 @@ extends DefaultCompletionProvider
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = "code.completion.lookup.procedure.columns.info";
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = "code.completion.lookup.system.procedure.name.info";
 	public static final String  PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = "code.completion.lookup.system.procedure.columns.info";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_TABLE_TYPES                   = "code.completion.lookup.table.tableTypes.{PRODUCTNAME}";
+	public static final String  PROPKEY_CODE_COMP_LOOKUP_SCHEMA_WITH_NO_TABLES         = "code.completion.lookup.schema.withNoTables";
+	public static final String  PROPKEY_CODE_COMP_saveCache                            = "code.completion.lookup.cache.save";
+	public static final String  PROPKEY_CODE_COMP_saveCacheTimeInMs                    = "code.completion.lookup.cache.save.timeInMs";
+	public static final String  PROPKEY_CODE_COMP_saveCacheQuestion                    = "code.completion.lookup.cache.save.popupQuestion";
 
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_STATIC_CMDS_INFO              = true;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_MISC_INFO                     = true;
@@ -41,6 +61,12 @@ extends DefaultCompletionProvider
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO        = false;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO    = true;
 	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO = true;
+	public static final boolean DEFAULT_CODE_COMP_LOOKUP_SCHEMA_WITH_NO_TABLES         = true;
+	public static final boolean DEFAULT_CODE_COMP_saveCache                            = false;
+	public static final int     DEFAULT_CODE_COMP_saveCacheTimeInMs                    = 7000;
+	public static final boolean DEFAULT_CODE_COMP_saveCacheQuestion                    = true;
+
+	public static final String  TEMPLATE_CODE_COMP_saveCacheFileName                   = Version.APP_STORE_DIR + File.separator + "CompletionProviderCache.{INSTANCE}.jso";
 
 	protected static final List<Completion> EMPTY_COMPLETION_LIST = new ArrayList<Completion>();
 	
@@ -53,6 +79,10 @@ extends DefaultCompletionProvider
 	public boolean isLookupProcedureColumns()       { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO,        DEFAULT_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO); }
 	public boolean isLookupSystemProcedureName()    { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO,    DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO); }
 	public boolean isLookupSystemProcedureColumns() { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO, DEFAULT_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO); }
+	public boolean isLookupSchemaWithNoTables()     { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_LOOKUP_SCHEMA_WITH_NO_TABLES,         DEFAULT_CODE_COMP_LOOKUP_SCHEMA_WITH_NO_TABLES); }
+	public boolean isSaveCacheEnabled()             { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_saveCache,                            DEFAULT_CODE_COMP_saveCache); }
+	public int     getSaveCacheTimeInMs()           { return Configuration.getCombinedConfiguration().getIntProperty    (PROPKEY_CODE_COMP_saveCacheTimeInMs,                    DEFAULT_CODE_COMP_saveCacheTimeInMs); }
+	public boolean isSaveCacheQuestionEnabled()     { return Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CODE_COMP_saveCacheQuestion,                    DEFAULT_CODE_COMP_saveCacheQuestion); }
 
 	public void    setLookupStaticCmds            (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_STATIC_CMDS_INFO,              val); tmp.save(); } }
 	public void    setLookupMisc                  (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_MISC_INFO,                     val); tmp.save(); } }
@@ -63,6 +93,10 @@ extends DefaultCompletionProvider
 	public void    setLookupProcedureColumns      (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_PROCEDURE_COLUMNS_INFO,        val); tmp.save(); } }
 	public void    setLookupSystemProcedureName   (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_NAME_INFO,    val); tmp.save(); } }
 	public void    setLookupSystemProcedureColumns(boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_SYSTEM_PROCEDURE_COLUMNS_INFO, val); tmp.save(); } }
+	public void    setLookupSchemaWithNoTables    (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_LOOKUP_SCHEMA_WITH_NO_TABLES,         val); tmp.save(); } }
+	public void    setSaveCacheEnabled            (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_saveCache,                            val); tmp.save(); } }
+	public void    setSaveCacheTimeInMs           (int     val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_saveCacheTimeInMs,                    val); tmp.save(); } }
+	public void    setSaveCacheQuestionEnabled    (boolean val) { Configuration tmp = Configuration.getInstance(Configuration.USER_TEMP); if (tmp != null) { tmp.setProperty(PROPKEY_CODE_COMP_saveCacheQuestion,                    val); tmp.save(); } }
 
 	/** if the back-end values for completion is needed to be refreshed or not */
 	private boolean _needRefresh = true;
@@ -121,12 +155,129 @@ extends DefaultCompletionProvider
 	}
 
 
+	public ConnectionProvider getConnectionProvider()
+	{
+		return _connectionProvider;
+	}
+
 //	@Override
 //	public void addCompletion(Completion c)
 //	{
 //		_savedComplitionList.add(c);
 //		super.addCompletion(c);
 //	}
+
+	private String _codeCompletionCacheSavedFile = null;
+	
+	public String getSavedCacheFileName()
+	{
+		return _codeCompletionCacheSavedFile;
+	}
+
+	public void setSavedCacheInstanceName(String instanceName)
+	{
+		if (instanceName == null)
+		{
+			_codeCompletionCacheSavedFile = null;
+			return;
+		}
+
+		// Keep only A-Z, a-z so no strange chars will be part of the filename
+		instanceName = instanceName.replaceAll("[^A-Za-z0-9_.-]", "");
+		
+		String filename = TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
+		_codeCompletionCacheSavedFile = filename;
+	}
+
+	/**
+	 * Clear the saved/serialized cache if any exists
+	 */
+	public void clearSavedCache()
+	{
+		if (getSavedCacheFileName() == null)
+			return;
+
+		File f = new File(getSavedCacheFileName());
+		if (f.exists())
+		{
+			f.delete();
+			_logger.info("Removing saved completion cache. filename '"+getSavedCacheFileName()+"'.");
+		}
+		setSavedCacheInstanceName(null);
+	}
+
+	public void saveCacheToFile(List<? extends Completion> list, String instanceName)
+	{
+		setSavedCacheInstanceName(instanceName);
+		
+		if (list == null)
+			return;
+
+		_logger.info("Saving "+list.size()+" entries in completion cache using filename '"+getSavedCacheFileName()+"'.");
+
+		try
+		{
+			FileOutputStream fos = new FileOutputStream(getSavedCacheFileName());
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeObject(list);
+			oos.close();
+			fos.close();
+		}
+		catch (IOException e)
+		{
+			_logger.warn("Problems saving completion cache to the file '"+getSavedCacheFileName()+"'.", e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T extends AbstractCompletionX> List<T> getSavedCacheFromFile(String instanceName)	
+	{
+		setSavedCacheInstanceName(instanceName);
+
+		if (getSavedCacheFileName() == null)
+			return null;
+
+		File f = new File(getSavedCacheFileName());
+		if ( ! f.exists() )
+			return null;
+
+		ArrayList<T> list = new ArrayList<T>();
+		try
+		{
+			FileInputStream fis = new FileInputStream(getSavedCacheFileName());
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			list = (ArrayList<T>) ois.readObject();
+			ois.close();
+			fis.close();
+
+			// Loop and set the provider after it has been restored from File
+			for (T compl : list)
+				compl.setProvider(this);
+			
+			loadSavedCacheFromFilePostAction(list);
+
+			// Add a "WARNING" entry that the list is restored from file (can be old)
+			T warningEntry = (T) new SavedCacheCompletionWarning(this, f, list.size());
+			warningEntry.setRelevance(Integer.MAX_VALUE);
+			list.add(warningEntry);
+		}
+		catch (Exception e)
+		{
+			_logger.warn("Problems restoring completion cache from the file '"+getSavedCacheFileName()+"'.", e);
+			return null;
+		}
+
+		_logger.info("Restored "+list.size()+" entries into the completion cache from filename '"+getSavedCacheFileName()+"'.");
+		return list;
+	}
+	
+	/**
+	 * Override this if the implementor needs to do something with the list after it has been loaded
+	 * @param list the loaded completions
+	 */
+	public void loadSavedCacheFromFilePostAction(List<? extends AbstractCompletionX> list)
+	{
+	}
 
 	/**
 	 * Mark this provider, to do refresh next time it's used
@@ -418,4 +569,37 @@ extends DefaultCompletionProvider
 	 * @return
 	 */
 	abstract public ListCellRenderer createDefaultCompletionCellRenderer();
+
+	/**
+	 * Open a configuration dialog
+	 */
+	public void configure()
+	{
+		CompletionPropertiesDialog.showDialog(_guiOwner, this);
+	}
+
+	public TableModel getLookupTableTypesModel()
+	{
+		String[] cols = {"Include", "TableType"};
+		DefaultTableModel tm = new DefaultTableModel(cols,  0);
+		return tm;
+	}
+	
+	public void setLookupTableTypes(List<String> tableTypes)
+	{
+	}
+
+	public String getDbProductName()
+	{
+		return "";
+	}
+	/** Clean up specific stuff when the client does a disconnect */
+	public void disconnect()
+	{
+	}
+	
+	public Window getGuiOwner()
+	{
+		return _guiOwner;
+	}
 }

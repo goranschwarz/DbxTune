@@ -274,6 +274,14 @@ grant exec on sp_whoisb to public
 go
 
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_whoisb')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_whoisb"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_whoisb"
+go
+
 
 
 
@@ -380,4 +388,12 @@ go
 exec sp_procxmode 'sp_whoisb_sub_blocks', 'anymode'
 go
 grant exec on sp_whoisb_sub_blocks to public
+go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_whoisb_sub_blocks')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_whoisb_sub_blocks"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_whoisb_sub_blocks"
 go
