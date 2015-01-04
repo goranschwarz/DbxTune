@@ -302,3 +302,11 @@ go
 --exec sp_asetune_ra_stats 2
 go
 
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_asetune_ra_stats')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_asetune_ra_stats"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_asetune_ra_stats"
+go

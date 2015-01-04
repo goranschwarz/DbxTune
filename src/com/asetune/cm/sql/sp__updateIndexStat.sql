@@ -262,6 +262,15 @@ go
 grant exec on sp__updateIndexStat to oper_role
 go
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp__updateIndexStat')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp__updateIndexStat"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp__updateIndexStat"
+go
+
+
 
 -------------------------------------------------------------
 -- Procedure: sp__updateIndexStatAllDB
@@ -348,6 +357,14 @@ end
 go
 
 grant exec on sp__updateIndexStatAllDB to oper_role
+go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp__updateIndexStatAllDB')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp__updateIndexStatAllDB"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp__updateIndexStatAllDB"
 go
 
 

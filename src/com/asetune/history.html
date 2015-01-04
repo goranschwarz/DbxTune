@@ -39,12 +39,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>SQL Window: Enhancements</b><br>
 	<ul>
        <li>Get sort order and character set when connection to a RepServer</li>
-       <li>\rpc \exec \call commands handles return codes in a better way</li>
-       <li>go | bcp ...: return how many rows was actually transferred by the BCP.</li>
+       <li>\rpc \exec \call commands handles return codes/parameters in a better way</li>
+       <li>\rpc \exec \call \prep commands handles more types (bigint|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob)</li>
+       <li>go | bcp ...: return how many rows was actually transferred by the BCP, and some other enhancements</li>
        <li>Command History: you can now copy the file name from the status bar</li>
-       <li></li>
-       <li></li>
-       <li></li>
+       <li>Insert/Get last history commands with Crtl-Shift+H</li>
+       <li>Favorite commands, can be bound to a specific Vendor</li>
+       <li>Save/Restore "untitled" file</li>
+       <li>AutoCommit enable/disable functionality, if you are in AutoCommit=false, two extra buttons will be visible "Commit" and "Rollback"<br>
+	       in ASE and in AutoCommit=false (chained mode) a Watermark warning will only appear if you holding locks in the server (syslocks)</li>
+       <li>Better error handling for Oracle, if a 'create procedure' failed, get the reasons from Oracle system tables 'ALL_ERROR'</li>
+       <li>Moved Completion properties into a separate dialog</li>
+       <li>Various enhancements to the Code Completion subsystem</li>
+       <li>If it's a BLOB or Text column value AND the content seems to be a picture, lets show the picture if you hover/tooltip over the value</li>
        <li></li>
 
        <li>More options in the "Options" button (to the right of "exec" button)</li>
@@ -57,9 +64,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
        <li>Bug fix: in Code Completions with respect to SCHEMA prefixes and stored procedures</li>
        <li>Bug fix: better handling of getting the correct object CLOB=getString(), BLOB=convertToHex(), etc...</li>
+       <li>Bug fix: Command line switched wasn't working to 100% (-U -P -S) to make initial connection on startup</li>
+       <li>Bug fix: ResultSetTableModel sometimes generated wrong data type</li>
 
        <li>Probably a bunch of more stuff that I have forgot</li>
 	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: freeze</b><br>
+	The GUI seems to freeze in some cases. Hopefully this is fixed...<br>
+	The major change made was: WaitForExec dialog now always gets executed on the EDT - Event Dispatch Thread<br>
+	The above dialog was used during Java Garbage Collections<br>  
 	</LI>
 
 	<LI>
@@ -85,6 +101,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Memory check</b><br>
 	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br> 
+	</LI>
+
+
+	<LI>
+	<b>Bug fix: Mac OSX, java 8 wont start.</b><br>
+	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br> 
 	</LI>
 
 	<LI>

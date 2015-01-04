@@ -102,7 +102,8 @@ public class ToolTipSupplierTest extends JFrame
 //		        "    h3 { font-size: 1.0em; margin: .83em 0 }"+
 				"</style>" +
 				"</head>";
-
+//headStyleSheet = "";
+			
 			String str = "" +
 			"<html>" + 
 			headStyleSheet +

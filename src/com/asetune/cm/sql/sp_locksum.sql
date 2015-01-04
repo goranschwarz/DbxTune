@@ -108,3 +108,11 @@ exec sp_procxmode 'sp_locksum', 'anymode'
 go
 grant exec on sp_locksum to public
 go 
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_locksum')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_locksum"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_locksum"
+go

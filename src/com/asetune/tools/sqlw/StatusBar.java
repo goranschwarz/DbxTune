@@ -28,12 +28,12 @@ public class StatusBar extends JPanel
 
 	private JLabel     _userName               = new JLabel("");
 	private JLabel     _serverName             = new JLabel(NOT_CONNECTED);
-	private JLabel     _productStringShort     = new JLabel("");
+	private GLabel     _productStringShort     = new GLabel("");
 	private String     _productStringLong      = null;
 	private String     _productVersion         = null;
 	private String     _productServerName      = null;
 
-	private JLabel     _aseConnStateInfo       = new JLabel("");
+	private GLabel     _aseConnStateInfo       = new GLabel("");
 
 	private JLabel     _editorAtLineCol        = new JLabel("1,1");
 
@@ -68,19 +68,26 @@ public class StatusBar extends JPanel
 		"<html>" +
 		"Various status for the current connection. Are we in a transaction or not.<br>" +
 		"<br>" +
-		"<code>@@trancount</code> / TranCount Explanation:<br>" +
+		"<code>@@trancount</code> / TranCount Explanation:" +
 		"<ul>" +
 		"  <li>Simply a counter on <code>begin transaction</code> nesting level<br>" +
 		"      Try to issue <code>begin/commit/rollback tran</code> multiple times and see how @@trancount increases/decreases (rollback always resets it to 0)</li>" +
 		"</ul>" +
-		"<code>@@transtate</code> / TranState Explanation:<br>" +
+		"<code>@@transtate</code> / TranState Explanation:" +
 		"<ul>" +
 		"  <li><b>TRAN_IN_PROGRESS:</b> Transaction in progress. A transaction is in effect; The previous statement executed successfully</li>" +
 		"  <li><b>TRAN_SUCCEED:    </b> Last Transaction succeeded. The transaction completed and committed its changes.</li>" +
 		"  <li><b>STMT_ABORT:      </b> Last Statement aborted. The previous statement was aborted; No effect on the transaction.</li>" +
-		"  <li><b>TRAN_ABORT:      </b> Last Transaction aborted. The transaction aborted and rolled back any changes.</li>" +
+		"  <li><b>TRAN_ABORT:      </b> Last Transaction aborted. The transaction aborted and rolled back any changes.<br>" +
+		"                               To get rid of status 'TRAN_ABORT' simply issue <code>begin tran commit tran</code> to induce a dummy transaction that succeeds...<br>" +
+		"      </li>" +
 		"</ul>" +
-		"To get rid of status 'TRAN_ABORT' simply issue <code>begin tran commit tran</code> to induce a dummy transaction that succeeds..." +
+		"<br>" +
+		"<code>@@tranchained</code> / TranChained Explanation:" +
+		"<ul>" +
+		"  <li><b>0</b>: autocommit=true  (<code>set chained off</code>): The default mode, called <b>unchained</b> mode or Transact-SQL mode, requires explicit <b>begin transaction</b> statements paired with <b>commit transaction</b> or <b>rollback transaction</b> statements to complete the transaction.</li>" +
+		"  <li><b>1</b>: autocommit=false (<code>set chained on</code>):  <b>chained</b> mode implicitly begins a transaction before any data-retrieval or modification statement: <b>delete</b>, <b>insert</b>, <b>open</b>, <b>fetch</b>, <b>select</b>, and <b>update</b>. You must still explicitly end the transaction with <b>commit transaction</b> or <b>rollback transaction</b></li>" +
+		"</ul>" +
 		"</html>";
 	
 	private static final String ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE = 
@@ -167,7 +174,7 @@ public class StatusBar extends JPanel
 		add(_productStringShort,     "growx");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 		
-		add(_editorAtLineCol,        "growx");
+		add(_editorAtLineCol,        "growx, hidemode 3");
 
 		// encode name seems to be slightly off, lets hide it until we have a better implementation
 //		_currentFilenameEncoding.setVisible(false); 
@@ -182,6 +189,10 @@ public class StatusBar extends JPanel
 	public void setEditorPos(int line, int col)
 	{
 		_editorAtLineCol.setText( (line+1) + ":" + (col+1) );
+	}
+	public void setVisibleAtLineCol(boolean visible)
+	{
+		_editorAtLineCol.setVisible(visible);
 	}
 	
 	public final static String NO_FILE = "no-file";
@@ -333,12 +344,14 @@ public class StatusBar extends JPanel
 			return;
 		}
 
-		String dbname    = "db="        + csi._dbname;
-		String spid      = "spid="      + csi._spid;
-		String username  = "user="      + csi._username;
-		String susername = "login="     + csi._susername;
-		String tranState = "TranState=" + csi.getTranStateStr();
-		String tranCount = "TranCount=" + csi._tranCount;
+		String dbname      = "db="          + csi._dbname;
+		String spid        = "spid="        + csi._spid;
+		String username    = "user="        + csi._username;
+		String susername   = "login="       + csi._susername;
+		String tranState   = "TranState="   + csi.getTranStateStr();
+		String tranCount   = "TranCount="   + csi._tranCount;
+		String tranChained = "TranChained=" + csi._tranChained;
+		String lockCount   = "LockCount="   + csi._lockCount;
 
 		if (csi._tranCount > 0)
 			tranCount = "TranCount=<b><font color=\"red\">" + csi._tranCount        + "</font></b>";
@@ -346,6 +359,12 @@ public class StatusBar extends JPanel
 		if ( csi.isNonNormalTranState() )
 			tranState = "TranState=<b><font color=\"red\">" + csi.getTranStateStr() + "</font></b>";
 		
+		if (csi._tranCount > 0)
+			tranChained = "TranChained=<b><font color=\"red\">" + csi._tranChained    + "</font></b>";
+
+		if (csi._lockCount > 0)
+			lockCount = "LockCount=<b><font color=\"red\">" + csi._lockCount    + "</font></b>";
+
 		String text = spid + ", " + username + ", " + susername;
 		if (csi._tranCount > 0 || csi.isNonNormalTranState())
 		{
@@ -355,13 +374,24 @@ public class StatusBar extends JPanel
 				+ username  + ", " 
 				+ susername + ", " 
 				+ (csi.isTranStateUsed() ? (tranState + ", ") : "") 
-				+ tranCount + 
-				"</html>";
+				+ tranCount + ", "
+				+ tranChained + ", "
+				+ lockCount
+				+ "</html>";
+		}
+		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
+		if (csi._tranChained == 1 && csi._lockCount == 0)
+		{ // color #B45F04 = dark yellow/orange
+			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, "+spid + ", " + username + ", " + susername + "</html>";
 		}
 
 		_aseConnStateInfo.setVisible(true);
 		_aseConnStateInfo.setText(text);
 		
+		String lockText = "<hr>";
+		if (csi._lockCount > 0)
+			lockText = "<hr>Locks held by this SPID:" + csi.getLockListTableAsHtmlTable() + "<hr>";
+
 		String tooltip = "<html>" +
 			"<table border=0 cellspacing=0 cellpadding=1>" +
 			                         "<tr> <td>Current DB:    </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
@@ -370,8 +400,10 @@ public class StatusBar extends JPanel
 			                         "<tr> <td>Current Login: </td> <td><b>" + csi._susername        + "</b> </td> </tr>" +
 			(csi.isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
 			                         "<tr> <td>Tran Count:    </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
+			                         "<tr> <td>Tran Chained:  </td> <td><b>" + csi._tranChained      + "</b> </td> </tr>" +
+			                         "<tr> <td>Lock Count:    </td> <td><b>" + csi._lockCount        + "</b> </td> </tr>" +
 			"</table>" +
-			"<hr>" + 
+			lockText +
 			(csi.isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...
 
 		_aseConnStateInfo.setToolTipText(tooltip); //add dbname,spid,transtate, trancount here

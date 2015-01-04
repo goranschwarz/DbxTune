@@ -29,6 +29,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.parser.QueryWindowMessageParser;
+import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.ConnectionProvider;
@@ -1202,7 +1203,7 @@ extends CompletionProviderAbstract
 //		sb.append("<B>Pos:</B> ")        .append(ci._colPos)       .append("<BR>");
 //		sb.append("<B>Default:</B> ")    .append(ci._colDefault)   .append("<BR>");
 //		sb.append("<HR>");
-//		sb.append("-end-");
+//		sb.append("-end-<BR><BR>");
 //		
 //		return sb.toString();
 		return null;

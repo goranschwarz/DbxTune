@@ -995,6 +995,18 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	**---------------------------------------------------
 	*/	
 	
+	/**
+	 * Get last entry
+	 * @return
+	 */
+	public String getLastCommand()
+	{
+		if (_tm == null)
+			return null;
+
+		return _tm.getLastCommand();
+	}
+
 	public void setFileName(String filename)
 	{
 		_historyFileName = filename;
@@ -2050,6 +2062,14 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		{
 			CommandHistoryEntry entry = _rows.get(row);
 			return entry.getOriginCommand();
+		}
+
+		public String getLastCommand()
+		{
+			if (_rows.isEmpty())
+				return null;
+
+			return getCommand( getRowCount() - 1 );
 		}
 
 		public void addEntry(CommandHistoryEntry entry)

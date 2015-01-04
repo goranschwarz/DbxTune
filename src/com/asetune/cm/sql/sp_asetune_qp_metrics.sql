@@ -125,6 +125,14 @@ grant exec on sp_asetune_qp_metrics_in_db to public
 go
 
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_asetune_qp_metrics_in_db')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_asetune_qp_metrics_in_db"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_asetune_qp_metrics_in_db"
+go
+
 
 
 
@@ -215,6 +223,14 @@ end
 go
 
 grant exec on sp_asetune_qp_metrics to public
+go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_asetune_qp_metrics')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_asetune_qp_metrics"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_asetune_qp_metrics"
 go
 
 use master

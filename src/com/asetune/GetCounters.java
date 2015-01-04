@@ -419,8 +419,6 @@ extends CounterControllerAbstract
 	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
-//		if (_isInitialized)
-//			return;
 		if (isInitialized())
 		return;
 
@@ -428,8 +426,6 @@ extends CounterControllerAbstract
 			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
 
 			
-//		if (! _countersIsCreated)
-//			createCounters();
 		if (! isCountersCreated())
 			createCounters();
 		

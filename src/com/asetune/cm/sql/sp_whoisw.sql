@@ -206,3 +206,11 @@ exec sp_procxmode 'sp_whoisw', 'anymode'
 go
 grant exec on sp_whoisw to public
 go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_whoisw')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_whoisw"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_whoisw"
+go

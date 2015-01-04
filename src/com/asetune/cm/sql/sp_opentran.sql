@@ -168,3 +168,11 @@ exec sp_procxmode 'sp_opentran', 'anymode'
 go
 grant exec on sp_opentran to public
 go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_opentran')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_opentran"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_opentran"
+go

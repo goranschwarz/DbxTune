@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class CollectionUtils
 {
@@ -100,4 +101,23 @@ public class CollectionUtils
 
 		return false;
 	}
+	
+
+
+	public static boolean containsIgnoreCase(List<String> list, String searchFor)
+	{
+		for (String current : list)
+			if ( current.equalsIgnoreCase(searchFor) )
+				return true;
+		return false;
+	}
+
+	public static boolean containsIgnoreCase(Set<String> set, String searchFor)
+	{
+		for (String current : set)
+			if ( current.equalsIgnoreCase(searchFor) )
+				return true;
+		return false;
+	}
+
 }

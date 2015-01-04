@@ -409,7 +409,7 @@ public class ConnectionDialog
 	//---- JDBC panel
 	@SuppressWarnings("unused")
 	private JPanel               _jdbcPanel            = null;
-	private ImageIcon            _jdbcImageIcon        = SwingUtils.readImageIcon(Version.class, "images/pcs_read_32.png"); // FIXME: get a icon for this
+	private ImageIcon            _jdbcImageIcon        = SwingUtils.readImageIcon(Version.class, "images/jdbc_connect_32.png");
 	private JLabel               _jdbcIcon             = new JLabel(_jdbcImageIcon);
 	private MultiLineLabel       _jdbcHelp             = new MultiLineLabel();
 	private JLabel               _jdbcProfile_lbl      = new JLabel("Use Profile");
@@ -437,7 +437,7 @@ public class ConnectionDialog
 	//---- JDBC Driver Info panel
 	@SuppressWarnings("unused")
 	private JPanel               _jdbcDriverInfoPanel      = null;
-	private ImageIcon            _jdbcDriverInfoImageIcon  = SwingUtils.readImageIcon(Version.class, "images/pcs_read_32.png"); // FIXME: get a icon for this
+	private ImageIcon            _jdbcDriverInfoImageIcon  = SwingUtils.readImageIcon(Version.class, "images/jdbc_driver_32.png");
 	private JLabel               _jdbcDriverInfoIcon       = new JLabel(_jdbcDriverInfoImageIcon);
 	private MultiLineLabel       _jdbcDriverInfoHelp       = new MultiLineLabel();
 //	private GTable               _jdbcDiTable              = new GTable();
@@ -1473,8 +1473,12 @@ public class ConnectionDialog
 		JLabel heading = new JLabel(" Connection Profiles ");
 		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, 14));
 
+//		JScrollPane treeScroll = new JScrollPane(_connProfileTree, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+		JScrollPane treeScroll = new JScrollPane(_connProfileTree);
+		
 		panel.add( heading );
-		panel.add( _connProfileTree, "push, grow" );
+//		panel.add( _connProfileTree, "push, grow" );
+		panel.add( treeScroll, "push, grow" );
 //		panel.add( new JCheckBox("Add on Connect", true));
 		
 		return panel;
@@ -2627,8 +2631,7 @@ public class ConnectionDialog
 		
 		_jdbcDriverInfoHelp.setText(
 				"What JDBC Drivers are known to the system\n" +
-				"Or what drivers has been registered in the Java DriverManager.\n" +
-				"This is not 100% functional yet (some bugs in the dialog)");
+				"Or what drivers has been registered in the Java DriverManager.");
 
 //		_jdbcDriver_lbl  .setToolTipText("JDBC drivername to be used when creating the connection");
 //		_jdbcDriver_cbx  .setToolTipText("JDBC drivername to be used when creating the connection");
@@ -4362,6 +4365,7 @@ public class ConnectionDialog
 				StringBuffer sb = new StringBuffer();
 				sb.append("<html>");
 				sb.append("<h2>Problems During Connect (SQLException)</h2>");
+				sb.append( "<hr>" );
 				boolean loadDriverProblem = false;
 				while (e != null)
 				{
@@ -4379,6 +4383,7 @@ public class ConnectionDialog
 					sb.append( "<tr> <td nowrap><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
 					sb.append( "<tr> <td nowrap><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
 					sb.append( "</table>" );
+					sb.append( "<hr>" );
 					e = e.getNextException();
 				}
 				if (loadDriverProblem)

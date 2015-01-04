@@ -165,3 +165,11 @@ exec sp_procxmode 'sp_lock2', 'anymode'
 go
 grant exec on sp_lock2 to public
 go 
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_lock2')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_lock2"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_lock2"
+go

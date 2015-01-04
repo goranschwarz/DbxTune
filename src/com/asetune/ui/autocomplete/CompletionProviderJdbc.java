@@ -12,6 +12,7 @@ import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.parser.QueryWindowMessageParser;
+import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.utils.ConnectionProvider;
 
 public class CompletionProviderJdbc

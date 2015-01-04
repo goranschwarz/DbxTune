@@ -64,9 +64,11 @@ rem ------------------------------------------------------------------------
 rem --- set JVM parameters   and   DEBUG stuff
 rem ------------------------------------------------------------------------
 set JVM_PARAMS=-Xmx700m
+set JVM_PARAMS=-Xmx4096m
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.ericsson.se -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dcom.sun.management.jmxremote
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
+rem --- set JVM_PARAMS=%JVM_PARAMS% -Duser.language=en
 
 set EXTRA=%NOGUI%
 rem --- set DEBUG_OPTIONS=-Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=2323,server=y,suspend=n
@@ -115,6 +117,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\jcommon-1.0.21.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jfreechart-1.0.14.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\DDLGen.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\simplemagic-1.6.jar
 
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
@@ -151,7 +154,7 @@ rem ------------------------------------------------------------------------
 pushd %SQLW_HOME%
 REM echo %CLASSPATH%
 
-java  %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
+java %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_sqlw

@@ -735,3 +735,11 @@ exec sp_procxmode 'sp_spaceused2', 'anymode'
 go
 grant execute on sp_spaceused2 to public
 go
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_spaceused2')) is not null)
+	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_spaceused2"
+else
+	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_spaceused2"
+go

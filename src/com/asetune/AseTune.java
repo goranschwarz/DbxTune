@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -659,7 +660,7 @@ public class AseTune
 			{
 				_hasDevVersionExpired = true;
 
-				String msg = "This DEVELOPMENT VERSION has expired. The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. A new version can be downloaded here 'http://www.asetune.com'";
+				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.asetune.com'";
 				_logger.error(msg);
 				Exception ex = new Exception(msg);
 				if (_gui)
@@ -670,7 +671,11 @@ public class AseTune
 					SwingUtils.showErrorMessage(Version.getAppName()+" - This DEVELOPMENT VERSION has expired",
 						"<html>" +
 							"<h2>This DEVELOPMENT VERSION has expired.</h2>" +
+							"Current Version is '"+Version.getVersionStr()+"', with the build string '"+Version.getBuildStr()+"'.<br>" +
+							"<br>" +
 							"The <i>time to live</i> period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. <br>" +
+							"And the current date is '"+df.format(new Date())+"'.<br>" +
+							"<br>" +
 							"A new version can be downloaded at <A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
 							"<br>" +
 							"The application will still be started, in <b>restricted mode</b><br>" +
@@ -1223,19 +1228,5 @@ public class AseTune
 			e.printStackTrace();
 			System.out.println("--------------------------------------------------------------------");
 		}
-	}
-}
-
-class NormalExitException
-extends Exception
-{
-	private static final long serialVersionUID = 1L;
-	public NormalExitException()
-	{
-		super();
-	}
-	public NormalExitException(String msg)
-	{
-		super(msg);
 	}
 }

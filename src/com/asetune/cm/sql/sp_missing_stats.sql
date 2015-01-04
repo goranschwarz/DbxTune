@@ -160,6 +160,13 @@ go
 drop table #ixcols
 go
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_decode_colidarray')) is not null)
+	print "Creating function '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_decode_colidarray"
+else
+	print "Creating function '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_decode_colidarray"
+go
 
 
 
@@ -288,7 +295,13 @@ go
 grant exec on sp_missing_stats_in_db to public
 go
 
-
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_missing_stats_in_db')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_missing_stats_in_db"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_missing_stats_in_db"
+go
 
 
 
@@ -350,9 +363,19 @@ go
 grant exec on sp_missing_stats to public
 go
 
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp_missing_stats')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_missing_stats"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_missing_stats"
+go
+
+
 use master
 go
 --sp_missing_stats
 go
+
 
 

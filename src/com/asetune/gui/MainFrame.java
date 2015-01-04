@@ -24,6 +24,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -194,6 +195,9 @@ public class MainFrame
 
 	public static final String    PROPKEY_summaryOperations_showRate   = "MainFrame.summary.operations.show.rate";
 	public static final boolean   DEFAULT_summaryOperations_showRate   = true;
+
+	public static final String    PROPKEY_setStatus_invokeAndWait      = "MainFrame.notInEdt.setStatus.invokeAndWait";
+	public static final boolean   DEFAULT_setStatus_invokeAndWait      = true;
 
 	static
 	{
@@ -576,8 +580,8 @@ public class MainFrame
 
 		//--------------------------
 		// MENU - Icons
-		_connect_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect16.gif"));
-		_disconnect_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect16.gif"));
+		_connect_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect_16.png"));
+		_disconnect_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect_16.png"));
 		_exit_mi                      .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
 
 		_logView_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
@@ -788,8 +792,8 @@ public class MainFrame
 
 		//--------------------------
 		// TOOLBAR
-		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "connect16.gif",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-		_disConnectTb_but   = SwingUtils.makeToolbarButton(Version.class, "disconnect16.gif", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+		_disConnectTb_but   = SwingUtils.makeToolbarButton(Version.class, "disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
 
 		_screenshotTb_but   = SwingUtils.makeToolbarButton(Version.class, "screenshot.png",   ACTION_SCREENSHOT,     this, "Take a screenshot of the application", "Screenshot");
 		_samplePauseTb_but  = SwingUtils.makeToolbarButton(Version.class, "sample_pause.png", ACTION_SAMPLING_PAUSE, this, "Pause ALL sampling activity",          "Pause");
@@ -1333,8 +1337,8 @@ public class MainFrame
 				System.exit(0);
 			}
 		});
-	
-	
+		
+		pack();
 	}
 	/*---------------------------------------------------
 	** END: component initialization
@@ -3546,7 +3550,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		systmp.setProperty("system.predefined.sql.06.install.procName",            "sp_locksum");
 		systmp.setProperty("system.predefined.sql.06.install.procDateThreshold",   VersionInfo.SP_LOCKSUM_CR_STR);
 		systmp.setProperty("system.predefined.sql.06.install.scriptLocation",      com.asetune.cm.sql.VersionInfo.class.getName());
-		systmp.setProperty("system.predefined.sql.06.install.scriptName",          "ssp_locksum.sqlp_.sql");
+		systmp.setProperty("system.predefined.sql.06.install.scriptName",          "sp_locksum.sql");
 		systmp.setProperty("system.predefined.sql.06.install.needsRole",           "sa_role");
 
 		//----- sp_spaceused2.sql -----
@@ -4218,6 +4222,52 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		setStatus(type, null);
 	}
+
+	/**
+	 * This class is used to apply setStatus(int type, String param) is it's NOT called by the EDT (Event Dispatch Thread)<br>
+	 * Created a single class, so we don't have to create a new Runnable class "on the fly" for every call... 
+	 */
+	private static class StatusWrapper
+	implements Runnable
+	{
+		private boolean _invokeAndWait = DEFAULT_setStatus_invokeAndWait;
+		private int    _type;
+		private String _param;
+
+		public StatusWrapper(boolean invokeAndWait)
+		{
+			_invokeAndWait = invokeAndWait;
+		}
+
+		public void setStatus(int type, String param)
+		{
+			_type  = type;
+			_param = param;
+			
+			if ( SwingUtils.isEventQueueThread() )
+				setStatus(type, param);
+			else
+			{
+				if (_invokeAndWait)
+				{
+    				try { SwingUtilities.invokeAndWait(this); }
+    				catch (InterruptedException e)      { _logger.info("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: "+e); }
+    				catch (InvocationTargetException e) { _logger.warn("StatusWrapper.setStatus(), calling SwingUtilities.invokeAndWait(), Caught: "+e, e); }
+				}
+				else
+				{
+					SwingUtilities.invokeLater(this);
+				}
+			}
+		}
+		@Override
+		public void run()
+		{
+			MainFrame.setStatus(_type, _param);
+		}
+	}
+	private static StatusWrapper _statusWrapper;
+
 	/**
 	 * Sets values in the status panel.
 	 * @param type <code>ST_CONNECT, ST_DISCONNECT, ST_STATUS_FIELD, ST_MEMORY</code>
@@ -4226,23 +4276,19 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public static void setStatus(int type, String param)
 	{
 		// If this is NOT the event queue thread, dispatch it to that thread
-//		if ( ! SwingUtils.isEventQueueThread() )
-//		{
-//			final int    finalType  = type;
-//			final String finalParam = param;
-//			Runnable execThis = new Runnable()
-//			{
-//				public void run()
-//				{
-//					MainFrame.setStatus(finalType, finalParam);
-//				}
-//			};
-//			try { SwingUtilities.invokeAndWait(execThis); }
-//			catch (InterruptedException e)      { e.printStackTrace(); }
-//			catch (InvocationTargetException e) { e.printStackTrace(); }
-//			return;
-//		}
-//		System.out.println("setStatus(): type='"+type+"', param='"+param+"'.");
+		// But instead of creating a Runnable class for every call, reuse the Runnable, implemented in _statusWrapper
+		if ( ! SwingUtils.isEventQueueThread() )
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("MainFrame.setStatus() -NOT-IN-EDT-: ThreadName=='"+Thread.currentThread().getName()+"', type="+type+", param='"+param+"'.");
+
+//System.out.println("MainFrame.setStatus() -NOT-IN-EDT-: ThreadName=='"+Thread.currentThread().getName()+"', type="+type+", param='"+param+"'.");
+			if (_statusWrapper == null)
+				_statusWrapper = new StatusWrapper(Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_setStatus_invokeAndWait, DEFAULT_setStatus_invokeAndWait));
+
+			_statusWrapper.setStatus(type, param);
+			return;
+		}
 
 		if (type == ST_OFFLINE_CONNECT)
 		{

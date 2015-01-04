@@ -16,9 +16,11 @@ import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,7 +43,6 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableModelEvent;
-import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
@@ -59,6 +60,7 @@ import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -521,28 +523,30 @@ extends JXTable
 
 	/**
 	 * Like findColumn() on the TableModel<br>
+	 * Note: Case sensitive
 	 * @return -1: If the column name is doesn't exists in the view (could be hidden) nor in the Model
 	 */
 	public int findViewColumn(String colName)
+	{
+		return findViewColumn(colName, true);
+	}
+	/**
+	 * Like findColumn() on the TableModel<br>
+	 * @return -1: If the column name is doesn't exists in the view (could be hidden) nor in the Model
+	 */
+	public int findViewColumn(String colName, boolean caseSensitive)
 	{
 		int viewColPos  = -1;
 		int modelColPos = -1;
 
 		// Get the model position
 		TableModel tm = getModel();
-		if (tm instanceof AbstractTableModel)
+		for (int c=0; c<tm.getColumnCount(); c++) 
 		{
-			modelColPos = ((AbstractTableModel)tm).findColumn(colName);
-		}
-		else
-		{
-			for (int c=0; c<tm.getColumnCount(); c++) 
+			if ( caseSensitive ?	colName.equals(tm.getColumnName(c)) : colName.equalsIgnoreCase(tm.getColumnName(c)) ) 
 			{
-				if (colName.equals(tm.getColumnName(c))) 
-				{
-					modelColPos = c;
-					break;
-				}
+				modelColPos = c;
+				break;
 			}
 		}
 		if (modelColPos < 0)
@@ -995,8 +999,17 @@ extends JXTable
 			}
 			catch (Throwable t)
 			{
-				_logger.info("GTable='"+getName()+"', Problems when calling super.tableChanged(e). (enable debug mode to see stacktrace) Caught: "+t); // no stacktrace to log, just info message...
-				_logger.debug("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
+				int mcols = getModel().getColumnCount();
+				int vcols = getColumnCount();
+				if (mcols > vcols)
+				{
+					// Lets do nothing here, since the there are probably *hidden* columns in the view
+				}
+				else
+				{
+					_logger.info("GTable='"+getName()+"', Problems when calling super.tableChanged(e). (enable debug mode to see stacktrace) Caught: "+t); // no stacktrace to log, just info message...
+					_logger.debug("GTable='"+getName()+"', Problems when calling super.tableChanged(e). Caught: "+t, t);
+				}
 			}
 
 			// restoring current selected row by PK is sometimes a problem... 
@@ -1315,6 +1328,384 @@ extends JXTable
 	}
 
 
+	//------------------------------------------------------------
+	//-- BEGIN: getValueAsXXXXX using column name
+	//          more methods will be added as they are needed
+	//------------------------------------------------------------
+	public String getValueAsString(int vrow, String colName)
+	{
+		return getValueAsString(vrow, colName, true);
+	}
+	public String getValueAsString(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		return o.toString();
+	}
+
+	public Short getValueAsShort(int vrow, String colName)
+	{
+		return getValueAsShort(vrow, colName, true);
+	}
+	public Short getValueAsShort(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).shortValue();
+
+		try
+		{
+			return Short.parseShort(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Short value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Integer getValueAsInteger(int vrow, String colName)
+	{
+		return getValueAsInteger(vrow, colName, true);
+	}
+	public Integer getValueAsInteger(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).intValue();
+
+		try
+		{
+			return Integer.parseInt(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Integer value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Long getValueAsLong(int vrow, String colName)
+	{
+		return getValueAsLong(vrow, colName, true);
+	}
+	public Long getValueAsLong(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue();
+
+		try
+		{
+			return Long.parseLong(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Long value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Timestamp getValueAsTimestamp(int vrow, String colName)
+	{
+		return getValueAsTimestamp(vrow, colName, true);
+	}
+	public Timestamp getValueAsTimestamp(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Timestamp)
+			return ((Timestamp)o);
+
+		try
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat();
+			java.util.Date date = sdf.parse(o.toString());
+			return new Timestamp(date.getTime());
+		}
+		catch(ParseException e)
+		{
+			_logger.warn("Problem reading Timestamp value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public BigDecimal getValueAsBigDecimal(int vrow, String colName)
+	{
+		return getValueAsBigDecimal(vrow, colName, true);
+	}
+	public BigDecimal getValueAsBigDecimal(int vrow, String colName, boolean caseSensitive)
+	{
+		Object o = getValueAsObject(vrow, colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof BigDecimal)
+			return ((BigDecimal)o);
+
+		try
+		{
+			return new BigDecimal(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading BigDecimal value for vrow="+vrow+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Object getValueAsObject(int vrow, String colName)
+	{
+		return getValueAsObject(vrow, colName, true);
+	}
+	public Object getValueAsObject(int vrow, String colName, boolean caseSensitive)
+	{
+//		int col_pos = findViewColumn(colName, caseSensitive);
+//		if (col_pos < 0)
+//			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+
+		TableModel tm = getModel();
+		int mrow = convertRowIndexToModel(vrow);
+//		int mcol = convertColumnIndexToModel(col_pos);
+		int mcol = -1;
+
+		// get column pos from the model, if it's hidden in the JXTable
+		for (int c=0; c<tm.getColumnCount(); c++) 
+		{
+			if ( caseSensitive ? colName.equals(tm.getColumnName(c)) : colName.equalsIgnoreCase(tm.getColumnName(c)) ) 
+			{
+				mcol = c;
+				break;
+			}
+		}
+		if (mcol < 0)
+			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+		
+//System.out.println("getValueAsObject(vrow="+vrow+", colName='"+colName+"'): col_pos="+col_pos+", mrow="+mrow+", mcol="+mcol+".");
+		Object o = tm.getValueAt(mrow, mcol);
+
+		if (tm instanceof ResultSetTableModel)
+		{
+			if (o != null && o instanceof String)
+			{
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+					return null;
+			}
+		}
+		return o;
+	}
+	//------------------------------------------------------------
+	//-- END: getValueAsXXXXX using column name
+	//------------------------------------------------------------
+
+	
+	//------------------------------------------------------------
+	//-- BEGIN: getSelectedValuesAsXXXX using column name
+	//          more methods will be added as they are needed
+	//------------------------------------------------------------
+	public String getSelectedValuesAsString(String colName)
+	{
+		return getSelectedValuesAsString(colName, true);
+	}
+	public String getSelectedValuesAsString(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		return o.toString();
+	}
+
+	public Short getSelectedValuesAsShort(String colName)
+	{
+		return getSelectedValuesAsShort(colName, true);
+	}
+	public Short getSelectedValuesAsShort(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).shortValue();
+
+		try
+		{
+			return Short.parseShort(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Short value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Integer getSelectedValuesAsInteger(String colName)
+	{
+		return getSelectedValuesAsInteger(colName, true);
+	}
+	public Integer getSelectedValuesAsInteger(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).intValue();
+
+		try
+		{
+			return Integer.parseInt(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Integer value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Long getSelectedValuesAsLong(String colName)
+	{
+		return getSelectedValuesAsLong(colName, true);
+	}
+	public Long getSelectedValuesAsLong(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue();
+
+		try
+		{
+			return Long.parseLong(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Long value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Timestamp getSelectedValuesAsTimestamp(String colName)
+	{
+		return getSelectedValuesAsTimestamp(colName, true);
+	}
+	public Timestamp getSelectedValuesAsTimestamp(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof Timestamp)
+			return ((Timestamp)o);
+
+		try
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat();
+			java.util.Date date = sdf.parse(o.toString());
+			return new Timestamp(date.getTime());
+		}
+		catch(ParseException e)
+		{
+			_logger.warn("Problem reading Timestamp value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public BigDecimal getSelectedValuesAsBigDecimal(String colName)
+	{
+		return getSelectedValuesAsBigDecimal(colName, true);
+	}
+	public BigDecimal getSelectedValuesAsBigDecimal(String colName, boolean caseSensitive)
+	{
+		Object o = getSelectedValuesAsObject(colName, caseSensitive);
+
+		if (o == null)
+			return null;
+
+		if (o instanceof BigDecimal)
+			return ((BigDecimal)o);
+
+		try
+		{
+			return new BigDecimal(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading BigDecimal value for vrow="+getSelectedRow()+", column='"+colName+"', tableName='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	public Object getSelectedValuesAsObject(String colName)
+	{
+		return getSelectedValuesAsObject(colName, true);
+	}
+	public Object getSelectedValuesAsObject(String colName, boolean caseSensitive)
+	{
+		int vrow = getSelectedRow();
+		if (vrow == -1)
+			return null;
+
+		TableModel tm = getModel();
+		int mrow = convertRowIndexToModel(vrow);
+		int mcol = -1;
+
+		// get column pos from the model, if it's hidden in the JXTable
+		for (int c=0; c<tm.getColumnCount(); c++) 
+		{
+			if ( caseSensitive ? colName.equals(tm.getColumnName(c)) : colName.equalsIgnoreCase(tm.getColumnName(c)) ) 
+			{
+				mcol = c;
+				break;
+			}
+		}
+		if (mcol < 0)
+			throw new RuntimeException("Can't find column '"+colName+"' in JTable named '"+getName()+"'.");
+		
+		Object o = tm.getValueAt(mrow, mcol);
+
+		if (tm instanceof ResultSetTableModel)
+		{
+			if (o != null && o instanceof String)
+			{
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+					return null;
+			}
+		}
+		return o;
+	}
+	//------------------------------------------------------------
+	//-- END: getSelectedValuesAsXXXX using column name
+	//------------------------------------------------------------
+	
+	
 	/*----------------------------------------------------
 	 **---------------------------------------------------
 	 **---------------------------------------------------

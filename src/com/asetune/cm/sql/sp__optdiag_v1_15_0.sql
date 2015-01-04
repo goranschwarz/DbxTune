@@ -837,5 +837,14 @@ go
 grant exec on sp__optdiag to public
 go
 
+
+declare @dbname varchar(255)
+select @dbname = db_name()
+if ((select object_id('sp__optdiag')) is not null)
+	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp__optdiag"
+else
+	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp__optdiag"
+go
+
 use master
 go

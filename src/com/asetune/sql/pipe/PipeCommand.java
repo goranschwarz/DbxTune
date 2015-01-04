@@ -56,7 +56,9 @@ public class PipeCommand
 //		_logger.warn("Problems creating the 'go | pipeCommand, continuing without applying this.", e);
 //		SwingUtils.showWarnMessage("Problems creating PipeCommand", e.getMessage(), e);
 
-		if (_cmdStr.startsWith("grep ") || _cmdStr.startsWith("egrep "))
+		if (    _cmdStr.startsWith("grep ")  || _cmdStr.equals("grep") 
+		     || _cmdStr.startsWith("egrep ") || _cmdStr.equals("egrep")
+		   )
 		{
 			//_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
 			IPipeCommand cmd = new PipeCommandGrep(_cmdStr);
@@ -64,7 +66,7 @@ public class PipeCommand
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
-		else if (_cmdStr.startsWith("bcp "))
+		else if (_cmdStr.startsWith("bcp ") || _cmdStr.equals("bcp"))
 		{
 //			_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
 			IPipeCommand cmd = new PipeCommandBcp(_cmdStr);
@@ -109,4 +111,9 @@ public class PipeCommand
 	{
 		return _cmd;
 	}
+
+//	public String getCmdStr()
+//	{
+//		return _cmdStr;
+//	}
 }

@@ -33,10 +33,12 @@ import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -76,6 +78,7 @@ import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseSqlScriptReader;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -87,6 +90,28 @@ implements ActionListener, FocusListener //, ChangeListener
 	private static Logger _logger = Logger.getLogger(FavoriteCommandDialog.class);
 	private static final long serialVersionUID = 1L;
 
+	public final static String PROPKEY_VENDOR_TYPE = "FavoriteCommand.VendorType";
+	
+	public enum VendorType
+	{
+		GENERIC,  // Show for "any" Vendor Type
+		
+		ASE, 
+		ASA, 
+		IQ, 
+		RS, 
+		HANA, 
+		MAXDB, 
+
+		ORACLE, 
+		MSSQL, 
+		DB2, 
+		H2, 
+		HSQL, 
+		MYSQL, 
+		DERBY
+	};
+	
 	private JSplitPane           _splitPane              = new JSplitPane();
 
 	private JButton              _ok                     = new JButton("OK");
@@ -106,6 +131,8 @@ implements ActionListener, FocusListener //, ChangeListener
 
 	private JLabel               _preview1_lbl           = new JLabel("Preview");
 	private JLabel               _preview2_lbl           = new JLabel("<html><i>How the item will look like</i></html>");
+	private JLabel               _favoriteType_lbl       = new JLabel("Type");
+	private JTextField           _favoriteType_txt       = new JTextField();
 	private JLabel               _favoriteName_lbl       = new JLabel("Name");
 	private JTextField           _favoriteName_txt       = new JTextField();
 	private JLabel               _favoriteDesc_lbl       = new JLabel("Description");
@@ -285,6 +312,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						// Now get the ToolTip from the CounterTableModel
 						String toolTip = null;
 						if (mIndex == FavoriteTableModel.TAB_POS_POS)     toolTip = "<html>Position in the Favorite Commands Menu.</html>";
+						if (mIndex == FavoriteTableModel.TAB_POS_TYPE)    toolTip = "<html>Show this command only when connected to this Vendor.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_NAME)    toolTip = "<html>Name of this Favorite Command.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_DESC)    toolTip = "<html>Description of this Favorite Command.</html>";
 						if (mIndex == FavoriteTableModel.TAB_POS_ICON)    toolTip = "<html>Filename of any Icon, representing the Statement.</html>";
@@ -319,6 +347,7 @@ implements ActionListener, FocusListener //, ChangeListener
 					{
 						FavoriteTableModel ctm = (FavoriteTableModel) tm;
 						
+						String type   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_TYPE) + "";
 						String name   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_NAME) + "";
 						String desc   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_DESC) + "";
 						String icon   = ctm.getValueAt(mrow, FavoriteTableModel.TAB_POS_ICON) + "";
@@ -327,6 +356,7 @@ implements ActionListener, FocusListener //, ChangeListener
 
 						tip = "<html>" +
 						      "<table align=\"left\" border=0 cellspacing=0 cellpadding=0>" +
+						        "<tr> <td><b>Type:        </b></td> <td>" + type + "</td> </tr>" +
 						        "<tr> <td><b>Name:        </b></td> <td>" + name + "</td> </tr>" +
 						        "<tr> <td><b>Description: </b></td> <td>" + desc + "</td> </tr>" +
 						        "<tr> <td><b>Icon:        </b></td> <td>" + icon + "</td> </tr>" +
@@ -384,6 +414,7 @@ implements ActionListener, FocusListener //, ChangeListener
 
 					TableModel tm = _table.getModel();
 
+					String type = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_TYPE)    + "";
 					String name = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_NAME)    + "";
 					String desc = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_DESC)    + "";
 					String icon = tm.getValueAt(mrow, FavoriteTableModel.TAB_POS_ICON)    + "";
@@ -394,6 +425,7 @@ implements ActionListener, FocusListener //, ChangeListener
 						cmd = ctm.getCommand(mrow);
 					}
 
+					_favoriteType_txt.setText(type);
 					_favoriteName_txt.setText(name);
 					_favoriteDesc_txt.setText(desc);
 					_favoriteIcon_txt.setText(icon);
@@ -513,10 +545,14 @@ implements ActionListener, FocusListener //, ChangeListener
 		_moveUp_but             .setToolTipText("<html>Move the Selected Command <b>up</b> in the Favorite List.</html>");
 		_moveDown_but           .setToolTipText("<html>Move the Selected Command <b>down</b> in the Favorite List.</html>");
 
+		_favoriteType_txt.setEnabled(false);
 		_favoriteName_txt.setEnabled(false);
 		_favoriteDesc_txt.setEnabled(false);
 		_favoriteIcon_txt.setEnabled(false);
 
+		panel.add(_favoriteType_lbl,  "");
+		panel.add(_favoriteType_txt,  "pushx, growx, wrap");
+		
 		panel.add(_favoriteName_lbl,  "");
 		panel.add(_favoriteName_txt,  "pushx, growx, wrap");
 		
@@ -1008,9 +1044,9 @@ implements ActionListener, FocusListener //, ChangeListener
 	/**
 	 * Add entry 
 	 */
-	public void addEntry(String name, String description, String icon, String cmd)
+	public void addEntry(VendorType type, String name, String description, String icon, String cmd)
 	{
-		addEntry(-1, new FavoriteCommandEntry(name, description, icon, cmd));
+		addEntry(-1, new FavoriteCommandEntry(type, name, description, icon, cmd));
 	}
 
 	/**
@@ -1154,6 +1190,10 @@ implements ActionListener, FocusListener //, ChangeListener
 	private static final String XML_BEGIN_TAG_FAVORITE_COMMAND_ENTRY = "<"  + XML_TAG_FAVORITE_COMMAND_ENTRY + ">";
 	private static final String XML_END___TAG_FAVORITE_COMMAND_ENTRY = "</" + XML_TAG_FAVORITE_COMMAND_ENTRY + ">";
 
+	private static final String       XML_SUBTAG_TYPE                = "Type";
+	private static final String XML_BEGIN_SUBTAG_TYPE                = "<"  + XML_SUBTAG_TYPE + ">";
+	private static final String XML_END___SUBTAG_TYPE                = "</" + XML_SUBTAG_TYPE + ">";
+
 	private static final String       XML_SUBTAG_NAME                = "Name";
 	private static final String XML_BEGIN_SUBTAG_NAME                = "<"  + XML_SUBTAG_NAME + ">";
 	private static final String XML_END___SUBTAG_NAME                = "</" + XML_SUBTAG_NAME + ">";
@@ -1285,6 +1325,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			else
 			{
 				if      (XML_SUBTAG_COMMAND    .equals(qName)) _lastEntry.setCommand    (_xmlTagBuffer.toString().trim());
+				else if (XML_SUBTAG_TYPE       .equals(qName)) _lastEntry.setType       (_xmlTagBuffer.toString().trim());
 				else if (XML_SUBTAG_NAME       .equals(qName)) _lastEntry.setName       (_xmlTagBuffer.toString().trim());
 				else if (XML_SUBTAG_DESCRIPTION.equals(qName)) _lastEntry.setDescription(_xmlTagBuffer.toString().trim());
 				else if (XML_SUBTAG_ICON       .equals(qName)) _lastEntry.setIcon       (_xmlTagBuffer.toString().trim());
@@ -1735,23 +1776,26 @@ implements ActionListener, FocusListener //, ChangeListener
 	//-------------------------------------------------------------------
 	public static class FavoriteCommandEntry
 	{
-		private String _name        = null;
-		private String _description = null;
-		private String _icon        = null;
-		private String _originCmd   = null;
-		private String _formatedCmd = null;
+		private VendorType _type        = null;
+		private String     _name        = null;
+		private String     _description = null;
+		private String     _icon        = null;
+		private String     _originCmd   = null;
+		private String     _formatedCmd = null;
 
 		public FavoriteCommandEntry()
 		{
 		}
-		public FavoriteCommandEntry(String cmd, String name, String description)
+		public FavoriteCommandEntry(VendorType type, String cmd, String name, String description)
 		{
+			setType(type);
 			setName(name);
 			setDescription(description);
 			setCommand(cmd);
 		}
-		public FavoriteCommandEntry(String name, String description, String icon, String cmd)
+		public FavoriteCommandEntry(VendorType type, String name, String description, String icon, String cmd)
 		{
+			setType(type);
 			setName(name);
 			setDescription(description);
 			setIcon(icon);
@@ -1760,7 +1804,7 @@ implements ActionListener, FocusListener //, ChangeListener
 
 		public static FavoriteCommandEntry addSeparator()
 		{
-			return new FavoriteCommandEntry(SEPARATOR, SEPARATOR, null, SEPARATOR);
+			return new FavoriteCommandEntry(VendorType.GENERIC, SEPARATOR, SEPARATOR, null, SEPARATOR);
 		}
 
 		public boolean isSeparator()
@@ -1768,11 +1812,29 @@ implements ActionListener, FocusListener //, ChangeListener
 			return (SEPARATOR.equals(getName()) || SEPARATOR.equals(getDescription()) || SEPARATOR.equals(getOriginCommand()));
 		}
 
-		public String getName()            { return _name        == null ? "" : _name;        }
-		public String getDescription()     { return _description == null ? "" : _description; }
-		public String getIcon()            { return _icon        == null ? "" : _icon;        }
-		public String getFormatedCommand() { return _formatedCmd == null ? "" : _formatedCmd; }
-		public String getOriginCommand()   { return _originCmd   == null ? "" : _originCmd;   }
+		public VendorType getType()            { return _type        == null ? VendorType.GENERIC : _type;        }
+		public String     getName()            { return _name        == null ? ""                 : _name;        }
+		public String     getDescription()     { return _description == null ? ""                 : _description; }
+		public String     getIcon()            { return _icon        == null ? ""                 : _icon;        }
+		public String     getFormatedCommand() { return _formatedCmd == null ? ""                 : _formatedCmd; }
+		public String     getOriginCommand()   { return _originCmd   == null ? ""                 : _originCmd;   }
+
+		public void setType(VendorType type)
+		{
+			if (type == null)
+				type = VendorType.GENERIC;
+			_type = type;
+		}
+
+		public void setType(String type)
+		{
+			if (type == null)
+				_type = VendorType.GENERIC;
+			else
+			{
+				_type = VendorType.valueOf(type);
+			}
+		}
 
 		public void setName(String name)
 		{
@@ -1810,10 +1872,11 @@ implements ActionListener, FocusListener //, ChangeListener
 				
 			sb.append("\n");
 			sb.append("    ").append(XML_BEGIN_TAG_FAVORITE_COMMAND_ENTRY).append("\n");
-			sb.append("        ").append(XML_BEGIN_SUBTAG_NAME)       .append(StringUtil.xmlSafe(getName()         )).append(XML_END___SUBTAG_NAME)       .append("\n");
-			sb.append("        ").append(XML_BEGIN_SUBTAG_DESCRIPTION).append(StringUtil.xmlSafe(getDescription()  )).append(XML_END___SUBTAG_DESCRIPTION).append("\n");
-			sb.append("        ").append(XML_BEGIN_SUBTAG_ICON)       .append(StringUtil.xmlSafe(getIcon()         )).append(XML_END___SUBTAG_ICON)       .append("\n");
-			sb.append("        ").append(XML_BEGIN_SUBTAG_COMMAND)    .append(StringUtil.xmlSafe(getOriginCommand())).append(XML_END___SUBTAG_COMMAND)    .append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_TYPE)       .append(StringUtil.xmlSafe(getType().toString() )).append(XML_END___SUBTAG_TYPE)       .append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_NAME)       .append(StringUtil.xmlSafe(getName()            )).append(XML_END___SUBTAG_NAME)       .append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_DESCRIPTION).append(StringUtil.xmlSafe(getDescription()     )).append(XML_END___SUBTAG_DESCRIPTION).append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_ICON)       .append(StringUtil.xmlSafe(getIcon()            )).append(XML_END___SUBTAG_ICON)       .append("\n");
+			sb.append("        ").append(XML_BEGIN_SUBTAG_COMMAND)    .append(StringUtil.xmlSafe(getOriginCommand()   )).append(XML_END___SUBTAG_COMMAND)    .append("\n");
 			sb.append("    ").append(XML_END___TAG_FAVORITE_COMMAND_ENTRY).append("\n");
 
 			return sb.toString();
@@ -1825,12 +1888,13 @@ implements ActionListener, FocusListener //, ChangeListener
 	{
 		private static final long serialVersionUID = 1L;
 
-		private static final String[] TAB_HEADER = {"Pos", "Name", "Description", "Icon", "Command"};
+		private static final String[] TAB_HEADER = {"Pos", "Type", "Name", "Description", "Icon", "Command"};
 		private static final int TAB_POS_POS     = 0;
-		private static final int TAB_POS_NAME    = 1;
-		private static final int TAB_POS_DESC    = 2;
-		private static final int TAB_POS_ICON    = 3;
-		private static final int TAB_POS_COMMAND = 4;
+		private static final int TAB_POS_TYPE    = 1;
+		private static final int TAB_POS_NAME    = 2;
+		private static final int TAB_POS_DESC    = 3;
+		private static final int TAB_POS_ICON    = 4;
+		private static final int TAB_POS_COMMAND = 5;
 
 		private ArrayList<FavoriteCommandEntry> _rows = new ArrayList<FavoriteCommandEntry>();
 		private boolean _hasChanged = false;
@@ -1976,6 +2040,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			switch (column)
 			{
 			case TAB_POS_POS:     return TAB_HEADER[TAB_POS_POS];
+			case TAB_POS_TYPE:    return TAB_HEADER[TAB_POS_TYPE];
 			case TAB_POS_NAME:    return TAB_HEADER[TAB_POS_NAME];
 			case TAB_POS_DESC:    return TAB_HEADER[TAB_POS_DESC];
 			case TAB_POS_ICON:    return TAB_HEADER[TAB_POS_ICON];
@@ -1997,6 +2062,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			switch (column)
 			{
 			case TAB_POS_POS:     return row + 1;
+			case TAB_POS_TYPE:    return entry.getType();
 			case TAB_POS_NAME:    return entry.getName();
 			case TAB_POS_DESC:    return entry.getDescription();
 			case TAB_POS_ICON:    return entry.getIcon();
@@ -2059,6 +2125,9 @@ implements ActionListener, FocusListener //, ChangeListener
 		private RSyntaxTextAreaX     _command_txt      = new RSyntaxTextAreaX(15, 80);
 		private RTextScrollPane      _command_scroll   = new RTextScrollPane(_command_txt);
 
+		private JLabel               _favoriteType_lbl = new JLabel("Type");
+		private JComboBox            _favoriteType_cbx = new JComboBox(VendorType.values());
+
 		private JLabel               _favoriteName_lbl = new JLabel("Name");
 		private JTextField           _favoriteName_txt = new JTextField();
 
@@ -2107,6 +2176,8 @@ implements ActionListener, FocusListener //, ChangeListener
 			}
 			else throw new RuntimeException("Unknown Dialog Type");
 
+			_favoriteType_lbl.setToolTipText("<html>GENERIC = Always show this command, else only show this command when connected to a specific vendor.</html>");
+			_favoriteType_cbx.setToolTipText(_favoriteType_lbl.getToolTipText());
 			_favoriteName_lbl.setToolTipText("<html><i><b>Optional</b></i> Name of the command, if not given the <i>menu text</i> will be the Command itself<br><br>Tip: The preview field below indicates how the <i>menu text</i> will be displayed.</html>");
 			_favoriteName_txt.setToolTipText(_favoriteName_lbl.getToolTipText());
 			_favoriteDesc_lbl.setToolTipText("<html><i><b>Optional</b></i> A Short Description of the command, which be displayed in the <i>menu text</i><br><br>Tip: The preview field below indicates how the <i>menu text</i> will be displayed.</html>");
@@ -2118,6 +2189,9 @@ implements ActionListener, FocusListener //, ChangeListener
 
 			_command_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
+			panel.add(_favoriteType_lbl,  "");
+			panel.add(_favoriteType_cbx,  "pushx, growx, wrap");
+			
 			panel.add(_favoriteName_lbl,  "");
 			panel.add(_favoriteName_txt,  "pushx, growx, wrap");
 			
@@ -2140,6 +2214,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			setContentPane(panel);
 
 			// Fill in some start values
+			_favoriteType_cbx.setSelectedItem(_entry.getType());
 			_favoriteName_txt.setText(_entry.getName());
 			_favoriteDesc_txt.setText(_entry.getDescription());
 			_favoriteIcon_txt.setText(_entry.getIcon());
@@ -2171,6 +2246,7 @@ implements ActionListener, FocusListener //, ChangeListener
 			// --- BUTTON: OK ---
 			if (_ok.equals(source))
 			{
+				_entry.setType       (_favoriteType_cbx.getSelectedItem()+"");
 				_entry.setName       (_favoriteName_txt.getText());
 				_entry.setDescription(_favoriteDesc_txt.getText());
 				_entry.setIcon       (_favoriteIcon_txt.getText());
@@ -2211,4 +2287,67 @@ implements ActionListener, FocusListener //, ChangeListener
 	** END: class AddOrChangeEntryDialog
 	**---------------------------------------------------
 	*/
+
+	
+	
+	private static boolean isVendorType(String connectedToProductName, VendorType vendorType)
+	{
+		if (vendorType == null || connectedToProductName == null)
+			return false;
+
+		if (VendorType.GENERIC.equals(vendorType)) 
+			return true;
+		
+		if      (VendorType.ASE   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return true;
+		else if (VendorType.ASA   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return true;
+		else if (VendorType.IQ    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return true;
+		else if (VendorType.RS    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return true;
+		else if (VendorType.HANA  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HANA      )) return true;
+		else if (VendorType.MAXDB .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB     )) return true;
+		else if (VendorType.ORACLE.equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE    )) return true;
+		else if (VendorType.MSSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL     )) return true;
+		else if (VendorType.DB2   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX    )) return true;
+		else if (VendorType.HSQL  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL      )) return true;
+		else if (VendorType.MYSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL     )) return true;
+		else if (VendorType.DERBY .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY     )) return true;
+		
+		return false;
+	}
+
+
+
+	/**
+	 * Hide all menu entries that should not be visible based on what DBMS Vendor we are connected to
+	 * @param jcomp
+	 * @param connectedToProductName
+	 */
+	public static void setVisibilityForPopupMenu(JComponent jcomp, String connectedToProductName)
+	{
+		if (jcomp == null)
+			return;
+
+		int count = jcomp.getComponentCount();
+		if (jcomp instanceof JMenu)
+			count = ((JMenu)jcomp).getMenuComponentCount();
+
+		for (int i=0; i<count; i++)
+		{
+			Component c = (jcomp instanceof JMenu) ? ((JMenu)jcomp).getMenuComponent(i) : jcomp.getComponent(i);
+			if (c instanceof JComponent)
+			{
+				JComponent jc = (JComponent) c;
+				Object oVendorType = jc.getClientProperty(PROPKEY_VENDOR_TYPE);
+				if (oVendorType != null && oVendorType instanceof VendorType)
+				{
+					VendorType vendorType = (VendorType)oVendorType;
+					boolean visible = isVendorType(connectedToProductName, vendorType);
+					jc.setVisible(visible);
+				}
+
+				// If it's a Menu, it will probably have children, so lets check them
+				if (jc instanceof JMenu)
+					setVisibilityForPopupMenu((JMenu)jc, connectedToProductName);
+			}
+		}
+	}
 }

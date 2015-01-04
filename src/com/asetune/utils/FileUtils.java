@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -322,6 +323,26 @@ public class FileUtils
 		}
 
 		return encoding;
+	}
+
+	public static String readFile(String filename, String encoding)
+	throws IOException
+	{
+		File file = new File(filename);
+		return readFile(file, encoding);
+	}
+	public static String readFile(File file, String encoding)
+	throws IOException
+	{
+		String content = null;
+
+		FileReader reader = new FileReader(file);
+		char[] chars = new char[(int) file.length()];
+		reader.read(chars);
+		content = new String(chars);
+		reader.close();
+
+		return content;
 	}
 
 }
