@@ -269,7 +269,7 @@ public class ResultSetTableModel
 //						o = rs.getObject(c);
 //						break;
 //				}
-				
+
                 // Do we want to remove leading/trailing blanks
 				if (o instanceof String && _stringTrim)
 					o = ((String)o).trim();
