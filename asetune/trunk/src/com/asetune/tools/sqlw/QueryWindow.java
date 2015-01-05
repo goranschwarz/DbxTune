@@ -5382,7 +5382,7 @@ public class QueryWindow
 					if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 					{
 						oracleShowErrors(_conn, resultCompList, startRowInSelection, batchStartRow, currentSql);
-						
+
 						// also try to get the procedure text, which will be added to the message
 						// but not for print statement
 						if (_getObjectTextOnError_chk.isSelected())
@@ -7264,7 +7264,8 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 			errorInfo = new ArrayList<JAseMessage>();
 
 		// HANA
-		if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+//		if (DbUtils.DB_PROD_NAME_HANA.equals(_connectedToProductName))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_HANA))
 		{
 			int    line       = -1;
 			int    col        = -1;
@@ -7324,6 +7325,39 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 			errorInfo.add(exMsg);
 			resultCompList.add(exMsg);
 		} // end HANA
+		// Get Oracle ERROR Messages
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
+		{
+			int    line       = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);
+			int    col        = -1;
+			String objectName = null;
+			String objectText = null;
+
+			// also try to get the procedure text, which will be added to the message
+			// but not for print statement
+			if (_getObjectTextOnError_chk.isSelected())
+			{
+				int    lineNumber  = 0;
+				String nameAndLine = DbUtils.parseOracleMessageForProcName(ex);
+
+				if (nameAndLine != null)
+				{
+					String[] sa = nameAndLine.split(":");
+					objectName = sa[0];
+					if (sa.length >= 2)
+						lineNumber = StringUtil.parseInt(sa[1], 0);
+
+					objectText = DbUtils.getOracleObjectText(_conn, objectName);
+					objectText = StringUtil.markTextAtLine(objectText, lineNumber, true);
+				}
+
+			}
+
+			JSQLExceptionMessage exMsg = new JSQLExceptionMessage(ex, _connectedToProductName, line, col, originSql, objectText, _query_txt);
+
+			errorInfo.add(exMsg);
+			resultCompList.add(exMsg);
+		} // end ORACLE
 		else
 		{
 			int line = startRowInSelection + scriptReaderSqlBatchStartLine + DbUtils.getLineForFirstStatement(originSql);

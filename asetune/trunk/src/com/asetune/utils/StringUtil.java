@@ -1238,13 +1238,13 @@ public class StringUtil
 	 * Format a (function or procedure text) or any line of text
 	 * 
 	 * @param text the object text (if null, null will be returned)
-	 * @param line line number to be marked
+	 * @param line line number to be marked (if -1 nothing will be done, if 0 only row prefix will be added)
 	 * @param markUsingHtml mark it using HTML font red
 	 * @return the objectText with 'line#> text'
 	 */
 	public static String markTextAtLine(String text, int line, boolean markUsingHtml)
 	{
-		if (text == null || line <= 0)
+		if (text == null || line < 0)
 			return text;
 
 		StringBuilder sb = new StringBuilder();
@@ -1460,6 +1460,29 @@ public class StringUtil
 	 */
 	public static List<String> splitOnCommasAllowQuotes(String input, boolean trim)
 	{
+		return splitOnCharAllowQuotes(input, ',', trim);
+	}
+
+	/**
+	 * Split on input:splitChar, but if the splitChar is found inside quotes (" or ') then treat that splitChar to be part of the string
+	 * <p>
+	 * It allows both single(') and double quotes(") to start/terminate a string.<br>
+	 * Example:<br>
+	 * <pre>
+	 *      splitOnCharAllowQuotes("a, b, c, 'd,d,d', 'It''s a str', \"e,f,g\", \"now that's \"\"strange\"\".\"", ',');
+	 *      returns 7 elements: [a][b][c]['d,d,d']['It''s a str']["e,f,g"]["now that's ""strange""."]
+	 * </pre> 
+	 * to unquote a string see {@link #unquote(String str)}
+	 * <p>
+	 * 
+	 * @param input     a String that should be split
+	 * @param splitChar The character to split the string on
+	 * @param trim      if you want any leading/trailing blanks before/after the commas to be trimmed away.
+	 * @return A List of Strings 
+	 * 
+	 */
+	public static List<String> splitOnCharAllowQuotes(String input, char splitChar, boolean trim)
+	{
 		List<String> tokensList = new ArrayList<String>();
 		if (input == null)
 			return tokensList;
@@ -1496,7 +1519,7 @@ public class StringUtil
 				
 				b.append(c);
 			}
-			else if (c == ',')
+			else if (c == splitChar)
 			{
 				if ( inQuotes )
 				{

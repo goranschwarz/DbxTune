@@ -762,6 +762,62 @@ public class DbUtils
 			return UNKNOWN;
 		}
 	}
+
+	/**
+	 * Try to extract the procedure or function name from a ORACLE error message
+	 * <p>
+	 * Example of Oracle messages
+	 * <pre>
+	 * 1> \call gs_deleteme_proc(100001, ?) from dual :(str=null out)
+	 * Oracle: ErrorCode 6502, SQLState 65000, ExceptionClass: java.sql.SQLException
+	 * ORA-06502: PL/SQL: numeric or value error: character string buffer too small
+	 * ORA-06512: at "APPDEMO.GS_DELETEME", line 40
+	 * ORA-06512: at "APPDEMO.GS_DELETEME_PROC", line 11
+	 * ORA-06512: at line 1
+	 * </pre>
+	 * @param msg the message...
+	 * @return null if not found, otherwise SCHEMA.OBJECTNAME:lineNum
+	 */
+	public static String parseOracleMessageForProcName(SQLException ex)
+	{
+		if (ex == null)
+			return null;
+		
+		String msg = ex.getMessage();
+		if (msg == null)
+			return null;
+
+		// The message seems to be split in several lines so read the lines
+		// when hitting first "ORA-06512:" then process and exit
+		Scanner scanner = new Scanner(msg);
+		while (scanner.hasNextLine()) 
+		{
+			String lineStr = scanner.nextLine();
+
+			// Split the line into various parts, and return (hopefully all language translations will use the same positions)
+			// ORA-06512: at "APPDEMO.GS_DELETEME", line 40
+			if (lineStr.startsWith("ORA-06512: "))
+			{
+				List<String> parts = StringUtil.splitOnCharAllowQuotes(lineStr, ' ', true);
+				
+				String objName = parts.size() >= 3 ? parts.get(2) : "";
+				String lineNum = parts.size() >= 5 ? parts.get(4) : "";
+
+				// Remove leading quote char
+				if (objName.startsWith("\""))
+					objName = objName.substring(1);
+
+				// Remove tailing quote char & comma char
+				if (objName.endsWith("\","))
+					objName = objName.substring(0, objName.length()-2);
+
+				return objName + ":" + lineNum;
+			}
+		}
+		return null;
+	}
+
+
 	/**
 	 * NOTE: <b>not yet tested</b><br>
 	 * Get a stored procedure or function text
@@ -786,12 +842,29 @@ public class DbUtils
 
 		//--------------------------------------------
 		// GET OBJECT TEXT
-		String sql =
-			"SELECT text \n" +
-			"FROM all_source \n" +
-			"WHERE owner = '"+schema+"' \n" +
-			"  AND name  = '"+name+"' \n" +
-			"ORDER BY line \n";
+//		String sql =
+//			"SELECT text \n" +
+//			"FROM all_source \n" +
+//			"WHERE owner = '"+schema+"' \n" +
+//			"  AND name  = '"+name+"' \n" +
+//			"ORDER BY line \n";
+
+//		String sql = 
+//			"select dbms_metadata.get_ddl(OBJECT_TYPE, OBJECT_NAME, OWNER) \n"
+//			+ "from DBA_OBJECTS \n"  // or possible ALL_OBJECTS
+//			+ "where OWNER       = '"+schema+"' \n"
+//			+ "  and OBJECT_NAME = '"+name+"'";
+
+		String sql = 
+//			"SELECT SUBSTR(TEXT, 1, LENGTH(TEXT) - 1) \n" +
+			"SELECT TEXT \n" +
+//			"FROM DBA_SOURCE \n" +
+			"FROM ALL_SOURCE \n" +                   // ALL_SOURCE will hopefully need less authority/grants than DBA_SOURCE
+			"WHERE OWNER = '"+schema+"' \n" +
+			"  AND NAME = '"+name+"' \n" +
+//			"  AND TYPE = '????' \n" +
+			"ORDER BY LINE \n";
+
 		try
 		{
 			StringBuilder sb = new StringBuilder();
@@ -801,7 +874,13 @@ public class DbUtils
 			while(rs.next())
 			{
 				String textPart = rs.getString(1);
+ 
+				// only needed if: dbms_metadata.get_ddl is used
+				//if (textPart.startsWith("\n"))
+				//	textPart = textPart.substring(1);
+
 				sb.append(textPart);
+//				sb.append(textPart).append("\n");
 			}
 			rs.close();
 			statement.close();
@@ -812,7 +891,7 @@ public class DbUtils
 		catch (SQLException e)
 		{
 			returnText = null;
-			_logger.warn("Problems getting text for Oracle object '"+objectName+"'. Caught: "+e); 
+			_logger.warn("Problems getting text for ORACLE object '"+objectName+"'. Caught: "+e); 
 		}
 
 		return returnText;

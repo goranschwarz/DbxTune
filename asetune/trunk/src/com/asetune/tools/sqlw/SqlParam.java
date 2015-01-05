@@ -100,6 +100,19 @@ public class SqlParam
 		if ("string".equals(type) || "str".equals(type) || "varchar".equals(type)) 
 		{
 			p._sqlType = Types.VARCHAR; 
+
+			if (isNull)
+				p._val = null;
+			else
+			{
+				p._val = new String(val);
+			}
+		}
+		// STRING as CHAR
+		else if ("char".equals(type)) 
+		{
+			p._sqlType = Types.CHAR; 
+
 			if (isNull)
 				p._val = null;
 			else
