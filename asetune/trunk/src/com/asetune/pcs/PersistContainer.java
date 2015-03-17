@@ -41,6 +41,29 @@ public class PersistContainer
 
 
 
+	/**
+	 * Small class to hold Header information
+	 */
+	public static class HeaderInfo
+	{
+		public Timestamp _mainSampleTime;
+		public String    _serverName;
+		public String    _onHostname;
+		public Timestamp _counterClearTime;
+		
+		public HeaderInfo()
+		{
+		}
+
+		public HeaderInfo(Timestamp mainSampleTime, String serverName, String onHostname, Timestamp counterClearTime)
+		{
+			_mainSampleTime   = mainSampleTime;
+			_serverName       = serverName;
+			_onHostname       = onHostname;
+			_counterClearTime = counterClearTime;
+		}
+	}
+	
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -58,6 +81,11 @@ public class PersistContainer
 		_mainSampleTime   = mainSampleTime;
 		_serverName       = serverName;
 		_onHostname       = onHostname;
+	}
+	
+	public PersistContainer(HeaderInfo headerInfo)
+	{
+		this(headerInfo._mainSampleTime, headerInfo._serverName, headerInfo._onHostname);
 	}
 
 

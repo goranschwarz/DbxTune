@@ -1753,7 +1753,7 @@ public class AseStackTraceAnalyzer
 				_infoPane.add(_currObjid_txt,            "split, pushx, growx");
 				_infoPane.add(_currObjid_cbx,            "wrap");
 				
-				_table = new GTable();
+				_table = new GTable("", Color.WHITE); // display NULL values as "" empty strings
 				_table.setSortable(false);
 //				_table.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
 				_table.packAll(); // set size so that all content in all cells are visible

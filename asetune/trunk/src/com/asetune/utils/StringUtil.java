@@ -605,7 +605,7 @@ public class StringUtil
 	{
 		// Extract Environment variables
 		// search for ${ENV_NAME}
-		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
+		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}"); // or maybe: "\\$\\{[A-Za-z0-9_]+\\}"
 		while( compiledRegex.matcher(val).find() )
 		{
 			String envVal  = null;
@@ -624,11 +624,13 @@ public class StringUtil
 				envVal = System.getProperty(envName);
 				if (envVal == null)
 				{
+					_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
 					System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
 				}
 			}
 			if (envVal == null)
 			{
+				_logger.warn("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
 				System.out.println("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
 				envVal="";
 			}
@@ -636,7 +638,7 @@ public class StringUtil
 			// So change them to / instead...
 			envVal = envVal.replace('\\', '/');
 
-			// NOW substityte the ENV VARIABLE with a real value...
+			// NOW substitute the ENV VARIABLE with a real value...
 			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
 		}
 
@@ -1710,6 +1712,30 @@ public class StringUtil
 		return "???";
 	}
 
+	public static String ltrim(String s) 
+	{
+		if (s == null)
+			return s;
+		
+	    int i = 0;
+	    while (i < s.length() && Character.isWhitespace(s.charAt(i))) 
+	        i++;
+
+	    return s.substring(i);
+	}
+
+	public static String rtrim(String s) 
+	{
+		if (s == null)
+			return s;
+		
+	    int i = s.length()-1;
+	    while (i >= 0 && Character.isWhitespace(s.charAt(i))) 
+	        i--;
+
+	    return s.substring(0,i+1);
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -1718,6 +1744,10 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println("ltrim(): |" + StringUtil.ltrim(" 1 2 3 4 5 ") + "|");
+		System.out.println("rtrim(): |" + StringUtil.rtrim(" 1 2 3 4 5 ") + "|");
+		System.exit(0);
+
 		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("string='',str='x,y',str3='''', int=99,int=null", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
 
 		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("1,2,'a,b,c', 'it''s true 2sq'''''", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']

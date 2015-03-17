@@ -11,7 +11,7 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmSysmonPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -231,7 +231,7 @@ extends CountersModel
 //	private long _oldSample_unsigned_kernel_wakeupCalls = 0;
 //	private long _newSample_unsigned_kernel_wakeupCalls = 0;
 //
-//	private void detectCounterResetHelper(SamplingCnt oldSample, SamplingCnt newSample)
+//	private void detectCounterResetHelper(CounterSample oldSample, CounterSample newSample)
 //	{
 //		// PK: [instanceid,] field_name, group_name
 //		String key = "wakeup_calls:kernel"; // TODO: if ASE-CE we should try to get in "instance" as the first part of the key
@@ -257,7 +257,7 @@ extends CountersModel
 	 * if counters has been reset outside, shorten the sample interval
 	 */
 	@Override
-	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
 //		detectCounterResetHelper(oldSample, newSample);
 
@@ -300,7 +300,7 @@ extends CountersModel
 		}
 
 		// Let super do all the work
-		SamplingCnt diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+		CounterSample diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
 		
 		// Adjust interval (make it shorter) if counters has been cleared
 		if (isCountersCleared && getCounterClearTime() != null)

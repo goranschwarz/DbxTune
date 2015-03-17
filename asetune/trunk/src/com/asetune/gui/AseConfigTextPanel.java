@@ -10,7 +10,7 @@ import javax.swing.JTextArea;
 
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
-import com.asetune.AseTune;
+import com.asetune.DbxTune;
 import com.asetune.pcs.PersistReader;
 import com.asetune.utils.ConnectionProvider;
 
@@ -40,7 +40,7 @@ extends JPanel
 	public void refresh()
 	{
 		Timestamp  ts        = null;
-		boolean    hasGui    = AseTune.hasGUI();
+		boolean    hasGui    = DbxTune.hasGui();
 		boolean    isOffline = false;
 		Connection conn      = null;
 

@@ -1449,17 +1449,46 @@ public class SwingUtils
 		return newModel;
 	}
 
+//	/**
+//	 * Get current screen resulution as a String
+//	 * @return For example "1024x768"
+//	 */
+//	public static String getScreenResulutionAsString()
+//	{
+//		GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+//		int width = gd.getDisplayMode().getWidth();
+//		int height = gd.getDisplayMode().getHeight();
+//		
+//		return width + "x" + height;
+//	}
 	/**
-	 * Get current screen resulution as a String
-	 * @return For example "1024x768"
+	 * Get current screen resolution as a String<br>
+	 * And if you got more than one screen, the screen resolutions will be separated with a semicolon (;)
+	 * @return For example "1024x768" or "2560x1440;1024x768"
 	 */
 	public static String getScreenResulutionAsString()
 	{
-		GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-		int width = gd.getDisplayMode().getWidth();
-		int height = gd.getDisplayMode().getHeight();
-		
-		return width + "x" + height;
+		String retStr = "";
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] screens = ge.getScreenDevices();
+		int n = screens.length;
+		for (int i=0; i<n; i++) 
+		{
+			GraphicsDevice gd = screens[i];
+			int width = gd.getDisplayMode().getWidth();
+			int height = gd.getDisplayMode().getHeight();
+
+			if (i > 0)
+				retStr += ";";
+				
+			retStr = retStr + width + "x" + height;
+		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("getScreenResulutionAsString(): returns |"+retStr+"|.");
+
+		return retStr;
 	}
 	/**
 	 * If the input parameters are smaller than the screen size then they will be used<br>

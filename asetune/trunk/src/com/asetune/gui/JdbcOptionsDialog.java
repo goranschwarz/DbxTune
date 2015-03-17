@@ -957,47 +957,47 @@ implements ActionListener, TableModelListener
 	//////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////
 
-	public static void main(String[] args)
-	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
-
-		// set native L&F
-		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
-		catch (Exception e) {}
-
-
-		Configuration conf = new Configuration("c:\\JdbcOptionsDialog.tmp.deleteme.properties");
-		Configuration.setInstance(Configuration.USER_TEMP, conf);
-
-		MainFrame frame = new MainFrame();
-
-		// Create and Start the "collector" thread
-		GetCounters getCnt = new GetCountersGui();
-		try
-		{
-			getCnt.init();
-		}
-		catch (Exception e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		getCnt.start();
-
-		frame.pack();
-
-		Map<String,String> input = new HashMap<String,String>();
-		input.put("KEY", "VAL");
-		input.put("APPLICATIONNAME", "JdbcOptionDialog-test");
-
-		System.out.println("IN: "+input);
-		Map<String,String> output = JdbcOptionsDialog.showDialog(null, AseConnectionFactory.getDriver(), AseConnectionFactory.getUrlTemplate(), input);
-		System.out.println("OUT: "+output);
-	}
+//	public static void main(String[] args)
+//	{
+//		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+//		PropertyConfigurator.configure(log4jProps);
+//
+//		// set native L&F
+//		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
+//		catch (Exception e) {}
+//
+//
+//		Configuration conf = new Configuration("c:\\JdbcOptionsDialog.tmp.deleteme.properties");
+//		Configuration.setInstance(Configuration.USER_TEMP, conf);
+//
+//		MainFrame frame = new MainFrameAse();
+//
+//		// Create and Start the "collector" thread
+//		GetCounters getCnt = new GetCountersGui();
+//		try
+//		{
+//			getCnt.init();
+//		}
+//		catch (Exception e)
+//		{
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+////		getCnt.start();
+//
+//		frame.pack();
+//
+//		Map<String,String> input = new HashMap<String,String>();
+//		input.put("KEY", "VAL");
+//		input.put("APPLICATIONNAME", "JdbcOptionDialog-test");
+//
+//		System.out.println("IN: "+input);
+//		Map<String,String> output = JdbcOptionsDialog.showDialog(null, AseConnectionFactory.getDriver(), AseConnectionFactory.getUrlTemplate(), input);
+//		System.out.println("OUT: "+output);
+//	}
 }

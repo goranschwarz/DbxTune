@@ -12,6 +12,8 @@ import javax.swing.table.DefaultTableModel;
 import org.apache.log4j.Logger;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
+import com.asetune.DbxTune;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.HostMonitorMetaData;
@@ -92,9 +94,12 @@ extends CountersModel
 	private void localInit()
 	throws Exception
 	{
-		if (AseTune.getCounterCollector().isHostMonConnected())
+//		if (AseTune.getCounterCollector().isHostMonConnected())
+//		{
+//			SshConnection sshConn = AseTune.getCounterCollector().getHostMonConnection();
+		if (CounterController.getInstance().isHostMonConnected())
 		{
-			SshConnection sshConn = AseTune.getCounterCollector().getHostMonConnection();
+			SshConnection sshConn = CounterController.getInstance().getHostMonConnection();
 
 			//System.out.println("CounterModelHostMonitor.init(sqlConn): CREATING MONITOR: "+_hostMonType);
 
@@ -107,7 +112,7 @@ extends CountersModel
 			else if (_hostMonType == HOSTMON_UD_CLASS)
 			{
 				Configuration conf = null;
-				if(AseTune.hasGUI())
+				if(DbxTune.hasGui())
 //					conf = Configuration.getInstance(Configuration.CONF);
 					conf = Configuration.getCombinedConfiguration();
 				else
@@ -332,7 +337,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 	}
 	
@@ -420,7 +425,7 @@ extends CountersModel
 		// NOW apply data to the VIEW
 		// in GUI mode this is done preferred by the EventDispathThread, thats why we
 		// need to use the temp variable tmpOsSampleTable, which is set to _osSampleTable...
-		if ( ! AseTune.hasGUI() )
+		if ( ! DbxTune.hasGui() )
 		{
 			// NO GUI, move structures
 			_osSampleTable = tmpOsSampleTable;

@@ -31,6 +31,7 @@ import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.AseConnectionFactory;
@@ -158,7 +159,8 @@ implements ActionListener
 			}
 		}
 		
-		if (AseTune.getCounterCollector().isMonConnected())
+//		if (AseTune.getCounterCollector().isMonConnected())
+		if (CounterController.getInstance().isMonConnected())
 		{
 			String servername = "";
 			try 

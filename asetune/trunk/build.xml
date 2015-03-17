@@ -76,24 +76,50 @@
 
 <!--		<launch4j configFile="./launch4j.xml" />-->
 
-		<copy file="asetune.bat"                                       toFile="${dist}/asetune.bat"/>
-		<copy file="perfdemo.bat"                                      toFile="${dist}/perfdemo.bat"/>
-		<copy file="asetune.sh"                                        toFile="${dist}/asetune.sh"/>
-		<copy file="asetune.properties"                                toFile="${dist}/asetune.properties"/>
-		<copy file="sqlw.bat"                                          toFile="${dist}/sqlw.bat"/>
-		<copy file="sqlw.sh"                                           toFile="${dist}/sqlw.sh"/>
-		<copy file="tailw.bat"                                         toFile="${dist}/tailw.bat"/>
-		<copy file="tailw.sh"                                          toFile="${dist}/tailw.sh"/>
-<!--		<copy file="iqtune.bat"                                        toFile="${dist}/iqtune.bat"/>                  -->
-<!--		<copy file="iqtune.sh"                                         toFile="${dist}/iqtune.sh"/>                   -->
-		<copy file="${src}/com/asetune/history.html"                   toFile="${dist}/history.html"/>
-		<copy file="${src}/com/asetune/images/asetune_splash.jpg"      toFile="${dist}/lib/asetune_splash.jpg"/>
-		<copy file="${src}/com/asetune/images/asetune_icon_32.gif"     toFile="${dist}/lib/asetune_icon_32.gif"/>
-		<copy file="${src}/com/asetune/images/asetune_icon_32.png"     toFile="${dist}/lib/asetune_icon_32.png"/>
-		<copy file="${src}/com/asetune/images/asetune_icon_32.png"     toFile="${dist}/lib/asetune_icon_32.png"/>
-		<copy file="${src}/com/asetune/images/sqlw_splash.jpg"         toFile="${dist}/lib/sqlw_splash.jpg"/>
-		<copy file="${src}/com/asetune/images/sql_query_window_32.png" toFile="${dist}/lib/sqlw_icon_32.png"/>
-		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"       toFile="${dist}/lib/iqtune_splash.jpg"/>
+		<copy file="perfdemo.bat"                                       toFile="${dist}/perfdemo.bat"/>
+
+		<copy file="sqlw.bat"                                           toFile="${dist}/sqlw.bat"/>
+		<copy file="sqlw.sh"                                            toFile="${dist}/sqlw.sh"/>
+
+		<copy file="tailw.bat"                                          toFile="${dist}/tailw.bat"/>
+		<copy file="tailw.sh"                                           toFile="${dist}/tailw.sh"/>
+		<copy file="${src}/com/asetune/images/sqlw_splash.jpg"          toFile="${dist}/lib/sqlw_splash.jpg"/>
+		<copy file="${src}/com/asetune/images/sql_query_window_32.png"  toFile="${dist}/lib/sqlw_icon_32.png"/>
+
+		<copy file="asetune.bat"                                        toFile="${dist}/asetune.bat"/>
+		<copy file="asetune.sh"                                         toFile="${dist}/asetune.sh"/>
+		<copy file="asetune.properties"                                 toFile="${dist}/asetune.properties"/>
+		<copy file="${src}/com/asetune/images/asetune_splash.jpg"       toFile="${dist}/lib/asetune_splash.jpg"/>
+		<copy file="${src}/com/asetune/images/asetune_icon_32.gif"      toFile="${dist}/lib/asetune_icon_32.gif"/>
+		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
+		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
+
+		<copy file="iqtune.bat"                                         toFile="${dist}/iqtune.bat"/>
+<!--	<copy file="iqtune.sh"                                          toFile="${dist}/iqtune.sh"/>-->
+		<copy file="iqtune.properties"                                  toFile="${dist}/iqtune.properties"/>
+		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/lib/iqtune_splash.jpg"/>
+
+		<copy file="rstune.bat"                                         toFile="${dist}/rstune.bat"/>
+<!--	<copy file="rstune.sh"                                          toFile="${dist}/rstune.sh"/>-->
+		<copy file="rstune.properties"                                  toFile="${dist}/rstune.properties"/>
+		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/lib/rstune_splash.jpg"/>
+
+		<copy file="hanatune.bat"                                       toFile="${dist}/hanatune.bat"/>
+<!--	<copy file="hanatune.sh"                                        toFile="${dist}/hanatune.sh"/>-->
+		<copy file="hanatune.properties"                                toFile="${dist}/hanatune.properties"/>
+		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/lib/hanatune_splash.jpg"/>
+
+		<copy file="sqlservertune.bat"                                  toFile="${dist}/sqlservertune.bat"/>
+<!--	<copy file="sqlservertune.sh"                                   toFile="${dist}/sqlservertune.sh"/>-->
+		<copy file="sqlservertune.properties"                           toFile="${dist}/sqlservertune.properties"/>
+		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/lib/sqlservertune_splash.jpg"/>
+
+		<copy file="oracletune.bat"                                     toFile="${dist}/oracletune.bat"/>
+<!--	<copy file="oracletune.sh"                                      toFile="${dist}/oracletune.sh"/>-->
+		<copy file="oracletune.properties"                              toFile="${dist}/oracletune.properties"/>
+		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/lib/oracletune_splash.jpg"/>
+
+		<copy file="${src}/com/asetune/history.html"                    toFile="${dist}/history.html"/>
 		<copy todir="${dist}/lib">
 			<fileset dir="lib">
 				<include name="*.jar"/>
@@ -116,11 +142,11 @@
 				<attribute name="Built-Date"             value="${TODAY}"/>
 				<!--
 				<attribute name="Implementation-Vendor"  value="Goran Schwarz"/>
-				<attribute name="Implementation-Title"   value="AseTune - Sybase Performance Monitor Tool"/>
+				<attribute name="Implementation-Title"   value="DbxTune - Database Performance Monitor Tool"/>
 				<attribute name="Implementation-Version" value="FIXME - ASA example: build 3152 J2SE"/>
 				<attribute name="Implementation-Version" value="${version.num}-b${build.number}"/>
 				<attribute name="Specification-Vendor"   value="Goran Schwarz"/>
-				<attribute name="Specification-Title"    value="AseTune - Sybase Performance Monitor Tool"/>
+				<attribute name="Specification-Title"    value="DbxTune - Database Performance Monitor Tool"/>
 				<attribute name="Specification-Version"  value="FIXME - ASA example: 12.0.1"/>
 				-->
 			</manifest>

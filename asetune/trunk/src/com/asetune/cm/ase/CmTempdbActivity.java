@@ -14,7 +14,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
@@ -216,7 +216,7 @@ extends CountersModel
 	 * Compute the AppendLogContPct for DIFF values
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int AppendLogRequests,          AppendLogWaits;
 		int AppendLogRequests_pos = -1, AppendLogWaits_pos = -1;

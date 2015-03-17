@@ -16,7 +16,7 @@ import javax.swing.SwingUtilities;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
+import com.asetune.DbxTune;
 import com.asetune.gui.TabularCntrPanel;
 
 
@@ -182,7 +182,7 @@ public class CountersModelAppend
 	@Override public boolean isPctColumn (int index) { return false; }
 
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 	}
 	
@@ -217,13 +217,13 @@ public class CountersModelAppend
 			while (w != null)
 			{
 				hasWarning = true;
-				_logger.warn("SamplingCnt. Warning : " + w);
+				_logger.warn("CounterSample. Warning : " + w);
 				w = w.getNextWarning();
 			}
 		}
 		catch (Exception ex)
 		{
-			_logger.warn("SamplingCnt.getWarnings : " + ex);
+			_logger.warn("CounterSample.getWarnings : " + ex);
 			ex.printStackTrace();
 		}
 		if (hasWarning)
@@ -332,7 +332,7 @@ public class CountersModelAppend
 		if (tabPanel != null)
 			tabPanel.setTimeInfo(null, getSampleTimeHead(), _thisSamplingTime, _interval);
 
-		if ( AseTune.hasGUI() )
+		if ( DbxTune.hasGui() )
 		{
 			Runnable doWork = new Runnable()
 			{

@@ -1148,7 +1148,7 @@ implements ActionListener, MouseListener
 				// remove all old items (if any)
 				popupMenu.removeAll();
 
-				for (CountersModel cm : GetCounters.getCmList())
+				for (CountersModel cm : CounterController.getInstance().getCmList())
 				{
 					// Now create menu items in the correct order
 					for (String name : cm.getTrendGraphNames())
@@ -1236,9 +1236,12 @@ implements ActionListener, MouseListener
 				trendGraphPopupMenu.removeAll();
 
 				// Get the CM: try short name and long name
-				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//				if (cm == null)
+//					cm = GetCounters.getInstance().getCmByDisplayName(cmName);
+				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 				if (cm == null)
-					cm = GetCounters.getInstance().getCmByDisplayName(cmName);
+					cm = CounterController.getInstance().getCmByDisplayName(cmName);
 				
 				if (cm == null)
 				{

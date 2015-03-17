@@ -43,8 +43,8 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
-import com.asetune.AseTune;
-import com.asetune.GetCounters;
+import com.asetune.CounterController;
+import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -1341,7 +1341,7 @@ public class AseConfigMonitoringDialog
 		{
 			int newConfigVal = newValue ? 1 : 0;
 
-			List<CountersModel> cmList = GetCounters.getCmListDependsOnConfig(aseConfig, _conn, _aseVersionNum, _isClusterEnabled);
+			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn, _aseVersionNum, _isClusterEnabled);
 			if (cmList.size() > 0)
 			{
 				// List for info message
@@ -1524,7 +1524,8 @@ public class AseConfigMonitoringDialog
 
 		
 		// If we are currenty in REFRESH, then do GUI wait for the sample to finish.
-		if (GetCounters.hasInstance() && GetCounters.getInstance().isRefreshing())
+//		if (GetCounters.hasInstance() && GetCounters.getInstance().isRefreshing())
+		if (CounterController.hasInstance() && CounterController.getInstance().isRefreshing())
 		{
 			WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Waiting for currect sample to finish");
 
@@ -1535,7 +1536,8 @@ public class AseConfigMonitoringDialog
 				public Object doWork()
 				{
 					// - Wait for current refresh period to end.
-					GetCounters getCnt = AseTune.getCounterCollector();
+//					GetCounters getCnt = AseTune.getCounterCollector();
+					ICounterController getCnt = CounterController.getInstance();
 					if (getCnt != null)
 					{
 						boolean pauseState = MainFrame.getInstance().isPauseSampling();
@@ -1832,7 +1834,7 @@ public class AseConfigMonitoringDialog
 			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
 			if ( ! StringUtil.isNullOrBlank(cfg) )
 			{
-				List<CountersModel> cmList = GetCounters.getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
+				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
 				if (cmList.size() > 0)
 				{
 					tt += "<br><br>";

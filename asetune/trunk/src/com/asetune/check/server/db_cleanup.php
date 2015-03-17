@@ -304,41 +304,45 @@
 
 		//doCleanup("ALTER TABLE sqlw_usage CHANGE sqlwCheckId sqlwCheckId int not null auto_increment");
 
-//doCleanup("
-//CREATE TABLE asemon_mda_info...
-//");
-doCleanup("drop table sqlw_usage_info");
-doCleanup("
-CREATE TABLE sqlw_usage_info
-(
-	sqlwCheckId             int,
-	serverAddTime           timestamp,
-	clientTime              timestamp,
-	userName                varchar(30),
+		//doCleanup("ALTER TABLE asemon_usage ADD clientAppName      varchar(30)     AFTER clientSourceVersion");
+		//doCleanup("UPDATE asemon_usage SET clientAppName = 'AseTune', serverAddTime=serverAddTime");
 
-	connectId               int,
 
-	connTypeStr             varchar(30),
-	prodName                varchar(30),
-	srvVersionInt           int,
-
-	connectTime             timestamp,
-	disconnectTime          timestamp,
-
-	execMainCount           int,
-	execBatchCount          int,
-	execTimeTotal           int,
-	execTimeSqlExec         int,
-	execTimeRsRead          int,
-	rsCount                 int,
-	rsRowsCount             int,
-	iudRowsCount            int,
-	sqlWarningCount         int,
-	sqlExceptionCount       int,
-
-	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
-);
-");
+		//doCleanup("
+		//CREATE TABLE asemon_mda_info...
+		//");
+		//doCleanup("drop table sqlw_usage_info");
+		//doCleanup("
+		//CREATE TABLE sqlw_usage_info
+		//(
+		//	sqlwCheckId             int,
+		//	serverAddTime           timestamp,
+		//	clientTime              timestamp,
+		//	userName                varchar(30),
+		//
+		//	connectId               int,
+		//
+		//	connTypeStr             varchar(30),
+		//	prodName                varchar(30),
+		//	srvVersionInt           int,
+		//
+		//	connectTime             timestamp,
+		//	disconnectTime          timestamp,
+		//
+		//	execMainCount           int,
+		//	execBatchCount          int,
+		//	execTimeTotal           int,
+		//	execTimeSqlExec         int,
+		//	execTimeRsRead          int,
+		//	rsCount                 int,
+		//	rsRowsCount             int,
+		//	iudRowsCount            int,
+		//	sqlWarningCount         int,
+		//	sqlExceptionCount       int,
+		//
+		//	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
+		//);
+		//");
 
 
 		// FIX VERSION for INT columns

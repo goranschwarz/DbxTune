@@ -15,7 +15,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmProcessActivityPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -370,15 +370,15 @@ extends CountersModel
 	 * doing it this way, means better performance, since the values are cached locally in memory
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1, pos_BlockingSPID = -1;
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
-		SamplingCnt counters = diffData;
-//		SamplingCnt counters = chosenData;
+		CounterSample counters = diffData;
+//		CounterSample counters = chosenData;
 	
 		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 		if (mtd == null)

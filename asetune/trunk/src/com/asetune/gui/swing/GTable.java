@@ -1,6 +1,7 @@
 package com.asetune.gui.swing;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -16,16 +17,21 @@ import java.awt.event.MouseListener;
 import java.beans.PropertyChangeEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -33,10 +39,12 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
+import javax.swing.JTable;
 import javax.swing.RowSorter.SortKey;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.UIDefaults;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.PopupMenuEvent;
@@ -44,6 +52,7 @@ import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
@@ -51,8 +60,19 @@ import javax.swing.table.TableModel;
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.event.TableColumnModelExtListener;
+import org.jdesktop.swingx.hyperlink.HyperlinkAction;
+import org.jdesktop.swingx.renderer.CheckBoxProvider;
+import org.jdesktop.swingx.renderer.ComponentProvider;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
+import org.jdesktop.swingx.renderer.HyperlinkProvider;
+import org.jdesktop.swingx.renderer.IconValue;
+import org.jdesktop.swingx.renderer.IconValues;
+import org.jdesktop.swingx.renderer.LabelProvider;
+import org.jdesktop.swingx.renderer.MappedValue;
 import org.jdesktop.swingx.renderer.StringValue;
 import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
@@ -62,6 +82,7 @@ import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.tools.sqlw.ResultSetJXTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -84,15 +105,55 @@ extends JXTable
 	/** If columns are reordered, save it after X seconds inactivity */
 	protected Timer             _columnLayoutTimer          = null;
 
+	public static final String  PROPKEY_NULL_REPLACE = "GTable.replace.null.with";
+	public static final String  DEFAULT_NULL_REPLACE = "(NULL)";
+
+//	private static final String NULL_REPLACE = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE, DEFAULT_NULL_REPLACE);
+	private String NULL_REPLACE = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE, DEFAULT_NULL_REPLACE);
+//	private String _nullReplace = null;
+
+	private Color _nullValueBgColor = null;
+
 	public GTable()
 	{
+		this(null, null);
+	}
+
+	public GTable(String nullReplaceStr, Color nullValueBgColor)
+	{
+		setNullValueDisplay(nullReplaceStr);
+		setNullValueDisplayBgColor(nullValueBgColor);
 		init();
 	}
 
 	public GTable(TableModel tm)
 	{
 		super(tm);
+		setNullValueDisplay(null);
+		setNullValueDisplayBgColor(null);
 		init();
+	}
+	
+	public void setNullValueDisplay(String nullReplaceStr)
+	{
+		NULL_REPLACE = nullReplaceStr;
+		if (nullReplaceStr == null)
+			NULL_REPLACE = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE, DEFAULT_NULL_REPLACE);
+	}
+	public String getNullValueDisplay()
+	{
+		return NULL_REPLACE;
+	}
+
+	public void setNullValueDisplayBgColor(Color color)
+	{
+		_nullValueBgColor = color;
+		if (_nullValueBgColor == null)
+			_nullValueBgColor = ResultSetJXTable.NULL_VALUE_COLOR;
+	}
+	public Color setNullValueDisplayBgColor()
+	{
+		return _nullValueBgColor;
 	}
 
 	public int getLastMousePressedAtViewHeaderCol()
@@ -197,12 +258,13 @@ extends JXTable
 		}
 	}
 
-	private void init()
+	public int getBigDecimalFormatMinimumFractionDigits()
 	{
-		// wait 1 seconds before column layout is saved, this simply means less config writes...
-		_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
-//		_thisTable = this;
+		return 0;
+	}
 
+	public void setBigDecimalFormatMinimumFractionDigits(final int digits)
+	{
 		//
 		// Cell renderer changes to "Rate" Counters
 		//
@@ -218,7 +280,7 @@ extends JXTable
 				try
 				{
 					nf = new DecimalFormat();
-					nf.setMinimumFractionDigits(1);
+					nf.setMinimumFractionDigits(digits);
 				}
 				catch (Throwable t)
 				{
@@ -235,6 +297,195 @@ extends JXTable
 		};
 		// bind the RATE values (which happens to be BigDecimal)
 		setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(sv, JLabel.RIGHT));
+	}
+
+	@Override
+	// NOTE: this is grabbed from "super" 
+	protected void createDefaultRenderers() 
+	{
+		// super.createDefaultRenderers();
+
+		defaultRenderersByColumnClass = new UIDefaults(8, 0.75f);
+
+		// configured default table renderer (internally LabelProvider)
+		setDefaultRenderer(Object.class, new DefaultTableRendererNullAware());
+		setDefaultRenderer(Number.class, new DefaultTableRendererNullAware(StringValues.NUMBER_TO_STRING, JLabel.RIGHT));
+		setDefaultRenderer(Date.class,   new DefaultTableRendererNullAware(StringValues.DATE_TO_STRING));
+
+		// use the same center aligned default for Image/Icon
+		TableCellRenderer renderer = new DefaultTableRendererNullAware(new MappedValue(StringValues.EMPTY, IconValues.ICON), JLabel.CENTER);
+		setDefaultRenderer(Icon.class, renderer);
+		setDefaultRenderer(ImageIcon.class, renderer);
+
+		// use a ButtonProvider for booleans
+		setDefaultRenderer(Boolean.class, new DefaultTableRendererNullAware(new CheckBoxProvider()));
+
+		try {
+			setDefaultRenderer(URI.class, new DefaultTableRendererNullAware(new HyperlinkProvider(new HyperlinkAction())) );
+		} catch (Exception e) {
+			// nothing to do - either headless or Desktop not supported
+		}
+	}
+
+	private class DefaultTableRendererNullAware extends DefaultTableRenderer
+	{
+		private static final long serialVersionUID = 1L;
+		private StringValue       _nullStr = new StringValue()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getString(Object value)
+			{
+				return NULL_REPLACE;
+			}
+		};
+		private TableCellRenderer _nullValue= new DefaultTableRenderer(new LabelProvider(_nullStr));
+
+		public DefaultTableRendererNullAware()                                                            { super();}
+		public DefaultTableRendererNullAware(ComponentProvider<?> componentProvider)                      { super(componentProvider); }
+		public DefaultTableRendererNullAware(StringValue converter)                                       { super(converter); }
+		public DefaultTableRendererNullAware(StringValue converter, int alignment)                        { super(converter, alignment); }
+		@SuppressWarnings("unused")
+		public DefaultTableRendererNullAware(StringValue stringValue, IconValue iconValue)                { super(stringValue, iconValue); }
+		@SuppressWarnings("unused")
+		public DefaultTableRendererNullAware(StringValue stringValue, IconValue iconValue, int alignment) { super(stringValue, iconValue, alignment); }
+
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+		{
+			if (value == null)
+				return _nullValue.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+				
+			return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+		}
+		
+	}
+
+	private void init()
+	{
+		// wait 1 seconds before column layout is saved, this simply means less config writes...
+		_columnLayoutTimer = new Timer(1000, new ColumnLayoutTimerAction(this));
+//		_thisTable = this;
+
+		
+		//
+		// Cell renderer changes to "Rate" Counters
+		//
+		// The normal formatter doesn't add '.0' if values are even
+		// Make '0'     -> '0.0' 
+		//  and '123'   -> '123.0' 
+		//  and '123.5' -> '123.5'
+		setBigDecimalFormatMinimumFractionDigits(getBigDecimalFormatMinimumFractionDigits());
+
+		// ---------------------------------------------------------------------------------------------
+		// Below is Cell renderer for:  java.sql.Timestamp, java.sql.Date, java.sql.Time
+		// ---------------------------------------------------------------------------------------------
+
+		// java.sql.Timestamp format
+		@SuppressWarnings("serial")
+		StringValue svTimestamp = new StringValue() 
+		{
+//			DateFormat df = DateFormat.getDateInstance(DateFormat.LONG);
+			String format = Configuration.getCombinedConfiguration().getProperty("GTable.cellRenderer.format.Timestamp", "yyyy-MM-dd HH:mm:ss.SSS");
+			DateFormat df = new SimpleDateFormat(format);
+			@Override
+			public String getString(Object value) 
+			{
+				if (value != null && value instanceof java.sql.Timestamp)
+				{
+    				try 
+    				{ 
+    					return df.format(value); 
+    				}
+    				catch(Throwable ignore) 
+    				{
+    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					return value==null ? NULL_REPLACE : value.toString(); 
+    				}
+				}
+				else
+				{
+					return value==null ? NULL_REPLACE : value.toString();
+				}
+			}
+		};
+		setDefaultRenderer(java.sql.Timestamp.class, new DefaultTableRenderer(svTimestamp));
+
+		// java.sql.Date format
+		@SuppressWarnings("serial")
+		StringValue svDate = new StringValue() 
+		{
+			String format = Configuration.getCombinedConfiguration().getProperty("GTable.cellRenderer.format.Date", "yyyy-MM-dd");
+			DateFormat df = new SimpleDateFormat(format);
+			@Override
+			public String getString(Object value) 
+			{
+				if (value != null && value instanceof java.sql.Date)
+				{
+    				try 
+    				{ 
+    					return df.format(value); 
+    				}
+    				catch(Throwable ignore) 
+    				{
+    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					return value==null ? NULL_REPLACE : value.toString(); 
+    				}
+				}
+				else
+				{
+					return value==null ? NULL_REPLACE : value.toString();
+				}
+			}
+		};
+		setDefaultRenderer(java.sql.Date.class, new DefaultTableRenderer(svDate));
+
+		// java.sql.Time format
+		@SuppressWarnings("serial")
+		StringValue svTime = new StringValue() 
+		{
+			String format = Configuration.getCombinedConfiguration().getProperty("GTable.cellRenderer.format.Time", "HH:mm:ss");
+			DateFormat df = new SimpleDateFormat(format);
+			@Override
+			public String getString(Object value) 
+			{
+				if (value != null && value instanceof java.sql.Time)
+				{
+    				try 
+    				{ 
+    					return df.format(value); 
+    				}
+    				catch(Throwable ignore) 
+    				{
+    					_logger.warn("Problems in GTable when rendering type '"+value.getClass().getName()+"', object '"+value+"'. returning a toString instead. Caught: "+ignore);
+    					return value==null ? NULL_REPLACE : value.toString(); 
+    				}
+				}
+				else
+				{
+					return value==null ? NULL_REPLACE : value.toString();
+				}
+			}
+		};
+		setDefaultRenderer(java.sql.Time.class, new DefaultTableRenderer(svTime));
+
+		//---------------------------------------------
+		// NULL Values: SET BACKGROUND COLOR
+		//---------------------------------------------
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				// Check NULL value
+				Object cellValue = adapter.getValue();
+				if (cellValue == null || NULL_REPLACE.equals(cellValue))
+					return true;
+
+				return false;
+			}
+		}, _nullValueBgColor, null));
 
 		//--------------------------------------------------------------------
 		// Add mouse listener to be used to identify what row/col we are at.
@@ -1507,7 +1758,7 @@ extends JXTable
 		{
 			if (o != null && o instanceof String)
 			{
-				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+				if (NULL_REPLACE.equals(o))
 					return null;
 			}
 		}
@@ -1695,7 +1946,7 @@ extends JXTable
 		{
 			if (o != null && o instanceof String)
 			{
-				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+				if (NULL_REPLACE.equals(o))
 					return null;
 			}
 		}

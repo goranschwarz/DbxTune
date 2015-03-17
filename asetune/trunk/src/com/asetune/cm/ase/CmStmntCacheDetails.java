@@ -236,7 +236,7 @@ extends CountersModel
 		{
 			sql_hasShowplan    = " HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n";
 			sql_doShowplan     = " msgAsColValue = convert(text, ''), \n";
-			// msgAsColValue: is the column where the show_plan() function will be placed (this is done in SamplingCnt.java:readResultset())
+			// msgAsColValue: is the column where the show_plan() function will be placed (this is done in CounterSample.java:readResultset())
 		}
 
 		//----- XML PLAN
@@ -308,13 +308,13 @@ extends CountersModel
 			nl_15702           = "\n";
 		}
 
-		// ASE 16.0
+		// ASE 16.0 (back ported to 15.7 SP130)
 		String TotalPIO            = ""; // The total PIO value.
 		String TotalLIO            = ""; // The total LIO value.
 		String TotalCpuTime        = ""; // The total execution time value. (ms)
 		String TotalElapsedTime    = ""; // The total elapsed time value. (ms)
-//		if (aseVersion >= 1600000)
-		if (aseVersion >= Ver.ver(16,0))
+//		if (aseVersion >= Ver.ver(16,0))
+		if (aseVersion >= Ver.ver(15,7,0, 130))
 		{
 			TotalPIO		 = "TotalPIO, ";         // DIFF COUNTER
 			TotalLIO         = "TotalLIO, ";         // DIFF COUNTER
@@ -326,7 +326,7 @@ extends CountersModel
 		// NOTE: The function 'show_plan(-1,SSQLID,-1,-1)'
 		//       returns a Ase Message (MsgNum=0) within the ResultSet
 		//       those messages are placed in the column named 'msgAsColValue'
-		//       see SamplingCnt.readResultset() for more details
+		//       see CounterSample.readResultset() for more details
 		String cols = 
 			(isClusterEnabled ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
 			" DBID, \n" +                       // The database ID from which the statement was cached.

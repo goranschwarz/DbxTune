@@ -80,7 +80,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private static Logger _logger = Logger.getLogger(LogTailWindow.class);
 	private static final long serialVersionUID = 1L;
 
-	public enum FileType {ASE_LOG, REPSERVER_LOG, UNKNOWN_LOG}
+	public enum FileType {ASE_LOG, REPSERVER_LOG, IQ_LOG, UNKNOWN_LOG}
 
 	public final static String APP_NAME              = "tailw";
 	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "tailw.save.properties");
@@ -449,21 +449,13 @@ PropertyConfigurator.configure(log4jProps);
 				String dbProduct = ConnectionDialog.getDatabaseProductName(_conn);
 				_servername      = ConnectionDialog.getDatabaseServerName(_conn);
 				_srvVersionStr   = ConnectionDialog.getDatabaseProductVersion(_conn);
+				String logName   = DbUtils         .getServerLogFileName(dbProduct, _conn);
 
-				if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(dbProduct))
-				{
-					_fileType      = FileType.ASE_LOG;
-//					_servername    = AseConnectionUtils.getAseServername(_conn);
-//					_srvVersionStr = AseConnectionUtils.getAseVersionStr(_conn);
-					_logFilename_txt.setText(AseConnectionUtils.getServerLogFileName(_conn));
-				}
-				if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(dbProduct))
-				{
-					_fileType      = FileType.REPSERVER_LOG;
-//					_servername    = RepServerUtils.getServerName(_conn);
-//					_srvVersionStr = RepServerUtils.getServerVersionStr(_conn);
-					_logFilename_txt.setText(RepServerUtils.getServerLogFileName(_conn));
-				}
+				_logFilename_txt.setText(logName);
+				
+				if      (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_ASE)) _fileType = FileType.ASE_LOG;
+				else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_RS))  _fileType = FileType.REPSERVER_LOG;
+				else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_IQ))  _fileType = FileType.IQ_LOG;
 				else
 				{
 					// FIXME: unknown type and connection...
@@ -483,11 +475,15 @@ PropertyConfigurator.configure(log4jProps);
 		_logTail_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 		if ( _fileType == FileType.ASE_LOG)
 		{
-//			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL); // FIXME: create a ASE SYNTAX
+//			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL_LOG); // FIXME: create a ASE LOG SYNTAX
 		}
 		else if ( _fileType == FileType.REPSERVER_LOG)
 		{
-//			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL); // FIXME: create a RS SYNTAX
+//			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_RCL_LOG); // FIXME: create a RS LOG SYNTAX
+		}
+		else if ( _fileType == FileType.IQ_LOG)
+		{
+//			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_IQ_LOG); // FIXME: create a RS LOG SYNTAX
 		}
 		else
 		{

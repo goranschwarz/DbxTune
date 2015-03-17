@@ -43,7 +43,7 @@ import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
+import com.asetune.DbxTune;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CmSybMessageHandler;
@@ -1294,7 +1294,7 @@ public class RefreshProcess extends Thread
 			pdf.statusBarLbl.setForeground(Color.RED);
 			pdf.statusBarLbl.setText("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.");
 
-			if (AseTune.hasGUI())
+			if (DbxTune.hasGui())
 			{
 				String htmlMsg = "<html>" +
 					"Problems executing SQL Statement.<br>" +

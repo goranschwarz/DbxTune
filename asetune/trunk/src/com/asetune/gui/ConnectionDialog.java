@@ -100,11 +100,12 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
-import com.asetune.AseTune;
-import com.asetune.GetCounters;
+import com.asetune.CounterController;
+import com.asetune.DbxTune;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.ConnectionProfile.DbxTuneParams;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.GLabel;
@@ -281,6 +282,7 @@ public class ConnectionDialog
 	private JLabel               _aseSqlInit_lbl         = new JLabel("SQL Init");
 	private JTextField           _aseSqlInit_txt         = new JTextField("");
 
+	private JPanel               _dbxTuneOptionsPanel             = null;
 	private TemplateComboBoxModel _aseOptionUseTemplate_mod       = new TemplateComboBoxModel();
 	private JCheckBox            _aseOptionUseTemplate_chk        = new JCheckBox("Use Counter Template", false);
 	private JComboBox            _aseOptionUseTemplate_cbx        = new JComboBox(_aseOptionUseTemplate_mod);
@@ -427,15 +429,16 @@ public class ConnectionDialog
 	private JTextField           _jdbcPassword_txt     = new JPasswordField();
 	private JCheckBox            _jdbcSavePassword_chk = new JCheckBox("Save password", true);
 //	private JLabel               _jdbcTestConn_lbl     = new JLabel();
+	private JButton              _jdbcDriverInfo_but   = new JButton("JDBC Driver Info...");
 	private JButton              _jdbcTestConn_but     = new JButton("Test Connection");
 	private JLabel               _jdbcSqlInit_lbl      = new JLabel("SQL Init");
 	private JTextField           _jdbcSqlInit_txt      = new JTextField("");
 	private JLabel               _jdbcUrlOptions_lbl   = new JLabel("URL Options");
 	private JTextField           _jdbcUrlOptions_txt   = new JTextField("");
-	private JButton              _jdbcUrlOptions_but   = new JButton("...");
-	
+	private JButton              _jdbcUrlOptions_but   = new JButton("...");	
+	private SshTunnelInfo        _jdbcSshTunnelInfo       = null; // always NULL for the moment, since this isn't supported for the moment
+
 	//---- JDBC Driver Info panel
-	@SuppressWarnings("unused")
 	private JPanel               _jdbcDriverInfoPanel      = null;
 	private ImageIcon            _jdbcDriverInfoImageIcon  = SwingUtils.readImageIcon(Version.class, "images/jdbc_driver_32.png");
 	private JLabel               _jdbcDriverInfoIcon       = new JLabel(_jdbcDriverInfoImageIcon);
@@ -449,14 +452,17 @@ public class ConnectionDialog
 	private JButton              _ok                 = new JButton("OK");
 	private JButton              _cancel             = new JButton("Cancel");
 
-	private boolean              _checkAseCfg        = true;
-	private boolean              _showAseTab         = true;
-	private boolean              _showHostmonTab     = true;
-	private boolean              _showPcsTab         = true;
-	private boolean              _showOfflineTab     = true;
-	private boolean              _showJdbcTab        = false;
-
-	private boolean              _showAseTuneOptions = true;
+////	private boolean              _checkAseCfg        = true;
+//	private ConnectionProgressExtraActions _srvExtraChecks = null;
+//	private boolean              _showAseTab         = true;
+//	private boolean              _showHostmonTab     = true;
+//	private boolean              _showPcsTab         = true;
+//	private boolean              _showOfflineTab     = true;
+//	private boolean              _showJdbcTab        = false;
+//
+//	private boolean              _showAseTuneOptions = true;
+//	private boolean              _showDbxTuneOptionsInJdbc = false;
+	private Options              _options = null;
 
 //	private static ConnectionDialog   _instance       = null;
 //	public static ConnectionDialog getInstance()
@@ -464,9 +470,42 @@ public class ConnectionDialog
 //		return _instance;
 //	}
 
+	/**
+	 * Options that can be passed to the Connection Dialog, what should be visible etc...
+	 */
+	public static class Options
+	{
+		public ConnectionProgressExtraActions _srvExtraChecks = null;
+		public boolean              _showAseTab         = true;
+		public boolean              _showHostmonTab     = true;
+		public boolean              _showPcsTab         = true;
+		public boolean              _showOfflineTab     = true;
+		public boolean              _showJdbcTab        = false;
+
+		public boolean              _showDbxTuneOptionsInTds  = true;
+		public boolean              _showDbxTuneOptionsInJdbc = false;
+		
+		public Options()
+		{
+		}
+		public Options(ConnectionProgressExtraActions srvExtraChecks, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab, boolean showJdbcOptions)
+		{
+			_srvExtraChecks           = srvExtraChecks;
+			_showAseTab               = showAseTab;
+			_showDbxTuneOptionsInTds  = showAseOptions;
+			_showHostmonTab           = showHostmonTab;
+			_showPcsTab               = showPcsTab;
+			_showOfflineTab           = showOfflineTab;
+			_showJdbcTab              = showJdbcTab;
+			_showDbxTuneOptionsInJdbc = showJdbcOptions;
+		}
+	}
+
 	public static Connection showTdsOnlyConnectionDialog(Frame owner)
 	{
-		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, false, false, false, false, false);
+//		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, false, false, false, false, false);
+//		ConnectionDialog connDialog = new ConnectionDialog(null, null, true, false, false, false, false, false, false);
+		ConnectionDialog connDialog = new ConnectionDialog(null, new Options(null, true, false, false, false, false, false, false));
 		connDialog.setVisible(true);
 		connDialog.dispose();
 
@@ -483,9 +522,13 @@ public class ConnectionDialog
 
 	public ConnectionDialog(Frame owner)
 	{
-		this(owner, true, true, true, true, true, true, false);
+//		this(owner, true, true, true, true, true, true, false);
+//		this(owner, null, true, true, true, true, true, false, false);
+		this(owner, null);
 	}
-	public ConnectionDialog(Frame owner, boolean checkAseCfg, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab)
+//	public ConnectionDialog(Frame owner, boolean checkAseCfg, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab)
+//	public ConnectionDialog(Frame owner, ConnectionProgressExtraActions srvExtraChecks, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab, boolean showJdbcOptions)
+	public ConnectionDialog(Frame owner, Options options)
 	{
 		super(owner, "Connect", ModalityType.DOCUMENT_MODAL);
 //		super(owner, "Connect", true);
@@ -495,13 +538,20 @@ public class ConnectionDialog
 		if (owner == null)
 			_useCmForPcsTable = false;
 
-		_checkAseCfg        = checkAseCfg;
-		_showAseTab         = showAseTab;
-		_showAseTuneOptions = showAseOptions;
-		_showHostmonTab     = showHostmonTab;
-		_showPcsTab         = showPcsTab;
-		_showOfflineTab     = showOfflineTab;
-		_showJdbcTab        = showJdbcTab;
+		_options = options;
+		if (_options == null)
+			_options = new Options();
+
+		// FIXME: add all of the below to a class, which is passed as the constructor...
+////		_checkAseCfg        = checkAseCfg;
+//		_srvExtraChecks     = srvExtraChecks;
+//		_showAseTab         = showAseTab;
+//		_showAseTuneOptions = showAseOptions;
+//		_showHostmonTab     = showHostmonTab;
+//		_showPcsTab         = showPcsTab;
+//		_showOfflineTab     = showOfflineTab;
+//		_showJdbcTab        = showJdbcTab;
+//		_showDbxTuneOptionsInJdbc = showJdbcOptions; // NOT YET IMPLEMENTED
 
 //		_inputMap = input;
 		initComponents();
@@ -888,6 +938,18 @@ public class ConnectionDialog
 		}
 	}
 
+	/**
+	 * Get Connection, first TDS, then OFFLINE, then JDBC
+	 * @return
+	 */
+	public Connection getConnection()
+	{
+		Connection conn = getAseConn();
+		if (conn == null) conn = getOfflineConn();
+		if (conn == null) conn = getJdbcConn();
+		return conn;
+	}
+
 	public int                      getConnectionType() { return _connectionType; }
 	public Connection               getAseConn()        { return _aseConn; }
 	public SshConnection            getSshConn()        { return _sshConn; }
@@ -896,8 +958,9 @@ public class ConnectionDialog
 	public Connection               getOfflineConn()    { return _offlineConn; }
 	public Connection               getJdbcConn()       { return _jdbcConn; }
 
-	public SshTunnelInfo            getAseSshTunnelInfo() { return _aseSshTunnelInfo; }
-
+	public SshTunnelInfo            getAseSshTunnelInfo()  { return _aseSshTunnelInfo; }
+	public SshTunnelInfo            getJdbcSshTunnelInfo() { return _jdbcSshTunnelInfo; }
+	
 	public Date getDisConnectTime()
 	{
 		return _disConnectTime;
@@ -1304,7 +1367,7 @@ public class ConnectionDialog
 						{
 							JLabel l = (JLabel) comp;
 							ConnProfileSrvType t = (ConnProfileSrvType) o;
-							l.setIcon(ConnectionProfileManager.getIcon(t._vendor));
+							l.setIcon(ConnectionProfileManager.getIcon16(t._vendor));
 							l.setText(t._name);
 							l.setToolTipText(null);
 
@@ -1317,7 +1380,7 @@ public class ConnectionDialog
 						{
 							JLabel l = (JLabel) comp;
 							ConnectionProfile t = (ConnectionProfile) o;
-							l.setIcon(ConnectionProfileManager.getIcon(t.getSrvType()));
+							l.setIcon(ConnectionProfileManager.getIcon16(t.getSrvType()));
 							l.setText(t.getName());
 							l.setToolTipText(t.getToolTipText());
 
@@ -1506,7 +1569,7 @@ public class ConnectionDialog
 		panel.setLayout(new BorderLayout());
 
 		String aseTabTip     = "Connect to an ASE to monitor performance.";
-		String hostmonTabTip = "Connect to Operating System host machine where ASE is hosted to monitor IO and or CPU performance.";
+		String hostmonTabTip = "Connect to Operating System host machine where DB Server is hosted to monitor IO and or CPU performance.";
 		String pcsTabTip     = "In GUI mode save Data Counter to a Storage, which can be view later by the 'offline' mode.";
 		String offlineTabTip = "<html>" +
 		                       "Connect to a 'offline' Counter Storage where "+Version.getAppName()+" has stored counter data.<br>" +
@@ -1516,17 +1579,25 @@ public class ConnectionDialog
 
 //		_tab = new JTabbedPane();
 		_tab = new GTabbedPane();
+		
 		_tab.addTab(TAB_TITLE_ASE,     null, createTabAse(),     aseTabTip);
 		_tab.addTab(TAB_TITLE_HOSTMON, null, createTabHostmon(), hostmonTabTip);
 		_tab.addTab(TAB_TITLE_PCS,     null, createTabPcs(),     pcsTabTip);
 		_tab.addTab(TAB_TITLE_OFFLINE, null, createTabOffline(), offlineTabTip);
 		_tab.addTab(TAB_TITLE_JDBC,    null, createTabJdbc(),    jdbcTabTip);
 		
-		if (! _showAseTab)     _tab.setVisibleAtModel(TAB_POS_ASE,     false);
-		if (! _showHostmonTab) _tab.setVisibleAtModel(TAB_POS_HOSTMON, false);
-		if (! _showPcsTab)     _tab.setVisibleAtModel(TAB_POS_PCS,     false);
-		if (! _showOfflineTab) _tab.setVisibleAtModel(TAB_POS_OFFLINE, false);
-		if (! _showJdbcTab)    _tab.setVisibleAtModel(TAB_POS_JDBC,    false);
+		if (! _options._showAseTab)     _tab.setVisibleAtModel(TAB_POS_ASE,     false);
+		if (! _options._showHostmonTab) _tab.setVisibleAtModel(TAB_POS_HOSTMON, false);
+		if (! _options._showPcsTab)     _tab.setVisibleAtModel(TAB_POS_PCS,     false);
+		if (! _options._showOfflineTab) _tab.setVisibleAtModel(TAB_POS_OFFLINE, false);
+		if (! _options._showJdbcTab)    _tab.setVisibleAtModel(TAB_POS_JDBC,    false);
+
+		// If ASE isn't visible, Set the JDBC tab first
+		if (! _options._showAseTab)
+		{
+			String[] tabOrder = {TAB_TITLE_JDBC, TAB_TITLE_HOSTMON, TAB_TITLE_PCS, TAB_TITLE_OFFLINE};
+			_tab.setTabOrder(tabOrder);
+		}
 
 		// Set active tab to first tab that is enabled
 		for (int t=0; t<_tab.getTabCount(); t++)
@@ -1553,8 +1624,8 @@ public class ConnectionDialog
 		
 		panel.add(createAseUserPasswdPanel(),      "growx, pushx");
 		panel.add(createAseServerPanel(),          "growx, pushx");
-		if (_showAseTuneOptions)
-			panel.add(createAseTuneOptionsPanel(), "growx, pushx");
+		if (_options._showDbxTuneOptionsInTds)
+			panel.add(createDbxTuneOptionsPanel(), "growx, pushx");
 //		panel.add(createPcsPanel(),                "grow, hidemode 3");
 		
 		return panel;
@@ -1596,10 +1667,26 @@ public class ConnectionDialog
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 
-//		panel.add(new JLabel("NOT YET FULLY IMPLEMENTED AND TESTED"), "grow");
-		panel.add(createJdbcPanel(),           "growx, pushx");
-		panel.add(createJdbcDriverInfoPanel(), "grow, push");
+		createJdbcPanel();
+		createJdbcDriverInfoPanel();
+
+		panel.add(_jdbcPanel,           "growx, pushx");
 		
+		if (_options._showDbxTuneOptionsInJdbc)
+		{
+			panel.add(createDbxTuneOptionsPanel(), "growx, pushx");
+
+			// Normally do not show this button, only if the DbxTuneOptions panel is visible (meaning we might record a session)
+			_jdbcDriverInfo_but.setVisible(true);
+		}
+		else
+		{
+			panel.add(_jdbcDriverInfoPanel, "grow, push");
+
+			// Normally do not show this button, only if the DbxTuneOptions panel is visible (meaning we might record a session)
+			_jdbcDriverInfo_but.setVisible(false);
+		}
+
 		return panel;
 	}
 	private JPanel createAseUserPasswdPanel()
@@ -1613,10 +1700,10 @@ public class ConnectionDialog
 		else
 			_asePasswd_txt = new JPasswordField();
 
-		_aseUser_lbl  .setToolTipText("User name to use when logging in to the below ASE Server.");
-		_aseUser_txt  .setToolTipText("User name to use when logging in to the below ASE Server.");
-		_asePasswd_lbl.setToolTipText("Password to use when logging in to the below ASE Server");
-		_asePasswd_txt.setToolTipText("Password to use when logging in to the below ASE Server");
+		_aseUser_lbl  .setToolTipText("User name to use when logging in to the below DB Server.");
+		_aseUser_txt  .setToolTipText("User name to use when logging in to the below DB Server.");
+		_asePasswd_lbl.setToolTipText("Password to use when logging in to the below DB Server");
+		_asePasswd_txt.setToolTipText("Password to use when logging in to the below DB Server");
 		_aseOptionSavePwd_chk      .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		_aseOptionPwdEncryption_chk.setToolTipText("<html>Encrypt the password when sending it over the network<br>This will set jConnect option ENCRYPT_PASSWORD=true</html>");
 
@@ -1665,16 +1752,16 @@ public class ConnectionDialog
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
 				+ "</ul></html>");
-		_aseIfile_lbl       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving ASE name into hostname and port number");
-		_aseIfile_txt       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving ASE name into hostname and port number");
+		_aseIfile_lbl       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving DB Server name into hostname and port number");
+		_aseIfile_txt       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving DB Server name into hostname and port number");
 		_aseIfile_but       .setToolTipText("Open a File Dialog to locate a Directory Service file.");
 		_aseEditIfile_but   .setToolTipText("Edit the Name/Directory Service file. Just opens a text editor.");
-		_aseServer_lbl      .setToolTipText("Name of the ASE you are connecting to");
-		_aseServer_cbx      .setToolTipText("Name of the ASE you are connecting to");
-		_aseHost_lbl        .setToolTipText("<html>Hostname or IP address of the ASE you are connecting to<br>Syntax: host1[,host2,...]</html>");
-		_aseHost_txt        .setToolTipText("<html>Hostname or IP address of the ASE you are connecting to<br>Syntax: host1[,host2,...]</html>");
-		_asePort_lbl        .setToolTipText("<html>Port number of the ASE you are connecting to<br>Syntax: port1[,port2,...]</html>");
-		_asePort_txt        .setToolTipText("<html>Port number of the ASE you are connecting to<br>Syntax: port1[,port2,...]</html>");
+		_aseServer_lbl      .setToolTipText("Name of the DB Server you are connecting to");
+		_aseServer_cbx      .setToolTipText("Name of the DB Server you are connecting to");
+		_aseHost_lbl        .setToolTipText("<html>Hostname or IP address of the DB Server you are connecting to<br>Syntax: host1[,host2,...]</html>");
+		_aseHost_txt        .setToolTipText("<html>Hostname or IP address of the DB Server you are connecting to<br>Syntax: host1[,host2,...]</html>");
+		_asePort_lbl        .setToolTipText("<html>Port number of the DB Server you are connecting to<br>Syntax: port1[,port2,...]</html>");
+		_asePort_txt        .setToolTipText("<html>Port number of the DB Server you are connecting to<br>Syntax: port1[,port2,...]</html>");
 		_aseLoginTimeout_lbl.setToolTipText("<html>Login timeout in seconds</html>");
 		_aseLoginTimeout_txt.setToolTipText("<html>Login timeout in seconds</html>");
 		_aseOptions_lbl     .setToolTipText("<html>JConnect Options that can be set.<br>Syntax: OPT1=value[, OPT2=value]<br>Or press the '...' button to add enties.</html>");
@@ -1685,7 +1772,7 @@ public class ConnectionDialog
 		_aseSshTunnel_chk   .setToolTipText(
 			"<html>" +
 			    "Use a SSH (Secure Shell) connection as a tunnel or intermediate hop, when you can't connect " +
-			    "directly to the destination machine where the ASE is hosted. This due to firewall restrictions or port blocking.<br>" +
+			    "directly to the destination machine where the DB Server is hosted. This due to firewall restrictions or port blocking.<br>" +
 			    "When you use a SSH Tunnel all data traffic will be encrypted.<br>" +
 			    "<br> " +
 			    "The intermediate unix/linux host needs to have a SSH Server, which normally runs on port 22. " +
@@ -1851,20 +1938,25 @@ public class ConnectionDialog
 //		_aseClientCharset_cbx.addItem("unicode");
 		_aseClientCharset_cbx.addItem("utf8");	}
 	
-	private JPanel createAseTuneOptionsPanel()
+	private JPanel createDbxTuneOptionsPanel()
 	{
+		if (_dbxTuneOptionsPanel != null)
+			return _dbxTuneOptionsPanel;
+
 		JPanel panel = SwingUtils.createPanel("Options", true);
 		panel.setLayout(new MigLayout("wrap 1, gap 0", "", ""));   // insets Top Left Bottom Right
+		
+		_dbxTuneOptionsPanel = panel;
 
-//		_aseOptionSavePwd_chk        .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
-		_aseOptionConnOnStart_chk    .setToolTipText("When "+Version.getAppName()+" starts use the above ASE and connect automatically (if the below 'Persisten Counter Storage' is enabled, it will also be used at startup)");
-		_aseOptionReConnOnFailure_chk.setToolTipText("If connection to the monitored server is lost in some way, try to reconnect to the server again automatically.");
-		_aseOptionStore_chk          .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
-		_aseHostMonitor_chk          .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
-
-		_aseOptionUseTemplate_chk    .setToolTipText("<html>Use a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.<br>So if you have specific monitoring needs for this specific server, you can easely choose a specific preconfigured monitoring template.</html>");
-		_aseOptionUseTemplate_cbx    .setToolTipText("Choose a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.");
-		_aseOptionUseTemplate_but    .setToolTipText("Open the Template Dialog (same as menu->View->Change 'Performance Counter' Options...");
+//		_aseOptionSavePwd_chk          .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
+		_aseOptionConnOnStart_chk      .setToolTipText("When "+Version.getAppName()+" starts use the Server and connect automatically (if the below 'Persisten Counter Storage' is enabled, it will also be used at startup)");
+		_aseOptionReConnOnFailure_chk  .setToolTipText("If connection to the monitored server is lost in some way, try to reconnect to the server again automatically.");
+		_aseOptionStore_chk            .setToolTipText("Store GUI Counter Data in a database (Persistent Counter Storage), which can be viewed later, connect to it from the 'offline' tab");
+		_aseHostMonitor_chk            .setToolTipText("Connect to the Operating System host via SSH, to monitor IO statistics and/or CPU usage.");
+                                       
+		_aseOptionUseTemplate_chk      .setToolTipText("<html>Use a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.<br>So if you have specific monitoring needs for this specific server, you can easely choose a specific preconfigured monitoring template.</html>");
+		_aseOptionUseTemplate_cbx      .setToolTipText("Choose a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.");
+		_aseOptionUseTemplate_but      .setToolTipText("Open the Template Dialog (same as menu->View->Change 'Performance Counter' Options...");
 		
 		_aseDeferredConnect_chk        .setToolTipText("If you want to connect at a specific time, and start to collect data");
 		_aseDeferredConnectHour_sp     .setToolTipText("What Hour do you want to connect");
@@ -1873,20 +1965,20 @@ public class ConnectionDialog
 		_aseDeferredDisConnectHour_sp  .setToolTipText("After how many hours of sampling do you want to disconnect");
 		_aseDeferredDisConnectMinute_sp.setToolTipText("After how many minutes of sampling do you want to disconnect");
 
-		if (_showPcsTab)
+		if (_options._showPcsTab)
 			panel.add(_aseOptionStore_chk,       "");
 
-		if (_showHostmonTab)
+		if (_options._showHostmonTab)
 			panel.add(_aseHostMonitor_chk,       "");
 
-		if (_showPcsTab)
+		if (_options._showPcsTab)
 		{
 			panel.add(_aseOptionUseTemplate_chk, "split");
 			panel.add(_aseOptionUseTemplate_cbx, "pushx, growx");
 			panel.add(_aseOptionUseTemplate_but, "wrap");
 		}
 
-		if (_showHostmonTab || _showPcsTab)
+		if (_options._showHostmonTab || _options._showPcsTab)
 			panel.add(new JSeparator(),          "gap 5 5 5 5, pushx, growx"); // gap left [right] [top] [bottom]
 
 //		panel.add(_aseOptionSavePwd_chk,            "");
@@ -2023,7 +2115,7 @@ public class ConnectionDialog
 		s = "<b>- What is this Basic Operating System Monitoring.</b>";
 		t = "If you want to monitor the Operating System with some basic command, this is one way you can do it.<br>" +
 		    "And also if you are storing the Performance Counters in a Persistent storage, the OS Monitoring is in sync with <br>" +
-		    "the Performance Counters from the monitored ASE Server, which makes it easier to correlate the various metrics.";
+		    "the Performance Counters from the monitored  Server, which makes it easier to correlate the various metrics.";
 		txt = new MultiLineLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
@@ -2187,10 +2279,10 @@ public class ConnectionDialog
 		_pcsJdbcUrl_lbl     .setToolTipText(JDBC_URL_TOOLTIP);
 		_pcsJdbcUrl_cbx     .setToolTipText(JDBC_URL_TOOLTIP);
 		_pcsJdbcUrl_but     .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
-		_pcsJdbcUsername_lbl.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the ASE username</html>");
-		_pcsJdbcUsername_txt.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the ASE username</html>");
-		_pcsJdbcPassword_lbl.setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the ASE server, you can most likely leave this to blank.</html>");
-		_pcsJdbcPassword_txt.setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the ASE server, you can most likely leave this to blank.</html>");
+		_pcsJdbcUsername_lbl.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the monitored DB Server username</html>");
+		_pcsJdbcUsername_txt.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the monitored DB Server username</html>");
+		_pcsJdbcPassword_lbl.setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the monitored DB Server, you can most likely leave this to blank.</html>");
+		_pcsJdbcPassword_txt.setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the monitored DB Server, you can most likely leave this to blank.</html>");
 		_pcsTestConn_but    .setToolTipText("Make a test connection to the above JDBC datastore");
 		_pcsH2Option_startH2NetworkServer_chk.setToolTipText("Start the H2 database engine in 'server' mode, so we can connect to the server while the PCS is storing information...");
 
@@ -2313,8 +2405,8 @@ public class ConnectionDialog
 
 		_pcsDdl_doDdlLookupAndStore_chk            .setToolTipText("<html>If you want the most accessed objects, Stored procedures, views etc and active statements to be DDL information to be stored in the PCS.<br>You can view them with the tool 'DDL Viewer' when connected to a offline database.<html>");
 		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setToolTipText("Also do DDL Lookup and Storage of dependant objects. Simply does 'exec sp_depends tabname' and add dependant objects for lookup...");
-		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the ASE Server.");
-		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the ASE Server.");
+		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the source DB Server.");
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the source DB Server.");
 
 		// LAYOUT
 		panel.add(_pcsDdl_doDdlLookupAndStore_chk,             "");
@@ -2542,6 +2634,7 @@ public class ConnectionDialog
 		_jdbcUrlOptions_txt.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
 		_jdbcUrlOptions_but.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
 		_jdbcTestConn_but  .setToolTipText("Make a test connection to the above JDBC datastore");
+		_jdbcDriverInfo_but.setToolTipText("Show a dialog with all available JDBC Drivers that are in the java classpath");
 
 		panel.add(_jdbcIcon,  "");
 		panel.add(_jdbcHelp,  "wmin 100, push, grow, wrap 15");
@@ -2561,7 +2654,8 @@ public class ConnectionDialog
 		panel.add(_jdbcUsername_txt,     "push, grow, wrap");
 
 		panel.add(_jdbcPassword_lbl,     "");
-		panel.add(_jdbcPassword_txt,     "push, grow, wrap");
+		panel.add(_jdbcPassword_txt,     "push, grow, split");
+		panel.add(_jdbcSavePassword_chk, "wrap");
 		
 		panel.add(_jdbcSqlInit_lbl,      "");
 		panel.add(_jdbcSqlInit_txt,      "push, grow, wrap");
@@ -2570,10 +2664,12 @@ public class ConnectionDialog
 		panel.add(_jdbcUrlOptions_txt,   "push, grow, split");
 		panel.add(_jdbcUrlOptions_but,   "wrap");
 
-		panel.add(_jdbcSavePassword_chk, "skip, split, growx, pushx");
+//		panel.add(_jdbcSavePassword_chk, "skip, split, growx, pushx");
 //		panel.add(_jdbcTestConn_lbl,     "");
+		panel.add(new JLabel(),          "skip, split, growx, pushx"); // dummy to push next to the right
+		panel.add(_jdbcDriverInfo_but,   "hidemode 2");
 		panel.add(_jdbcTestConn_but,     "wrap");
-		
+
 		_jdbcProfile_cbx.setEditable(false);
 		_jdbcDriver_cbx .setEditable(true);
 		_jdbcUrl_cbx    .setEditable(true);
@@ -2615,6 +2711,8 @@ public class ConnectionDialog
 		_jdbcPassword_txt   .addActionListener(this);
 		_jdbcUrl_but        .addActionListener(this);
 		_jdbcUrlOptions_but .addActionListener(this);
+
+		_jdbcDriverInfo_but .addActionListener(this);
 
 		// ADD FOCUS LISTENERS
 //		xxx_txt.addFocusListener(this);
@@ -3042,7 +3140,8 @@ public class ConnectionDialog
 				//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+//				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+				CountersModel cm  = CounterController.getInstance().getCmByDisplayName(tabName);
 				if (cm != null)
 				{
 					if (col == PCS_TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
@@ -3078,33 +3177,37 @@ public class ConnectionDialog
 
 	private void toggleCounterStorageTab()
 	{
-		if (_showPcsTab)
+		if (_options._showPcsTab)
 		{
 			if (_aseOptionStore_chk.isSelected())
 			{
 //				_tab.setVisibleAtModel(TAB_POS_PCS, true);
-				_tab.setEnabledAt(TAB_POS_PCS, true);
+//				_tab.setEnabledAtModel(TAB_POS_PCS, true);
+				_tab.setEnabledAtTitle(TAB_TITLE_PCS, true);
 			}
 			else
 			{
 //				_tab.setVisibleAtModel(TAB_POS_PCS, false);
-				_tab.setEnabledAt(TAB_POS_PCS, false);
+//				_tab.setEnabledAtModel(TAB_POS_PCS, false);
+				_tab.setEnabledAtTitle(TAB_TITLE_PCS, false);
 			}
 		}
 	}
 	private void toggleHostmonTab()
 	{
-		if (_showHostmonTab)
+		if (_options._showHostmonTab)
 		{
 			if (_aseHostMonitor_chk.isSelected())
 			{
 //				_tab.setVisibleAtModel(TAB_POS_HOSTMON, true);
-				_tab.setEnabledAt(TAB_POS_HOSTMON, true);
+//				_tab.setEnabledAtModel(TAB_POS_HOSTMON, true);
+				_tab.setEnabledAtTitle(TAB_TITLE_HOSTMON, true);
 			}
 			else
 			{
 //				_tab.setVisibleAtModel(TAB_POS_HOSTMON, false);
-				_tab.setEnabledAt(TAB_POS_HOSTMON, false);
+//				_tab.setEnabledAtModel(TAB_POS_HOSTMON, false);
+				_tab.setEnabledAtTitle(TAB_TITLE_HOSTMON, false);
 			}
 		}
 	}
@@ -3118,10 +3221,14 @@ public class ConnectionDialog
 		String otherProblem   = "";
 
 		boolean checkMoreStuff = true;
+		boolean checkHostPort  = true;
 
-		if (TAB_TITLE_ASE.equals(_tab.getSelectedTitle(false)))
+		String curTabName = _tab.getSelectedTitle(false);
+
+		if (TAB_TITLE_ASE.equals(curTabName))
 		{
 			checkMoreStuff = true;
+			checkHostPort  = true;
 
 			if (_aseUser_txt.getText().trim().equals("")) 
 				aseProblem = "ASE User name must be specified";
@@ -3133,9 +3240,10 @@ public class ConnectionDialog
 			}
 		}
 
-		else if (TAB_TITLE_OFFLINE.equals(_tab.getSelectedTitle(false)))
+		else if (TAB_TITLE_OFFLINE.equals(curTabName))
 		{
 			checkMoreStuff = false;
+			checkHostPort  = false;
 
 			String url = _offlineJdbcUrl_cbx.getEditor().getItem().toString();
 			// URL
@@ -3146,9 +3254,10 @@ public class ConnectionDialog
 				offlineProblem = "Replace the [template] with something or delete it.";
 		}
 
-		else if (TAB_TITLE_JDBC.equals(_tab.getSelectedTitle(false)))
+		else if (TAB_TITLE_JDBC.equals(curTabName))
 		{
-			checkMoreStuff = false;
+			checkMoreStuff = true;
+			checkHostPort  = false;
 
 //			String url = _jdbcUrl_cbx.getEditor().getItem().toString();
 //			// URL
@@ -3161,7 +3270,7 @@ public class ConnectionDialog
 
 		if (checkMoreStuff)
 		{
-			if (_showAseTuneOptions) // then the createAseTuneOptionsPanel() has been done, and we want to check this
+			if (_options._showDbxTuneOptionsInTds || _options._showDbxTuneOptionsInJdbc) // then the createAseTuneOptionsPanel() has been done, and we want to check this
 			{
 				if (_aseOptionStore_chk.isSelected())
 				{
@@ -3209,7 +3318,7 @@ public class ConnectionDialog
 				}
 			}
 
-			if (true)
+			if (checkHostPort)
 			{
 				// host/port fields has to match
 				String[] hosts = StringUtil.commaStrToArray(_aseHost_txt.getText());
@@ -3224,9 +3333,12 @@ public class ConnectionDialog
 		String sumProblem = otherProblem + aseProblem + offlineProblem + jdbcProblem + pcsProblem + hostmonProblem;
 		_ok_lbl.setText(sumProblem);
 		_pcsTestConn_lbl.setText(sumProblem);
-		_tab.setForegroundAtModel(TAB_POS_HOSTMON, _tab.getForegroundAtModel(TAB_POS_ASE));
-		_tab.setForegroundAtModel(TAB_POS_PCS,     _tab.getForegroundAtModel(TAB_POS_ASE));
-		_tab.setForegroundAtModel(TAB_POS_OFFLINE, _tab.getForegroundAtModel(TAB_POS_ASE));
+
+//		Color fgColor = _tab.getForegroundAtModel( _tab.getSelectedIndexModel() );
+		Color fgColor = Color.BLACK;
+		_tab.setForegroundAtModel(TAB_POS_HOSTMON, fgColor);
+		_tab.setForegroundAtModel(TAB_POS_PCS,     fgColor);
+		_tab.setForegroundAtModel(TAB_POS_OFFLINE, fgColor);
 
 		if (sumProblem.equals(""))
 		{
@@ -3438,17 +3550,17 @@ public class ConnectionDialog
 			if (currentVersion != newVersion)
 			{
 				String msg = "<html>" +
-						"Connecting to a different ASE Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
-						"To connect to another ASE Version, you need to restart the application." +
+						"Connecting to a different DB Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
+						"To connect to another DB Version, you need to restart the application." +
 						"</html>";
-				if (AseTune.hasGUI())
+				if (DbxTune.hasGui())
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
 				return false;
 			}
 			else
 			{
-				_logger.info("Re-connected to the same ASE Version as priviously. Version is '"+currentVersion+"'.");
+				_logger.info("Re-connected to the same DB Version as priviously. Version is '"+currentVersion+"'.");
 				return true;
 			}
 		}
@@ -3476,6 +3588,8 @@ public class ConnectionDialog
 		SshTunnelInfo sshTunnelInfo   = _aseSshTunnelInfo;
 
 		String        loginTimeoutStr = _aseLoginTimeout_txt.getText().trim();
+		
+		ImageIcon     srvIcon         = ConnectionProfileManager.getIcon32(ConnectionProfile.SrvType.TDS_ASE);
 
 		if (connProfile != null)
 		{
@@ -3495,6 +3609,8 @@ public class ConnectionDialog
 			aseSshTunnel   = entry._tdsShhTunnelUse;
 			
 			loginTimeoutStr= entry._tdsLoginTimout + "";
+			
+			srvIcon         = ConnectionProfileManager.getIcon32(connProfile.getSrvType());
 		}
 
 		// -------------------------------------------
@@ -3508,21 +3624,22 @@ public class ConnectionDialog
 			props.put("password", password);
 			try
 			{
-				_logger.info("Connecting to ASE using RAW-URL username='"+username+"', URL='"+tdsUseUrlStr+"'.");
-				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _checkAseCfg, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit);
+				_logger.info("Connecting to DB Server using RAW-URL username='"+username+"', URL='"+tdsUseUrlStr+"'.");
+//				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _checkAseCfg, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit);
+				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
 				return true;
 			}
 			catch (SQLException e)
 			{
 				String msg = AseConnectionUtils.showSqlExceptionMessage(this, "Problems Connecting", "Problems when connecting to the data server.", e); 
-				_logger.warn("Problems when connecting to a ASE Server. "+msg);
+				_logger.warn("Problems when connecting to a DB Server. "+msg);
 				return false;
 			}
 			catch (Exception e)
 			{
 				SwingUtils.showErrorMessage(this, "Problems Connecting", "Problems when connecting to the data server.\n\n" + e.getMessage(), e);
-				_logger.warn("Problems when connecting to a ASE Server. Caught: "+e);
+				_logger.warn("Problems when connecting to a DB Server. Caught: "+e);
 				return false;
 			}
 			//<<<<<----- RETURN after this
@@ -3586,13 +3703,10 @@ public class ConnectionDialog
 		
 		try
 		{
-			_logger.info("Connecting to ASE '"+AseConnectionFactory.getServer()+"'.  hostPortStr='"+AseConnectionFactory.getHostPortStr()+"', user='"+AseConnectionFactory.getUser()+"'.");
+			_logger.info("Connecting to DB Server '"+AseConnectionFactory.getServer()+"'.  hostPortStr='"+AseConnectionFactory.getHostPortStr()+"', user='"+AseConnectionFactory.getUser()+"'.");
 
 			String urlStr = AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr();
-//			String urlStr = "jdbc:sybase:Tds:" + AseConnectionFactory.getHostPortStr();
-			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit);
-//			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _checkAseCfg, _sshConn, _desiredProductName);
-//			_aseConn = AseConnectionFactory.getConnection();
+			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //String TDS_SSH_TUNNEL_CONNECTION  = _aseConn.getClientInfo("TDS_SSH_TUNNEL_CONNECTION");
 //String TDS_SSH_TUNNEL_INFORMATION = _aseConn.getClientInfo("TDS_SSH_TUNNEL_INFORMATION");
 //System.out.println("TDS_SSH_TUNNEL_CONNECTION="+TDS_SSH_TUNNEL_CONNECTION);
@@ -3603,12 +3717,12 @@ public class ConnectionDialog
 		{
 			// The below shows a showErrorMessage
 			String msg = AseConnectionUtils.showSqlExceptionMessage(this, "Problems Connecting", "Problems when connecting to the data server.", e); 
-			_logger.warn("Problems when connecting to a ASE Server. "+msg);
+			_logger.warn("Problems when connecting to a  Server. "+msg);
 			return false;
 		}
 		catch (Exception e)
 		{
-			_logger.warn("Problems when connecting to a ASE Server. Caught: "+e);
+			_logger.warn("Problems when connecting to a DB Server. Caught: "+e);
 			SwingUtils.showErrorMessage(this, "Problems Connecting", 
 					"Problems when connecting to the data server." +
 					"\n\n" + e.getMessage(), e);
@@ -3644,7 +3758,8 @@ public class ConnectionDialog
 
 		if (connProfile != null)
 		{
-			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+			ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
 			username = entry._osMonUsername;
 			password = entry._osMonPassword;
@@ -3710,8 +3825,7 @@ public class ConnectionDialog
 			String pcsAll = _pcsWriter_cbx.getEditor().getItem().toString();
 			if (connProfile != null)
 			{
-				ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
-				pcsAll = entry._pcsWriterClass;
+				pcsAll = connProfile.getDbxTuneParams()._pcsWriterClass;
 			}
 			pcsProps.put(PersistentCounterHandler.PROPKEY_WriterClass, pcsAll);
 
@@ -3726,7 +3840,8 @@ public class ConnectionDialog
 				{
 					if (connProfile != null)
 					{
-						ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//						ConnectionProfile.TdsEntry tdsEntry = connProfile.getTdsEntry();
+						ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
 						pcsProps.put(PersistWriterJdbc.PROP_jdbcDriver,   entry._pcsWriterDriver);
 						pcsProps.put(PersistWriterJdbc.PROP_jdbcUrl,      entry._pcsWriterUrl);
@@ -4165,7 +4280,16 @@ public class ConnectionDialog
 			tunnelInfo     = entry._jdbcShhTunnelInfo;
 		}
 		
-		_jdbcConn = jdbcConnect(Version.getAppName(), 
+//		_jdbcConn = jdbcConnect(Version.getAppName(), 
+//				jdbcDriver, 
+//				jdbcUrl,
+//				jdbcUser, 
+//				jdbcPasswd,
+//				jdbcUrlOptions,
+//				sqlInit,
+//				tunnelInfo);
+
+		_jdbcConn = jdbcConnect2(Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
 				jdbcUser, 
@@ -4216,7 +4340,48 @@ public class ConnectionDialog
 	/**
 	 * Test to connect
 	 * @param tunnelInfo 
+	 * @throws Exception 
 	 */
+	private Connection jdbcConnect2(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
+	{
+		Properties props  = new Properties();
+	//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
+		props.put("user", user);
+		props.put("password", passwd);
+		
+		if (StringUtil.hasValue(urlOptions))
+		{
+			Map<String, String> urlMap = StringUtil.parseCommaStrToMap(urlOptions);
+			for (String key : urlMap.keySet())
+			{
+				String val = urlMap.get(key);
+				
+				props .put(key, val);
+			}
+		}
+		
+		// Add specific JDBC Properties, for specific URL's, if not already specified
+		if (url.startsWith("jdbc:db2:"))
+		{
+			if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
+			{
+				props .put("retrieveMessagesFromServerOnGetMessage", "true");
+			}
+		}
+
+		try
+		{
+			ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
+			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, _options._srvExtraChecks, _sshConn, tunnelInfo, _desiredProductName, sqlInit, srvIcon);
+		}
+		catch (Exception ex)
+		{
+			// Or we can choose to show a DIALOG, but lets skip it for now.
+			//ex.printStackTrace();
+			return null;
+		}
+	}
+
 	private Connection jdbcConnect(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo)
 	{
 		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
@@ -4958,6 +5123,31 @@ public class ConnectionDialog
 					_jdbcPassword_txt.getText());
 		}
 
+		// --- JDBC: SHOW JDBC DRIVER INFO
+		if (_jdbcDriverInfo_but.equals(source))
+		{
+			final JDialog dialog = new JDialog(this, "JDBC Driver Information", true);
+			JButton close = new JButton("Close");
+
+			dialog.setLayout(new MigLayout());
+			dialog.add(_jdbcDriverInfoPanel, "grow, push, wrap");
+			dialog.add(close,                "tag ok, wrap");
+
+			dialog.pack();
+			SwingUtils.setLocationCenterParentWindow(this, dialog);
+
+			close.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					dialog.setVisible(false);
+				}
+			});
+			
+			dialog.setVisible(true);
+		}
+
 		// --- ASE: jConnect Options BUTTON: "..."  (open dialig to choose available options)
 		if (_jdbcUrlOptions_but.equals(source))
 		{
@@ -5022,10 +5212,12 @@ public class ConnectionDialog
 			{
 				connType = JDBC_CONN;
 			}
-			// ASE & PCS CONNECT
+			// if current tab is 'PCS' or 'HOSTMON', then choose what type based of what tab's are visible
 			else
 			{
-				connType = TDS_CONN;
+				if      (_options._showAseTab)  connType = TDS_CONN;
+				else if (_options._showJdbcTab) connType = JDBC_CONN;
+				else throw new RuntimeException("Sorry I can't figgure out where to connect, please choose tab '"+TAB_TITLE_ASE+"' or '"+TAB_TITLE_JDBC+"'.");
 			}
 
 			action_connect(connType, null);
@@ -5157,39 +5349,286 @@ public class ConnectionDialog
 			_connectionType = OFFLINE_CONN;
 			setVisible(false);
 		}
-		// JDBC CONNECT
-		else if (JDBC_CONN == connType)
-		{
-			// CONNECT to the JDBC, if it fails, we stay in the dialog
-			if ( _jdbcConn == null )
-			{
-				if ( ! jdbcConnect(connProfile) )
-					return;
-			}
+//		// JDBC CONNECT
+//		else if (JDBC_CONN == connType)
+//		{
+//			// CONNECT to the JDBC, if it fails, we stay in the dialog
+//			if ( _jdbcConn == null )
+//			{
+//				if ( ! jdbcConnect(connProfile) )
+//					return;
+//			}
+//
+//			// Update Connection Profile
+//			updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
+//
+//			// SET CONNECTION TYP and "CLOSE" the dialog
+//			_connectionType = JDBC_CONN;
+//			setVisible(false);
+//		}
+//		// ASE & PCS CONNECT
+//		else if (TDS_CONN == connType)
+//		{
+//			if (_options._showAseTuneOptions)
+//			{
+//				boolean recordThisSession        = _aseOptionStore_chk.isSelected();
+//				boolean aseDeferredConnect       = _aseDeferredConnect_chk.isSelected();
+//				boolean aseHostMonitor           = _aseHostMonitor_chk.isSelected();
+//	
+//				if (connProfile != null)
+//				{
+//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//	
+//					recordThisSession        = entry._asetuneOptRecordSession;
+//					aseDeferredConnect       = entry._asetuneOptConnectLater;
+//					aseHostMonitor           = entry._asetuneOptOsMonitoring;
+//				}
+//	
+//				// Double check if we want to RECORD the session
+//				// We might have pressed OK and RECORD has been checked, but it was the previous session.
+//				if (recordThisSession)
+//				{
+//					String msgHtml = 
+//						"<html>" +
+//						   "<h2>Do you want to record this session?</h2>" +
+//						   "Your intentions might be: to just view Performance Counters without Recording them in a database (the Persistent Counter Storage)<br>" +
+//						   "Meaning you have just forgot to <b>disable</b> the Recording for this specific session...<br>" +
+//						   "<ul>" +
+//						   "  <li><b>Continue</b> the connection and <b>Record</b> the Performance Counters.</li>" +
+//						   "  <li><b>Continue</b> the connection <b>without recoding</b> the data, just view the Performance Counters.</li>" +
+//						   "  <li><b>Cancel</b> and <b>return</b> to the Connection Dialog.</li>" +
+//						   "</ul>" +
+//						"</html>";
+//	
+//					Object[] options = {
+//							"Record Session",
+//							"Do NOT Record",
+//							"Cancel"
+//							};
+//					int answer = JOptionPane.showOptionDialog(this, 
+//						msgHtml,
+//						"Record this Performance Session?", // title
+//						JOptionPane.YES_NO_CANCEL_OPTION,
+//						JOptionPane.QUESTION_MESSAGE,
+//						null,     //do not use a custom Icon
+//						options,  //the titles of buttons
+//						options[0]); //default button title
+//	
+//					if      (answer == 0) recordThisSession = true;
+//					else if (answer == 1) recordThisSession = false;
+//					else                  return;
+//				}
+//	
+//				// Should we WAIT to make the connection. DEFERRED or CONNECT LATER
+//				if (aseDeferredConnect)
+//				{
+//					final String hhmm = aseDeferredConnectChkAction(connProfile);
+//					if (hhmm != null)
+//					{
+//						Date startTime = null;
+//						try { startTime = PersistWriterBase.getRecordingStartTime(hhmm); }
+//						catch(Exception ignore) { }
+//	
+//						if (startTime != null)
+//						{
+//							// Create a Waitfor Dialog
+//							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at "+startTime);
+//	
+//							// Create the Executor object
+//							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
+//							{
+//								@Override
+//								public Object doWork()
+//								{
+//									try { PersistWriterBase.waitForRecordingStartTime(hhmm, getWaitDialog()); }
+//									catch (InterruptedException ignore) {}
+//	
+//									return null;
+//								}
+//	
+//								/** Should the cancel button be visible or not. */
+//								@Override
+//								public boolean canDoCancel()
+//								{
+//									return true;
+//								}
+//							};
+//							  
+//							// or if you didn't return anything from the doWork() method
+//							wait.execAndWait(doWork);
+//							
+//							// Stay in the Connection Dialog if cancel was pressed
+//							if (wait.wasCanceled())
+//							{
+//								return;
+//							}
+//						}
+//					}
+//				} // end: wait for connect
+//	
+//				// PCS CONNECT
+//				if (recordThisSession)
+//				{
+//					// CONNECT to the PCS, if it fails, we stay in the dialog
+//	
+//					// A new instance will be created each time we connect/hit_ok_but, 
+//					// thats ok because its done inside pcsConnect().
+//					if ( ! pcsConnect(connProfile) )
+//						return;
+//	
+//					// setPersistCounters for all CM:s
+//					if (_useCmForPcsTable && connProfile == null)
+//					{
+//						TableModel tm = _pcsSessionTable.getModel();
+//						for(int r=0; r<tm.getRowCount(); r++)
+//						{
+//							for (CountersModel cm : CounterController.getInstance().getCmList())
+//							{
+//								String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
+//								Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
+//								Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
+//								boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
+//								boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
+//								boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
+//								boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
+//								String  cmName   = cm.getName();
+//								if (cmName.equals(rowName))
+//								{
+//									cm.setPersistCounters    (pcsStore,               true);
+//									cm.setPersistCountersAbs (pcsStoreAbs,            true);
+//									cm.setPersistCountersDiff(pcsStoreDiff,           true);
+//									cm.setPersistCountersRate(pcsStoreRate,           true);
+//									cm.setPostponeTime       (pcsPostpone.intValue(), true);
+//									cm.setQueryTimeout       (pcsTimeout.intValue(),  true);
+//									continue;
+//								}
+//							}
+//						}
+//					}
+//					else
+//					{
+//	//					TableModel tm = _pcsSessionTable.getModel();
+//	//					for(int r=0; r<tm.getRowCount(); r++)
+//	//					{
+//	//						String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
+//	//						Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
+//	//						Integer pcsPostpone  = (Integer)  tm.getValueAt(r, PCS_TAB_POS_POSTPONE);
+//	//						boolean pcsStore     = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_PCS)) .booleanValue();
+//	//						boolean pcsStoreAbs  = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_ABS)) .booleanValue();
+//	//						boolean pcsStoreDiff = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_DIFF)).booleanValue();
+//	//						boolean pcsStoreRate = ((Boolean) tm.getValueAt(r, PCS_TAB_POS_STORE_RATE)).booleanValue();
+//	//						
+//	//						//System.out.println("OK: name="+StringUtil.left(rowName,25)+", timeout="+pcsTimeout+", postpone="+pcsPostpone+", store="+pcsStore+", abs="+pcsStoreAbs+", diff="+pcsStoreDiff+", rate="+pcsStoreRate+".");
+//	//					}
+//					}
+//				} // end: PCS CONNECT
+//	
+//				// OS HOST CONNECT
+//				if (aseHostMonitor)
+//				{
+//					// Simply set the Connection Object used to connect
+//					// the ACTUAL SSH Connection will be done as a tak in aseConnect() + ConnectionProgressDialog... 
+//					_sshConn = hostmonCreateConnectionObject(connProfile);
+//	
+//				} // end: OS HOST CONNECT
+//			} // end: _showAseTuneOptions
+//
+//			if ( _aseConn == null )
+//			{
+//				// CONNECT to the ASE
+//				boolean ok = aseConnect(connProfile);
+//
+//				// HOST MONITOR: post fix
+//				if (_sshConn != null && ! _sshConn.isConnected() )
+//				{
+//					_sshConn.close();
+//					_sshConn = null;
+//				}
+//				
+//				// if it failed: stay in the dialog
+//				if ( ! ok  )
+//					return;
+//			}
+//			
+//			
+//			// Set a specific COUNTER TEMPLATE
+//			if (_options._showAseTuneOptions)
+//			{
+//				boolean aseOptionUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
+//				String  aseOptionUseTemplateName = StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx);
+//	
+//				if (connProfile != null)
+//				{
+//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//	
+//					aseOptionUseTemplate     = entry._asetuneUseTemplate;
+//					aseOptionUseTemplateName = entry._asetuneUseTemplateName;
+//				}
+//	
+//				if (aseOptionUseTemplate)
+//				{
+//					if ( NO_TEMPLATE_IS_SELECTED.equals(aseOptionUseTemplateName) )
+//					{
+//						// Should we display a message that NO TEMPLATE is selected here???
+//						// For the moment, just continue...
+//					}
+//					else
+//					{
+//						try 
+//						{
+//							TcpConfigDialog.setTemplate(aseOptionUseTemplateName);
+//						}
+//						catch(NameNotFoundException ex)
+//						{
+//							SwingUtils.showInfoMessage(this, "Error loading Template", 
+//									"<html>"
+//									+ "Can't load the Template Named '"+aseOptionUseTemplateName+"'<br>"
+//									+ "<br>"
+//									+ "Continuing the connect process, but without the specified template loaded."
+//									+ "</html>");
+//						}
+//					}
+//				}
+//
+//				// Set the desired disconnect time.
+//				_disConnectTime = null;
+//				try 
+//				{ 
+//					Date stopTime  = PersistWriterBase.getRecordingStopTime(null, aseDeferredDisConnectChkAction(connProfile)); 
+//					_disConnectTime = stopTime;
+//				}
+//				catch(Exception ex) 
+//				{
+//					_logger.warn("Could not determen stop/disconnect time, stop time will NOT be set.");
+//				}
+//			} // end: _showAseTuneOptions
+//
+//			// Update Connection Profile
+//			updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
+//
+//			// SET CONNECTION TYP and "CLOSE" the dialog
+//			_connectionType = TDS_CONN;
+//			setVisible(false);
+//
+//		} // END: ASE & PCS CONNECT
 
-			// Update Connection Profile
-			updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
-
-			// SET CONNECTION TYP and "CLOSE" the dialog
-			_connectionType = JDBC_CONN;
-			setVisible(false);
-		}
-		// ASE & PCS CONNECT
-		else if (TDS_CONN == connType)
+		// ASE/JDBC & PCS CONNECT
+		else if (TDS_CONN == connType || JDBC_CONN == connType)
 		{
-			if (_showAseTuneOptions)
+			if (_options._showDbxTuneOptionsInTds || _options._showDbxTuneOptionsInJdbc)
 			{
 				boolean recordThisSession        = _aseOptionStore_chk.isSelected();
-				boolean aseDeferredConnect       = _aseDeferredConnect_chk.isSelected();
-				boolean aseHostMonitor           = _aseHostMonitor_chk.isSelected();
+				boolean dbxDeferredConnect       = _aseDeferredConnect_chk.isSelected();
+				boolean dbxHostMonitor           = _aseHostMonitor_chk.isSelected();
 	
 				if (connProfile != null)
 				{
-					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+					ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 	
-					recordThisSession        = entry._asetuneOptRecordSession;
-					aseDeferredConnect       = entry._asetuneOptConnectLater;
-					aseHostMonitor           = entry._asetuneOptOsMonitoring;
+					recordThisSession        = entry._dbxtuneOptRecordSession;
+					dbxDeferredConnect       = entry._dbxtuneOptConnectLater;
+					dbxHostMonitor           = entry._dbxtuneOptOsMonitoring;
 				}
 	
 				// Double check if we want to RECORD the session
@@ -5228,7 +5667,7 @@ public class ConnectionDialog
 				}
 	
 				// Should we WAIT to make the connection. DEFERRED or CONNECT LATER
-				if (aseDeferredConnect)
+				if (dbxDeferredConnect)
 				{
 					final String hhmm = aseDeferredConnectChkAction(connProfile);
 					if (hhmm != null)
@@ -5290,7 +5729,7 @@ public class ConnectionDialog
 						TableModel tm = _pcsSessionTable.getModel();
 						for(int r=0; r<tm.getRowCount(); r++)
 						{
-							for (CountersModel cm : GetCounters.getCmList())
+							for (CountersModel cm : CounterController.getInstance().getCmList())
 							{
 								String  rowName      = (String)   tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
 								Integer pcsTimeout   = (Integer)  tm.getValueAt(r, PCS_TAB_POS_TIMEOUT);
@@ -5332,45 +5771,73 @@ public class ConnectionDialog
 				} // end: PCS CONNECT
 	
 				// OS HOST CONNECT
-				if (aseHostMonitor)
+				if (dbxHostMonitor)
 				{
 					// Simply set the Connection Object used to connect
 					// the ACTUAL SSH Connection will be done as a tak in aseConnect() + ConnectionProgressDialog... 
 					_sshConn = hostmonCreateConnectionObject(connProfile);
 	
 				} // end: OS HOST CONNECT
-			} // end: _showAseTuneOptions
+			} // end: _showAseTuneOptions || _showDbxTuneOptionsInJdbc
 
-			if ( _aseConn == null )
+			if (TDS_CONN == connType)
 			{
-				// CONNECT to the ASE
-				boolean ok = aseConnect(connProfile);
-
-				// HOST MONITOR: post fix
-				if (_sshConn != null && ! _sshConn.isConnected() )
+    			if ( _aseConn == null )
+    			{
+    				// CONNECT to the ASE
+    				boolean ok = aseConnect(connProfile);
+    
+    				// HOST MONITOR: post fix
+    				if (_sshConn != null && ! _sshConn.isConnected() )
+    				{
+    					_sshConn.close();
+    					_sshConn = null;
+    				}
+    				
+    				// if it failed: stay in the dialog
+    				if ( ! ok  )
+    					return;
+    			}
+			}
+			else if (JDBC_CONN == connType)
+			{
+				// CONNECT to the JDBC, if it fails, we stay in the dialog
+				if ( _jdbcConn == null )
 				{
-					_sshConn.close();
-					_sshConn = null;
+    				boolean ok = jdbcConnect(connProfile);
+
+    				// HOST MONITOR: post fix
+    				if (_sshConn != null && ! _sshConn.isConnected() )
+    				{
+    					_sshConn.close();
+    					_sshConn = null;
+    				}
+    				
+    				// if it failed: stay in the dialog
+    				if ( ! ok  )
+    					return;
 				}
-				
-				// if it failed: stay in the dialog
-				if ( ! ok  )
-					return;
+			}
+			else
+			{
+				// This could not happen but lets put it ion here if we change the code
+				throw new RuntimeException("Unknow connection type. connType="+connType);
 			}
 			
 			
 			// Set a specific COUNTER TEMPLATE
-			if (_showAseTuneOptions)
+			if (_options._showDbxTuneOptionsInTds || _options._showDbxTuneOptionsInJdbc)
 			{
 				boolean aseOptionUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
 				String  aseOptionUseTemplateName = StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx);
 	
 				if (connProfile != null)
 				{
-					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
-	
-					aseOptionUseTemplate     = entry._asetuneUseTemplate;
-					aseOptionUseTemplateName = entry._asetuneUseTemplateName;
+//					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+					ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
+
+					aseOptionUseTemplate     = entry._dbxtuneUseTemplate;
+					aseOptionUseTemplateName = entry._dbxtuneUseTemplateName;
 				}
 	
 				if (aseOptionUseTemplate)
@@ -5409,13 +5876,26 @@ public class ConnectionDialog
 				{
 					_logger.warn("Could not determen stop/disconnect time, stop time will NOT be set.");
 				}
-			} // end: _showAseTuneOptions
+			} // end: _showAseTuneOptions || _showDbxTuneOptionsInJdbc
 
 			// Update Connection Profile
-			updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
+			if (TDS_CONN == connType)
+			{
+				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
+			}
+			else if (JDBC_CONN == connType)
+			{
+				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
+			}
+			else
+			{
+				// This could not happen but lets put it ion here if we change the code
+				throw new RuntimeException("Unknow connection type. connType="+connType);
+			}
+
 
 			// SET CONNECTION TYP and "CLOSE" the dialog
-			_connectionType = TDS_CONN;
+			_connectionType = connType;
 			setVisible(false);
 
 		} // END: ASE & PCS CONNECT
@@ -5474,52 +5954,53 @@ public class ConnectionDialog
 			tds._tdsUseUrl              = _aseConnUrl_chk.isSelected();
 			tds._tdsUseUrlStr           = _aseConnUrl_txt.getText(); // actual URL if _aseConnUrl_chk.isSelected is true
 
-			tds._isAseTuneParamsValid   = _showAseTuneOptions;
-			if (tds._isAseTuneParamsValid)
+			tds._isDbxTuneParamsValid   = _options._showDbxTuneOptionsInTds;
+			if (tds._isDbxTuneParamsValid)
 			{
-				tds._asetuneUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
-				tds._asetuneUseTemplateName = _aseOptionUseTemplate_mod.notSelectedValueToNull(StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx));
-
-				tds._asetuneOptRecordSession          = _aseOptionStore_chk.isSelected();
-				tds._asetuneOptOsMonitoring           = _aseHostMonitor_chk.isSelected();
-
-				tds._asetuneOptConnectAtStartup       = _aseOptionConnOnStart_chk    .isSelected();
-				tds._asetuneOptReconnectOnLostConn    = _aseOptionReConnOnFailure_chk.isSelected();
-				tds._asetuneOptConnectLater           = _aseDeferredConnect_chk      .isSelected();
-				tds._asetuneOptDissConnectLater       = _aseDeferredDisConnect_chk   .isSelected();
-				if (tds._asetuneOptConnectLater)
-				{
-					tds._asetuneOptConnectLaterHour       = _aseDeferredConnectHour_spm  .getNumber()+"";
-					tds._asetuneOptConnectLaterMinute     = _aseDeferredConnectMinute_spm.getNumber()+"";
-				}
-				if (tds._asetuneOptConnectLater)
-				{
-					tds._asetuneOptDissConnectLaterHour   = _aseDeferredDisConnectHour_spm  .getNumber()+"";
-					tds._asetuneOptDissConnectLaterMinute = _aseDeferredDisConnectMinute_spm.getNumber()+"";
-				}
-
-				if (tds._asetuneOptOsMonitoring)
-				{
-					tds._osMonUsername      = _hostmonUser_txt         .getText();
-					tds._osMonPassword      = _hostmonPasswd_txt       .getText();
-					tds._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
-					tds._osMonHost          = _hostmonHost_txt         .getText();
-					tds._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
-				}
-
-				if (tds._asetuneOptRecordSession)
-				{
-					tds._pcsWriterClass                    = StringUtil.getSelectedItemString(_pcsWriter_cbx);
-					tds._pcsWriterDriver                   = StringUtil.getSelectedItemString(_pcsJdbcDriver_cbx);
-					tds._pcsWriterUrl                      = StringUtil.getSelectedItemString(_pcsJdbcUrl_cbx);
-					tds._pcsWriterUsername                 = _pcsJdbcUsername_txt    .getText();
-					tds._pcsWriterPassword                 = _pcsJdbcPassword_txt    .getText();
-					tds._pcsWriterSavePassword             = _pcsJdbcSavePassword_chk.isSelected();
-					tds._pcsWriterStartH2asNwServer        = _pcsH2Option_startH2NetworkServer_chk      .isSelected();
-					tds._pcsWriterDdlLookup                = _pcsDdl_doDdlLookupAndStore_chk            .isSelected();
-					tds._pcsWriterDdlStoreDependantObjects = _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected();
-					tds._pcsWriterDdlLookupSleepTime       = StringUtil.parseInt(_pcsDdl_afterDdlLookupSleepTimeInMs_txt.getText(), tds._pcsWriterDdlLookupSleepTime);
-				}
+				tds._dbxtuneParams = createDbxTuneParams();
+//				tds._dbxtuneUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
+//				tds._dbxtuneUseTemplateName = _aseOptionUseTemplate_mod.notSelectedValueToNull(StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx));
+//
+//				tds._dbxtuneOptRecordSession          = _aseOptionStore_chk.isSelected();
+//				tds._dbxtuneOptOsMonitoring           = _aseHostMonitor_chk.isSelected();
+//
+//				tds._dbxtuneOptConnectAtStartup       = _aseOptionConnOnStart_chk    .isSelected();
+//				tds._dbxtuneOptReconnectOnLostConn    = _aseOptionReConnOnFailure_chk.isSelected();
+//				tds._dbxtuneOptConnectLater           = _aseDeferredConnect_chk      .isSelected();
+//				tds._dbxtuneOptDissConnectLater       = _aseDeferredDisConnect_chk   .isSelected();
+//				if (tds._dbxtuneOptConnectLater)
+//				{
+//					tds._dbxtuneOptConnectLaterHour       = _aseDeferredConnectHour_spm  .getNumber()+"";
+//					tds._dbxtuneOptConnectLaterMinute     = _aseDeferredConnectMinute_spm.getNumber()+"";
+//				}
+//				if (tds._dbxtuneOptConnectLater)
+//				{
+//					tds._dbxtuneOptDissConnectLaterHour   = _aseDeferredDisConnectHour_spm  .getNumber()+"";
+//					tds._dbxtuneOptDissConnectLaterMinute = _aseDeferredDisConnectMinute_spm.getNumber()+"";
+//				}
+//
+//				if (tds._dbxtuneOptOsMonitoring)
+//				{
+//					tds._osMonUsername      = _hostmonUser_txt         .getText();
+//					tds._osMonPassword      = _hostmonPasswd_txt       .getText();
+//					tds._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
+//					tds._osMonHost          = _hostmonHost_txt         .getText();
+//					tds._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
+//				}
+//
+//				if (tds._dbxtuneOptRecordSession)
+//				{
+//					tds._pcsWriterClass                    = StringUtil.getSelectedItemString(_pcsWriter_cbx);
+//					tds._pcsWriterDriver                   = StringUtil.getSelectedItemString(_pcsJdbcDriver_cbx);
+//					tds._pcsWriterUrl                      = StringUtil.getSelectedItemString(_pcsJdbcUrl_cbx);
+//					tds._pcsWriterUsername                 = _pcsJdbcUsername_txt    .getText();
+//					tds._pcsWriterPassword                 = _pcsJdbcPassword_txt    .getText();
+//					tds._pcsWriterSavePassword             = _pcsJdbcSavePassword_chk.isSelected();
+//					tds._pcsWriterStartH2asNwServer        = _pcsH2Option_startH2NetworkServer_chk      .isSelected();
+//					tds._pcsWriterDdlLookup                = _pcsDdl_doDdlLookupAndStore_chk            .isSelected();
+//					tds._pcsWriterDdlStoreDependantObjects = _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected();
+//					tds._pcsWriterDdlLookupSleepTime       = StringUtil.parseInt(_pcsDdl_afterDdlLookupSleepTimeInMs_txt.getText(), tds._pcsWriterDdlLookupSleepTime);
+//				}
 			}
 
 			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, tds, selectedProfileName, ConnectionDialog.this);
@@ -5558,6 +6039,13 @@ public class ConnectionDialog
 			jdbc._jdbcSavePassword       = _jdbcSavePassword_chk.isSelected();
 //			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;            // NOT YET IMPLEMENTED
 
+			jdbc._isDbxTuneParamsValid   = _options._showDbxTuneOptionsInJdbc;
+			if (jdbc._isDbxTuneParamsValid)
+			{
+				jdbc._dbxtuneParams = createDbxTuneParams();
+System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
+			}
+			
 			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, jdbc, selectedProfileName, ConnectionDialog.this);
 			_jdbcProfile_mod.refresh();
 		}
@@ -5567,6 +6055,105 @@ public class ConnectionDialog
 			return;
 		}
 	}
+
+	private DbxTuneParams createDbxTuneParams()
+	{
+		DbxTuneParams entry = new DbxTuneParams();
+		
+		entry._dbxtuneUseTemplate     = _aseOptionUseTemplate_chk.isSelected();
+		entry._dbxtuneUseTemplateName = _aseOptionUseTemplate_mod.notSelectedValueToNull(StringUtil.getSelectedItemString(_aseOptionUseTemplate_cbx));
+
+		entry._dbxtuneOptRecordSession          = _aseOptionStore_chk.isSelected();
+		entry._dbxtuneOptOsMonitoring           = _aseHostMonitor_chk.isSelected();
+
+		entry._dbxtuneOptConnectAtStartup       = _aseOptionConnOnStart_chk    .isSelected();
+		entry._dbxtuneOptReconnectOnLostConn    = _aseOptionReConnOnFailure_chk.isSelected();
+		entry._dbxtuneOptConnectLater           = _aseDeferredConnect_chk      .isSelected();
+		entry._dbxtuneOptDissConnectLater       = _aseDeferredDisConnect_chk   .isSelected();
+		if (entry._dbxtuneOptConnectLater)
+		{
+			entry._dbxtuneOptConnectLaterHour       = _aseDeferredConnectHour_spm  .getNumber()+"";
+			entry._dbxtuneOptConnectLaterMinute     = _aseDeferredConnectMinute_spm.getNumber()+"";
+		}
+		if (entry._dbxtuneOptConnectLater)
+		{
+			entry._dbxtuneOptDissConnectLaterHour   = _aseDeferredDisConnectHour_spm  .getNumber()+"";
+			entry._dbxtuneOptDissConnectLaterMinute = _aseDeferredDisConnectMinute_spm.getNumber()+"";
+		}
+
+		if (entry._dbxtuneOptOsMonitoring)
+		{
+			entry._osMonUsername      = _hostmonUser_txt         .getText();
+			entry._osMonPassword      = _hostmonPasswd_txt       .getText();
+			entry._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
+			entry._osMonHost          = _hostmonHost_txt         .getText();
+			entry._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
+		}
+
+		if (entry._dbxtuneOptRecordSession)
+		{
+			entry._pcsWriterClass                    = StringUtil.getSelectedItemString(_pcsWriter_cbx);
+			entry._pcsWriterDriver                   = StringUtil.getSelectedItemString(_pcsJdbcDriver_cbx);
+			entry._pcsWriterUrl                      = StringUtil.getSelectedItemString(_pcsJdbcUrl_cbx);
+			entry._pcsWriterUsername                 = _pcsJdbcUsername_txt    .getText();
+			entry._pcsWriterPassword                 = _pcsJdbcPassword_txt    .getText();
+			entry._pcsWriterSavePassword             = _pcsJdbcSavePassword_chk.isSelected();
+			entry._pcsWriterStartH2asNwServer        = _pcsH2Option_startH2NetworkServer_chk      .isSelected();
+			entry._pcsWriterDdlLookup                = _pcsDdl_doDdlLookupAndStore_chk            .isSelected();
+			entry._pcsWriterDdlStoreDependantObjects = _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected();
+			entry._pcsWriterDdlLookupSleepTime       = StringUtil.parseInt(_pcsDdl_afterDdlLookupSleepTimeInMs_txt.getText(), entry._pcsWriterDdlLookupSleepTime);
+		}
+
+		return entry;
+	}
+
+	private void loadDbxTuneParams(DbxTuneParams entry)
+	{
+		_aseOptionUseTemplate_chk.setSelected(    entry._dbxtuneUseTemplate);
+		_aseOptionUseTemplate_cbx.setSelectedItem(entry._dbxtuneUseTemplateName); // FIXME default value
+
+		_aseOptionStore_chk.setSelected(entry._dbxtuneOptRecordSession);
+		_aseHostMonitor_chk.setSelected(entry._dbxtuneOptOsMonitoring);
+
+		_aseOptionConnOnStart_chk    .setSelected(entry._dbxtuneOptConnectAtStartup);
+		_aseOptionReConnOnFailure_chk.setSelected(entry._dbxtuneOptReconnectOnLostConn);
+		_aseDeferredConnect_chk      .setSelected(entry._dbxtuneOptConnectLater);
+		_aseDeferredDisConnect_chk   .setSelected(entry._dbxtuneOptDissConnectLater);
+		if (entry._dbxtuneOptConnectLater)
+		{
+			_aseDeferredConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptConnectLaterHour));
+			_aseDeferredConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptConnectLaterMinute));
+		}
+		if (entry._dbxtuneOptConnectLater)
+		{
+			_aseDeferredDisConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptDissConnectLaterHour));
+			_aseDeferredDisConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptDissConnectLaterMinute));
+		}
+
+		if (entry._dbxtuneOptOsMonitoring)
+		{
+			_hostmonUser_txt         .setText(    entry._osMonUsername);
+			_hostmonPasswd_txt       .setText(    entry._osMonPassword);
+			_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
+			_hostmonHost_txt         .setText(    entry._osMonHost);
+			_hostmonPort_txt         .setText(    entry._osMonPort+"");
+		}
+
+		if (entry._dbxtuneOptRecordSession)
+		{
+			_pcsWriter_cbx                             .setSelectedItem(entry._pcsWriterClass);
+			_pcsJdbcDriver_cbx                         .setSelectedItem(entry._pcsWriterDriver);
+			_pcsJdbcUrl_cbx                            .setSelectedItem(entry._pcsWriterUrl);
+			_pcsJdbcUsername_txt                       .setText(        entry._pcsWriterUsername);
+			_pcsJdbcPassword_txt                       .setText(        entry._pcsWriterPassword);
+			_pcsJdbcSavePassword_chk                   .setSelected(    entry._pcsWriterSavePassword);
+			_pcsH2Option_startH2NetworkServer_chk      .setSelected(    entry._pcsWriterStartH2asNwServer);
+			_pcsDdl_doDdlLookupAndStore_chk            .setSelected(    entry._pcsWriterDdlLookup);
+			_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(    entry._pcsWriterDdlStoreDependantObjects);
+			_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
+		}
+	}
+
 
 	public void load(ConnectionProfile connProfile)
 	{
@@ -5601,52 +6188,54 @@ public class ConnectionDialog
 				_aseConnUrl_chk            .setSelected(    entry._tdsUseUrl);
 				_aseConnUrl_txt            .setText(        entry._tdsUseUrlStr); // actual URL if _aseConnUrl_chk.isSelected is true
 
-				boolean isAseTuneParamsValid = entry._isAseTuneParamsValid;
-				if (isAseTuneParamsValid)
+				boolean isDbxTuneParamsValid = entry._isDbxTuneParamsValid;
+				if (isDbxTuneParamsValid)
 				{
-					_aseOptionUseTemplate_chk.setSelected(    entry._asetuneUseTemplate);
-					_aseOptionUseTemplate_cbx.setSelectedItem(entry._asetuneUseTemplateName); // FIXME default value
+					loadDbxTuneParams(entry._dbxtuneParams);
 
-					_aseOptionStore_chk.setSelected(entry._asetuneOptRecordSession);
-					_aseHostMonitor_chk.setSelected(entry._asetuneOptOsMonitoring);
-
-					_aseOptionConnOnStart_chk    .setSelected(entry._asetuneOptConnectAtStartup);
-					_aseOptionReConnOnFailure_chk.setSelected(entry._asetuneOptReconnectOnLostConn);
-					_aseDeferredConnect_chk      .setSelected(entry._asetuneOptConnectLater);
-					_aseDeferredDisConnect_chk   .setSelected(entry._asetuneOptDissConnectLater);
-					if (entry._asetuneOptConnectLater)
-					{
-						_aseDeferredConnectHour_spm  .setValue(new Integer(entry._asetuneOptConnectLaterHour));
-						_aseDeferredConnectMinute_spm.setValue(new Integer(entry._asetuneOptConnectLaterMinute));
-					}
-					if (entry._asetuneOptConnectLater)
-					{
-						_aseDeferredDisConnectHour_spm  .setValue(new Integer(entry._asetuneOptDissConnectLaterHour));
-						_aseDeferredDisConnectMinute_spm.setValue(new Integer(entry._asetuneOptDissConnectLaterMinute));
-					}
-
-					if (entry._asetuneOptOsMonitoring)
-					{
-						_hostmonUser_txt         .setText(    entry._osMonUsername);
-						_hostmonPasswd_txt       .setText(    entry._osMonPassword);
-						_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
-						_hostmonHost_txt         .setText(    entry._osMonHost);
-						_hostmonPort_txt         .setText(    entry._osMonPort+"");
-					}
-
-					if (entry._asetuneOptRecordSession)
-					{
-						_pcsWriter_cbx                             .setSelectedItem(entry._pcsWriterClass);
-						_pcsJdbcDriver_cbx                         .setSelectedItem(entry._pcsWriterDriver);
-						_pcsJdbcUrl_cbx                            .setSelectedItem(entry._pcsWriterUrl);
-						_pcsJdbcUsername_txt                       .setText(        entry._pcsWriterUsername);
-						_pcsJdbcPassword_txt                       .setText(        entry._pcsWriterPassword);
-						_pcsJdbcSavePassword_chk                   .setSelected(    entry._pcsWriterSavePassword);
-						_pcsH2Option_startH2NetworkServer_chk      .setSelected(    entry._pcsWriterStartH2asNwServer);
-						_pcsDdl_doDdlLookupAndStore_chk            .setSelected(    entry._pcsWriterDdlLookup);
-						_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(    entry._pcsWriterDdlStoreDependantObjects);
-						_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
-					}
+//					_aseOptionUseTemplate_chk.setSelected(    entry._dbxtuneUseTemplate);
+//					_aseOptionUseTemplate_cbx.setSelectedItem(entry._dbxtuneUseTemplateName); // FIXME default value
+//
+//					_aseOptionStore_chk.setSelected(entry._dbxtuneOptRecordSession);
+//					_aseHostMonitor_chk.setSelected(entry._dbxtuneOptOsMonitoring);
+//
+//					_aseOptionConnOnStart_chk    .setSelected(entry._dbxtuneOptConnectAtStartup);
+//					_aseOptionReConnOnFailure_chk.setSelected(entry._dbxtuneOptReconnectOnLostConn);
+//					_aseDeferredConnect_chk      .setSelected(entry._dbxtuneOptConnectLater);
+//					_aseDeferredDisConnect_chk   .setSelected(entry._dbxtuneOptDissConnectLater);
+//					if (entry._dbxtuneOptConnectLater)
+//					{
+//						_aseDeferredConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptConnectLaterHour));
+//						_aseDeferredConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptConnectLaterMinute));
+//					}
+//					if (entry._dbxtuneOptConnectLater)
+//					{
+//						_aseDeferredDisConnectHour_spm  .setValue(new Integer(entry._dbxtuneOptDissConnectLaterHour));
+//						_aseDeferredDisConnectMinute_spm.setValue(new Integer(entry._dbxtuneOptDissConnectLaterMinute));
+//					}
+//
+//					if (entry._dbxtuneOptOsMonitoring)
+//					{
+//						_hostmonUser_txt         .setText(    entry._osMonUsername);
+//						_hostmonPasswd_txt       .setText(    entry._osMonPassword);
+//						_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
+//						_hostmonHost_txt         .setText(    entry._osMonHost);
+//						_hostmonPort_txt         .setText(    entry._osMonPort+"");
+//					}
+//
+//					if (entry._dbxtuneOptRecordSession)
+//					{
+//						_pcsWriter_cbx                             .setSelectedItem(entry._pcsWriterClass);
+//						_pcsJdbcDriver_cbx                         .setSelectedItem(entry._pcsWriterDriver);
+//						_pcsJdbcUrl_cbx                            .setSelectedItem(entry._pcsWriterUrl);
+//						_pcsJdbcUsername_txt                       .setText(        entry._pcsWriterUsername);
+//						_pcsJdbcPassword_txt                       .setText(        entry._pcsWriterPassword);
+//						_pcsJdbcSavePassword_chk                   .setSelected(    entry._pcsWriterSavePassword);
+//						_pcsH2Option_startH2NetworkServer_chk      .setSelected(    entry._pcsWriterStartH2asNwServer);
+//						_pcsDdl_doDdlLookupAndStore_chk            .setSelected(    entry._pcsWriterDdlLookup);
+//						_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(    entry._pcsWriterDdlStoreDependantObjects);
+//						_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
+//					}
 				}
 			}
 			else if (connProfile.isType(ConnectionProfile.Type.JDBC))
@@ -5665,6 +6254,13 @@ public class ConnectionDialog
 				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
 				_jdbcSavePassword_chk .setSelected(    entry._jdbcSavePassword);
 //				_jdbcSshTunnelInfo = entry._jdbcShhTunnelInfo;            // NOT YET IMPLEMENTED
+
+				boolean isDbxTuneParamsValid = entry._isDbxTuneParamsValid;
+				if (isDbxTuneParamsValid)
+				{
+					loadDbxTuneParams(entry._dbxtuneParams);
+				}
+
 			}
 			else if (connProfile.isType(ConnectionProfile.Type.OFFLINE))
 			{
@@ -5758,7 +6354,7 @@ public class ConnectionDialog
 
 	private void updateSshTunnelDescription()
 	{
-		// set the ASE SSH desription to visible or not + resize dialog if it's the checkbox
+		// set the ASE SSH description to visible or not + resize dialog if it's the checkbox
 		_aseSshTunnelDesc_lbl.setVisible(_aseSshTunnel_chk.isSelected());
 		if (_aseSshTunnel_chk.isSelected())
 		{
@@ -5808,11 +6404,12 @@ public class ConnectionDialog
 		
 		if (connProfile != null)
 		{
-			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+			ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
-			enable = entry._asetuneOptConnectLater;
-			hh     = entry._asetuneOptConnectLaterHour;
-			mm     = entry._asetuneOptConnectLaterMinute;
+			enable = entry._dbxtuneOptConnectLater;
+			hh     = entry._dbxtuneOptConnectLaterHour;
+			mm     = entry._dbxtuneOptConnectLaterMinute;
 		}
 
 		_aseDeferredConnectHour_lbl  .setEnabled(enable);
@@ -5853,11 +6450,12 @@ public class ConnectionDialog
 
 		if (connProfile != null)
 		{
-			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+//			ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
+			ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
-			enable = entry._asetuneOptDissConnectLater;
-			hh     = entry._asetuneOptDissConnectLaterHour;
-			mm     = entry._asetuneOptDissConnectLaterMinute;
+			enable = entry._dbxtuneOptDissConnectLater;
+			hh     = entry._dbxtuneOptDissConnectLaterHour;
+			mm     = entry._dbxtuneOptDissConnectLaterMinute;
 		}
 
 		_aseDeferredDisConnectHour_lbl  .setEnabled(enable);
@@ -6010,7 +6608,8 @@ public class ConnectionDialog
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
 			String        cmName = (String)  tm.getValueAt(r, PCS_TAB_POS_CM_NAME);
-			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
+//			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
+			CountersModel cm     = CounterController.getInstance().getCmByName(cmName);
 			if (cm == null)
 				continue;
 
@@ -6237,6 +6836,12 @@ public class ConnectionDialog
 		conf.setProperty("conn.dialog.window.height", this.getSize().height);
 		conf.setProperty("conn.dialog.window.pos.x",  this.getLocationOnScreen().x);
 		conf.setProperty("conn.dialog.window.pos.y",  this.getLocationOnScreen().y);
+
+		// last TAB and PROFILE
+		conf.setProperty("conn.dialog.last.tab.name",              _tab.getSelectedTitle(false));
+		conf.setProperty("conn.dialog.last.profile.name.tds",      StringUtil.getSelectedItemString(_aseProfile_cbx));
+		conf.setProperty("conn.dialog.last.profile.name.offline",  StringUtil.getSelectedItemString(_offlineProfile_cbx));
+		conf.setProperty("conn.dialog.last.profile.name.jdbc",     StringUtil.getSelectedItemString(_jdbcProfile_cbx));
 
 		conf.save();
 	}
@@ -6484,6 +7089,13 @@ public class ConnectionDialog
 		_jdbcSqlInit_txt.setText(conf.getProperty("jdbc.login.sql.init", "" ));
 //		conf.getProperty("jdbc.login.sql.init."+urlStr, "" );
 
+		//----------------------------------
+		// last PROFILE
+		//----------------------------------
+		_aseProfile_mod    .setSelectedItem( conf.getProperty("conn.dialog.last.profile.name.tds",     NO_PROFILE_IS_SELECTED) );
+		_offlineProfile_mod.setSelectedItem( conf.getProperty("conn.dialog.last.profile.name.offline", NO_PROFILE_IS_SELECTED) );
+		_jdbcProfile_mod   .setSelectedItem( conf.getProperty("conn.dialog.last.profile.name.jdbc",    NO_PROFILE_IS_SELECTED) );
+
 		action_nwPasswdEncryption();
 	}
 	private void getSavedWindowProps()
@@ -6512,6 +7124,11 @@ public class ConnectionDialog
 		// Window size can not be "smaller" than the minimum size
 		// If so "OK" button etc will be hidden.
 		SwingUtils.setWindowMinSize(this);
+		
+		// Set active tab to "last one used"
+		String lastTab = conf.getProperty("conn.dialog.last.tab.name");
+		if (lastTab != null)
+			_tab.setSelectedTitle(lastTab);
 	}
 
 	
@@ -7729,7 +8346,8 @@ public class ConnectionDialog
 		System.out.println("showTdsOnlyConnectionDialog, returned: conn="+conn);
 
 		// DO THE THING
-		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, true, false, false, false, true);
+//		ConnectionDialog connDialog = new ConnectionDialog(null, null, true, true, false, false, false, true, false);
+		ConnectionDialog connDialog = new ConnectionDialog(null, new Options(null, true, true, false, false, false, true, false));
 		connDialog.setVisible(true);
 		connDialog.dispose();
 

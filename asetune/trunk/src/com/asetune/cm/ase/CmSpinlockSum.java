@@ -15,7 +15,7 @@ import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmSpinlockSumPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -700,7 +700,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 
@@ -777,7 +777,7 @@ extends CountersModel
 	 * if counters has been reset outside, shorten the sample interval
 	 */
 	@Override
-	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
 // The below dosn't work if we don't have a counter that is predictive, like clock_ticks or similar
 // if we use a counter that *could* become bigger in the second sample, the below wont work
@@ -811,7 +811,7 @@ extends CountersModel
 //System.out.println(getName()+":computeDiffCnt(): isCountersCleared="+isCountersCleared+".");
 
 		// Let super do all the work
-		SamplingCnt diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+		CounterSample diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
 		
 		// Adjust interval (make it shorter) if counters has been cleared
 		if (isCountersCleared && getCounterClearTime() != null)

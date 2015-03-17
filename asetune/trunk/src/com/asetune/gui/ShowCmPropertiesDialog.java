@@ -30,6 +30,7 @@ import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -65,7 +66,7 @@ extends JDialog implements ActionListener, ChangeListener
 	private JLabel             _initialized_false_lbl = new JLabel("<html>This Performance Counter has <b>not</b> yet been initialized.</html>");
 
 	// Version info
-	private JLabel             _testVersion_lbl      = new JLabel("ASE Version");
+	private JLabel             _testVersion_lbl      = new JLabel("Server Version");
 	private JLabel             _testVersionMajor_lbl = new JLabel("Major");
 	private SpinnerNumberModel _testVersionMajor_spm = new SpinnerNumberModel(12, 12, 99, 1); // value, min, max, step
 	private JSpinner           _testVersionMajor_sp  = new JSpinner(_testVersionMajor_spm);
@@ -88,16 +89,16 @@ extends JDialog implements ActionListener, ChangeListener
 
 	private JCheckBox          _testVersionIsCe_chk  = new JCheckBox("Cluster Edition", false);
 
-	private JLabel             _testVersionShort_lbl   = new JLabel("ASE Short Version");
+	private JLabel             _testVersionShort_lbl   = new JLabel("Server Short Version");
 	private JTextField         _testVersionShort_txt   = new JTextField();
 	private JTextField         _testVersionInt_txt     = new JTextField();
 	
 	// Fields
-	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init");
+	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init - Only executed once, before firt sample");
 	private RSyntaxTextArea	   _sqlInit              = new RSyntaxTextArea();
 //	private RTextScrollPane    _sqlInitScroll        = new RTextScrollPane(_sqlInit);
 
-	private JLabel             _sqlExec_lbl          = new JLabel("SQL");
+	private JLabel             _sqlExec_lbl          = new JLabel("SQL - Executed on every sample");
 	private RSyntaxTextArea	   _sqlExec              = new RSyntaxTextArea();
 //	private RTextScrollPane    _sqlExecScroll        = new RTextScrollPane(_sqlExec);
 
@@ -105,7 +106,7 @@ extends JDialog implements ActionListener, ChangeListener
 	private RSyntaxTextArea	   _sqlWhere             = new RSyntaxTextArea();
 //	private RTextScrollPane    _sqlWhereScroll       = new RTextScrollPane(_sqlWhere);
 
-	private JLabel             _sqlClose_lbl         = new JLabel("SQL Close");
+	private JLabel             _sqlClose_lbl         = new JLabel("SQL Close - Only executed once, when the connetion is closed");
 	private RSyntaxTextArea	   _sqlClose             = new RSyntaxTextArea();
 //	private RTextScrollPane    _sqlCloseScroll       = new RTextScrollPane(_sqlClose);
 
@@ -121,16 +122,16 @@ extends JDialog implements ActionListener, ChangeListener
 	private JTextField         _pctCols_txt          = new JTextField();
 	private JCheckBox          _pctColsHighlight_chk = new JCheckBox();
 
-	private JLabel             _needConfig_lbl       = new JLabel("Need ASE Configuration");
+	private JLabel             _needConfig_lbl       = new JLabel("Need Server Configuration");
 	private JTextField         _needConfig_txt       = new JTextField();
 
-	private JLabel             _needRole_lbl         = new JLabel("Need ASE Roles");
+	private JLabel             _needRole_lbl         = new JLabel("Need Server Roles");
 	private JTextField         _needRole_txt         = new JTextField();
 
-	private JLabel             _needAseVersion_lbl   = new JLabel("Need ASE Version");
+	private JLabel             _needAseVersion_lbl   = new JLabel("Need Server Version");
 	private JTextField         _needAseVersion_txt   = new JTextField();
 
-	private JLabel             _needAseCeVersion_lbl = new JLabel("Need ASE Cluster Edition");
+	private JLabel             _needAseCeVersion_lbl = new JLabel("Need Cluster Edition");
 	private JTextField         _needAseCeVersion_txt = new JTextField();
 
 	private JLabel             _dependsOnCm_lbl      = new JLabel("Depends on Performance Counter");
@@ -223,7 +224,7 @@ extends JDialog implements ActionListener, ChangeListener
 		panel.setLayout(new MigLayout("", "", ""));
 
 		JPanel namePanel    = SwingUtils.createPanel("Name Information",  false);
-		JPanel aseVerPanel  = SwingUtils.createPanel("ASE Version",       true);
+		JPanel aseVerPanel  = SwingUtils.createPanel("Server Version",    true);
 		JPanel sqlPanel     = SwingUtils.createPanel("SQL Information",   true);
 		JPanel otherPanel   = SwingUtils.createPanel("Other Information", true);
 
@@ -234,8 +235,8 @@ extends JDialog implements ActionListener, ChangeListener
 
 		//------------ BEGIN: TOOLTIP
 		namePanel  .setToolTipText("<html>What is this Performance Counters name.</html>");
-		aseVerPanel.setToolTipText("<html>Change ASE Version to see what SQL will be used on other ASE Versions</html>");
-		sqlPanel   .setToolTipText("<html>What SQL statements are executed to get Performance Counters.<br>Change ASE Version in above panel to see what SQL will be used on other ASE Versions</html>");
+		aseVerPanel.setToolTipText("<html>Change Server Version to see what SQL will be used on other Server Versions</html>");
+		sqlPanel   .setToolTipText("<html>What SQL statements are executed to get Performance Counters.<br>Change Server Version in above panel to see what SQL will be used on other Server Versions</html>");
 //		otherPanel .setToolTipText("");
 
 		_ok_but               .setToolTipText("<html>This panel is <b>read only</b>, so nothing is changed for this Performance Counter when you click OK</html>");
@@ -245,27 +246,27 @@ extends JDialog implements ActionListener, ChangeListener
 		_cmLongName_lbl       .setToolTipText("<html>The name that is presented in the Tab Panel for this Performance Counter</html>");
 		_cmLongName_txt       .setToolTipText("<html>The name that is presented in the Tab Panel for this Performance Counter</html>");
 
-		_initialized_true_lbl .setToolTipText("<html>You have a connection to an ASE Server</html>");
-		_initialized_false_lbl.setToolTipText("<html>No connection to any ASE server, so you need to specify for what ASE Version you want information on.</html>");
+		_initialized_true_lbl .setToolTipText("<html>You have a connection to an Server</html>");
+		_initialized_false_lbl.setToolTipText("<html>No connection to any Server, so you need to specify for what Server Version you want information on.</html>");
 
 
-		_testVersion_lbl      .setToolTipText("<html>Specify what ASE Server Version you want to see information about</html>");
-		_testVersionMajor_lbl .setToolTipText("<html>Major version of the ASE Server, Example: <b>15</b>.0.3</html>");
-		_testVersionMajor_sp  .setToolTipText("<html>Major version of the ASE Server, Example: <b>15</b>.0.3</html>");
+		_testVersion_lbl      .setToolTipText("<html>Specify what Server Version you want to see information about</html>");
+		_testVersionMajor_lbl .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
+		_testVersionMajor_sp  .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
 
-		_testVersionMinor_lbl .setToolTipText("<html>Minor version of the ASE Server, Example: 15.<b>0</b>.3</html>");
-		_testVersionMinor_sp  .setToolTipText("<html>Minor version of the ASE Server, Example: 15.<b>0</b>.3</html>");
+		_testVersionMinor_lbl .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
+		_testVersionMinor_sp  .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
 
-		_testVersionMaint_lbl .setToolTipText("<html>Mintenance version of the ASE Server, Example: 15.0.<b>3</b></html>");
-		_testVersionMaint_sp  .setToolTipText("<html>Mintenance version of the ASE Server, Example: 15.0.<b>3</b></html>");
+		_testVersionMaint_lbl .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
+		_testVersionMaint_sp  .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
 
-		_testVersionEsd_lbl   .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 ASE changed from ESD into SP.</html>");
-		_testVersionEsd_sp    .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the ASE Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 ASE changed from ESD into SP.</html>");
+		_testVersionEsd_lbl   .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
+		_testVersionEsd_sp    .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
 
-		_testVersionPl_lbl    .setToolTipText("<html>PL -Patch Level of the ASE Server, Example: 16.0 SP01 <b>PL01</b><br>SAP is using Patch Level to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>Note: This is introduced in ASE 16.0</html>");
+		_testVersionPl_lbl    .setToolTipText("<html>PL -Patch Level of the Server Version, Example: 16.0 SP01 <b>PL01</b><br>SAP is using Patch Level to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>Note: This is introduced in ASE 16.0</html>");
 		_testVersionPl_sp     .setToolTipText(_testVersionPl_lbl.getToolTipText());
 
-		_testVersionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a ASE Cluster Edition</html>");
+		_testVersionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a Cluster Edition Server</html>");
 
 		_testVersionShort_lbl .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
 		_testVersionShort_txt .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
@@ -281,8 +282,8 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlWhere_lbl         .setToolTipText("<html>Any extra where clauses that will be applied</html>");
 		_sqlWhere             .setToolTipText("<html>Any extra where clauses that will be applied</html>");
 
-		_sqlClose_lbl         .setToolTipText("<html>What SQL statement will be executed when we close the connection to the ASE Server</html>");
-		_sqlClose             .setToolTipText("<html>What SQL statement will be executed when we close the connection to the ASE Server</html>");
+		_sqlClose_lbl         .setToolTipText("<html>What SQL statement will be executed when we close the connection to the Server</html>");
+		_sqlClose             .setToolTipText("<html>What SQL statement will be executed when we close the connection to the Server</html>");
 
 		_pkCols_lbl           .setToolTipText("<html>What columns is Primary Key, which will be used when doing diff calculations</html>");
 		_pkCols_txt           .setToolTipText("<html>What columns is Primary Key, which will be used when doing diff calculations</html>");
@@ -296,17 +297,17 @@ extends JDialog implements ActionListener, ChangeListener
 		_pctCols_txt          .setToolTipText("<html>What columns should we be treated as Percentage columns</html>");
 		_pctColsHighlight_chk .setToolTipText("<html>Mark the PERCENT columns with a background color in the SQL text</html>");
 
-		_needConfig_lbl       .setToolTipText("<html>What ASE Configuration(s) does this Performance Counter depend on.</html>");
-		_needConfig_txt       .setToolTipText("<html>What ASE Configuration(s) does this Performance Counter depend on.</html>");
+		_needConfig_lbl       .setToolTipText("<html>What Server Configuration(s) does this Performance Counter depend on.</html>");
+		_needConfig_txt       .setToolTipText("<html>What Server Configuration(s) does this Performance Counter depend on.</html>");
 
-		_needRole_lbl         .setToolTipText("<html>What ASE Role(s) does this Performance Counter depend on.</html>");
-		_needRole_txt         .setToolTipText("<html>What ASE Role(s) does this Performance Counter depend on.</html>");
+		_needRole_lbl         .setToolTipText("<html>What Server Role(s) does this Performance Counter depend on.</html>");
+		_needRole_txt         .setToolTipText("<html>What Server Role(s) does this Performance Counter depend on.</html>");
 
-		_needAseVersion_lbl   .setToolTipText("<html>We need to connect to a ASE Server with a higher Version than this to get Performance Counters</html>");
-		_needAseVersion_txt   .setToolTipText("<html>We need to connect to a ASE Server with a higher Version than this to get Performance Counters</html>");
+		_needAseVersion_lbl   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
+		_needAseVersion_txt   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
 
-		_needAseCeVersion_lbl .setToolTipText("<html>If this is 0, then we will use ASE Version number.</html>");
-		_needAseCeVersion_txt .setToolTipText("<html>If this is 0, then we will use ASE Version number.</html>");
+		_needAseCeVersion_lbl .setToolTipText("<html>If this is 0, then we will use Server Version number.</html>");
+		_needAseCeVersion_txt .setToolTipText("<html>If this is 0, then we will use Server Version number.</html>");
 
 		_dependsOnCm_lbl      .setToolTipText("<html>Do this Performance Counter depend on some other Performance Counters Data.</html>");
 		_dependsOnCm_txt      .setToolTipText("<html>Do this Performance Counter depend on some other Performance Counters Data.</html>");
@@ -541,7 +542,8 @@ extends JDialog implements ActionListener, ChangeListener
 
 	private void loadFieldsUsingVersion(int aseVersion, boolean isCeEnabled)
 	{
-		Connection conn = AseTune.getCounterCollector().getMonConnection();
+//		Connection conn = AseTune.getCounterCollector().getMonConnection();
+		Connection conn = CounterController.getInstance().getMonConnection();
 
 		String sqlInit  = _cm.getSqlInitForVersion (conn, aseVersion, isCeEnabled);
 		String sqlExec  = _cm.getSqlForVersion     (conn, aseVersion, isCeEnabled);

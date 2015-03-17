@@ -38,6 +38,7 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
@@ -54,6 +55,7 @@ import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class CmSummaryPanel
@@ -221,6 +223,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _fullTranslog_txt             = new JTextField();
 	private JLabel           _oldestOpenTran_lbl           = new JLabel();
 	private JTextField       _oldestOpenTran_txt           = new JTextField();
+	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
+	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
 	
 	private JLabel           _bootcount_lbl                = new JLabel();
 	private JTextField       _bootcount_txt                = new JTextField();
@@ -414,8 +418,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				else
 					systemView = AseConnectionUtils.CE_SYSTEM_VIEW_CLUSTER;
 
-				if (AseTune.getCounterCollector().isMonConnected())
-					AseConnectionUtils.setClusterEditionSystemView(AseTune.getCounterCollector().getMonConnection(), systemView);
+//				if (AseTune.getCounterCollector().isMonConnected())
+//					AseConnectionUtils.setClusterEditionSystemView(AseTune.getCounterCollector().getMonConnection(), systemView);
+				if (CounterController.getInstance().isMonConnected())
+					AseConnectionUtils.setClusterEditionSystemView(CounterController.getInstance().getMonConnection(), systemView);
 
 				saveProps();
 			}
@@ -902,6 +908,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTran_txt.setToolTipText(tooltip);
 		_oldestOpenTran_txt.setEditable(false);
 
+		tooltip = "After this amount of seconds, and 'alarm' will be raised...";
+		_oldestOpenTranThreshold_lbl.setText("Open Tran Threshold");
+		_oldestOpenTranThreshold_lbl.setToolTipText(tooltip);
+		_oldestOpenTranThreshold_txt.setToolTipText(tooltip);
+		_oldestOpenTranThreshold_txt.setEditable(false);
 		
 		
 		tooltip = "How many times has this ASE been rebooted.";
@@ -1164,6 +1175,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_oldestOpenTran_lbl,      "");
 		panel.add(_oldestOpenTran_txt,      "growx, wrap");
 		
+		panel.add(_oldestOpenTranThreshold_lbl, "");
+		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap");
+		
 
 		
 		panel.add(_bootcount_lbl,           "gapy 20");
@@ -1374,7 +1388,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 	private void refreshClusterInfo()
 	{
-		Connection conn = AseTune.getCounterCollector().getMonConnection();
+//		Connection conn = AseTune.getCounterCollector().getMonConnection();
+		Connection conn = CounterController.getInstance().getMonConnection();
 
 		// Cluster View
 		int clusterView = AseConnectionUtils.getClusterEditionSystemView(conn);
@@ -1553,8 +1568,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		setFieldAbsDiffRate(cm, "PhysicalWrites", _PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
 		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
 
-		_fullTranslog_txt     .setText(cm.getAbsString (0, "fullTranslogCount"));
-		_oldestOpenTran_txt   .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
+		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
+		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
+		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
 
 		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
 		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
@@ -1626,11 +1642,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		// Check LOCK WAITS and, do notification
 		//----------------------------------------------
-		int lockWaits = 0;
-		try { lockWaits = Integer.parseInt(_lockWaits_txt.getText()); }
-		catch (NumberFormatException ignore) {}
+		int lockWaits          = StringUtil.parseInt(_lockWaits_txt.getText(), 0);
+//		int lockWaitsThreshold = StringUtil.parseInt(_lockWaitThreshold_txt.getText(), 0);
 		_logger.debug("LOCK-WAITS="+lockWaits+", TEXT='"+_lockWaits_txt.getText()+"'.");
-		if (lockWaits > 0) // Disabled for the moment
+		if (lockWaits > 0)
 		{
 			_lockWaits_txt    .setBackground(Color.RED);
 			_lockWaitsDiff_txt.setBackground(Color.RED);
@@ -1654,11 +1669,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		// Check FULL LOGS and, do notification
 		//----------------------------------------------
-		int fullLogs = 0;
-		try { fullLogs = Integer.parseInt(_fullTranslog_txt.getText()); }
-		catch (NumberFormatException ignore) {}
+		int fullLogs = StringUtil.parseInt(_fullTranslog_txt.getText(), 0);
 		_logger.debug("FULL-LOG="+lockWaits+", TEXT='"+_fullTranslog_txt.getText()+"'.");
-		if (fullLogs > 0) // Disabled for the moment
+		if (fullLogs > 0)
 		{
 			_fullTranslog_txt.setBackground(Color.RED);
 
@@ -1680,11 +1693,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		//----------------------------------------------
 		// Check OLDEST OPEN TRANSACTION and, do notification
 		//----------------------------------------------
-		int oldestOpenTranInSec = 0;
-		try { oldestOpenTranInSec = Integer.parseInt(_oldestOpenTran_txt.getText()); }
-		catch (NumberFormatException ignore) {}
+		int oldestOpenTranInSec          = StringUtil.parseInt(_oldestOpenTran_txt.getText(), 0);
+		int oldestOpenTranInSecThreshold = StringUtil.parseInt(_oldestOpenTranThreshold_txt.getText(), 0);
 		_logger.debug("OLDEST-OPEN-TRANSACTION="+oldestOpenTranInSec+", TEXT='"+_oldestOpenTran_txt.getText()+"'.");
-		if (oldestOpenTranInSec > 0)
+		if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
 		{
 			_oldestOpenTran_txt.setBackground(Color.RED);
 
@@ -1838,6 +1850,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		_fullTranslog_txt       .setText("");
 		_oldestOpenTran_txt     .setText("");
+		_oldestOpenTranThreshold_txt.setText("");
 		
 		_bootcount_txt          .setText("");
 		_recoveryState_txt      .setText("");
@@ -1929,13 +1942,16 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				setWatermarkText(offlineSamplePeriod);
 		}
 //		else if ( ! AseTune.hasCounterCollector() || ! AseTune.getCounterCollector().isMonConnected() )
-		else if ( ! AseTune.hasCounterCollector() || (_cm != null && ! _cm.isConnected()) )
+//		else if ( ! AseTune.hasCounterCollector() || (_cm != null && ! _cm.isConnected()) )
+		else if ( ! CounterController.hasInstance() || (_cm != null && ! _cm.isConnected()) )
 		{
 			setWatermarkText("Not Connected...");
 		}
-		else if ( AseTune.hasCounterCollector() && AseTune.getCounterCollector().getMonDisConnectTime() != null )
+//		else if ( AseTune.hasCounterCollector() && AseTune.getCounterCollector().getMonDisConnectTime() != null )
+		else if ( CounterController.hasInstance() && CounterController.getInstance().getMonDisConnectTime() != null )
 		{
-			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(AseTune.getCounterCollector().getMonDisConnectTime());
+//			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(AseTune.getCounterCollector().getMonDisConnectTime());
+			String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(CounterController.getInstance().getMonDisConnectTime());
 			setWatermarkText("Disconnect at: \n"+dateStr);
 		}
 		else

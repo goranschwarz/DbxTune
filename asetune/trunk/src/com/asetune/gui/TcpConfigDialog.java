@@ -505,7 +505,8 @@ implements ActionListener, TableModelListener
 			boolean storeDiff    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_DIFF)).booleanValue();
 			boolean storeRate    = ((Boolean) tm.getValueAt(r, TAB_POS_STORE_RATE)).booleanValue();
 
-			CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+//			CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+			CountersModel cm  = CounterController.getInstance().getCmByDisplayName(tabName);
 			
 			if (cm == null)
 			{
@@ -1247,7 +1248,8 @@ implements ActionListener, TableModelListener
 					_logger.debug("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 				// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+//				CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+				CountersModel cm  = CounterController.getInstance().getCmByDisplayName(tabName);
 				if (cm != null)
 				{
 					if (col == TAB_POS_BG)         return cm.isBackgroundDataPollingEditable();
@@ -1711,42 +1713,42 @@ implements ActionListener, TableModelListener
 	//////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////
 
-	public static void main(String[] args)
-	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
-
-		// set native L&F
-		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
-		catch (Exception e) {}
-
-
-		Configuration conf = new Configuration("c:\\OfflineSessionsViewer.tmp.deleteme.properties");
-		Configuration.setInstance(Configuration.USER_TEMP, conf);
-
-		MainFrame frame = new MainFrame();
-
-		// Create and Start the "collector" thread
-		GetCounters getCnt = new GetCountersGui();
-		CounterController.setInstance(getCnt);
-		try
-		{
-			getCnt.init();
-		}
-		catch (Exception e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		getCnt.start();
-
-		frame.pack();
-
-		TcpConfigDialog.showDialog(frame);
-	}
+//	public static void main(String[] args)
+//	{
+//		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+//		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+//		PropertyConfigurator.configure(log4jProps);
+//
+//		// set native L&F
+//		try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());}
+//		catch (Exception e) {}
+//
+//
+//		Configuration conf = new Configuration("c:\\OfflineSessionsViewer.tmp.deleteme.properties");
+//		Configuration.setInstance(Configuration.USER_TEMP, conf);
+//
+//		MainFrame frame = new MainFrameAse();
+//
+//		// Create and Start the "collector" thread
+//		GetCounters getCnt = new GetCountersGui();
+//		CounterController.setInstance(getCnt);
+//		try
+//		{
+//			getCnt.init();
+//		}
+//		catch (Exception e)
+//		{
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+////		getCnt.start();
+//
+//		frame.pack();
+//
+//		TcpConfigDialog.showDialog(frame);
+//	}
 }

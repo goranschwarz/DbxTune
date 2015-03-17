@@ -14,6 +14,9 @@ import com.asetune.utils.StringUtil;
 public class ConnectionProfile
 {
 	private static Logger _logger = Logger.getLogger(ConnectionProfile.class);
+
+	private static final DbxTuneParams DBXTUNE_PARAMS_EMPTY = new DbxTuneParams();
+	
 	public enum Type
 	{
 		TDS, 
@@ -145,6 +148,11 @@ public class ConnectionProfile
 	public boolean isType   (Type    type)    { return type.equals(_type); }
 	public boolean isSrvType(SrvType srvType) { return srvType.equals(_srvType); }
 
+	public boolean isSrvType(String productName) 
+	{
+		SrvType srvType = getServerType(_type, productName);
+		return srvType.equals(_srvType);
+	}
 
 	public void setSrvTypeUnknown()
 	{
@@ -191,6 +199,15 @@ public class ConnectionProfile
 	public JdbcEntry getJdbcEntry()       { return _jdbcEntry; }
 	public OfflineEntry getOfflineEntry() { return _offlineEntry; }
 	
+	public DbxTuneParams getDbxTuneParams()
+	{
+		if (_tdsEntry     != null) return _tdsEntry ._dbxtuneParams == null ? DBXTUNE_PARAMS_EMPTY : _tdsEntry ._dbxtuneParams;
+		if (_jdbcEntry    != null) return _jdbcEntry._dbxtuneParams == null ? DBXTUNE_PARAMS_EMPTY : _jdbcEntry._dbxtuneParams;
+		if (_offlineEntry != null) return DBXTUNE_PARAMS_EMPTY;
+
+		throw new IllegalStateException("No Entry has been assigned. _tdsEntry==null, _jdbcEntry==null, _offlineEntry==null");
+	}
+
 	public ConnProfileEntry getEntry()
 	{
 		if (_tdsEntry     != null) return _tdsEntry;
@@ -223,6 +240,13 @@ public class ConnectionProfile
 		return "";
 	}
 
+	public String getDbUserName()
+	{
+		if (_tdsEntry     != null) return _tdsEntry    ._tdsUsername;
+		if (_jdbcEntry    != null) return _jdbcEntry   ._jdbcUsername;
+		if (_offlineEntry != null) return _offlineEntry._jdbcUsername;
+		return "";
+	}
 	
 	@Override
 	public String toString()
@@ -276,46 +300,47 @@ public class ConnectionProfile
 	public static final String       XML_TDS_UseRawUrl                           = "UseRawUrl";
 	public static final String       XML_TDS_UseRawUrlStr                        = "UseRawUrlStr";
 
-	public static final String       XML_TDS_IsAseTuneParamsValid                = "IsAseTuneParamsValid";
+	public static final String       XML_TDS_IsAseTuneParamsValid                = "IsAseTuneParamsValid"; // original name for the tag 'IsDbxTuneParamsValid', maybe we can be backward compatible when reading the XML file
+	public static final String       XML_TDS_IsDbxTuneParamsValid                = "IsDbxTuneParamsValid";
 
-	public static final String       XML_TDS_ASETUNE_UseTemplate                 = "UseTemplate";
-	public static final String       XML_TDS_ASETUNE_UseTemplateName             = "UseTemplateName";
+	public static final String       XML_TDS_DBXTUNE_UseTemplate                 = "UseTemplate";
+	public static final String       XML_TDS_DBXTUNE_UseTemplateName             = "UseTemplateName";
 
-	public static final String       XML_TDS_ASETUNE_OptRecordSession            = "OptRecordSession";
-	public static final String       XML_TDS_ASETUNE_OptOsMonitoring             = "OptOsMonitoring";
-	public static final String       XML_TDS_ASETUNE_OptConnectAtStartup         = "OptConnectAtStartup";
-	public static final String       XML_TDS_ASETUNE_OptReconnectOnLostConn      = "OptReconnectOnLostConn";
-	public static final String       XML_TDS_ASETUNE_OptConnectLater             = "OptConnectLater";
-	public static final String       XML_TDS_ASETUNE_OptConnectLaterHour         = "OptConnectLaterHour";
-	public static final String       XML_TDS_ASETUNE_OptConnectLaterMinute       = "OptConnectLaterMinute";
-	public static final String       XML_TDS_ASETUNE_OptDissConnectLater         = "OptDissConnectLater";
-	public static final String       XML_TDS_ASETUNE_OptDissConnectLaterHour     = "OptDissConnectLaterHour";
-	public static final String       XML_TDS_ASETUNE_OptDissConnectLaterMinute   = "OptDissConnectLaterMinute";
+	public static final String       XML_TDS_DBXTUNE_OptRecordSession            = "OptRecordSession";
+	public static final String       XML_TDS_DBXTUNE_OptOsMonitoring             = "OptOsMonitoring";
+	public static final String       XML_TDS_DBXTUNE_OptConnectAtStartup         = "OptConnectAtStartup";
+	public static final String       XML_TDS_DBXTUNE_OptReconnectOnLostConn      = "OptReconnectOnLostConn";
+	public static final String       XML_TDS_DBXTUNE_OptConnectLater             = "OptConnectLater";
+	public static final String       XML_TDS_DBXTUNE_OptConnectLaterHour         = "OptConnectLaterHour";
+	public static final String       XML_TDS_DBXTUNE_OptConnectLaterMinute       = "OptConnectLaterMinute";
+	public static final String       XML_TDS_DBXTUNE_OptDissConnectLater         = "OptDissConnectLater";
+	public static final String       XML_TDS_DBXTUNE_OptDissConnectLaterHour     = "OptDissConnectLaterHour";
+	public static final String       XML_TDS_DBXTUNE_OptDissConnectLaterMinute   = "OptDissConnectLaterMinute";
 
-	public static final String       XML_TDS_ASETUNE_osMonUsername               = "osMonUsername";
-	public static final String       XML_TDS_ASETUNE_osMonPassword               = "osMonPassword";
-	public static final String       XML_TDS_ASETUNE_osMonSavePassword           = "osMonSavePassword";
-	public static final String       XML_TDS_ASETUNE_osMonHost                   = "osMonHost";
-	public static final String       XML_TDS_ASETUNE_osMonPort                   = "osMonPort";
+	public static final String       XML_TDS_DBXTUNE_osMonUsername               = "osMonUsername";
+	public static final String       XML_TDS_DBXTUNE_osMonPassword               = "osMonPassword";
+	public static final String       XML_TDS_DBXTUNE_osMonSavePassword           = "osMonSavePassword";
+	public static final String       XML_TDS_DBXTUNE_osMonHost                   = "osMonHost";
+	public static final String       XML_TDS_DBXTUNE_osMonPort                   = "osMonPort";
 
-	public static final String       XML_TDS_ASETUNE_pcsWriterClass                    = "pcsWriterClass";
-	public static final String       XML_TDS_ASETUNE_pcsWriterDriver                   = "pcsWriterDriver";
-	public static final String       XML_TDS_ASETUNE_pcsWriterUrl                      = "pcsWriterUrl";
-	public static final String       XML_TDS_ASETUNE_pcsWriterUsername                 = "pcsWriterUsername";
-	public static final String       XML_TDS_ASETUNE_pcsWriterPassword                 = "pcsWriterPassword";
-	public static final String       XML_TDS_ASETUNE_pcsWriterSavePassword             = "pcsWriterSavePassword";
-	public static final String       XML_TDS_ASETUNE_pcsWriterStartH2asNwServer        = "pcsWriterStartH2asNwServer";
-	public static final String       XML_TDS_ASETUNE_pcsWriterDdlLookup                = "pcsWriterDdlLookup";
-	public static final String       XML_TDS_ASETUNE_pcsWriterDdlStoreDependantObjects = "pcsWriterDdlStoreDependantObjects";
-	public static final String       XML_TDS_ASETUNE_pcsWriterDdlLookupSleepTime       = "pcsWriterDdlLookupSleepTime";
-	public static final String       XML_TDS_ASETUNE_pcsWriterCounterDetailes          = "pcsWriterCounterDetailes";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterClass                    = "pcsWriterClass";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDriver                   = "pcsWriterDriver";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterUrl                      = "pcsWriterUrl";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterUsername                 = "pcsWriterUsername";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterPassword                 = "pcsWriterPassword";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterSavePassword             = "pcsWriterSavePassword";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer        = "pcsWriterStartH2asNwServer";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookup                = "pcsWriterDdlLookup";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects = "pcsWriterDdlStoreDependantObjects";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime       = "pcsWriterDdlLookupSleepTime";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCounterDetailes          = "pcsWriterCounterDetailes";
 	
-//	public static final String       XML_TDS_ASETUNE_pcsReaderDriver             = "pcsReaderDriver";
-//	public static final String       XML_TDS_ASETUNE_pcsReaderUrl                = "pcsReaderUrl";
-//	public static final String       XML_TDS_ASETUNE_pcsReaderUsername           = "pcsReaderUsername";
-//	public static final String       XML_TDS_ASETUNE_pcsReaderPassword           = "pcsReaderPassword";
-//	public static final String       XML_TDS_ASETUNE_pcsReaderCheckForNewSamples = "pcsReaderCheckForNewSamples";
-//	public static final String       XML_TDS_ASETUNE_pcsReaderStartH2asNwServer  = "pcsReaderStartH2asNwServer";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderDriver             = "pcsReaderDriver";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderUrl                = "pcsReaderUrl";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderUsername           = "pcsReaderUsername";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderPassword           = "pcsReaderPassword";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderCheckForNewSamples = "pcsReaderCheckForNewSamples";
+//	public static final String       XML_TDS_DBXTUNE_pcsReaderStartH2asNwServer  = "pcsReaderStartH2asNwServer";
 
 
 	//-------------------------------------------------------------------------------------------------------------------
@@ -353,7 +378,305 @@ public class ConnectionProfile
 		public String getDifference(ConnProfileEntry entry);
 		public String getKey();
 	}
-	
+
+	public static class DbxTuneParams
+	{
+		public boolean       _dbxtuneUseTemplate     = false;
+		public String        _dbxtuneUseTemplateName = null;
+
+		// DbxTune options
+		public boolean       _dbxtuneOptRecordSession          = false;
+		public boolean       _dbxtuneOptOsMonitoring           = false;
+		public boolean       _dbxtuneOptConnectAtStartup       = false;
+		public boolean       _dbxtuneOptReconnectOnLostConn    = true;
+		public boolean       _dbxtuneOptConnectLater           = false;
+		public String        _dbxtuneOptConnectLaterHour       = null; 
+		public String        _dbxtuneOptConnectLaterMinute     = null; 
+		public boolean       _dbxtuneOptDissConnectLater       = false;
+		public String        _dbxtuneOptDissConnectLaterHour   = null; 
+		public String        _dbxtuneOptDissConnectLaterMinute = null; 
+
+		// HostMonitor
+		public String        _osMonUsername      = null;
+		public String        _osMonPassword      = null;
+		public boolean       _osMonSavePassword  = true;
+		public String        _osMonHost          = null;
+		public int           _osMonPort          = 22;
+
+		// Recordings
+		public String        _pcsWriterClass             = null;
+		public String        _pcsWriterDriver            = null;
+		public String        _pcsWriterUrl               = null;
+		public String        _pcsWriterUsername          = null;
+		public String        _pcsWriterPassword          = null;
+		public boolean       _pcsWriterSavePassword      = true;
+		public boolean       _pcsWriterStartH2asNwServer = true;
+		public boolean       _pcsWriterDdlLookup                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
+		public boolean       _pcsWriterDdlStoreDependantObjects = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
+		public int           _pcsWriterDdlLookupSleepTime       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
+
+		/** default constructor */
+		public DbxTuneParams()
+		{
+		}
+
+		/** Copy another object */
+		public DbxTuneParams(DbxTuneParams fromEntry)
+		{
+			if (fromEntry == null)
+				return;
+
+			_dbxtuneUseTemplate                = fromEntry._dbxtuneUseTemplate;
+			_dbxtuneUseTemplateName            = fromEntry._dbxtuneUseTemplateName;
+
+			// DbxTune options
+			_dbxtuneOptRecordSession           = fromEntry._dbxtuneOptRecordSession;
+			_dbxtuneOptOsMonitoring            = fromEntry._dbxtuneOptOsMonitoring;
+			_dbxtuneOptConnectAtStartup        = fromEntry._dbxtuneOptConnectAtStartup;
+			_dbxtuneOptReconnectOnLostConn     = fromEntry._dbxtuneOptReconnectOnLostConn;
+			_dbxtuneOptConnectLater            = fromEntry._dbxtuneOptConnectLater;
+			_dbxtuneOptConnectLaterHour        = fromEntry._dbxtuneOptConnectLaterHour; 
+			_dbxtuneOptConnectLaterMinute      = fromEntry._dbxtuneOptConnectLaterMinute; 
+			_dbxtuneOptDissConnectLater        = fromEntry._dbxtuneOptDissConnectLater;
+			_dbxtuneOptDissConnectLaterHour    = fromEntry._dbxtuneOptDissConnectLaterHour; 
+			_dbxtuneOptDissConnectLaterMinute  = fromEntry._dbxtuneOptDissConnectLaterMinute; 
+
+			// HostMonitor
+			_osMonUsername                     = fromEntry._osMonUsername;
+			_osMonPassword                     = fromEntry._osMonPassword;
+			_osMonSavePassword                 = fromEntry._osMonSavePassword;
+			_osMonHost                         = fromEntry._osMonHost;
+			_osMonPort                         = fromEntry._osMonPort;
+
+			// Recordings
+			_pcsWriterClass                    = fromEntry._pcsWriterClass;
+			_pcsWriterDriver                   = fromEntry._pcsWriterDriver;
+			_pcsWriterUrl                      = fromEntry._pcsWriterUrl;
+			_pcsWriterUsername                 = fromEntry._pcsWriterUsername;
+			_pcsWriterPassword                 = fromEntry._pcsWriterPassword;
+			_pcsWriterSavePassword             = fromEntry._pcsWriterSavePassword;
+			_pcsWriterStartH2asNwServer        = fromEntry._pcsWriterStartH2asNwServer;
+			_pcsWriterDdlLookup                = fromEntry._pcsWriterDdlLookup;
+			_pcsWriterDdlStoreDependantObjects = fromEntry._pcsWriterDdlStoreDependantObjects;
+			_pcsWriterDdlLookupSleepTime       = fromEntry._pcsWriterDdlLookupSleepTime;
+		}
+
+//		public PropPropEntry _pcsWriterCounterDetailes          = null;
+
+		public String getDifference(DbxTuneParams entry)
+		{
+			if (entry == null)
+				entry = DBXTUNE_PARAMS_EMPTY;
+
+			StringBuilder sb = new StringBuilder();
+			
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_UseTemplate              , _dbxtuneUseTemplate              , entry._dbxtuneUseTemplate);
+			if (_dbxtuneUseTemplate || entry._dbxtuneUseTemplate)
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName          , entry._dbxtuneUseTemplateName);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession         , entry._dbxtuneOptRecordSession);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring          , entry._dbxtuneOptOsMonitoring);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup      , entry._dbxtuneOptConnectAtStartup);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn   , entry._dbxtuneOptReconnectOnLostConn);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater          , entry._dbxtuneOptConnectLater);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLaterHour      , _dbxtuneOptConnectLaterHour      , entry._dbxtuneOptConnectLaterHour);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLaterMinute    , _dbxtuneOptConnectLaterMinute    , entry._dbxtuneOptConnectLaterMinute);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLater      , _dbxtuneOptDissConnectLater      , entry._dbxtuneOptDissConnectLater);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterHour  , _dbxtuneOptDissConnectLaterHour  , entry._dbxtuneOptDissConnectLaterHour);
+			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, _dbxtuneOptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);
+
+			if (_dbxtuneOptRecordSession || entry._dbxtuneOptRecordSession)
+			{
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass   , entry._pcsWriterClass);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver  , entry._pcsWriterDriver);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl     , entry._pcsWriterUrl);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername, entry._pcsWriterUsername);
+				if (_pcsWriterSavePassword)
+					htmlTabRowIfChangedPwd(sb, XML_TDS_DBXTUNE_pcsWriterPassword         , _pcsWriterPassword                , entry._pcsWriterPassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword            , entry._pcsWriterSavePassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer       , entry._pcsWriterStartH2asNwServer);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup               , entry._pcsWriterDdlLookup);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime      , entry._pcsWriterDdlLookupSleepTime);
+			}
+
+			if (_dbxtuneOptOsMonitoring || entry._dbxtuneOptOsMonitoring)
+			{
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonUsername    , _osMonUsername    , entry._osMonUsername);
+				if (_osMonSavePassword || entry._osMonSavePassword)
+					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPassword, _osMonPassword    , entry._osMonPassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword, entry._osMonSavePassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost        , entry._osMonHost);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort        , entry._osMonPort);
+			}
+
+			return sb.toString();
+		}
+
+		public String toHtml()
+		{
+			StringBuilder sb = new StringBuilder();
+			
+			sb.append("<h3>DbxTune specific settings</h3>");
+			sb.append("<hr>");
+			sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+			htmlTabRow(sb, XML_TDS_DBXTUNE_UseTemplate, _dbxtuneUseTemplate   );
+			if (_dbxtuneUseTemplate)
+				htmlTabRow(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLaterHour      , _dbxtuneOptConnectLaterHour);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLaterMinute    , _dbxtuneOptConnectLaterMinute);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLater      , _dbxtuneOptDissConnectLater);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLaterHour  , _dbxtuneOptDissConnectLaterHour);
+			htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, _dbxtuneOptDissConnectLaterMinute);
+			sb.append("</table>");
+
+			if (_dbxtuneOptRecordSession)
+			{
+				sb.append("<h3>Recording Database details</h3>");
+				sb.append("<hr>");
+				sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername);
+				if (_pcsWriterSavePassword)
+					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterPassword            , !_logger.isDebugEnabled() ? "**secret**" : _pcsWriterPassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime);
+				sb.append("</table>");
+			}
+
+			if (_dbxtuneOptOsMonitoring)
+			{
+				sb.append("<h3>Operating System Monitoring details</h3>");
+				sb.append("<hr>");
+				sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonUsername    , _osMonUsername);
+				if (_osMonSavePassword)
+					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPassword, !_logger.isDebugEnabled() ? "**secret**" : _osMonPassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort);
+				sb.append("</table>");
+			}
+
+			return sb.toString();
+		}
+
+		public String toXml()
+		{
+			StringBuilder sb = new StringBuilder();
+
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_UseTemplate,                 _dbxtuneUseTemplate);
+			if (_dbxtuneUseTemplate)
+				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_UseTemplateName,         _dbxtuneUseTemplateName);
+		
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptRecordSession,            _dbxtuneOptRecordSession);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptOsMonitoring,             _dbxtuneOptOsMonitoring);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectAtStartup,         _dbxtuneOptConnectAtStartup);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptReconnectOnLostConn,      _dbxtuneOptReconnectOnLostConn);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLater,             _dbxtuneOptConnectLater);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLaterHour,         _dbxtuneOptConnectLaterHour);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLaterMinute,       _dbxtuneOptConnectLaterMinute);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLater,         _dbxtuneOptDissConnectLater);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLaterHour,     _dbxtuneOptDissConnectLaterHour);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLaterMinute,   _dbxtuneOptDissConnectLaterMinute);
+		
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonUsername,               _osMonUsername);
+			if (_osMonSavePassword)
+				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPassword,           Configuration.encryptPropertyValue(XML_TDS_DBXTUNE_osMonPassword, _osMonPassword));
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonSavePassword,           _osMonSavePassword);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonHost,                   _osMonHost);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPort,                   _osMonPort);
+		
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass,                    _pcsWriterClass);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver,                   _pcsWriterDriver);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUrl,                      _pcsWriterUrl);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUsername,                 _pcsWriterUsername);
+			if (_pcsWriterSavePassword)
+				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterPassword,              _pcsWriterPassword);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterSavePassword,             _pcsWriterSavePassword);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        _pcsWriterStartH2asNwServer);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                _pcsWriterDdlLookup);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       _pcsWriterDdlLookupSleepTime);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          _pcsWriterCounterDetailes);
+
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderDriver,             _pcsReaderDriver);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUrl,                _pcsReaderUrl);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUsername,           _pcsReaderUsername);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderPassword,           Configuration.encryptPropertyValue(XML_TDS_DBXTUNE_pcsReaderPassword, _pcsReaderPassword));
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderCheckForNewSamples, _pcsReaderCheckForNewSamples);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderStartH2asNwServer,  _pcsReaderStartH2asNwServer);
+
+			return sb.toString();
+		}
+
+		public static DbxTuneParams parseXml(Element element)
+		{
+			DbxTuneParams entry = new DbxTuneParams();
+
+			entry._dbxtuneUseTemplate                = getValue(element, XML_TDS_DBXTUNE_UseTemplate,     entry._dbxtuneUseTemplate);
+			entry._dbxtuneUseTemplateName            = getValue(element, XML_TDS_DBXTUNE_UseTemplateName, entry._dbxtuneUseTemplateName);
+
+			// DbxTune options
+			entry._dbxtuneOptRecordSession           = getValue(element, XML_TDS_DBXTUNE_OptRecordSession,          entry._dbxtuneOptRecordSession);
+			entry._dbxtuneOptOsMonitoring            = getValue(element, XML_TDS_DBXTUNE_OptOsMonitoring,           entry._dbxtuneOptOsMonitoring);
+			entry._dbxtuneOptConnectAtStartup        = getValue(element, XML_TDS_DBXTUNE_OptConnectAtStartup,       entry._dbxtuneOptConnectAtStartup); // should the be in here???
+			entry._dbxtuneOptReconnectOnLostConn     = getValue(element, XML_TDS_DBXTUNE_OptReconnectOnLostConn,    entry._dbxtuneOptReconnectOnLostConn);
+			entry._dbxtuneOptConnectLater            = getValue(element, XML_TDS_DBXTUNE_OptConnectLater,           entry._dbxtuneOptConnectLater); // should the be in here???
+			entry._dbxtuneOptConnectLaterHour        = getValue(element, XML_TDS_DBXTUNE_OptConnectLaterHour,       entry._dbxtuneOptConnectLaterHour);  // should the be in here???
+			entry._dbxtuneOptConnectLaterMinute      = getValue(element, XML_TDS_DBXTUNE_OptConnectLaterMinute,     entry._dbxtuneOptConnectLaterMinute);  // should the be in here???
+			entry._dbxtuneOptDissConnectLater        = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLater,       entry._dbxtuneOptDissConnectLater); // should the be in here???
+			entry._dbxtuneOptDissConnectLaterHour    = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLaterHour,   entry._dbxtuneOptDissConnectLaterHour);  // should the be in here???
+			entry._dbxtuneOptDissConnectLaterMinute  = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);  // should the be in here???
+
+			// HostMonitor
+			if (entry._dbxtuneOptOsMonitoring)
+			{
+				entry._osMonUsername                 = getValue(element, XML_TDS_DBXTUNE_osMonUsername,     entry._osMonUsername);
+				entry._osMonSavePassword             = getValue(element, XML_TDS_DBXTUNE_osMonSavePassword, entry._osMonSavePassword); // Should this be here???
+				if (entry._osMonSavePassword)
+					entry._osMonPassword             = getValue(element, XML_TDS_DBXTUNE_osMonPassword,     entry._osMonPassword);
+				entry._osMonHost                     = getValue(element, XML_TDS_DBXTUNE_osMonHost,         entry._osMonHost);
+				entry._osMonPort                     = getValue(element, XML_TDS_DBXTUNE_osMonPort,         entry._osMonPort);
+			}
+
+			// Recordings
+			if (entry._dbxtuneOptRecordSession)
+			{
+				entry._pcsWriterClass                    = getValue(element, XML_TDS_DBXTUNE_pcsWriterClass,                    entry._pcsWriterClass);
+				entry._pcsWriterDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterDriver,                   entry._pcsWriterDriver);
+				entry._pcsWriterUrl                      = getValue(element, XML_TDS_DBXTUNE_pcsWriterUrl,                      entry._pcsWriterUrl);
+				entry._pcsWriterUsername                 = getValue(element, XML_TDS_DBXTUNE_pcsWriterUsername,                 entry._pcsWriterUsername);
+				entry._pcsWriterSavePassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterSavePassword,             entry._pcsWriterSavePassword);
+				if (entry._pcsWriterSavePassword)
+					entry._pcsWriterPassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterPassword,                 entry._pcsWriterPassword);
+				entry._pcsWriterStartH2asNwServer        = getValue(element, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        entry._pcsWriterStartH2asNwServer);
+				entry._pcsWriterDdlLookup                = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                entry._pcsWriterDdlLookup);
+				entry._pcsWriterDdlStoreDependantObjects = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
+				entry._pcsWriterDdlLookupSleepTime       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       entry._pcsWriterDdlLookupSleepTime);
+//				entry._pcsWriterCounterDetailes          = getValue(element, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          entry._pcsWriterCounterDetailes);
+			}
+			// Load Recordings
+//			entry._pcsReaderDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsReaderDriver,             entry._pcsReaderDriver);
+//			entry._pcsReaderUrl                      = getValue(element, XML_TDS_DBXTUNE_pcsReaderUrl,                entry._pcsReaderUrl);
+//			entry._pcsReaderUsername                 = getValue(element, XML_TDS_DBXTUNE_pcsReaderUsername,           entry._pcsReaderUsername);
+//			entry._pcsReaderPassword                 = getValue(element, XML_TDS_DBXTUNE_pcsReaderPassword,           entry._pcsReaderPassword);
+//			entry._pcsReaderCheckForNewSamples       = getValue(element, XML_TDS_DBXTUNE_pcsReaderCheckForNewSamples, entry._pcsReaderCheckForNewSamples);
+//			entry._pcsReaderStartH2asNwServer        = getValue(element, XML_TDS_DBXTUNE_pcsReaderStartH2asNwServer,  entry._pcsReaderStartH2asNwServer);
+			
+			return entry;
+		}
+	}
+
 	public static class TdsEntry
 	implements ConnProfileEntry
 	{
@@ -379,42 +702,43 @@ public class ConnectionProfile
 		public String        _tdsUseUrlStr     = null; // actual URL if above is true
 
 		// If below parameters is valid and should be read written to the XML file
-		public boolean       _isAseTuneParamsValid   = false; 
+		public boolean       _isDbxTuneParamsValid   = false; 
+		public DbxTuneParams _dbxtuneParams    = null; 
 
-		public boolean       _asetuneUseTemplate     = false;
-		public String        _asetuneUseTemplateName = null;
-
-		// AseTune options
-		public boolean       _asetuneOptRecordSession          = false;
-		public boolean       _asetuneOptOsMonitoring           = false;
-		public boolean       _asetuneOptConnectAtStartup       = false;
-		public boolean       _asetuneOptReconnectOnLostConn    = true;
-		public boolean       _asetuneOptConnectLater           = false;
-		public String        _asetuneOptConnectLaterHour       = null; 
-		public String        _asetuneOptConnectLaterMinute     = null; 
-		public boolean       _asetuneOptDissConnectLater       = false;
-		public String        _asetuneOptDissConnectLaterHour   = null; 
-		public String        _asetuneOptDissConnectLaterMinute = null; 
-
-		// HostMonitor
-		public String        _osMonUsername      = null;
-		public String        _osMonPassword      = null;
-		public boolean       _osMonSavePassword  = true;
-		public String        _osMonHost          = null;
-		public int           _osMonPort          = 22;
-
-		// Recordings
-		public String        _pcsWriterClass             = null;
-		public String        _pcsWriterDriver            = null;
-		public String        _pcsWriterUrl               = null;
-		public String        _pcsWriterUsername          = null;
-		public String        _pcsWriterPassword          = null;
-		public boolean       _pcsWriterSavePassword      = true;
-		public boolean       _pcsWriterStartH2asNwServer = true;
-		public boolean       _pcsWriterDdlLookup                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
-		public boolean       _pcsWriterDdlStoreDependantObjects = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
-		public int           _pcsWriterDdlLookupSleepTime       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
-//		public PropPropEntry _pcsWriterCounterDetailes          = null;
+//		public boolean       _dbxtuneUseTemplate     = false;
+//		public String        _dbxtuneUseTemplateName = null;
+//
+//		// DbxTune options
+//		public boolean       _dbxtuneOptRecordSession          = false;
+//		public boolean       _dbxtuneOptOsMonitoring           = false;
+//		public boolean       _dbxtuneOptConnectAtStartup       = false;
+//		public boolean       _dbxtuneOptReconnectOnLostConn    = true;
+//		public boolean       _dbxtuneOptConnectLater           = false;
+//		public String        _dbxtuneOptConnectLaterHour       = null; 
+//		public String        _dbxtuneOptConnectLaterMinute     = null; 
+//		public boolean       _dbxtuneOptDissConnectLater       = false;
+//		public String        _dbxtuneOptDissConnectLaterHour   = null; 
+//		public String        _dbxtuneOptDissConnectLaterMinute = null; 
+//
+//		// HostMonitor
+//		public String        _osMonUsername      = null;
+//		public String        _osMonPassword      = null;
+//		public boolean       _osMonSavePassword  = true;
+//		public String        _osMonHost          = null;
+//		public int           _osMonPort          = 22;
+//
+//		// Recordings
+//		public String        _pcsWriterClass             = null;
+//		public String        _pcsWriterDriver            = null;
+//		public String        _pcsWriterUrl               = null;
+//		public String        _pcsWriterUsername          = null;
+//		public String        _pcsWriterPassword          = null;
+//		public boolean       _pcsWriterSavePassword      = true;
+//		public boolean       _pcsWriterStartH2asNwServer = true;
+//		public boolean       _pcsWriterDdlLookup                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
+//		public boolean       _pcsWriterDdlStoreDependantObjects = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
+//		public int           _pcsWriterDdlLookupSleepTime       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
+////		public PropPropEntry _pcsWriterCounterDetailes          = null;
 
 
 		public TdsEntry(String key)
@@ -429,50 +753,52 @@ public class ConnectionProfile
 		}
 
 		/**
-		 * if the previously stored profile IS an AseTune Profile<br>
+		 * if the previously stored profile IS an DbxTune Profile<br>
 		 * and we are using SQLWindow, we need to copy the "hidden" fields into the passed ConnectionProfileEntry<br>
-		 * otherwise we will lose that data the next time we use the entry from AseTune
+		 * otherwise we will lose that data the next time we use the entry from DbxTune
 		 * 
 		 * @param fromEntry entry to copy from
 		 */
-		public void copyAseTuneParams(TdsEntry fromEntry)
+		public void copyDbxTuneParams(TdsEntry fromEntry)
 		{
-//System.out.println("copyAseTuneParams: from '"+fromEntry+"', to this '"+this+"'.");
-			_isAseTuneParamsValid              = fromEntry._isAseTuneParamsValid; 
+//System.out.println("copyDbxTuneParams: from '"+fromEntry+"', to this '"+this+"'.");
+			_isDbxTuneParamsValid              = fromEntry._isDbxTuneParamsValid; 
 
-			_asetuneUseTemplate                = fromEntry._asetuneUseTemplate;
-			_asetuneUseTemplateName            = fromEntry._asetuneUseTemplateName;
+			_dbxtuneParams                     = new DbxTuneParams(fromEntry._dbxtuneParams); // we probably need to create a NEW object here
 
-			// AseTune options
-			_asetuneOptRecordSession           = fromEntry._asetuneOptRecordSession;
-			_asetuneOptOsMonitoring            = fromEntry._asetuneOptOsMonitoring;
-			_asetuneOptConnectAtStartup        = fromEntry._asetuneOptConnectAtStartup;
-			_asetuneOptReconnectOnLostConn     = fromEntry._asetuneOptReconnectOnLostConn;
-			_asetuneOptConnectLater            = fromEntry._asetuneOptConnectLater;
-			_asetuneOptConnectLaterHour        = fromEntry._asetuneOptConnectLaterHour; 
-			_asetuneOptConnectLaterMinute      = fromEntry._asetuneOptConnectLaterMinute; 
-			_asetuneOptDissConnectLater        = fromEntry._asetuneOptDissConnectLater;
-			_asetuneOptDissConnectLaterHour    = fromEntry._asetuneOptDissConnectLaterHour; 
-			_asetuneOptDissConnectLaterMinute  = fromEntry._asetuneOptDissConnectLaterMinute; 
-
-			// HostMonitor
-			_osMonUsername                     = fromEntry._osMonUsername;
-			_osMonPassword                     = fromEntry._osMonPassword;
-			_osMonSavePassword                 = fromEntry._osMonSavePassword;
-			_osMonHost                         = fromEntry._osMonHost;
-			_osMonPort                         = fromEntry._osMonPort;
-
-			// Recordings
-			_pcsWriterClass                    = fromEntry._pcsWriterClass;
-			_pcsWriterDriver                   = fromEntry._pcsWriterDriver;
-			_pcsWriterUrl                      = fromEntry._pcsWriterUrl;
-			_pcsWriterUsername                 = fromEntry._pcsWriterUsername;
-			_pcsWriterPassword                 = fromEntry._pcsWriterPassword;
-			_pcsWriterSavePassword             = fromEntry._pcsWriterSavePassword;
-			_pcsWriterStartH2asNwServer        = fromEntry._pcsWriterStartH2asNwServer;
-			_pcsWriterDdlLookup                = fromEntry._pcsWriterDdlLookup;
-			_pcsWriterDdlStoreDependantObjects = fromEntry._pcsWriterDdlStoreDependantObjects;
-			_pcsWriterDdlLookupSleepTime       = fromEntry._pcsWriterDdlLookupSleepTime;
+//			_dbxtuneUseTemplate                = fromEntry._dbxtuneUseTemplate;
+//			_dbxtuneUseTemplateName            = fromEntry._dbxtuneUseTemplateName;
+//
+//			// DbxTune options
+//			_dbxtuneOptRecordSession           = fromEntry._dbxtuneOptRecordSession;
+//			_dbxtuneOptOsMonitoring            = fromEntry._dbxtuneOptOsMonitoring;
+//			_dbxtuneOptConnectAtStartup        = fromEntry._dbxtuneOptConnectAtStartup;
+//			_dbxtuneOptReconnectOnLostConn     = fromEntry._dbxtuneOptReconnectOnLostConn;
+//			_dbxtuneOptConnectLater            = fromEntry._dbxtuneOptConnectLater;
+//			_dbxtuneOptConnectLaterHour        = fromEntry._dbxtuneOptConnectLaterHour; 
+//			_dbxtuneOptConnectLaterMinute      = fromEntry._dbxtuneOptConnectLaterMinute; 
+//			_dbxtuneOptDissConnectLater        = fromEntry._dbxtuneOptDissConnectLater;
+//			_dbxtuneOptDissConnectLaterHour    = fromEntry._dbxtuneOptDissConnectLaterHour; 
+//			_dbxtuneOptDissConnectLaterMinute  = fromEntry._dbxtuneOptDissConnectLaterMinute; 
+//
+//			// HostMonitor
+//			_osMonUsername                     = fromEntry._osMonUsername;
+//			_osMonPassword                     = fromEntry._osMonPassword;
+//			_osMonSavePassword                 = fromEntry._osMonSavePassword;
+//			_osMonHost                         = fromEntry._osMonHost;
+//			_osMonPort                         = fromEntry._osMonPort;
+//
+//			// Recordings
+//			_pcsWriterClass                    = fromEntry._pcsWriterClass;
+//			_pcsWriterDriver                   = fromEntry._pcsWriterDriver;
+//			_pcsWriterUrl                      = fromEntry._pcsWriterUrl;
+//			_pcsWriterUsername                 = fromEntry._pcsWriterUsername;
+//			_pcsWriterPassword                 = fromEntry._pcsWriterPassword;
+//			_pcsWriterSavePassword             = fromEntry._pcsWriterSavePassword;
+//			_pcsWriterStartH2asNwServer        = fromEntry._pcsWriterStartH2asNwServer;
+//			_pcsWriterDdlLookup                = fromEntry._pcsWriterDdlLookup;
+//			_pcsWriterDdlStoreDependantObjects = fromEntry._pcsWriterDdlStoreDependantObjects;
+//			_pcsWriterDdlLookupSleepTime       = fromEntry._pcsWriterDdlLookupSleepTime;
 			
 		}
 
@@ -521,46 +847,51 @@ public class ConnectionProfile
 			if (_tdsUseUrl || entry._tdsUseUrl)
 				htmlTabRowIfChanged(sb, XML_TDS_UseRawUrlStr   , _tdsUseUrlStr      , entry._tdsUseUrlStr);
 
-			if (_isAseTuneParamsValid || entry._isAseTuneParamsValid)
+			if (_isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
 			{
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_UseTemplate              , _asetuneUseTemplate              , entry._asetuneUseTemplate);
-				if (_asetuneUseTemplate || entry._asetuneUseTemplate)
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_UseTemplateName      , _asetuneUseTemplateName          , entry._asetuneUseTemplateName);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptRecordSession         , _asetuneOptRecordSession         , entry._asetuneOptRecordSession);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptOsMonitoring          , _asetuneOptOsMonitoring          , entry._asetuneOptOsMonitoring);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptConnectAtStartup      , _asetuneOptConnectAtStartup      , entry._asetuneOptConnectAtStartup);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptReconnectOnLostConn   , _asetuneOptReconnectOnLostConn   , entry._asetuneOptReconnectOnLostConn);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptConnectLater          , _asetuneOptConnectLater          , entry._asetuneOptConnectLater);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptConnectLaterHour      , _asetuneOptConnectLaterHour      , entry._asetuneOptConnectLaterHour);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptConnectLaterMinute    , _asetuneOptConnectLaterMinute    , entry._asetuneOptConnectLaterMinute);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptDissConnectLater      , _asetuneOptDissConnectLater      , entry._asetuneOptDissConnectLater);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptDissConnectLaterHour  , _asetuneOptDissConnectLaterHour  , entry._asetuneOptDissConnectLaterHour);
-				htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_OptDissConnectLaterMinute, _asetuneOptDissConnectLaterMinute, entry._asetuneOptDissConnectLaterMinute);
+				if (_dbxtuneParams == null)
+					_dbxtuneParams = DBXTUNE_PARAMS_EMPTY;
 
-				if (_asetuneOptRecordSession || entry._asetuneOptRecordSession)
-				{
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterClass                   , _pcsWriterClass   , entry._pcsWriterClass);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterDriver                  , _pcsWriterDriver  , entry._pcsWriterDriver);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterUrl                     , _pcsWriterUrl     , entry._pcsWriterUrl);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterUsername                , _pcsWriterUsername, entry._pcsWriterUsername);
-					if (_pcsWriterSavePassword)
-						htmlTabRowIfChangedPwd(sb, XML_TDS_ASETUNE_pcsWriterPassword         , _pcsWriterPassword                , entry._pcsWriterPassword);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterSavePassword            , _pcsWriterSavePassword            , entry._pcsWriterSavePassword);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer       , entry._pcsWriterStartH2asNwServer);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup               , entry._pcsWriterDdlLookup);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime      , entry._pcsWriterDdlLookupSleepTime);
-				}
+				sb.append(_dbxtuneParams.getDifference(entry._dbxtuneParams));
 
-				if (_asetuneOptOsMonitoring || entry._asetuneOptOsMonitoring)
-				{
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_osMonUsername    , _osMonUsername    , entry._osMonUsername);
-					if (_osMonSavePassword || entry._osMonSavePassword)
-						htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_osMonPassword, _osMonPassword    , entry._osMonPassword);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_osMonSavePassword, _osMonSavePassword, entry._osMonSavePassword);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_osMonHost        , _osMonHost        , entry._osMonHost);
-					htmlTabRowIfChanged(sb, XML_TDS_ASETUNE_osMonPort        , _osMonPort        , entry._osMonPort);
-				}
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_UseTemplate              , _dbxtuneUseTemplate              , entry._dbxtuneUseTemplate);
+//				if (_dbxtuneUseTemplate || entry._dbxtuneUseTemplate)
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName          , entry._dbxtuneUseTemplateName);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession         , entry._dbxtuneOptRecordSession);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring          , entry._dbxtuneOptOsMonitoring);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup      , entry._dbxtuneOptConnectAtStartup);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn   , entry._dbxtuneOptReconnectOnLostConn);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater          , entry._dbxtuneOptConnectLater);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLaterHour      , _dbxtuneOptConnectLaterHour      , entry._dbxtuneOptConnectLaterHour);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptConnectLaterMinute    , _dbxtuneOptConnectLaterMinute    , entry._dbxtuneOptConnectLaterMinute);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLater      , _dbxtuneOptDissConnectLater      , entry._dbxtuneOptDissConnectLater);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterHour  , _dbxtuneOptDissConnectLaterHour  , entry._dbxtuneOptDissConnectLaterHour);
+//				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, _dbxtuneOptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);
+//
+//				if (_dbxtuneOptRecordSession || entry._dbxtuneOptRecordSession)
+//				{
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass   , entry._pcsWriterClass);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver  , entry._pcsWriterDriver);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl     , entry._pcsWriterUrl);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername, entry._pcsWriterUsername);
+//					if (_pcsWriterSavePassword)
+//						htmlTabRowIfChangedPwd(sb, XML_TDS_DBXTUNE_pcsWriterPassword         , _pcsWriterPassword                , entry._pcsWriterPassword);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword            , entry._pcsWriterSavePassword);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer       , entry._pcsWriterStartH2asNwServer);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup               , entry._pcsWriterDdlLookup);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime      , entry._pcsWriterDdlLookupSleepTime);
+//				}
+//
+//				if (_dbxtuneOptOsMonitoring || entry._dbxtuneOptOsMonitoring)
+//				{
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonUsername    , _osMonUsername    , entry._osMonUsername);
+//					if (_osMonSavePassword || entry._osMonSavePassword)
+//						htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPassword, _osMonPassword    , entry._osMonPassword);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword, entry._osMonSavePassword);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost        , entry._osMonHost);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort        , entry._osMonPort);
+//				}
 			}
 
 			if (sb.length() > 0)
@@ -593,7 +924,7 @@ public class ConnectionProfile
 			htmlTabRow(sb, XML_TDS_IFILE              , _tdsIfile);
 			htmlTabRow(sb, XML_TDS_USERNAME           , _tdsUsername);
 			if (_tdsSavePassword)
-				htmlTabRow(sb, XML_TDS_PASSWORD       , "**secret**");
+				htmlTabRow(sb, XML_TDS_PASSWORD       , !_logger.isDebugEnabled() ? "**secret**" : _tdsPassword);
 			htmlTabRow(sb, XML_TDS_SAVE_PASSWORD      , _tdsSavePassword);
 			htmlTabRow(sb, XML_TDS_NW_ENCRYPT_PASSWORD, _tdsNwEncryptPasswd);
 			htmlTabRow(sb, XML_TDS_SERVER_NAME        , _tdsServer);
@@ -611,58 +942,61 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_UseRawUrlStr   , _tdsUseUrlStr);
 			sb.append("</table>");
 
-			if (_isAseTuneParamsValid)
+			if (_isDbxTuneParamsValid)
 			{
-				sb.append("<h3>AseTune specific settings</h3>");
-				sb.append("<hr>");
-				sb.append("<table border=0 cellspacing=1 cellpadding=1>");
-				htmlTabRow(sb, XML_TDS_ASETUNE_UseTemplate, _asetuneUseTemplate   );
-				if (_asetuneUseTemplate)
-					htmlTabRow(sb, XML_TDS_ASETUNE_UseTemplateName      , _asetuneUseTemplateName);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptRecordSession         , _asetuneOptRecordSession);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptOsMonitoring          , _asetuneOptOsMonitoring);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptConnectAtStartup      , _asetuneOptConnectAtStartup);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptReconnectOnLostConn   , _asetuneOptReconnectOnLostConn);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptConnectLater          , _asetuneOptConnectLater);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptConnectLaterHour      , _asetuneOptConnectLaterHour);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptConnectLaterMinute    , _asetuneOptConnectLaterMinute);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptDissConnectLater      , _asetuneOptDissConnectLater);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptDissConnectLaterHour  , _asetuneOptDissConnectLaterHour);
-				htmlTabRow(sb, XML_TDS_ASETUNE_OptDissConnectLaterMinute, _asetuneOptDissConnectLaterMinute);
-				sb.append("</table>");
-
-				if (_asetuneOptRecordSession)
-				{
-					sb.append("<h3>Recording Database details</h3>");
-					sb.append("<hr>");
-					sb.append("<table border=0 cellspacing=1 cellpadding=1>");
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterClass                   , _pcsWriterClass);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterDriver                  , _pcsWriterDriver);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterUrl                     , _pcsWriterUrl);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterUsername                , _pcsWriterUsername);
-					if (_pcsWriterSavePassword)
-						htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterPassword            , "**secret**");
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterSavePassword            , _pcsWriterSavePassword);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
-					htmlTabRow(sb, XML_TDS_ASETUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime);
-					sb.append("</table>");
-				}
-
-				if (_asetuneOptOsMonitoring)
-				{
-					sb.append("<h3>Operating System Monitoring details</h3>");
-					sb.append("<hr>");
-					sb.append("<table border=0 cellspacing=1 cellpadding=1>");
-					htmlTabRow(sb, XML_TDS_ASETUNE_osMonUsername    , _osMonUsername);
-					if (_osMonSavePassword)
-						htmlTabRow(sb, XML_TDS_ASETUNE_osMonPassword, "**secret**");
-					htmlTabRow(sb, XML_TDS_ASETUNE_osMonSavePassword, _osMonSavePassword);
-					htmlTabRow(sb, XML_TDS_ASETUNE_osMonHost        , _osMonHost);
-					htmlTabRow(sb, XML_TDS_ASETUNE_osMonPort        , _osMonPort);
-					sb.append("</table>");
-				}
+				if (_dbxtuneParams != null)
+					sb.append(_dbxtuneParams.toHtml());
+				
+//				sb.append("<h3>DbxTune specific settings</h3>");
+//				sb.append("<hr>");
+//				sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_UseTemplate, _dbxtuneUseTemplate   );
+//				if (_dbxtuneUseTemplate)
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_UseTemplateName      , _dbxtuneUseTemplateName);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptRecordSession         , _dbxtuneOptRecordSession);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptOsMonitoring          , _dbxtuneOptOsMonitoring);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectAtStartup      , _dbxtuneOptConnectAtStartup);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptReconnectOnLostConn   , _dbxtuneOptReconnectOnLostConn);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLater          , _dbxtuneOptConnectLater);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLaterHour      , _dbxtuneOptConnectLaterHour);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptConnectLaterMinute    , _dbxtuneOptConnectLaterMinute);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLater      , _dbxtuneOptDissConnectLater);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLaterHour  , _dbxtuneOptDissConnectLaterHour);
+//				htmlTabRow(sb, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, _dbxtuneOptDissConnectLaterMinute);
+//				sb.append("</table>");
+//
+//				if (_dbxtuneOptRecordSession)
+//				{
+//					sb.append("<h3>Recording Database details</h3>");
+//					sb.append("<hr>");
+//					sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername);
+//					if (_pcsWriterSavePassword)
+//						htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterPassword            , !_logger.isDebugEnabled() ? "**secret**" : _pcsWriterPassword);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime);
+//					sb.append("</table>");
+//				}
+//
+//				if (_dbxtuneOptOsMonitoring)
+//				{
+//					sb.append("<h3>Operating System Monitoring details</h3>");
+//					sb.append("<hr>");
+//					sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonUsername    , _osMonUsername);
+//					if (_osMonSavePassword)
+//						htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPassword, !_logger.isDebugEnabled() ? "**secret**" : _osMonPassword);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort);
+//					sb.append("</table>");
+//				}
 			}
 
 			sb.append("</html>");
@@ -701,51 +1035,54 @@ public class ConnectionProfile
 			if (_tdsUseUrl)
 				StringUtil.xmlTag(sb, 8, XML_TDS_UseRawUrlStr,    _tdsUseUrlStr);
 
-			// AseTune params
-			StringUtil.xmlTag(sb, 8, XML_TDS_IsAseTuneParamsValid, _isAseTuneParamsValid);
-			if (_isAseTuneParamsValid)
+			// DbxTune params
+			StringUtil.xmlTag(sb, 8, XML_TDS_IsDbxTuneParamsValid, _isDbxTuneParamsValid);
+			if (_isDbxTuneParamsValid)
 			{
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_UseTemplate,                 _asetuneUseTemplate);
-				if (_asetuneUseTemplate)
-					StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_UseTemplateName,         _asetuneUseTemplateName);
-			
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptRecordSession,            _asetuneOptRecordSession);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptOsMonitoring,             _asetuneOptOsMonitoring);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptConnectAtStartup,         _asetuneOptConnectAtStartup);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptReconnectOnLostConn,      _asetuneOptReconnectOnLostConn);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptConnectLater,             _asetuneOptConnectLater);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptConnectLaterHour,         _asetuneOptConnectLaterHour);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptConnectLaterMinute,       _asetuneOptConnectLaterMinute);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptDissConnectLater,         _asetuneOptDissConnectLater);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptDissConnectLaterHour,     _asetuneOptDissConnectLaterHour);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_OptDissConnectLaterMinute,   _asetuneOptDissConnectLaterMinute);
-			
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_osMonUsername,               _osMonUsername);
-				if (_osMonSavePassword)
-					StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_osMonPassword,           Configuration.encryptPropertyValue(XML_TDS_ASETUNE_osMonPassword, _osMonPassword));
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_osMonSavePassword,           _osMonSavePassword);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_osMonHost,                   _osMonHost);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_osMonPort,                   _osMonPort);
-			
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterClass,                    _pcsWriterClass);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterDriver,                   _pcsWriterDriver);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterUrl,                      _pcsWriterUrl);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterUsername,                 _pcsWriterUsername);
-				if (_pcsWriterSavePassword)
-					StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterPassword,              _pcsWriterPassword);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterSavePassword,             _pcsWriterSavePassword);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterStartH2asNwServer,        _pcsWriterStartH2asNwServer);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterDdlLookup,                _pcsWriterDdlLookup);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
-				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterDdlLookupSleepTime,       _pcsWriterDdlLookupSleepTime);
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsWriterCounterDetailes,          _pcsWriterCounterDetailes);
+				if (_dbxtuneParams != null)
+					sb.append(_dbxtuneParams.toXml());
 
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderDriver,             _pcsReaderDriver);
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderUrl,                _pcsReaderUrl);
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderUsername,           _pcsReaderUsername);
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderPassword,           Configuration.encryptPropertyValue(XML_TDS_ASETUNE_pcsReaderPassword, _pcsReaderPassword));
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderCheckForNewSamples, _pcsReaderCheckForNewSamples);
-//				StringUtil.xmlTag(sb, 8, XML_TDS_ASETUNE_pcsReaderStartH2asNwServer,  _pcsReaderStartH2asNwServer);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_UseTemplate,                 _dbxtuneUseTemplate);
+//				if (_dbxtuneUseTemplate)
+//					StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_UseTemplateName,         _dbxtuneUseTemplateName);
+//			
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptRecordSession,            _dbxtuneOptRecordSession);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptOsMonitoring,             _dbxtuneOptOsMonitoring);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectAtStartup,         _dbxtuneOptConnectAtStartup);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptReconnectOnLostConn,      _dbxtuneOptReconnectOnLostConn);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLater,             _dbxtuneOptConnectLater);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLaterHour,         _dbxtuneOptConnectLaterHour);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptConnectLaterMinute,       _dbxtuneOptConnectLaterMinute);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLater,         _dbxtuneOptDissConnectLater);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLaterHour,     _dbxtuneOptDissConnectLaterHour);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_OptDissConnectLaterMinute,   _dbxtuneOptDissConnectLaterMinute);
+//			
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonUsername,               _osMonUsername);
+//				if (_osMonSavePassword)
+//					StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPassword,           Configuration.encryptPropertyValue(XML_TDS_DBXTUNE_osMonPassword, _osMonPassword));
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonSavePassword,           _osMonSavePassword);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonHost,                   _osMonHost);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPort,                   _osMonPort);
+//			
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass,                    _pcsWriterClass);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver,                   _pcsWriterDriver);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUrl,                      _pcsWriterUrl);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUsername,                 _pcsWriterUsername);
+//				if (_pcsWriterSavePassword)
+//					StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterPassword,              _pcsWriterPassword);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterSavePassword,             _pcsWriterSavePassword);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        _pcsWriterStartH2asNwServer);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                _pcsWriterDdlLookup);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       _pcsWriterDdlLookupSleepTime);
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          _pcsWriterCounterDetailes);
+//
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderDriver,             _pcsReaderDriver);
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUrl,                _pcsReaderUrl);
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUsername,           _pcsReaderUsername);
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderPassword,           Configuration.encryptPropertyValue(XML_TDS_DBXTUNE_pcsReaderPassword, _pcsReaderPassword));
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderCheckForNewSamples, _pcsReaderCheckForNewSamples);
+////				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderStartH2asNwServer,  _pcsReaderStartH2asNwServer);
 			}
 			
 			StringUtil.xmlEndTag(sb, 4, XML_TDS_ENTRY);
@@ -786,58 +1123,60 @@ public class ConnectionProfile
 			if (entry._tdsUseUrl)
 				entry._tdsUseUrlStr   = getValue(element, XML_TDS_UseRawUrlStr,        entry._tdsUseUrlStr);
 
-			entry._isAseTuneParamsValid = getValue(element, XML_TDS_IsAseTuneParamsValid, entry._isAseTuneParamsValid);
-			if (entry._isAseTuneParamsValid)
+			entry._isDbxTuneParamsValid = getValue(element, XML_TDS_IsDbxTuneParamsValid, XML_TDS_IsAseTuneParamsValid, entry._isDbxTuneParamsValid); // XML_TDS_IsAseTuneParamsValid is backward compatibility
+			if (entry._isDbxTuneParamsValid)
 			{
-				entry._asetuneUseTemplate                = getValue(element, XML_TDS_ASETUNE_UseTemplate,     entry._asetuneUseTemplate);
-				entry._asetuneUseTemplateName            = getValue(element, XML_TDS_ASETUNE_UseTemplateName, entry._asetuneUseTemplateName);
-	
-				// AseTune options
-				entry._asetuneOptRecordSession           = getValue(element, XML_TDS_ASETUNE_OptRecordSession,          entry._asetuneOptRecordSession);
-				entry._asetuneOptOsMonitoring            = getValue(element, XML_TDS_ASETUNE_OptOsMonitoring,           entry._asetuneOptOsMonitoring);
-				entry._asetuneOptConnectAtStartup        = getValue(element, XML_TDS_ASETUNE_OptConnectAtStartup,       entry._asetuneOptConnectAtStartup); // should the be in here???
-				entry._asetuneOptReconnectOnLostConn     = getValue(element, XML_TDS_ASETUNE_OptReconnectOnLostConn,    entry._asetuneOptReconnectOnLostConn);
-				entry._asetuneOptConnectLater            = getValue(element, XML_TDS_ASETUNE_OptConnectLater,           entry._asetuneOptConnectLater); // should the be in here???
-				entry._asetuneOptConnectLaterHour        = getValue(element, XML_TDS_ASETUNE_OptConnectLaterHour,       entry._asetuneOptConnectLaterHour);  // should the be in here???
-				entry._asetuneOptConnectLaterMinute      = getValue(element, XML_TDS_ASETUNE_OptConnectLaterMinute,     entry._asetuneOptConnectLaterMinute);  // should the be in here???
-				entry._asetuneOptDissConnectLater        = getValue(element, XML_TDS_ASETUNE_OptDissConnectLater,       entry._asetuneOptDissConnectLater); // should the be in here???
-				entry._asetuneOptDissConnectLaterHour    = getValue(element, XML_TDS_ASETUNE_OptDissConnectLaterHour,   entry._asetuneOptDissConnectLaterHour);  // should the be in here???
-				entry._asetuneOptDissConnectLaterMinute  = getValue(element, XML_TDS_ASETUNE_OptDissConnectLaterMinute, entry._asetuneOptDissConnectLaterMinute);  // should the be in here???
-	
-				// HostMonitor
-				if (entry._asetuneOptOsMonitoring)
-				{
-					entry._osMonUsername                 = getValue(element, XML_TDS_ASETUNE_osMonUsername,     entry._osMonUsername);
-					entry._osMonSavePassword             = getValue(element, XML_TDS_ASETUNE_osMonSavePassword, entry._osMonSavePassword); // Should this be here???
-					if (entry._osMonSavePassword)
-						entry._osMonPassword             = getValue(element, XML_TDS_ASETUNE_osMonPassword,     entry._osMonPassword);
-					entry._osMonHost                     = getValue(element, XML_TDS_ASETUNE_osMonHost,         entry._osMonHost);
-					entry._osMonPort                     = getValue(element, XML_TDS_ASETUNE_osMonPort,         entry._osMonPort);
-				}
-	
-				// Recordings
-				if (entry._asetuneOptRecordSession)
-				{
-					entry._pcsWriterClass                    = getValue(element, XML_TDS_ASETUNE_pcsWriterClass,                    entry._pcsWriterClass);
-					entry._pcsWriterDriver                   = getValue(element, XML_TDS_ASETUNE_pcsWriterDriver,                   entry._pcsWriterDriver);
-					entry._pcsWriterUrl                      = getValue(element, XML_TDS_ASETUNE_pcsWriterUrl,                      entry._pcsWriterUrl);
-					entry._pcsWriterUsername                 = getValue(element, XML_TDS_ASETUNE_pcsWriterUsername,                 entry._pcsWriterUsername);
-					entry._pcsWriterSavePassword             = getValue(element, XML_TDS_ASETUNE_pcsWriterSavePassword,             entry._pcsWriterSavePassword);
-					if (entry._pcsWriterSavePassword)
-						entry._pcsWriterPassword             = getValue(element, XML_TDS_ASETUNE_pcsWriterPassword,                 entry._pcsWriterPassword);
-					entry._pcsWriterStartH2asNwServer        = getValue(element, XML_TDS_ASETUNE_pcsWriterStartH2asNwServer,        entry._pcsWriterStartH2asNwServer);
-					entry._pcsWriterDdlLookup                = getValue(element, XML_TDS_ASETUNE_pcsWriterDdlLookup,                entry._pcsWriterDdlLookup);
-					entry._pcsWriterDdlStoreDependantObjects = getValue(element, XML_TDS_ASETUNE_pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
-					entry._pcsWriterDdlLookupSleepTime       = getValue(element, XML_TDS_ASETUNE_pcsWriterDdlLookupSleepTime,       entry._pcsWriterDdlLookupSleepTime);
-	//				entry._pcsWriterCounterDetailes          = getValue(element, XML_TDS_ASETUNE_pcsWriterCounterDetailes,          entry._pcsWriterCounterDetailes);
-				}
-				// Load Recordings
-	//			entry._pcsReaderDriver                   = getValue(element, XML_TDS_ASETUNE_pcsReaderDriver,             entry._pcsReaderDriver);
-	//			entry._pcsReaderUrl                      = getValue(element, XML_TDS_ASETUNE_pcsReaderUrl,                entry._pcsReaderUrl);
-	//			entry._pcsReaderUsername                 = getValue(element, XML_TDS_ASETUNE_pcsReaderUsername,           entry._pcsReaderUsername);
-	//			entry._pcsReaderPassword                 = getValue(element, XML_TDS_ASETUNE_pcsReaderPassword,           entry._pcsReaderPassword);
-	//			entry._pcsReaderCheckForNewSamples       = getValue(element, XML_TDS_ASETUNE_pcsReaderCheckForNewSamples, entry._pcsReaderCheckForNewSamples);
-	//			entry._pcsReaderStartH2asNwServer        = getValue(element, XML_TDS_ASETUNE_pcsReaderStartH2asNwServer,  entry._pcsReaderStartH2asNwServer);
+				entry._dbxtuneParams = DbxTuneParams.parseXml(element);
+
+//				entry._dbxtuneUseTemplate                = getValue(element, XML_TDS_DBXTUNE_UseTemplate,     entry._dbxtuneUseTemplate);
+//				entry._dbxtuneUseTemplateName            = getValue(element, XML_TDS_DBXTUNE_UseTemplateName, entry._dbxtuneUseTemplateName);
+//	
+//				// DbxTune options
+//				entry._dbxtuneOptRecordSession           = getValue(element, XML_TDS_DBXTUNE_OptRecordSession,          entry._dbxtuneOptRecordSession);
+//				entry._dbxtuneOptOsMonitoring            = getValue(element, XML_TDS_DBXTUNE_OptOsMonitoring,           entry._dbxtuneOptOsMonitoring);
+//				entry._dbxtuneOptConnectAtStartup        = getValue(element, XML_TDS_DBXTUNE_OptConnectAtStartup,       entry._dbxtuneOptConnectAtStartup); // should the be in here???
+//				entry._dbxtuneOptReconnectOnLostConn     = getValue(element, XML_TDS_DBXTUNE_OptReconnectOnLostConn,    entry._dbxtuneOptReconnectOnLostConn);
+//				entry._dbxtuneOptConnectLater            = getValue(element, XML_TDS_DBXTUNE_OptConnectLater,           entry._dbxtuneOptConnectLater); // should the be in here???
+//				entry._dbxtuneOptConnectLaterHour        = getValue(element, XML_TDS_DBXTUNE_OptConnectLaterHour,       entry._dbxtuneOptConnectLaterHour);  // should the be in here???
+//				entry._dbxtuneOptConnectLaterMinute      = getValue(element, XML_TDS_DBXTUNE_OptConnectLaterMinute,     entry._dbxtuneOptConnectLaterMinute);  // should the be in here???
+//				entry._dbxtuneOptDissConnectLater        = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLater,       entry._dbxtuneOptDissConnectLater); // should the be in here???
+//				entry._dbxtuneOptDissConnectLaterHour    = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLaterHour,   entry._dbxtuneOptDissConnectLaterHour);  // should the be in here???
+//				entry._dbxtuneOptDissConnectLaterMinute  = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);  // should the be in here???
+//	
+//				// HostMonitor
+//				if (entry._dbxtuneOptOsMonitoring)
+//				{
+//					entry._osMonUsername                 = getValue(element, XML_TDS_DBXTUNE_osMonUsername,     entry._osMonUsername);
+//					entry._osMonSavePassword             = getValue(element, XML_TDS_DBXTUNE_osMonSavePassword, entry._osMonSavePassword); // Should this be here???
+//					if (entry._osMonSavePassword)
+//						entry._osMonPassword             = getValue(element, XML_TDS_DBXTUNE_osMonPassword,     entry._osMonPassword);
+//					entry._osMonHost                     = getValue(element, XML_TDS_DBXTUNE_osMonHost,         entry._osMonHost);
+//					entry._osMonPort                     = getValue(element, XML_TDS_DBXTUNE_osMonPort,         entry._osMonPort);
+//				}
+//	
+//				// Recordings
+//				if (entry._dbxtuneOptRecordSession)
+//				{
+//					entry._pcsWriterClass                    = getValue(element, XML_TDS_DBXTUNE_pcsWriterClass,                    entry._pcsWriterClass);
+//					entry._pcsWriterDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterDriver,                   entry._pcsWriterDriver);
+//					entry._pcsWriterUrl                      = getValue(element, XML_TDS_DBXTUNE_pcsWriterUrl,                      entry._pcsWriterUrl);
+//					entry._pcsWriterUsername                 = getValue(element, XML_TDS_DBXTUNE_pcsWriterUsername,                 entry._pcsWriterUsername);
+//					entry._pcsWriterSavePassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterSavePassword,             entry._pcsWriterSavePassword);
+//					if (entry._pcsWriterSavePassword)
+//						entry._pcsWriterPassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterPassword,                 entry._pcsWriterPassword);
+//					entry._pcsWriterStartH2asNwServer        = getValue(element, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        entry._pcsWriterStartH2asNwServer);
+//					entry._pcsWriterDdlLookup                = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                entry._pcsWriterDdlLookup);
+//					entry._pcsWriterDdlStoreDependantObjects = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
+//					entry._pcsWriterDdlLookupSleepTime       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       entry._pcsWriterDdlLookupSleepTime);
+//	//				entry._pcsWriterCounterDetailes          = getValue(element, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          entry._pcsWriterCounterDetailes);
+//				}
+//				// Load Recordings
+//	//			entry._pcsReaderDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsReaderDriver,             entry._pcsReaderDriver);
+//	//			entry._pcsReaderUrl                      = getValue(element, XML_TDS_DBXTUNE_pcsReaderUrl,                entry._pcsReaderUrl);
+//	//			entry._pcsReaderUsername                 = getValue(element, XML_TDS_DBXTUNE_pcsReaderUsername,           entry._pcsReaderUsername);
+//	//			entry._pcsReaderPassword                 = getValue(element, XML_TDS_DBXTUNE_pcsReaderPassword,           entry._pcsReaderPassword);
+//	//			entry._pcsReaderCheckForNewSamples       = getValue(element, XML_TDS_DBXTUNE_pcsReaderCheckForNewSamples, entry._pcsReaderCheckForNewSamples);
+//	//			entry._pcsReaderStartH2asNwServer        = getValue(element, XML_TDS_DBXTUNE_pcsReaderStartH2asNwServer,  entry._pcsReaderStartH2asNwServer);
 			}
 
 			ConnectionProfile connProfile = new ConnectionProfile(name, type, srvType, entry);
@@ -857,6 +1196,9 @@ public class ConnectionProfile
 		public String        _jdbcSqlInit            = null;
 		public String        _jdbcUrlOptions         = null; // should the be in here???
 		public SshTunnelInfo _jdbcShhTunnelInfo      = null; // NOT YET IMPLEMENTED
+
+		public boolean       _isDbxTuneParamsValid   = false; 
+		public DbxTuneParams _dbxtuneParams          = null; 
 
 
 		@Override
@@ -880,6 +1222,20 @@ public class ConnectionProfile
 //			return super.equals(obj);
 //		}
 
+		/**
+		 * if the previously stored profile IS an DbxTune Profile<br>
+		 * and we are using SQLWindow, we need to copy the "hidden" fields into the passed ConnectionProfileEntry<br>
+		 * otherwise we will lose that data the next time we use the entry from DbxTune
+		 * 
+		 * @param storedJdbcEntry entry to copy from
+		 */
+		public void copyDbxTuneParams(JdbcEntry storedJdbcEntry)
+		{
+			//System.out.println("copyDbxTuneParams: from '"+fromEntry+"', to this '"+this+"'.");
+			_isDbxTuneParamsValid              = storedJdbcEntry._isDbxTuneParamsValid; 
+			_dbxtuneParams                     = new DbxTuneParams(storedJdbcEntry._dbxtuneParams); // we probably need to create a NEW object here
+		}
+
 		@Override
 		public String getDifference(ConnProfileEntry profileEntry)
 		{
@@ -897,6 +1253,14 @@ public class ConnectionProfile
 			htmlTabRowIfChanged(sb, XML_JDBC_UrlOptions     , _jdbcUrlOptions,    entry._jdbcUrlOptions);
 			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo, entry._jdbcShhTunnelInfo);
 
+			if (_isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
+			{
+				if (_dbxtuneParams == null)
+					_dbxtuneParams = DBXTUNE_PARAMS_EMPTY;
+
+				sb.append(_dbxtuneParams.getDifference(entry._dbxtuneParams));
+			}
+			
 			if (sb.length() > 0)
 			{
 				sb.insert(0, "<tr> <td nowrap bgcolor=\"#848484\"><font color=\"white\"><b>Attribute</b></font></td> <td nowrap bgcolor=\"#848484\"><font color=\"white\"><b>New Value</b></font></td> <td nowrap bgcolor=\"#848484\"><font color=\"white\"><b>Old Value</b></font></td> </tr>");
@@ -928,12 +1292,18 @@ public class ConnectionProfile
 			htmlTabRow(sb, XML_JDBC_URL          , _jdbcUrl);
 			htmlTabRow(sb, XML_JDBC_USERNAME     , _jdbcUsername);
 			if (_jdbcSavePassword)
-			htmlTabRow(sb, XML_JDBC_PASSWORD     , "**secret**");
+			htmlTabRow(sb, XML_JDBC_PASSWORD     , !_logger.isDebugEnabled() ? "**secret**" : _jdbcPassword);
 			htmlTabRow(sb, XML_JDBC_SAVE_PASSWORD, _jdbcSavePassword);
 			htmlTabRow(sb, XML_JDBC_SqlInit      , _jdbcSqlInit);
 			htmlTabRow(sb, XML_JDBC_UrlOptions   , _jdbcUrlOptions);
 			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo);
 			sb.append("</table>");
+
+			if (_isDbxTuneParamsValid)
+			{
+				if (_dbxtuneParams != null)
+					sb.append(_dbxtuneParams.toHtml());
+			}
 
 			sb.append("</html>");
 			
@@ -962,6 +1332,13 @@ public class ConnectionProfile
 			StringUtil.xmlTag(sb, 8, XML_JDBC_UrlOptions,      _jdbcUrlOptions);
 			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,   _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
 			
+			StringUtil.xmlTag(sb, 8, XML_TDS_IsDbxTuneParamsValid, _isDbxTuneParamsValid);
+			if (_isDbxTuneParamsValid)
+			{
+				if (_dbxtuneParams != null)
+					sb.append(_dbxtuneParams.toXml());
+			}
+
 			StringUtil.xmlEndTag(sb, 4, XML_JDBC_ENTRY);
 			return sb.toString();
 		}
@@ -984,6 +1361,12 @@ public class ConnectionProfile
 			entry._jdbcSqlInit       = getValue(element, XML_JDBC_SqlInit,       entry._jdbcSqlInit);
 			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_ShhTunnelInfo, entry._jdbcUrlOptions);
 			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
+
+			entry._isDbxTuneParamsValid = getValue(element, XML_TDS_IsDbxTuneParamsValid, entry._isDbxTuneParamsValid);
+			if (entry._isDbxTuneParamsValid)
+			{
+				entry._dbxtuneParams = DbxTuneParams.parseXml(element);
+			}
 
 			ConnectionProfile connProfile = new ConnectionProfile(name, type, srvType, entry);
 			return connProfile;
@@ -1070,7 +1453,7 @@ public class ConnectionProfile
 			htmlTabRow(sb, XML_OFFLINE_URL                  , _jdbcUrl);
 			htmlTabRow(sb, XML_OFFLINE_USERNAME             , _jdbcUsername);
 			if (_jdbcSavePassword)
-			htmlTabRow(sb, XML_OFFLINE_PASSWORD             , "**secret**");
+			htmlTabRow(sb, XML_OFFLINE_PASSWORD             , !_logger.isDebugEnabled() ? "**secret**" : _jdbcPassword);
 			htmlTabRow(sb, XML_OFFLINE_SAVE_PASSWORD        , _jdbcSavePassword);
 			htmlTabRow(sb, XML_OFFLINE_checkForNewSessions  , _checkForNewSessions);
 			htmlTabRow(sb, XML_OFFLINE_H2Option_startH2NwSrv, _H2Option_startH2NwSrv);
@@ -1209,12 +1592,37 @@ public class ConnectionProfile
 		return defaultVal;
 	}
 
+//	private static boolean getValue(Element element, String tagName, boolean defaultVal)
+//	{
+//		String retValue = null;
+//		NodeList nodeList = element.getElementsByTagName(tagName);
+//		if (nodeList.getLength() > 0)
+//			retValue = nodeList.item(0).getTextContent();
+//		
+//		if (StringUtil.hasValue(retValue))
+//			return "true".equalsIgnoreCase(retValue);
+//
+//		return defaultVal;
+//	}
 	private static boolean getValue(Element element, String tagName, boolean defaultVal)
+	{
+		return getValue(element, tagName, null, defaultVal);
+	}
+	private static boolean getValue(Element element, String tagName, String oldTagName, boolean defaultVal)
 	{
 		String retValue = null;
 		NodeList nodeList = element.getElementsByTagName(tagName);
 		if (nodeList.getLength() > 0)
+		{
 			retValue = nodeList.item(0).getTextContent();
+		}
+		else if (StringUtil.hasValue(oldTagName)) // if the TAG wasn't found: Check backward compatibility TAGNAME
+		{
+			nodeList = element.getElementsByTagName(oldTagName);
+			if (nodeList.getLength() > 0)
+				retValue = nodeList.item(0).getTextContent();
+		}
+			
 		
 		if (StringUtil.hasValue(retValue))
 			return "true".equalsIgnoreCase(retValue);

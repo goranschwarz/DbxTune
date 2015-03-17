@@ -6,6 +6,9 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -39,8 +42,8 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
+import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -59,6 +62,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -203,10 +207,10 @@ implements Cloneable, ITableTooltip
 	// 
 	private int clearCmLevel;
 
-	private SamplingCnt _prevSample = null;      // Contains old raw data (previous sample)
-	private SamplingCnt _newSample  = null;      // Contains new raw data
-	private SamplingCnt _diffData   = null;       // diff between newSample and oldSample data (not filtered)
-	private SamplingCnt _rateData   = null;       // diffData / sampleInterval
+	private CounterSample _prevSample = null;      // Contains old raw data (previous sample)
+	private CounterSample _newSample  = null;      // Contains new raw data
+	private CounterSample _diffData   = null;       // diff between newSample and oldSample data (not filtered)
+	private CounterSample _rateData   = null;       // diffData / sampleInterval
 	
 	private int _dataSource = getDefaultDataSource();//DATA_RATE;
 
@@ -601,10 +605,10 @@ implements Cloneable, ITableTooltip
 //		c._newSample                  = this._newSample;
 //		c._diffData                   = this._diffData;
 //		c._rateData                   = this._rateData;
-		c._prevSample                 = this._prevSample == null ? null : new SamplingCnt(this._prevSample, true);
-		c._newSample                  = this._newSample  == null ? null : new SamplingCnt(this._newSample,  true);
-		c._diffData                   = this._diffData   == null ? null : new SamplingCnt(this._diffData,   true);
-		c._rateData                   = this._rateData   == null ? null : new SamplingCnt(this._rateData,   true);
+		c._prevSample                 = this._prevSample == null ? null : new CounterSample(this._prevSample, true);
+		c._newSample                  = this._newSample  == null ? null : new CounterSample(this._newSample,  true);
+		c._diffData                   = this._diffData   == null ? null : new CounterSample(this._diffData,   true);
+		c._rateData                   = this._rateData   == null ? null : new CounterSample(this._rateData,   true);
 		
 		c._dataSource                 = this._dataSource;
 
@@ -761,7 +765,8 @@ implements Cloneable, ITableTooltip
 	{
 		// Remove this, this is just for backward compatibility.
 		if (_counterController == null)
-			return AseTune.getCounterCollector();
+//			return AseTune.getCounterCollector();
+			return CounterController.getInstance();
 
 		return _counterController;
 	}
@@ -830,9 +835,9 @@ implements Cloneable, ITableTooltip
 	public void setValueAt(int type, Object value, int row, int col)
 	{
 		CounterTableModel data = null;
-		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
-		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
-		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
+		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new CounterSample("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
+		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new CounterSample("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
+		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new CounterSample("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
 		else
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
@@ -848,10 +853,10 @@ implements Cloneable, ITableTooltip
 	public void setColumnNames(int type, List<String> cols)
 	{
 //		CounterTableModel data = null;
-		SamplingCnt data = null;
-		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new SamplingCnt("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
-		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new SamplingCnt("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
-		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new SamplingCnt("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
+		CounterSample data = null;
+		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new CounterSample("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
+		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new CounterSample("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
+		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new CounterSample("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
 		else
 			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
 
@@ -1028,7 +1033,7 @@ implements Cloneable, ITableTooltip
 		//---------------------------
 		// GUI
 		//---------------------------
-		if (AseTune.hasGUI())
+		if (DbxTune.hasGui())
 		{
 			if ( ! isActive() )
 			{
@@ -1351,6 +1356,10 @@ implements Cloneable, ITableTooltip
 	}
 
 	
+	public void setDiffDissColumns(List<String> cols) { setDiffDissColumns(cols.toArray(new String[cols.size()])); }
+	public void setDiffColumns    (List<String> cols) { setDiffColumns    (cols.toArray(new String[cols.size()])); }
+	public void setPctColumns     (List<String> cols) { setPctColumns     (cols.toArray(new String[cols.size()])); }
+
 	public void setDiffDissColumns(String[] cols) { _diffDissColumns = cols; }
 	public void setDiffColumns(String[] cols)     { _diffColumns     = cols; }
 	public void setPctColumns(String[] cols)      { _pctColumns      = cols; }
@@ -1390,7 +1399,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public List<List<Object>> getDataCollection(int whatData)
 	{
-		SamplingCnt data = null;
+		CounterSample data = null;
 
 		if      (whatData == DATA_ABS)  data = _newSample;
 		else if (whatData == DATA_DIFF) data = _diffData;
@@ -1415,7 +1424,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public synchronized List<String> getColNames(int whatData)
 	{
-		SamplingCnt data = null;
+		CounterSample data = null;
 
 		if      (whatData == DATA_ABS)  data = _newSample;
 		else if (whatData == DATA_DIFF) data = _diffData;
@@ -2242,6 +2251,25 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Get the SQL Statement for getting the "current time" on the server.<br>
+	 * If null is returned, the java System.currentTime() will be used.
+	 * @return
+	 */
+	public String getServerTimeCmd()
+	{
+		return getCounterController().getServerTimeCmd();
+	}
+
+	/**
+	 * Does the Server support many SQL Statements in the same SQL Batch
+	 * @return 
+	 */
+	public boolean isSqlBatchingSupported()
+	{
+		return getCounterController().isSqlBatchingSupported();
+	}
+
+	/**
 	 * This one could or <br>should</b> be called to get a SQL string that will be used
 	 * to get data for a specific Performance Counter.
 	 * <p>
@@ -2427,18 +2455,43 @@ implements Cloneable, ITableTooltip
 			throw new IllegalArgumentException("The passed conn is null.");
 
 		String sql = getSqlInit();
-		if (sql != null && !sql.trim().equals(""))
+		if (StringUtil.hasValue(sql))
 		{
+			int batchCounter = 0;
 			try
 			{
-				Statement stmt = conn.createStatement();
-				stmt.execute(sql);
-				stmt.close();
+				BufferedReader br = new BufferedReader( new StringReader(sql) );
+				for(String sqlBatch=AseSqlScript.readCommand(br); sqlBatch!=null; sqlBatch=AseSqlScript.readCommand(br))
+				{
+					sql = sqlBatch;
+					
+					if (_logger.isDebugEnabled())
+					{
+						_logger.debug("##### BEGIN doSqlInit(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug(sql);
+						_logger.debug("##### END   doSqlInit(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("");
+					}
+					_logger.info(getName()+": doSqlInit() sending statement: "+sql.trim());
+
+					try
+					{
+						Statement stmt = conn.createStatement();
+						stmt.execute(sql);
+						stmt.close();
+					}
+					catch (SQLException e)
+					{
+						_logger.warn("Problem when executing the 'init' SQL statement: ErrorCode="+e.getErrorCode()+", SQL="+sql, e);
+						//return false;
+					}
+					batchCounter++;
+				}
+				br.close();
 			}
-			catch (SQLException e)
+			catch (IOException ex) 
 			{
-				_logger.warn("Problem when executing the 'init' SQL statement.", e);
-				return false;
+				_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
 			}
 		}
 		return true;
@@ -2463,17 +2516,60 @@ implements Cloneable, ITableTooltip
 			throw new IllegalArgumentException("The passed conn is null.");
 
 		String sql = getSqlClose();
-		if (sql != null && !sql.trim().equals(""))
+		if (StringUtil.hasValue(sql))
 		{
+			// SET the message handler used for this CM
+			// this is needed in the doSqlClose(), but not in the doSqlInit() where the maeesage handler has already been installed...
+			SybMessageHandler curMsgHandler = null;
+			if (conn instanceof SybConnection)
+			{
+				curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
+				((SybConnection)conn).setSybMessageHandler(getSybMessageHandler());
+			}
+			
+			int batchCounter = 0;
 			try
 			{
-				Statement stmt = conn.createStatement();
-				stmt.execute(sql);
-				stmt.close();
+				BufferedReader br = new BufferedReader( new StringReader(sql) );
+				for(String sqlBatch=AseSqlScript.readCommand(br); sqlBatch!=null; sqlBatch=AseSqlScript.readCommand(br))
+				{
+					sql = sqlBatch;
+					
+					if (_logger.isDebugEnabled())
+					{
+						_logger.debug("##### BEGIN doSqlClose(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug(sql);
+						_logger.debug("##### END   doSqlClose(send sql), batchCounter="+batchCounter+" ############################### "+ getName());
+						_logger.debug("");
+					}
+					_logger.info(getName()+": doSqlClose() sending statement: "+sql.trim());
+
+					try
+					{
+						Statement stmt = conn.createStatement();
+						stmt.execute(sql);
+						stmt.close();
+					}
+					catch (SQLException e)
+					{
+						_logger.warn("Problem when executing the 'close' SQL statement: ErrorCode="+e.getErrorCode()+", SQL="+sql, e);
+						//return;// false;
+					}
+					batchCounter++;
+				}
+				br.close();
 			}
-			catch (SQLException e)
+			catch (IOException ex) 
 			{
-				_logger.warn("Problem when executing the 'close' SQL statement.", e);
+				_logger.error("While reading the input SQL 'go' String, caught: "+ex, ex);
+			}
+			finally
+			{
+				// restore old message handler
+				if (curMsgHandler != null)
+				{
+					((SybConnection)conn).setSybMessageHandler(curMsgHandler);
+				}
 			}
 		}
 	}
@@ -2588,7 +2684,7 @@ implements Cloneable, ITableTooltip
 
 		// In NO_GUI mode, we might want to auto configure monitoring...
 		boolean doReconfigure = false;
-		if ( ! AseTune.hasGUI() )
+		if ( ! DbxTune.hasGui() )
 		{
 //			Configuration conf = Configuration.getInstance(Configuration.CONF);
 //			Configuration conf = Configuration.getCombinedConfiguration();
@@ -2995,7 +3091,7 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @param newSample the new values
 	 */
-	public void localCalculation(SamplingCnt newSample)
+	public void localCalculation(CounterSample newSample)
 	{
 	}
 
@@ -3007,7 +3103,7 @@ implements Cloneable, ITableTooltip
 	 * @param newSample
 	 * @param diffData
 	 */
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 	}
 
@@ -3017,7 +3113,7 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @param tmpRateData
 	 */
-	public void localCalculationRatePerSec(SamplingCnt rateData)
+	public void localCalculationRatePerSec(CounterSample rateData)
 	{
 	}
 
@@ -3026,13 +3122,13 @@ implements Cloneable, ITableTooltip
 	 * In here we can choose the discard/change values from ResultSet, when doing SQL Refresh <br>
 	 * overridden to change the "resultset"
 	 * 
-	 * @param cnt the SamplingCnt object, if you want to access meta data
+	 * @param cnt the CounterSample object, if you want to access meta data
 	 * @param thisRow a List<Object> with the currect row we just pulled of from the ResultSet
-	 * @param prevRow a List<Object> with the last row that was added to the SamplingCnt
+	 * @param prevRow a List<Object> with the last row that was added to the CounterSample
 	 * 
 	 * @return true to add row, false to discard row
 	 */
-	public boolean hookInSqlRefreshBeforeAddRow(SamplingCnt cnt, List<Object> thisRow, List<Object> prevRow)
+	public boolean hookInSqlRefreshBeforeAddRow(CounterSample cnt, List<Object> thisRow, List<Object> prevRow)
 	{
 		return true;
 	}
@@ -3109,13 +3205,10 @@ implements Cloneable, ITableTooltip
 		_sampleException = e;
 		if (e != null)
 		{
-			if (e instanceof DependsOnCmPostponeException)
-				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else if (e instanceof SQLException)
-				_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else
-				_logger.warn("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
-				//_logger.info("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
+			if      (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else                                                _logger.warn ("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
 		}
 	}
 
@@ -3192,7 +3285,7 @@ implements Cloneable, ITableTooltip
 	/** 
 	 * initialize Diss/Diff/Pct column bitmaps 
 	 */
-	private void initColumnStuff(SamplingCnt cnt)
+	private void initColumnStuff(CounterSample cnt)
 	{
 		// Initialize isDiffDissCol array
 		if (_isDiffDissCol == null)
@@ -3439,6 +3532,16 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Create a Object that a sample can be put into
+	 * <p>
+	 * This can be overridden if you want to use another implementation. 
+	 */
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		return new CounterSample(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
+	/**
 	 * This is the method to override if you want to different refresh
 	 * TODO: check for more Exception, so we dont leave this code without resetting: _newSample, _diffData, _rateData
 	 * 
@@ -3502,14 +3605,34 @@ implements Cloneable, ITableTooltip
 		// if this is NOT done, Swing will use the modified model with the "unmodified" view, 
 		// this since tableChanged() has not yet been called and readjust the view to the model.
 		//--------------------------------------------------
-		SamplingCnt tmpDiffData = null;
-		SamplingCnt tmpRateData = null;
-		SamplingCnt tmpNewSample = new SamplingCnt(_name, _negativeDiffCountersToZero, _diffColumns, _prevSample);
+		CounterSample tmpDiffData = null;
+		CounterSample tmpRateData = null;
+//		CounterSample tmpNewSample = new CounterSample(_name, _negativeDiffCountersToZero, _diffColumns, _prevSample);
+		CounterSample tmpNewSample = createCounterSample(_name, _negativeDiffCountersToZero, _diffColumns, _prevSample);
 		try
 		{
 			setSampleException(null);
 			beginSqlRefresh();
-			tmpNewSample.getCnt(this, conn, getSql()+getSqlWhere(), _pkCols);
+			if ( tmpNewSample.getSample(this, conn, getSql()+getSqlWhere(), _pkCols) == false )
+				return -1;
+		}
+		catch (NoValidRowsInSample e)
+		{
+			if (tabPanel != null)
+			{
+				String msg = e.getMessage();
+				setSampleException(e);
+
+				tabPanel.setWatermarkText(msg);
+			}
+
+			// No data should be visible, so reset some structures
+			// NOTE: is this enough or should we do fireXXXXChange as well... 
+			_newSample = null;
+			_diffData  = null;
+			_rateData  = null;
+			
+			return -1;
 		}
 		catch (SQLException e)
 		{
@@ -3555,7 +3678,7 @@ implements Cloneable, ITableTooltip
 					
 					// NOTE: can we do this in a better way?
 					// I dont like 'hasGUI()' switches...
-					if (AseTune.hasGUI())
+					if (DbxTune.hasGui())
 					{
 						String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
 
@@ -3576,7 +3699,7 @@ implements Cloneable, ITableTooltip
 						dialog.setModal(false);
 						dialog.setVisible(true);
 
-						MainFrame.setStatus(MainFrame.ST_DISCONNECT);
+						MainFrame.getInstance().setStatus(MainFrame.ST_DISCONNECT);
 					}
 				}
 				else
@@ -3691,7 +3814,7 @@ implements Cloneable, ITableTooltip
 			if (_prevSample != null)
 			{
 				// old sample is not null, so we can compute the diffs
-//				tmpDiffData = SamplingCnt.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
+//				tmpDiffData = CounterSample.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
 				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
 			}
 	
@@ -3713,7 +3836,7 @@ implements Cloneable, ITableTooltip
 				localCalculation(_prevSample, tmpNewSample, tmpDiffData);
 	
 				// we got some data, compute the rates and update the data model
-//				tmpRateData = SamplingCnt.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
+//				tmpRateData = CounterSample.computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 				tmpRateData = computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
 				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
@@ -3736,7 +3859,7 @@ implements Cloneable, ITableTooltip
 		sendAlarmRequest(tmpNewSample, tmpDiffData, tmpRateData);
 
 
-		if ( ! AseTune.hasGUI() )
+		if ( ! DbxTune.hasGui() )
 		{
 			// NO GUI, move structures
 			_prevSample = tmpNewSample;
@@ -3758,9 +3881,9 @@ implements Cloneable, ITableTooltip
 		else // HAS GUI
 		{
 			// Make them final copies to be used in the doWork/Runnable below
-			final SamplingCnt fTmpNewSample = tmpNewSample;
-			final SamplingCnt fTmpDiffData = tmpDiffData;
-			final SamplingCnt fTmpRateData = tmpRateData;
+			final CounterSample fTmpNewSample = tmpNewSample;
+			final CounterSample fTmpDiffData = tmpDiffData;
+			final CounterSample fTmpRateData = tmpRateData;
 
 			final CountersModel thisCm = this;
 
@@ -3778,7 +3901,7 @@ implements Cloneable, ITableTooltip
 					beginGuiRefresh();
 
 					// Set: Info fields
-					MainFrame.setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
+					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
 
 					// Simulate a SLOW action, for example a massive sort...
 					// which would case the GUI to block for a while...
@@ -3845,7 +3968,7 @@ implements Cloneable, ITableTooltip
 					updateGraphData();
 		
 					// reset: Info fields
-					MainFrame.setStatus(MainFrame.ST_STATUS2_FIELD, "");
+					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "");
 
 					endGuiRefresh();
 
@@ -3888,11 +4011,11 @@ implements Cloneable, ITableTooltip
 	 * @param isCountersCleared If the counters has been cleared 
 	 * @return
 	 */
-	public SamplingCnt computeDiffCnt(SamplingCnt oldSample, SamplingCnt newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
-//		return SamplingCnt.computeDiffCnt(prevSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+//		return CounterSample.computeDiffCnt(prevSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
 		// Initialize result structure
-		SamplingCnt diffCnt = new SamplingCnt(newSample, false, newSample._name+"-diff");
+		CounterSample diffCnt = new CounterSample(newSample, false, newSample._name+"-diff");
 
 		long newTsMilli      = newSample.getSampleTime().getTime();
 		long oldTsMilli      = oldSample.getSampleTime().getTime();
@@ -3964,15 +4087,31 @@ implements Cloneable, ITableTooltip
 
 						String colName = newSample.getColumnName(i);
 
-						if ( newRowObj instanceof Number )
+						if (newRowObj == null)
+						{
+							diffRow.add(null);
+						}
+						else if ( newRowObj instanceof Number )
 						{
 							Number diffValue = diffColumnValue((Number)oldRowObj, (Number)newRowObj, diffCnt.getNegativeDiffCountersToZero(), newSample.getName(), colName, isCountersCleared);
 							diffRow.add(diffValue);
 						}
 						else
 						{
-							_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'.");
-							diffRow.add(newRowObj);
+							// Try to convert the String into a Number
+							try
+							{
+								Number diffValue = diffColumnValue(NumberUtils.toNumber(oldRowObj), NumberUtils.toNumber(newRowObj), diffCnt.getNegativeDiffCountersToZero(), newSample.getName(), colName, isCountersCleared);
+								diffRow.add(diffValue);
+							}
+							catch(NumberFormatException nfe)
+							{
+								_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'. Trying to convert it to a Number Caught: "+nfe);
+								diffRow.add(newRowObj);
+							}
+								
+//							_logger.warn("CounterSampleSetName='"+newSample._name+"', className='"+newRowObj.getClass().getName()+"' columns can't be 'diff' calculated. colName='"+colName+"', key='"+newPk+"', oldObj='"+oldRowObj+"', newObj='"+newRowObj+"'.");
+//							diffRow.add(newRowObj);
 						}
 					}
 				}
@@ -4021,6 +4160,12 @@ implements Cloneable, ITableTooltip
 	protected Number diffColumnValue(Number prevColVal, Number newColVal, boolean negativeDiffCountersToZero, String counterSetName, String colName, boolean isCountersCleared)
 	{
 		Number diffColVal = null;
+		
+		if (newColVal == null)
+			return null;
+
+		if (prevColVal == null)
+			return newColVal;
 
 		if (newColVal instanceof BigDecimal)
 		{
@@ -4130,11 +4275,11 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @return a "rate" calculated object
 	 */
-	private SamplingCnt computeRatePerSec(SamplingCnt diffData, boolean[] isDiffCol, boolean[] isPctCol)
+	private CounterSample computeRatePerSec(CounterSample diffData, boolean[] isDiffCol, boolean[] isPctCol)
 	{
-//		return SamplingCnt.computeRatePerSec(diffData, isDiffCol, isPctCol);
+//		return CounterSample.computeRatePerSec(diffData, isDiffCol, isPctCol);
 		// Initialize result structure
-		SamplingCnt rate  = new SamplingCnt(diffData, false, diffData._name+"-rate");
+		CounterSample rate  = new CounterSample(diffData, false, diffData._name+"-rate");
 
 		int sampleInterval = diffData.getSampleInterval();
 		
@@ -4170,8 +4315,12 @@ implements Cloneable, ITableTooltip
 					if (sampleInterval == 0)
 						newObject = "N/A";
 
+					if (originObject == null)
+					{
+						newObject = null;
+					}
 					// Calculate rate
-					if (originObject instanceof Number)
+					else if (originObject instanceof Number)
 					{
 						// Get the object as a Double value
 						if ( originObject instanceof Number )
@@ -4224,7 +4373,7 @@ implements Cloneable, ITableTooltip
 	 * @param diffData
 	 * @param rateData
 	 */
-	public void sendDdlDetailsRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	public void sendDdlDetailsRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
 	{
 		if ( ! PersistentCounterHandler.hasInstance() )
 			return;
@@ -4390,7 +4539,7 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @return true if the row is to be sent to the DDL storage 
 	 */
-	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, CounterSample absData, CounterSample diffData, CounterSample rateData)
 	{
 		return true;
 	}
@@ -4435,7 +4584,7 @@ implements Cloneable, ITableTooltip
 	 * @param diffData
 	 * @param rateData
 	 */
-	public void sendAlarmRequest(SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	public void sendAlarmRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
 	{
 		// empty implementation, any subclass can implement it.
 	}
@@ -4545,6 +4694,19 @@ implements Cloneable, ITableTooltip
 		return _diffData;
 	}
 	protected CounterTableModel getCounterDataRate()
+	{
+		return _rateData;
+	}
+
+	protected CounterSample getCounterSampleAbs()
+	{
+		return _newSample;
+	}
+	protected CounterSample getCounterSampleDiff()
+	{
+		return _diffData;
+	}
+	protected CounterSample getCounterSampleRate()
 	{
 		return _rateData;
 	}
@@ -5459,5 +5621,4 @@ implements Cloneable, ITableTooltip
 	//-------------------------------------------------------
 	// END: NON CONFIGURED MONITORING 
 	//-------------------------------------------------------
-
 }

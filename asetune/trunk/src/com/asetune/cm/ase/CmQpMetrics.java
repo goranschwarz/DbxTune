@@ -14,7 +14,7 @@ import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmQpMetricsPanel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
@@ -209,7 +209,7 @@ extends CountersModel
 
 	/** "collapse" all rows for DBName, id, sequence... the column "qtext" into one row (the first row DBName, id, sequence=0) */
 	@Override
-	public boolean hookInSqlRefreshBeforeAddRow(SamplingCnt cnt, List<Object> thisRow, List<Object> prevRow)
+	public boolean hookInSqlRefreshBeforeAddRow(CounterSample cnt, List<Object> thisRow, List<Object> prevRow)
 	{
 		if (thisRow == null || prevRow == null)
 			return true;

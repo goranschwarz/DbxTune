@@ -102,7 +102,7 @@ implements ActionListener
 //implements ActionListener, SybMessageHandler, ConnectionProvider
 {
 	private static Logger _logger = Logger.getLogger(RsDumpQueueDialog.class);
-	private static final long serialVersionUID = 1L;
+//	private static final long serialVersionUID = 1L;
 
 	//-------------------------------------------------
 	// Actions
@@ -1398,13 +1398,12 @@ implements ActionListener
 	private void action_connect(ActionEvent e)
 	{
 		// Create a new dialog Window
-		boolean checkAseCfg    = false;
-		boolean showAseTab     = true;
-		boolean showAseOptions = false;
-		boolean showHostmonTab = false;
-		boolean showPcsTab     = false;
-		boolean showOfflineTab = false;
-		boolean showJdbcTab    = false;
+//		boolean showAseTab     = true;
+//		boolean showAseOptions = false;
+//		boolean showHostmonTab = false;
+//		boolean showPcsTab     = false;
+//		boolean showOfflineTab = false;
+//		boolean showJdbcTab    = false;
 
 		_connectedToProductName    = null;
 		_connectedToProductVersion = null;
@@ -1412,7 +1411,19 @@ implements ActionListener
 		_connectedAsUser           = null;
 		_connectedWithUrl          = null;
 
-		ConnectionDialog connDialog = new ConnectionDialog(_jframe, checkAseCfg, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab, showJdbcTab);
+		com.asetune.gui.ConnectionDialog.Options connDialogOptions = new com.asetune.gui.ConnectionDialog.Options();
+		connDialogOptions._srvExtraChecks           = null;
+		connDialogOptions._showAseTab               = true;
+		connDialogOptions._showDbxTuneOptionsInTds  = false;
+		connDialogOptions._showHostmonTab           = false;
+		connDialogOptions._showPcsTab               = false;
+		connDialogOptions._showOfflineTab           = false;
+		connDialogOptions._showJdbcTab              = false;
+		connDialogOptions._showDbxTuneOptionsInJdbc = false;
+
+//		ConnectionDialog connDialog = new ConnectionDialog(_jframe, null, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab, showJdbcTab, false);
+		ConnectionDialog connDialog = new ConnectionDialog(_jframe, connDialogOptions);
+
 		// Show the dialog and wait for response
 		connDialog.setVisible(true);
 		connDialog.dispose();

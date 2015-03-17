@@ -113,7 +113,7 @@ extends CountersModel
 
 		pkCols.add("InstanceID");
 		pkCols.add("DBID");
-		pkCols.add("SPID");
+		pkCols.add("ScannerSPID");
 
 		return pkCols;
 	}

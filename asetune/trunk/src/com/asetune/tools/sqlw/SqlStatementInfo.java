@@ -100,14 +100,19 @@ public class SqlStatementInfo
 					+ "    \\prep insert inti t1 values(? ?) :(params) -- exec using Prepared Statement\n"
 					+ "\n"
 					+ "param description: \n"
-					+ "    Type     Value               java.sql.Types Example: replace question mark(?) with value\n"
-					+ "    -------  ------------------- -------------- ----------------------------------------\n"
-					+ "    string = 'a string value'    Types.VARCHAR  string='it''s a string', string=null\n"
-					+ "    int    = integer             Types.INTEGER  int=99, int=null\n"
-					+ "    clob   = 'filename|url'      Types.CLOB     clob='c:\\xxx.txt, clob='http://asetune.com'\n"
-					+ "    blob   = 'filename|url'      Types.BLOB     blob='c:\\xxx.jpg, blob='http://www.asemon.se/images/sample3.png'\n"
-					+ "    ora_rs                       -10            a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
-					+ "                                                ora_rs will simply be treated as a ResultSet for SQL Window.\n"
+					+ "    Type        Value               java.sql.Types  Example: replace question mark(?) with value\n"
+					+ "    ---------   ------------------- --------------- --------------------------------------------\n"
+					+ "    string    = 'a string value'    Types.VARCHAR   string='it''s a string', string=null\n"
+					+ "    int       = integer             Types.INTEGER   int=99, int=null\n"
+					+ "    bigint    = long                Types.BIGINT    bigint=9999999999999999999, int=null\n"
+					+ "    numeric   = bigdecimal          Types.NUMERIC   numeric=1.12, numeric=null\n"
+					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
+					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
+					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"
+					+ "    clob      = 'filename|url'      Types.CLOB      clob='c:\\xxx.txt, clob='http://asetune.com'\n"
+					+ "    blob      = 'filename|url'      Types.BLOB      blob='c:\\xxx.jpg, blob='http://www.asemon.se/images/sample3.png'\n"
+					+ "    ora_rs                          -10             a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
+					+ "                                                    ora_rs will simply be treated as a ResultSet for SQL Window.\n"
 					+ "Examples: \n"
 					+ "    \\call procName1(?,?,?) :(string='a string', int=99, string=null) \n"
 					+ "    \\call procName2(?,?)   :(int=99, string=null out) -- calls a procedure where last parameter is an output variable\n"
@@ -164,7 +169,11 @@ public class SqlStatementInfo
 				_sql = sqlParamsStr;
 				if (StringUtil.hasValue(rpcParamsStr))
 					_sqlParams = SqlParam.parse(rpcParamsStr);
-			}
+
+				if (_logger.isDebugEnabled());
+					_logger.debug("NEW SQL for PreparedStatemnent: |"+_sql+"|.");
+
+			} // end: _preparedStatement
 
 			// FIXME: make the below code EASIER
 			// COMMAND: \exec
@@ -257,7 +266,9 @@ public class SqlStatementInfo
 				else
 					_sql = "{call "+procName+"("+sqlParamsStr+")}";
 				
-				_logger.debug("NEW PROC SQL: |"+_sql+"|.");
+				if (_logger.isDebugEnabled());
+					_logger.debug("NEW SQL for CallableStatemnent: |"+_sql+"|.");
+
 			} // end: _callableStatement
 
 

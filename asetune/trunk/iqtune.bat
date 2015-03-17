@@ -129,6 +129,7 @@ set classpath=%classpath%;%IQTUNE_HOME%\lib\asetune.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\jtds-1.2.7.jar
+set classpath=%classpath%;%IQTUNE_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\log4j-1.2.17.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\h2-1.3.176.jar
@@ -149,6 +150,9 @@ set classpath=%classpath%;%IQTUNE_HOME%\lib\jfreechart-1.0.17.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\antlr-4.0-complete.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%IQTUNE_HOME%\lib\DDLGen.jar
+
+set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
+set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
 
 rem --- echo %CLASSPATH%
 

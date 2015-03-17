@@ -26,43 +26,51 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelUserDefined;
+import com.asetune.cm.CounterSample;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
+import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public abstract class CounterControllerAbstract
-extends Thread
+//extends Thread
 implements ICounterController
 {
 	/** Log4j logging. */
 	private static Logger _logger = Logger.getLogger(CounterControllerAbstract.class);
 
-	protected Thread _thread = null;
+	private String _supportedProductString = null;
+	@Override public void   setSupportedProductName(String str) { _supportedProductString = str; }
+	@Override public String getSupportedProductName()           { return _supportedProductString; }
+
+//	protected Thread   _thread  = null;
+//	protected boolean  _running = false;
+	private boolean _hasGui;
 
 	/** The counterModels has been created */
-	private static boolean _isCountersCreated  = false; 
+	private boolean _isCountersCreated  = false; 
 
 	/** have we been initialized or not */
-	private static boolean _isInitialized      = false; 
+	private boolean _isInitialized      = false; 
 
 	/** if we should do refreshing of the counters, or is refreshing paused */
-	private static boolean _refreshIsEnabled   = false;
+	private boolean _refreshIsEnabled   = false;
 
 	/** if any monitoring thread is currently getting information from the monitored server */
-	private static boolean _isRefreshing = false;
+	private boolean _isRefreshing = false;
 
 	
-	private static String _waitEvent = "";
+	private String _waitEvent = "";
 	
 	/** Keep a list of all CounterModels that you have initialized */
-	protected static List<CountersModel> _CMList = new ArrayList<CountersModel>();
+	protected List<CountersModel> _CmList = new ArrayList<CountersModel>();
 
 //	/** is sp_configure 'capture missing statistics' set or not */
 //	protected boolean _config_captureMissingStatistics = false;
@@ -112,6 +120,88 @@ implements ICounterController
 	private String        _summaryCmName = null;
 	private ISummaryPanel _summaryPanel  = null;
 
+	/** This is where the counters are <b>actually</b> fetched from the monitored server */
+	private CounterCollectorThreadAbstract _counterCollectorThread = null;
+
+	/**
+	 * The default constructor
+	 * @param hasGui should we create a GUI or NoGUI collection thread
+	 */
+	public CounterControllerAbstract(boolean hasGui)
+	{
+		_hasGui = hasGui;
+		_counterCollectorThread = createCounterCollectorThread(hasGui);
+	}
+
+	/**
+	 * Was this Controller created with a GUI or not
+	 * @return
+	 */
+	public boolean hasGui()
+	{
+		return _hasGui;
+	}
+
+	/**
+	 * Get the collector thread implementation
+	 * @return The collector thread implementation
+	 */
+	public CounterCollectorThreadAbstract getCounterCollectorThread()
+	{
+		return _counterCollectorThread;
+	}
+
+	/**
+	 * Create a counter collector<br>
+	 * This could be overridden by any subclass if we want a change in behavior
+	 * 
+	 * @param hasGui should we create a GUI or NoGUI collection thread
+	 */
+	public CounterCollectorThreadAbstract createCounterCollectorThread(boolean hasGui)
+	{
+		if (hasGui)
+			return new CounterCollectorThreadGui(this);
+		else
+			return new CounterCollectorThreadNoGui(this);
+	}
+
+	/**
+	 * Initialize the Controller, and also calls init() on the CollectorThread
+	 */
+	@Override
+	public void init() throws Exception
+	{
+		getCounterCollectorThread().init(hasGui());
+	}
+
+	/** 
+	 * The controller should get details about a specific collection 
+	 */
+	@Override
+	public abstract HeaderInfo createPcsHeaderInfo();
+
+
+	/**
+	 * Start the collector thread
+	 */
+	@Override
+	public void start()
+	{
+		_counterCollectorThread.start();
+	}
+
+	/** shutdown or stop any collector */
+	@Override
+	public void shutdown()
+	{
+		_logger.info("Stopping the collector thread.");
+//		_running = false;
+//		if (_thread != null)
+//			_thread.interrupt();
+		getCounterCollectorThread().shutdown();
+	}
+
+
 	@Override
 	public CountersModel getSummaryCm()
 	{
@@ -148,13 +238,14 @@ implements ICounterController
 	@Override
 	public void addCm(CountersModel cm)
 	{ 
-		_CMList.add(cm);
+		getCmList().add(cm);
 	}
 
 	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
-	public static List<CountersModel> getCmList()
+	@Override
+	public List<CountersModel> getCmList()
 	{ 
-		return _CMList; 
+		return _CmList; 
 	}
 
 
@@ -162,10 +253,11 @@ implements ICounterController
 	 * Get any <code>CountersModel</code> that depends on a specific ASE configuration 
 	 * @return a List of CountersModel objects
 	 */
-	public static List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
+	@Override
+	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
-		for (CountersModel cm : _CMList)
+		for (CountersModel cm : getCmList())
 		{
 			String[] sa = cm.getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
 //			String[] sa = cm.getDependsOnConfig();
@@ -186,7 +278,7 @@ implements ICounterController
 		return cmList; 
 	}
 	/** simply do: return getCmListDependsOnConfig(cfg, null, 0, false); */
-	public static List<CountersModel> getCmListDependsOnConfig(String cfg)
+	public List<CountersModel> getCmListDependsOnConfig(String cfg)
 	{
 		return getCmListDependsOnConfig(cfg, null, 0, false);
 	}
@@ -201,7 +293,7 @@ implements ICounterController
 		if (StringUtil.isNullOrBlank(name))
 			return null;
 
-		for (CountersModel cm : _CMList)
+		for (CountersModel cm : getCmList())
 		{
 			if (cm != null && cm.getName().equalsIgnoreCase(name))
 			{
@@ -221,7 +313,7 @@ implements ICounterController
 		if (StringUtil.isNullOrBlank(name))
 			return null;
 
-		for (CountersModel cm : _CMList)
+		for (CountersModel cm : getCmList())
 		{
 			if (cm != null && cm.getDisplayName().equalsIgnoreCase(name))
 			{
@@ -246,6 +338,7 @@ implements ICounterController
 	 * 
 	 * @param resetAllCms call reset() on all cm's
 	 */
+	@Override
 	public void reset(boolean resetAllCms)
 	{
 		// have we been initialized or not
@@ -263,27 +356,19 @@ implements ICounterController
 		}
 	}
 
-
-	/** Init needs to be implemented by any subclass */
-	public abstract void init()
-	throws Exception;
-
-	/** The run is located in any implementing subclass */
-	@Override
-	public abstract void run();
-
-	/** shutdown or stop any collector */
-	public abstract void shutdown();
 	
-	public static void setWaitEvent(String str)
+	@Override
+	public void setWaitEvent(String str)
 	{
 		_waitEvent = str;
 	}
-	public static String getWaitEvent()
+	@Override
+	public String getWaitEvent()
 	{
 		return _waitEvent;
 	}
 
+	@Override
 	public boolean isInitialized()
 	{
 		return _isInitialized;
@@ -313,7 +398,8 @@ implements ICounterController
 	 * @param isClusterEnabled    is it a cluster ASE
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
-	public abstract void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+	@Override
+	public abstract void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception;
 
 //	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
@@ -555,9 +641,10 @@ implements ICounterController
 	 * initialize the counter object using a specific ASE release
 	 * this so we can decide what monitor tables and columns we could use.
 	 */
-	abstract public void createCounters();
+	@Override
+	abstract public void createCounters(boolean hasGui);
 
-//	public void createCounters();
+//	public void createCounters(boolean hasGui);
 //	{
 //		if (_countersIsCreated)
 //			return;
@@ -565,7 +652,7 @@ implements ICounterController
 //		_logger.info("Creating ALL CM Objects.");
 //
 //		ICounterController counterController = this;
-//		MainFrame          guiController     = Configuration.hasGui() ? MainFrame.getInstance() : null;
+//		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
 //
 //		CmSummary          .create(counterController, guiController);
 //
@@ -680,7 +767,7 @@ implements ICounterController
 	public void createUserDefinedCounterModels(ICounterController counterController, IGuiController guiController)
 	{
 		Configuration conf = null;
-		if(AseTune.hasGUI())
+		if(DbxTune.hasGui())
 		{
 			conf = Configuration.getCombinedConfiguration();
 		}
@@ -698,7 +785,8 @@ implements ICounterController
 	public static int createUserDefinedCounterModels(Configuration conf)
 	{
 		// FIXME: when we have multiple flavors of AseTune (RepServer, IQ, HANA, MSSQL, etc): we probably can't trust this
-		ICounterController counterController = GetCounters.getInstance();
+//		ICounterController counterController = GetCounters.getInstance();
+		ICounterController counterController = CounterController.getInstance();
 		IGuiController     guiController     = Configuration.hasGui() ? MainFrame.getInstance() : null;
 
 		return createUserDefinedCounterModels(counterController, guiController, conf);
@@ -984,7 +1072,7 @@ implements ICounterController
 
 		if (addGraph)
 		{
-			if (AseTune.hasGUI())
+			if (DbxTune.hasGui())
 			{
 				// GRAPH
 				TrendGraph tg = new TrendGraph(
@@ -1016,7 +1104,7 @@ implements ICounterController
 	public void createUserDefinedCounterModelHostMonitors(ICounterController counterController, IGuiController guiController)
 	{
 		Configuration conf = null;
-		if(AseTune.hasGUI())
+		if(DbxTune.hasGui())
 		{
 //			conf = Configuration.getInstance(Configuration.CONF);
 			conf = Configuration.getCombinedConfiguration();
@@ -1259,6 +1347,7 @@ implements ICounterController
 	 * Interrupt the sleep and request a new refresh.<br>
 	 * Note: this will be disregarded if we not sleeping waiting for a new refresh.
 	 */
+	@Override
 	public void doRefresh()
 	{
 		if ( isRefreshing() )
@@ -1275,11 +1364,12 @@ implements ICounterController
 	public void doInterrupt()
 	{
 		// interrupt the collector thread
-		if (_thread != null)
-		{
-			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"', this was done by thread '"+Thread.currentThread().getName()+"'.");
-			_thread.interrupt();
-		}
+//		if (_thread != null)
+//		{
+//			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"', this was done by thread '"+Thread.currentThread().getName()+"'.");
+//			_thread.interrupt();
+//		}
+		getCounterCollectorThread().doInterrupt();
 	}
 
 	private boolean _isSleeping = false;
@@ -1291,8 +1381,9 @@ implements ICounterController
 	/**
 	 * Sleep for X ms, should only be used when GUI should be able to be interrupted.
 	 * @param ms sleep time
-	 * @return true if we were sleept the whole time, false if we were interrupted.
+	 * @return true if we were slept the whole time, false if we were interrupted.
 	 */
+	@Override
 	public boolean sleep(int ms)
 	{
 		try 
@@ -1317,6 +1408,7 @@ implements ICounterController
 	 * Interrupt the thread if it's sleeping using the sleep() method in this class.<br>
 	 * If Thread:sleep() has been used it wont do interrupts, just skipping your request.
 	 */
+	@Override
 	public void doInterruptSleep()
 	{
 		if ( isSleeping() )
@@ -1326,25 +1418,29 @@ implements ICounterController
 	}
 	
 	/** enable/continue refreshing of monitor counters from the monitored server */
+	@Override
 	public void enableRefresh()
 	{
 		_refreshIsEnabled = true;
 
 		// If we where in sleep at the getCounters loop
-		if (_thread != null)
-		{
-			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"' if it was sleeping... This was done by thread '"+Thread.currentThread().getName()+"'.");
-			_thread.interrupt();
-		}
+//		if (_thread != null)
+//		{
+//			_logger.debug("Sending 'interrupt' to the thread '"+_thread.getName()+"' if it was sleeping... This was done by thread '"+Thread.currentThread().getName()+"'.");
+//			_thread.interrupt();
+//		}
+		doInterrupt();
 	}
 
 	/** pause/disable refreshing of monitor counters from the monitored server */
+	@Override
 	public void disableRefresh()
 	{
 		_refreshIsEnabled = false;
 	}
 
 	/** if we refreshing of the counters is enabled, or paused */
+	@Override
 	public boolean isRefreshEnabled()
 	{
 		return _refreshIsEnabled;
@@ -1355,6 +1451,7 @@ implements ICounterController
 	 * Are we currently getting counter information from the monitored server
 	 * @return yes or no
 	 */
+	@Override
 	public boolean isRefreshing()
 	{
 		return _isRefreshing;
@@ -1364,7 +1461,8 @@ implements ICounterController
 	 * Indicate the we are currently in the process of getting counter information from the monitored server
 	 * @param true=isRefresing
 	 */
-	public static void setInRefresh(boolean s)
+	@Override
+	public void setInRefresh(boolean s)
 	{
 		_isRefreshing = s;
 	}
@@ -1520,13 +1618,18 @@ implements ICounterController
 	}
 	// Simulate the _conn.isClosed() functionality, but add a query timeout...
 	// it looks like jConnect isClosed() could hang if you call many simultaneously
-	private boolean isClosed(Connection conn)
+	protected boolean isClosed(Connection conn)
 	throws SQLException
 	{
 		try
 		{
-			Statement stmnt   = conn.createStatement();
-			ResultSet rs      = stmnt.executeQuery("select 'AseTune-check:isClosed(conn)'");
+			String sql =  getIsClosedSql();
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("isClosed(): sql="+sql);
+			
+			Statement stmnt = conn.createStatement();
+			ResultSet rs    = stmnt.executeQuery(sql);
 
 			stmnt.setQueryTimeout(5);
 			while (rs.next())
@@ -1546,6 +1649,22 @@ implements ICounterController
 
 			throw e;
 		}
+	}
+	
+	/**
+	 * SQL Statement that will be issued when checking if a connection is alive
+	 * @return
+	 */
+	protected abstract String getIsClosedSql();
+
+	/**
+	 * Does the Server support many SQL Statements in the same SQL Batch
+	 * @return 
+	 */
+	@Override
+	public boolean isSqlBatchingSupported()
+	{
+		return true;
 	}
 
 	/**
@@ -1619,8 +1738,10 @@ implements ICounterController
 	@Override
 	public void cleanupMonConnection()
 	{
+		getCounterCollectorThread().cleanupMonConnection();
 	}
-
+	
+	
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
 	//// SSH connection
@@ -1634,6 +1755,7 @@ implements ICounterController
 	 * Do we have a connection to the HOST?
 	 * @return true or false
 	 */
+	@Override
 	public boolean isHostMonConnected()
 	{
 		return isHostMonConnected(false, false);
@@ -1679,6 +1801,7 @@ implements ICounterController
 	/**
 	 * Set the <code>SshConnection</code> to use for monitoring.
 	 */
+	@Override
 	public void setHostMonConnection(SshConnection sshConn)
 	{
 		_sshConn = sshConn;
@@ -1688,12 +1811,14 @@ implements ICounterController
 	/**
 	 * Gets the <code>SshConnection</code> to the monitored server.
 	 */
+	@Override
 	public SshConnection getHostMonConnection()
 	{
 		return _sshConn;
 	}
 
 	/** Gets the <code>SshConnection</code> to the monitored server. */
+	@Override
 	public void closeHostMonConnection()
 	{
 		if (_sshConn == null) 
@@ -1725,6 +1850,7 @@ implements ICounterController
 	 * Call this whenever we do a new sample
 	 * @param mainSampleTime the time of the sample.
 	 */
+	@Override
 	public void setStatisticsTime(Timestamp mainSampleTime)
 	{
 		if (_statFirstSampleTime == null)
@@ -1737,6 +1863,7 @@ implements ICounterController
 	 * Reset statistical times (first/last) sample times<br>
 	 * This would be called by the statistical "sender" after a disconnect.
 	 */
+	@Override
 	public void resetStatisticsTime()
 	{
 		_statFirstSampleTime = null;
@@ -1747,6 +1874,7 @@ implements ICounterController
 	 * Get first sample time, used by the statistical send<br>
 	 * If no samples has been done it will return null
 	 */
+	@Override
 	public Timestamp getStatisticsFirstSampleTime()
 	{
 		return _statFirstSampleTime;
@@ -1756,6 +1884,7 @@ implements ICounterController
 	 * Get last sample time, used by the statistical send
 	 * If no samples has been done it will return null
 	 */
+	@Override
 	public Timestamp getStatisticsLastSampleTime()
 	{
 		return _statLastSampleTime;

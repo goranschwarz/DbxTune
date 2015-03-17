@@ -135,9 +135,11 @@ import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
-import com.asetune.check.CheckForUpdates;
-import com.asetune.check.CheckForUpdates.SqlwConnectInfo;
-import com.asetune.check.CheckForUpdates.SqlwUsageInfo;
+import com.asetune.check.CheckForUpdates2;
+import com.asetune.check.CheckForUpdates2Sqlw;
+import com.asetune.check.CheckForUpdates2Sqlw.SqlwConnectInfo;
+import com.asetune.check.CheckForUpdates2Sqlw.SqlwUsageInfo;
+import com.asetune.gui.AboutBox;
 import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
@@ -145,7 +147,11 @@ import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.FavoriteCommandDialog;
 import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.FavoriteCommandDialog.VendorType;
+import com.asetune.gui.GuiLogAppender;
+import com.asetune.gui.JdbcMetaDataInfoDialog;
+import com.asetune.gui.Log4jViewer;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.MainFrameAse;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -381,6 +387,10 @@ public class QueryWindow
 	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
 	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
 	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
+	public static final String ACTION_VIEW_CONN_INFO            = "VIEW_CONN_INFO";
+
+	public static final String ACTION_OPEN_ABOUT                = "OPEN_ABOUT";
+	public static final String ACTION_OPEN_LOG_VIEW             = "OPEN_LOG_VIEW";
 
 	public static final String ACTION_PREV_ERROR                = "PREV_ERROR";
 	public static final String ACTION_NEXT_ERROR                = "NEXT_ERROR";
@@ -448,6 +458,7 @@ public class QueryWindow
 	private JPanel            _topPane                    = new JPanel( new BorderLayout() );
 	private JPanel            _bottomPane                 = new JPanel( new MigLayout("insets 0 0 0 0") );
 
+	private Log4jViewer       _logView                    = null;
 
 
 	private JSeparator        _cntrlPrefix_sep            = new JSeparator(SwingConstants.VERTICAL);
@@ -543,6 +554,7 @@ public class QueryWindow
 
 	// View
 	private JMenu               _view_m                 = new JMenu("View");
+	private JMenuItem           _logView_mi             = new JMenuItem("Open Log Window...");
 	private JMenuItem           _viewCmdHistory_mi      = new JMenuItem("Command History");
 	private JMenuItem           _viewLogFile_mi         = new JMenuItem("Tail on Server Log File");
 	private JMenuItem           _ase_viewConfig_mi      = new JMenuItem("View ASE Configuration...");
@@ -550,6 +562,7 @@ public class QueryWindow
 	private JMenuItem           _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
 	private JMenuItem           _rs_dumpQueue_mi        = new JMenuItem("View Stable Queue Content...");
 	private JMenuItem           _rsWhoIsDown_mi         = new JMenuItem("Admin who_is_down");
+	private JMenuItem           _jdbcMetaDataInfo_mi    = new JMenuItem("View JDBC Meta Data Info...");
 
 	private JMenu               _preferences_m              = new JMenu("Preferences");
 	private JCheckBoxMenuItem   _prefWinOnConnect_mi        = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
@@ -562,6 +575,10 @@ public class QueryWindow
 	private JMenu               _tools_m                = new JMenu("Tools");
 	private JMenuItem           _toolDummy_mi           = new JMenuItem("Dummy entry");
 	private JMenuItem           _aseCaptureSql_mi       = new JMenuItem("Capture SQL...");
+
+	// Help
+	private JMenu               _help_m                 = new JMenu("Help");
+	private JMenuItem           _about_mi               = new JMenuItem("About");
 
 	// Start time
 	private static long _startTime = System.currentTimeMillis();
@@ -587,6 +604,9 @@ public class QueryWindow
 			if (appStoreDir.mkdir())
 				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
 		}
+
+		// Initialize the "Check For Updates" subsystem
+		CheckForUpdates2.setInstance( new CheckForUpdates2Sqlw() );
 
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
@@ -945,11 +965,15 @@ public class QueryWindow
 //		if (_jframe != null)
 		if (winType == WindowType.CMDLINE_JFRAME)
 		{
+			// Calling this would make GuiLogAppender, to register itself in log4j.
+			GuiLogAppender.getInstance();
+
 			_jframe.setJMenuBar(_main_mb);
 	
 			_main_mb.add(_file_m);
 			_main_mb.add(_view_m);
 			_main_mb.add(_tools_m);
+			_main_mb.add(_help_m);
 
 			// FILE
 			_file_m.add(_connect_mi);
@@ -973,6 +997,7 @@ public class QueryWindow
 			_file_m .setMnemonic(KeyEvent.VK_F);
 	
 			// VIEW
+			_view_m.add(_logView_mi);
 			_view_m.add(_viewCmdHistory_mi);
 			_view_m.add(_viewLogFile_mi);
 			_view_m.add(_ase_viewConfig_mi);
@@ -980,13 +1005,20 @@ public class QueryWindow
 			_view_m.add(_rs_configAllDdl_mi);   
 			_view_m.add(_rs_dumpQueue_mi);
 			_view_m.add(_rsWhoIsDown_mi);
-
+			_view_m.add(_jdbcMetaDataInfo_mi);
+			
 			_view_m.add(_preferences_m);
 			_preferences_m.add(_prefWinOnConnect_mi);
 			_preferences_m.add(_prefShowAppNameInTitle_mi);
 			_preferences_m.add(_prefSplitHorizontal_mi);
 			_preferences_m.add(_prefPlaceCntrlInToolbar_mi);
 			
+			// HELP
+			_help_m.add(_about_mi);
+
+			_help_m .setMnemonic(KeyEvent.VK_H);
+
+
 			_prefShowAppNameInTitle_mi.addActionListener(new ActionListener()
 			{
 				@Override
@@ -1047,6 +1079,7 @@ public class QueryWindow
 // reserve Ctrl+Shift+s for when we have "multiple editor tabs"
 //			_fSaveAll_mi       .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 			
+			_logView_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 
 			_rsWhoIsDown_mi    .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 
@@ -1094,7 +1127,12 @@ public class QueryWindow
 			_connect_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect_16.png"));
 			_disconnect_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/disconnect_16.png"));
 			_cloneConnect_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/clone_connect_16.png"));
-			_exit_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/close.gif"));
+			_fNew_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/new_file.png"));
+			_fOpen_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/open_file.png"));
+			_fSave_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/save.png"));
+			_fSave_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/save.png"));
+			_fSaveAs_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/save_as.png"));
+			_logView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
 			_viewLogFile_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/tail_logfile.png"));
 			_viewCmdHistory_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/command_history.png"));
 			_ase_viewConfig_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
@@ -1103,6 +1141,8 @@ public class QueryWindow
 			_rs_dumpQueue_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png"));
 			_rsWhoIsDown_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/rs_admin_who_is_down.png"));
 			_aseCaptureSql_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
+//			_conn_viewProps_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/jdbc_conn_info.png"));
+			_about_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/about.png"));
 
 			//--------------------------
 			// MENU - Actions
@@ -1119,6 +1159,7 @@ public class QueryWindow
 			_fAlwaysOverwriteUntitled_mi.setActionCommand(ACTION_SAVE_PROPS);
 			_exit_mi                    .setActionCommand(ACTION_EXIT);
 
+			_logView_mi                 .setActionCommand(ACTION_OPEN_LOG_VIEW);
 			_viewCmdHistory_mi          .setActionCommand(ACTION_VIEW_CMD_HISTORY);
 			_viewLogFile_mi             .setActionCommand(ACTION_VIEW_LOG_TAIL);
 			_ase_viewConfig_mi          .setActionCommand(ACTION_VIEW_ASE_CONFIG);
@@ -1127,6 +1168,10 @@ public class QueryWindow
 			_rs_dumpQueue_mi            .setActionCommand(ACTION_RS_DUMP_QUEUE);
 			_rsWhoIsDown_mi             .setActionCommand(ACTION_RS_WHO_IS_DOWN);
 			_aseCaptureSql_mi           .setActionCommand(ACTION_ASE_CAPTURE_SQL);
+			_jdbcMetaDataInfo_mi        .setActionCommand(ACTION_VIEW_CONN_INFO);
+
+			_about_mi                   .setActionCommand(ACTION_OPEN_ABOUT);
+
 
 			//--------------------------
 			// And the action listener
@@ -1142,6 +1187,7 @@ public class QueryWindow
 			_fSaveUntitled_mi      .addActionListener(this);
 			_exit_mi               .addActionListener(this);
 
+			_logView_mi            .addActionListener(this);
 			_viewCmdHistory_mi     .addActionListener(this);
 			_viewLogFile_mi        .addActionListener(this);
 			_ase_viewConfig_mi     .addActionListener(this);
@@ -1150,6 +1196,9 @@ public class QueryWindow
 			_rs_dumpQueue_mi       .addActionListener(this);
 			_rsWhoIsDown_mi        .addActionListener(this);
 			_aseCaptureSql_mi      .addActionListener(this);
+			_jdbcMetaDataInfo_mi   .addActionListener(this);
+
+			_about_mi              .addActionListener(this);
 		}
 
 //		final JPopupMenu fileHistoryPopupMenu = new JPopupMenu();
@@ -1841,7 +1890,7 @@ public class QueryWindow
 //				{
 //					SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
 //				}
-				openFile(f);
+				openFile(f, false);
 			}
 		}
 
@@ -1858,64 +1907,14 @@ public class QueryWindow
 		// Set components if visible, enabled etc...
 		setComponentVisibility();
 		
-		// If nothing is in the TEXT
+		// if it has been started from the command line (this so we don't load/save if started from xxxTune instantiations)
+		// AND: If nothing is in the TEXT
 		// Load last untitled file
-		if (_query_txt.getText().length() == 0)
+		if (winType == WindowType.CMDLINE_JFRAME && _query_txt.getText().length() == 0)
 		{
 			boolean loadUntitledFile = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_restoreUntitledTextAtStartup, DEFAULT_restoreUntitledTextAtStartup);
 			if (loadUntitledFile)
-			{
-				final String filename = Configuration.getCombinedConfiguration().getProperty(PROPKEY_untitledFileName, DEFAULT_untitledFileName);
-				final int lastRowNum  = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_saveUntitledFileRowNum, -1);
-				try
-				{
-					File f = new File(filename);
-					if (f.exists())
-					{
-						// Load the file using RSyntaxTextArea's methods (emulating load/reload)
-						String encoding = FileUtils.getFileEncoding(f);
-						UnicodeReader ur = new UnicodeReader(f, encoding);
-						BufferedReader r = new BufferedReader(ur);
-						try { _query_txt.read(r, null); } 
-						finally { r.close(); }
-						if (encoding != null)
-							_query_txt.setEncoding(encoding);
-
-//						String content = FileUtils.readFile(f, FileUtils.getFileEncoding(f));
-//						_query_txt.setText(content);
-						
-						// reset the UNDO manager
-						_query_txt.setDirty(false);
-						_query_txt.discardAllEdits();
-						
-						_untitledFileLastModified = f.lastModified();
-
-						// Set last edit position
-						if (lastRowNum > 0)
-						{
-							Runnable doLater = new  Runnable()
-							{
-								@Override
-								public void run()
-								{
-									try 
-									{
-										_query_txt.requestFocusInWindow();
-										_query_txt.setCaretPosition(_query_txt.getLineStartOffset(lastRowNum));
-										_query_txt.scrollRectToVisible(_query_txt.getVisibleRect());
-									}
-									catch (BadLocationException ignore) {ignore.printStackTrace();}
-								}
-							};
-							SwingUtilities.invokeLater(doLater);
-						}
-					}
-				}
-				catch (IOException ex)
-				{
-					SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
-				}
-			}
+				loadUntitledFile(true);
 		}
 
 		if (winType == WindowType.CMDLINE_JFRAME)
@@ -1930,7 +1929,9 @@ public class QueryWindow
 				@Override
 				public void run()
 				{
-					CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+//					CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
+					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+						CheckForUpdates2.getInstance().checkForUpdateNoBlock(_jframe, false, true);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -1983,6 +1984,11 @@ public class QueryWindow
 
 		return watchdog;
 	}
+
+//	public String getConnectedToProductName()
+//	{
+//		return _connectedToProductName;
+//	}
 
 	private void loadProps()
 	{
@@ -2285,6 +2291,9 @@ public class QueryWindow
 		if (ACTION_VIEW_LOG_TAIL.equals(actionCmd))
 			action_viewLogTail(e);
 
+		if (ACTION_VIEW_CONN_INFO.equals(actionCmd))
+			action_viewConnInfo(e);
+
 		// ACTION for "exec"
 		if (ACTION_EXECUTE.equals(actionCmd))
 			actionExecute(e, false);
@@ -2325,7 +2334,12 @@ public class QueryWindow
 		if (ACTION_NEXT_ERROR.equals(actionCmd))
 			action_nextError(e);
 
-		
+		if (ACTION_OPEN_LOG_VIEW.equals(actionCmd))
+			action_openLogViewer();
+
+		if (ACTION_OPEN_ABOUT.equals(actionCmd))
+			action_about(e);
+
 		setComponentVisibility();
 		setWatermark();
 	}
@@ -2345,7 +2359,7 @@ public class QueryWindow
 		_statusBar.setFilenameDirty(isDirty);
 
 		_fSave_mi  .setEnabled(isDirty);
-		_fSaveAs_mi.setEnabled(isDirty);
+//		_fSaveAs_mi.setEnabled(isDirty);
 		
 		_statusBar.setEditorPos(_query_txt.getCaretLineNumber(), _query_txt.getCaretOffsetFromLineStart());
 
@@ -2427,13 +2441,21 @@ public class QueryWindow
 		}
 
 		// Create a new dialog Window
-		boolean checkAseCfg    = false;
-		boolean showAseTab     = true;
-		boolean showAseOptions = false;
-		boolean showHostmonTab = false;
-		boolean showPcsTab     = false;
-		boolean showOfflineTab = true;
-		boolean showJdbcTab    = true;
+//		boolean showAseTab     = true;
+//		boolean showAseOptions = false;
+//		boolean showHostmonTab = false;
+//		boolean showPcsTab     = false;
+//		boolean showOfflineTab = true;
+//		boolean showJdbcTab    = true;
+		com.asetune.gui.ConnectionDialog.Options connDialogOptions = new com.asetune.gui.ConnectionDialog.Options();
+		connDialogOptions._srvExtraChecks           = null;
+		connDialogOptions._showAseTab               = true;
+		connDialogOptions._showDbxTuneOptionsInTds  = false;
+		connDialogOptions._showHostmonTab           = false;
+		connDialogOptions._showPcsTab               = false;
+		connDialogOptions._showOfflineTab           = true;
+		connDialogOptions._showJdbcTab              = true;
+		connDialogOptions._showDbxTuneOptionsInJdbc = false;
 
 		_srvVersion                 = 0;
 		_connectedAtTime            = 0;
@@ -2465,13 +2487,14 @@ public class QueryWindow
 		String aseDbname = null;
 		
 		// Create the connection dialog
-		ConnectionDialog connDialog = new ConnectionDialog(_jframe, checkAseCfg, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab, showJdbcTab);
+//		ConnectionDialog connDialog = new ConnectionDialog(_jframe, null, showAseTab, showAseOptions, showHostmonTab, showPcsTab, showOfflineTab, showJdbcTab, false);
+		ConnectionDialog connDialog = new ConnectionDialog(_jframe, connDialogOptions);
 
 		// If the source is "CommandLine" Parameters
 		//   - call the ConnectionDialogs logic to just connect
 		// else
 		//   - open the dialog
-		if (source != null && source instanceof CommandLine && showAseTab)
+		if (source != null && source instanceof CommandLine && connDialogOptions._showAseTab)
 		{
 			if ( action != null && action.startsWith(ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP) )
 			{
@@ -2674,7 +2697,7 @@ public class QueryWindow
 					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
 
 					// JDBC Specific statuses
-					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 					
 					_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
@@ -2695,7 +2718,7 @@ public class QueryWindow
 					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
 
 					// JDBC Specific statuses
-					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 					
 					_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
@@ -2723,7 +2746,7 @@ public class QueryWindow
 
 
 				// Send connection info
-				final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+				final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
 				connInfo.setProdName         (_connectedToProductName);
 				connInfo.setProdVersionStr   (_connectedToProductVersion);
 				connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2750,7 +2773,9 @@ public class QueryWindow
 					@Override
 					public void run()
 					{
-						CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+//						CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+						if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+							CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
 					}
 				}, "checkForUpdatesThread");
 				checkForUpdatesThread.setDaemon(true);
@@ -2782,14 +2807,14 @@ public class QueryWindow
 			_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 			// JDBC Specific statuses
-			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 
 			// Load Windown Props for this server
 			loadWinPropsForSrv(_conn.toString());
 
 			// Send connection info
-			final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2806,7 +2831,7 @@ public class QueryWindow
 //			connInfo.setClientCharsetName(_connectedClientCharsetName); 
 //			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
-			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+//			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 
 			// Create a thread that does this...
 			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
@@ -2816,7 +2841,9 @@ public class QueryWindow
 				@Override
 				public void run()
 				{
-					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+//					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+						CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -2945,7 +2972,7 @@ public class QueryWindow
 			{
 				//---------------------------------------------------
 				// JDBC Specific status - refreshed after each execution
-				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 			}
 
@@ -2955,7 +2982,7 @@ public class QueryWindow
 			loadWinPropsForSrv(_connectedWithUrl);
 
 			// Send connection info
-			final SqlwConnectInfo connInfo = new CheckForUpdates.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2972,7 +2999,7 @@ public class QueryWindow
 //			connInfo.setClientCharsetName(_connectedClientCharsetName); 
 //			connInfo.setClientCharsetDesc(_connectedClientCharsetDesc); 
 
-			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+//			CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
 
 			// Create a thread that does this...
 			// Apparently the noBlockCheckSqlWindow() hits problems when it accesses the CheckForUpdates, which uses ProxyVole
@@ -2982,7 +3009,9 @@ public class QueryWindow
 				@Override
 				public void run()
 				{
-					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+//					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
+					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+						CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -3009,6 +3038,7 @@ public class QueryWindow
 		_rs_dumpQueue_mi       .setVisible(false);
 		_rsWhoIsDown_mi        .setVisible(false);
 		_aseCaptureSql_mi      .setVisible(false);
+		_jdbcMetaDataInfo_mi   .setVisible(false);
 
 		// view and tools menu might be empty...
 		// if so hide the main menu entry as well
@@ -3090,6 +3120,7 @@ public class QueryWindow
 				_ase_viewConfig_mi         .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
 				_cmdSql_but                .setVisible(true);
 				_aseCaptureSql_mi          .setVisible(true);
+				_jdbcMetaDataInfo_mi       .setVisible(true);
 
 				_dbnames_cbx               .setEnabled(true);
 				_exec_but                  .setEnabled(true);
@@ -3154,6 +3185,7 @@ public class QueryWindow
 			{
 //				_logger.info("Connected to the Sybase TDS service with product name '"+_connectedToProductName+"', only esential functionality is enabled.");
 				_cmdSql_but                .setVisible(true);
+				_jdbcMetaDataInfo_mi       .setVisible(true);
 
 				_dbnames_cbx               .setVisible(false);
 				_exec_but                  .setEnabled(true);
@@ -3185,6 +3217,7 @@ public class QueryWindow
 		if ( _connType == ConnectionDialog.OFFLINE_CONN)
 		{
 			_cmdSql_but                .setVisible(true);
+			_jdbcMetaDataInfo_mi       .setVisible(true);
 
 			_dbnames_cbx               .setEnabled(false);
 			_exec_but                  .setEnabled(true);
@@ -3219,6 +3252,7 @@ public class QueryWindow
 		if ( _connType == ConnectionDialog.JDBC_CONN)
 		{
 			_cmdSql_but                .setVisible(true);
+			_jdbcMetaDataInfo_mi       .setVisible(true);
 
 			_dbnames_cbx               .setEnabled(false);
 			_exec_but                  .setEnabled(true);
@@ -3331,7 +3365,7 @@ public class QueryWindow
 				_getObjectTextOnError_chk  .setEnabled(false);
 				_jdbcAutoCommit_chk        .setEnabled(false);
 				_sendCommentsOnly_chk      .setEnabled(false);
-				_setAseOptions_but         .setEnabled(false);
+				_setAseOptions_but         .setVisible(false);
 				_execGuiShowplan_but       .setEnabled(false);
 
 				setSrvInTitle(null);
@@ -3555,7 +3589,30 @@ public class QueryWindow
 		}
 
 
-		SwingUtils.showInfoMessage("New File", "Sorry not fully implemented yet.");
+//		SwingUtils.showInfoMessage("New File", "Sorry not fully implemented yet.");
+		try
+		{
+			String initialFileContent = 
+				  "------------------------------------------------------------------------------------------------------------------\n"
+				+ "-- Tip: If you keep the below 'exit' as the first 'statement' you wont execute the whole editor content by mistake\n"
+				+ "------------------------------------------------------------------------------------------------------------------\n"
+				+ "exit -- When 'exit'  is seen: no more commands will be sent to the server\n"
+				+ "------- When 'go'    is seen: a sql-batch will be sent to server, send 'go help' to get more details. (If you want to send SQL when you have a ';' at the end-of-line, enable 'Use Semicolon to Send' at the 'Options' button.)\n"
+				+ "-------              you can also 'pipe' from a 'go' command terminator... There is only a couple of command implemented: grep, egrep or bcp. Example: go | grep 'some str', or: go | bcp tablename -Uxxx -Pxxx -Sxxx -Dxxx)\n"
+				+ "------- When '\\help' is seen: You will get the help text for local sqlw commands.\n"
+				+ "------------------------------------------------------------------------------------------------------------------\n"
+				+ "";
+					
+			File suggestFileName = new File(getDefaultFilePath(), "sqlw.editor.temp." + Long.toString(System.currentTimeMillis()) + ".sql");
+			File newFile = FileUtils.openNewFileDialog(_window, suggestFileName, true, initialFileContent);
+
+			if (newFile != null)
+				openFile(newFile, true);
+		}
+		catch (IOException ex)
+		{
+			SwingUtils.showErrorMessage(_window, "New File", "Sorry problems when creating a new file.", ex);
+		}
 
 		// hmm do I need to do...
 //		_query_txt = new TextEditorPane();
@@ -3642,12 +3699,12 @@ public class QueryWindow
 			int returnVal = fc.showOpenDialog(_window);
 			if (returnVal == JFileChooser.APPROVE_OPTION) 
 			{
-				openFile(fc.getSelectedFile());
+				openFile(fc.getSelectedFile(), false);
 			}
 		}
 		else
 		{
-			openFile(fileToOpen);
+			openFile(fileToOpen, false);
 		}
 	}
 
@@ -3667,11 +3724,11 @@ public class QueryWindow
 		}
 	}
 
-	private void openFile(String filename)
+	private void openFile(String filename, boolean posToEndOfFile)
 	{
-		openFile( new File(filename) );
+		openFile( new File(filename), posToEndOfFile );
 	}
-	private void openFile(File file)
+	private void openFile(File file, boolean posToEndOfFile)
 	{
 		try
 		{
@@ -3689,6 +3746,94 @@ public class QueryWindow
 			
 			// reset the UNDO manager
 			_query_txt.discardAllEdits();
+			
+			if (posToEndOfFile)
+			{
+				Runnable doLater = new  Runnable()
+				{
+					@Override
+					public void run()
+					{
+						try 
+						{
+							int lastRowNum = _query_txt.getLineCount();
+							if (lastRowNum > 0)
+								lastRowNum--;
+							_query_txt.requestFocusInWindow();
+							_query_txt.setCaretPosition(_query_txt.getLineStartOffset(lastRowNum));
+							_query_txt.scrollRectToVisible(_query_txt.getVisibleRect());
+						}
+						catch (BadLocationException ignore) {ignore.printStackTrace();}
+					}
+				};
+				SwingUtilities.invokeLater(doLater);
+				
+			}
+		}
+		catch (IOException ex)
+		{
+			SwingUtils.showErrorMessage("Problems Loading file", "Problems Loading file", ex);
+		}
+	}
+
+	/**
+	 * Load the untitled file 
+	 */
+	private void loadUntitledFile(boolean atStartup)
+	{
+		final String filename = Configuration.getCombinedConfiguration().getProperty(PROPKEY_untitledFileName, DEFAULT_untitledFileName);
+		final int lastRowNum  = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_saveUntitledFileRowNum, -1);
+
+		try
+		{
+			File f = new File(filename);
+			if (! f.exists())
+				return;
+
+			if (atStartup)
+			{
+				// Load the file using RSyntaxTextArea's methods (emulating load/reload)
+				String encoding = FileUtils.getFileEncoding(f);
+				UnicodeReader ur = new UnicodeReader(f, encoding);
+				BufferedReader r = new BufferedReader(ur);
+				try { _query_txt.read(r, null); } 
+				finally { r.close(); }
+				if (encoding != null)
+					_query_txt.setEncoding(encoding);
+
+//				String content = FileUtils.readFile(f, FileUtils.getFileEncoding(f));
+//				_query_txt.setText(content);
+				
+				// reset the UNDO manager
+				_query_txt.setDirty(false);
+				_query_txt.discardAllEdits();
+				
+				_untitledFileLastModified = f.lastModified();
+			}
+			else
+			{
+				openFile(f, false);
+			}
+
+			// Set last edit position
+			if (lastRowNum > 0)
+			{
+				Runnable doLater = new  Runnable()
+				{
+					@Override
+					public void run()
+					{
+						try 
+						{
+							_query_txt.requestFocusInWindow();
+							_query_txt.setCaretPosition(_query_txt.getLineStartOffset(lastRowNum));
+							_query_txt.scrollRectToVisible(_query_txt.getVisibleRect());
+						}
+						catch (BadLocationException ignore) {ignore.printStackTrace();}
+					}
+				};
+				SwingUtilities.invokeLater(doLater);
+			}
 		}
 		catch (IOException ex)
 		{
@@ -3703,6 +3848,10 @@ public class QueryWindow
 	{
 		boolean saveIt = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_saveUntitledFile, DEFAULT_saveUntitledFile);
 		if ( ! saveIt )
+			return;
+
+		// Only support this if it has been started from the command line (this so we don't load/save if started from xxxTune instantiations)
+		if (_windowType != WindowType.CMDLINE_JFRAME)
 			return;
 
 		// get the filename 
@@ -4000,6 +4149,26 @@ public class QueryWindow
 	}
 
 
+	public void action_openLogViewer()
+	{
+		if (_logView == null)
+			_logView = new Log4jViewer(_jframe);
+		_logView.setVisible(true);
+	}
+
+	private void action_about(ActionEvent e)
+	{
+		AboutBox.show(_jframe);
+//		AboutBox dlg = new AboutBox(_jframe);
+//		Dimension dlgSize = dlg.getPreferredSize();
+//		Dimension frmSize = _jframe.getSize();
+//		Point loc = _jframe.getLocation();
+//		dlg.setLocation((frmSize.width - dlgSize.width) / 2 + loc.x, (frmSize.height - dlgSize.height) / 2 + loc.y);
+//		dlg.setModal(true);
+//		dlg.pack();
+//		dlg.setVisible(true);
+	}
+
 	private void action_exit(ActionEvent e)
 	{
 		_jframe.dispatchEvent(new WindowEvent(_jframe, WindowEvent.WINDOW_CLOSING));
@@ -4154,7 +4323,12 @@ public class QueryWindow
 		logTailDialog.startTail();
 	}
 
-	
+	private void action_viewConnInfo(ActionEvent e)
+	{
+		JdbcMetaDataInfoDialog dialog = new JdbcMetaDataInfoDialog(_window, _conn);
+		dialog.setVisible(true);
+	}
+		
 	private void action_nextError(ActionEvent e)
 	{
 		int atQueryLine = _query_txt.getCaretLineNumber() + 1;
@@ -5137,7 +5311,7 @@ public class QueryWindow
 			}
 			else
 			{
-				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn);
+				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
 				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 			}
 		}
@@ -5377,7 +5551,7 @@ public class QueryWindow
 						_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
 						+ sqe.getMessage();
 					sb.append(msg);
-					
+
 					// Get Oracle ERROR Messages
 					if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
 					{
@@ -8309,7 +8483,9 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 
 		if (blockingCall)
 		{
-			CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+//			CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+			if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+				CheckForUpdates2.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
 		}
 		else
 		{
@@ -8321,7 +8497,9 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				@Override
 				public void run()
 				{
-					CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+//					CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
+					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
+						CheckForUpdates2.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -9855,7 +10033,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		popupMenu.add(openDialog);
 
 		// add Predefined SQL from AseTune
-		JMenu preDefinedSql = MainFrame.createPredefinedSqlMenu(QueryWindow.this);
+		JMenu preDefinedSql = MainFrameAse.createPredefinedSqlMenu(QueryWindow.this);
 //		preDefinedSql.setText("<html>Predefined SQL Statements (same as in AseTune)</html>");
 		preDefinedSql.setText("<html>Execute some extra <i>system</i> stored procedures. <i>(if not exist; create it)</i></html>");
 		preDefinedSql.putClientProperty(FavoriteCommandDialog.PROPKEY_VENDOR_TYPE, VendorType.ASE);
@@ -10310,6 +10488,12 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		{
 			String key = "LastFileList."+i+".name";
 			String val = conf.getProperty(key, "");
+			
+			// Only add it if the file really exists
+			File f = new File(val);
+			if ( ! f.exists())
+				continue;
+
 			_lastFileNameList.set(i, val);
 		}
 
@@ -10323,18 +10507,22 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		// remove all old items (if any)
 		_fHistory_m.removeAll();
 
+		JMenuItem mi;;
+
 		int keyStrokeNum = 0x30; // KeyEvent.VK_0 = 0x30;
 
 		// Now create menu items
 		for (String name : _lastFileNameList)
 		{
-			JMenuItem mi = new JMenuItem();
+			mi = new JMenuItem();
 			mi.setText(name);
+			mi.setActionCommand(name);
 
 			// Add Ctrl-1 .. Ctrl-9   for the first 9 entries
 			keyStrokeNum++;
 			if (keyStrokeNum <=  KeyEvent.VK_9)
-				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+//				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+				mi.setAccelerator(KeyStroke.getKeyStroke(keyStrokeNum, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
 
 			mi.addActionListener(new ActionListener()
 			{
@@ -10345,13 +10533,42 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 					if (o instanceof JMenuItem)
 					{
 						JMenuItem mi = (JMenuItem) o;
-						String filename = mi.getText();
+						String filename = mi.getActionCommand();
 						action_fileOpen(null, filename);
 					}
 				}
 			});
 			_fHistory_m.add(mi);
 		}
+
+		//--------------------------------------------------------------
+		// at the end add: 'Untitled' file   ... with shortcut Alt-Shift-U
+		mi = new JMenuItem();
+		String fileName = Configuration.getCombinedConfiguration().getProperty(PROPKEY_untitledFileName, DEFAULT_untitledFileName);
+		mi.setText("<html><b>Load the <i>'Untitled'</i> file.</b></html>");
+		mi.setActionCommand(fileName);
+		mi.setToolTipText("<html>"
+				+ "In the <i>'Untitled'</i> file we store <i>temporary</i> commands until next application session.<br>"
+				+ "This so you can restart the application and continue to work at a later time...<br>"
+				+ "<br>"
+				+ "Filename is: <code>"+fileName+"</code><br>"
+				+ "This can be changed with the property: <code>"+PROPKEY_untitledFileName+"</code>"
+				+ "</html>");
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK));
+
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object o = e.getSource();
+				if (o instanceof JMenuItem)
+				{
+					loadUntitledFile(false);
+				}
+			}
+		});
+		_fHistory_m.add(mi);
 	}
 
 	/**
@@ -10464,6 +10681,13 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
     			else
     				str = "@@trancount = " + _aseConnectionStateInfo._tranCount + ", @@tranchained = " + _aseConnectionStateInfo._tranChained;
 			}
+				
+			setWatermarkText(str);
+		}
+		else if ( _jdbcConnectionStateInfo != null && _jdbcConnectionStateInfo._inTransaction )
+		{
+			String str = "NOTE: You are currently in a TRANSACTION!\n"
+			           + "Don't forget to commit or rollback!";
 				
 			setWatermarkText(str);
 		}
@@ -10611,7 +10835,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				{
 //System.out.println("GO AND RELOAD THE FILE");
 //					openFile(_statusBar.getFilename());
-					openFile(file);
+					openFile(file, false);
 
 					// Set back the carret position where you were before reloading the file
 					try	

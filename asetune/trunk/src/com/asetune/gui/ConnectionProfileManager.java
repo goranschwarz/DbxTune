@@ -107,30 +107,61 @@ public class ConnectionProfileManager
 	public static final boolean  DEFAULT_connProfile_load_onNodeSelection = true;
 
 	
+	//---------------------------------------------
+	// 16 pixel icons
+	//---------------------------------------------
 	// Sybase products
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_ASE       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_ase_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_ASA       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_asa_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_IQ        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_iq_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_RS        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_rs_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_OTHER     = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_other_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_SYBASE_UNDEFINED = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_undefined_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_ASE       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_ase_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_ASA       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_asa_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_IQ        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_iq_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_RS        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_rs_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_OTHER     = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_other_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_SYBASE_UNDEFINED = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_undefined_16.png");
 
 	// SAP products
-	public static final ImageIcon ICON_DB_PROD_NAME_HANA             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hana_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_MAXDB            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_maxdb_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_HANA             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hana_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_MAXDB            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_maxdb_16.png");
 
 	// JDBC products
-	public static final ImageIcon ICON_DB_PROD_NAME_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_HSQL             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hsql_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_HSQL             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hsql_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_16.png");
 
-	public static final ImageIcon ICON_DB_PROD_NAME_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_16.png");
+
+	//---------------------------------------------
+	// 32 pixel icons
+	//---------------------------------------------
+	// Sybase products
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_ASE       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_ase_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_ASA       = SwingUtils.readImageIcon(Version.class, "images/conn_profile_asa_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_IQ        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_iq_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_RS        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_rs_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_OTHER     = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_other_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_SYBASE_UNDEFINED = SwingUtils.readImageIcon(Version.class, "images/conn_profile_tds_undefined_32.png");
+
+	// SAP products
+	public static final ImageIcon ICON_DB_PROD_NAME_32_HANA             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hana_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_MAXDB            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_maxdb_32.png");
+
+	// JDBC products
+	public static final ImageIcon ICON_DB_PROD_NAME_32_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_HSQL             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hsql_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_32.png");
+
+	public static final ImageIcon ICON_DB_PROD_NAME_32_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_32.png");
 
 	// XML Strings for the Catalog and ConnProfile Tree
 	private final static String XML_PROFILE_TREE                     = "ProfileTree";
@@ -351,7 +382,14 @@ public class ConnectionProfileManager
 		}
 		else
 		{
-			_profileTreeModel.nodeChanged(node[node.length-1]);
+			try
+			{
+				_profileTreeModel.nodeChanged(node[node.length-1]);
+			}
+			catch(Throwable t)
+			{
+				_logger.debug("Problems when updating the tree node '"+node[node.length-1]+"'. Caught: "+t, t);
+			}
 		}
 
 //		save();
@@ -529,49 +567,138 @@ public class ConnectionProfileManager
 	}
 
 
-	public static ImageIcon getIcon(String productName)
+	public static ImageIcon getIcon16(String productName)
 	{
-		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return ICON_DB_PROD_NAME_DB2_UX;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return ICON_DB_PROD_NAME_DB2_ZOS;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return ICON_DB_PROD_NAME_DERBY;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return ICON_DB_PROD_NAME_H2;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return ICON_DB_PROD_NAME_HANA;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return ICON_DB_PROD_NAME_MAXDB;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return ICON_DB_PROD_NAME_HSQL;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return ICON_DB_PROD_NAME_MSSQL;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return ICON_DB_PROD_NAME_MYSQL;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return ICON_DB_PROD_NAME_ORACLE;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return ICON_DB_PROD_NAME_16_DB2_UX;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return ICON_DB_PROD_NAME_16_DB2_ZOS;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return ICON_DB_PROD_NAME_16_DERBY;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return ICON_DB_PROD_NAME_16_H2;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return ICON_DB_PROD_NAME_16_HANA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return ICON_DB_PROD_NAME_16_MAXDB;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return ICON_DB_PROD_NAME_16_HSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return ICON_DB_PROD_NAME_16_MYSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return ICON_DB_PROD_NAME_16_ORACLE;
 		
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return ICON_DB_PROD_NAME_SYBASE_ASA;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return ICON_DB_PROD_NAME_SYBASE_ASE;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return ICON_DB_PROD_NAME_SYBASE_IQ;
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return ICON_DB_PROD_NAME_SYBASE_RS;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return ICON_DB_PROD_NAME_16_SYBASE_ASA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return ICON_DB_PROD_NAME_16_SYBASE_ASE;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return ICON_DB_PROD_NAME_16_SYBASE_IQ;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return ICON_DB_PROD_NAME_16_SYBASE_RS;
 
-		return ICON_DB_PROD_NAME_OTHER;
+		return ICON_DB_PROD_NAME_16_OTHER;
 	}
-	public static ImageIcon getIcon(SrvType srvType)
+	public static ImageIcon getIcon32(String productName)
 	{
-		if      (SrvType.JDBC_DB2_UX   .equals(srvType)) return ICON_DB_PROD_NAME_DB2_UX;
-		else if (SrvType.JDBC_DB2_ZOS  .equals(srvType)) return ICON_DB_PROD_NAME_DB2_ZOS;
-		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_DERBY;
-		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_H2;
-		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_HANA;
-		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_MAXDB;
-		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_HSQL;
-		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_MSSQL;
-		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_MYSQL;
-		else if (SrvType.JDBC_ORACLE   .equals(srvType)) return ICON_DB_PROD_NAME_ORACLE;
-		else if (SrvType.JDBC_OTHER    .equals(srvType)) return ICON_DB_PROD_NAME_OTHER;
-		else if (SrvType.JDBC_UNDEFINED.equals(srvType)) return ICON_DB_PROD_NAME_UNDEFINED;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return ICON_DB_PROD_NAME_32_DB2_UX;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return ICON_DB_PROD_NAME_32_DB2_ZOS;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return ICON_DB_PROD_NAME_32_DERBY;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return ICON_DB_PROD_NAME_32_H2;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return ICON_DB_PROD_NAME_32_HANA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return ICON_DB_PROD_NAME_32_MAXDB;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return ICON_DB_PROD_NAME_32_HSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return ICON_DB_PROD_NAME_32_MYSQL;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return ICON_DB_PROD_NAME_32_ORACLE;
+		
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return ICON_DB_PROD_NAME_32_SYBASE_ASA;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return ICON_DB_PROD_NAME_32_SYBASE_ASE;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return ICON_DB_PROD_NAME_32_SYBASE_IQ;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return ICON_DB_PROD_NAME_32_SYBASE_RS;
 
-		else if (SrvType.TDS_ASA       .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_ASA;
-		else if (SrvType.TDS_ASE       .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_ASE;
-		else if (SrvType.TDS_IQ        .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_IQ;
-		else if (SrvType.TDS_RS        .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_RS;
-		else if (SrvType.TDS_OTHER     .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_OTHER;
-		else if (SrvType.TDS_UNDEFINED .equals(srvType)) return ICON_DB_PROD_NAME_SYBASE_UNDEFINED;
+		return ICON_DB_PROD_NAME_32_OTHER;
+	}
+	public static ImageIcon getIcon16(SrvType srvType)
+	{
+		if      (SrvType.JDBC_DB2_UX   .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_UX;
+		else if (SrvType.JDBC_DB2_ZOS  .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_ZOS;
+		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_16_DERBY;
+		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_16_H2;
+		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_16_HANA;
+		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_16_MAXDB;
+		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_16_HSQL;
+		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_16_MYSQL;
+		else if (SrvType.JDBC_ORACLE   .equals(srvType)) return ICON_DB_PROD_NAME_16_ORACLE;
+		else if (SrvType.JDBC_OTHER    .equals(srvType)) return ICON_DB_PROD_NAME_16_OTHER;
+		else if (SrvType.JDBC_UNDEFINED.equals(srvType)) return ICON_DB_PROD_NAME_16_UNDEFINED;
 
-		return ICON_DB_PROD_NAME_OTHER;
+		else if (SrvType.TDS_ASA       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASA;
+		else if (SrvType.TDS_ASE       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASE;
+		else if (SrvType.TDS_IQ        .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_IQ;
+		else if (SrvType.TDS_RS        .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RS;
+		else if (SrvType.TDS_OTHER     .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_OTHER;
+		else if (SrvType.TDS_UNDEFINED .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_UNDEFINED;
+
+		return ICON_DB_PROD_NAME_16_OTHER;
+	}
+
+	public static ImageIcon getIcon32(SrvType srvType)
+	{
+		if      (SrvType.JDBC_DB2_UX   .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_UX;
+		else if (SrvType.JDBC_DB2_ZOS  .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_ZOS;
+		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_32_DERBY;
+		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_32_H2;
+		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_32_HANA;
+		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_32_MAXDB;
+		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_32_HSQL;
+		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_32_MYSQL;
+		else if (SrvType.JDBC_ORACLE   .equals(srvType)) return ICON_DB_PROD_NAME_32_ORACLE;
+		else if (SrvType.JDBC_OTHER    .equals(srvType)) return ICON_DB_PROD_NAME_32_OTHER;
+		else if (SrvType.JDBC_UNDEFINED.equals(srvType)) return ICON_DB_PROD_NAME_32_UNDEFINED;
+
+		else if (SrvType.TDS_ASA       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASA;
+		else if (SrvType.TDS_ASE       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASE;
+		else if (SrvType.TDS_IQ        .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_IQ;
+		else if (SrvType.TDS_RS        .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RS;
+		else if (SrvType.TDS_OTHER     .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_OTHER;
+		else if (SrvType.TDS_UNDEFINED .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_UNDEFINED;
+
+		return ICON_DB_PROD_NAME_32_OTHER;
+	}
+
+	public static ImageIcon getIcon16byUrl(String jdbcUrl)
+	{
+		if (StringUtil.isNullOrBlank(jdbcUrl))
+			return ICON_DB_PROD_NAME_16_OTHER;
+
+		if      (jdbcUrl.startsWith("jdbc:odbc:"))                return ICON_DB_PROD_NAME_16_OTHER;
+		else if (jdbcUrl.startsWith("jdbc:sybase:Tds:"))          return ICON_DB_PROD_NAME_16_SYBASE_UNDEFINED;
+		else if (jdbcUrl.startsWith("jdbc:jtds:"))                return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:h2:"))                  return ICON_DB_PROD_NAME_16_H2;
+		else if (jdbcUrl.startsWith("jdbc:sap:"))                 return ICON_DB_PROD_NAME_16_HANA;
+		else if (jdbcUrl.startsWith("jdbc:sapdb:"))               return ICON_DB_PROD_NAME_16_MAXDB;
+		else if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return ICON_DB_PROD_NAME_16_ORACLE;
+		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_16_DB2_UX;
+//		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_16_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_16_MYSQL;
+		else if (jdbcUrl.startsWith("jdbc:derby:"))               return ICON_DB_PROD_NAME_16_DERBY;
+
+		return ICON_DB_PROD_NAME_16_OTHER;
+	}
+
+	public static ImageIcon getIcon32byUrl(String jdbcUrl)
+	{
+		if (StringUtil.isNullOrBlank(jdbcUrl))
+			return ICON_DB_PROD_NAME_32_OTHER;
+
+		if      (jdbcUrl.startsWith("jdbc:odbc:"))                return ICON_DB_PROD_NAME_32_OTHER;
+		else if (jdbcUrl.startsWith("jdbc:sybase:Tds:"))          return ICON_DB_PROD_NAME_32_SYBASE_UNDEFINED;
+		else if (jdbcUrl.startsWith("jdbc:jtds:"))                return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:h2:"))                  return ICON_DB_PROD_NAME_32_H2;
+		else if (jdbcUrl.startsWith("jdbc:sap:"))                 return ICON_DB_PROD_NAME_32_HANA;
+		else if (jdbcUrl.startsWith("jdbc:sapdb:"))               return ICON_DB_PROD_NAME_32_MAXDB;
+		else if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return ICON_DB_PROD_NAME_32_ORACLE;
+		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_32_DB2_UX;
+//		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_32_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_32_MYSQL;
+		else if (jdbcUrl.startsWith("jdbc:derby:"))               return ICON_DB_PROD_NAME_32_DERBY;
+
+		return ICON_DB_PROD_NAME_32_OTHER;
 	}
 
 	/**
@@ -620,8 +747,17 @@ public class ConnectionProfileManager
 				TdsEntry storedTdsEntry = (TdsEntry) connProfile.getEntry();
 				TdsEntry newTdsEntry    = (TdsEntry) connProfileEntry;
 
-				if (storedTdsEntry._isAseTuneParamsValid && !newTdsEntry._isAseTuneParamsValid)
-					newTdsEntry.copyAseTuneParams(storedTdsEntry);
+				if (storedTdsEntry._isDbxTuneParamsValid && !newTdsEntry._isDbxTuneParamsValid)
+					newTdsEntry.copyDbxTuneParams(storedTdsEntry);
+			}
+
+			if (connProfileEntry instanceof JdbcEntry && connProfile.getEntry() instanceof JdbcEntry)
+			{
+				JdbcEntry storedJdbcEntry = (JdbcEntry) connProfile.getEntry();
+				JdbcEntry newJdbcEntry    = (JdbcEntry) connProfileEntry;
+
+				if (storedJdbcEntry._isDbxTuneParamsValid && !newJdbcEntry._isDbxTuneParamsValid)
+					newJdbcEntry.copyDbxTuneParams(storedJdbcEntry);
 			}
 
 			if ( ! connProfile.equals(connProfileEntry) )
@@ -698,6 +834,10 @@ public class ConnectionProfileManager
 			boolean showInterfacesPanel  = false;
 			boolean showConnProfilePanel = true;
 
+			String userName = _connProfile.getDbUserName();
+			if (StringUtil.hasValue(userName))
+				userName = " - " + userName;
+
 			if (_connProfile.isType(ConnectionProfile.Type.TDS))
 			{
 				ConnectionProfile.TdsEntry tdsEntry = (ConnectionProfile.TdsEntry)_connProfile.getEntry();
@@ -726,11 +866,14 @@ public class ConnectionProfileManager
 	    				if (key.equalsIgnoreCase("localhost") && hostPortMap.size() > 1)
 	    					continue;
 	    
+	    				// Get first part (hostname) of the hostname.somedomain.com
 	    				suggestedName = key.toUpperCase();
 	    				if (suggestedName.indexOf(".") > 0) // hostname.acme.com
 	    					suggestedName = suggestedName.substring(0, suggestedName.indexOf("."));
-	    				suggestedName += "_" + val;
-	    
+	    				// If it's a number, then it must be an IP address, do not add this, set suggestedName to "" (a blank string)
+	    				try { Integer.parseInt(suggestedName); suggestedName = ""; } 
+	    				catch(NumberFormatException ignore)  { suggestedName += "_" + val; } // If not a Number, add '_portNumber' at the end
+	    				
 	    				break; // only get first entry
 	    			}
 				}
@@ -741,23 +884,24 @@ public class ConnectionProfileManager
 				_interfacesSuggestions.add(hostPortStr.replace(':', '_').replace('.', '_'));
 				
 				// Add some suggestions to the profile
-				if (StringUtil.hasValue(_dbServerName))            _profileSuggestions.add(_dbServerName);
-				if (StringUtil.hasValue(suggestedName))            _profileSuggestions.add(suggestedName);
-				if (StringUtil.hasValue(ifileServerName))          _profileSuggestions.add(ifileServerName);
-				_profileSuggestions.add(hostPortStr.replace(':', '_').replace('.', '_').replace(',', '_'));
+				if (StringUtil.hasValue(_dbServerName))            _profileSuggestions.add(_dbServerName   + userName);
+				if (StringUtil.hasValue(suggestedName))            _profileSuggestions.add(suggestedName   + userName);
+				if (StringUtil.hasValue(ifileServerName))          _profileSuggestions.add(ifileServerName + userName);
+				_profileSuggestions.add(hostPortStr.replace(':', '_').replace('.', '_').replace(',', '_')  + userName);
 
 				if ( StringUtil.hasValue(_connProfile.getName()) && ! _profileSuggestions.contains(_connProfile.getName()) )
 				{
 					if (_connProfile.getName().endsWith("_copy"))
 						_profileSuggestions.add(0, _connProfile.getName());
 					else
-						_profileSuggestions.add(_connProfile.getName());
+						_profileSuggestions.add(_connProfile.getName() + userName);
 				}
 			}
 			else
 			{
-    			if (StringUtil.hasValue(_dbServerName))            _profileSuggestions.add(_dbServerName);
-    			_profileSuggestions.add(_connProfile.getKey());
+    			if (StringUtil.hasValue(_dbServerName))
+    				_profileSuggestions.add(_dbServerName + userName );
+    			_profileSuggestions.add(_connProfile.getKey() + userName);
 
     			// If profile name hasn't already been added, DO IT
     			// If it's a COPY, put the copy entry FIRST
@@ -766,7 +910,7 @@ public class ConnectionProfileManager
 					if (_connProfile.getName().endsWith("_copy"))
 						_profileSuggestions.add(0, _connProfile.getName());
 					else
-						_profileSuggestions.add(_connProfile.getName());
+						_profileSuggestions.add(_connProfile.getName() + userName);
 				}
 			}
 
@@ -1411,18 +1555,62 @@ public class ConnectionProfileManager
 			if (o instanceof ConnectionProfile) 
 			{
 				ConnectionProfile connProfile = (ConnectionProfile) o;
+//System.out.println("ConnectionProfileManager:FilteredTreeModel:filterInclude(): connProfile.getType()="+connProfile.getType()+", connProfile.getSrvType()="+connProfile.getSrvType()+", connProfile="+connProfile+", _filterProductName='"+_filterProductName+"'.");
 	
 				// Hide Server types of NOT desired products
 				if (_filterProductName != null)
 				{
-					if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
-					{
-						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_ASE) )
-						{
-							//System.out.println("HIDE NODE: "+connProfile);
-							return false;
-						}
-					}
+					if ( ! connProfile.isSrvType(_filterProductName) )
+						return false;
+
+//					if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_ASE) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
+//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_IQ) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
+//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_RS) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
+//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_ASA) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
+//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_HANA))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.JDBC_HANA) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
+//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_MSSQL))
+//					{
+//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.JDBC_MSSQL) )
+//						{
+//							//System.out.println("HIDE NODE: "+connProfile);
+//							return false;
+//						}
+//					}
 				}
 			}
 			return true;

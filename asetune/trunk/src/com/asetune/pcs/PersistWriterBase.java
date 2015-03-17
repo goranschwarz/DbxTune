@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import com.asetune.AseConfig;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
@@ -327,6 +328,57 @@ public abstract class PersistWriterBase
 		return str;
 	}
 
+//	public static String jdbcTypeToSqlType(int columnType)
+//	{
+//		switch (columnType)
+//		{
+//		case java.sql.Types.BIT:          return "bit";
+//		case java.sql.Types.TINYINT:      return "tinyint";
+//		case java.sql.Types.SMALLINT:     return "smallint";
+//		case java.sql.Types.INTEGER:      return "int";
+//		case java.sql.Types.BIGINT:       return "bigint";
+//		case java.sql.Types.FLOAT:        return "float";
+//		case java.sql.Types.REAL:         return "real";
+//		case java.sql.Types.DOUBLE:       return "double";
+//		case java.sql.Types.NUMERIC:      return "numeric";
+//		case java.sql.Types.DECIMAL:      return "decimal";
+//		case java.sql.Types.CHAR:         return "char";
+//		case java.sql.Types.VARCHAR:      return "varchar";
+//		case java.sql.Types.LONGVARCHAR:  return "text";
+//		case java.sql.Types.DATE:         return "date";
+//		case java.sql.Types.TIME:         return "time";
+//		case java.sql.Types.TIMESTAMP:    return "datetime";
+//		case java.sql.Types.BINARY:       return "binary";
+//		case java.sql.Types.VARBINARY:    return "varbinary";
+//		case java.sql.Types.LONGVARBINARY:return "image";
+////		case java.sql.Types.NULL:         return "-null-";
+////		case java.sql.Types.OTHER:        return "-other-";
+////		case java.sql.Types.JAVA_OBJECT:  return "-java_object";
+////		case java.sql.Types.DISTINCT:     return "-DISTINCT-";
+////		case java.sql.Types.STRUCT:       return "-STRUCT-";
+////		case java.sql.Types.ARRAY:        return "-ARRAY-";
+//		case java.sql.Types.BLOB:         return "image";
+//		case java.sql.Types.CLOB:         return "text";
+////		case java.sql.Types.REF:          return "-REF-";
+////		case java.sql.Types.DATALINK:     return "-DATALINK-";
+//		case java.sql.Types.BOOLEAN:      return "bit";
+//
+//		//------------------------- JDBC 4.0 -----------------------------------
+////		case java.sql.Types.ROWID:         return "java.sql.Types.ROWID";
+////		case java.sql.Types.NCHAR:         return "java.sql.Types.NCHAR";
+////		case java.sql.Types.NVARCHAR:      return "java.sql.Types.NVARCHAR";
+////		case java.sql.Types.LONGNVARCHAR:  return "java.sql.Types.LONGNVARCHAR";
+////		case java.sql.Types.NCLOB:         return "java.sql.Types.NCLOB";
+////		case java.sql.Types.SQLXML:        return "java.sql.Types.SQLXML";
+//
+//		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
+////		case -10:                          return "oracle.jdbc.OracleTypes.CURSOR";
+//
+//		//------------------------- UNHANDLED TYPES  ---------------------------
+//		default:
+//			return "unknown-jdbc-datatype("+columnType+")";
+//		}
+//	}
 	/**
 	 * This method can be overladed and used to change the syntax for various datatypes 
 	 */
@@ -340,6 +392,54 @@ public abstract class PersistWriterBase
 
 		return type;
 	}
+//	public String getDatatype(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
+//	throws SQLException
+//	{
+//		String type   = null;
+//		int    length = -1;
+//		int    prec   = -1;
+//		int    scale  = -1;
+//
+//		if (isDeltaOrPct)
+//		{
+//			type    = "numeric";
+//			length  = -1;
+//			prec    = 10;
+//			scale   = 1;
+//		}
+//		else
+//		{
+//			type  = rsmd.getColumnTypeName(col);
+//			if (type == null)
+//			{
+//				int jdbcType = rsmd.getColumnType(col);
+//				type = jdbcTypeToSqlType(jdbcType);
+//			}
+//
+//			if ( type.equals("char") || type.equals("varchar") )
+//			{
+//				length = rsmd.getColumnDisplaySize(col);
+//				prec   = -1;
+//				scale  = -1;
+//			}
+//			
+//			if ( type.equals("numeric") || type.equals("decimal") )
+//			{
+//				length = -1;
+//				prec   = rsmd.getPrecision(col);
+//				scale  = rsmd.getScale(col);
+//			}
+//
+//			// Most databases doesn't have unsigned datatypes, so lets leave "unsigned int" as "int"
+//			if ( type.startsWith("unsigned ") )
+//			{
+//				String newType = type.substring("unsigned ".length());
+//				_logger.info("Found the uncommon data type '"+type+"', instead the data type '"+newType+"' will be used.");
+//				type = newType;
+//			}
+//		}
+//		return getDatatype(type, length, prec, scale);
+//	}
 	public String getDatatype(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
 	throws SQLException
 	{
@@ -354,23 +454,12 @@ public abstract class PersistWriterBase
 			length  = -1;
 			prec    = 10;
 			scale   = 1;
+
+			return getDatatype(type, length, prec, scale);
 		}
 		else
 		{
-			type  = rsmd.getColumnTypeName(col);
-			if ( type.equals("char") || type.equals("varchar") )
-			{
-				length = rsmd.getColumnDisplaySize(col);
-				prec   = -1;
-				scale  = -1;
-			}
-			
-			if ( type.equals("numeric") || type.equals("decimal") )
-			{
-				length = -1;
-				prec   = rsmd.getPrecision(col);
-				scale  = rsmd.getScale(col);
-			}
+			type  = ResultSetTableModel.getColumnTypeName(rsmd, col);
 
 			// Most databases doesn't have unsigned datatypes, so lets leave "unsigned int" as "int"
 			if ( type.startsWith("unsigned ") )
@@ -379,8 +468,9 @@ public abstract class PersistWriterBase
 				_logger.info("Found the uncommon data type '"+type+"', instead the data type '"+newType+"' will be used.");
 				type = newType;
 			}
+			
+			return type;
 		}
-		return getDatatype(type, length, prec, scale);
 	}
 	public String getNullable(boolean nullable)
 	{
@@ -391,7 +481,8 @@ public abstract class PersistWriterBase
 	throws SQLException
 	{
 		// datatype "bit" can't be NULL declared in ASE
-		String type  = rsmd.getColumnTypeName(col);
+//		String type  = rsmd.getColumnTypeName(col);
+		String type  = getDatatype(col, rsmd, isDeltaOrPct);
 		if (type != null && type.equalsIgnoreCase("bit"))
 			return getNullable(false);
 		else

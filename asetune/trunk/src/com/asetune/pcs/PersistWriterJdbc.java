@@ -13,6 +13,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ import org.apache.log4j.Logger;
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
 import com.asetune.AseConfigText.ConfigType;
-import com.asetune.AseTune;
+import com.asetune.DbxTune;
 import com.asetune.MonTablesDictionary;
 import com.asetune.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.MonTablesDictionary.MonTableEntry;
@@ -226,7 +227,7 @@ public class PersistWriterJdbc
 				shutdownThread.setName("StopPcs");
 				shutdownThread.start();
 
-				if (AseTune.hasGUI())
+				if (DbxTune.hasGui())
 				{
 					String msg = getDatabaseProductName()+": Severe problems "+extraMessage+"when storing Performance Counters, Disconnected from monitored server.";
 					_logger.info(msg);
@@ -583,20 +584,26 @@ public class PersistWriterJdbc
 				if (cont != null)
 					varVal = cont.getServerName();
 			}
-			else if ( "ASEHOSTNAME".equals(varName) )
+			else if ( "ASEHOSTNAME".equals(varName) || "HOSTNAME".equals(varName) )
 			{
 //				varVal = AseConnectionUtils.getAseHostname(conn, true);
 				varVal = "";
 				if (cont != null)
 					varVal = cont.getOnHostname();
 			}
-			else if ( "ASETUNE_HOME".equals(varName) )
+//			else if ( "ASETUNE_HOME"    .equals(varName) ) { varVal = System.getProperty("ASETUNE_HOME",     ""); }
+//			else if ( "ASETUNE_SAVE_DIR".equals(varName) ) { varVal = System.getProperty("ASETUNE_SAVE_DIR", ""); }
+//			else if ( "IQTUNE_HOME"     .equals(varName) ) { varVal = System.getProperty("IQTUNE_HOME",      ""); }
+//			else if ( "IQTUNE_SAVE_DIR" .equals(varName) ) { varVal = System.getProperty("IQTUNE_SAVE_DIR",  ""); }
+//			else if ( "RSTUNE_HOME"     .equals(varName) ) { varVal = System.getProperty("RSTUNE_HOME",      ""); }
+//			else if ( "RSTUNE_SAVE_DIR" .equals(varName) ) { varVal = System.getProperty("RSTUNE_SAVE_DIR",  ""); }
+			else if ( varName != null && varName.endsWith("TUNE_SAVE_DIR")) 
 			{
-				varVal = System.getProperty("ASETUNE_HOME", "");
+				varVal = System.getProperty(varName, "");
 			}
-			else if ( "ASETUNE_SAVE_DIR".equals(varName) )
+			else if ( varName != null && varName.endsWith("TUNE_HOME")) 
 			{
-				varVal = System.getProperty("ASETUNE_SAVE_DIR", "");
+				varVal = System.getProperty(varName, "");
 			}
 			else
 			{
@@ -976,7 +983,7 @@ public class PersistWriterJdbc
 					_conn = null;
 					
 					Exception ex =  new Exception(msg);
-					if (AseTune.hasGUI())
+					if (DbxTune.hasGui())
 					{
 						MainFrame.getInstance().action_disconnect();
 						SwingUtils.showErrorMessage("PersistWriterJdbc", msg, ex);
@@ -2230,6 +2237,17 @@ public class PersistWriterJdbc
 
 							// NOTE: column in JDBC starts at 1, not 0
 							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+							int jdbcDataType  = rsmd.getColumnType(c + 1);
+//							if (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY)
+//								allowedLength += 2; // binary may need the extra 2 chars if it's prefixed with a 0x
+
+							// If a hex string starts with 0x chop that off, H2 doesn't seem to like it
+							if (str != null && (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY))
+							{
+								if (str.startsWith("0x"))
+									str = str.substring("0x".length());
+							}
+
 							if (str != null && str.length() > allowedLength)
 							{
 								int dataLength = str.length();
@@ -2237,7 +2255,7 @@ public class PersistWriterJdbc
 
 								// Add '...' at the end if it's a long string, or simply "chop it of" if it's a very short string.
 								String truncStr = "";
-								if (allowedLength <= 3)
+								if (allowedLength <= 3 || (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY) ) // Binary data types can contain '...'
 									truncStr = str.substring(0, allowedLength);
 								else
 									truncStr = str.substring(0, allowedLength - 3) + "...";

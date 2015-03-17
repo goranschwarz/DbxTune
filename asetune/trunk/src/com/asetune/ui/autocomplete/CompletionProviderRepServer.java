@@ -403,6 +403,63 @@ extends CompletionProviderAbstract
 					"\tuse dump marker \n", 
 				"Create STANDBY WS Connection"));
 
+		// Create replication definition "template"
+		list.add( new CompletionTemplate( 
+				"create replication definition ",  
+					"create replication definition REPDEF_NAME \n" +
+					"\twith primary at <srv.db> \n" +
+					"\t[with all       tables named [table_owner.]'table_name' [quoted] | \n" +
+					"\t[with primary   table named  [table_owner.]'table_name'] \n" +
+					"\t with replicate table named  [table_owner.]'table_name'] [quoted]] \n" +
+					"\t( \n" +
+					"\t    column_name [as replicate_column_name] [datatype [null | not null] [datatype [null | not null] [map to published_datatype]] [quoted] \n" +
+					"\t  [,column_name [as replicate_column_name] [map to published_datatype]] [quoted]...) [references [table_owner.]table_name [(column_name)]] \n" +
+					"\t) \n" +
+					"\tprimary key (column_name [, column_name]...) \n" +
+					"\t[searchable columns (column_name [, column_name]...)] \n" +
+					"\t[send standby [{all | replication definition} columns]] \n" +
+					"\t[replicate {minimal | all} columns] \n" +
+					"\t[replicate {SQLDML ['off'] | 'options'}] \n" +
+					"\t[replicate_if_changed (column_name [, column_name]...)] \n" +
+					"\t[always_replicate (column_name [, column_name]...)] \n" +
+					"\t[with dynamic sql | without dynamic sql] \n",
+				"Create replication definition template"));
+
+		// Create subscription "template"
+		list.add( new CompletionTemplate( 
+				"create subscription ",  
+					"create subscription SUB_NAME \n" +
+					"\tfor {<repdef> | func_repdef | publication pub | database replication definition <dbrepdef> } [with primary at <srv.db>] \n" +
+					"\twith replicate at <srv.db> \n" +
+					"\t[where {column_name | @param_name} {< | > | >= | <= | = | &} value \n" +
+					"\t  [and {column_name | @param_name} {< | > | >= | <= | = | &} value]...] \n" +
+					"\t[without materialization | without holdlock [direct_load [user username password pass]] | incrementally] \n" +
+					"\t[subscribe to truncate table] \n" +
+					"\t[for new articles] \n",
+				"Create subscription template"));
+
+		
+		// Create DATABASE replication definition
+		list.add( new CompletionTemplate( 
+				"create database replication definition ",  
+					"create database replication definition DB_REPDEF_NAME \n" +
+					"\twith primary at <srv.db> \n" +
+					"\treplicate DDL \n" +
+					"\treplicate tables \n" +
+					"\treplicate functions \n" +
+					"\treplicate transactions \n" +
+					"\treplicate system procedures \n" +
+					"--[[not] replicate DDL] \n" +
+					"--[[not] replicate setname setcont] \n" +
+					"--[[not] replicate setname setcont] \n" +
+					"--[[not] replicate setname setcont] \n" +
+					"--[[not] replicate setname setcont] \n" +
+					"--[[not] replicate {SQLDML | DML_options} [in table_list]] \n" +
+					"--setname  ::= {tables | functions | transactions | system procedures} \n" +
+					"--setcont  ::= [[in] ([owner1.]name1[, [owner2.]name2 [, ... ]])] \n",
+				"Create database replication definition"));
+
+		// dsi_buf_dump on/off
 		list.add( new CompletionTemplate( 
 				"trace dsi_buf_dump on ",  
 				"trace 'on', 'dsi', 'dsi_buf_dump'",
@@ -411,6 +468,16 @@ extends CompletionProviderAbstract
 				"trace dsi_buf_dump off ",  
 				"trace 'off', 'dsi', 'dsi_buf_dump'",
 				"Turn OFF: Write SQL statements executed by the DSI Threads to the RS log"));
+
+		// dsi_buf_dump on/off for Express Connect @ connection level
+		list.add( new CompletionTemplate( 
+				"trace dsi_buf_dump on: for \"express connect\" at connection level",
+				"alter connection to <srv.db> set trace to 'econn, dsi_buf_dump, on'",
+				"Turn ON: for Express Connect: Write SQL statements executed by the DSI Threads to the RS log"));
+		list.add( new CompletionTemplate( 
+				"trace dsi_buf_dump off: for \"express connect\" at connection level",
+				"alter connection to <srv.db> set trace to 'econn, dsi_buf_dump, off'",
+				"Turn OFF: for Express Connect: Write SQL statements executed by the DSI Threads to the RS log"));
 
 		list.add(new CompletionTemplate("&lt;dbid&gt;",     "<dbid>",     "Translate a SRV.db to the repserver dbid"));
 		list.add(new CompletionTemplate("&lt;srv.db&gt;",   "<srv.db>",   "Get list of PHYSICAL databases configured in repserver"));

@@ -16,7 +16,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmEnginesPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -498,7 +498,7 @@ extends CountersModel
 	 * Compute the CPU times in pct instead of numbers of usage seconds since last sample
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int aseVersion = getServerVersion();
 		// NOTE: IOCPUTime was introduced in ASE 15.5
@@ -599,7 +599,7 @@ extends CountersModel
 	 * Local adjustments to the rate values 
 	 */
 	@Override
-	public void localCalculationRatePerSec(SamplingCnt rateData)
+	public void localCalculationRatePerSec(CounterSample rateData)
 	{
 		int aseVersion = getServerVersion();
 

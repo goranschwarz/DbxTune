@@ -13,6 +13,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -47,9 +49,6 @@ import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
-import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.ssh.SshConnection;
@@ -59,6 +58,7 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.SwingWorker;
@@ -142,7 +142,8 @@ implements ActionListener, ConnectionProgressCallback
 	private static final String EXTRA_TASK_INIT_MONITOR_DICT      = "Init Monitor Dictionary";
 	private static final String EXTRA_TASK_INIT_ASE_CONFIG_DICT   = "Init ASE Configuration Dictionary";
 	private static final String EXTRA_TASK_INIT_COUNTER_COLLECTOR = "Init Counter Collector";
-	private boolean      _doExtraTasks     = true;
+//	private boolean      _doExtraTasks     = true;
+	private ConnectionProgressExtraActions      _extraTasks     = null;
 
 	private static final String TASK_SQL_INIT = "Executing SQL Initialization String";
 
@@ -161,25 +162,29 @@ implements ActionListener, ConnectionProgressCallback
 	}
 	
 	// FIXME: do this in a MUCH better way, this is a late night hack
-	private static String     _fixme_jdbcDriver = null;
-	private static String     _fixme_rawUrl     = null;
-	private static Properties _fixme_props      = null;
-	public static Connection connectWithProgressDialog(Window owner, String driver, String rawUrl, Properties props, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
+	private String     _rawJdbcDriver = null;
+	private String     _rawJdbcUrl    = null;
+	private Properties _rawJdbcProps  = null;
+
+	public static Connection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
-		_fixme_jdbcDriver = driver;
-		_fixme_rawUrl     = rawUrl;
-		_fixme_props      = props;
-		return connectWithProgressDialog(owner, rawUrl, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
+		return connectWithProgressDialog(owner, null, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-//	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, String desiredDbProductName)
-	public static Connection connectWithProgressDialog(Window owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
+	public static Connection connectWithProgressDialog(Window owner, String urlStr, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	throws Exception
+	{
+		return connectWithProgressDialog(owner, urlStr, null, null, null, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
+	}
+
+	// NOTE: PRIVATE
+	private static Connection connectWithProgressDialog(Window owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		ConnectionProgressDialog cpd = null;
 
-		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
-		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
+		if      (owner instanceof Dialog) cpd = new ConnectionProgressDialog((Dialog)owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
+		else if (owner instanceof  Frame) cpd = new ConnectionProgressDialog( (Frame)owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 		else throw new IllegalAccessException("owner parameter can only be of the object types 'Dialog' or 'Frame'.");
 
 		// kick off connect.
@@ -189,7 +194,7 @@ implements ActionListener, ConnectionProgressCallback
 		// If NOT, make the Progress dialog visible
 		try { Thread.sleep(200); }
 		catch (InterruptedException ignore) {}
-		if (cpd._atWork)
+		if (cpd._atWork || cpd._exception != null)
 			cpd.setVisible(true);
 
 		_logger.debug("hasConnection="+(cpd._connection!=null)+", hasException="+(cpd._exception!=null));
@@ -203,20 +208,26 @@ implements ActionListener, ConnectionProgressCallback
 		return null;
 	}
 	
-	private ConnectionProgressDialog(Dialog owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
+	private ConnectionProgressDialog(Dialog owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
+		init(owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	private ConnectionProgressDialog(Frame owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
+	private ConnectionProgressDialog(Frame owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
 		super(owner, true);
-		init(owner, urlStr, doExtraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit);
+		init(owner, urlStr, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	private void init(Component owner, String urlStr, boolean doExtraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit)
+	private void init(Component owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	{
-		_urlStr = urlStr;
-		_doExtraTasks = doExtraTasks;
+//System.out.println("ConnectionProgressDialog.init(): urlStr='"+urlStr+"', rawJdbcDriver='"+rawJdbcDriver+"', rawJdbcUrl='"+rawJdbcUrl+"', rawJdbcProps='"+rawJdbcProps+"'.");
+		_urlStr        = urlStr;
+		_rawJdbcDriver = rawJdbcDriver;
+		_rawJdbcUrl    = rawJdbcUrl;
+		_rawJdbcProps  = rawJdbcProps;
+
+//		_doExtraTasks = doExtraTasks;
+		_extraTasks = extraTasks;
 
 		// the ssh connection object itself will newer be changed
 		// just the contents on the object will be, this is if: it will do a connect
@@ -236,14 +247,18 @@ implements ActionListener, ConnectionProgressCallback
 		//	MonTablesDictionary.getInstance().initialize(conn);
 		//	GetCounters.initExtraMonTablesDictionary();
 
+		if (srvIcon != null)
+			_status_icon.setIcon(srvIcon);
+		
 		// Extra tasks, that happens after the connection.
-		String[] extraTasks = {
+		String[] extraTasksInfo = {
 			EXTRA_TASK_CHECK_MONITOR_CONFIG, 
 			EXTRA_TASK_INIT_MONITOR_DICT, 
 			EXTRA_TASK_INIT_ASE_CONFIG_DICT, 
 			EXTRA_TASK_INIT_COUNTER_COLLECTOR};
-		if ( ! _doExtraTasks )
-			extraTasks = null;
+//		if ( ! _doExtraTasks )
+		if ( _extraTasks == null )
+			extraTasksInfo = null;
 
 		try 
 		{ 
@@ -283,11 +298,18 @@ implements ActionListener, ConnectionProgressCallback
 			}
 			else
 			{
-				//-------------------------------------------
-				// Add HOST:PORT number(s) to the TASK list
-				//-------------------------------------------
-				_urlHelper = AseUrlHelper.parseUrl(_urlStr);
-				addTask(_urlHelper.getHostPortArr());
+				if (_rawJdbcUrl != null)
+				{
+					addTask(_rawJdbcUrl);
+				}
+				else
+				{
+					//-------------------------------------------
+					// Add HOST:PORT number(s) to the TASK list
+					//-------------------------------------------
+					_urlHelper = AseUrlHelper.parseUrl(_urlStr);
+					addTask(_urlHelper.getHostPortArr());
+				}
 			}
 
 			if (StringUtil.hasValue(_sqlInit))
@@ -299,7 +321,7 @@ implements ActionListener, ConnectionProgressCallback
 			//-------------------------------------------
 			// Add any Extra stuff to the task list
 			//-------------------------------------------
-			addTask(extraTasks);
+			addTask(extraTasksInfo);
 
 			String aseSshTunnelDesc = "";
 			if (_sshTunnelInfo != null)
@@ -312,7 +334,7 @@ implements ActionListener, ConnectionProgressCallback
 					"SSH User   '<b>" + _sshTunnelInfo.getSshUsername()   + "</b>'. " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + _sshTunnelInfo.getSshPassword() + "</b>' " : "");
 			}
-			String server = _urlHelper.getServerName();
+			String server = _urlHelper != null ? _urlHelper.getServerName() : _rawJdbcUrl;
 			if (server != null)
 				_server_lbl.setText("<html>Connecting to Server: <b>"+server+"</b>"+aseSshTunnelDesc+"</html>");
 			else
@@ -324,7 +346,7 @@ implements ActionListener, ConnectionProgressCallback
 			// Calculate number of "ticks" it should be in the progress bar
 			int ticksPerSecond       = (1000 * 100) / TIMER_PROGRESS_WAIT / 100;
 			int timeoutInSecPerEntry = 10;
-			int hostPortCount        = _urlHelper.getHostPortCount();
+			int hostPortCount        = _urlHelper != null ? _urlHelper.getHostPortCount() : 1;
 			_progress.setMaximum( ticksPerSecond * timeoutInSecPerEntry * hostPortCount );
 
 			_logger.debug("_progress.getMaximum()="+_progress.getMaximum());
@@ -461,7 +483,15 @@ implements ActionListener, ConnectionProgressCallback
 				if (col == TAB_POS_INFO && row >= 0)
 				{
 					Object o = getModel().getValueAt(row, col);
-					if (o instanceof SQLException)
+					if (o instanceof InternalSQLException)
+					{
+						InternalSQLException sqlex = (InternalSQLException) o;
+						String msg = "";
+						msg += sqlex._htmlStr + "\n";
+						msg += "<br>Stacktrace:\n";
+						tip = "<pre>" + msg + StringUtil.stackTraceToString( sqlex ) + "</pre>";
+					}
+					else if (o instanceof SQLException)
 					{
 						SQLException sqlex = (SQLException) o;
 						String msg = "";
@@ -517,7 +547,7 @@ implements ActionListener, ConnectionProgressCallback
 
 	protected TableModel createTableModel()
 	{
-		String[] colHeader = {"", "Host and Port", "Status", "Message"};
+		String[] colHeader = {"", _rawJdbcUrl == null ? "Host and Port" : "Url", "Status", "Message"};
 		Vector<String> columns = new Vector<String>();
 		for (int i = 0; i < colHeader.length; i++)
 			columns.add(colHeader[i]);
@@ -706,16 +736,61 @@ implements ActionListener, ConnectionProgressCallback
 			if (infoObj instanceof SQLException)
 				msg = ((SQLException)infoObj).getMessage();
 
+			final int heightBeforeSet = _buttomStatus_lbl.getPreferredSize().height;
 			_buttomStatus_lbl.setText("<html><font color=\"red\"><b>FAILURE:</b> "+msg+"</font></html>");
+
+			// Come up with a good tooltip for the _buttomStatus_lbl, if it's an Exception
+			String tooltip = null;
+			if (infoObj instanceof InternalSQLException)
+			{
+				InternalSQLException sqlex = (InternalSQLException) infoObj;
+				String msg2 = "";
+				msg2 += sqlex._htmlStr + "\n";
+				msg2 += "<br>Stacktrace:\n";
+				tooltip = "<pre>" + msg2 + StringUtil.stackTraceToString( sqlex ) + "</pre>";
+			}
+			else if (infoObj instanceof SQLException)
+			{
+				SQLException sqlex = (SQLException) infoObj;
+				String msg2 = "";
+				//Examine the SQLWarnings chained to this exception for the reason(s).
+				msg2 += "-- BEGIN - SQLWarning/SQLException chain ----------------\n";
+				msg2 += AseConnectionUtils.getMessageFromSQLException(sqlex, false) + "\n";
+				msg2 += "-- END - SQLWarning/SQLException chain ------------------\n";
+				msg2 += "Stacktrace:\n";
+				tooltip = "<pre>" + msg2 + StringUtil.stackTraceToString( sqlex ) + "</pre>";
+			}
+			else if (infoObj instanceof Exception)
+			{
+				Exception ex = (Exception) infoObj;
+				tooltip = "<pre>" + StringUtil.stackTraceToString( ex ) + "</pre>";
+			}
+			if (tooltip != null)
+				_buttomStatus_lbl.setToolTipText("<html>"+tooltip+"</html>");
+			
+			
+			// If the _buttomStatus_lbl gets bigger (especially with HTML content), then make the dialog bigger as well
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					int growHeight = _buttomStatus_lbl.getPreferredSize().height - heightBeforeSet;
+					if (growHeight > 0)
+					{
+						Dimension dialogSize = ConnectionProgressDialog.this.getSize();
+						ConnectionProgressDialog.this.setSize(dialogSize.width, dialogSize.height+growHeight);
+					}
+				}
+			});
 		}
 
 		// Set progress to 100%
 		_progress.setValue( _progress.getMaximum() );
 
-		// stop pgrogressbar movement
+		// stop progress bar movement
 		if ( _progressTimer.isRunning() )
 			_progressTimer.stop();
-
 	}
 
 	/**
@@ -776,18 +851,21 @@ implements ActionListener, ConnectionProgressCallback
 			});
 			return;
 		}
-		
-		// IF we forgot to strip of the string "jdbc:sybase:Tds:", then strip it off.
-//		String urlStartTemplate = "jdbc:sybase:Tds:";
-		String urlStartTemplate = AseConnectionFactory.getUrlTemplateBase();
-		if (taskName.startsWith(urlStartTemplate))
-			taskName = taskName.substring(urlStartTemplate.length());
 
-		// IF we forgot to strip of the /dbname or ?options, then strip it off.
-		if (taskName.indexOf("/") >= 0)
-			taskName = taskName.substring(0, taskName.indexOf("/"));
-		if (taskName.indexOf("?") >= 0)
-			taskName = taskName.substring(0, taskName.indexOf("?"));
+		if (_rawJdbcUrl == null)
+		{
+			// IF we forgot to strip of the string "jdbc:sybase:Tds:", then strip it off.
+//			String urlStartTemplate = "jdbc:sybase:Tds:";
+			String urlStartTemplate = AseConnectionFactory.getUrlTemplateBase();
+			if (taskName.startsWith(urlStartTemplate))
+				taskName = taskName.substring(urlStartTemplate.length());
+			
+			// IF we forgot to strip of the /dbname or ?options, then strip it off.
+			if (taskName.indexOf("/") >= 0)
+				taskName = taskName.substring(0, taskName.indexOf("/"));
+			if (taskName.indexOf("?") >= 0)
+				taskName = taskName.substring(0, taskName.indexOf("?"));
+		}
 
 		TableModel tm = _task_tab.getModel();
 
@@ -817,7 +895,7 @@ implements ActionListener, ConnectionProgressCallback
 					if ( ! _progressTimer.isRunning() )
 						_progressTimer.start();
 
-					// If we are beond the host-port stuff... mark the UNMARKED host-ports as "SKIPPED"
+					// If we are beyond the host-port stuff... mark the UNMARKED host-ports as "SKIPPED"
 					if (EXTRA_TASK_CHECK_MONITOR_CONFIG.equals(taskName))
 					{
 						for (int x=0; x<rowForTaskCheckMonitorConfig; x++)
@@ -877,8 +955,8 @@ implements ActionListener, ConnectionProgressCallback
 					tm.setValueAt(infoObj,                    r, TAB_POS_INFO);
 					
 					_progress_lbl.setText("<html>Failed connection to: <b>"+taskName+"</b></html>");
-					
-					// ARe we on the LAST ROW...
+
+					// are we on the LAST ROW...
 					if (r == tm.getRowCount()-1  ||  status == ConnectionProgressCallback.TASK_STATUS_FAILED_LAST)
 					{
 						_progress_lbl.setText("");
@@ -1058,16 +1136,41 @@ implements ActionListener, ConnectionProgressCallback
 					}
 
 
-					_logger.debug("SwingWorker.construct(): fixme_jdbcDriver='"+_fixme_jdbcDriver+"', fixme_rawUrl='"+_fixme_rawUrl+"', fixme_props='"+_fixme_props+"'.");
+					_logger.debug("SwingWorker.construct(): _rawJdbcDriver='"+_rawJdbcDriver+"', _rawJdbcUrl='"+_rawJdbcUrl+"', _rawJdbcProps='"+_rawJdbcProps+"'.");
 					
-					if (_fixme_jdbcDriver != null && _fixme_rawUrl != null)
+					Connection conn;
+					if (_rawJdbcDriver != null && _rawJdbcUrl != null)
 					{
 						//-------------------------
 						// DO: RAW: ASE connection
 						//-------------------------
-						_logger.debug("SwingWorker.construct() does: RAW_URL: AseConnectionFactory.getConnection(fixme_jdbcDriver, _fixme_rawUrl, fixme_props, thisDialog)");
-//						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
-						Connection conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, ConnectionProgressDialog.this);
+						if (_logger.isDebugEnabled())
+							_logger.debug("SwingWorker.construct() does: RAW_URL: AseConnectionFactory.getConnection(fixme_jdbcDriver, _fixme_rawUrl, fixme_props, thisDialog)");
+						
+						// If the URL start with 'jdbc:sybase:Tds:' then it's jConnect
+						// * if jConnect use the old methods
+						// * otherwise assume it's another JDBC driver and use those methods
+						if (_rawJdbcUrl.startsWith("jdbc:sybase:Tds:"))
+						{
+//							conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
+							conn = AseConnectionFactory.getConnection(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps, ConnectionProgressDialog.this);
+						}
+						else
+						{
+							setTaskStatus(_rawJdbcUrl, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+
+							try
+							{
+								conn = jdbcConnect(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps);
+								setTaskStatus(_rawJdbcUrl, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+							}
+							catch (SQLException ex)
+							{
+								setTaskStatus(_rawJdbcUrl, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+								conn = null;
+								throw ex;
+							}
+						}
 
 						// close the connection if it's not the expected Product Name
 						if (conn != null)
@@ -1086,8 +1189,7 @@ implements ActionListener, ConnectionProgressCallback
 						// DO: ASE connection
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: NORMAL: AseConnectionFactory.getConnection(thisDialog)");
-//						Connection conn = AseConnectionFactory.getConnection(_thisDialog);
-						Connection conn = AseConnectionFactory.getConnection(ConnectionProgressDialog.this);
+						conn = AseConnectionFactory.getConnection(ConnectionProgressDialog.this);
 //conn.setClientInfo("TDS_SSH_TUNNEL_CONNECTION", "FIXME: ssh Connection goes here so we can close it, when closing ASE Connection");
 //conn.setClientInfo("TDS_SSH_TUNNEL_INFORMATION", "FIXME: sshTunnelInfo goes here");
 
@@ -1100,92 +1202,95 @@ implements ActionListener, ConnectionProgressCallback
 								conn = null;
 							}
 						}
-
-						//-------------------------
-						// Extra tasks
-						//-------------------------
-						if (conn != null && _doExtraTasks)
-						{
-							// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
-							MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
-
-							//-------------------------
-							//---- DO 'Check Monitor Configuration' (EXTRA_TASK_CHECK_MONITOR_CONFIG)
-							//-------------------------
-							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-//							boolean monCheckOk = AseConnectionUtils.checkForMonitorOptions(conn, null, true, _thisDialog, "enable monitoring");
-							boolean monCheckOk = AseConnectionUtils.checkForMonitorOptions(conn, null, true, ConnectionProgressDialog.this, "enable monitoring");
-							if (monCheckOk)
-								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-							else
-							{
-								try { conn.close(); } catch (SQLException ignore) {}
-								conn = null;
-
-								Exception ex = new Exception("The system is not properly configured for monitoring.");
-								setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-								setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-								throw ex;
-							}
-
-							//-------------------------
-							//---- DO 'Init Monitor Dictionary' (EXTRA_TASK_INIT_MONITOR_DICT)
-							//-------------------------
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-							if ( ! ConnectionDialog.checkReconnectVersion(conn) )
-							{
-								try { conn.close(); } catch (SQLException ignore) {}
-								conn = null;
-
-								Exception ex = new Exception("Connecting to a different ASE Version, This is NOT supported now...");
-								setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
-								setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-								setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
-								throw ex;
-							}
-							MonTablesDictionary.getInstance().initialize(conn, true);
-							GetCounters.initExtraMonTablesDictionary();
-
-							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-								
-							//-------------------------
-							//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_ASE_CONFIG_DICT)
-							//-------------------------
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-							AseConfig aseCfg = AseConfig.getInstance();
-							if ( ! aseCfg.isInitialized() )
-							{
-								aseCfg.initialize(conn, true, false, null);
-							}
-
-//							// initialize ASE Cache Config Dictionary (NOT PART OF THE TASK LIST, NO GUI RESPONCE)
-//							AseCacheConfig aseCacheCfg = AseCacheConfig.getInstance();
-//							if ( ! aseCacheCfg.isInitialized() )
-//							{
-//								aseCacheCfg.initialize(conn, true, false, null);
-//							}
-							// initialize ASE Config Text Dictionary
-							AseConfigText.initializeAll(conn, true, false, null);
-
-							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-
-							//-------------------------
-							//---- DO 'Init Counter Collector' (EXTRA_TASK_INIT_COUNTER_COLLECTOR)
-							//-------------------------
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_CURRENT);
-							GetCounters.getInstance().initCounters(
-								conn,
-								true,
-								MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
-								MonTablesDictionary.getInstance().isClusterEnabled(),
-								MonTablesDictionary.getInstance().getMdaVersion());
-							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
-							
-						}
-						_connection = conn; 
 					}
+
+					//-------------------------
+					// Extra tasks
+					//-------------------------
+					if (conn != null && _extraTasks != null)
+					{
+						// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
+						_extraTasks.initializeVersionInfo(conn, ConnectionProgressDialog.this);
+
+						//-------------------------
+						//---- DO 'Check Monitor Configuration' (EXTRA_TASK_CHECK_MONITOR_CONFIG)
+						//-------------------------
+						setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						if ( _extraTasks.checkMonitorConfig(conn, ConnectionProgressDialog.this) )
+							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						else
+						{
+							try { conn.close(); } catch (SQLException ignore) {}
+							conn = null;
+
+							Exception ex = new Exception("The system is not properly configured for monitoring.");
+							
+							setTaskStatus(EXTRA_TASK_CHECK_MONITOR_CONFIG,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+
+							throw ex;
+						}
+
+						//-------------------------
+						//---- DO 'Init Monitor Dictionary' (EXTRA_TASK_INIT_MONITOR_DICT)
+						//-------------------------
+						setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						if ( _extraTasks.initMonitorDictionary(conn, ConnectionProgressDialog.this) )
+							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						else
+						{
+							try { conn.close(); } catch (SQLException ignore) {}
+							conn = null;
+
+							Exception ex = new Exception("Initializing the Monitor Dictionary Failed."); 
+
+							setTaskStatus(EXTRA_TASK_INIT_MONITOR_DICT,      ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+
+							throw ex;
+						}
+
+						//-------------------------
+						//---- DO 'Init ASE Configuration Dictionary' (EXTRA_TASK_INIT_ASE_CONFIG_DICT)
+						//-------------------------
+						setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						if ( _extraTasks.initDbServerConfigDictionary(conn, ConnectionProgressDialog.this) )
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						else
+						{
+							try { conn.close(); } catch (SQLException ignore) {}
+							conn = null;
+
+							Exception ex = new Exception("Initializing the DB Server Configurations Dictionary Failed."); 
+
+							setTaskStatus(EXTRA_TASK_INIT_ASE_CONFIG_DICT,   ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SKIPPED);
+
+							throw ex;
+						}
+
+						//-------------------------
+						//---- DO 'Init Counter Collector' (EXTRA_TASK_INIT_COUNTER_COLLECTOR)
+						//-------------------------
+						setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_CURRENT);
+						if ( _extraTasks.initCounterCollector(conn, ConnectionProgressDialog.this) )
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
+						else
+						{
+							try { conn.close(); } catch (SQLException ignore) {}
+							conn = null;
+
+							Exception ex = new Exception("Initializing the Counter Collector/Controller Failed."); 
+
+							setTaskStatus(EXTRA_TASK_INIT_COUNTER_COLLECTOR, ConnectionProgressCallback.TASK_STATUS_FAILED, ex);
+
+							throw ex;
+						}
+					}
+					_connection = conn; 
 
 					// SQL INIT string
 					if (_connection != null && StringUtil.hasValue(_sqlInit))
@@ -1320,7 +1425,147 @@ implements ActionListener, ConnectionProgressCallback
 //		}
 //	}
 	
+	private Connection jdbcConnect(String driver, String url, Properties props)
+	throws SQLException
+	{
+		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
+
+		// user name should be part of the props...
+		String user = props.getProperty("user", "-unknown-");
+		
+		try
+		{
+			// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
+			try
+			{
+				Driver jdbcDriver = DriverManager.getDriver(url);
+				if (jdbcDriver == null)
+					Class.forName(driver).newInstance();
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
+				_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
+			}
+
+			// Add specific JDBC Properties, for specific URL's, if not already specified
+			if (url.startsWith("jdbc:db2:"))
+			{
+				if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
+				{
+					props .put("retrieveMessagesFromServerOnGetMessage", "true");
+					props2.put("retrieveMessagesFromServerOnGetMessage", "true");
+				}
+			}
+
+			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', props='"+props+"'.");
+
+			StringBuilder sb = new StringBuilder();
+			sb.append( "<html>" );
+			sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
+			sb.append( "<tr> <td nowrap><b>User:  </b></td> <td nowrap>").append( user   ).append("</td> </tr>");
+			sb.append( "<tr> <td nowrap><b>Url:   </b></td> <td nowrap>").append( url    ).append("</td> </tr>");
+			if (props2.size() > 0)
+				sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+			sb.append( "<tr> <td nowrap><b>Driver:</b></td> <td nowrap>").append( driver ).append("</td> </tr>");
+			sb.append( "</table>" );
+			sb.append( "</html>" );
+
+			Connection conn = DriverManager.getConnection(url, props);
+			
+			return conn;
+		}
+		catch (SQLException ex)
+		{
+			SQLException eTmp = ex;
+			StringBuffer sb = new StringBuffer();
+			while (eTmp != null)
+			{
+				sb.append( "\n" );
+				sb.append( "ex.toString='").append( ex.toString()       ).append("', ");
+				sb.append( "Driver='"     ).append( driver              ).append("', ");
+				sb.append( "URL='"        ).append( url                 ).append("', ");
+				sb.append( "User='"       ).append( user                ).append("', ");
+				sb.append( "SQLState='"   ).append( eTmp.getSQLState()  ).append("', ");
+				sb.append( "ErrorCode="   ).append( eTmp.getErrorCode() ).append(", ");
+				sb.append( "Message='"    ).append( eTmp.getMessage()   ).append("', ");
+//				sb.append( "classpath='"  ).append( System.getProperty("java.class.path") ).append("'.");
+				eTmp = eTmp.getNextException();
+			}
+			String extExStr = sb.toString();
+			_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+extExStr);
+
+				
+			SQLException e = ex;
+			sb = new StringBuffer();
+			sb.append("<html>");
+			sb.append("<h2>Problems During Connect (SQLException)</h2>");
+			sb.append( "<hr>" );
+			boolean loadDriverProblem = false;
+			while (e != null)
+			{
+				if (e.getMessage().indexOf("No suitable driver") >= 0)
+					loadDriverProblem = true;
+
+				sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
+				sb.append( "<tr> <td nowrap><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
+				sb.append( "<tr> <td nowrap><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
+				sb.append( "<tr> <td nowrap><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
+				sb.append( "<tr> <td nowrap><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
+				sb.append( "<tr> <td nowrap><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
+				if (props2.size() > 0)
+					sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+				sb.append( "<tr> <td nowrap><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
+//				sb.append( "<tr> <td nowrap><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
+				sb.append( "</table>" );
+				sb.append( "<hr>" );
+				e = e.getNextException();
+			}
+			if (true)
+			{
+				String classpath = System.getProperty("java.class.path");
+				if (StringUtil.hasValue(classpath))
+				{
+					if (PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN)
+						classpath = classpath.replace(';', ',');
+					else
+						classpath = classpath.replace(':', ',');
+
+					sb.append("<h3>CLASSPATH</h3>");
+					sb.append("<ul>");
+					for (String str : StringUtil.parseCommaStrToList(classpath))
+						if (StringUtil.hasValue(str))
+							sb.append("<li>").append(str).append("</li>");
+					sb.append("</ul>");
+				}
+			}
+			if (loadDriverProblem)
+			{
+					sb.append("<h2>An error occurred while establishing the connection: </h2>");
+					sb.append("The selected Driver cannot handle the specified Database URL. <br>");
+					sb.append("The most common reason for this error is that the database <b>URL contains a syntax error</b> preventing the driver from accepting it. <br>");
+					sb.append("The error also occurs when trying to connect to a database with the wrong driver. Correct this and try again.");
+			}
+			sb.append("</html>");
+			String htmlExStr = sb.toString();
+//			SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect",htmlExStr, e);
+		
+			throw new InternalSQLException(extExStr, htmlExStr, ex.getSQLState(), ex.getErrorCode(), ex);
+		}
+	}
 	
+	private class InternalSQLException extends SQLException
+	{
+		private static final long serialVersionUID = 1L;
+		
+		String _htmlStr = "";
+
+		public InternalSQLException(String extExStr, String htmlStr, String sqlState, int errorCode, SQLException ex)
+		{
+			super(extExStr, sqlState, errorCode, ex);
+			_htmlStr = htmlStr;
+		}
+	}
 	
 	
 	
@@ -1403,7 +1648,7 @@ implements ActionListener, ConnectionProgressCallback
 
 			try
 			{
-				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, true, null, null, null, null);
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, _hostPortUrl, null, null, null, null, null, null);
 				System.out.println("Connection returned. conn="+conn);
 			}
 			catch (Exception e)

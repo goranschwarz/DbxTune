@@ -105,7 +105,7 @@ public class SqlParam
 				p._val = null;
 			else
 			{
-				p._val = new String(val);
+				p._val = new String(StringUtil.envVariableSubstitution(val));
 			}
 		}
 		// STRING as CHAR
@@ -117,7 +117,7 @@ public class SqlParam
 				p._val = null;
 			else
 			{
-				p._val = new String(val);
+				p._val = new String(StringUtil.envVariableSubstitution(val));
 			}
 		}
 		// INT

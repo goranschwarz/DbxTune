@@ -11,15 +11,15 @@ import javax.swing.JPanel;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
+import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmSummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
@@ -391,7 +391,7 @@ extends CountersModel
 		{
 			if (isRoleActive(AseConnectionUtils.SA_ROLE))
 			{
-				Component guiOwner = AseTune.hasGUI() ? MainFrame.getInstance() : null;
+				Component guiOwner = DbxTune.hasGui() ? MainFrame.getInstance() : null;
 //				nwAddrInfo = "(select min(convert(varchar(255),address_info)) from syslisteners where address_info not like 'localhost%')";
 				nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, guiOwner) + "'";
 			}
@@ -446,6 +446,8 @@ extends CountersModel
 		//
 		//
 		//
+		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, 10) \n";
+
 		String oldestOpenTranInSec = 
 			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"                                               THEN -1 \n" +
@@ -558,6 +560,7 @@ extends CountersModel
 //				"                        from master..syslogshold h \n" +
 //				"                        where h.name != '$replication_truncation_point' ) \n" +
 				oldestOpenTranInSec + 
+				oldestOpenTranInSecThreshold +
 
 				", pack_received      = @@pack_received \n" +
 				", pack_sent          = @@pack_sent \n" +
@@ -589,9 +592,9 @@ extends CountersModel
 	 * reset some negative counters to 0
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
-		SamplingCnt counters = diffData;
+		CounterSample counters = diffData;
 		
 		if (counters == null)
 			return;
@@ -627,7 +630,7 @@ extends CountersModel
 			checkAndSetNc20(counters, rowId, "packet_errors");
 		}
 	}
-	private void checkAndSetNc20(SamplingCnt counters, int rowId, String columnName)
+	private void checkAndSetNc20(CounterSample counters, int rowId, String columnName)
 	{
 		int colId = counters.findColumn(columnName);
 		if (colId >= 0)

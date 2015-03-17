@@ -8,7 +8,7 @@ import java.util.List;
 import javax.naming.NameNotFoundException;
 import javax.swing.JCheckBoxMenuItem;
 
-import com.asetune.GetCounters;
+import com.asetune.CounterControllerAse;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
@@ -16,7 +16,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmDeviceIoPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -39,7 +39,7 @@ extends CountersModel
 		"<p>What devices are doing IO's and what's the approximare service time on the disk.</p>" +
 		"Do not trust the service time <b>too</b> much...<br>" +
 		"<br>" +
-		GetCounters.TRANLOG_DISK_IO_TOOLTIP +
+		CounterControllerAse.TRANLOG_DISK_IO_TOOLTIP +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
@@ -536,7 +536,7 @@ extends CountersModel
 	 * Compute the avgServ column, which is IOTime/(Reads+Writes)
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int AvgServ_msId=-1, ReadsPctId=-1, APFReadsPctId=-1, WritesPctId=-1;
 

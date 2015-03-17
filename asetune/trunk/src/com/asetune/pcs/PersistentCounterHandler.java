@@ -20,7 +20,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
+import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
@@ -1389,9 +1391,12 @@ implements Runnable
 			return getDdlLookupConnection();
 
 		// If the Counter Collector isn't running, no need to continue
-		if ( ! GetCounters.hasInstance() )
+//		if ( ! GetCounters.hasInstance() )
+//			return null;
+//		GetCounters cc = GetCounters.getInstance();
+		if ( ! CounterController.hasInstance() )
 			return null;
-		GetCounters cc = GetCounters.getInstance();
+		ICounterController cc = CounterController.getInstance();
 
 		// If the Counter Collector isn't connected, no need to continue
 		if ( ! cc.isMonConnected() )

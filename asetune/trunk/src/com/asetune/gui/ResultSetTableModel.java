@@ -541,11 +541,17 @@ public class ResultSetTableModel
 				   )
 				{
 					int columnDisplaySize = rsmd.getColumnDisplaySize(col);
+					
+//					if (columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
+//						columnDisplaySize += 2; // just in case we need the extra length when storing a binary with the prefix '0x'
 
 					columnTypeName += "("+columnDisplaySize+")";
 				}
 			}
 			catch (SQLException ignore) {}
+			
+			if (columnTypeName == null)
+				throw new SQLException("Dummy exception to get static resolution for the SQL Type based on the JDBC Type");
 		}
 		catch (SQLException e)
 		{
@@ -588,8 +594,10 @@ public class ResultSetTableModel
 				case java.sql.Types.DATE:         return "date";
 				case java.sql.Types.TIME:         return "time";
 				case java.sql.Types.TIMESTAMP:    return "datetime";
-				case java.sql.Types.BINARY:       return "binary("+columnDisplaySize+")";
-				case java.sql.Types.VARBINARY:    return "varbinary("+columnDisplaySize+")";
+				case java.sql.Types.BINARY:       return "binary("+columnDisplaySize+")";    // just in case we need the extra length when storing a binary with the prefix '0x'
+				case java.sql.Types.VARBINARY:    return "varbinary("+columnDisplaySize+")"; // just in case we need the extra length when storing a binary with the prefix '0x'
+//				case java.sql.Types.BINARY:       return "binary("+(columnDisplaySize+2)+")";    // just in case we need the extra length when storing a binary with the prefix '0x'
+//				case java.sql.Types.VARBINARY:    return "varbinary("+(columnDisplaySize+2)+")"; // just in case we need the extra length when storing a binary with the prefix '0x'
 				case java.sql.Types.LONGVARBINARY:return "image";
 				case java.sql.Types.NULL:         return "-null-";
 				case java.sql.Types.OTHER:        return "-other-";

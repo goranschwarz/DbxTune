@@ -660,13 +660,15 @@ public class AseConnectionFactory
 	 * Get host and port in the jConnect URL format
 	 * @return a String that contains host1:port1[,host2:port2[,hostN:portN]]
 	 */
-	@SuppressWarnings("unchecked")
 	public static String getIHostPortStr(String server)
 	{
 		SyInterfacesEntry ie = _interfacesDriver.getEntry(server);
 
 		if (ie == null)
+		{
+			_logger.warn("getIHostPortStr(): Can not find an entry for server '"+server+"', from the interfaces driver '"+_interfacesDriver.getBundle()+"'. null will be returned.");
 			return null;
+		}
 
 		String hostPortStr = "";
 

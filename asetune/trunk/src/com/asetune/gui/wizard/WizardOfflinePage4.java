@@ -25,6 +25,7 @@ import net.miginfocom.swing.MigLayout;
 import org.jdesktop.swingx.JXTable;
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
@@ -174,7 +175,7 @@ implements ActionListener, TableModelListener
 		boolean debug = false;
 		if (!debug)
 		{
-			for (CountersModel cm : GetCounters.getCmList())
+			for (CountersModel cm : CounterController.getInstance().getCmList())
 			{
 				if (cm != null)
 				{

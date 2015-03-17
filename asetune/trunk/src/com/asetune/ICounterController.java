@@ -1,10 +1,15 @@
 package com.asetune;
 
 import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CounterSample;
 import com.asetune.gui.ISummaryPanel;
+import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.ssh.SshConnection;
 
 public interface ICounterController
 {
@@ -82,6 +87,12 @@ public interface ICounterController
 	public CountersModel getCmByName(String name);
 	
 	/** 
+	 * Get a List of all CM's 
+	 * @return a list of all CM's
+	 */
+	public List<CountersModel> getCmList();
+	
+	/** 
 	 * Get <code>CountersModel</code> object for a CM that has the "long" name for example 'Procedure Call Stack' for CMprocCallStack
 	 * @return if the CM is not found a null will be return
 	 */
@@ -101,4 +112,54 @@ public interface ICounterController
 	 */
 	public String getSummaryCmName();
 
+	/** initialize the collector */
+	public void init()
+	throws Exception;
+
+	/** start the collector */
+	public void start();
+
+	/** shutdown or stop any collector */
+	public void shutdown();
+
+	
+	
+	
+	boolean isHostMonConnected();
+	SshConnection getHostMonConnection();
+	void setHostMonConnection(SshConnection sshConn);
+	void closeHostMonConnection();
+
+	boolean isRefreshing();
+	void doRefresh();
+	void enableRefresh();
+	void disableRefresh();
+	void doInterruptSleep();
+
+	Timestamp getStatisticsFirstSampleTime();
+	Timestamp getStatisticsLastSampleTime();
+	void resetStatisticsTime();
+
+	void initCounters(Connection conn, boolean b, int srvExecutableVersionNum, boolean clusterEnabled, int mdaVersion) throws Exception;
+
+	void reset(boolean b);
+
+	String getSupportedProductName();
+	void setSupportedProductName(String supportedProductName);
+
+
+	
+	List<CountersModel> getCmListDependsOnConfig(String srvConfig, Connection conn, int srvVersionNum, boolean isClusterEnabled);
+	void setWaitEvent(String string);
+	void createCounters(boolean hasGui);
+	boolean sleep(int i);
+	String getWaitEvent();
+	boolean isRefreshEnabled();
+	boolean isInitialized();
+	void setInRefresh(boolean b);
+	void setStatisticsTime(Timestamp _mainSampleTime);
+	HeaderInfo createPcsHeaderInfo();
+	void checkServerSpecifics();
+	String getServerTimeCmd();
+	boolean isSqlBatchingSupported();
 }

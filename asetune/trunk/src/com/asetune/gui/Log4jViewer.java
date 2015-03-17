@@ -109,7 +109,7 @@ implements ActionListener, TableModelListener
 	private JLabel             _maxLogRecords_lbl  = new JLabel("Max log records");
 	private JSpinner           _maxLogRecords_sp   = null;
 	private SpinnerNumberModel _maxLogRecords_spm  = null;
-	private JCheckBox          _openOnErrors_chk   = new JCheckBox("Open This Window on Errors", true);
+	private JCheckBox          _openOnErrors_chk   = new JCheckBox("Open This Window on Errors", false);
 	
 	//-------------------------------------------------
 	// DATA TABLE panel
