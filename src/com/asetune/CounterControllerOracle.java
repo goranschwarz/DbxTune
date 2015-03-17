@@ -6,7 +6,10 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.oracle.CmIoStatFile;
+import com.asetune.cm.oracle.CmIoStatFunction;
 import com.asetune.cm.oracle.CmSummary;
+import com.asetune.cm.oracle.CmSysStat;
 import com.asetune.cm.oracle.CmSystemEvent;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
@@ -60,7 +63,9 @@ extends CounterControllerAbstract
 		CmSummary           .create(counterController, guiController);
 
 		CmSystemEvent       .create(counterController, guiController);
-
+		CmSysStat           .create(counterController, guiController);
+		CmIoStatFunction    .create(counterController, guiController);
+		CmIoStatFile        .create(counterController, guiController);
 
 
 

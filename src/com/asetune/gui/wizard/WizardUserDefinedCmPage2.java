@@ -53,11 +53,11 @@ implements ActionListener, FocusListener, CaretListener
 
 	private static final String WIZ_NAME = "SQL-Statements";
 	private static final String WIZ_DESC = "SQL Statement(s)";// 
-	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init. (for example: create some work tables, set ASE options, etc...)\nThis is only executed once, before firt sample.";
+	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init. (for example: create some work tables, set ASE options, etc...)\nThis is only executed once, before first sample.";
 	private static final String WIZ_HELP2 = "SQL Statements that will be executed on every sample. (should produce a resultset)";
 	private static final String WIZ_HELP3 = "SQL Statements that will be executed on close. (for example: drop tables created in init)\nThis is only executed once, when the connetion is closed.";
 
-	private static final String NEED_VERSION_DEFAULT = "Works on all ASE versions";
+	private static final String NEED_VERSION_DEFAULT = "Works on all DB Server versions";
 	private static final String NEED_VERSION_TOOLTIP = "<html>" + 
 	                                                      "Lowest ASE Version where this Counter Model works on.<br>" +
 	                                                      "Specify this as a number/integer.<br>" +
@@ -100,7 +100,7 @@ implements ActionListener, FocusListener, CaretListener
 	private RSyntaxTextArea _sqlInit_txt      = new RSyntaxTextArea();  // A field to enter a query in
 	private RSyntaxTextArea _sql_txt          = new RSyntaxTextArea();  // A field to enter a query in
 	private RSyntaxTextArea _sqlClose_txt     = new RSyntaxTextArea();  // A field to enter a query in
-	private JLabel      _needVersion_lbl      = new JLabel("Min ASE Version");
+	private JLabel      _needVersion_lbl      = new JLabel("Min DB Version");
 	private JTextField  _needVersion_txt      = new JTextField(NEED_VERSION_DEFAULT);
 	private JLabel      _needRole_lbl         = new JLabel("Needs Role");
 	private JTextField  _needRole_txt         = new JTextField(NEED_ROLE_DEFAULT);
