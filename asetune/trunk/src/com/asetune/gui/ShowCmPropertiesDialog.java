@@ -94,7 +94,7 @@ extends JDialog implements ActionListener, ChangeListener
 	private JTextField         _testVersionInt_txt     = new JTextField();
 	
 	// Fields
-	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init - Only executed once, before firt sample");
+	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init - Only executed once, before first sample");
 	private RSyntaxTextArea	   _sqlInit              = new RSyntaxTextArea();
 //	private RTextScrollPane    _sqlInitScroll        = new RTextScrollPane(_sqlInit);
 
