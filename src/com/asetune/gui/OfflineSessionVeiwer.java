@@ -59,6 +59,7 @@ import org.jdesktop.swingx.treetable.TreeTableModel;
 
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
+import com.asetune.CounterControllerAbstract;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.gui.OfflineSessionModel.SessionLevel;
@@ -597,7 +598,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		if (udcConf != null && udcConf.size() > 0)
 		{
 			_logger.info("Loading UDC, User Defined Counters from Offline Storage Database into the GUI.");
-			GetCounters.createUserDefinedCounterModels(udcConf);
+			CounterControllerAbstract.createUserDefinedCounterModels(udcConf);
 		}
 		else
 		{

@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterControllerAbstract;
 import com.asetune.cm.CountersModel;
+import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Ver;
 
@@ -24,8 +25,13 @@ import com.asetune.utils.Ver;
 public class RefreshCounters 
 extends CounterControllerAbstract
 {
+	public RefreshCounters(boolean hasGui)
+	{
+		super(hasGui);
+	}
+
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(RefreshCounters.class);
+	private static Logger _logger = Logger.getLogger(RefreshCounters.class);
 
 	/**
 	 * Reset All CM's etc, this so we build new SQL statements if we connect to a different ASE version<br>
@@ -37,18 +43,6 @@ extends CounterControllerAbstract
 	public void reset(boolean resetAllCms)
 	{
 		super.reset(resetAllCms);
-
-//		// is sp_configure 'capture missing statistics' set or not
-//		_config_captureMissingStatistics = false;
-//
-//		// is sp_configure 'enable metrics capture' set or not
-//		_config_enableMetricsCapture = false;
-//		
-//		// is sp_configure 'kernel mode' is set to 'threaded'
-//		_config_threadedKernelMode = false;
-//		
-//		// A list of roles which the connected user has
-//		_activeRoleList = null;
 	}
 
 
@@ -58,126 +52,11 @@ extends CounterControllerAbstract
 	throws Exception
 	{
 		// Create all the CM objects, the objects will be added to _CMList
-		createCounters();
+		createCounters(hasGui());
 	}
 
-	/** shutdown or stop any collector */
 	@Override
-	public void shutdown()
-	{
-		_logger.info("Stopping the collector thread.");
-//		_running = false;
-		if (_thread != null)
-			_thread.interrupt();
-	}
-	
-//	/**
-//	 * When we have a database connection, lets do some extra init this
-//	 * so all the CountersModel can decide what SQL to use. <br>
-//	 * SQL statement usually depends on what ASE Server version we monitor.
-//	 * 
-//	 * @param conn
-//	 * @param hasGui              is this initialized with a GUI?
-//	 * @param aseVersion          what is the ASE Executable version
-//	 * @param isClusterEnabled    is it a cluster ASE
-//	 * @param monTablesVersion    what version of the MDA tables should we use
-//	 */
-//	@Override
-//	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
-//	throws Exception
-//	{
-//		if (isInitialized())
-//			return;
-//
-//		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
-//			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
-//
-//			
-//		if (! isCountersCreated())
-//			createCounters();
-//		
-//		_logger.info("Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
-//
-//		// Get active ASE Roles
-//		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
-//		_activeRoleList = AseConnectionUtils.getActiveRoles(conn);
-//		
-//		// Get active Monitor Configuration
-//		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
-//
-//		// Get some specific configurations
-////		if (aseVersion >= 15031)
-////		if (aseVersion >= 1503010)
-//		if (aseVersion >= Ver.ver(15,0,3,1))
-//			_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
-//
-////		if (aseVersion >= 15020)
-////		if (aseVersion >= 1502000)
-//		if (aseVersion >= Ver.ver(15,0,2))
-//			_config_enableMetricsCapture = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable metrics capture");
-//
-//		_config_threadedKernelMode = false;
-////		if (aseVersion >= 15700)
-////		if (aseVersion >= 1570000)
-//		if (aseVersion >= Ver.ver(15,7))
-//		{
-//			String kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
-//			_config_threadedKernelMode = "threaded".equals(kernelMode);
-//		}
-//
-//		
-//		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
-//		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-////		if (aseVersion >= 15031)
-////		if (aseVersion >= 1503010)
-//		if (aseVersion >= Ver.ver(15,0,3,1))
-//			AseConnectionUtils.setCompatibilityMode(conn, false);
-//
-//		// initialize all the CM's
-//		Iterator<CountersModel> i = _CMList.iterator();
-//		while (i.hasNext())
-//		{
-//			CountersModel cm = i.next();
-//
-//			if (cm != null)
-//			{
-//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
-//
-//				// set the version
-////				cm.setServerVersion(aseVersion);
-//				cm.setServerVersion(monTablesVersion);
-//				cm.setClusterEnabled(isClusterEnabled);
-//				
-//				// set the active roles, so it can be used in initSql()
-//				cm.setActiveRoles(_activeRoleList);
-//
-//				// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
-//				cm.setMonitorConfigs(monitorConfigMap);
-//
-//				// Now when we are connected to a server, and properties are set in the CM, 
-//				// mark it as runtime initialized (or late initialization)
-//				// do NOT do this at the end of this method, because some of the above stuff
-//				// will be used by the below method calls.
-//				cm.setRuntimeInitialized(true);
-//
-//				// Initializes SQL, use getServerVersion to check what we are connected to.
-//				cm.initSql(conn);
-//
-//				// Use this method if we need to check anything in the database.
-//				// for example "deadlock pipe" may not be active...
-//				// If server version is below 15.0.2 statement cache info should not be VISABLE
-//				cm.init(conn);
-//				
-//				// Initialize graphs for the version you just connected to
-//				// This will simply enable/disable graphs that should not be visible for the ASE version we just connected to
-//				cm.initTrendGraphForVersion(monTablesVersion);
-//			}
-//		}
-//
-//		setInitialized(true);
-//	}
-	@Override
-	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -188,9 +67,9 @@ extends CounterControllerAbstract
 	
 			
 		if (! isCountersCreated())
-			createCounters();
+			createCounters(true);
 		
-		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+srvVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
 	
 		// Get active ASE Roles
 		List<String> activeRoleList = AseConnectionUtils.getActiveSystemRoles(conn);
@@ -203,15 +82,15 @@ extends CounterControllerAbstract
 		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 		// This will hurt performance, especially when querying sysmonitors table, so set this to off
 //		if (aseVersion >= 1503010)
-		if (aseVersion >= Ver.ver(15,0,3,1))
+		if (srvVersion >= Ver.ver(15,0,3,1))
 			AseConnectionUtils.setCompatibilityMode(conn, false);
 
 		// initialize all the CM's
-		for (CountersModel cm : _CMList)
+		for (CountersModel cm : getCmList())
 		{
 			if (cm != null)
 			{
-				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
+				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+srvVersion+".");
 
 				// set the version
 //				cm.setServerVersion(aseVersion);
@@ -259,7 +138,7 @@ extends CounterControllerAbstract
 	 * this so we can decide what monitor tables and columns we could use.
 	 */
 	@Override
-	public void createCounters()
+	public void createCounters(boolean hasGui)
 	{
 		if (isCountersCreated())
 			return;
@@ -267,7 +146,7 @@ extends CounterControllerAbstract
 		_logger.info("Creating ALL CM Objects.");
 
 //		GetCounters counterController = this;
-//		MainFrame   guiController     = Configuration.hasGui() ? MainFrame.getInstance() : null;
+//		MainFrame   guiController     = hasGui ? MainFrame.getInstance() : null;
 
 //		CmSummary          .create(counterController, guiController);
 //
@@ -279,9 +158,43 @@ extends CounterControllerAbstract
 	}
 
 	/** The run is located in any implementing subclass */
+//	@Override
+//	public void run()
+//	{
+//	}
+
+
+
+
+
 	@Override
-	public void run()
+	public HeaderInfo createPcsHeaderInfo()
+	{
+		throw new RuntimeException("createPcsHeaderInfo(): THIS SHOULD NOT BE CALLED... will be removed later.");
+	}
+
+//	@Override
+//	public void start()
+//	{
+//		throw new RuntimeException("start(): THIS SHOULD NOT BE CALLED... will be removed later.");
+//	}
+
+
+	@Override
+	public void checkServerSpecifics()
 	{
 	}
 
+
+	@Override
+	public String getServerTimeCmd()
+	{
+		return "select getdate() \n";
+	}
+
+	@Override
+	protected String getIsClosedSql()
+	{
+		return "select 'AseTune-check:isClosed(conn)'";
+	}
 }

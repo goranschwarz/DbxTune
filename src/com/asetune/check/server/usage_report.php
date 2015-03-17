@@ -96,8 +96,8 @@ DB Cleanup:
 
 	$mda_deleteVersion         = versionFix($_GET['mda_deleteVersion']);
 	$mda_verifyVersion         = versionFix($_GET['mda_verifyVersion']);
-	$mda_lowVersion            = versionFix($_GET['mda_lowVersion']);
-	$mda_highVersion           = versionFix($_GET['mda_highVersion']);
+	$mda_lowVersion            = versionFix(str_replace(" ", "", $_GET['mda_lowVersion']));  // remove spaces in version str
+	$mda_highVersion           = versionFix(str_replace(" ", "", $_GET['mda_highVersion'])); // remove spaces in version str
 	$mda_isCluster             = $_GET['mda_isCluster'];
 
 	$ipDesc_key                = $_GET['ipDesc_key'];

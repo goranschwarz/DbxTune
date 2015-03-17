@@ -14,7 +14,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmCachedObjectsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -321,7 +321,7 @@ extends CountersModel
 	 * discard "DDL Save" when: Objects with IndexID > 0 and ObjectType == "system table"
 	 */
 	@Override
-	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, SamplingCnt absData, SamplingCnt diffData, SamplingCnt rateData)
+	public boolean sendDdlDetailsRequestForSpecificRow(String dBName, String objectName, int row, CounterSample absData, CounterSample diffData, CounterSample rateData)
 	{
 		// If ObjectType is "system table", then do NOT send it for DDL Storage
 		int ObjectType_pos = absData.findColumn("ObjectType");

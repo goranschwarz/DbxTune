@@ -1,5 +1,12 @@
 package com.asetune.utils;
 
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,11 +14,24 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.tree.DefaultMutableTreeNode;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
+
+import com.asetune.gui.ConnectionProfile;
 
 public class FileUtils
 {
@@ -345,4 +365,200 @@ public class FileUtils
 		return content;
 	}
 
+	/**
+	 * Open a dialog to ask for a new filename
+	 * @param owner
+	 * @return null if cancel is pressed, otherwise the filename.
+	 */
+	public static File openNewFileDialog(Window owner, File suggestedFilename, boolean showTempFileOption, String initialFileContent)
+	throws IOException
+	{
+		NewFileDialog dialog = new NewFileDialog(owner, suggestedFilename, showTempFileOption, initialFileContent);
+		dialog.setVisible(true);
+		
+		return dialog.getFilename();
+	}
+
+	private static class NewFileDialog
+	extends JDialog
+	{
+		private static final long serialVersionUID = 1L;
+
+		private File       _retFile            = null;
+		private File       _suggestion         = null;
+		private boolean    _showTempFileOption = true;
+		private String     _initialFileContent = null;
+
+		private JLabel     _filename_lbl = new JLabel("Filename");
+		private JTextField _filename_txt = new JTextField();
+		private JButton    _filename_but = new JButton("...");
+
+		private JCheckBox  _deleteOnExit_chk = new JCheckBox("Delete this file when the application exists...", true);
+
+		private JButton    _ok     = new JButton("OK");
+		private JButton    _cancel = new JButton("Cancel");
+		
+		public NewFileDialog(Window owner, File suggestedFilename, boolean showTempFileOption, String initialFileContent)
+		{
+			super(owner, "Create new file");
+			setModal(true);
+			
+			_suggestion         = suggestedFilename;
+			_showTempFileOption = showTempFileOption;
+			_initialFileContent = initialFileContent;
+
+			init();
+			pack();
+			setLocationRelativeTo(owner);
+//			SwingUtils.setFocus(_ok);
+		}
+
+		private void filenameFocus()
+		{
+			String currentFn   = _filename_txt.getText();
+			File   currentFile = new File(currentFn);
+			
+			String fn = currentFile.getName();
+					
+			// Select the part ib <> "c:\xxx\yyy\<filename>.txt" so we can easily choose a new name for the file. 
+			int selStart = currentFn.indexOf(fn);
+			if (selStart == -1)
+				selStart = 0;
+			int selEnd = currentFn.lastIndexOf(".");
+			if (selEnd == -1 || selEnd < selStart)
+				selEnd = currentFn.length();
+
+			_filename_txt.setSelectionStart(selStart);
+			_filename_txt.setSelectionEnd(selEnd);
+		}
+
+		private void init()
+		{
+			setLayout(new MigLayout());
+			
+			add(new JLabel("<html><h3>Create a new file</h3></html>"), "span, wrap");
+
+			add(_filename_lbl, "");
+			add(_filename_txt, "growx, pushx");
+			add(_filename_but, "wrap");
+			
+			if (_showTempFileOption)
+				add(_deleteOnExit_chk, "skip, span, wrap");
+
+			add(new JLabel(""), "span, split, growx, pushx");
+			add(_ok,            "tag ok");
+			add(_cancel,        "tag cancel");
+
+			SwingUtils.installEscapeButton(this, _cancel);
+
+			if (_suggestion != null)
+			{
+				_filename_txt.setText(_suggestion.toString());
+				filenameFocus();
+			}
+			
+			// Uncheck the "remove file on exit" if we start to type a filename
+			_filename_txt.addKeyListener(new KeyListener()
+			{
+				@Override
+				public void keyReleased(KeyEvent e)
+				{
+					String fullName  = _filename_txt.getText();
+					String shortName = new File(fullName).getName().toLowerCase();
+					Boolean selected = fullName.equals(_suggestion.toString()) || shortName.contains("temp") || shortName.contains("tmp") ;
+					_deleteOnExit_chk.setSelected(selected);
+					
+					if (e.getKeyCode() == KeyEvent.VK_ENTER)
+						_ok.doClick();
+				}
+				
+				@Override public void keyTyped(KeyEvent e) {}
+				@Override public void keyPressed(KeyEvent e) {}
+			});
+
+			// Uncheck the "remove file on exit" if we start to type a filename
+			_filename_txt.addFocusListener(new FocusListener()
+			{
+				@Override
+				public void focusGained(FocusEvent e)
+				{
+					filenameFocus();
+				}
+				@Override public void focusLost(FocusEvent e) {}
+			});
+
+			// Action for "..."
+			_filename_but.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					String fn = _filename_txt.getText();
+					String dir = new File(fn).getParent();
+					JFileChooser fc = new JFileChooser(dir);
+
+					int returnVal = fc.showOpenDialog(NewFileDialog.this);
+					if (returnVal == JFileChooser.APPROVE_OPTION) 
+					{
+						File file = fc.getSelectedFile();
+						_filename_txt.setText(file.toString());
+						_deleteOnExit_chk.setSelected(false);
+					}
+				}
+			});
+
+			// Action for OK
+			_ok.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					String fn = _filename_txt.getText();
+					if (StringUtil.hasValue(fn))
+						_retFile = new File(fn);
+
+					setVisible(false);
+				}
+			});
+
+			// Action for CANCEL
+			_cancel.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					_retFile = null;
+					setVisible(false);
+				}
+			});
+		}
+
+		public File getFilename()
+		throws IOException
+		{
+			if (_retFile != null)
+				_retFile.createNewFile();
+			
+			boolean deleteFileOnExit = _showTempFileOption && _deleteOnExit_chk.isSelected(); 
+			if (deleteFileOnExit)
+				_retFile.deleteOnExit();
+
+			if (StringUtil.hasValue(_initialFileContent))
+			{
+				PrintWriter pw = new PrintWriter(_retFile);
+				pw.append(_initialFileContent);
+				if (deleteFileOnExit)
+				{
+					pw.append("------------------------------------------------------------------------------------------------------------------\n");
+					pw.append("------- NOTE: This file will be deleted when the application exits...\n");
+					pw.append("-------       But you can always 'Save as...' if you want to save the content to a new file.\n");
+					pw.append("------------------------------------------------------------------------------------------------------------------\n");
+				}
+				pw.close();
+			}
+
+			
+			return _retFile;
+		}
+	}
 }

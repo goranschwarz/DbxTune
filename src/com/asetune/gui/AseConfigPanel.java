@@ -42,7 +42,7 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.AseConfig;
-import com.asetune.AseTune;
+import com.asetune.DbxTune;
 import com.asetune.pcs.PersistReader;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
@@ -81,7 +81,7 @@ implements ActionListener
 	public void refresh()
 	{
 		Timestamp  ts        = null;
-		boolean    hasGui    = AseTune.hasGUI();
+		boolean    hasGui    = DbxTune.hasGui();
 		boolean    isOffline = false;
 		Connection conn      = null;
 

@@ -384,7 +384,7 @@ public class MonTablesDictionary
 					return;
 				}
 				_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
-				_monTables = null;
+//				_monTables = null;
 				return;
 			}
 		}
@@ -853,7 +853,7 @@ public class MonTablesDictionary
 			if (_montablesStatus.equals("incomplete"))
 			{
 				String msg = "ASE Monitoring tables has not been completely installed. Please check it's status with: sp_version";
-				if (AseTune.hasGUI())
+				if (DbxTune.hasGui())
 					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
 				_logger.warn(msg);
 			}

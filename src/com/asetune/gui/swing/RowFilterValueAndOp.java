@@ -10,6 +10,8 @@ import javax.swing.table.TableModel;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.CountersModel;
+
 /**
  * Filter data using EQual, NotEqual, GreaterThen or LessThen.
  * 
@@ -167,8 +169,24 @@ extends RowFilter<TableModel, Integer>
 	private boolean showInView(Entry<? extends TableModel, ? extends Integer> entry)
 	{
 		Object cellValue = entry.getValue(_colId);
+		
+		// Handle NULL values in model.
 		if (cellValue == null)
-			return true;
+		{
+			TableModel tm = entry.getModel();
+			if (tm instanceof CountersModel)
+			{
+				// To get the correct "NULL" display value, we need to do the following...
+				//cellValue = ((CountersModel)tm).getTabPanel().getDataTable().getNullValueDisplay();
+				// But lets sheet a bit... This will NOT work if you change the NULL Display Value using property 'GTable.replace.null.with=SomeOtherNullRepresantation' 
+				cellValue = GTable.DEFAULT_NULL_REPLACE;
+			}
+			else
+			{
+				// For all other table models, simply do NOT show null values when filtering
+				return false;
+			}
+		}
 
 		// Create a new object that we use to compare
 		if (_filterObj == null)

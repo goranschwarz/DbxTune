@@ -16,7 +16,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmActiveStatementsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -522,7 +522,7 @@ extends CountersModel
 	 * Also do post lookups of dbcc sqltext, sp_showplan, dbcc stacktrace
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 //		long startTime = System.currentTimeMillis();
 
@@ -547,7 +547,7 @@ extends CountersModel
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
-		SamplingCnt counters = diffData;
+		CounterSample counters = diffData;
 
 		if ( ! MonTablesDictionary.hasInstance() )
 			return;
@@ -782,7 +782,7 @@ extends CountersModel
 //		return super.clone();
 //	}
 
-	private String getBlockingListStr(SamplingCnt counters, int spid, int pos_BlockingSPID, int pos_SPID)
+	private String getBlockingListStr(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
 	{
 		StringBuilder sb = new StringBuilder();
 

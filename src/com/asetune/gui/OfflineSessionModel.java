@@ -12,6 +12,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.treetable.AbstractTreeTableModel;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
 import com.asetune.pcs.PersistReader;
@@ -271,7 +272,7 @@ extends AbstractTreeTableModel
 		List<String> new_cmLongNameSumCols  = new ArrayList<String>();
 
 		// FIXME: maybe get the TAB ORDER instead...
-		for (CountersModel cm : GetCounters.getCmList())
+		for (CountersModel cm : CounterController.getInstance().getCmList())
 		{
 			String shortCmName = cm.getName();
 			String longCmName  = cm.getDisplayName();

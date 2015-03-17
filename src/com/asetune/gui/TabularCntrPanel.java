@@ -77,13 +77,13 @@ import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
+import org.jdesktop.swingx.decorator.HighlighterFactory;
 import org.jdesktop.swingx.decorator.PainterHighlighter;
 import org.jdesktop.swingx.painter.AbstractPainter;
 import org.jdesktop.swingx.renderer.PainterAware;
 import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
@@ -257,6 +257,19 @@ implements
 		_dataTable = new GTable()
 		{
 			private static final long serialVersionUID = 1L;
+
+			/**
+			 * Tell the Cell renderer for "Rate" Counters (BigDecimal values) to always use 1 fraction
+			 * The normal formatter doesn't add '.0' if values are even
+			 * Make '0'     -> '0.0'
+			 *  and '123'   -> '123.0'
+			 *  and '123.5' -> '123.5'
+			 */
+			@Override
+			public int getBigDecimalFormatMinimumFractionDigits()
+			{
+				return 1;
+			}
 
 			@Override
 			public void sorterChanged(RowSorterEvent e) 
@@ -1028,9 +1041,12 @@ implements
 	{
 //		throw new RuntimeException("TabularCntrPanel has not implemented the method 'getConnection()'");
 		// FIXME: shouldn't this be done on XXX (the ICounterController from the CM or something similar)
-		if (GetCounters.getInstance().isMonConnected())
+//		if (GetCounters.getInstance().isMonConnected())
+//		{
+//			return GetCounters.getInstance().getMonConnection();
+		if (CounterController.getInstance().isMonConnected())
 		{
-			return GetCounters.getInstance().getMonConnection();
+			return CounterController.getInstance().getMonConnection();
 		}
 		else
 		{
@@ -2219,6 +2235,15 @@ implements
 
 
 	/**
+	 * If the implementor wants simple striping on rows in table
+	 * @return true to "strip" the table rows
+	 */
+	protected boolean isCreateSimpleStriping()
+	{
+		return false;
+	}
+
+	/**
 	 * 
 	 * @return
 	 */
@@ -2233,7 +2258,12 @@ implements
 								// visible
 		_dataTable.setSortable(true);
 		_dataTable.setColumnControlVisible(true);
-		_dataTable.setHighlighters(_highliters); // a variant of cell render
+//		_dataTable.setHighlighters(_highliters); // a variant of cell render
+		if (isCreateSimpleStriping())
+			_dataTable.addHighlighter(HighlighterFactory.createSimpleStriping());
+		_dataTable.addHighlighter(new HighlighterDiffData(_highligtIfDelta)); 
+		_dataTable.addHighlighter(new HighlighterPctData(_highligtIfPct));
+
 
 		// Fixing/setting background selection color... on some platforms it
 		// seems to be a strange color
@@ -3555,8 +3585,8 @@ implements
 //		{
 //			// new Exception().printStackTrace();
 //
-//			// TODO: try to get PK from the CounterModel (or SamplingCnt.getPkForRow()) 
-//			//       then restore: row=SamplingCnt.getRowForPk(); convertModelToView(); setSelectionInterval()
+//			// TODO: try to get PK from the CounterModel (or CounterSample.getPkForRow()) 
+//			//       then restore: row=CounterSample.getRowForPk(); convertModelToView(); setSelectionInterval()
 //
 //			int viewSelectedRow = getSelectedRow();
 //			int modelRowBefore = -1;
@@ -3772,11 +3802,11 @@ implements
 			return cm.isPctColumn(adapter.convertColumnIndexToModel(adapter.column));
 		}
 	};
-	private Highlighter[] _highliters = { 
-			new HighlighterDiffData(_highligtIfDelta), 
-			new HighlighterPctData(_highligtIfPct)
-			// ,HighlighterFactory.createSimpleStriping()
-		};
+//	private Highlighter[] _highliters = { 
+//			new HighlighterDiffData(_highligtIfDelta), 
+//			new HighlighterPctData(_highligtIfPct)
+//			// ,HighlighterFactory.createSimpleStriping()
+//		};
 
 	private static class HighlighterDiffData extends AbstractHighlighter
 	{

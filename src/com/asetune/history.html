@@ -41,6 +41,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>Get sort order and character set when connection to a RepServer</li>
        <li>\rpc \exec \call commands handles return codes/parameters in a better way</li>
        <li>\rpc \exec \call \prep commands handles more types (bigint|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob)</li>
+       <li>\rpc \exec \call \prep with type string accepts environment variables in the form ${ENV_NAME}</li>
        <li>go | bcp ...: return how many rows was actually transferred by the BCP, and some other enhancements</li>
        <li>Command History: you can now copy the file name from the status bar</li>
        <li>Insert/Get last history commands with Crtl-Shift+H</li>
@@ -53,6 +54,10 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>Various enhancements to the Code Completion subsystem</li>
        <li>If it's a BLOB or Text column value AND the content seems to be a picture, lets show the picture if you hover/tooltip over the value</li>
        <li>Oracle show stored procedure source code (using a tooltip at error message), in case of non-handled server side exceptions</li>
+       <li>New File: has been implemented.</li>
+       <li>Dialog to view all JDBC MetaData on the Connection Level. This is under: Menu -&gt; View -&gt; 'View JDBC Meta Data info...'</li>
+       <li>Dialog to view error log information and change log level. This is under: Menu -&gt; View -&gt; 'Open Log Window...'</li>
+       <li>About Dialog to view application version. This is under: Menu -&gt; Help -&gt; 'About'</li>
        <li></li>
 
        <li>More options in the "Options" button (to the right of "exec" button)</li>
@@ -77,6 +82,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	The GUI seems to freeze in some cases. Hopefully this is fixed...<br>
 	The major change made was: WaitForExec dialog now always gets executed on the EDT - Event Dispatch Thread<br>
 	The above dialog was used during Java Garbage Collections<br>  
+	</LI>
+
+	<LI>
+	<b>Bug fix: Rep Senders - CmRaSenders, Log Scanners - CmRaScanners</b><br>
+	Both of them had wrong PK for delta calculation. It now uses ScannerSPID in CmRaScanners and SenderSPID for CmRaSenders<br> 
 	</LI>
 
 	<LI>
@@ -159,7 +169,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	       <li>LastDeleteDate     - The date of the last delete on this object</li>
 	       <li>LastDeleteDateDiff - How many MS ago did we do a Delete</li>
 	     </ul> 
-	   <li>Statement Cache Details: new columns</li>
+	   <li>Statement Cache Details: new columns (the below was also back ported for ASE 15.7 SP130)</li>
 	     <ul>
 	       <li>TotalPIO         - The total PIO value.</li>
 	       <li>TotalLIO         - The total LIO value.</li>

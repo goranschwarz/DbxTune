@@ -1,29 +1,49 @@
 package com.asetune;
 
+import com.asetune.pcs.PersistContainer.HeaderInfo;
 
-public class GetCountersNoOp extends GetCounters
+public class GetCountersNoOp
 {
-
-	@Override
-	public void init()
-	{
-//		long startTime = System.currentTimeMillis();
-//		System.out.println("Initializing.");
-
-		this.createCounters();
-
-//		long execTime = System.currentTimeMillis() - startTime;
-//		System.out.println("Done. It took "+TimeUtils.msToTimeStr(execTime));
-	}
-
-	@Override
-	public void run()
-	{
-	}
-
-	@Override
-	public void shutdown()
-	{
-	}
-
 }
+
+//public class GetCountersNoOp extends GetCounters
+//{
+//
+//	@Override
+//	public void checkServerSpecifics()
+//	{
+//	}
+//
+//	@Override
+//	public void init()
+//	{
+//		this.createCounters();
+//	}
+//
+//	@Override
+//	public void run()
+//	{
+//	}
+//
+//	@Override
+//	public void shutdown()
+//	{
+//	}
+//
+//	@Override
+//	public HeaderInfo createPcsHeaderInfo()
+//	{
+//		return null;
+//	}
+//
+//	@Override
+//	public CounterCollectorThreadAbstract getCounterCollectorThread()
+//	{
+//		return null;
+//	}
+//
+//	@Override
+//	public void start()
+//	{
+//	}
+//}

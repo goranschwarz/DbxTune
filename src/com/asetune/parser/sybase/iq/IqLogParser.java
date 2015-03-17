@@ -41,8 +41,10 @@ package com.asetune.parser.sybase.iq;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -53,15 +55,55 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
+
+import com.sun.jmx.snmp.Timestamp;
+
 public class IqLogParser
 {
-	private Map<String, String> _connId2User = new HashMap<String, String>();
-	private Map<String, ConnLevel> _connIdMap = new LinkedHashMap<String, ConnLevel>();
+	/**
+	 * Holds a mapping from a connectionId to a specific UserName
+	 * Note: a UserName is only picked up when it connects or receives a cancel requests
+	 *       This means that the UserName can be unknown if the file doesn't login/cancel requests
+	 *  
+	 * Key:   connId
+	 * Value: userName
+	 */
+	private Map<String, String> _connId2User = new HashMap<String, String>();           // Key: connId, Value: userName 
+	
+	/**
+	 * Holds a mapping from a connectionId to gathered details about a specific connection 
+	 * The ConnLevelInfo object, holds various information about a specific connId...
+	 *   * like a Map of the various Operations performed by this connection id
+	 *   * query plans if this is enabled.
+	 *   
+	 * Key:   connId
+	 * Value: class ConnLevelInfo
+	 */
+	private Map<String, ConnLevelInfo> _connIdMap = new LinkedHashMap<String, ConnLevelInfo>();
+	
+	/**
+	 * Holds Update/Insert Pass 1 and Pass 2 information
+	 * Temporary used to store last row(s), and removed as soon as the Operation is added to the ConnLevelInfo object
+	 * (this so we can have multiple connections output lines out-of-sequence in the file, meaning different connections print simultaneously to the log)
+	 * 
+	 * When adding the Statistics for a Update/Insert Operation, the entry is removed.  
+	 *  
+	 * Key:   connId
+	 * Value: class Pass12
+	 */
 	private Map<String, Pass12> _connPass12Map = new HashMap<String, Pass12>();
 
+	/**
+	 * Holds a summary counter for Cancel request made by a specific UserName (note cancel request is also incremented at the ConnLevelInfo for each ConnID)
+	 * 
+	 * Key:   userName, 
+	 * Value: counter that holds number of cancel request
+	 */
 	private Map<String, Integer> _userCancelReq = new LinkedHashMap<String, Integer>();
-	
-	private SimpleDateFormat _dateFormat = new SimpleDateFormat("MM/dd HH:mm:ss");
+
+	/** What date format does the log have */
+	private static SimpleDateFormat _dateFormat = new SimpleDateFormat("MM/dd HH:mm:ss");
 
 	private CmdLineOptions _cmdLineOpt = null;
 
@@ -103,25 +145,27 @@ public class IqLogParser
 				if ((lineNum % 500000) == 0)
 					System.out.format("Processed %d K lines.\n", lineNum/1000);
 
-				//------------------------------------
-				// try to grab Update Pass 1 and Pass 2
-				//------------------------------------
-				// I. 11/27 02:54:24. 0000000574 Update Started:
-				// I. 11/27 02:54:24. 0000000574 income
-				// I. 11/27 02:54:24. 0000000574 [20895]: Update Pass 1 completed in 0 seconds.
-				// I. 11/27 02:54:24. 0000000574 [20895]: Update Pass 2 completed in 0 seconds.
-				// I. 11/27 02:54:24. 0000000574 [20896]: Update for 'income' completed in 0 seconds.  62 rows updated.
-				
-                // I. 12/08 16:40:05. 0000035309 Insert Started.
-                // I. 12/08 16:40:05. 0000035309 #rs_uledger_accounts_1237_4
-                // I. 12/08 16:40:05. 0000000085 Txn 1041065594 0 1041065594
-                // I. 12/08 16:40:05. 0000035309 [20895]: Insert Pass 1 completed in 0 seconds.
-                // I. 12/08 16:40:05. 0000035309 [20895]: Insert Pass 2 completed in 0 seconds.
-				// I. 12/08 16:40:05. 0000035309 [20896]: Insert for '#rs_uledger_accounts_1237_4' completed in 0 seconds.  52 rows inserted.
 
 				if (row.length >= 5)
 				{
 					String connId = row[3];
+
+					//------------------------------------
+					// try to grab Update Pass 1 and Pass 2
+					//------------------------------------
+					// I. 11/27 02:54:24. 0000000574 Update Started:
+					// I. 11/27 02:54:24. 0000000574 income
+					// I. 11/27 02:54:24. 0000000574 [20895]: Update Pass 1 completed in 0 seconds.
+					// I. 11/27 02:54:24. 0000000574 [20895]: Update Pass 2 completed in 0 seconds.
+					// I. 11/27 02:54:24. 0000000574 [20896]: Update for 'income' completed in 0 seconds.  62 rows updated.
+					
+	                // I. 12/08 16:40:05. 0000035309 Insert Started.
+	                // I. 12/08 16:40:05. 0000035309 #rs_uledger_accounts_1237_4
+	                // I. 12/08 16:40:05. 0000000085 Txn 1041065594 0 1041065594
+	                // I. 12/08 16:40:05. 0000035309 [20895]: Insert Pass 1 completed in 0 seconds.
+	                // I. 12/08 16:40:05. 0000035309 [20895]: Insert Pass 2 completed in 0 seconds.
+					// I. 12/08 16:40:05. 0000035309 [20896]: Insert for '#rs_uledger_accounts_1237_4' completed in 0 seconds.  52 rows inserted.
+
 					if ( row.length == 6 && "Update".equals(row[4]) && "Started:".equals(row[5]) )
 						_connPass12Map.put(connId, new Pass12(OpType.UPDATE) );
 
@@ -150,7 +194,62 @@ public class IqLogParser
 							}
 						}
 					}
-				}
+					
+					//------------------------------------
+					// Grab Query plan information 
+					// Start of a query plan has 7 tokens - the last 5th being [20535]:
+					// End of the query plan comes when the 5th token is no longer [20535]:
+					//------------------------------------
+					//	I. 12/11 08:13:28. 0001334736 [20535]: Query Plan:
+					//	I. 12/11 08:13:28. 0001334736 [20535]: 0    #20:  Root
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Child Node 1:  #19
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Estimated Result Rows:  8
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         User Name:  #szhong   (SA connHandle: 258722  SA connID: 185)
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Est. Temp Space Used (Mb):    15.8
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Requested attributes:  No Scroll Chained 
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Effective Number of Users:  6
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Number of CPUs:  16
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         IQ Main Cache Size (Mb):  65000
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         IQ Temp Cache Size (Mb):  70000
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Threads used for executing local invariant predicates:  3
+					//	I. 12/11 08:13:28. 0001334736 [20535]:         Number of CPUs (actual):  88
+					//  .....
+					//	I. 12/11 08:13:28. 0001334736 [20535]:                   Column 2     Note:  LF index used by optimizer
+					//	I. 12/11 08:13:28. 0001334736 [20535]:                   Column 2     Indexes:  FP(2), LF, HG(U)
+					//	I. 12/11 08:13:28. 0001334736 [20535]:                   Maximum Row ID:  504
+					//	I. 12/11 08:13:28. 0001334736 [20819]: 
+
+					if (_cmdLineOpt._qplans)
+					{
+						if ("[20535]:".equals(row[4]))
+						{
+							if ( "Query".equals(row[5]) && "Plan:".equals(row[6]))
+							{
+								String date    = row[1];
+								String time    = row[2];
+
+								QueryPlan qPlan = new QueryPlan(date, time);
+
+								int startPos = line.indexOf("[20535]:") + "[20535]: ".length();
+								qPlan.addLine( line.substring(startPos) );
+
+								addQueryPlan(connId, qPlan);
+							}
+							else
+							{
+								QueryPlan qPlan = getQueryPlan(connId);
+								
+								// NOTE: Just add it to the "last" query plan
+								//       But if we havn't received any row with "Query Plan:" then the getQueryPlan() will return with NULL 
+								if (qPlan != null)
+								{
+									int startPos = line.indexOf("[20535]:") + "[20535]: ".length();
+									qPlan.addLine( line.substring(startPos) );
+								}
+							}
+						}
+					} // end: _cmdLineOpt._qplans
+				} // end: row.length >= 5
 
 				if (row.length >= 14)
 				{
@@ -170,6 +269,7 @@ public class IqLogParser
 								System.out.format("WARNING: Resusing ConnectionID=%s, for user=%-20s  this previously used by=%s\n", connId, user, prevUser);
 						}
 						_connId2User.put(connId, user);
+						
 //						System.out.format("Connect: id=%s, user=%s\n", connId, user);
 					}
 
@@ -196,7 +296,7 @@ public class IqLogParser
 						String user   = row[17];
 
 						// Update at connection level
-						ConnLevel connLvl = _connIdMap.get(connId);
+						ConnLevelInfo connLvl = _connIdMap.get(connId);
 						if (connLvl != null)
 						{
 							connLvl.incCancelRequests();
@@ -265,6 +365,8 @@ public class IqLogParser
 			
 			br.close();
 			fileReader.close();
+
+			System.out.println("Done Parsing file: "+file);
 		}
 		catch(IOException e)
 		{
@@ -273,6 +375,38 @@ public class IqLogParser
 	}
 
 	
+	private QueryPlan getQueryPlan(String connId)
+	{
+		ConnLevelInfo connLvl = _connIdMap.get(connId);
+		if (connLvl != null)
+		{
+			return connLvl.getLastQueryPlan();
+		}
+
+		return null;
+	}
+
+	private void addQueryPlan(String connId, QueryPlan qplan)
+	{
+		if (qplan == null)
+			throw new IllegalArgumentException("calling addQueryPlan: QueryPlan is NULL");
+
+		String user = getUserByConnectionId(connId);
+
+		ConnLevelInfo connLvl = _connIdMap.get(connId);
+		if (connLvl == null)
+		{
+			connLvl = new ConnLevelInfo(connId, user, qplan.getDateTime());
+			_connIdMap.put(connId, connLvl);
+		}
+
+		if (_startTime == null)
+ 			_startTime = qplan.getDateTime();
+ 		_endTime = qplan.getDateTime();
+		
+		connLvl.addQueryPlan(qplan);
+	}
+
 	private void putStats(String connId, String tab, String opStr, int seconds, int rows, Pass12 pass12, String date, String time, int lineNum)
 	{
 		String user = getUserByConnectionId(connId);
@@ -287,32 +421,34 @@ public class IqLogParser
  			_startTime = ts;
  		_endTime = ts;
 		
-		ConnLevel connLvl = _connIdMap.get(connId);
+		ConnLevelInfo connLvl = _connIdMap.get(connId);
 		if (connLvl == null)
 		{
-			connLvl = new ConnLevel(connId, user, ts);
+			connLvl = new ConnLevelInfo(connId, user, ts);
 			_connIdMap.put(connId, connLvl);
 		}
 
 		connLvl.addOperation(tab, opStr, seconds, rows, pass12, ts, lineNum);
 	}
 
-	public String printStat()
+	public void printStat(PrintStream ps)
 	{
-		StringBuilder report = new StringBuilder();
-		
-		report.append("=======================================================================================\n");
-		report.append("IQ Log Report:\n");
-		report.append("File:     "+_currentFile).append("\n");
-		report.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
-		report.append("End:      "+_dateFormat.format(_endTime)).append("\n");
-		report.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
-		report.append("=======================================================================================\n");
-		report.append("\n");
+		ps.append("=======================================================================================\n");
+		ps.append("IQ Log Report:\n");
+		ps.append("File:     "+_currentFile).append("\n");
+		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
+		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
+		ps.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
+		ps.append("=======================================================================================\n");
+		ps.append("\n");
 		
 		for (String key : _connIdMap.keySet())
 		{
-			ConnLevel connLvl = _connIdMap.get(key);
+			ConnLevelInfo connLvl = _connIdMap.get(key);
+
+			// If the statistics map is empty, no need to print information.
+			if (connLvl._statsMap.isEmpty())
+				continue;
 
 			// Get Operations in to a list and sort them
 			List<Operation> opList = new ArrayList<Operation>();
@@ -382,30 +518,74 @@ public class IqLogParser
 			section.append(sumOp.toString()).append("\n");
 
 			// Finally add this section to the report
-			report.append(section);
+			ps.append(section);
 		}
 
-		report.append("\n");
-		report.append("=======================================================\n");
-		report.append("-- Cancel requests statistics:\n");
-		report.append("-------------------------------------------------------\n");
+		ps.append("\n");
+		ps.append("=======================================================\n");
+		ps.append("-- Cancel requests statistics:\n");
+		ps.append("-------------------------------------------------------\n");
 		for (String key : _userCancelReq.keySet())
 		{
-			report.append(String.format("%6d Cancel request for user %-20s was received.\n", _userCancelReq.get(key), key));
+			ps.append(String.format("%6d Cancel request for user %-20s was received.\n", _userCancelReq.get(key), key));
 		}
 
-		report.append("\n");
-		report.append("=======================================================================================\n");
-		report.append("--END-OF-REPORT--:\n");
-		report.append("=======================================================================================\n");
-		report.append("File:     "+_currentFile).append("\n");
-		report.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
-		report.append("End:      "+_dateFormat.format(_endTime)).append("\n");
-		report.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
-		report.append("=======================================================================================\n");
-		report.append("\n");
-		
-		return report.toString();
+		if (_cmdLineOpt._qplans)
+		{
+			ps.append("\n");
+			ps.append("=======================================================\n");
+			ps.append("-- Query Plan SUMMARY:\n");
+			ps.append("-------------------------------------------------------\n");
+			ps.append(" User                           ConnID     QueryPlanCount QueryPlansRowSum\n");
+			ps.append(" ------------------------------ ---------- -------------- ----------------\n");
+			for (String key : _connIdMap.keySet())
+			{
+				ConnLevelInfo connLvl = _connIdMap.get(key);
+
+				if (connLvl.getQueryPlanCount() == 0)
+					continue;
+
+				int qpRowSum = 0;
+				for (QueryPlan qplan : connLvl.getQueryPlanList())
+					qpRowSum += qplan.getQueryPlanRows();
+
+				String row = String.format(" %-30s %10s %14d %16d\n", connLvl.getUser(), connLvl._connId, connLvl.getQueryPlanCount(), qpRowSum);
+				ps.append(row);
+			}
+
+			ps.append("\n");
+			ps.append("=======================================================\n");
+			ps.append("-- Query Plan Output:\n");
+			ps.append("-------------------------------------------------------\n");
+			for (String key : _connIdMap.keySet())
+			{
+				ConnLevelInfo connLvl = _connIdMap.get(key);
+
+				if (connLvl.getQueryPlanCount() == 0)
+					continue;
+
+				ps.append("\n");
+				ps.append("#######################################################################################\n");
+				ps.append("User='").append(connLvl.getUser()).append("', ConnID='").append(connLvl._connId).append("', QueryPlanCount=").append(connLvl.getQueryPlanCount()+"").append(".\n");
+				ps.append("#######################################################################################\n");
+				for (QueryPlan qplan : connLvl.getQueryPlanList())
+				{
+					ps.append("\n");
+					ps.append(qplan.toString("    ")).append("\n");
+				}
+			}
+		}
+
+		ps.append("\n");
+		ps.append("=======================================================================================\n");
+		ps.append("--END-OF-REPORT--:\n");
+		ps.append("=======================================================================================\n");
+		ps.append("File:     "+_currentFile).append("\n");
+		ps.append("Start:    "+_dateFormat.format(_startTime)).append("\n");
+		ps.append("End:      "+_dateFormat.format(_endTime)).append("\n");
+		ps.append("Duration: "+msToTimeStr("%HH:%MM", _endTime.getTime() - _startTime.getTime()) + "    (HH:MM)").append("\n");
+		ps.append("=======================================================================================\n");
+		ps.append("\n");
 	}
 
 	/**
@@ -485,26 +665,51 @@ public class IqLogParser
 		INSERT, UPDATE, DELETE, SUMMARY
 	};
 
-	private static class ConnLevel
+	private static class ConnLevelInfo
 	{
 		private String _user                  = null;//"";
 		private String _connId                = "";
 
 		private Map<String, Operation> _statsMap = new LinkedHashMap<String, Operation>();
-//		private List<Operation> _opList       = new ArrayList<Operation>();
-		private Date            _startTime    = null;
-		private Date            _endTime      = null;
+//		private List<Operation> _opList          = new ArrayList<Operation>();
+		private List<QueryPlan> _queryPlanList   = new ArrayList<QueryPlan>();
+		private Date            _startTime       = null;
+		private Date            _endTime         = null;
 		
 //		private Operation       _rsLastCommit = null;
 //		private Operation       _summary      = null;
 		
 		private int             _cancelReqCnt = 0;
 
-		public ConnLevel(String connId, String user, Date ts)
+		public ConnLevelInfo(String connId, String user, Date ts)
 		{
 			_user      = user;
 			_connId    = connId;
 			_startTime = ts;
+		}
+
+		public QueryPlan getLastQueryPlan()
+		{
+			if (_queryPlanList.isEmpty())
+				return null;
+			
+			return _queryPlanList.get( _queryPlanList.size() - 1 );
+		}
+
+		public void addQueryPlan(QueryPlan qplan)
+		{
+			_queryPlanList.add(qplan);
+			_endTime = qplan.getDateTime();
+		}
+
+		public List<QueryPlan> getQueryPlanList()
+		{
+			return _queryPlanList;
+		}
+
+		public int getQueryPlanCount()
+		{
+			return _queryPlanList.size();
 		}
 
 		public String getUser()
@@ -515,7 +720,7 @@ public class IqLogParser
 		public void setUser(String user)
 		{
 			if ( _user != null && !_user.equals(user) && !_user.startsWith("--"))
-				System.out.println("ConnLevel: _connId='', is already assigned a user with name '"+_user+"', this will be overwritten with the new name '"+user+"'.");
+				System.out.println("ConnLevelInfo: _connId='', is already assigned a user with name '"+_user+"', this will be overwritten with the new name '"+user+"'.");
 			_user = user;
 		}
 
@@ -548,10 +753,69 @@ public class IqLogParser
 		}
 	}
 
+	private static class QueryPlan
+	{
+		private Date _datetime = null;
+		private String _sqlCmd = null;
+		private ArrayList<String> _planTextList = new ArrayList<String>();
+		
+		
+		public QueryPlan(String date, String time)
+		{
+	 		try { _datetime = _dateFormat.parse(date + " " + time); }
+			catch (ParseException ignore) {}
+		}
+
+		public Date getDateTime()
+		{
+			return _datetime;
+		}
+
+		public String getSqlCmd()
+		{
+			return _sqlCmd;
+		}
+		
+		public ArrayList<String> getQueryPlanList()
+		{
+			return _planTextList;
+		}
+		
+		public int getQueryPlanRows()
+		{
+			return _planTextList.size();
+		}
+		
+		@Override
+		public String toString()
+		{
+			return toString("");
+		}
+		
+		public String toString(String prefix)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			sb.append(prefix).append("==== Begin Query Plan ============================================================\n");
+			sb.append(prefix).append("Time: ").append(_datetime).append("\n");
+			sb.append(prefix).append("SQL: ").append(_sqlCmd != null ? _sqlCmd : "Not available").append("\n");
+			sb.append(prefix).append("----------------------------------------------------------------------------------\n");
+			for (String str : _planTextList)
+				sb.append(prefix).append(str).append("\n");
+			sb.append(prefix).append("---- End Query Plan --------------------------------------------------------------\n");
+			
+			return sb.toString();
+		}
+		
+		public void addLine(String s)
+		{
+			_planTextList.add(s);
+		}
+	}
 	private static class Operation
 	implements Comparable<Operation>
 	{
-		private ConnLevel     _connLvl     = null;
+		private ConnLevelInfo     _connLvl     = null;
 //		private String        _user        = "";
 		private String        _table       = "";
 		private OpType        _opType      = null;
@@ -585,7 +849,7 @@ public class IqLogParser
 			_rows        += op._rows;
 			_singleRow   += op._singleRow;
 		}
-		public Operation(ConnLevel connLevel, String tab, String opStr)
+		public Operation(ConnLevelInfo connLevel, String tab, String opStr)
 		{
 			_connLvl = connLevel;
 //			_user    = user;
@@ -663,8 +927,10 @@ public class IqLogParser
 
 	private static class CmdLineOptions
 	{
+		public String  _outfile = null;
 		public int     _topRows = Integer.MAX_VALUE; 
 		public boolean _onlyRs  = false; 
+		public boolean _qplans  = false;
 	}
 
 	public static void main(String[] args)
@@ -675,15 +941,29 @@ public class IqLogParser
 		if (args.length == 0)
 		{
 			System.out.println("");
-			System.out.println("Usage: [-t top#] iq_log_file [iq_log_file...]");
-			System.out.println("       -t #   Only show top rows");
-			System.out.println("       -r     Only collections with rs_lastcommit in them.");
+			System.out.println("Usage: [-o outfile] [-t top#] [-r] [-q] iq_log_file [iq_log_file...]");
+			System.out.println("       -o file  write to this output file, default stdout");
+			System.out.println("       -t #     Only show top rows");
+			System.out.println("       -r       Only collections with rs_lastcommit in them.");
+			System.out.println("       -q       Capture embedded query plans.");
 			System.out.println("");
 		}
 		
 		for (int i=0; i<args.length; i++)
 		{
-			if (args[i].startsWith("-t")) // -t 10 | -t10
+			if (args[i].startsWith("-o")) // -o filename | -tfilename
+			{
+				if (args[i].equals("-o"))
+				{
+					i++;
+					cmdLineOptions._outfile = args[i];
+				}
+				else
+				{
+					cmdLineOptions._outfile = args[i].substring(2);
+				}
+			}
+			else if (args[i].startsWith("-t")) // -t 10 | -t10
 			{
 				if (args[i].equals("-t"))
 				{
@@ -699,6 +979,10 @@ public class IqLogParser
 			{
 				cmdLineOptions._onlyRs = true;
 			}
+			else if (args[i].equals("-q"))
+			{
+				cmdLineOptions._qplans = true;
+			}
 			else
 			{
 				fileList.add(args[i]);
@@ -706,11 +990,27 @@ public class IqLogParser
 				
 		}
 
+		PrintStream out = System.out;
+		if (cmdLineOptions._outfile != null)
+		{
+			try
+			{
+				out = new PrintStream(cmdLineOptions._outfile);
+			}
+			catch (FileNotFoundException e)
+			{
+				System.err.println("Problems opening the output file '"+cmdLineOptions._outfile+"', Caught: "+e);
+				e.printStackTrace();
+				return;
+			}
+		}
+
 		for (String file : fileList)
 		{
 			IqLogParser p = new IqLogParser(cmdLineOptions);
 			p.parse(file);
-			System.out.println(p.printStat());
+			System.out.println("Report output is written to: " + (cmdLineOptions._outfile == null ? "stdout" : cmdLineOptions._outfile) );
+			p.printStat(out);
 		}
 	}
 }

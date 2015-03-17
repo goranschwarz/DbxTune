@@ -42,7 +42,7 @@ extends JXTable
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(ResultSetJXTable.class);
 
-	private final static Color NULL_VALUE_COLOR = new Color(240, 240, 240);
+	public final static Color NULL_VALUE_COLOR = new Color(240, 240, 240);
 
 	private Point _lastMouseClick = null;
 

@@ -16,7 +16,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmSpidCpuWaitPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -309,7 +309,7 @@ extends CountersModel
 
 		cols += 
 			"  A.SPID, A.KPID, "+UserName+"\n" +
-			"  sampleTimeInMs = convert(int,-1), \n" + // This value is replaced with a real value in class SamplingCnt
+			"  sampleTimeInMs = convert(int,-1), \n" + // This value is replaced with a real value in class CounterSample
 			"  A.CPUTime, A.WaitTime as SpidWaitTime, W.WaitTime as EventIdWaitTime, W.Waits, \n" +
 			"  WaitTimePerWait = CASE WHEN W.Waits > 0 THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) ELSE convert(numeric(15,3), 0.0) END, \n" +
 			"  W.WaitEventID, \n" +
@@ -532,7 +532,7 @@ extends CountersModel
 	 * doing it this way, means better performance, since the values are cached locally in memory
 	 */
 	@Override
-	public void localCalculation(SamplingCnt newSample)
+	public void localCalculation(CounterSample newSample)
 	{
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1;
@@ -604,7 +604,7 @@ extends CountersModel
 	 * Also do post lookups of dbcc sqltext, sp_showplan, dbcc stacktrace
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		//Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();

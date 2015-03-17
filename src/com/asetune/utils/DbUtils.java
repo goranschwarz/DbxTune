@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.tools.tailw.LogTailWindow.FileType;
 
 public class DbUtils
 {
@@ -377,6 +378,151 @@ public class DbUtils
 	}
 
 	/**
+	 * Get server error log for various vendors
+	 * @param dbProductName name of the product, if null: get the product name using JDBC DatabaseMetaData
+	 * @param conn
+	 * @return
+	 */
+	public static String getServerLogFileName(String dbProduct, Connection conn)
+	throws SQLException
+	{
+		String sql = "not-yet-specified";
+		
+		if (StringUtil.isNullOrBlank(dbProduct))
+			dbProduct = getDatabaseProductName(conn);
+
+		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_ASE))  // does MsSQL support @@errorlog??? //
+		{
+			sql = "select @@errorlog";
+		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_RS))
+		{
+			sql = "admin log_name";
+		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_ASA))
+		{
+			sql = "select property('ConsoleLogFile')";
+		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_HANA))
+		{
+			// into: /usr/sap/<SID>/HDB<system number>/<hostname>/trace
+			// NOTE: The below needs to be tested verified
+			//       Also the 'somelogname.log' needs to be determined
+			//       I wasn't able to find any M_xxx table with the LOG names, so I had to do the below...
+			sql = "select '/usr/sap/' \n"
+				+ "   || (select VALUE from M_SYSTEM_OVERVIEW where NAME = 'Instance ID') \n" 
+				+ "   || '/HDB' \n"
+				+ "   || (select VALUE from M_SYSTEM_OVERVIEW where NAME = 'Instance Number') \n" 
+				+ "   || '/' \n"
+				+ "   || (select HOST from M_SERVICES where SERVICE_NAME = 'indexserver' and COORDINATOR_TYPE = 'MASTER') \n" 
+				+ "   || '/trace/somelogname.log' \n"
+				+ "   AS logName \n"
+				+ "from DUMMY \n";
+		}
+		else
+		{
+			return "unsupported product name '"+dbProduct+"'.";
+		}
+
+		String retStr = "";
+
+		Statement stmt = conn.createStatement();
+		
+		ResultSet rs = stmt.executeQuery(sql);
+		while (rs.next())
+		{
+			retStr = rs.getString(1);
+		}
+		rs.close();
+		stmt.close();
+
+		return retStr;
+	}
+
+	/**
+	 * Get product name for the connection, this is also works for ReplicationServer, which normally throws an Exception
+	 * @param conn if this is null, a "" is returned.
+	 * @return
+	 */
+	public static String getDatabaseProductName(Connection conn)
+	throws SQLException
+	{
+		if (conn == null)
+			return "";
+
+		// yes this was already implemented, so lets reuse it...
+		return ConnectionDialog.getDatabaseProductName(conn);
+	}
+
+	/**
+	 * Check if the connection is in a transaction
+	 * 
+	 * Oracle uses: dbms_transaction.local_transaction_id
+	 * Others:      always return false
+	 * 
+	 * @param conn
+	 * @param dbProduct if null or blank, we will call getDatabaseProductName(conn) to get the name
+	 * @return
+	 * @throws SQLException
+	 */
+	public static boolean isInTransaction(Connection conn, String dbProduct)
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(dbProduct))
+			dbProduct = getDatabaseProductName(conn);
+
+		if      (isProductName(dbProduct, DB_PROD_NAME_ORACLE)) return isInTransactionOracle(conn);
+		else if (isProductName(dbProduct, DB_PROD_NAME_DB2_UX)) return isInTransactionDb2(conn);
+
+		return false;
+	}
+
+	private static boolean isInTransactionOracle(Connection conn)
+	throws SQLException
+	{
+		String sql = 
+			  "select "
+			+ "CASE "
+			+ "  WHEN dbms_transaction.local_transaction_id IS NULL THEN 0 "
+			+ "  ELSE 1 "
+			+ "END FROM DUAL";
+
+		boolean retVal = false;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+		while (rs.next())
+		{
+			retVal = rs.getInt(1) == 1;
+		}
+		rs.close();
+		stmt.close();
+
+		return retVal;
+	}
+	private static boolean isInTransactionDb2(Connection conn)
+	throws SQLException
+	{
+		// Hopefully this works, but NOT certain
+		String sql = 
+			  "select UOW_LOG_SPACE_USED "
+			+ "FROM TABLE(MON_GET_UNIT_OF_WORK((select agent_id from sysibmadm.applications where appl_id = application_id()), -1))";
+
+		boolean retVal = false;
+		
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+		while (rs.next())
+		{
+			retVal = rs.getInt(1) > 0;
+		}
+		rs.close();
+		stmt.close();
+
+		return retVal;
+	}
+
+	/**
 	 * Execute a SQL Statement, if any ResultSets are produced, they will be returned as a List
 	 * 
 	 * @param conn a valid connection
@@ -505,6 +651,40 @@ public class DbUtils
 		}
 		return rowNumber;
 	}
+	
+	
+	
+	
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// BEGIN IQ helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	public static String getIqServerLogFileName(Connection conn)
+	throws SQLException
+	{
+		String cmd = "select property('ConsoleLogFile')";
+		String retStr = "";
+
+		Statement stmt = conn.createStatement();
+		
+		ResultSet rs = stmt.executeQuery(cmd);
+		while (rs.next())
+		{
+			retStr = rs.getString(1);
+		}
+		rs.close();
+		stmt.close();
+
+		return retStr;
+	}
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// BEGIN IQ helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+
+	
 	
 	//------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------
@@ -1129,16 +1309,17 @@ public class DbUtils
 	/**
 	 * Get various state about a ASE Connection
 	 */
-	public static JdbcConnectionStateInfo getJdbcConnectionStateInfo(Connection conn)
+	public static JdbcConnectionStateInfo getJdbcConnectionStateInfo(Connection conn, String dbProduct)
 	{
 		JdbcConnectionStateInfo csi = new JdbcConnectionStateInfo();
-
+		
 		// Do the work
 		try
 		{
 			csi._catalog        = conn.getCatalog();
 			csi._autocommit     = conn.getAutoCommit();
 			csi._isolationLevel = conn.getTransactionIsolation();
+			csi._inTransaction  = DbUtils.isInTransaction(conn, dbProduct);
 		}
 		catch (SQLException sqle)
 		{
@@ -1156,6 +1337,7 @@ public class DbUtils
 		public String  _catalog        = "";
 		public boolean _autocommit     = true;
 		public int     _isolationLevel = -1;
+		public boolean _inTransaction  = false;
 
 		protected String isolationLevelToString(int isolation)
 		{
@@ -1226,4 +1408,5 @@ public class DbUtils
 		System.out.println("2: " + parseHanaMessageForProcName("SAP DBTech JDBC: [19999]: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_PROC_INSTALL_FINAL\": line 58 col 3 (at pos 1705): [19999] (range 3) user-defined error exception: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_ABORT_SESSION\": line 56 col 3 (at pos 1929): [19999] (range 3) user-defined error exception: *** Error while installing PROCEDURE SYSTEM.GS_P1  Object was not found."));
 		System.out.println("3: " + parseHanaMessageForProcName("[304]: division by zero undefined:  [304] \"SYSTEM\".\"GS_P1\": line 5 col 2 (at pos 54): [304] (range 3) division by zero undefined exception: division by zero undefined:  at function /()"));
 	}
+
 }

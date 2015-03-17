@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Properties;
 
 import com.asetune.AseTune;
+import com.asetune.CounterController;
 import com.asetune.utils.ConnectionProvider;
 
 /**
@@ -66,8 +67,10 @@ implements XmenuAction
 	public boolean createConnectionOnStart()
 	{
 		// FIXME: this isn't very generic
-		if (AseTune.hasCounterCollector())
-			return AseTune.getCounterCollector().isMonConnected();
+//		if (AseTune.hasCounterCollector())
+//			return AseTune.getCounterCollector().isMonConnected();
+		if (CounterController.hasInstance())
+			return CounterController.getInstance().isMonConnected();
 		return false;
 	}
 

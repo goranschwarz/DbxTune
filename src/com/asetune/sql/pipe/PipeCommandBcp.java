@@ -336,7 +336,15 @@ extends PipeCommandAbstract
     				props.setProperty("ENABLE_BULK_LOAD", "true");
     			}
 
-    			String hostPortStr = AseConnectionFactory.getIHostPortStr(_bcpParams._server);
+    			String hostPortStr = null;
+    			if ( _bcpParams._server.contains(":") )
+    				hostPortStr = _bcpParams._server;
+    			else
+    				hostPortStr = AseConnectionFactory.getIHostPortStr(_bcpParams._server);
+    			
+    			if (StringUtil.isNullOrBlank(hostPortStr))
+    				throw new Exception("Can't find server name information about '"+_bcpParams._server+"', hostPortStr=null. Please try with -S hostname:port");
+
     			_conn = AseConnectionFactory.getConnection(hostPortStr, _bcpParams._db, _bcpParams._user, _bcpParams._passwd, "sqlw-bcp", null, props, (ConnectionProgressCallback)null);
 
     			if ( ! StringUtil.isNullOrBlank(_bcpParams._db) )

@@ -32,7 +32,6 @@ import javax.swing.event.EventListenerList;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.BackwardNameCompatibility;
 import com.asetune.gui.MainFrame;
@@ -1247,7 +1246,8 @@ implements Runnable, ConnectionProvider
 	
 	private int loadSessionGraph(String cmName, String graphName, Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
 	{
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
 			_logger.warn("Can't find any CM named '"+cmName+"'.");
@@ -1502,7 +1502,8 @@ implements Runnable, ConnectionProvider
 			throw new IllegalArgumentException("OfflineCm or sampleTs cant be null");
 
 		String cmName = ocm.name;
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
 			_logger.warn("Can't find any CM named '"+cmName+"'.");
@@ -1644,7 +1645,8 @@ implements Runnable, ConnectionProvider
 
 //		String cmName = SummaryPanel.CM_NAME;
 		String cmName = CounterController.getSummaryCmName();
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
 			_logger.warn("Can't find any CM named '"+cmName+"'.");
@@ -1875,7 +1877,8 @@ implements Runnable, ConnectionProvider
 		if (sampleTs == null) throw new IllegalArgumentException("sampleTs can't be null");
 
 		String cmName = cmInd._cmName;
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm == null)
 		{
 			_logger.warn("Can't find any CM named '"+cmName+"'.");

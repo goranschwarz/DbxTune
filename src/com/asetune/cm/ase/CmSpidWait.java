@@ -23,7 +23,7 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmSpidWaitPanel;
 import com.asetune.cm.ase.helper.WaitCounterSummary;
 import com.asetune.cm.ase.helper.WaitCounterSummary.WaitCounterEntry;
@@ -286,7 +286,7 @@ extends CountersModel
 	 * doing it this way, means better performance, since the values are cached locally in memory
 	 */
 	@Override
-	public void localCalculation(SamplingCnt newSample)
+	public void localCalculation(CounterSample newSample)
 	{
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1;
@@ -354,7 +354,7 @@ extends CountersModel
 	 * Compute the WaitTimePerWait for diff values
 	 */
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int WaitTime,        Waits;
 		int WaitTimeId = -1, WaitsId = -1;

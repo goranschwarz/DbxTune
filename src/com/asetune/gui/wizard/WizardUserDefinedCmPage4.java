@@ -34,10 +34,11 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
 
@@ -129,7 +130,7 @@ implements ActionListener, TableModelListener
 
 					// Datatype is NOT number, do NOT allow edit
 					String datatype = (String) getValueAt(row, TAB_POS_DATA_TYPE);
-					return SamplingCnt.isDiffAllowedForDatatype(datatype);
+					return CounterSample.isDiffAllowedForDatatype(datatype);
 				}
 				
 				return false;
@@ -198,7 +199,7 @@ implements ActionListener, TableModelListener
 		
 		DefaultTableModel tm = (DefaultTableModel)_table.getModel();
 
-		SamplingCnt sc = (SamplingCnt) getWizardData("SamplingCnt");
+		CounterSample sc = (CounterSample) getWizardData("CounterSample");
 		if (sc != null)
 		{
 			List<String> names = sc.getColNames();
@@ -272,7 +273,8 @@ implements ActionListener, TableModelListener
 		String cmName = (String) getWizardData("cmTemplate");
 		if (cmName == null)
 			return;
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			TableModel tm = _table.getModel();

@@ -7,14 +7,14 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.GetCounters;
+import com.asetune.CounterControllerAse;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmIoQueueSumPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -38,7 +38,7 @@ extends CountersModel
 		"For ASE 15.0.2 or so, we will have 'System' segment covered as well.<br>" +
 		"Do not trust the service time <b>too</b> much...<br>" +
 		"<br>" +
-		GetCounters.TRANLOG_DISK_IO_TOOLTIP +
+		CounterControllerAse.TRANLOG_DISK_IO_TOOLTIP +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
@@ -203,16 +203,16 @@ extends CountersModel
 			tgdp.setDate(this.getTimestamp());
 			tgdp.setData(arr);
 		}
-//		SamplingCnt sAbs  = (SamplingCnt)getCounterDataAbs();
-//		SamplingCnt sDiff = (SamplingCnt)getCounterDataDiff();
-//		SamplingCnt sRate = (SamplingCnt)getCounterDataRate();
+//		CounterSample sAbs  = (CounterSample)getCounterDataAbs();
+//		CounterSample sDiff = (CounterSample)getCounterDataDiff();
+//		CounterSample sRate = (CounterSample)getCounterDataRate();
 //		
 //		System.out.println(sAbs .debugToString());
 //		System.out.println(sDiff.debugToString());
 //		System.out.println(sRate.debugToString());
 	}
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		double AvgServ_ms;
 		long   IOs,        IOTime;

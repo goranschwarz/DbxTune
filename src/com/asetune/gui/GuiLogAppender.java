@@ -13,7 +13,7 @@ import org.apache.log4j.lf5.LogLevelFormatException;
 import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
 
-import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdates2;
 
 
 public class GuiLogAppender
@@ -97,7 +97,8 @@ public class GuiLogAppender
 		// Yes this can be done better
 		// for example with a listener, but I was in a hurry...
 		if (record.isSevereLevel() || record.isWarningLevel())
-			CheckForUpdates.sendLogInfoNoBlock(record);
+//			CheckForUpdates.sendLogInfoNoBlock(record);
+			CheckForUpdates2.getInstance().sendLogInfoNoBlock(record);
 	}
 
 	@Override

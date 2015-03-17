@@ -13,7 +13,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmCachedProcsPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -261,7 +261,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void localCalculation(SamplingCnt prevSample, SamplingCnt newSample, SamplingCnt diffData)
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		long SumExecutionCount,          SumRequestCnt;
 		int  SumExecutionCount_pos = -1, SumRequestCnt_pos = -1;
@@ -319,7 +319,7 @@ extends CountersModel
 			}
 		}
 	}
-	private void doAvgCalculation(SamplingCnt data, long divByValue, long val, int rowId, int setColPos)
+	private void doAvgCalculation(CounterSample data, long divByValue, long val, int rowId, int setColPos)
 	{
 		if (divByValue > 0)
 		{

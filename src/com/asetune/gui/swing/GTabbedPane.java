@@ -1338,6 +1338,10 @@ public class GTabbedPane
 		}
 	}
 
+//	public void setEnabledAtModel(int model, boolean enable)
+//	{
+//	}
+
 	private void fixTabExtendedEntry()
 	{
 		List<String> visibleTabs = getTabOrder();
@@ -2389,8 +2393,44 @@ public class GTabbedPane
 	}
 
 	
+	/**
+	 * Set enabled at first matching title (in this or any sub TabbedPan) to component.
+	 */
+	/** 
+	 * Sets the component at first matching title (in this or any sub TabbedPan) to component. 
+	 */
+	public void setEnabledAtTitle(String title, boolean enabled)
+	{
+		setEnabledAtTitle(this, title, enabled);
+	}
+	private static boolean setEnabledAtTitle(JTabbedPane tp, String title, boolean enabled)
+	{
+		for (int t=0; t<tp.getTabCount(); t++)
+		{
+			String    titleName = tp.getTitleAt(t);
+			Component comp      = tp.getComponentAt(t);
+
+			if (title.equals(titleName))
+			{
+				tp.setEnabledAt(t, enabled);
+				return true;
+			}
+
+			if (comp instanceof JTabbedPane)
+			{
+				if (setEnabledAtTitle((JTabbedPane)comp, title, enabled))
+					return true;
+			}
+		}
+		return false;
+	}
 	
-	
+	public int getSelectedIndexModel()
+	{
+		String name = getSelectedTitle(false);
+		return getModelExtendedEntryIndex(name);
+	}
+
 	/*---------------------------------------------------
 	** BEGIN: implementing: MouseListener
 	**---------------------------------------------------

@@ -28,6 +28,7 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
 
+import com.asetune.CounterController;
 import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -167,7 +168,8 @@ implements ActionListener, TableModelListener
 					//System.out.println("isCellEditable: row="+row+", col="+col+", storePcs="+storePcs+", tabName='"+tabName+"'.");
 
 					// Get CountersModel and check if that model supports editing for Abs, Diff & Rate
-					CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+//					CountersModel cm  = GetCounters.getInstance().getCmByDisplayName(tabName);
+					CountersModel cm  = CounterController.getInstance().getCmByDisplayName(tabName);
 					if (cm != null)
 					{
 						if (col == TAB_POS_STORE_ABS)  return storePcs && cm.isPersistCountersAbsEditable();
@@ -237,7 +239,7 @@ implements ActionListener, TableModelListener
 		boolean debug = false;
 		if (!debug)
 		{
-			for (CountersModel cm : GetCounters.getCmList())
+			for (CountersModel cm : CounterController.getInstance().getCmList())
 			{
 				if (cm != null)
 				{
@@ -370,7 +372,8 @@ implements ActionListener, TableModelListener
 			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_diff, storeDiff +"");
 			putWizardData( cmName+"."+CountersModel.PROPKEY_persistCounters_rate, storeRate +"");
 
-			CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//			CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 			if (cm != null)
 			{
 				if (cm instanceof CounterModelHostMonitor && storePcs)
@@ -439,7 +442,8 @@ implements ActionListener, TableModelListener
 		for (int r=0; r<tm.getRowCount(); r++)
 		{
 			String        cmName = (String)  tm.getValueAt(r, TAB_POS_CM_NAME);
-			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
+//			CountersModel cm     = GetCounters.getInstance().getCmByName(cmName);
+			CountersModel cm     = CounterController.getInstance().getCmByName(cmName);
 			if (cm == null)
 				continue;
 

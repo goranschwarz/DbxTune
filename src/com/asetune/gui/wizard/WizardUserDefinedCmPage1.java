@@ -115,14 +115,16 @@ implements ActionListener
 	{
 		// Check if we already have a CM with that name
 		String cmName = _name_txt.getText().trim();
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			return "There is alraedy a CM named '"+cmName+"'.";
 		}
 
 		String cmDesc = _shortDesc_txt.getText().trim();
-		cm = GetCounters.getInstance().getCmByDisplayName(cmDesc);
+//		cm = GetCounters.getInstance().getCmByDisplayName(cmDesc);
+		cm = CounterController.getInstance().getCmByDisplayName(cmDesc);
 		if (cm != null)
 		{
 			return "The Short Description '"+cmDesc+"' is already used.";
@@ -174,7 +176,8 @@ implements ActionListener
 			if (cmName != null)
 			{
 				putWizardData("cmTemplate", cmName);
-				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//				CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 				if (cm != null)
 				{
 					_name_txt     .setText(cm.getName()        + "Copy");
@@ -394,7 +397,7 @@ implements ActionListener
 			Vector<Vector<Object>> tab = new Vector<Vector<Object>>();
 			Vector<Object>         row = new Vector<Object>();
 
-			for (CountersModel cm : GetCounters.getCmList())
+			for (CountersModel cm : CounterController.getInstance().getCmList())
 			{
 				if (cm != null)
 				{

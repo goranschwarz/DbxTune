@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
@@ -42,6 +43,7 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.Version;
 import com.asetune.gui.AboutBox;
+import com.asetune.gui.MainFrame;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
@@ -67,7 +69,8 @@ public class CheckDialog
 	private JCheckBox  _doNotShowHtmlResponse_chk       = new JCheckBox("Do not show this message again.");
 	private JCheckBox  _launchBrowserOnHtmlResponse_chk = new JCheckBox("Launch Operating System Default HTML Browser with the response content");
 
-	private CheckForUpdates _cfu = null;
+//	private CheckForUpdates _cfu = null;
+	private CheckForUpdates2 _cfu = null;
 
 
 
@@ -75,17 +78,50 @@ public class CheckDialog
 	** BEGIN: constructors & Factories
 	**---------------------------------------------------
 	*/
-	private CheckDialog(Frame owner, CheckForUpdates cfu)
+//	private CheckDialog(Frame owner, CheckForUpdates cfu)
+//	{
+//		super(owner, "", true);
+//		init(owner, cfu);
+//	}
+//	private CheckDialog(Dialog owner, CheckForUpdates cfu)
+//	{
+//		super(owner, "", true);
+//		init(owner, cfu);
+//	}
+//	private void init(Window owner, CheckForUpdates cfu)
+//	{
+//		_cfu = cfu;
+//		
+//		initComponents();
+//
+//		// Set initial size
+////		int width  = (3 * Toolkit.getDefaultToolkit().getScreenSize().width)  / 4;
+////		int height = (3 * Toolkit.getDefaultToolkit().getScreenSize().height) / 4;
+////		setSize(width, height);
+//		pack();
+//
+////		Dimension size = getPreferredSize();
+////		size.width = 500;
+////
+////		setPreferredSize(size);
+//////		setMinimumSize(size);
+////		setSize(size);
+//
+//		setLocationRelativeTo(owner);
+//		setFocus();
+//	}
+
+	private CheckDialog(Frame owner, CheckForUpdates2 cfu)
 	{
 		super(owner, "", true);
 		init(owner, cfu);
 	}
-	private CheckDialog(Dialog owner, CheckForUpdates cfu)
+	private CheckDialog(Dialog owner, CheckForUpdates2 cfu)
 	{
 		super(owner, "", true);
 		init(owner, cfu);
 	}
-	private void init(Window owner, CheckForUpdates cfu)
+	private void init(Window owner, CheckForUpdates2 cfu)
 	{
 		_cfu = cfu;
 		
@@ -107,7 +143,6 @@ public class CheckDialog
 		setLocationRelativeTo(owner);
 		setFocus();
 	}
-
 	//---------------------
 	// FACTORIES
 //	public static void showDialog(Frame owner, CheckForUpdates cfu)
@@ -122,7 +157,82 @@ public class CheckDialog
 //		dialog.setVisible(true);
 //		dialog.dispose();
 //	}
-	public static void showDialog(Component owner, CheckForUpdates cfu)
+//	public static void showDialog(Component owner, CheckForUpdates cfu)
+//	{
+//		//		Configuration conf = Configuration.getInstance(Configuration.TEMP);
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//		boolean doNotShowOnFailure = conf.getBooleanProperty("CheckDialog.doNotShowOnFailure", false);
+//		long lastShowDate = conf.getLongProperty("CheckDialog.lastShowTime", System.currentTimeMillis());
+//
+//		long msSinceLastShow = System.currentTimeMillis() - lastShowDate;
+//		// Build a timeLimit        ms *  sec *  min *  hour * days
+//		long showTimeLimit   =   1000L *  60L *  60L *   24L *  30L; // show me in 30 days again
+//
+//		if (_logger.isDebugEnabled())
+//		{
+//			String lastShowDateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(lastShowDate));
+//			_logger.debug("Last show date for CheckForUpdate Dialog was '"+lastShowDateStr+"', Saved 'CheckDialog.doNotShowOnFailure' was '"+doNotShowOnFailure+"', msSinceLastShow="+msSinceLastShow+"("+TimeUtils.msToTimeStr(msSinceLastShow)+"), showTimeLimit="+showTimeLimit+"("+TimeUtils.msToTimeStr(showTimeLimit)+").");
+//		}
+//
+//		if (msSinceLastShow > showTimeLimit)
+//			doNotShowOnFailure = false;
+//
+//		if (cfu != null && !cfu._checkSucceed && doNotShowOnFailure)
+//			return;
+//
+//
+//		// FEEDBACK
+//		boolean doNotShowFeedback = conf.getBooleanProperty("CheckDialog.doNotShowFeedback", false);
+//		long lastFeedbackDate = conf.getLongProperty("CheckDialog.lastFeebackDate", 0);
+//
+//		if (cfu != null && cfu.hasFeedback() && doNotShowFeedback)
+//		{
+//			_logger.debug("This feedback date was '"+cfu.getFeedbackTime()+"', Saved 'CheckDialog.lastFeebackDate' was '"+lastFeedbackDate+"', doNotShowFeedback="+doNotShowFeedback+".");
+//			// Do not show if: savedFeedbackDate  
+//			if ( cfu.getFeedbackTime() > lastFeedbackDate)
+//			{
+//				_logger.debug("SHOW Feedback.");
+//			}
+//			else
+//			{
+//				_logger.debug("--- DO NOT SHOW Feedback.");
+//				return;
+//			}
+//		}
+//		
+//		boolean doNotShowHtmlResponse = conf.getBooleanProperty("CheckDialog.doNotShowHtmlResponse", false);
+//
+//		if (cfu != null && cfu.isResponseOfHtml() && doNotShowHtmlResponse)
+//		{
+//			_logger.debug("CheckDialog.doNotShowHtmlResponse="+doNotShowHtmlResponse+", so NOT showing the window, simply returning.");
+//			return;
+//		}
+//		
+//		boolean launchBrowserOnHtmlResponse = conf.getBooleanProperty("CheckDialog.launchBrowserOnHtmlResponse", true);
+//
+//		
+//		CheckDialog dialog = null;
+//
+//		if      (owner instanceof Frame)  dialog = new CheckDialog((Frame) owner, cfu);
+//		else if (owner instanceof Dialog) dialog = new CheckDialog((Dialog)owner, cfu);
+//		else                              dialog = new CheckDialog((Dialog)null, cfu);
+//
+//		dialog._doNotShow_chk.setToolTipText("Even if you check this option, a new question like this will popup after 30 days.");
+//		dialog._doNotShow_chk.setSelected(doNotShowOnFailure);
+//
+//		dialog._doNotShowFeedback_chk.setToolTipText("<html>Do not show <b>this</b> feedback question again.<br>Future feedbacks questions will still show up!</html>");
+//		dialog._doNotShowFeedback_chk.setSelected(doNotShowFeedback);
+//
+//		dialog._doNotShowHtmlResponse_chk.setToolTipText("<html>Do not show <b>this</b> HTML Response message again.<br>Note: This option will be reset next time a successful 'Check For Update' has been made.</html>");
+//		dialog._doNotShowHtmlResponse_chk.setSelected(doNotShowHtmlResponse);
+//
+//		dialog._launchBrowserOnHtmlResponse_chk.setToolTipText("<html>Launch the Operating System default HTML Browser to view the HTML content.</html>");
+//		dialog._launchBrowserOnHtmlResponse_chk.setSelected(launchBrowserOnHtmlResponse);
+//
+//		dialog.setVisible(true);
+//		dialog.dispose();
+//	}
+	public static void showDialog(Component owner, CheckForUpdates2 cfu)
 	{
 		//		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -395,9 +505,21 @@ public class CheckDialog
 
 		JLabel icon        = new JLabel(SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif"));
 
-		JLabel appName     = new JLabel(); 
-		appName.setText(Version.getAppName());
-		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
+//		String appName = Version.getAppName();
+//		if      (AseTune    .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif"));
+//		else if (QueryWindow.APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png"));
+//		else if (IqTune     .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/iqtune_icon_32.png"));
+//		else if (RsTune     .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/rstune_icon_32.png"));
+//		else if (HanaTune   .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/hanatune_icon_32.png"));
+//		else if (MsSqlTune  .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/mssqltune_icon_32.png"));
+		
+		ImageIcon appIcon = MainFrame.getInstance().getApplicationIcon32();
+		if (appIcon != null)
+			icon = new JLabel(appIcon);
+
+		JLabel appName_lbl = new JLabel(); 
+		appName_lbl.setText(Version.getAppName());
+		appName_lbl.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
 
 		String msg = "";
 		boolean showWhatsNew     = false;
@@ -444,13 +566,15 @@ public class CheckDialog
 			      "<ul>" +
 			         "<li>You do <b>not</b> have Internet access from this machine.</li>" +
 			         "<li>You sit behind a Proxy server.</li>" +
-			         "<li>Or simply because <A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A> is down for the moment.</li>" +
+//			         "<li>Or simply because <A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A> is down for the moment.</li>" +
+			         "<li>Or simply because <A HREF=\""+CheckForUpdates2.getInstance().getHomeUrl()+"\">"+CheckForUpdates2.getInstance().getHomeUrl()+"</A> is down for the moment.</li>" +
 			      "</ul>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you do not have Internet access from this machine,<br>" +
 			      "please do manual checks for new releases at:<br>" +
-			      "<A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A><br>" +
+//			      "<A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A><br>" +
+			      "<A HREF=\""+CheckForUpdates2.getInstance().getHomeUrl()+"\">"+CheckForUpdates2.getInstance().getHomeUrl()+"</A><br>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you normally have Internet access from this machine<br>" +
@@ -495,10 +619,10 @@ public class CheckDialog
 		feedback.addHyperlinkListener(this);
 
 		
-		panel.add(icon,       "span, center, wrap");
-		panel.add(appName,    "span, center, wrap 20");
+		panel.add(icon,        "span, center, wrap");
+		panel.add(appName_lbl, "span, center, wrap 20");
 
-		panel.add(feedback,   "span, pushx, grow, wrap 20");
+		panel.add(feedback,    "span, pushx, grow, wrap 20");
 
 		if ( showWhatsNew )
 		{
@@ -603,43 +727,43 @@ public class CheckDialog
 	**---------------------------------------------------
 	*/
 	
-	public static void main(String[] args)
-	{
-		Properties log4jProps = new Properties();
-		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
-//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
-		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
-		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
-		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
-		PropertyConfigurator.configure(log4jProps);
-
-		try
-		{
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
-
-		CheckForUpdates check = new CheckForUpdates();
-
-		JFrame frame = new JFrame();
-
-		check._newAppVersion = "1.0.0";
-		check._downloadUrl   = "http://www.asetune.com/download.html";
-		check._checkSucceed  = true;
-		check._hasUpgrade    = true;
-		CheckDialog.showDialog(frame, check);
-
-		check._checkSucceed = true;
-		check._hasUpgrade   = false;
-		CheckDialog.showDialog(frame, check);
-
-		check._checkSucceed = false;
-		check._hasUpgrade   = false;
-		CheckDialog.showDialog(frame, check);
-
-	}
+//	public static void main(String[] args)
+//	{
+//		Properties log4jProps = new Properties();
+//		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+////		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+//		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+//		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+//		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+//		PropertyConfigurator.configure(log4jProps);
+//
+//		try
+//		{
+//			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+//		}
+//		catch (Exception e)
+//		{
+//			e.printStackTrace();
+//		}
+//
+//		CheckForUpdates check = new CheckForUpdates();
+//
+//		JFrame frame = new JFrame();
+//
+//		check._newAppVersion = "1.0.0";
+//		check._downloadUrl   = "http://www.asetune.com/download.html";
+//		check._checkSucceed  = true;
+//		check._hasUpgrade    = true;
+//		CheckDialog.showDialog(frame, check);
+//
+//		check._checkSucceed = true;
+//		check._hasUpgrade   = false;
+//		CheckDialog.showDialog(frame, check);
+//
+//		check._checkSucceed = false;
+//		check._hasUpgrade   = false;
+//		CheckDialog.showDialog(frame, check);
+//
+//	}
 }
 

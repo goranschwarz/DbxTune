@@ -131,7 +131,8 @@
 
 	$clientSourceDate        = getUrlParam('clientSourceDate');
 	$clientSourceVersion     = getUrlParam('clientSourceVersion');
-	$clientAppVersionStr     = getUrlParam2('clientAseTuneVersion', 'clientAsemonVersion');
+	$clientAppName           = getUrlParam('clientAppName');
+	$clientAppVersionStr     = getUrlParam2('clientAseTuneVersion', 'clientAppVersion');
 	$appStartupTime          = getUrlParam('appStartupTime');
 	$clientExpireDate        = getUrlParam('clientExpireDate');
 
@@ -162,6 +163,12 @@
 
 	$caller_ip               = get_ip_address();
 
+
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 	//------------------------------------------
 	// If user is 'gorans', get out of here otherwise I will flod the log with personal entries
@@ -198,6 +205,7 @@
 
 		clientSourceDate,
 		clientSourceVersion,
+		clientAppName,
 		clientAsemonVersion,
 		appStartupTime,
 		clientExpireDate,
@@ -237,6 +245,7 @@
 
 		'$clientSourceDate',
 		$clientSourceVersion,
+		'$clientAppName',
 		'$clientAppVersionStr',
 		'$appStartupTime',
 		'$clientExpireDate',

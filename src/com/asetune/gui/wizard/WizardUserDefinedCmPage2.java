@@ -29,10 +29,10 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
-import com.asetune.GetCounters;
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.SamplingCnt;
+import com.asetune.cm.CounterSample;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
@@ -52,10 +52,10 @@ implements ActionListener, FocusListener, CaretListener
 //	private static Logger _logger          = Logger.getLogger(WizardUserDefinedCmPage2.class);
 
 	private static final String WIZ_NAME = "SQL-Statements";
-	private static final String WIZ_DESC = "SQL Statement(s)";
-	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init. (for example: create some work tables, set ASE options, etc...)";
-	private static final String WIZ_HELP2 = "SQL Statements that will be executed on refresh. (should produce a resultset)";
-	private static final String WIZ_HELP3 = "SQL Statements that will be executed on close. (for example: drop tables created in init)";
+	private static final String WIZ_DESC = "SQL Statement(s)";// 
+	private static final String WIZ_HELP1 = "SQL Statements that will be executed on init. (for example: create some work tables, set ASE options, etc...)\nThis is only executed once, before firt sample.";
+	private static final String WIZ_HELP2 = "SQL Statements that will be executed on every sample. (should produce a resultset)";
+	private static final String WIZ_HELP3 = "SQL Statements that will be executed on close. (for example: drop tables created in init)\nThis is only executed once, when the connetion is closed.";
 
 	private static final String NEED_VERSION_DEFAULT = "Works on all ASE versions";
 	private static final String NEED_VERSION_TOOLTIP = "<html>" + 
@@ -234,7 +234,8 @@ implements ActionListener, FocusListener, CaretListener
 		String cmName = (String) getWizardData("cmTemplate");
 		if (cmName == null)
 			return;
-		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+//		CountersModel cm = GetCounters.getInstance().getCmByName(cmName);
+		CountersModel cm = CounterController.getInstance().getCmByName(cmName);
 		if (cm != null)
 		{
 			_sqlInit_txt    .setText( cm.getSqlInit() );
@@ -381,13 +382,14 @@ implements ActionListener, FocusListener, CaretListener
 	@Override
 	public WizardPanelNavResult allowNext(String stepName, Map settings, Wizard wizard)
 	{
-		putWizardData("SamplingCnt", null);
+		putWizardData("CounterSample", null);
 		try 
 		{
 			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
 			CountersModel cm = new CountersModel();
-			SamplingCnt sample = new SamplingCnt("asetune-wiz-udc-test", true, null, null);
-			sample.getCnt(cm, conn, _sql_txt.getText(), null);
+//			CounterSample sample = new CounterSample("asetune-wiz-udc-test", true, null, null);
+			CounterSample sample = cm.createCounterSample("asetune-wiz-udc-test", true, null, null);
+			sample.getSample(cm, conn, _sql_txt.getText(), null);
 
 			if (sample.getColumnCount() <= 0)
 			{
@@ -399,7 +401,7 @@ implements ActionListener, FocusListener, CaretListener
 
 					return WizardPanelNavResult.REMAIN_ON_PAGE;	
 			}
-			putWizardData("SamplingCnt", sample);
+			putWizardData("CounterSample", sample);
 		}
 		catch (Exception ex) 
 		{

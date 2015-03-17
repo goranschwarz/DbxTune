@@ -252,7 +252,7 @@ extends AbstractTableModel
 	/** check if the AseConfig is initialized or not */
 	public boolean isInitialized()
 	{
-		return (_aseConfigMap != null ? true : false);
+		return _aseConfigMap != null;
 	}
 
 	/**

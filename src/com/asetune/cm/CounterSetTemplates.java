@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.asetune.CounterController;
+import com.asetune.CounterControllerNoOp;
+import com.asetune.GetCountersNoGui;
 import com.asetune.GetCountersNoOp;
 import com.asetune.utils.PropPropEntry;
 
@@ -254,7 +256,10 @@ public class CounterSetTemplates
 
 	public static void main(String[] args)
 	{
-		GetCountersNoOp counters = new GetCountersNoOp();
+//		GetCountersNoOp counters = new GetCountersNoOp();
+//		CounterController.setInstance(counters);
+//		counters.init();
+		CounterControllerNoOp counters = new CounterControllerNoOp(true);
 		CounterController.setInstance(counters);
 		counters.init();
 

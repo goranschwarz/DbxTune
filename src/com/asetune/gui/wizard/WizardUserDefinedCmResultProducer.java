@@ -12,6 +12,7 @@ import org.netbeans.spi.wizard.Summary;
 import org.netbeans.spi.wizard.WizardException;
 import org.netbeans.spi.wizard.WizardPage.WizardResultProducer;
 
+import com.asetune.CounterControllerAbstract;
 import com.asetune.GetCounters;
 import com.asetune.gui.MainFrame;
 import com.asetune.utils.Configuration;
@@ -108,7 +109,7 @@ implements WizardResultProducer
 			try
 			{
 				Configuration tmpConf = createConf(wizardData);
-				int failCount = GetCounters.createUserDefinedCounterModels(tmpConf);
+				int failCount = CounterControllerAbstract.createUserDefinedCounterModels(tmpConf);
 				
 				if (failCount == 0)
 				{

@@ -3480,12 +3480,18 @@ public class AseConnectionUtils
 
 	/**
 	 * Get various state about a ASE Connection
+	 * 
+	 * @param conn
+	 * @param isAse true for ASE, false if it's a MS-SQL Server (no we should probably not share this method... but at start it looked like a good idea)
+	 * @return
 	 */
-	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean getTranState)
+	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean isAse)
 	{
-		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount, tranchained=@@tranchained";
-		if (getTranState)
-			sql += ", transtate=@@transtate";
+		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
+		if (isAse)
+			sql += ", tranchained=@@tranchained, transtate=@@transtate";
+		else
+			sql += ", tranchained=sign((@@options & 2))"; // MSSQL retired @@transtate in SqlServer2008, SqlServer never implemented @@transtate 
 
 		ConnectionStateInfo csi = new ConnectionStateInfo();
 
@@ -3503,7 +3509,7 @@ public class AseConnectionUtils
 				csi._susername   = rs.getString(4);
 				csi._tranCount   = rs.getInt   (5);
 				csi._tranChained = rs.getInt   (6);
-				csi._tranState   = getTranState ? rs.getInt(7) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
+				csi._tranState   = isAse ? rs.getInt(7) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
 			}
 
 //			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
@@ -3512,28 +3518,56 @@ public class AseConnectionUtils
 //			{
 //				csi._lockCount = rs.getInt(1);
 //			}
-			sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
-				+ " from master.dbo.syslocks "
-				+ " where spid = @@spid	"
-				+ " group by dbid, id, type ";
-			
-			csi._lockCount = 0;
-			csi._lockList.clear();
-
-			rs = stmnt.executeQuery(sql);
-			while(rs.next())
+			if (isAse)
 			{
-				String dbname    = rs.getString(1);
-				String tableName = rs.getString(2);
-				int    lockType  = rs.getInt   (3);
-				int    lockCount = rs.getInt   (4);
+				sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
+					+ " from master.dbo.syslocks "
+					+ " where spid = @@spid	"
+					+ " group by dbid, id, type ";
 
-				csi._lockCount += lockCount;
-				csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+				csi._lockCount = 0;
+				csi._lockList.clear();
+
+				rs = stmnt.executeQuery(sql);
+				while(rs.next())
+				{
+					String dbname    = rs.getString(1);
+					String tableName = rs.getString(2);
+					int    lockType  = rs.getInt   (3);
+					int    lockCount = rs.getInt   (4);
+
+					csi._lockCount += lockCount;
+					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+				}
+
+				rs.close();
+				stmnt.close();
 			}
+			else // MS SQL do not have syslocks anymore, so use: sys.dm_tran_locks, and simulate some kind of equal question...
+			{
+				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
+				    + " from sys.dm_tran_locks "
+				    + " where request_session_id = @@spid "
+				    + "  and resource_type = 'OBJECT' ";
 
-			rs.close();
-			stmnt.close();
+				csi._lockCount = 0;
+				csi._lockList.clear();
+
+				rs = stmnt.executeQuery(sql);
+				while(rs.next())
+				{
+					String dbname    = rs.getString(1);
+					String tableName = rs.getString(2);
+					String lockType  = rs.getString(3);
+					int    lockCount = rs.getInt   (4);
+
+					csi._lockCount += lockCount;
+					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+				}
+
+				rs.close();
+				stmnt.close();
+			}
 
 		}
 		catch (SQLException sqle)
@@ -3722,6 +3756,13 @@ public class AseConnectionUtils
 			_dbname    = dbname;
 			_tableName = tableName;
 			_lockType  = getAseLockType(lockType);
+			_lockCount = lockCount;
+		}
+		public LockRecord(String dbname, String tableName, String lockType, int lockCount)
+		{
+			_dbname    = dbname;
+			_tableName = tableName;
+			_lockType  = lockType;
 			_lockCount = lockCount;
 		}
 	}
