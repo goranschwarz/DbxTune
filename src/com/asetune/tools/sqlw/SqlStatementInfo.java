@@ -277,10 +277,10 @@ public class SqlStatementInfo
 
 			int questionMarkCount = StringUtil.charCount(sqlParamsStr, '?');
 //System.out.println("SqlStatementInfo(): questionMarkCount="+questionMarkCount+", sqlParamsStr.length()="+sqlParamsStr.length()+", _sqlParams.size()="+_sqlParams.size()+".");
-			if (questionMarkCount == 0 && sqlParamsStr.length() > 0)
+			if (_callableStatement && questionMarkCount == 0 && sqlParamsStr.length() > 0)
 			{
 				String rpcParamSpec        = ":( {int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
-				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\filename.txt', clob='http://google.com' )";
+				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\\filename.txt', clob='http://google.com' )";
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 
 				String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
@@ -300,12 +300,15 @@ public class SqlStatementInfo
 				_logger.warn(msg.replace("\n", ""));
 
 				// Add WARNING Message to the result
-				resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg, _sql));
+				if (resultCompList != null)
+					resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg, _sql));
+				else
+					System.out.println("WARNING - "+msg);
 			}
 			if (questionMarkCount != _sqlParams.size())
 			{
 				String rpcParamSpec        = ":( {int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
-				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\filename.txt', clob='http://google.com' )";
+				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\\filename.txt', clob='http://google.com' )";
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 				
 				String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
@@ -328,7 +331,10 @@ public class SqlStatementInfo
 
 			// Register the return-status
 			if (_doReturnCode)
+			{
+				_logger.debug("SqlStatementInfo: registering OUT PARAM for procedure return code at pos=1");
 				_cstmnt.registerOutParameter(1, Types.INTEGER);
+			}
 
 			// Set RPC Parameters
 			if (_sqlParams != null)
@@ -339,9 +345,16 @@ public class SqlStatementInfo
 					pos++; // first pos will be 2, since #1 is used as return status
 
 					if (param.isOutputParam())
+					{
+						if (_logger.isDebugEnabled())
+							_logger.debug("SqlStatementInfo: registering OUT PARAM at pos="+pos+", sqlType="+param.getSqlType()+", jdbcSqlType="+ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
 						_cstmnt.registerOutParameter(pos, param.getSqlType());
+					}
 					else
 					{
+						if (_logger.isDebugEnabled())
+							_logger.debug("SqlStatementInfo: registering 'send' PARAM at pos="+pos+", sqlType="+param.getSqlType()+", jdbcSqlType="+ResultSetTableModel.getColumnJavaSqlTypeName(param.getSqlType()));
+
 						if (param.getSqlType() == Types.BLOB)
 						{
 							_cstmnt.setBytes(pos, (byte[])param.getValue());
@@ -399,7 +412,10 @@ public class SqlStatementInfo
 		{
 			if (_doReturnCode)
 			{
+				_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading return code from procedure: _cstmnt.getInt(1)");
 				int returnStatus = _cstmnt.getInt(1);
+				_logger.debug("readRpcReturnCodeAndOutputParameters(): return code from procedure: "+returnStatus);
+
 				resultCompList.add( new JAseProcRetCode(returnStatus, _sql) );
 			}
 			
@@ -414,7 +430,9 @@ public class SqlStatementInfo
 					
 					if (param.isOutputParam())
 					{
+						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject("+pos+")");
 						Object outParamVal = _cstmnt.getObject(pos);
+						_logger.debug("readRpcReturnCodeAndOutputParameters(): Reading OUTPUT parameter: _cstmnt.getObject("+pos+"): value: "+outParamVal);
 
 						// If OUTput parameter is ORACLE SYS_REFCURSOR, then read the ResultSet
 						if (    outParamVal != null 
@@ -422,6 +440,8 @@ public class SqlStatementInfo
 						     && param.getSqlType() == SqlParam.ORACLE_CURSOR_TYPE
 						   )
 						{
+							_logger.debug("readRpcReturnCodeAndOutputParameters(): OUTPUT parameter: "+pos+", is a ResultSet (Oracle cursor ref)");
+
 							ResultSet rs = (ResultSet) outParamVal;
 
 							// For the moment, don't support pipe/filters etc... just make this simple

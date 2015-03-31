@@ -21,6 +21,7 @@ import net.miginfocom.swing.MigLayout;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.utils.StringUtil;
 
 
 public class WizardOfflinePage8
@@ -36,6 +37,7 @@ implements ActionListener
 	private JCheckBox  _previewFile = new JCheckBox("Preview the output file when closing the wizard", true);
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage8()
@@ -91,6 +93,7 @@ implements ActionListener
 		return problem.length() == 0 ? null : "Following fields cant be empty: "+problem;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();
@@ -102,9 +105,13 @@ implements ActionListener
 
 		if (name.equals("BUTTON_STORE_FILE"))
 		{
+//			String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+			String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+			String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
 			JFileChooser fc = new JFileChooser();
-			if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-				fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+			if (envNameSaveDirVal != null)
+				fc.setCurrentDirectory(new File(envNameSaveDirVal));
 
 			int returnVal = fc.showOpenDialog(null);
 			if (returnVal == JFileChooser.APPROVE_OPTION) 

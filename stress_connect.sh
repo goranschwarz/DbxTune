@@ -73,7 +73,7 @@ export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/jdbc_drivers/*
 export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}
 
 
-export PATH=${SQLW_JAVA_HOME}/bin:${ASETUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+export PATH=${SQLW_JAVA_HOME}/bin:${DBXTUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
 
 echo "================================================================"
@@ -84,7 +84,7 @@ echo ${APPL_HOME_propName}=${APPL_HOME}
 echo ${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR}
 echo CLASSPATH=${CLASSPATH}
 echo SQLW_JAVA_HOME=${SQLW_JAVA_HOME}
-echo ASETUNE_JAVA_HOME=${ASETUNE_JAVA_HOME}
+echo DBXTUNE_JAVA_HOME=${DBXTUNE_JAVA_HOME}
 echo JAVA_HOME=${JAVA_HOME}
 echo EXTRA_JDBC_DRIVERS=${EXTRA_JDBC_DRIVERS}
 
@@ -99,7 +99,7 @@ then
 	echo "-----------------------------------------------------------------------"
 	echo "The java installation can be pointed out using the variable JAVA_HOME"
 	echo "Current SQLW_JAVA_HOME    variable is set to ${SQLW_JAVA_HOME}"
-	echo "Current ASETUNE_JAVA_HOME variable is set to ${ASETUNE_JAVA_HOME}"
+	echo "Current DBXTUNE_JAVA_HOME variable is set to ${DBXTUNE_JAVA_HOME}"
 	echo "Current JAVA_HOME         variable is set to ${JAVA_HOME}"
 	echo "-----------------------------------------------------------------------"
 	

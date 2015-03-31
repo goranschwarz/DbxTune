@@ -132,7 +132,7 @@ rem --- echo %CLASSPATH%
 rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
-set PATH=%TAILW_JAVA_HOME%\bin;%ASETUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
+set PATH=%TAILW_JAVA_HOME%\bin;%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 
 
 
@@ -184,7 +184,7 @@ echo Error: Use a higher java version.
 echo -----------------------------------------------------------------------
 echo The java installation can be pointed out using the variable JAVA_HOME
 echo Current TAILW_JAVA_HOME   variable is set to %TAILW_JAVA_HOME%
-echo Current ASETUNE_JAVA_HOME variable is set to %ASETUNE_JAVA_HOME%
+echo Current DBXTUNE_JAVA_HOME variable is set to %DBXTUNE_JAVA_HOME%
 echo Current JAVA_HOME         variable is set to %JAVA_HOME%
 echo -----------------------------------------------------------------------
 goto exit_tailw

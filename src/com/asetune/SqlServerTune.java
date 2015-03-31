@@ -25,11 +25,17 @@ extends DbxTune
 		return APP_NAME;
 	}
 
-	@Override
-	public String getAppHomeEnvName()
-	{
-		return "SQLSERVERTUNE_HOME";
-	}
+//	@Override
+//	public String getAppHomeEnvName()
+//	{
+//		return "SQLSERVERTUNE_HOME";
+//	}
+//
+//	@Override
+//	public String getAppSaveDirEnvName()
+//	{
+//		return "SQLSERVERTUNE_SAVE_DIR";
+//	}
 
 	@Override
 	public String getConfigFileName()

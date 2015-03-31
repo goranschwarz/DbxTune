@@ -1,8 +1,7 @@
 package com.asetune;
 
-import java.sql.Connection;
-
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 
 public class CounterControllerNoOp
 extends CounterControllerAbstract
@@ -30,7 +29,10 @@ extends CounterControllerAbstract
 	}
 
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion) throws Exception
+//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion) throws Exception
+//	{
+//	}
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion) throws Exception
 	{
 	}
 

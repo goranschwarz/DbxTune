@@ -136,7 +136,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\antlr-4.0-complete.jar
 rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
-set PATH=%SQLW_JAVA_HOME%\bin;%ASETUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH% 	
+set PATH=%SQLW_JAVA_HOME%\bin;%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH% 	
 
 
 rem ------------------------------------------------------------------------
@@ -187,7 +187,7 @@ echo Error: Use a higher java version.
 echo -----------------------------------------------------------------------
 echo The java installation can be pointed out using the variable JAVA_HOME
 echo Current SQLW_JAVA_HOME    variable is set to %SQLW_JAVA_HOME%
-echo Current ASETUNE_JAVA_HOME variable is set to %ASETUNE_JAVA_HOME%
+echo Current DBXTUNE_JAVA_HOME variable is set to %DBXTUNE_JAVA_HOME%
 echo Current JAVA_HOME         variable is set to %JAVA_HOME%
 echo -----------------------------------------------------------------------
 goto exit_sqlw

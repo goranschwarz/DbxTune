@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Properties;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
@@ -32,6 +33,8 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.Version;
+import com.asetune.gui.MainFrame;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -187,8 +190,23 @@ public class MailGroupDialog
 
 		JLabel icon        = new JLabel(SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif"));
 
+		String appNameStr = Version.getAppName();
+		if (QueryWindow.APP_NAME.equals(appNameStr))
+		{
+			icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png"));
+		}
+		else
+		{
+			if (MainFrame.hasInstance())
+			{
+    			ImageIcon appIcon = MainFrame.getInstance().getApplicationIcon32();
+    			if (appIcon != null)
+    				icon = new JLabel(appIcon);
+			}
+		}
+
 		JLabel appName     = new JLabel(); 
-		appName.setText(Version.getAppName());
+		appName.setText(appNameStr);
 		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
 
 		String msg =

@@ -51,6 +51,7 @@ import org.jdesktop.swingx.MultiSplitLayout;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.SwingUtils;
@@ -954,6 +955,9 @@ implements ActionListener
 			if (conn instanceof SybConnection)
 				((SybConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
 
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
+
 			// select @@version
 			String aseVersionStr = "unknown";
 			Statement stmt = conn.createStatement();
@@ -1158,6 +1162,9 @@ implements ActionListener
 			System.out.println(Thread.currentThread().getName()+ ": Start.");
 
 			if (_conn instanceof SybConnection)
+				((SybConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
+
+			if (_conn instanceof TdsConnection)
 				((SybConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
 			
 			boolean running = true;

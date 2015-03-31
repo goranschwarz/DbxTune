@@ -14,7 +14,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
-import java.sql.Connection;
 import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
@@ -49,10 +48,12 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -135,7 +136,8 @@ public class ProcessDetailFrame extends JFrame
 	//private   TitledBorder     titledBorder1;
 
 	private RefreshProcess refressProcess;
-	private Connection cnx;
+//	private Connection cnx;
+	private DbxConnection cnx;
 	private ConnectionProvider _connectionProvider = null;
 
 
@@ -987,6 +989,12 @@ public class ProcessDetailFrame extends JFrame
 				clear();
 			}
 		});
+		
+//		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+//		String envNameHomeDir = DbxTune.getInstance().getAppHomeEnvName();     // ASETUNE_HOME
+		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+		String envNameHomeDir = "DBXTUNE_HOME";
+
 		saveButton.setText("Save & Clear");
 		saveButton.setToolTipText(
 			"<html>" +
@@ -996,9 +1004,9 @@ public class ProcessDetailFrame extends JFrame
 				" <li> capStmts.YYYY-MM-DD.txt     </li>" +
 				" <li> capStmts.YYYY-MM-DD.ddl.sql </li>" +
 				"</ul>" +
-				"in Directory ASETUNE_SAVE_DIR or ASETUNE_HOME<br>" +
-				"ASETUNE_SAVE_DIR = " + System.getProperty("ASETUNE_SAVE_DIR") + "<br>" +
-				"ASETUNE_HOME = "     + System.getProperty("ASETUNE_HOME")     + "<br>" +
+				"in Directory "+envNameSaveDir+" or "+envNameHomeDir+"<br>" +
+				envNameSaveDir + " = " + StringUtil.getEnvVariableValue(envNameSaveDir) + "<br>" +
+				envNameHomeDir + " = " + StringUtil.getEnvVariableValue(envNameHomeDir) + "<br>" +
 			"</html>");
 		saveButton.addActionListener(new java.awt.event.ActionListener()
 		{

@@ -1,20 +1,14 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
-import java.sql.Connection;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
-import com.asetune.CounterController;
-import com.asetune.CounterControllerAse;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
-import com.asetune.utils.AseConnectionUtils;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.SwingUtils;
 
 public class MainFrameSqlServer 
@@ -53,7 +47,7 @@ extends MainFrame
 		return new ConnectionProgressExtraActions()
 		{
 			@Override
-			public boolean initializeVersionInfo(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 //				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
 //				MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
@@ -61,7 +55,7 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean checkMonitorConfig(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				Thread.sleep(1*1000);
 				return true;
@@ -69,7 +63,7 @@ extends MainFrame
 			}
 
 			@Override
-			public boolean initMonitorDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 //				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
 //					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
@@ -82,7 +76,7 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initDbServerConfigDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 //				AseConfig aseCfg = AseConfig.getInstance();
 //				if ( ! aseCfg.isInitialized() )
@@ -96,7 +90,7 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initCounterCollector(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 //				CounterController.getInstance().initCounters(
 //						conn,

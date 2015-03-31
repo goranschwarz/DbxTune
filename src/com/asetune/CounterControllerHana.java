@@ -1,12 +1,21 @@
 package com.asetune;
 
-import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.sqlserver.CmSummary;
+import com.asetune.cm.hana.CmDeltaMerge;
+import com.asetune.cm.hana.CmIoStat;
+import com.asetune.cm.hana.CmLockStat;
+import com.asetune.cm.hana.CmLockWait;
+import com.asetune.cm.hana.CmPlanCacheDetails;
+import com.asetune.cm.hana.CmPlanCacheOverview;
+import com.asetune.cm.hana.CmServiceMemory;
+import com.asetune.cm.hana.CmSummary;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
@@ -14,6 +23,7 @@ import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 
 
@@ -56,7 +66,17 @@ extends CounterControllerAbstract
 		ICounterController counterController = this;
 		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
 
-		CmSummary          .create(counterController, guiController);
+		CmSummary           .create(counterController, guiController);
+
+		CmServiceMemory     .create(counterController, guiController);
+		CmDeltaMerge        .create(counterController, guiController);
+
+		CmPlanCacheOverview .create(counterController, guiController);
+		CmPlanCacheDetails  .create(counterController, guiController);
+
+		CmIoStat            .create(counterController, guiController);
+		CmLockWait          .create(counterController, guiController);
+		CmLockStat          .create(counterController, guiController);
 
 //		CmAdminWhoSqm       .create(counterController, guiController);
 //		CmAdminWhoSqt       .create(counterController, guiController);
@@ -112,7 +132,9 @@ extends CounterControllerAbstract
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -172,54 +194,54 @@ extends CounterControllerAbstract
 	@Override
 	public PersistContainer.HeaderInfo createPcsHeaderInfo()
 	{
-		return new HeaderInfo(new Timestamp(System.currentTimeMillis()), "DUMMY_SQLSERVER", "DUMMY_SQLSERVER", new Timestamp(System.currentTimeMillis()));
-//		// Get session/head info
-//		String    aseServerName    = null;
-//		String    aseHostname      = null;
-//		Timestamp mainSampleTime   = null;
-//		Timestamp counterClearTime = null;
-//
-//		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-//
-//		try
-//		{
-//			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
-//				return null;
-//				
-//			Statement stmt = getMonConnection().createStatement();
-//			ResultSet rs = stmt.executeQuery(sql);
-//			while (rs.next())
-//			{
-//				mainSampleTime   = rs.getTimestamp(1);
-//				aseServerName    = rs.getString(2);
-//				aseHostname      = rs.getString(3);
-//				counterClearTime = rs.getTimestamp(4);
-//			}
-//			rs.close();
-//			stmt.close();
-//		}
-//		catch (SQLException sqlex)
-//		{
-//			// Connection is already closed.
+		// Get session/head info
+		String    aseServerName    = null;
+		String    aseHostname      = null;
+		Timestamp mainSampleTime   = null;
+		Timestamp counterClearTime = null;
+
+		String sql = "select CURRENT_TIMESTAMP as SRV_TIME, SYSTEM_ID, HOST from SYS.M_DATABASE";
+
+		try
+		{
+			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+				return null;
+
+			Statement stmt = getMonConnection().createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				mainSampleTime   = rs.getTimestamp(1);
+				aseServerName    = rs.getString(2);
+				aseHostname      = rs.getString(3);
+				//counterClearTime = rs.getTimestamp(4); // use this row if we can get when all counters are cleared... which I don't think is relevant for HANA
+				counterClearTime = new Timestamp(0);     // since global counter clear isn't in HANA set it to 0
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException sqlex)
+		{
+			// Check if Connection is already closed.
 //			if ( "JZ0C0".equals(sqlex.getSQLState()) )
 //			{
-//				boolean forceConnectionCheck = true;
-//				boolean closeConnOnFailure   = true;
-//				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-//				{
-//					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-//					return null;
-//				}
+				boolean forceConnectionCheck = true;
+				boolean closeConnOnFailure   = true;
+				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
+				{
+					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
+					return null;
+				}
 //			}
-//			
-//			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
-//			mainSampleTime   = new Timestamp(System.currentTimeMillis());
-//			aseServerName    = "unknown";
-//			aseHostname      = "unknown";
-//			counterClearTime = new Timestamp(0);
-//		}
-//		
-//		return new HeaderInfo(mainSampleTime, aseServerName, aseHostname, counterClearTime);
+			
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			mainSampleTime   = new Timestamp(System.currentTimeMillis());
+			aseServerName    = "unknown";
+			aseHostname      = "unknown";
+			counterClearTime = new Timestamp(0);
+		}
+		
+		return new HeaderInfo(mainSampleTime, aseServerName, aseHostname, counterClearTime);
 	}
 
 	

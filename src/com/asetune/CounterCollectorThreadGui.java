@@ -1,7 +1,6 @@
 package com.asetune;
 
 import java.awt.event.ActionEvent;
-import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -220,8 +219,10 @@ extends CounterCollectorThreadAbstract
 							// But for now just try to grab a connection and continue, revisit this later
 							try
 							{
-								Connection conn = AseConnectionFactory.getConnection("master", Version.getAppName(), Version.getVersionStr());
-								getCounterController().setMonConnection(conn);
+//								Connection conn = AseConnectionFactory.getConnection("master", Version.getAppName(), Version.getVersionStr());
+//								getCounterController().setMonConnection(conn);
+//								getCounterController().getMonConnection().reConnect(MainFrame.getInstance());
+								getCounterController().getMonConnection().reConnect(null);
 
 //								String str = AseConnectionFactory.getServer() + " (" +
 //								             AseConnectionFactory.getHost()   + ":" +

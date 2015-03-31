@@ -30,6 +30,13 @@ extends SqlCompletion
 		String catalogName = quoteNames ? q+tmpCatalogName+q : provider.fixStrangeNames(tmpCatalogName);
 		String schemaName  = quoteNames ? q+pi._procSchema+q : provider.fixStrangeNames(pi._procSchema);
 		String tableName   = quoteNames ? q+pi._procName+q   : provider.fixStrangeNames(pi._procName);
+		
+		if (pi._oraPackageName != null)
+		{
+			String pkgName = quoteNames ? q+pi._oraPackageName+q : provider.fixStrangeNames(pi._oraPackageName);
+			tableName = tableName + "." + pkgName;
+		}
+			
 
 		// If the schemaname/owner is 'dbo', do not prefix it with 'dbo.'
 //		if ("dbo".equalsIgnoreCase(pi._procSchema))
@@ -53,7 +60,7 @@ extends SqlCompletion
 		_procInfo = pi;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+pi._procType+"</font>" +
+			"<font color=\"blue\">"+(pi._oraPackageName==null?"":"PACKAGE ")+pi._procType+"</font>" +
 			(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
 //			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
 			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";

@@ -26,7 +26,6 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelUserDefined;
-import com.asetune.cm.CounterSample;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
@@ -34,6 +33,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -254,7 +254,8 @@ implements ICounterController
 	 * @return a List of CountersModel objects
 	 */
 	@Override
-	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
+//	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
 		for (CountersModel cm : getCmList())
@@ -399,7 +400,9 @@ implements ICounterController
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public abstract void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public abstract void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception;
+	public abstract void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception;
 
 //	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
@@ -1499,7 +1502,8 @@ implements ICounterController
 	//// database connection
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
-	private Connection         _conn                      = null;
+//	private Connection         _conn                      = null;
+	private DbxConnection      _conn                      = null;
 	private long               _lastIsClosedCheck         = 0;
 	private long               _lastIsClosedRefreshTime   = 2000;
 
@@ -1691,7 +1695,8 @@ implements ICounterController
 	 * Set the <code>Connection</code> to use for monitoring.
 	 */
 	@Override
-	public void setMonConnection(Connection conn)
+//	public void setMonConnection(Connection conn)
+	public void setMonConnection(DbxConnection conn)
 	{
 		_conn = conn;
 		if (isMonConnected())
@@ -1702,7 +1707,8 @@ implements ICounterController
 	 * Gets the <code>Connection</code> to the monitored server.
 	 */
 	@Override
-	public Connection getMonConnection()
+//	public Connection getMonConnection()
+	public DbxConnection getMonConnection()
 	{
 		return _conn;
 	}

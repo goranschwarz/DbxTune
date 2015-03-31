@@ -1,6 +1,6 @@
 package com.asetune.gui;
 
-import java.sql.Connection;
+import com.asetune.sql.conn.DbxConnection;
 
 public interface ConnectionProgressExtraActions
 {
@@ -13,7 +13,7 @@ public interface ConnectionProgressExtraActions
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean initializeVersionInfo(Connection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 
 	/**
 	 * Check if the Server is Configured properly for Monitoring, If it's not you may want to initialize/configure it before we continue.
@@ -23,7 +23,7 @@ public interface ConnectionProgressExtraActions
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean checkMonitorConfig(Connection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	
 	/**
 	 * Initialize the Monitor Dictionary, that will be used to display tool tips on the column headers
@@ -33,7 +33,7 @@ public interface ConnectionProgressExtraActions
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean initMonitorDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	
 	/**
 	 * Initialize the Servers Configuration Dictionary
@@ -43,7 +43,7 @@ public interface ConnectionProgressExtraActions
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean initDbServerConfigDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 	
 	/**
 	 * Initialize the Counter Collector
@@ -53,5 +53,5 @@ public interface ConnectionProgressExtraActions
 	 * @return true on success, false on failure (and the connection sequence will be aborted)
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
-	public boolean initCounterCollector(Connection conn, ConnectionProgressDialog cpd) throws Exception;
+	public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
 }

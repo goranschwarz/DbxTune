@@ -6,22 +6,20 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
-import javax.swing.JCheckBoxMenuItem;
 
 import com.asetune.CounterControllerAse;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.TrendGraphDataPoint;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CounterSample;
 import com.asetune.cm.sqlserver.gui.CmDeviceIoPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
-import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -95,6 +93,8 @@ extends CountersModel
 		setDescription(HTML_DESC);
 
 		setIconFile(GUI_ICON_FILE);
+
+		setShowClearTime(false);
 
 		setCounterController(counterController);
 		setGuiController(guiController);

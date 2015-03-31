@@ -50,6 +50,7 @@ import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.AseConfigMonitoringDialog;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -66,7 +67,8 @@ public class RefreshProcess extends Thread
 	private static final boolean DEFAULT_showDialogMdaConfig = true;
 
 	private ProcessDetailFrame pdf;
-	private Connection	       _conn;
+//	private Connection	       _conn;
+	private DbxConnection	   _conn;
 	private boolean	           refreshProcessFlag;
 	private boolean            _paused               = false;
 	private int                _refreshInterval      = 1;
@@ -199,7 +201,8 @@ public class RefreshProcess extends Thread
 	}
 	
 
-	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int spid, int kpid) 
+//	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int spid, int kpid) 
+	public RefreshProcess(ProcessDetailFrame aPdf, DbxConnection conn, int spid, int kpid) 
 	{
 		this.pdf = aPdf;
 		this._conn = conn;
@@ -1855,15 +1858,20 @@ public class RefreshProcess extends Thread
 		// no directory name was passed
 		if (saveToDir == null)
 		{
-			saveToDir = System.getProperty("ASETUNE_SAVE_DIR");
+//			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+//			String envNameHomeDir = DbxTune.getInstance().getAppHomeEnvName();     // ASETUNE_HOME
+			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+			String envNameHomeDir = "DBXTUNE_HOME";
+
+			saveToDir = StringUtil.getEnvVariableValue(envNameSaveDir);
 
 			if (saveToDir == null)
 			{
-				saveToDir = System.getProperty("ASETUNE_HOME");
+				saveToDir = StringUtil.getEnvVariableValue(envNameHomeDir);
 
 				if (saveToDir == null)
 				{
-					_logger.error("Directory name was not specified and ASETUNE_SAVE_DIR or ASETUNE_HOME was not set, can't save information about Captured Statements.");
+					_logger.error("Directory name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about Captured Statements.");
 					return;
 				}
 			}

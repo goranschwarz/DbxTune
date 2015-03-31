@@ -32,14 +32,18 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.OracleConnection;
 import com.asetune.ui.autocomplete.completions.AbstractCompletionX;
 import com.asetune.ui.autocomplete.completions.DbInfo;
+import com.asetune.ui.autocomplete.completions.FunctionColumnInfo;
+import com.asetune.ui.autocomplete.completions.FunctionInfo;
 import com.asetune.ui.autocomplete.completions.ProcedureInfo;
 import com.asetune.ui.autocomplete.completions.ProcedureParameterInfo;
 import com.asetune.ui.autocomplete.completions.SchemaInfo;
 import com.asetune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.asetune.ui.autocomplete.completions.SqlColumnCompletion;
 import com.asetune.ui.autocomplete.completions.SqlDbCompletion;
+import com.asetune.ui.autocomplete.completions.SqlFunctionCompletion;
 import com.asetune.ui.autocomplete.completions.SqlProcedureCompletion;
 import com.asetune.ui.autocomplete.completions.SqlSchemaCompletion;
 import com.asetune.ui.autocomplete.completions.SqlTableCompletion;
@@ -70,6 +74,9 @@ extends CompletionProviderAbstract
 	protected List<TableInfo>               _tableInfoList       = new ArrayList<TableInfo>();
 	protected List<SqlTableCompletion>      _tableComplList      = new ArrayList<SqlTableCompletion>();
 
+	protected List<FunctionInfo>            _functionInfoList       = new ArrayList<FunctionInfo>();
+	protected List<SqlFunctionCompletion>   _functionComplList      = new ArrayList<SqlFunctionCompletion>();
+
 	protected List<ProcedureInfo>           _procedureInfoList   = new ArrayList<ProcedureInfo>();
 	protected List<SqlProcedureCompletion>  _procedureComplList  = new ArrayList<SqlProcedureCompletion>();
 
@@ -80,9 +87,10 @@ extends CompletionProviderAbstract
 	protected boolean _quoteTableNames = false;
 	protected boolean _addSchemaName   = true;
 
-	protected String _dbProductName           = "";
-	protected String _dbExtraNameCharacters   = "";
-	protected String _dbIdentifierQuoteString = "\"";
+	protected String  _dbProductName           = "";
+	protected String  _dbExtraNameCharacters   = "";
+	protected String  _dbIdentifierQuoteString = "\"";
+	protected boolean _dbStoresUpperCaseIdentifiers = false;
 	
 	protected String _currentCatalog    = null;
 	protected String _currentServerName = null;
@@ -95,9 +103,10 @@ extends CompletionProviderAbstract
 		_quoteTableNames         = false;
 		_addSchemaName           = true;
 		
-		_dbProductName           = "";
-		_dbExtraNameCharacters   = "";
-		_dbIdentifierQuoteString = "\"";
+		_dbProductName                = "";
+		_dbExtraNameCharacters        = "";
+		_dbIdentifierQuoteString      = "\"";
+		_dbStoresUpperCaseIdentifiers = false;
 		
 		_currentCatalog          = null;
 		_currentServerName       = null;
@@ -107,6 +116,8 @@ extends CompletionProviderAbstract
 		_dbComplList             .clear();
 		_tableInfoList           .clear();
 		_tableComplList          .clear();
+		_functionInfoList        .clear();
+		_functionComplList       .clear();
 		_procedureInfoList       .clear();
 		_procedureComplList      .clear();
 		_systemProcInfoList      .clear();
@@ -185,6 +196,10 @@ extends CompletionProviderAbstract
 	public String getDbIdentifierQuoteString()
 	{
 		return _dbIdentifierQuoteString;
+	}
+	public boolean getDbStoresUpperCaseIdentifiers()
+	{
+		return _dbStoresUpperCaseIdentifiers;
 	}
 
 
@@ -629,14 +644,24 @@ extends CompletionProviderAbstract
 	 *  _schemaNames must be populated after a file has been loaded 
 	 */
 	@Override
-	public void loadSavedCacheFromFilePostAction(List<? extends AbstractCompletionX> list)
+	public void loadSavedCacheFromFilePostAction(List<? extends AbstractCompletionX> list, WaitForExecDialog waitDialog)
 	{
+System.out.println("loadSavedCacheFromFilePostAction: START... list.size()="+ (list == null ? null : list.size()) );
+		if (waitDialog != null)
+			waitDialog.setState("Adding Schema names...");
+
 		for (AbstractCompletionX compl : list)
 		{
+//System.out.println("entry: classname="+compl.getClass().getName());
 			if (compl instanceof SqlTableCompletion)
 			{
 				SqlTableCompletion c = (SqlTableCompletion) compl;
 				_schemaNames.add(c._tableInfo._tabSchema);
+			}
+			else if (compl instanceof SqlFunctionCompletion)
+			{
+				SqlFunctionCompletion c = (SqlFunctionCompletion) compl;
+				_schemaNames.add(c._functionInfo._funcSchema);
 			}
 			else if (compl instanceof SqlProcedureCompletion)
 			{
@@ -650,10 +675,30 @@ extends CompletionProviderAbstract
 					_schemaNames.add(c._schemaInfo._name);
 			}
 		}
+
+		final Connection conn = _connectionProvider.getConnection();
+		if (conn == null)
+		{
+			_logger.warn("No connection, can't initiate Mandatory Settings, completions might not work at 100%");
+			return;
+		}
+
+		if (waitDialog != null)
+			waitDialog.setState("Setting Mandatory Settings");
+		try
+		{
+			refreshCompletionForMandatory(conn, waitDialog);
+    	}
+    	catch (SQLException e)
+    	{
+    		_logger.info("Problems reading table information for SQL Table code completion.", e);
+    	}
+System.out.println("loadSavedCacheFromFilePostAction: END");
 	}
 
 
-	private void refresh()
+	@Override
+	public void refresh()
 	{
 		// Clear old completions
 		clear();
@@ -746,6 +791,11 @@ extends CompletionProviderAbstract
 				if ( ((SqlTableCompletion)c)._tableInfo.isColumnRefreshed() )
 					needsLookupCount++;
 			}
+			if (c instanceof SqlFunctionCompletion)
+			{
+				if ( ((SqlFunctionCompletion)c)._functionInfo.isColumnRefreshed() )
+					needsLookupCount++;
+			}
 			if (c instanceof SqlProcedureCompletion)
 			{
 				if ( ((SqlProcedureCompletion)c)._procInfo.isParamsRefreshed() )
@@ -766,7 +816,7 @@ extends CompletionProviderAbstract
 	{
 		RSyntaxTextArea textArea = (RSyntaxTextArea)comp;
 
-		String allowedChars = "_.*/:%[]\""; // []" will be stripped off when doing comparisons
+		String allowedChars = "_.*/:%[]$\""; // []" will be stripped off when doing comparisons
 		setCharsAllowedInWordCompletion(allowedChars);
 		if ( ! StringUtil.isNullOrBlank(_dbExtraNameCharacters) )
 			setCharsAllowedInWordCompletion( allowedChars + _dbExtraNameCharacters );
@@ -792,7 +842,7 @@ extends CompletionProviderAbstract
 //System.out.println("START: enteredText='"+enteredText+"'.");
 //System.out.println("START: currentWord='"+currentWord+"'.");
 
-SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString);
+SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
 //SqlObjectName cwId = new SqlObjectName(currentWord);
 
 //System.out.println("START: enteredText IDENTIFIER: "+ etId);
@@ -882,7 +932,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				}
 				else
 				{
-					List<Completion> list = getProcListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
+					List<Completion> list = getProcedureListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
 					if ( list != null && ! list.isEmpty() )
 						procList.addAll(list);
 				}
@@ -910,52 +960,24 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			// NOTE: make this test AFTER: OTHER_DB_LOOKUP, otherwise the regexp
 			if (etId.isSchemaQualifiedObject()) // SCHEMA.OBJECT
 			{
-//System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject");
-//System.out.println("_dbComplList:    "+_dbComplList);
+//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): etId._schName='"+etId._schName+"', etId._objName='"+etId._objName+"'.");
+				// Get from the schemas
+				List<Completion> list = getProcedureCompletionsFromSchema(_procedureComplList, etId._schName, etId._objName);
+//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
 
-//				// If the dbname/catalog exists, then do SCHEMA lookup in that database.
-//				for (SqlDbCompletion dc : _dbComplList)
-//				{
-//					DbInfo di = dc._dbInfo;
-//System.out.println("etId._schName='"+etId._schName+"', di._dbName='"+di._dbName+"', _currentCatalog='"+_currentCatalog+"'.");
-//					if (etId._schName.equalsIgnoreCase(di._dbName))
-//					{
-//						// use the local schemas (in current database)
-//						if (etId._schName.equalsIgnoreCase(_currentCatalog))
-//						{
-//System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject: IN CURRENT DATABASE");
-//							// lets return all schemas/owners
-//							for (String schemaName : _schemaNames)
-//								procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, etId._schName+"."+schemaName) );
-//							
-//							// Also return all objects... MATCHING the SCHEMA
-//							// Add matching procedures in local database
-//							for (SqlProcedureCompletion pc : _procedureComplList)
-//							{
-//								ProcedureInfo pi = pc._procInfo;
-//								if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName) && etId._schName.equalsIgnoreCase(pi._procSchema)) 
-//									procList.add(pc);
-//							}
-//						}
-//						else // Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)
-//						{
-//System.out.println(">>> in: Complete STORED PROCS: isSchemaQualifiedObject: Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)");
-//							Connection conn = _connectionProvider.getConnection();
-//							if (conn == null)
-//								return null;
-//
-//							List<Completion> list = getSchemaListWithGuiProgress(conn, etId._schName, etId._objName);
-//							if ( list != null && ! list.isEmpty() )
-//								procList.addAll(list);
-//						}
-//
-//						return procList;
-//					}
-//				}
-				
-				// Try another way
-				return getProcedureCompletionsFromSchema(_procedureComplList, etId._schName, etId._objName);
+				// If cached schema lookup failed, the option might be OFF do a on-the-fly lookup...
+				if (list.isEmpty())
+				{
+//System.out.println("EXEC: SCHEMA.OBJECT: NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
+					Connection conn = _connectionProvider.getConnection();
+					if (conn == null)
+						return null;
 
+					list = getProcedureListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
+//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
+				}
+
+				return list;
 			} // end: SCHEMA.OBJECT
 
 			// Add matching procedures in local database
@@ -987,6 +1009,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			// Add matching schemas
 			for (String schemaName : _schemaNames)
 			{
+//System.out.println("EXEC(add matching schemas): schemaName='"+schemaName+"', etId._objName='"+etId._objName+"'.");
 				if (startsWithIgnoreCaseOrRegExp(schemaName, etId._objName))
 					procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, schemaName) );
 			}
@@ -1010,13 +1033,15 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// TABLES in other databases, do lookup 'on the fly'
 		// Check for database..tab<ctrl+space> 
 		//
+//System.out.println(">>> etId: "+etId);
 		if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 		{
-//System.out.println(">>> in: TABLES in other databases, do lookup 'on the fly'");
+//System.out.println(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: "+etId);
 			Connection conn = _connectionProvider.getConnection();
 			if (conn == null)
 				return null;
 
+			// Note: this will also check for table-valued-functions, but right now that doesn't work :( at least for MS-SQL which I was testing against
 			return getTableListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
 		}
 
@@ -1063,7 +1088,12 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				String objNamePattern = colName;
 //System.out.println("IN LOCAL SCHEMA: schema='"+tabAliasName+"', objNamePattern='"+objNamePattern+"'.");
 				// do completion, but only for tables in a specific schema
-				return getTableCompletionsFromSchema(completions, tabAliasName, objNamePattern);
+//				List<Completion> tables    = getTableCompletionsFromSchema   (completions, tabAliasName, objNamePattern);
+//				List<Completion> functions = getFunctionCompletionsFromSchema(completions, tabAliasName, objNamePattern);
+//				tables.addAll(functions);
+//				return tables;
+				List<Completion> tables    = getTableAndFuncCompletionsFromSchema(completions, tabAliasName, objNamePattern);
+				return tables;
 			}
 			else // alias is NOT in the "locals" schemas (so hopefully it's a column, but we will discover that...)
 			{
@@ -1072,7 +1102,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				// If we find it, display columns for the table (alias)
 //				String tabName = getTableNameForAlias(comp, tabAliasName, true);
 				String        tabName     = getTableNameForAlias(comp, tabAliasName, false);
-				SqlObjectName fullTabName = new SqlObjectName( tabName, _dbProductName, _dbIdentifierQuoteString);
+				SqlObjectName fullTabName = new SqlObjectName( tabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
 //System.out.println("XXXX NOT-IN LOCAL SCHEMA: fullTabName='"+fullTabName+"'.");
 
 				// Columns to show, will end up in here
@@ -1092,6 +1122,16 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, tci._colName, ti));
 						}
 					}
+					// Search the cached function information.
+					FunctionInfo fi = getFunctionInfo(fullTabName._objName);
+					if (fi != null)
+					{
+						for (FunctionColumnInfo fci : fi._columns)
+						{
+							if (startsWithIgnoreCaseOrRegExp(fci._colName, colName))
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, fci._colName, ti));
+						}
+					}
 					// If not any columns was found "in cache", for this table, then do "on the fly" lookup
 					// column information is optional to get when refreshing tables...
 					// For the "non cached lookup" we need the catalog name, so set this...
@@ -1102,8 +1142,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					}
 				}
 
-				// If cached column lookup failed to find any cached entries, the option might be OFF
-				// do a on the fly lookup...
+				// If cached column lookup failed to find any cached entries, the option might be OFF do a on the fly lookup...
 				if (colList.isEmpty())
 				{
 //System.out.println("XXXX NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
@@ -1204,9 +1243,34 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		return getCompletionsFrom(completions, enteredText);
 	}
 
+
+	protected List<Completion> getTableAndFuncCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
+	{
+		ArrayList<Completion> retComp = new ArrayList<Completion>();
+long startTime = System.currentTimeMillis();
+		for (Completion c : completions)
+		{
+			if (c instanceof SqlTableCompletion)
+			{
+				SqlTableCompletion tabComp = (SqlTableCompletion) c;
+				if (schemaName.equalsIgnoreCase(tabComp._tableInfo._tabSchema))
+					retComp.add(c);
+			}
+			if (c instanceof SqlFunctionCompletion)
+			{
+				SqlFunctionCompletion funcComp = (SqlFunctionCompletion) c;
+				if (schemaName.equalsIgnoreCase(funcComp._functionInfo._funcSchema) && funcComp._functionInfo._isTableValuedFunction)
+					retComp.add(c);
+			}
+		}
+System.out.println("get-TABLE/FUNC-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+		return getCompletionsFrom(retComp, lastPart);
+	}
+
 	protected List<Completion> getTableCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
 	{
 		ArrayList<Completion> retComp = new ArrayList<Completion>();
+long startTime = System.currentTimeMillis();
 		for (Completion c : completions)
 		{
 			if (c instanceof SqlTableCompletion)
@@ -1216,21 +1280,43 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					retComp.add(c);
 			}
 		}
+System.out.println("get-TABLE-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
+		return getCompletionsFrom(retComp, lastPart);
+	}
+	
+	protected List<Completion> getFunctionCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
+	{
+		ArrayList<Completion> retComp = new ArrayList<Completion>();
+long startTime = System.currentTimeMillis();
+		for (Completion c : completions)
+		{
+			if (c instanceof SqlFunctionCompletion)
+			{
+				SqlFunctionCompletion funcComp = (SqlFunctionCompletion) c;
+				if (schemaName.equalsIgnoreCase(funcComp._functionInfo._funcSchema) && funcComp._functionInfo._isTableValuedFunction)
+					retComp.add(c);
+			}
+		}
+System.out.println("get-FUNCTION-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 	
 	protected List<Completion> getProcedureCompletionsFromSchema(List<SqlProcedureCompletion> ComplList, String schemaName, String lastPart)
 	{
 		ArrayList<Completion> retComp = new ArrayList<Completion>();
+long startTime = System.currentTimeMillis();
 		for (Completion c : ComplList)
 		{
 			if (c instanceof SqlProcedureCompletion)
 			{
 				SqlProcedureCompletion procComp = (SqlProcedureCompletion) c;
+//System.out.println("get-PROCEDURE-CompletionsFromSchema: procComp._procInfo='"+procComp._procInfo+"'.");
+//System.out.println("get-PROCEDURE-CompletionsFromSchema: procComp._procInfo._procSchema='"+procComp._procInfo._procSchema+"'.");
 				if (schemaName.equalsIgnoreCase(procComp._procInfo._procSchema))
 					retComp.add(c);
 			}
 		}
+System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+", ms="+(System.currentTimeMillis() - startTime));
 		return getCompletionsFrom(retComp, lastPart);
 	}
 
@@ -1352,10 +1438,12 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 
 		_dbExtraNameCharacters   = dbmd.getExtraNameCharacters();
 		_dbIdentifierQuoteString = dbmd.getIdentifierQuoteString();
+		_dbStoresUpperCaseIdentifiers = dbmd.storesUpperCaseIdentifiers();
 
-		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()   is '"+_dbProductName+"'.");
-		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()   is '"+_dbExtraNameCharacters+"'.");
-		_logger.info("JDBC DatabaseMetaData.getIdentifierQuoteString() is '"+_dbIdentifierQuoteString+"'.");
+		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
+		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()     is '"+_dbExtraNameCharacters+"'.");
+		_logger.info("JDBC DatabaseMetaData.getIdentifierQuoteString()   is '"+_dbIdentifierQuoteString+"'.");
+		_logger.info("JDBC DatabaseMetaData.storesUpperCaseIdentifiers() is '"+_dbStoresUpperCaseIdentifiers+"'.");
 		
 		// get current catalog/dbName
 		_currentCatalog = conn.getCatalog();
@@ -1424,6 +1512,11 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			return;
 	}
 
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
+	// DB
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
 	protected List<DbInfo> refreshCompletionForDbs(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
@@ -1452,6 +1545,12 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		return dbInfoList;
 	}
 
+	
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
+	// SCHEMAS
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
 	protected List<SchemaInfo> refreshCompletionForSchemas(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName)
 	throws SQLException
 	{
@@ -1479,7 +1578,10 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		{
 			SchemaInfo si = new SchemaInfo();
 
-			si._cat  = rs.getString("TABLE_CATALOG");
+			// Oracle dosn't seem to support TABLE_CATALOG so do workaround
+			boolean getTabCatalog = true;
+
+			if (getTabCatalog) { try { si._cat  = rs.getString("TABLE_CATALOG"); } catch(SQLException ex) { getTabCatalog = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'TABLE_CATALOG' in refreshCompletionForSchemas() "); }	}
 			si._name = rs.getString("TABLE_SCHEM");
 
 			// On some databases, do not show all the ***_role things, they are not schema or users...
@@ -1493,6 +1595,11 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		return schemaInfoList;
 	}
 
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
+	// TABLES
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
 	@Override
 	public TableModel getLookupTableTypesModel()
 	{
@@ -1939,6 +2046,377 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		} // end: fetch-table-by-table
 	}
 
+
+
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
+	// FUNCTIONS
+	//------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------
+	public String decodeFunctionType(int type)
+	{
+		if      (type == DatabaseMetaData.functionResultUnknown) return "Function (Return-Unknown)";
+		else if (type == DatabaseMetaData.functionNoTable)       return "Function (Return-Value)";
+		else if (type == DatabaseMetaData.functionReturnsTable)  return "Function (Returns-Table)";
+		else return "Procedure";
+	}
+
+	protected void enrichCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog)
+	throws SQLException
+	{
+	}
+	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog)
+	throws SQLException
+	{
+		return refreshCompletionForFunctions(conn, waitDialog, null, null, null);
+	}
+	protected List<FunctionInfo> refreshCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName)
+	throws SQLException
+	{
+//System.out.println("SQL: refreshCompletionForFunctions()");
+//new Exception("DUMMY STACKTRACE").printStackTrace();
+		// Obtain a DatabaseMetaData object from our current connection        
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+		// Each table description has the following columns: 
+
+        // 1: FUNCTION_CAT String => function catalog (may be null)
+        // 2: FUNCTION_SCHEM String => function schema (may be null)
+        // 3: FUNCTION_NAME String => function name. This is the name used to invoke the function
+        // 4: REMARKS String => explanatory comment on the function
+        // 5: FUNCTION_TYPE short => kind of function:
+        //      functionResultUnknown - Cannot determine if a return value or table will be returned
+        //      functionNoTable- Does not return a table
+        //      functionReturnsTable - Returns a table 
+        // 6: SPECIFIC_NAME String => the name which uniquely identifies this function within its schema. This is a user specified, or DBMS generated, name that may be different then the FUNCTION_NAME for example with overload functions 
+
+		final String stateMsg = "Getting Function information.";
+		waitDialog.setState(stateMsg);
+
+		ArrayList<FunctionInfo> functionInfoList = new ArrayList<FunctionInfo>();
+
+		if (waitDialog.wasCancelPressed())
+			return functionInfoList;
+
+		if (schemaName != null)
+		{
+			schemaName = schemaName.replace('*', '%').trim();
+			if ( ! schemaName.endsWith("%") )
+				schemaName += "%";
+		}
+
+		if (functionName == null)
+			functionName = "%";
+		else
+		{
+			functionName = functionName.replace('*', '%').trim();
+			if ( ! functionName.endsWith("%") )
+				functionName += "%";
+		}
+
+//		// What table types do we want to retrieve
+//		String[] types = getTableTypes(conn);
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("refreshCompletionForFunctions(): calling dbmd.getFunctions(catalog='"+catalogName+"', schema='"+schemaName+"', function='"+functionName+"')");
+//System.out.println("XXXX(): calling dbmd.getFunctions(catalog='"+catalogName+"', schema='"+schemaName+"', function='"+functionName+"')");
+
+		ResultSet rs = dbmd.getFunctions(catalogName, schemaName, functionName);
+		
+		int counter = 0;
+		while(rs.next())
+		{
+			counter++;
+			if ( (counter % 100) == 0 )
+				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+
+			// Oracle dosn't seem to support TABLE_CATALOG so do workaround
+			boolean getTypeInt = true;
+
+			FunctionInfo fi = new FunctionInfo();
+			                        fi._funcCat     = rs.getString("FUNCTION_CAT");
+			                        fi._funcSchema  = rs.getString("FUNCTION_SCHEM");
+			                        fi._funcName    = rs.getString("FUNCTION_NAME");
+			if (getTypeInt) { try { fi._funcTypeInt = rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions() "); }	}
+			                        fi._funcRemark  = rs.getString("REMARKS");
+//			                        fi._specificName= rs.getString("SPECIFIC_NAME");
+
+			fi._funcType = decodeFunctionType(fi._funcTypeInt);
+			fi._isTableValuedFunction = (fi._funcTypeInt == DatabaseMetaData.functionReturnsTable);
+//System.out.println("ROW("+counter+")-ADD: fi="+fi);
+
+			// add schemas... this is a Set so duplicates is ignored
+			_schemaNames.add(fi._funcSchema);
+
+			functionInfoList.add(fi);
+			
+			if (waitDialog.wasCancelPressed())
+				return functionInfoList;
+		}
+		rs.close();
+
+		return functionInfoList;
+	}
+
+	protected List<FunctionColumnInfo> refreshCompletionForFunctionColumns(Connection conn, WaitForExecDialog waitDialog, String catalogName, String schemaName, String functionName, String colName)
+	throws SQLException
+	{
+		DatabaseMetaData dbmd = conn.getMetaData();
+		
+		ArrayList<FunctionColumnInfo> retList = new ArrayList<FunctionColumnInfo>();
+
+		final String stateMsg = "Getting Column information for function '"+functionName+"'.";
+		waitDialog.setState(stateMsg);
+
+//		// fix catalogName
+//		if (catalogName != null)
+//		{
+//			catalogName = catalogName.replace('*', '%').trim();
+//			if ( ! catalogName.endsWith("%") )
+//				catalogName += "%";
+//		}
+//
+//		// fix schemaName
+//		if (schemaName != null)
+//		{
+//			schemaName = schemaName.replace('*', '%').trim();
+//			if ( ! schemaName.endsWith("%") )
+//				schemaName += "%";
+//		}
+//
+//		// fix tableName
+//		if (tableName == null)
+//			tableName = "%";
+//		else
+//		{
+//			tableName = tableName.replace('*', '%').trim();
+//			if ( ! tableName.endsWith("%") )
+//				tableName += "%";
+//		}
+
+		// fix colName
+		if (colName == null)
+			colName = "%";
+		else
+		{
+			colName = colName.replace('*', '%').trim();
+			if ( ! colName.endsWith("%") )
+				colName += "%";
+		}
+
+		// Obtain a DatabaseMetaData object from our current connection
+		ResultSet rs = dbmd.getFunctionColumns(catalogName, schemaName, functionName, colName);
+
+
+        // 1:  FUNCTION_CAT String => function catalog (may be null)
+        // 2:  FUNCTION_SCHEM String => function schema (may be null)
+        // 3:  FUNCTION_NAME String => function name. This is the name used to invoke the function
+        // 4:  COLUMN_NAME String => column/parameter name
+        // 5:  COLUMN_TYPE Short => kind of column/parameter:
+        //       functionColumnUnknown - nobody knows
+        //       functionColumnIn - IN parameter
+        //       functionColumnInOut - INOUT parameter
+        //       functionColumnOut - OUT parameter
+        //       functionColumnReturn - function return value
+        //       functionColumnResult - Indicates that the parameter or column is a column in the ResultSet 
+        // 6:  DATA_TYPE int => SQL type from java.sql.Types
+        // 7:  TYPE_NAME String => SQL type name, for a UDT type the type name is fully qualified
+        // 8:  PRECISION int => precision
+        // 9:  LENGTH int => length in bytes of data
+        // 10: SCALE short => scale - null is returned for data types where SCALE is not applicable.
+        // 11: RADIX short => radix
+        // 12: NULLABLE short => can it contain NULL.
+        //       functionNoNulls - does not allow NULL values
+        //       functionNullable - allows NULL values
+        //       functionNullableUnknown - nullability unknown 
+        // 13: REMARKS String => comment describing column/parameter
+        // 14: CHAR_OCTET_LENGTH int => the maximum length of binary and character based parameters or columns. For any other datatype the returned value is a NULL
+        // 15: ORDINAL_POSITION int => the ordinal position, starting from 1, for the input and output parameters. A value of 0 is returned if this row describes the function's return value. For result set columns, it is the ordinal position of the column in the result set starting from 1.
+        // 16: IS_NULLABLE String => ISO rules are used to determine the nullability for a parameter or column.
+        //       YES --- if the parameter or column can include NULLs
+        //       NO --- if the parameter or column cannot include NULLs
+        //       empty string --- if the nullability for the parameter or column is unknown 
+        // 17: SPECIFIC_NAME String => the name which uniquely identifies this function within its schema. This is a user specified, or DBMS generated, name that may be different then the FUNCTION_NAME for example with overload functions 
+        //
+
+		int counter = 0;
+		while(rs.next())
+		{
+			counter++;
+			if ( (counter % 100) == 0 )
+				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+
+			String funcCatalog = rs.getString("FUNCTION_CAT");
+			String funcSchema  = rs.getString("FUNCTION_SCHEM");
+			String funcName    = rs.getString("FUNCTION_NAME");
+			
+			FunctionColumnInfo ci = new FunctionColumnInfo();
+			ci._colName       = rs.getString("COLUMN_NAME");
+			ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
+			ci._colType       = rs.getString("TYPE_NAME");
+			ci._colLength     = rs.getInt   ("LENGTH");
+			ci._colIsNullable = rs.getInt   ("NULLABLE");
+			ci._colRemark     = rs.getString("REMARKS");
+//			ci._colDefault    = rs.getString("COLUMN_DEF");
+//			ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+
+			retList.add(ci);
+			
+			if (waitDialog.wasCancelPressed())
+				return retList;
+		}
+		rs.close();
+
+		return retList;
+	}
+
+	protected void refreshCompletionForFunctionColumns(Connection conn, WaitForExecDialog waitDialog, List<FunctionInfo> functionInfoList, boolean bulkGetColumns)
+	throws SQLException
+	{
+//System.out.println("SQL: refreshCompletionForTableColumns()");
+
+		//------------------------------------------------------------------------
+		// DatabaseMetaData..getColumns(null, null, "%", "%");
+		//------------------------------------------------------------------------
+		// Retrieves a description of table columns available in the specified catalog. 
+		// Only column descriptions matching the catalog, schema, table and column name criteria are returned. They are ordered by TABLE_CAT,TABLE_SCHEM, TABLE_NAME, and ORDINAL_POSITION. 
+		// 
+		// Each column description has the following columns: 
+		// TABLE_CAT         String => table catalog (may be null) 
+		// TABLE_SCHEM       String => table schema (may be null) 
+		// TABLE_NAME        String => table name 
+		// COLUMN_NAME       String => column name 
+		// DATA_TYPE         int    => SQL type from java.sql.Types 
+		// TYPE_NAME         String => Data source dependent type name, for a UDT the type name is fully qualified 
+		// COLUMN_SIZE       int    => column size. 
+		//                                  BUFFER_LENGTH is not used. 
+		// DECIMAL_DIGITS    int    => the number of fractional digits. Null is returned for data types where DECIMAL_DIGITS is not applicable. 
+		// NUM_PREC_RADIX    int    => Radix (typically either 10 or 2) 
+		// NULLABLE          int    => is NULL allowed. 
+		//                                  columnNoNulls - might not allow NULL values 
+		//                                  columnNullable - definitely allows NULL values 
+		//                                  columnNullableUnknown - nullability unknown 
+		// REMARKS           String => comment describing column (may be null) 
+		// COLUMN_DEF        String => default value for the column, which should be interpreted as a string when the value is enclosed in single quotes (may be null) 
+		// SQL_DATA_TYPE     int    => unused 
+		// SQL_DATETIME_SUB  int    => unused 
+		// CHAR_OCTET_LENGTH int    => for char types the maximum number of bytes in the column 
+		// ORDINAL_POSITION  int    => index of column in table (starting at 1) 
+		// IS_NULLABLE       String => ISO rules are used to determine the nullability for a column. 
+		//                                  YES --- if the parameter can include NULLs 
+		//                                  NO --- if the parameter cannot include NULLs 
+		//                                  empty string --- if the nullability for the parameter is unknown 
+		// SCOPE_CATLOG      String => catalog of table that is the scope of a reference attribute (null if DATA_TYPE isn't REF) 
+		// SCOPE_SCHEMA      String => schema of table that is the scope of a reference attribute (null if the DATA_TYPE isn't REF) 
+		// SCOPE_TABLE       String => table name that this the scope of a reference attribure (null if the DATA_TYPE isn't REF) 
+		// SOURCE_DATA_TYPE  short  => source type of a distinct type or user-generated Ref type, SQL type from java.sql.Types (null if DATA_TYPE isn't DISTINCT or user-generated REF) 
+		// IS_AUTOINCREMENT  String => Indicates whether this column is auto incremented 
+		//                                  YES --- if the column is auto incremented 
+		//                                  NO --- if the column is not auto incremented 
+		//                                  empty string --- if it cannot be determined whether the column is auto incremented parameter is unknown 
+		//                                  The COLUMN_SIZE column the specified column size for the given column. For numeric data, this is the maximum precision. For character data, this is the length in characters. For datetime datatypes, this is the length in characters of the String representation (assuming the maximum allowed precision of the fractional seconds component). For binary data, this is the length in bytes. For the ROWID datatype, this is the length in bytes. Null is returned for data types where the column size is not applicable.
+		// 
+		// Parameters:
+		// - catalog a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
+		// - schemaPattern a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
+		// - tableNamePattern a table name pattern; must match the table name as it is stored in the database 
+		// - columnNamePattern a column name pattern; must match the column name as it is stored in the database
+		//------------------------------------------------------------------------
+
+
+		// Obtain a DatabaseMetaData object from our current connection        
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+//		boolean bulkGetColumns = true;
+//		boolean bulkGetColumns = tableInfoList.size() > 20;
+
+//System.out.println("refreshCompletionForFunctionColumns(): bulkGetColumns="+bulkGetColumns);
+
+		if (bulkGetColumns)
+		{
+			final String stateMsg = "Getting Column information for ALL functions.";
+			waitDialog.setState(stateMsg);
+
+			String prevFuncName = "";
+			FunctionInfo funcInfo = null;
+	
+			// Obtain a DatabaseMetaData object from our current connection
+			ResultSet rs = dbmd.getColumns(null, null, "%", "%");
+
+			int counter = 0;
+			while(rs.next())
+			{
+				counter++;
+				if ( (counter % 100) == 0 )
+					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
+
+	//			String tabCatalog = rs.getString("TABLE_CAT");
+	//			String tabSchema  = rs.getString("TABLE_SCHEM");
+				String funcName    = rs.getString("TABLE_NAME");
+				
+				FunctionColumnInfo ci = new FunctionColumnInfo();
+				ci._colName       = rs.getString("COLUMN_NAME");
+				ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
+				ci._colType       = rs.getString("TYPE_NAME");
+				ci._colLength     = rs.getInt   ("COLUMN_SIZE");
+				ci._colIsNullable = rs.getInt   ("NULLABLE");
+				ci._colRemark     = rs.getString("REMARKS");
+				ci._colDefault    = rs.getString("COLUMN_DEF");
+				ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+	
+				if ( ! prevFuncName.equals(funcName) )
+				{
+					prevFuncName = funcName;
+					funcInfo = getFunctionInfo(funcName);
+				}
+				if (funcInfo == null)
+					continue;
+	
+				funcInfo.addColumn(ci);
+				
+				if (waitDialog.wasCancelPressed())
+					return;
+			}
+			rs.close();
+		}
+		else
+		{
+			// ADD Column information
+			for (FunctionInfo fi : functionInfoList)
+			{
+//System.out.println("refreshCompletionForFunctionColumns(): bulkGetColumns="+bulkGetColumns+", FunctionInfo="+fi);
+				if (waitDialog.wasCancelPressed())
+					return;
+
+				waitDialog.setState("Getting Column information for function '"+fi._funcName+"'.");
+				fi._needColumnRefresh = false;
+
+				ResultSet rs = dbmd.getColumns(fi._funcCat, fi._funcSchema, fi._funcName, "%");
+				while(rs.next())
+				{
+					FunctionColumnInfo ci = new FunctionColumnInfo();
+					ci._colName       = rs.getString("COLUMN_NAME");
+					ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
+					ci._colType       = rs.getString("TYPE_NAME");
+					ci._colLength     = rs.getInt   ("COLUMN_SIZE");
+					ci._colIsNullable = rs.getInt   ("NULLABLE");
+					ci._colRemark     = rs.getString("REMARKS");
+					ci._colDefault    = rs.getString("COLUMN_DEF");
+					ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+					
+//System.out.println("refreshCompletionForFunctionColumns(): bulkGetColumns="+bulkGetColumns+", ROW="+ci);
+					fi.addColumn(ci);
+				}
+				rs.close();
+
+			} // end: for (FunctionInfo fi : functionInfoList)
+		} // end: fetch-func-by-func
+	}
+
+
+	//------------------------------------------------------------------------------------------------------
+	// PROCEDURES
+	//------------------------------------------------------------------------------------------------------
 	protected List<ProcedureInfo> refreshCompletionForProcedures(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
@@ -2014,12 +2492,26 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			pi._procRemark       = rs.getString("REMARKS");
 //			pi._procSpecificName = rs.getString("SPECIFIC_NAME"); //in HANA = not there...
 
+System.out.println("refreshCompletionForProcedures() ADD: pi="+pi);
+			// add schemas... this is a Set so duplicates is ignored
+			_schemaNames.add(pi._procSchema);
+
 			procInfoList.add(pi);
 			
 			if (waitDialog.wasCancelPressed())
 				return procInfoList;
 		}
 		rs.close();
+		
+		// Special for ORACLE, get procedures with PACKAGES
+		if (conn instanceof OracleConnection)
+		{
+			OracleConnection oraConn = (OracleConnection) conn;
+			List<ProcedureInfo> oraPackProcs = oraConn.getPackageProcedures(waitDialog, catalogName, schemaName, procName);
+			
+			procInfoList.addAll(oraPackProcs);
+		}
+		
 		
 		return procInfoList;
 	}
@@ -2180,7 +2672,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					ppi._paramDefault    = rs.getString("COLUMN_DEF");
 					ppi._paramScale      = rs.getInt   ("SCALE");
 					
-//System.out.println("refreshCompletionForTableColumns(): bulkMode="+bulkMode+", ROW="+ppi);
+//System.out.println("refreshCompletionForProcedureParameters(): bulkMode="+bulkMode+", ROW="+ppi);
 					pi.addParameter(ppi);
 				}
 				rs.close();
@@ -2208,6 +2700,10 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		return "unknown("+type+")";
 	}
 
+
+	//------------------------------------------------------------------------------------------------------
+	// SYSTEM PROCEDURES
+	//------------------------------------------------------------------------------------------------------
 	protected List<ProcedureInfo> refreshCompletionForSystemProcedures(Connection conn, WaitForExecDialog waitDialog)
 	throws SQLException
 	{
@@ -2241,7 +2737,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 	 * Go and get the Completions for the underlying JDBC Connection
 	 * @return
 	 */
-	protected List<SqlTableCompletion> refreshCompletion()
+//	protected List<SqlTableCompletion> refreshCompletion()
+	protected <T extends AbstractCompletionX> List<T> refreshCompletion()
 	{
 //System.out.println("SQL: refreshCompletion()");
 		final Connection conn = _connectionProvider.getConnection();
@@ -2385,6 +2882,46 @@ if (_guiOwner == null)
 
 
 					//----------------------------------------------------------
+					// Get Function and Columns information
+					if (isLookupFunctionName())
+					{
+						thisStartTime = System.currentTimeMillis();
+						_functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog());
+						_logger.debug("---------------- Refresh Completion: FUNC-1 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+						if (isLookupFunctionColumns())
+						{
+							refreshCompletionForFunctionColumns(conn, getWaitDialog(), _functionInfoList, true);
+							_logger.debug("---------------- Refresh Completion: FUNC-2 Time: "+TimeUtils.msToTimeStr(System.currentTimeMillis()-thisStartTime));
+						}
+	
+						// Create completion list
+						getWaitDialog().setState("Creating Function Completions.");
+						_functionComplList.clear();
+						for (FunctionInfo ti : _functionInfoList)
+						{
+							SqlFunctionCompletion c = new SqlFunctionCompletion(CompletionProviderAbstractSql.this, ti, false, _addSchemaName, _quoteTableNames);
+							completionList.add(c);
+							_functionComplList.add(c);
+						}
+						
+//						// Add all other schemas (that dosn't have a table)
+//						if (isLookupSchemaWithNoTables())
+//						{
+//    						List<SchemaInfo> allSchemas = refreshCompletionForSchemas(conn, getWaitDialog(), null, null);
+//    						for (SchemaInfo si : allSchemas)
+//    							_schemaNames.add(si._name);
+//						}
+//
+//						// Add all schema names
+//						for (String schemaName : _schemaNames)
+//						{
+//							SqlSchemaCompletion c = new SqlSchemaCompletion(CompletionProviderAbstractSql.this, schemaName);
+//							completionList.add(c);
+//						}
+					}
+
+
+					//----------------------------------------------------------
 					// Get USER Procedure and Parameters information
 					if (isLookupProcedureName())
 					{
@@ -2456,7 +2993,9 @@ if (_guiOwner == null)
 		}; // END: new WaitForExecDialog.BgExecutor()
 
 		// Execute and WAIT
-		ArrayList<SqlTableCompletion> list = (ArrayList)wait.execAndWait(doWork);
+//		ArrayList<SqlTableCompletion> list = (ArrayList)wait.execAndWait(doWork);
+		ArrayList<T> list = (ArrayList) wait.execAndWait(doWork);
+
 		if (list == null)
 		{
 			if (doWork.hasException())
@@ -2476,6 +3015,7 @@ if (_guiOwner == null)
 	 */
 	private List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
 	{
+//new Exception("DUMMY EXCEPTION at: getTableListWithGuiProgress(conn='"+conn+"', catName='"+catName+"', schemaName='"+schemaName+"', objName='"+objName+"')").printStackTrace();
 		// Create a Waitfor Dialog and Executor, then execute it.
 		WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Refreshing SQL Completion");
 
@@ -2501,20 +3041,45 @@ if (_guiOwner == null)
 				try
 				{
 					//----------------------------------------------------------
-					// Get Table and Columns informaation
+					// Get Table and Columns information
+					getWaitDialog().setState("Getting Table Completions.");
 					List<TableInfo> tableInfoList = refreshCompletionForTables(conn, getWaitDialog(), catName, schemaName, objName);
-//					if (isLookupTableColumns())
-//						refreshCompletionForTableColumns(conn, getWaitDialog(), tableInfoList);
+
+					// Add it to the global table so we don't have to do the same lookup next time
+					_tableInfoList.addAll(tableInfoList);
 					if (tableInfoList.size() < 25)
 						refreshCompletionForTableColumns(conn, getWaitDialog(), tableInfoList, false);
 
-					// Create completion list
+					//----------------------------------------------------------
+					// Get Function and Columns information (for Table Valued Functions)
+					getWaitDialog().setState("Getting Function Completions.");
+					List<FunctionInfo> functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog(), catName, schemaName, objName);
+
+					// Add it to the global table so we don't have to do the same lookup next time
+					_functionInfoList.addAll(functionInfoList);
+					if (functionInfoList.size() < 25)
+						refreshCompletionForFunctionColumns(conn, getWaitDialog(), functionInfoList, false);
+
+
+					// Create completion list for tables
 					getWaitDialog().setState("Creating Table Completions.");
 					for (TableInfo ti : tableInfoList)
 					{
-//						SqlTableCompletion c = new SqlTableCompletion(_thisBaseClass, ti, _quoteTableNames);
 						SqlTableCompletion c = new SqlTableCompletion(CompletionProviderAbstractSql.this, ti, true, _addSchemaName, _quoteTableNames);
+						_tableComplList.add(c);
 						completionList.add(c);
+					}
+
+					// Create completion list for table valued functions
+					getWaitDialog().setState("Creating Table Valued Function Completions.");
+					for (FunctionInfo fi : functionInfoList)
+					{
+						if (fi._isTableValuedFunction)
+						{
+							SqlFunctionCompletion c = new SqlFunctionCompletion(CompletionProviderAbstractSql.this, fi, true, _addSchemaName, _quoteTableNames);
+							_functionComplList.add(c);
+							completionList.add(c);
+						}
 					}
 				}
 				catch (SQLException e)
@@ -2616,7 +3181,7 @@ if (_guiOwner == null)
 	 * @param objName
 	 * @return
 	 */
-	private List<Completion> getProcListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
+	private List<Completion> getProcedureListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
 	{
 		// Create a Waitfor Dialog and Executor, then execute it.
 		WaitForExecDialog wait = new WaitForExecDialog(_guiOwner, "Refreshing SQL Completion");
@@ -2625,7 +3190,7 @@ if (_guiOwner == null)
 		{
 			// This is the object that will be returned.
 //			ArrayList<SqlTableCompletion> completionList = new ArrayList<SqlTableCompletion>();
-			ArrayList<Completion> completionList = new ArrayList<Completion>();
+			ArrayList<Completion> localCompletionList = new ArrayList<Completion>();
 						
 			@Override
 			public boolean canDoCancel() { return true; };
@@ -2646,16 +3211,21 @@ if (_guiOwner == null)
 					// Get Table and Columns informaation
 					if (isLookupTableName())
 					{
+						getWaitDialog().setState("Getting Procedure Completions.");
 						List<ProcedureInfo> procInfoList = refreshCompletionForProcedures(conn, getWaitDialog(), catName, schemaName, objName);
+
+						// Add it to the global table so we don't have to do the same lookup next time
+						_procedureInfoList.addAll(procInfoList);
 						if (procInfoList.size() < 25)
-							refreshCompletionForProcedureParameters(conn, getWaitDialog(), procInfoList, true);
-	
+							refreshCompletionForProcedureParameters(conn, getWaitDialog(), procInfoList, false);
+
 						// Create completion list
-						getWaitDialog().setState("Creating Table Completions.");
+						getWaitDialog().setState("Creating Procedure Completions.");
 						for (ProcedureInfo pi : procInfoList)
 						{
 							SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, true, catName, _addSchemaName, _quoteTableNames);
-							completionList.add(c);
+							_procedureComplList.add(c);
+							localCompletionList.add(c);
 						}
 					}
 				}
@@ -2664,7 +3234,7 @@ if (_guiOwner == null)
 					_logger.info("Problems reading table information for SQL Procedure code completion.", e);
 				}
 
-				return completionList;
+				return localCompletionList;
 			}
 		}; // END: new WaitForExecDialog.BgExecutor()
 		
@@ -3294,6 +3864,35 @@ if (_guiOwner == null)
 		}
 		return null;
 	}
+
+	
+	
+	
+	
+	protected FunctionInfo getFunctionInfo(String functionName)
+	{
+		return getFunctionInfo(null, null, functionName, false);
+	}
+	protected FunctionInfo getFunctionInfo(String catName, String schemaName, String functionName, boolean getColInfo)
+	{
+		for (FunctionInfo fi : _functionInfoList)
+		{
+			if (functionName.equalsIgnoreCase(fi._funcName))
+			{
+				if (StringUtil.hasValue(catName) && ! catName.equalsIgnoreCase(fi._funcCat))
+					continue;
+				if (StringUtil.hasValue(schemaName) && ! schemaName.equalsIgnoreCase(fi._funcSchema))
+					continue;
+					
+				if (getColInfo && ! fi.isColumnRefreshed())
+					fi.refreshColumnInfo(_connectionProvider);
+					
+				return fi;
+			}
+		}
+		return null;
+	}
+
 
 //	/**
 //	 * Holds information about tables
@@ -3993,7 +4592,7 @@ if (_guiOwner == null)
 		if (needRefresh())
 			refresh();
 
-		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString);
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();
@@ -4002,6 +4601,7 @@ if (_guiOwner == null)
 
 		DbInfo        dbInfo    = getDbInfo(             sqlObj.getObjectName());
 		TableInfo     tabInfo   = getTableInfo(          sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
+		FunctionInfo  funcInfo  = getFunctionInfo(       sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
 		ProcedureInfo procInfo  = getProcedureInfo(      sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
 		ProcedureInfo sProcInfo = getSystemProcedureInfo(sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
 
@@ -4013,6 +4613,7 @@ if (_guiOwner == null)
 		StringBuilder sb = new StringBuilder();
 		if (dbInfo    != null) sb.append(dbInfo   .toHtmlString());
 		if (tabInfo   != null) sb.append(tabInfo  .toHtmlString());
+		if (funcInfo  != null) sb.append(funcInfo .toHtmlString());
 		if (procInfo  != null) sb.append(procInfo .toHtmlString());
 		if (sProcInfo != null) sb.append(sProcInfo.toHtmlString());
 		if (sb.length() != 0)

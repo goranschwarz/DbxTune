@@ -2,49 +2,6 @@
  */
 package com.asetune;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
-import org.apache.log4j.Logger;
-
-import com.asetune.check.CheckForUpdates;
-import com.asetune.cm.CounterSetTemplates;
-import com.asetune.gui.GuiLogAppender;
-import com.asetune.gui.MainFrame;
-import com.asetune.gui.MainFrameAse;
-import com.asetune.gui.SplashWindow;
-import com.asetune.gui.swing.EventQueueProxy;
-import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
-import com.asetune.pcs.PersistWriterBase;
-import com.asetune.pcs.PersistWriterJdbc;
-import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.tools.tailw.LogTailWindow;
-import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.Configuration;
-import com.asetune.utils.DbUtils;
-import com.asetune.utils.Debug;
-import com.asetune.utils.Encrypter;
-import com.asetune.utils.JavaVersion;
-import com.asetune.utils.Logging;
-import com.asetune.utils.Memory;
-import com.asetune.utils.StringUtil;
-import com.asetune.utils.SwingExceptionHandler;
-import com.asetune.utils.SwingUtils;
 
 
 public class AseTune

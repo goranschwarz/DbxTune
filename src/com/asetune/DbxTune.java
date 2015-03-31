@@ -99,7 +99,11 @@ public abstract class DbxTune
 	}
 
 	public abstract String getAppName();
-	public abstract String getAppHomeEnvName();
+//	public abstract String getAppHomeEnvName();
+//	public abstract String getAppSaveDirEnvName();
+	public String getAppHomeEnvName()    { return "DBXTUNE_HOME"; }
+	public String getAppSaveDirEnvName() { return "DBXTUNE_SAVE_DIR"; }
+
 
 	public abstract String getConfigFileName();
 	public abstract String getUserConfigFileName();
@@ -447,13 +451,15 @@ public abstract class DbxTune
 
 				if (opt_D.equals("H2"))
 				{
+					String envNameSaveDir    = getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+
 					String jdbcDriver = "org.h2.Driver";
 					String jdbcUrl    = "jdbc:h2:file:"+opt;
 					String jdbcUser   = "sa";
 					String jdbcPasswd = "";
 
 					if ("default".equalsIgnoreCase(opt))
-						jdbcUrl = "jdbc:h2:file:${IQTUNE_SAVE_DIR}/${SERVERNAME}_${DATE}";
+						jdbcUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}";
 
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,           jdbcDriver);
 					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,              jdbcUrl);
@@ -1024,7 +1030,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  -D ASA -d hostname:port:dbname:user:passwd");
 		pw.println("  Default connection specifications for different dbtypes:");
 		pw.println("     H2:  'h2dbfile' file is mandatory.");
-		pw.println("          Use: -d default, will set h2dbfile to '${IQTUNE_SAVE_DIR}/${SERVERNAME}_${DATE}'");
+		pw.println("          Use: -d default, will set h2dbfile to '${<DBXTUNE>_SAVE_DIR}/${SERVERNAME}_${DATE}'");
 		pw.println("     ASE: 'hostname:port:dbname:user:passwd' is all mandatory.");
 		pw.println("     ASA: port=2638, dbname='', user='DBA', passwd='SQL'");
 		pw.println("  If only '-d' is given, the default value for '-D' is 'H2'.");
@@ -1185,13 +1191,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			//-------------------------------
 			else
 			{
-//				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) new AseTune      (cmd);
-				if      ("AseTune2"     .equalsIgnoreCase(_mainClassName)) new AseTune2     (cmd);
-				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) new IqTune       (cmd);
-				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) new RsTune       (cmd);
-				else if ("HanaTune"     .equalsIgnoreCase(_mainClassName)) new HanaTune     (cmd);
-				else if ("SqlServerTune".equalsIgnoreCase(_mainClassName)) new SqlServerTune(cmd);
-				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) new OracleTune   (cmd);
+//				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) _instance = new AseTune      (cmd);
+				if      ("AseTune2"     .equalsIgnoreCase(_mainClassName)) _instance = new AseTune2     (cmd);
+				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) _instance = new IqTune       (cmd);
+				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) _instance = new RsTune       (cmd);
+				else if ("HanaTune"     .equalsIgnoreCase(_mainClassName)) _instance = new HanaTune     (cmd);
+				else if ("SqlServerTune".equalsIgnoreCase(_mainClassName)) _instance = new SqlServerTune(cmd);
+				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) _instance = new OracleTune   (cmd);
 				else
 				{
 					throw new Exception("Unknown Implementor of type '"+_mainClassName+"'.");

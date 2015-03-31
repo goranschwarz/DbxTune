@@ -76,6 +76,7 @@ import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
@@ -170,7 +171,9 @@ public class CounterControllerAse extends CounterControllerAbstract
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())

@@ -521,11 +521,14 @@ public class PersistWriterJdbc
 	 */
 	private String urlSubstitution(PersistContainer cont, String inputUrl)
 	{
+		if (inputUrl == null) throw new RuntimeException("urlSubstitution(): inputUrl is null");
+
 		Timestamp newDate = (cont != null) ? cont.getMainSampleTime() : new Timestamp(System.currentTimeMillis());
 
 //		String val = "abc ${DATE:format=yyyyMMdd.HHmm; roll=true} xxx ${SERVERNAME}:${VAR_IS_UNKNOWN}";
 		String val = inputUrl; 
 		_logger.debug("urlSubstitution(): INPUT: inputUrl='"+val+"'.");
+//System.out.println("PCS: urlSubstitution: INPUT: inputUrl='"+val+"'.");
 
 //		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
 		Pattern compiledRegex = Pattern.compile("\\$\\{.+\\}");
@@ -535,6 +538,7 @@ public class PersistWriterJdbc
 			String varStr      = val.substring( val.indexOf("${")+2, val.indexOf("}") );
 			String varName     = varStr;
 			Configuration varConf = null;
+//System.out.println("PCS: urlSubstitution: LOOP: varName='"+varName+"', varStr='"+varStr+"'.");
 			if (varStr.indexOf(':') >= 0)
 			{
 				int firstColon = varStr.indexOf(':');
@@ -547,6 +551,7 @@ public class PersistWriterJdbc
 					_logger.error("Problems parsing variables in the H2 URL '"+inputUrl+"' at the variable '"+varName+"' with the modifier '"+varModifier+"'. Caught: "+pe);
 				}
 			}
+//System.out.println("PCS: urlSubstitution: LOOP-2: varName='"+varName+"', varStr='"+varStr+"'.");
 
 			_logger.debug("urlSubstitution(): varName='"+varName+"', varModifyer='"+varConf+"'.");
 			
@@ -584,7 +589,7 @@ public class PersistWriterJdbc
 				if (cont != null)
 					varVal = cont.getServerName();
 			}
-			else if ( "ASEHOSTNAME".equals(varName) || "HOSTNAME".equals(varName) )
+			else if ( "ASEHOSTNAME".equals(varName) || "SRVHOSTNAME".equals(varName) || "HOSTNAME".equals(varName) )
 			{
 //				varVal = AseConnectionUtils.getAseHostname(conn, true);
 				varVal = "";
@@ -597,24 +602,40 @@ public class PersistWriterJdbc
 //			else if ( "IQTUNE_SAVE_DIR" .equals(varName) ) { varVal = System.getProperty("IQTUNE_SAVE_DIR",  ""); }
 //			else if ( "RSTUNE_HOME"     .equals(varName) ) { varVal = System.getProperty("RSTUNE_HOME",      ""); }
 //			else if ( "RSTUNE_SAVE_DIR" .equals(varName) ) { varVal = System.getProperty("RSTUNE_SAVE_DIR",  ""); }
-			else if ( varName != null && varName.endsWith("TUNE_SAVE_DIR")) 
+//			else if ( varName != null && varName.endsWith("TUNE_SAVE_DIR")) 
+//			{
+//				varName = DbxTune.getInstance().getAppSaveDirEnvName();
+//				varVal  = StringUtil.getEnvVariableValue(varName);
+//System.out.println("PCS: urlSubstitution: varName='"+varName+"', varVal='"+varVal+"'.");
+//			}
+//			else if ( varName != null && varName.endsWith("TUNE_HOME")) 
+//			{
+//				varName = DbxTune.getInstance().getAppHomeEnvName();
+//				varVal  = StringUtil.getEnvVariableValue(varName);
+////System.out.println("PCS: urlSubstitution: varName='"+varName+"', varVal='"+varVal+"'.");
+//			}
+			else if ( varName != null && "DBXTUNE_SAVE_DIR".equals(varName)) 
 			{
-				varVal = System.getProperty(varName, "");
+				varVal  = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 			}
-			else if ( varName != null && varName.endsWith("TUNE_HOME")) 
+			else if ( varName != null && "DBXTUNE_HOME".equals(varName)) 
 			{
-				varVal = System.getProperty(varName, "");
+				varVal  = StringUtil.getEnvVariableValue("DBXTUNE_HOME");
 			}
 			else
 			{
-				_logger.warn("urlSubstitution(): WARNING: Unknown variable '"+varName+"', simply removing it from the output.");
+				_logger.warn("PCS: urlSubstitution(): WARNING: Unknown variable '"+varName+"', simply removing it from the output.");
 				varVal = "";
 				//varVal = "$"+varStr+"";
 			}
 
+			if (varVal == null)
+				varVal = "";
+
+//System.out.println("PCS: urlSubstitution(): Substituting varName '${"+varStr+"}' with value '"+varVal+"'.");
 			_logger.debug("urlSubstitution(): Substituting varName '${"+varStr+"}' with value '"+varVal+"'.");
 
-			// NOW substityte the ENVVARIABLE with a real value...
+			// NOW substitute the ENVVARIABLE with a real value...
 			val = val.replace("${"+varStr+"}", varVal);
 		}
 		_logger.debug("urlSubstitution(): AFTER: val='"+val+"'.");

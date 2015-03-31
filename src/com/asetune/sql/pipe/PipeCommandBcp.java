@@ -417,7 +417,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			// If it doesnt exist, try to create it
 			if (_bcpParams._createTab)
 			{
-				SqlObjectName sqlObj = new SqlObjectName(_bcpParams._table, null, null);
+				SqlObjectName sqlObj = new SqlObjectName(_bcpParams._table, null, null, false);
 				DatabaseMetaData md = _conn.getMetaData();
 				ResultSet rs = md.getTables(sqlObj.getCatalogNameN(), sqlObj.getSchemaNameN(), sqlObj.getObjectNameN(), null);
 				int count = 0;

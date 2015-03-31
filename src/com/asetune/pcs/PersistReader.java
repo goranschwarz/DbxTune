@@ -38,6 +38,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
@@ -57,7 +58,8 @@ implements Runnable, ConnectionProvider
 	private static final String CMD_loadSessions            = "loadSessions";
 	
 	/** A connection to the PersitentCounter Storage back end */
-	private Connection _conn = null;
+//	private Connection _conn = null;
+	private DbxConnection _conn = null;
 	
 	/** implements singleton pattern */
 	private static PersistReader _instance = null;
@@ -108,7 +110,8 @@ implements Runnable, ConnectionProvider
 //	{
 //		_logger.setLevel(Level.DEBUG);
 //	}
-	public PersistReader(Connection conn)
+//	public PersistReader(Connection conn)
+	public PersistReader(DbxConnection conn)
 	{
 		_conn = conn;
 
@@ -147,7 +150,8 @@ implements Runnable, ConnectionProvider
 	/**
 	 * Set the <code>Connection</code> to use for getting offline sessions.
 	 */
-	public void setConnection(Connection conn)
+//	public void setConnection(Connection conn)
+	public void setConnection(DbxConnection conn)
 	{
 		_conn = conn;
 	}
@@ -160,13 +164,15 @@ implements Runnable, ConnectionProvider
 	 * Gets the <code>Connection</code> to the monitored server.
 	 */
 	@Override
-	public Connection getConnection()
+//	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
 		return _conn;
 	}
 
 	@Override
-	public Connection getNewConnection(String connName)
+//	public Connection getNewConnection(String connName)
+	public DbxConnection getNewConnection(String connName)
 	{
 		throw new RuntimeException("PersistentReader has not implemented the method 'getNewConnection(String)'");
 	}

@@ -37,7 +37,6 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;

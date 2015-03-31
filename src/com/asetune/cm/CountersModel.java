@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -59,6 +60,7 @@ import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -90,7 +92,9 @@ implements Cloneable, ITableTooltip
 	private IGuiController      _guiController     = null;
 	
 	/** Filename of Icon that any GUI will use */
-	private String             _guiIconFile       = null;
+	private String             _guiIconFile        = null;
+	/** If the above file can't be found use this one instead */
+	private String             _guiIconFileDefault = "images/CmNoIcon.png";
 
 	/** SybMessageHaandler used when querying the monitored server */
 	private CmSybMessageHandler _sybMessageHandler = null;
@@ -110,11 +114,11 @@ implements Cloneable, ITableTooltip
 	private String             _serverName        = "";
 	private Timestamp          _sampleTimeHead    = null;
 	private Timestamp          _counterClearTime  = null;
+	private boolean            _showClearTime     = true;
 	private boolean            _isCountersCleared = false;  // if counters has been cleared between previous sample and current sample. set in setCounterClearTime()
 	private Timestamp          _sampleTime        = null;
 	private long               _sampleInterval    = 0;
 
-	
 	// Individual timings of sample SQL, GUI LocalCalculation updates
 	private long               _sqlRefreshStartTime = 0;
 	private long               _sqlRefreshTime      = 0;
@@ -814,6 +818,17 @@ implements Cloneable, ITableTooltip
 		return _guiIconFile;
 	}
 
+	/** set Icon Filename which the GUI can use */
+	public void setIconFileDefault(String filename)
+	{
+		_guiIconFileDefault = filename;
+	}
+	/** get Icon Filename which the GUI can use */
+	public String getIconFileDefault()
+	{
+		return _guiIconFileDefault;
+	}
+
 	/**
 	 * Create a GUI panel, this one should be overridden by subclasses if you want to change behavior.
 	 */
@@ -823,7 +838,15 @@ implements Cloneable, ITableTooltip
 		TabularCntrPanel tcp = new TabularCntrPanel(this);
 
 		if (getIconFile() != null)
-			tcp.setIcon( SwingUtils.readImageIcon(Version.class, getIconFile()) );
+		{
+			ImageIcon icon = SwingUtils.readImageIcon(Version.class, getIconFile());
+
+			// Get default icon if we can't find the first icon
+			if (icon == null)
+				icon = SwingUtils.readImageIcon(Version.class, getIconFileDefault());
+				
+			tcp.setIcon(icon);
+		}
 
 		return tcp;
 	}
@@ -913,6 +936,7 @@ implements Cloneable, ITableTooltip
 		return null;
 	}
 	
+	public boolean   showClearTime()       { return _showClearTime; }
 	public String    getServerName()       { return _serverName; }
 	public Timestamp getSampleTimeHead()   { return _sampleTimeHead; }
 	public Timestamp getCounterClearTime() { return _counterClearTime; }
@@ -920,6 +944,11 @@ implements Cloneable, ITableTooltip
 	public long      getSampleInterval()   { return _sampleInterval; }
 	public boolean   isCountersCleared()   { return _isCountersCleared; }
 
+//	public Timestamp getPreviousSampleTimeHead() { return _prevSample == null ? null : _prevSample.getSampleTimeHead(); }
+	public Timestamp getPreviousSampleTime()     { return _prevSample == null ? null : _prevSample.getSampleTime(); }
+
+	
+	public void setShowClearTime(boolean b)              { _showClearTime = b; }
 	public void setServerName(String name)               { _serverName = name; }
 	public void setSampleTimeHead(Timestamp timeHead)    { _sampleTimeHead = timeHead; }
 	public void setSampleTime(Timestamp time)            { _sampleTime = time; }
@@ -2526,6 +2555,9 @@ implements Cloneable, ITableTooltip
 				curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
 				((SybConnection)conn).setSybMessageHandler(getSybMessageHandler());
 			}
+			// Set a TDS Message Handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).setSybMessageHandler(getSybMessageHandler());
 			
 			int batchCounter = 0;
 			try
@@ -2570,6 +2602,9 @@ implements Cloneable, ITableTooltip
 				{
 					((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 				}
+				// Restore old message handler
+				if (conn instanceof TdsConnection)
+					((TdsConnection)conn).restoreSybMessageHandler();
 			}
 		}
 	}
@@ -3000,7 +3035,8 @@ implements Cloneable, ITableTooltip
 
 				if (_logger.isDebugEnabled()) 
 					_logger.debug(getName() + ": should be HIDDEN.");
-				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+//				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
+				_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$DBXTUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 
 				TabularCntrPanel tcp = getTabPanel();
 				if (tcp != null)
@@ -3464,6 +3500,9 @@ implements Cloneable, ITableTooltip
 			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
 			((SybConnection)conn).setSybMessageHandler(getSybMessageHandler());
 		}
+		// Set a TDS Message Handler
+		if (conn instanceof TdsConnection)
+			((TdsConnection)conn).setSybMessageHandler(getSybMessageHandler());
 		
 		// now MAKE the refresh
 		int rowsFetched = 0;
@@ -3517,6 +3556,9 @@ implements Cloneable, ITableTooltip
 			{
 				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 			}
+			// Restore old message handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).restoreSybMessageHandler();
 		}
 
 		// increment counter

@@ -55,10 +55,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
-
-import com.sun.jmx.snmp.Timestamp;
-
 public class IqLogParser
 {
 	/**

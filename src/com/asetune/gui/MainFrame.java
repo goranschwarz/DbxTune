@@ -103,6 +103,7 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.tools.tailw.LogTailWindow;
@@ -112,7 +113,6 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
-import com.asetune.utils.JdbcUtils;
 import com.asetune.utils.Memory;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
@@ -429,7 +429,8 @@ public abstract class MainFrame
 //	private static Connection         _conn                      = null;
 //	private static long               _lastIsClosedCheck         = 0;
 //	private static long               _lastIsClosedRefreshTime   = 1200;
-	private static Connection         _offlineConn               = null;
+//	private static Connection         _offlineConn               = null;
+	private static DbxConnection      _offlineConn               = null;
 	private static long               _lastOfflineIsClosedCheck         = 0;
 	private static long               _lastOfflineIsClosedRefreshTime   = 1200;
 	private static OfflineSessionVeiwer _offlineView             = null;
@@ -1865,10 +1866,11 @@ public abstract class MainFrame
 					String jdbcUrl    = reader.getJdbcUrl();
 					String jdbcUser   = reader.getJdbcUser();
 					String jdbcPasswd = reader.getJdbcPasswd();
-					
+//NOTE: probably needs to get ConnProps from PersistReader and use that (or can we trust the "default ConnProps")
 					try 
 					{
-						Connection conn = JdbcUtils.connect(this, jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd);
+						DbxConnection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
+//						Connection conn = JdbcUtils.connect(this, jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd);
 						QueryWindow qf = new QueryWindow(conn, true, WindowType.JFRAME);
 						qf.openTheWindow();
 					}
@@ -1896,9 +1898,11 @@ public abstract class MainFrame
 					}
 
 					AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
+					DbxConnection.setPropertyForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
 	
 //					Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-QueryWindow", null);
-					Connection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
+//					Connection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
+					DbxConnection conn = getNewConnection(Version.getAppName()+"-QueryWindow");
 					QueryWindow qf = new QueryWindow(conn, true, WindowType.JFRAME);
 					qf.openTheWindow();
 				}
@@ -2635,7 +2639,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	 **---------------------------------------------------
 	 */
 	@Override
-	public Connection getConnection()
+//	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
 //		if (GetCounters.getInstance().isMonConnected())
 //		{
@@ -2650,11 +2655,13 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 	}
 	@Override
-	public Connection getNewConnection(String appName)
+//	public Connection getNewConnection(String appName)
+	public DbxConnection getNewConnection(String appName)
 	{
 		try
 		{
-			return AseConnectionFactory.getConnection(null, appName, null);
+//			return AseConnectionFactory.getConnection(null, appName, null);
+			return DbxConnection.connect(this, appName);
 		}
 		catch (Exception e)
 		{
@@ -3252,7 +3259,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	private void action_openAseMonitorConfigDialog(ActionEvent e)
 	{
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
-		Connection conn = CounterController.getInstance().getMonConnection();
+//		Connection conn = CounterController.getInstance().getMonConnection();
+		DbxConnection conn = CounterController.getInstance().getMonConnection();
 		AseConfigMonitoringDialog.showDialog(this, conn, -1);
 
 		// If monitoring is NOT enabled anymore, do disconnect
@@ -4202,7 +4210,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	/**
 	 * Set the <code>Connection</code> to use for monitoring.
 	 */
-	public static void setOfflineConnection(Connection conn)
+//	public static void setOfflineConnection(Connection conn)
+	public static void setOfflineConnection(DbxConnection conn)
 	{
 		_offlineConn = conn;
 	}
@@ -4210,7 +4219,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	/**
 	 * Gets the <code>Connection</code> to the monitored server.
 	 */
-	public static Connection getOfflineConnection()
+//	public static Connection getOfflineConnection()
+	public static DbxConnection getOfflineConnection()
 	{
 		return _offlineConn;
 	}

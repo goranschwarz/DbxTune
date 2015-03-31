@@ -3,7 +3,6 @@ package com.asetune.tools.sqlcapture;
 /**
  * @author <a href="mailto:goran_schwarz@hotmail.com">Goran Schwarz</a>
  */
-import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +11,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterControllerAbstract;
 import com.asetune.cm.CountersModel;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Ver;
 
@@ -56,7 +56,7 @@ extends CounterControllerAbstract
 	}
 
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())

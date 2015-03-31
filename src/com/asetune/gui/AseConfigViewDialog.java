@@ -8,7 +8,6 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
-import java.sql.Connection;
 import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
@@ -27,6 +26,7 @@ import com.asetune.Version;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.PersistReader;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
@@ -371,12 +371,14 @@ implements ActionListener, ConnectionProvider
 	*/
 
   	@Override
-	public Connection getConnection()
+//	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
 		return _connProvider.getConnection();
 	}
 	@Override
-	public Connection getNewConnection(String appname)
+//	public Connection getNewConnection(String appname)
+	public DbxConnection getNewConnection(String appname)
 	{
 		return _connProvider.getNewConnection(appname);
 	}

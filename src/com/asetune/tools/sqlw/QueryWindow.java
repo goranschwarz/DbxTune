@@ -161,6 +161,8 @@ import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandBcp;
 import com.asetune.sql.pipe.PipeCommandException;
@@ -190,6 +192,7 @@ import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.ui.autocomplete.CompletionProviderAse;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
 import com.asetune.ui.autocomplete.CompletionProviderRepServer;
+import com.asetune.ui.autocomplete.SqlObjectName;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -400,10 +403,11 @@ public class QueryWindow
 	private static final String REGEXP_MLC_SLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?:--.*)"; // SLC=SingleLineComment, MLC=MultiLineComment
 
 
-	private boolean     _initialized     = false;
+	private boolean       _initialized     = false;
 
-	private Connection  _conn            = null;
-	private int         _connType        = -1;
+//	private Connection    _conn            = null;
+	private DbxConnection _conn            = null;
+	private int           _connType        = -1;
 	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo  = null;
 	private DbUtils.JdbcConnectionStateInfo        _jdbcConnectionStateInfo = null;
 	
@@ -906,24 +910,43 @@ public class QueryWindow
 	 * This constructor method creates a simple GUI and hooks up an event
 	 * listener that updates the table when the user enters a new query.
 	 **/
-	public QueryWindow(Connection conn, WindowType winType)
+//	public QueryWindow(Connection conn, WindowType winType)
+//	{
+//		this(conn, null, null, true, winType, null);
+//	}
+//	public QueryWindow(Connection conn, boolean closeConnOnExit, WindowType winType)
+//	{
+//		this(conn, null, null, closeConnOnExit, winType, null);
+//	}
+//	public QueryWindow(Connection conn, String sql, WindowType winType)
+//	{
+//		this(conn, sql, null, true, winType, null);
+//	}
+//	public QueryWindow(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+//	{
+//		init(conn, sql, inputFile, closeConnOnExit, winType, conf);
+//	}
+//
+//	private void init(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+//	{
+	public QueryWindow(DbxConnection conn, WindowType winType)
 	{
 		this(conn, null, null, true, winType, null);
 	}
-	public QueryWindow(Connection conn, boolean closeConnOnExit, WindowType winType)
+	public QueryWindow(DbxConnection conn, boolean closeConnOnExit, WindowType winType)
 	{
 		this(conn, null, null, closeConnOnExit, winType, null);
 	}
-	public QueryWindow(Connection conn, String sql, WindowType winType)
+	public QueryWindow(DbxConnection conn, String sql, WindowType winType)
 	{
 		this(conn, sql, null, true, winType, null);
 	}
-	public QueryWindow(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+	public QueryWindow(DbxConnection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		init(conn, sql, inputFile, closeConnOnExit, winType, conf);
 	}
 
-	private void init(Connection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
+	private void init(DbxConnection conn, String sql, String inputFile, boolean closeConnOnExit, WindowType winType, Configuration conf)
 	{
 		_windowType = winType;
 
@@ -1341,7 +1364,7 @@ public class QueryWindow
 			// Remember the factory object that was passed to us
 			_conn = conn;
 
-			if (_conn instanceof SybConnection)
+			if (_conn instanceof SybConnection || _conn instanceof TdsConnection)
 			{
 				// Setup a message handler
 		//		((SybConnection)_conn).setSybMessageHandler(this);
@@ -4107,9 +4130,6 @@ public class QueryWindow
 //System.out.println("JFileChooser.CUSTOM_DIALOG: 'Save As'");
 		
 
-//		if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-//			fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
-
 		int returnVal = fc.showDialog(_window, "Save As");
 //		int returnVal = fc.showOpenDialog(_window);
 		if (returnVal == JFileChooser.APPROVE_OPTION) 
@@ -4824,11 +4844,13 @@ public class QueryWindow
 	**---------------------------------------------------
 	*/
 	@Override
-	public Connection getNewConnection(String appname)
+//	public Connection getNewConnection(String appname)
+	public DbxConnection getNewConnection(String appname)
 	{
 		try
 		{
-			return AseConnectionFactory.getConnection(null, appname, null);
+//			return AseConnectionFactory.getConnection(null, appname, null);
+			return DbxConnection.connect(_window, appname);
 		}
 		catch (Exception e)  // SQLException, ClassNotFoundException
 		{
@@ -4837,7 +4859,8 @@ public class QueryWindow
 		}
 	}
 	@Override
-	public Connection getConnection()
+//	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
 		return _conn;
 	}
@@ -5482,9 +5505,11 @@ public class QueryWindow
 							// but not for print statement
 							if (_getObjectTextOnError_chk.isSelected() && eedi.getSeverity() > 10)
 							{
-								objectText = AseConnectionUtils.getObjectText(_conn, null, searchForName, null, _srvVersion);
+								SqlObjectName sqlObj = new SqlObjectName(searchForName, _connectedToProductName, "\"", false);
+
+								objectText = AseConnectionUtils.getObjectText(_conn, null, sqlObj.getObjectName(), sqlObj.getSchemaName(), _srvVersion);
 								if (objectText == null && searchForName.startsWith("sp_"))
-									objectText = AseConnectionUtils.getObjectText(_conn, "sybsystemprocs", searchForName, null, _srvVersion);
+									objectText = AseConnectionUtils.getObjectText(_conn, "sybsystemprocs", sqlObj.getObjectName(), sqlObj.getSchemaName(), _srvVersion);
 								objectText = StringUtil.markTextAtLine(objectText, lineNumber, true);
 							}
 
@@ -5547,10 +5572,20 @@ public class QueryWindow
 				}
 				else
 				{
-					String msg = "Unexpected SQLException: " +
-						_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
-						+ sqe.getMessage();
-					sb.append(msg);
+					if (sqe instanceof SQLWarning)
+					{
+						String msg = "SQL-Warning: " +
+								_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", WarningClass: " + sqe.getClass().getName() + "\n"
+								+ sqe.getMessage();
+						sb.append(msg);
+					}
+					else
+					{
+						String msg = "Unexpected SQL-Exception: " +
+								_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", ExceptionClass: " + sqe.getClass().getName() + "\n"
+								+ sqe.getMessage();
+						sb.append(msg);
+					}
 
 					// Get Oracle ERROR Messages
 					if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE))
@@ -5632,543 +5667,6 @@ public class QueryWindow
 		}
 	}
 
-//	/*----------------------------------------------------------------------
-//	** BEGIN: class SqlStatementInfo, RpcParam
-//	**----------------------------------------------------------------------*/ 
-//	private static class SqlStatementInfo
-//	{
-//		private boolean                         _callableStatement = false;
-//		private boolean                         _preparedStatement = false;
-//		private ArrayList<QueryWindow.RpcParam> _rpcParams = null;
-//		private String                          _sqlOrigin = null;
-//		private String                          _sql       = null;
-//		private boolean                         _doReturnCode = false;
-//
-//		// Used when SQL String do NOT start with "exec "
-//		// Used during ResultSet loop
-//		private Statement _stmnt = null;
-//
-//		// Used when SQL String starts with "exec "
-//		private CallableStatement _cstmnt = null;
-//
-//		public Statement getStatement()
-//		{
-////System.out.println("SqlStatementInfo.getStatement():" + ((_useCallableStatement) ? "CALLABLE" : "LANGUAGE"));
-//			return (_callableStatement||_preparedStatement) ? _cstmnt : _stmnt;  
-//		}
-//		
-//		public boolean execute() 
-//		throws SQLException
-//		{
-////System.out.println("SqlStatementInfo.execute():" + ((_useCallableStatement) ? _sql : _sqlOrigin));
-//			return (_callableStatement||_preparedStatement) ? _cstmnt.execute() : _stmnt.execute(_sqlOrigin);
-//		}
-//		
-//		public SqlStatementInfo(Connection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList)
-//		throws SQLException
-//		{
-//			_sqlOrigin = sql;
-//			_sql = sql.trim();
-//
-//			String w1 = "";
-//			String w2 = "";
-//			// Check if it's a LOCAL command, which starts with: \
-//			if (_sql.startsWith("\\"))
-//			{
-//				// A set of known commands
-//				String[] knownCommands = {"\\exec", "\\rpc", "\\call", "\\prep"};
-//
-//				// Get first and seconds word
-//				StringTokenizer st = new StringTokenizer(_sql);
-//				int word = 0;
-//				while (st.hasMoreTokens()) 
-//				{
-//					word++;
-//					if      (word == 1) w1 = st.nextToken();
-//					else if (word == 2) w2 = st.nextToken();
-//					else break;
-//				}
-//
-//				// UNKNOWN command, give a list of available commands.
-//				if ( ! StringUtil.arrayContains(knownCommands, w1) || w2.equals(""))
-//				{
-//					String msg = 
-//						  "Unknown Local Command (or no parameters to it): " + w1 + "\n"
-//						+ "\n"
-//						+ "Local Commands available: \n"
-//						+ "    \\exec procName ? ? :(params)               -- exec using Callable Statement\n"
-//						+ "    \\rpc  procName ? ? :(params)               -- exec using Callable Statement\n"
-//						+ "    \\call procName ? ? :(params)               -- exec using Callable Statement\n"
-//						+ "    \\prep insert inti t1 values(? ?) :(params) -- exec using Prepared Statement\n"
-//						+ "\n"
-//						+ "param description: \n"
-//						+ "    Type     Value               java.sql.Types Example: replace question mark(?) with value\n"
-//						+ "    -------  ------------------- -------------- ----------------------------------------\n"
-//						+ "    string = 'a string value'    Types.VARCHAR  string='it''s a string', string=null\n"
-//						+ "    int    = integer             Types.INTEGER  int=99, int=null\n"
-//						+ "    clob   = 'filename|url'      Types.CLOB     clob='c:\\xxx.txt, clob='http://asetune.com'\n"
-//						+ "    blob   = 'filename|url'      Types.BLOB     blob='c:\\xxx.jpg, blob='http://www.asemon.se/images/sample3.png'\n"
-//						+ "    ora_rs                       -10            a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
-//						+ "                                                ora_rs will simply be treated as a ResultSet for SQL Window.\n"
-//						+ "Examples: \n"
-//						+ "    \\call procName1(?,?,?) :(string='a string', int=99, string=null) \n"
-//						+ "    \\call procName2(?,?)   :(int=99, string=null out) -- calls a procedure where last parameter is an output variable\n"
-//						+ "    \\call oracleProc(?)    :(ora_rs) -- calls a Oracle procedure which has a SYS_REFCURSOR as output parameter\n"
-//						+ "\n"
-//						+ "    \\prep insert into t1 values(?,?,?)     :(int=98, string=null, blob='http://www.asemon.se/images/sample3.png') \n"
-//						+ "    \\prep insert into t1 values(99,NULL,?) :(blob='http://www.asemon.se/images/sample3.png') \n"
-//						+ "";
-//					throw new SQLException(msg);
-//				}
-//			}
-//
-//
-//			// Flag that this is officially a CallableStatement or PreparedStatement
-//			if      (w1.equals("\\exec")) _callableStatement = true;
-//			else if (w1.equals("\\rpc" )) _callableStatement = true;
-//			else if (w1.equals("\\call")) _callableStatement = true;
-//			else if (w1.equals("\\prep")) _preparedStatement = true;
-//
-//			// Should we try to make a RPC call to the server
-//			if (_callableStatement || _preparedStatement)
-//			{
-//				// Initialize this to be empty at start
-//				_rpcParams = new ArrayList<QueryWindow.RpcParam>();
-//
-//				boolean forceRpc = false;
-//				String sqlParamsStr = "";
-//				String rpcParamsStr = null;
-//
-//				if (_preparedStatement)
-//				{
-//    				int startPos = _sql.indexOf(w2); // first word after '\prep'
-//
-//    				int rpcParamsBeginIdx = _sql.indexOf(":(");
-//    				int rpcParamsEndIdx   = StringUtil.indexOfEndBrace(_sql, rpcParamsBeginIdx + 2, ')');
-//
-//    				rpcParamsStr = _sql.substring(rpcParamsBeginIdx + 2, rpcParamsEndIdx);
-//    				sqlParamsStr = _sql.substring(startPos, rpcParamsBeginIdx).trim();
-////System.out.println("SqlStatementInfo(): preparedStmnt.sqlParamsStr=|"+sqlParamsStr+"|.");
-////System.out.println("SqlStatementInfo(): preparedStmnt.rpcParamsStr=|"+rpcParamsStr+"|.");
-//
-//					_sql       = sqlParamsStr;
-//					_rpcParams = RpcParam.parse(rpcParamsStr);
-//				}
-//
-//				// FIXME: make the below code EASIER
-//				if ( _callableStatement )
-//				{
-//					// If we are connected to a server that has return codes
-//					if (DbUtils.isProductName(dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_RS, DbUtils.DB_PROD_NAME_MSSQL))
-//						_doReturnCode = true;
-//					
-//					forceRpc = false;
-//					if (w1.equals("\\rpc"))
-//						forceRpc = true;
-//					
-//					String procName = "";
-////					String sqlParams = "";
-//					
-//					rpcParamsStr = null;
-//					int rpcParamsBeginIdx = _sql.indexOf(":(");
-//					int rpcParamsEndIdx   = StringUtil.indexOfEndBrace(_sql, rpcParamsBeginIdx + 2, ')');
-//					
-////					int startPos = _sql.indexOf(w2); // first word after '\exec'
-//					int firstSpace = _sql.indexOf(" ");
-//					firstSpace++;
-//					int secondSpace = StringUtil.indexOf(_sql, firstSpace, ' ', '(');
-//					
-//					//System.out.println("firstSpace="+firstSpace+", secondSpace="+secondSpace);
-//					
-//					if (secondSpace > firstSpace)
-//					{
-//						procName = _sql.substring(firstSpace, secondSpace);
-//						secondSpace++; // move one char to right to get parameters
-//						_logger.debug("procName: |"+procName+"|.");
-//						
-//						if (rpcParamsBeginIdx == -1)
-//							sqlParamsStr = _sql.substring(secondSpace).trim();
-//						else
-//							sqlParamsStr = _sql.substring(secondSpace, rpcParamsBeginIdx).trim();
-//						
-//						// remove any trailing ')' if the SQL looks like: \call name(?,?)
-//						if ( sqlParamsStr.endsWith(")") )
-//							sqlParamsStr = sqlParamsStr.substring(0, sqlParamsStr.length()-1);
-//						_logger.debug("parameters: |"+sqlParamsStr+"|.");
-//						
-//						if (rpcParamsBeginIdx != -1)
-//						{
-//							rpcParamsBeginIdx += 2;
-//							rpcParamsStr = _sql.substring(rpcParamsBeginIdx, rpcParamsEndIdx);
-//							_logger.debug("rpcParamsStr: |"+rpcParamsStr+"|.");
-//						}
-//					}
-//					else
-//					{
-//						procName = _sql.substring(firstSpace);
-//						sqlParamsStr = "";
-//					}
-//					
-//					// RPC Parameters spec ':({int|string}=val[ out][,...])'
-//					// \exec procname ?, ?, ? :(int=3,string=val, int=99)
-//					if (rpcParamsStr != null)
-//					{
-//						_rpcParams = RpcParam.parse(rpcParamsStr);
-//					}
-//					
-//					if (_doReturnCode)
-//						_sql = "{?=call "+procName+"("+sqlParamsStr+")}";
-//					else
-//						_sql = "{call "+procName+"("+sqlParamsStr+")}";
-//					
-//					_logger.debug("NEW PROC SQL: |"+_sql+"|.");
-//				} // end: ! _preparedStatement
-//
-//
-//				int questionMarkCount = StringUtil.charCount(sqlParamsStr, '?');
-//				if (questionMarkCount == 0 && sqlParamsStr.length() > 0)
-//				{
-//					String rpcParamSpec        = ":( {int|string|clob|blob} = val [ out] [,...] )";
-//					String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\filename.txt', clob='http://google.com' )";
-//					String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
-//
-//					String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
-//					             "Trying to execute a stored procedure via RPC method. The parameter list dosn't contain any Question Marks('?') This will probably *force* the JDBC driver to deliver the call as a 'language' statament to the server. \n" +
-//					             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
-//					             "If you want it to be sent as a RPC to the server, you needs to use Question Marks(?) for the parameter(s), and a parameter specification (se below) so that the JDBC driver can issue the call in an aproperiate way. \n" +
-//					             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-//					             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-//					             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
-//
-//					// if issued by '\rpc' then throw an exception
-//					// otherwise just write a warning message and continue
-//					if (forceRpc)
-//						throw new SQLException(msg);
-//
-//					// logg... but remove all NewLines
-//					_logger.warn(msg.replace("\n", ""));
-//
-//					// Add WARNING Message to the result
-//					resultCompList.add(new JAseMessage(Version.getAppName()+": WARNING - "+msg, _sql));
-//				}
-//				if (questionMarkCount != _rpcParams.size())
-//				{
-//					String rpcParamSpec        = ":( {int|string|clob|blob} = val [ out] [,...] )";
-//					String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\filename.txt', clob='http://google.com' )";
-//					String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
-//					
-//					String msg = "EXEC PROCEDURE AS RPC LOGIC: \n" +
-//					             "Trying to execute a stored procedure via RPC method. Number of Question Marks('?') doesn't match the paramete specification count (QuestionMarkCount="+questionMarkCount+", paramSpecCount="+_rpcParams.size()+"). \n" +
-//					             "Current CallableStatement sql looks like '"+_sql+"'. \n" +
-//					             "ParameterSpecification looks like '"+rpcParamsStr+"'. \n" +
-//					             "Format of the Parameter Specification is '"+rpcParamSpec+"'. \n" +
-//					             "Example of the Parameter Specification '"+rpcParamSpecExample+"'. \n" +
-//					             "Example of a SQL that will be translated to a RPC call '"+rpcfullExample+"'.";
-//					throw new SQLException(msg);
-//				}
-//			} // end: exec or call
-//
-//			// Get a Statement or a CallableStatement
-//			if (_callableStatement||_preparedStatement)
-//			{
-//				// Get a CallableStatement... (will also be used for PreparedStatement, since CallableStatement extends PreparedStatement)
-//				_cstmnt = conn.prepareCall(_sql);
-//
-//				// Register the return-status
-//				if (_doReturnCode)
-//					_cstmnt.registerOutParameter(1, Types.INTEGER);
-//
-//				// Set RPC Parameters
-//				if (_rpcParams != null)
-//				{
-//					int pos = _doReturnCode ? 1 : 0;
-//					for (RpcParam param : _rpcParams)
-//					{
-//						pos++; // first pos will be 2, since #1 is used as return status
-//
-//						if (param._isOutput)
-//							_cstmnt.registerOutParameter(pos, param._sqlType);
-//						else
-//						{
-//							if (param._sqlType == Types.BLOB)
-//							{
-//								_cstmnt.setBytes(pos, (byte[])param._val);
-////								if (param._val instanceof InputStream)
-//////									_cstmnt.setBlob(pos, (InputStream)param._val);
-////									_cstmnt.setBinaryStream(pos, (InputStream)param._val);
-////								else
-////									throw new SQLException("INTERNAL ERROR: Input parameter "+pos+" must be of InputStream...");
-//							}
-//							else if (param._sqlType == Types.CLOB)
-//							{
-//								_cstmnt.setString(pos, (String)param._val);
-////								if (param._val instanceof InputStream)
-//////									_cstmnt.setClob(pos, new InputStreamReader( (InputStream)param._val) );
-////									_cstmnt.setAsciiStream(pos, (InputStream)param._val );
-////								else
-////									throw new SQLException("INTERNAL ERROR: Input parameter "+pos+" must be of InputStream...");
-//							}
-//							else
-//							{
-//								_cstmnt.setObject(pos, param._val, param._sqlType);
-//							}
-//						}
-//					}
-//				}
-//			}
-//			else
-//			{
-//				// Get a "regular" Statement...
-//				_stmnt = conn.createStatement();
-//			}
-//		}
-//
-//		public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList, boolean asPlainText) 
-//		throws SQLException
-//		{
-//			if (_callableStatement||_preparedStatement)
-//			{
-//				if (_doReturnCode)
-//				{
-//					int returnStatus = _cstmnt.getInt(1);
-//					resultCompList.add( new JAseProcRetCode(returnStatus, _sql) );
-//				}
-//				
-//				// Set RPC Parameters
-//				if (_rpcParams != null)
-//				{
-//					int pos       = _doReturnCode ? 1 : 0;
-//					int posAdjust = _doReturnCode ? 1 : 0;
-//					for (RpcParam param : _rpcParams)
-//					{
-//						pos++;
-//						
-//						if (param._isOutput)
-//						{
-//							Object outParamVal = _cstmnt.getObject(pos);
-//
-//							// If OUTput parameter is ORACLE SYS_REFCURSOR, then read the ResultSet
-//							if (    outParamVal != null 
-//							     && outParamVal instanceof ResultSet 
-//							     && param._sqlType == RpcParam.ORACLE_CURSOR_TYPE
-//							   )
-//							{
-//								ResultSet rs = (ResultSet) outParamVal;
-//
-//								// For the moment, don't support pipe/filters etc... just make this simple
-//								if (asPlainText)
-//								{
-//									ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
-//									
-//									resultCompList.add(new JPlainResultSet(rstm));
-//								}
-//								else
-//								{
-//									// Convert the ResultSet into a TableModel, which fits on a JTable
-//									ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
-//				
-//									// Create the JTable, using the just created TableModel/ResultSet
-//									JXTable tab = new ResultSetJXTable(rstm);
-//									tab.setSortable(true);
-//									tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-//									tab.packAll(); // set size so that all content in all cells are visible
-//									tab.setColumnControlVisible(true);
-//									tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-//	
-//									// Add the JTable to a list for later use
-//									resultCompList.add(tab);
-//								}
-//							}
-//							else
-//							{
-//								resultCompList.add( new JAseProcRetParam(pos-posAdjust, outParamVal, param._sqlType, _sql) );
-//							}
-//						} // end: isOutput parameter
-//					}// end: loop RpcParam
-//				}
-//			}
-//		} // end: method
-//
-//	} // end: class SqlStatementInfo
-//
-//	
-//	private static class RpcParam
-//	{
-//		private int     _sqlType  = Types.OTHER;
-//		private Object  _val      = null;
-//		private boolean _isOutput = false;
-//
-//		 /**
-//		  * The SQL TYPE for an Oracle CURSOR in a Oracle Stored Procedure.
-//		  * This duplicates the OracleTypes.CURSOR, but with this constant 
-//		  * we do not need to import com.oracle.* jars into this project.
-//		  * However this class is still 100% dependent on Oracle at runtime 
-//		  * and cannot be unit tested without Oracle.
-//		  */
-//		private static int ORACLE_CURSOR_TYPE = -10;
-//
-//		public static RpcParam parseEntry(String entry)
-//		{
-//			if (entry == null)
-//				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', is NULL.");
-//
-//			boolean isOracleResultSetOutputParameter = entry.trim().equalsIgnoreCase("ora_rs");
-//
-//			if (isOracleResultSetOutputParameter)
-//			{
-//				RpcParam p = new RpcParam();
-//				p._isOutput = true;
-//				p._sqlType  = ORACLE_CURSOR_TYPE; 
-//				p._val      = null;
-//
-//				return p;
-//			}
-//
-//			int eqPos   = entry.indexOf('=');
-//			if (eqPos == -1)
-//				throw new RuntimeException("Problem parsing RPC Parameter entry '"+entry+"', no equal char is found. Expecting: 'int|string|clob|blob = value' or 'ora_rs'");
-//			String type = entry.substring(0, eqPos).trim();
-//			String val  = entry.substring(eqPos+1).trim();
-//			
-//			RpcParam p = new RpcParam();
-//
-//			if (val.endsWith(" out") || val.endsWith(" OUT") )
-//			{
-//				p._isOutput = true;
-//				val = val.substring(0, val.length() - " out".length()).trim();
-//			}
-//			val = StringUtil.unquote(val);
-////			if ( (val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("'") && val.endsWith("'")) )
-////			{
-////				val = val.substring(1, val.length() - 1);
-////			}
-//			boolean isNull = val.equalsIgnoreCase("null");
-//
-//			if      ("int"   .equals(type)) {p._sqlType = Types.INTEGER; p._val = isNull ? null : new Integer(val); }
-//			else if ("string".equals(type)) {p._sqlType = Types.VARCHAR; p._val = isNull ? null : new String(val); }
-//			else if ("clob"  .equals(type)) 
-//			{
-//				p._sqlType = Types.CLOB; 
-//				p._val = isNull ? null : readCLobValue(val); 
-//			}
-//			else if ("blob"  .equals(type)) 
-//			{
-//				p._sqlType = Types.BLOB; 
-//				p._val = isNull ? null : readBLobValue(val); 
-//			}
-//			else throw new RuntimeException("Unknown RPC Datatype '"+type+"'. known datatypes 'int|string|clob|blob|ora_rs'");
-//
-//			return p;
-//		}
-//		private static String readCLobValue(String urlStr)
-//		{
-//			ByteArrayOutputStream buffer = readLobInputStream(urlStr);
-//			return buffer.toString();
-//		}
-//		private static byte[] readBLobValue(String urlStr)
-//		{
-//			ByteArrayOutputStream buffer = readLobInputStream(urlStr);
-//			return buffer.toByteArray();
-//		}
-//		private static ByteArrayOutputStream readLobInputStream(String urlStr)
-//		{
-//			InputStream is = readLobValue(urlStr);
-//
-//			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-//
-//			int nRead;
-//			byte[] data       = new byte[16384];
-//			byte[] firstChunk = null; // can be used to determine the content
-//
-//			try
-//			{
-//				while ((nRead = is.read(data, 0, data.length)) != -1) 
-//				{
-//					buffer.write(data, 0, nRead);
-//					if (firstChunk == null)
-//						firstChunk = Arrays.copyOf(data, 1024);
-//				}
-//				buffer.flush();
-//				is.close();
-//
-//				if (firstChunk != null)
-//				{
-//					ContentInfoUtil util = new ContentInfoUtil();
-//					ContentInfo info = util.findMatch( firstChunk );
-//					_logger.info("Loaded file or URL '"+urlStr+"' which is of Content '" + (info == null ? "unknown" : info.toString()) + "'.");
-//				}
-//			}
-//			catch (IOException e)
-//			{
-//				throw new RuntimeException("Problems reading the InputStream from the URL or file '" + urlStr + "'. Caught: "+e, e);
-//			}
-//
-//			return buffer;
-//		}
-//		private static InputStream readLobValue(String urlStr)
-//		{
-//			try 
-//			{
-//				try
-//				{
-//					URL url = new URL(urlStr);
-//					InputStream is = url.openStream();
-//					return is;
-//				}
-//				catch(MalformedURLException e)
-//				{
-////System.out.println("rpc.readFile(urlStr='"+urlStr+"'): problems reading the URL, trying to open it as a file instead. caught: "+e);
-//					File file = new File(urlStr);
-////					if (!file.exists())
-////						throw new RuntimeException("File " + urlStr + " cannot be found.");
-//
-//					FileInputStream fis = new FileInputStream(file);
-//					return fis;
-//				}
-//			}
-//			catch (Exception e)
-//			{
-//				throw new RuntimeException("Problems reading the URL or file '" + urlStr + "'. Caught: "+e, e);
-//			}
-//		}
-//
-//		public static ArrayList<RpcParam> parse(String rpcParamsStr)
-//		{
-//			ArrayList<RpcParam> retList = new ArrayList<RpcParam>();
-//
-//			List<String> tmp = StringUtil.splitOnCommasAllowQuotes(rpcParamsStr, true);
-//			if ( tmp.size() == 0 && StringUtil.isNullOrBlank(tmp.get(0)) )
-//				throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|string|clob|blob = value' or 'ora_rs'.");
-//			
-//			for (int i=0; i<tmp.size(); i++)
-//			{
-//				String entry = tmp.get(i).trim();
-//				RpcParam p = parseEntry(entry);
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("RPC PARAM "+i+": '"+entry+"'. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
-//				retList.add(p);
-//			}
-//			return retList;
-//
-////			String[] tmp = rpcParamsStr.split(",");
-////			if ( tmp.length == 1 && StringUtil.isNullOrBlank(tmp[0]) )
-////				throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|string = value' or 'ora_rs'.");
-////
-////			for (int i=0; i<tmp.length; i++)
-////			{
-////				String entry = tmp[i].trim();
-////				RpcParam p = parseEntry(entry);
-////				if (_logger.isDebugEnabled())
-////					_logger.debug("RPC PARAM "+i+": '"+entry+"'. type=|"+p._sqlType+"|, val=|"+p._val+"|, isOutParam="+p._isOutput+".");
-////				retList.add(p);
-////			}
-////			return retList;
-//		}
-//	}
-//	/*----------------------------------------------------------------------
-//	** END: class SqlStatementInfo, RpcParam
-//	**----------------------------------------------------------------------*/ 
-
 
 	/**
 	 * This method uses the supplied SQL query string, and the
@@ -6191,11 +5689,10 @@ public class QueryWindow
 		// Setup a message handler
 		// Set an empty Message handler
 		SybMessageHandler curMsgHandler = null;
-		if (conn instanceof SybConnection)
+		if (conn instanceof SybConnection || conn instanceof TdsConnection)
 		{
-			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
-//			((SybConnection)conn).setSybMessageHandler(null);
-			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
+			// Create a new message handler which will be used for jConnect
+			SybMessageHandler newMsgHandler = new SybMessageHandler()
 			{
 				@Override
 				public SQLException messageHandler(SQLException sqle)
@@ -6232,7 +5729,15 @@ public class QueryWindow
 					// Downgrade ALL messages to SQLWarnings, so executions wont be interuppted.
 					return AseConnectionUtils.sqlExceptionToWarning(sqle);
 				}
-			});
+			};
+
+			if (conn instanceof SybConnection)
+			{
+				curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
+				((SybConnection)conn).setSybMessageHandler(newMsgHandler);
+			}
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).setSybMessageHandler(newMsgHandler);
 		}
 
 		// Vendor specific setting before we start to execute
@@ -6676,6 +6181,10 @@ public class QueryWindow
 			{
 				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 			}
+
+			// Restore old message handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).restoreSybMessageHandler();
 		}
 		
 		// In some cases, some of the area in not repainted
@@ -7737,656 +7246,6 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		return p;
 	}
 
-
-	/*----------------------------------------------------------------------
-	** BEGIN: various output classes
-	**----------------------------------------------------------------------*/ 
-//	public static class JAseMessage 
-//	extends JTextArea
-//	{
-//		private static final long serialVersionUID = 1L;
-//		
-//		private int    _msgNum      = -1;
-//		private String _msgText     = null;
-//		private int    _msgSeverity = -1;
-//		private int    _scriptRow   = -1;
-//		private int    _scriptCol   = -1;
-//		private String _originSql   = null;
-//		private String _objectText  = null; // IF stored procedure/function is passed
-//
-//		private RTextArea _sqlTextArea;
-//
-////		public JAseMessage()
-////		{
-////			_init();
-////		}
-//
-//		public JAseMessage(final String aseMsg, String originSql)
-//		{
-//			super(aseMsg);
-//			_originSql   = originSql;
-//			init();
-//		}
-//
-//		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, RTextArea sqlTextArea)
-//		{
-//			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, null, sqlTextArea);
-//		}
-//
-//		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, String originSql, String objectText, RTextArea sqlTextArea)
-//		{
-//			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, -1, originSql, objectText, sqlTextArea);
-//		}
-//
-//		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, RTextArea sqlTextArea)
-//		{
-//			this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, scriptCol, originSql, null, sqlTextArea);
-//		}
-//
-//		/**
-//		 * 
-//		 * @param aseMsg       Text message to print in the GUI
-//		 * @param msgNum       DBMS Message number
-//		 * @param msgText      Origin DBMS Text Message ?????
-//		 * @param msgSeverity  ASE Severity (if above 10 then the text will be in "red")
-//		 * @param scriptRow    (used to draw an red underline in the TextArea)
-//		 * @param scriptCol    (used to draw an red underline in the TextArea)
-//		 * @param originSql    Origin SQL Text that was executed
-//		 * @param objectText   If an "procedure/function" source code is accessible, it's the text
-//		 * @param sqlTextArea  Used for navigation button (next previous button)
-//		 */
-//		public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, String objectText, RTextArea sqlTextArea)
-//		{
-//			super(aseMsg);
-//			_msgNum      = msgNum;
-//			_msgText     = msgText;
-//			_msgSeverity = msgSeverity;
-//			_scriptRow   = scriptRow; // can be used to draw an red underline in the TextArea
-//			_scriptCol   = scriptCol; // can be used to draw an red underline in the TextArea
-//			_originSql   = originSql;
-//			_objectText  = objectText;
-//			_sqlTextArea = sqlTextArea;
-//			init();
-////System.out.println("JAseMessage: msgNum="+msgNum+", msgSeverity="+msgSeverity+", msgText='"+msgText+"', aseMsg='"+aseMsg+"'.");
-//		}
-//
-//		protected void init()
-//		{
-//			super.setEditable(false);
-//
-//			if (StringUtil.hasValue(_originSql))
-//				ToolTipManager.sharedInstance().registerComponent(this);
-//
-//			if (_aseMsgFont == null)
-//				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
-//			setFont(_aseMsgFont);
-//
-//			if (_msgSeverity > 10)
-//				setForeground(ColorUtils.DARK_RED);
-//
-//			setLineWrap(true);
-//			setWrapStyleWord(true);
-////			setOpaque(false); // Transparent
-//
-//			// install: GO-TO row when you inter the field
-//			if (_scriptRow > 0)
-//			{
-//				this.addMouseListener(new MouseListener()
-//				{
-//					@Override public void mouseReleased(MouseEvent e) {}
-//					@Override public void mousePressed(MouseEvent e) {}
-//					@Override public void mouseExited(MouseEvent e) {}
-//					@Override public void mouseEntered(MouseEvent e) {}
-//					
-//					@Override 
-//					public void mouseClicked(MouseEvent e) 
-//					{
-//						if (_sqlTextArea == null)
-//							return;
-//
-//						try
-//						{
-//							// Move to correct line in SQL Text
-//							_sqlTextArea.setCaretPosition(_sqlTextArea.getLineStartOffset(_scriptRow - 1));
-//							RXTextUtilities.possiblyMoveLineInScrollPane(_sqlTextArea);
-//
-//							// Unmark all messages
-//							Container parent = getParent();
-//							if (parent instanceof JPanel)
-//							{
-//								JPanel panel = (JPanel)parent;
-//								for (int i=0; i<panel.getComponentCount(); i++)
-//								{
-//									Component comp = panel.getComponent(i);
-//									if (comp instanceof JAseMessage)
-//									{
-//										JAseMessage msg = (JAseMessage)comp;
-//										msg.setBackground(Color.WHITE); //FIXME: Maybe not hardcode this color, get it from UI
-//									}
-//								}
-//							}
-//							// Mark the message
-//							setBackground(DEFAULT_OUTPUT_ERROR_HIGHLIGHT_COLOR);
-//						}
-//						catch (BadLocationException ble)
-//						{ // Never happens
-//							UIManager.getLookAndFeel().provideErrorFeedback(_sqlTextArea);
-//							ble.printStackTrace();
-//						}
-//					}
-//				});
-//			}
-//		}
-//
-//		@Override
-//		public String getToolTipText()
-//		{
-//			if (StringUtil.isNullOrBlank(_originSql))
-//				return null;
-//
-//			StringBuilder sb = new StringBuilder();
-//			sb.append("<html>");
-//			sb.append("<pre>");
-//			sb.append(getOriginSql()); // Show Origin SQL, on tooltip
-//			sb.append("</pre>");
-//			if (_objectText != null)
-//			{
-//				sb.append("<b>Procedure/Function Definition</b> Trying to mark error line in red.<br>");
-//				sb.append("<pre>");
-//				sb.append(getObjectText());
-//				sb.append("</pre>");
-//			}
-//			sb.append("<html>");
-//			return sb.toString();
-//		}
-//
-//		protected boolean hasHtmlStartTag()
-//		{
-//			// Actually it looks like Msg=6248 is used as a message number for this messages... but lets keep this below login (ordinary set showplan etc uses the same message)
-//			return _msgSeverity <= 10 && _msgText != null && _msgText.startsWith("<HTML>");
-//		}
-//
-//		protected boolean hasHtmlEndTag()
-//		{
-//			// Actually it looks like Msg=6248 is used as a message number for this messages... but lets keep this below login
-//			return _msgSeverity <= 10 && _msgText != null && _msgText.indexOf("</HTML>") > 0;
-//		}
-//
-//		public String getFullMsgText() { return super.getText(); }
-//		public String getMsgText()     { return _msgText; }
-//		public int    getMsgNum()      { return _msgNum; }
-//		public int    getMsgSeverity() { return _msgSeverity; }
-//		public int    getScriptRow()   { return _scriptRow; }
-//		public int    getScriptCol()   { return _scriptCol; }
-//		public String getOriginSql()   { return _originSql; }
-//		public String getObjectText()  { return _objectText; }
-//
-//		public void   setOriginSql (String sql) { _originSql  = sql; }
-//		public void   setObjectText(String str) { _objectText = str; }
-//
-//		public String getFullMsgTextHtml()
-//		{
-//			StringBuilder sb = new StringBuilder();
-//			
-//			sb.append("<html>");
-//			
-//			sb.append("<pre>");
-//			sb.append(getFullMsgText());
-//			sb.append("</pre>");
-//			sb.append("<br>");
-//			sb.append("<b>Note:</b> The marked red lines will disappear as soon as you change the text in the editor.");
-//			
-//			if (_objectText != null)
-//			{
-//				sb.append("<br><br>");
-//				sb.append("<b>Procedure/Function Definition</b> Trying to mark error line in red.<br>");
-//				sb.append("<pre>");
-//				sb.append(getObjectText());
-//				sb.append("</pre>");
-//			}
-//
-//			sb.append("</html>");
-//			
-//			return sb.toString();
-//		}
-//	}
-
-//	private static class JAseCancelledResultSet
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		public JAseCancelledResultSet(String originSql)
-//		{
-//			super("SQL was cancelled while reading the ResultSet", originSql);
-////			init();
-//			
-//			setForeground(ColorUtils.DARK_RED);
-//		}
-//	}
-//
-//	private static class JAseLimitedResultSet
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		public JAseLimitedResultSet(int numberOfRows, String originSql)
-//		{
-//			super("Reading the ResultSet was stopped after "+numberOfRows+" rows.", originSql);
-////			init();
-//
-//			setForeground(ColorUtils.DARK_RED);
-//		}
-//	}
-//	
-//	private static class JAseRowCount 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private int _rowCount;
-//
-//		public JAseRowCount(final int rowCount, String originSql)
-//		{
-//			super("(" + rowCount + " rows affected)", originSql);
-//			_rowCount = rowCount;
-////			init();
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//		
-//		@SuppressWarnings("unused")
-//		public int getRowCount()
-//		{
-//			return _rowCount;
-//		}
-//	}
-//
-//	private static class JAseProcRetCode 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private int _returnCode;
-//
-//		public JAseProcRetCode(final int returnCode, String originSql)
-//		{
-//			super("(return status = "+returnCode+")", originSql);
-//			_returnCode = returnCode;
-////			init();
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//		
-//		@SuppressWarnings("unused")
-//		public int getReturnCode()
-//		{
-//			return _returnCode;
-//		}
-//	}
-//
-//	private static class JAseProcRetParam 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private int    _pos;
-//		private Object _val;
-//		private int    _sqlType; // java.sql.Types
-//
-//		private static String toValue(Object val)
-//		{
-//			if (val == null)
-//				return ResultSetTableModel.DEFAULT_NULL_REPLACE; // ResultSetTableModel.NULL_REPLACE;
-//			
-//			if (val instanceof String)
-//				return "'" + val + "'";
-//
-//			return val + "";
-//		}
-//		public JAseProcRetParam(final int pos, final Object val, final int type, String originSql)
-//		{
-//			super("RPC Return parameter: pos="+pos+", value="+toValue(val), originSql);
-//			_pos     = pos;
-//			_val     = val;
-//			_sqlType = type;
-////			init();
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//		
-//		@SuppressWarnings("unused")
-//		public Object getValue()
-//		{
-//			return _val;
-//		}
-//		@SuppressWarnings("unused")
-//		public int getPosition()
-//		{
-//			return _pos;
-//		}
-//		@SuppressWarnings("unused")
-//		public int getType()
-//		{
-//			return _sqlType;
-//		}
-//	}
-//
-//	private static class JClientExecTime 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private long _execStartTime;
-//		private long _execStopTime;
-//		private long _execFinnishTime;
-//
-//		public JClientExecTime(final long execStartTime, final long execStopTime, final long execFinnishTime, int atLine, String originSql)
-//		{
-//			super("Client Exec Time: " + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStartTime) 
-//					+ " (sqlExec="     + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execStopTime    - execStartTime)
-//					+ ", readResults=" + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStopTime)
-//					+ "), at '"+(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()))
-//					+"', for SQL starting at Line "+atLine, originSql );
-//
-//			_execStartTime   = execStartTime;
-//			_execStopTime    = execStopTime;
-//			_execFinnishTime = execFinnishTime;
-//
-////			init();
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//		
-//		@SuppressWarnings("unused") public Object getExecStartTime()   { return _execStartTime; }
-//		@SuppressWarnings("unused") public Object getExecStopTime()    { return _execStopTime; }
-//		@SuppressWarnings("unused") public Object getExecFinnishTime() { return _execFinnishTime; }
-//	}
-//
-//	private static class JDbmsOuputMessage
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//		
-//		private static String getDbmsType(String connectedToProductName)
-//		{
-//			if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE)) return "Oracle";
-//			if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX)) return "DB2";
-//			return "Oracle/DB2";
-//		}
-//
-//		public JDbmsOuputMessage(String message, String originSql, String connectedToProductName)
-//		{
-//			super(getDbmsType(connectedToProductName)+" DBMS_OUTPUT.GET_LINE(): "+message, originSql);
-//
-//			setForeground(ColorUtils.VERY_DARK_BLUE);
-//		}
-//	}
-////	_resultCompList.add( new JOracleMessage(owner, name, type, sequence, line, position, text, attribute, message_number) );
-//	private static class JOracleMessage
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//		
-//		private static String createMsg(String owner, String name, String type, int sequence, int line, int position, String text, String attribute, int message_number)
-//		{
-//			return "Oracle SHOW ERRORS\n"
-//					+ "Type:           " + type + "\n"
-//					+ "Owner:          " + owner + "\n"
-//					+ "Name:           " + name + "\n"
-//					+ "sequence:       " + sequence + "\n"
-//					+ "line:           " + line + "\n"
-//					+ "position:       " + position + "\n"
-//					+ "attribute:      " + attribute + "\n"
-//					+ "message_number: " + message_number + "\n"
-//					+ text
-//					;
-//		}
-//
-//		public JOracleMessage(String owner, String name, String type, int sequence, int line, int position, String text, String attribute, int message_number, 
-//				int scriptRow, String originSql, RSyntaxTextArea textArea)
-//		{
-//			super(createMsg(owner, name, type, sequence, line, position, text, attribute, message_number), 
-//					message_number, text, 16, scriptRow, position, originSql, textArea);
-//
-//			setForeground(ColorUtils.DARK_RED);
-//		}
-//	}
-//
-//	private static class JSQLExceptionMessage
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private static String createMsg(SQLException ex, String productName)
-//		{
-//			String prodName = productName; 
-//			if (DbUtils.DB_PROD_NAME_HANA.equals(productName)) prodName = "HANA";
-//
-//			String sqlExceptionsText = ex.getMessage();
-////			SQLException xxx = ex;
-////			while (xxx != null)
-////			{
-////				System.out.println("XXXX:" + prodName + ": ErrorCode "+xxx.getErrorCode()+", SQLState "+xxx.getSQLState()+", ExceptionClass: " + xxx.getClass().getName() + "\n");
-////				xxx = xxx.getNextException();
-////			}
-////			System.out.println("JSQLExceptionMessage: prodName='"+prodName+"'.");
-////			ex.printStackTrace();
-//
-//			String sqlWarningsText = "";
-//			if (ex instanceof SQLWarning)
-//			{
-//				int w = 0;
-//				SQLWarning sqlw = (SQLWarning)ex;
-//				while (sqlw != null)
-//				{
-//					//System.out.println("SQLWarning: "+sqlw);
-//					String wmsg = sqlw.getMessage();
-//					
-//					sqlWarningsText += "SQLWarning("+w+"): " + wmsg;
-//					if ( ! sqlWarningsText.endsWith("\n") )
-//						sqlWarningsText += "\n";
-//						
-//					sqlw = sqlw.getNextWarning();
-//					if (w == 0 && sqlw == null)
-//						break;
-//					w++;
-//				}
-//				if (w > 1) // If we had a Warning Chain... add the chain, else "reset" the warnings...
-//					sqlWarningsText = "\nBelow is the full SQLWarning chain, there are "+w+" Warnings:\n" + sqlWarningsText;
-//			}
-//			
-//			String text = sqlExceptionsText;
-//			if (StringUtil.hasValue(sqlWarningsText))
-//			{
-//				if ( ! text.endsWith("\n") )
-//					text += "\n";
-//				text += sqlWarningsText;
-//			}
-//
-//			return prodName + ": ErrorCode "+ex.getErrorCode()+", SQLState "+ex.getSQLState()+", ExceptionClass: " + ex.getClass().getName() + "\n"
-////				+ "("+Version.getAppName()+": The SQL Batch was aborted due to a thrown SQLException)\n"
-//				+ text;
-//		}
-//		public JSQLExceptionMessage(SQLException ex, String productName, int line, int col, String originSql, String objectText, RTextArea sqlTextArea)
-//		{
-//			super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql, sqlTextArea);
-//			setObjectText(objectText);
-//			setForeground(ColorUtils.RED);
-//		}
-//	}
-//
-//	private static class JSentSqlStatement 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		@SuppressWarnings("unused")
-//		private int _scriptRow;
-//
-//		private static String createStr(String sql)
-//		{
-//			StringBuilder sb = new StringBuilder();
-//			Scanner scanner = new Scanner(sql);
-//			int row = 0;
-//			while (scanner.hasNextLine()) 
-//			{
-//				String str = scanner.nextLine();
-//				row++;
-//				sb.append(row).append("> ").append(str);
-//				if (scanner.hasNextLine())
-//					sb.append("\n");
-//			}
-//			return sb.toString();
-//		}
-//
-//		public JSentSqlStatement(String sql, int scriptRow)
-//		{
-//			super(createStr(sql), sql);
-//			_scriptRow = scriptRow;
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//	}
-//
-//	private static class JSkipSendSqlStatement 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private static String createStr(String sql)
-//		{
-//			StringBuilder sb = new StringBuilder();
-//			sb.append("-----------------------------------------------------------------------------------------------------------\n");
-//			sb.append("The below SQL Statement looks like it only consist of comments... This will NOT be sent to the server.     \n");
-//			sb.append("Note: If you still want to SEND it, the behaiviour can be changed under: Options -> Send empty SQL Batches \n");
-//			sb.append("-----------------------------------------------------------------------------------------------------------\n");
-//			Scanner scanner = new Scanner(sql);
-//			int row = 0;
-//			while (scanner.hasNextLine()) 
-//			{
-//				String str = scanner.nextLine();
-//				row++;
-//				sb.append(row).append("> ").append(str);
-//				if (scanner.hasNextLine())
-//					sb.append("\n");
-//			}
-//			return sb.toString();
-//		}
-//
-//		public JSkipSendSqlStatement(String sql)
-//		{
-//			super(createStr(sql), sql);
-//			
-//			setForeground(ColorUtils.VERY_DARK_YELLOW);
-//		}
-//	}
-//
-//	private static class JBcpWarning 
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		private static String createStr(SQLWarning sqlw, PipeCommand pipeCmd)
-//		{
-//			String mainText = "The BCP command '"+pipeCmd.getCmd().getCmdStr()+"' had some Warning messages.\n";
-//			String sqlWarningsText = "";
-//
-//			int w = 0;
-//			while (sqlw != null)
-//			{
-//				String wmsg = sqlw.getMessage();
-//				
-//				sqlWarningsText += "SQLWarning("+w+"): " + wmsg;
-//				if ( ! sqlWarningsText.endsWith("\n") )
-//					sqlWarningsText += "\n";
-//					
-//				sqlw = sqlw.getNextWarning();
-//				if (w == 0 && sqlw == null)
-//					break;
-//				w++;
-//			}
-//			if (w > 1) // If we had a Warning Chain... add the chain, else "reset" the warnings...
-//				sqlWarningsText = "Below is the full SQLWarning chain, there are "+w+" Warnings:\n" + sqlWarningsText;
-//
-//			return mainText + sqlWarningsText;
-//		}
-//
-//		public JBcpWarning(SQLWarning bcpSqlWarning, PipeCommand pipeCmd, String sql)
-//		{
-//			super(createStr(bcpSqlWarning, pipeCmd), sql);
-//
-//			setForeground(ColorUtils.VERY_DARK_YELLOW);
-//		}
-//	}
-//
-//	private static class JResultSetInfo
-//	extends JAseMessage
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		@SuppressWarnings("unused")
-//		private int _scriptRow;
-//
-//		private static String createStr(ResultSetTableModel rstm)
-//		{
-//			return rstm.getResultSetInfo();
-//		}
-//
-//		public JResultSetInfo(ResultSetTableModel rstm, String sql, int scriptRow)
-//		{
-//			super(createStr(rstm), sql);
-//			_scriptRow = scriptRow;
-//			
-//			setForeground(ColorUtils.VERY_DARK_GREEN);
-//		}
-//	}
-//	
-//	private static class JPlainResultSet 
-//	extends JTextArea
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		ResultSetTableModel _tm = null;
-//
-//		public JPlainResultSet(final ResultSetTableModel rstm)
-//		{
-//			super(rstm.toTableString());
-//			_tm = rstm;
-//			init();
-//		}
-//
-//		public int getRowCount()
-//		{
-//			return _tm.getRowCount();
-//		}
-//
-//		protected void init()
-//		{
-//			super.setEditable(false);
-//
-//			if (_aseMsgFont == null)
-//				_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
-//			setFont(_aseMsgFont);
-//
-//			setLineWrap(true);
-//			setWrapStyleWord(true);
-////			setOpaque(false); // Transparent
-//		}
-//
-////		public boolean isFocusable()
-////		{
-////			return false;
-////		}
-////
-////		public boolean isRequestFocusEnabled()
-////		{
-////			return false;
-////		}
-//	}
-//	/*----------------------------------------------------------------------
-//	** END: various output classes
-//	**----------------------------------------------------------------------*/ 
 
 
 	/*----------------------------------------------------------------------
@@ -9706,9 +8565,10 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				// remove all old items (if any)
 				popupMenu.removeAll();
 
-				JMenuItem cc_exec_mi   = new JMenuItem("<html><b>Open</b>      - <i><font color=\"green\">Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
-				JMenuItem cc_reset_mi  = new JMenuItem("<html><b>Clear</b>     - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
-				JMenuItem cc_config_mi = new JMenuItem("<html><b>Configure</b> - <i><font color=\"green\">Configure what types of objects should be fetched.</font></i></html>");
+				JMenuItem cc_exec_mi    = new JMenuItem("<html><b>Open</b>      - <i><font color=\"green\">Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
+				JMenuItem cc_reset_mi   = new JMenuItem("<html><b>Clear</b>     - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_refresh_mi = new JMenuItem("<html><b>Refresh</b>   - <i><font color=\"green\">Refreshes the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_config_mi  = new JMenuItem("<html><b>Configure</b> - <i><font color=\"green\">Configure what types of objects should be fetched.</font></i></html>");
 
 //				JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
 //				JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
@@ -9762,6 +8622,24 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 					}
 				});
 
+				// Refresh action
+				cc_refresh_mi.addActionListener(new ActionListener()
+				{
+					@Override
+					public void actionPerformed(ActionEvent e)
+					{
+						// mark code completion for refresh
+						if (_compleationProviderAbstract != null)
+						{
+							_compleationProviderAbstract.setNeedRefresh(true);
+							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+							_compleationProviderAbstract.clearSavedCache();
+
+							_compleationProviderAbstract.refresh();
+						}
+					}
+				});
+
 				// Configure action
 				cc_config_mi.addActionListener(new ActionListener()
 				{
@@ -9787,6 +8665,7 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				// Add it to the Code Completion popup menu
 				popupMenu.add(cc_exec_mi);
 				popupMenu.add(cc_reset_mi);
+				popupMenu.add(cc_refresh_mi);
 				popupMenu.add(cc_config_mi);
 				popupMenu.add(new JSeparator());
 //				popupMenu.add(cc_stat_mi);
@@ -11368,14 +10247,15 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 //		int    port = AseConnectionFactory.getIPort(server);
 		String hostPortStr = AseConnectionFactory.getIHostPortStr(server);
 		System.out.println("Connectiong to server='"+server+"'. Which is located on '"+hostPortStr+"'.");
-		Connection conn = null;
+		DbxConnection conn = null;
 		try
 		{
 			Properties props = new Properties();
 			props.put("CHARSET", "iso_1");
 			AseConnectionFactory.setPropertiesForAppname(Version.getAppName()+"-QueryWindow", "IGNORE_DONE_IN_PROC", "true");
 			
-			conn = AseConnectionFactory.getConnection(hostPortStr, null, "sa", "", Version.getAppName()+"-QueryWindow", null, props, null);
+			Connection c = AseConnectionFactory.getConnection(hostPortStr, null, "sa", "", Version.getAppName()+"-QueryWindow", null, props, null);
+			conn = DbxConnection.createDbxConnection(c);
 		}
 		catch (SQLException e)
 		{

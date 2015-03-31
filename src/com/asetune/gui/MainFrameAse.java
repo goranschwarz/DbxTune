@@ -28,13 +28,13 @@ import com.asetune.cm.ase.CmSysLoad;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.AseStackTraceAnalyzer;
 import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.QueryWindow;
-import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -78,7 +78,7 @@ extends MainFrame
 		return new ConnectionProgressExtraActions()
 		{
 			@Override
-			public boolean initializeVersionInfo(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
 				MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
@@ -86,13 +86,13 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean checkMonitorConfig(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
 			@Override
-			public boolean initMonitorDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
 					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
@@ -104,7 +104,7 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initDbServerConfigDictionary(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				AseConfig aseCfg = AseConfig.getInstance();
 				if ( ! aseCfg.isInitialized() )
@@ -117,7 +117,7 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initCounterCollector(Connection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				CounterController.getInstance().initCounters(
 						conn,
@@ -277,7 +277,8 @@ extends MainFrame
 		//-----------------------------
 		if (ACTION_OPEN_ASE_CONFIG_MON.equals(actionCmd))
 		{
-			Connection conn = CounterController.getInstance().getMonConnection();
+//			Connection conn = CounterController.getInstance().getMonConnection();
+			DbxConnection conn = CounterController.getInstance().getMonConnection();
 			AseConfigMonitoringDialog.showDialog(this, conn, -1);
 
 			// If monitoring is NOT enabled anymore, do disconnect
@@ -370,7 +371,7 @@ extends MainFrame
 		_captureSql_mi                 = new JMenuItem("Capture SQL...");
 		_aseAppTrace_mi                = new JMenuItem("ASE Application Tracing...");
 		_aseStackTraceAnalyzer_mi      = new JMenuItem("ASE StackTrace Analyzer...");
-		_preDefinedSql_m               = createPredefinedSqlMenu(null);
+		_preDefinedSql_m               = createPredefinedSqlMenu(this);
 //		_lockTool_mi                   = new JMenuItem("Lock Tool (NOT YET IMPLEMENTED)");
 
 		_aseConfMon_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
@@ -476,7 +477,7 @@ extends MainFrame
 	}
 
 
-	public static JMenu createPredefinedSqlMenu(final QueryWindow sqlWindowInstance)
+	public static JMenu createPredefinedSqlMenu(final Object callerInstance)
 	{
 		_logger.debug("createPredefinedSqlMenu(): called.");
 
@@ -572,8 +573,8 @@ extends MainFrame
 		systmp.setProperty("system.predefined.sql.07.install.scriptName",          "sp_spaceused2.sql");
 		systmp.setProperty("system.predefined.sql.07.install.needsRole",           "sa_role");
 
-		createPredefinedSqlMenu(menu, "system.predefined.sql.", systmp, sqlWindowInstance);
-		createPredefinedSqlMenu(menu, "user.predefined.sql.",   null,   sqlWindowInstance);
+		createPredefinedSqlMenu(menu, "system.predefined.sql.", systmp, callerInstance);
+		createPredefinedSqlMenu(menu, "user.predefined.sql.",   null,   callerInstance);
 
 		if ( menu.getMenuComponentCount() == 0 )
 		{
@@ -598,7 +599,7 @@ extends MainFrame
 	 * @param sqlWindowInstance can be null
 	 * @return
 	 */
-	protected static JMenu createPredefinedSqlMenu(JMenu menu, String prefix, Configuration conf, final QueryWindow sqlWindowInstance)
+	protected static JMenu createPredefinedSqlMenu(JMenu menu, String prefix, Configuration conf, final Object callerInstance)
 	{
 		if (prefix == null)           throw new IllegalArgumentException("prefix cant be null.");
 		if (prefix.trim().equals("")) throw new IllegalArgumentException("prefix cant be empty.");
@@ -710,40 +711,54 @@ extends MainFrame
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					Connection conn = null;
+//					Connection conn = null;
+					DbxConnection conn = null;
 					try
 					{
-						if (sqlWindowInstance == null)
+						QueryWindow queryWindowInstance = null;
+						MainFrame   dbxTuneInstance     = null;
+						
+						if (callerInstance != null)
 						{
-							// Check that we are connected
-//							if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
-							if ( ! CounterController.getInstance().isMonConnected(true, true) )
+							if (callerInstance instanceof QueryWindow) queryWindowInstance = (QueryWindow) callerInstance;
+							if (callerInstance instanceof MainFrame)   dbxTuneInstance     = (MainFrame) callerInstance;
+
+							if (dbxTuneInstance != null)
 							{
-								SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
-								return;
-							}
-							// Get a new connection
-							conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-PreDefinedSql", null);
+								// Check that we are connected
+//								if ( ! AseTune.getCounterCollector().isMonConnected(true, true) )
+								if ( ! CounterController.getInstance().isMonConnected(true, true) )
+								{
+									SwingUtils.showInfoMessage(MainFrame.getInstance(), "Not connected", "Not yet connected to a server.");
+									return;
+								}
+								// Get a new connection
+//								conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-PreDefinedSql", null);
+//								conn = DbxConnection.connect(Version.getAppName()+"-PreDefinedSql");
+								// or even better, use a ConnectionProvider...
+								conn = dbxTuneInstance.getNewConnection(Version.getAppName()+"-PreDefinedSql");
 							
-							// Check if the procedure exists (and create it if it dosn't)
-							if (doCheckCreate)
-								AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
+								// Check if the procedure exists (and create it if it dosn't)
+								if (doCheckCreate)
+									AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
 
-							// Open the SQL Window
-							QueryWindow qf = new QueryWindow(conn, sqlStr, null, true, WindowType.JFRAME, null);
-							qf.openTheWindow();
-						}
-						else
-						{
-							// Get the Connection used by sqlWindow
-							conn = sqlWindowInstance.getConnection();
+								// Open the SQL Window
+								QueryWindow qf = new QueryWindow(conn, sqlStr, null, true, WindowType.JFRAME, null);
+								qf.openTheWindow();
+							}
 
-							// Check if the procedure exists (and create it if it dosn't)
-							if (doCheckCreate)
-								AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
+							if (queryWindowInstance != null)
+							{
+								// Get the Connection used by sqlWindow
+								conn = queryWindowInstance.getConnection();
 
-							// Execute the query
-							sqlWindowInstance.displayQueryResults(sqlStr, 0, false);
+								// Check if the procedure exists (and create it if it dosn't)
+								if (doCheckCreate)
+									AseConnectionUtils.checkCreateStoredProc(conn, needsVersion, dbname, procName, procDateThreshold, scriptLocation, scriptName, needsRole);
+
+								// Execute the query
+								queryWindowInstance.displayQueryResults(sqlStr, 0, false);
+							}
 						}
 					}
 					catch (Throwable t)

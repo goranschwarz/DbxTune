@@ -26,6 +26,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -666,7 +667,9 @@ extends CounterCollectorThreadAbstract
 					AseConnectionFactory.setHostPort(_aseHostPortStr);
 
 					Connection conn = AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), (Properties)null, null);
-					getCounterController().setMonConnection(conn);
+//					getCounterController().setMonConnection( conn);
+					getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
+//					getCounterController().getMonConnection().reConnect();
 
 					// CHECK the connection for proper configuration.
 					// If failure, go and FIX

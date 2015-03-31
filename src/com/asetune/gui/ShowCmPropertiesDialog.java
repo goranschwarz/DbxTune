@@ -29,7 +29,6 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;

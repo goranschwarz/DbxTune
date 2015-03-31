@@ -51,6 +51,7 @@ import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.ssh.SshTunnelManager;
@@ -89,7 +90,8 @@ implements ActionListener, ConnectionProgressCallback
 	private SwingWorker              _doConnectWorker = null;
 
 	/** Connection made in background */
-	private Connection   _connection       = null;
+//	private Connection   _connection       = null;
+	private DbxConnection   _connection       = null;
 
 	/** If the connected Product Name must be a certain string, this is it */
 	private String       _desiredProductName = null;
@@ -166,19 +168,19 @@ implements ActionListener, ConnectionProgressCallback
 	private String     _rawJdbcUrl    = null;
 	private Properties _rawJdbcProps  = null;
 
-	public static Connection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	public static DbxConnection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		return connectWithProgressDialog(owner, null, rawJdbcDriver, rawJdbcUrl, rawJdbcProps, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
-	public static Connection connectWithProgressDialog(Window owner, String urlStr, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	public static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		return connectWithProgressDialog(owner, urlStr, null, null, null, extraTasks, sshConn, sshTunnelInfo, desiredDbProductName, sqlInit, srvIcon);
 	}
 
 	// NOTE: PRIVATE
-	private static Connection connectWithProgressDialog(Window owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+	private static DbxConnection connectWithProgressDialog(Window owner, String urlStr, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 	throws Exception
 	{
 		ConnectionProgressDialog cpd = null;
@@ -1138,7 +1140,8 @@ implements ActionListener, ConnectionProgressCallback
 
 					_logger.debug("SwingWorker.construct(): _rawJdbcDriver='"+_rawJdbcDriver+"', _rawJdbcUrl='"+_rawJdbcUrl+"', _rawJdbcProps='"+_rawJdbcProps+"'.");
 					
-					Connection conn;
+//					Connection conn;
+					DbxConnection conn;
 					if (_rawJdbcDriver != null && _rawJdbcUrl != null)
 					{
 						//-------------------------
@@ -1153,7 +1156,8 @@ implements ActionListener, ConnectionProgressCallback
 						if (_rawJdbcUrl.startsWith("jdbc:sybase:Tds:"))
 						{
 //							conn = AseConnectionFactory.getConnection(_fixme_jdbcDriver, _fixme_rawUrl, _fixme_props, _thisDialog);
-							conn = AseConnectionFactory.getConnection(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps, ConnectionProgressDialog.this);
+//							conn = AseConnectionFactory.getConnection(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps, ConnectionProgressDialog.this);
+							conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps, ConnectionProgressDialog.this) );
 						}
 						else
 						{
@@ -1161,7 +1165,8 @@ implements ActionListener, ConnectionProgressCallback
 
 							try
 							{
-								conn = jdbcConnect(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps);
+//								conn = jdbcConnect(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps);
+								conn = DbxConnection.createDbxConnection( jdbcConnect(_rawJdbcDriver, _rawJdbcUrl, _rawJdbcProps) );
 								setTaskStatus(_rawJdbcUrl, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 							}
 							catch (SQLException ex)
@@ -1189,7 +1194,8 @@ implements ActionListener, ConnectionProgressCallback
 						// DO: ASE connection
 						//-------------------------
 						_logger.debug("SwingWorker.construct() does: NORMAL: AseConnectionFactory.getConnection(thisDialog)");
-						conn = AseConnectionFactory.getConnection(ConnectionProgressDialog.this);
+//						conn = AseConnectionFactory.getConnection(ConnectionProgressDialog.this);
+						conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection(ConnectionProgressDialog.this) );
 //conn.setClientInfo("TDS_SSH_TUNNEL_CONNECTION", "FIXME: ssh Connection goes here so we can close it, when closing ASE Connection");
 //conn.setClientInfo("TDS_SSH_TUNNEL_INFORMATION", "FIXME: sshTunnelInfo goes here");
 
@@ -1361,9 +1367,12 @@ implements ActionListener, ConnectionProgressCallback
 				
 				if (output != null)
 				{
-					if (output instanceof Connection)
+//					if (output instanceof Connection)
+//					{
+//						Connection conn = (Connection) output;
+					if (output instanceof DbxConnection)
 					{
-						Connection conn = (Connection) output;
+						DbxConnection conn = (DbxConnection) output;
 						_logger.debug("Worker OUT-Connection: "+conn);
 						_connection = conn;
 

@@ -77,6 +77,7 @@ import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.RsLastcommit.OriginNotFoundException;
@@ -578,7 +579,7 @@ implements ActionListener
 			// Remember the factory object that was passed to us
 			_conn = conn;
 
-			if (_conn instanceof SybConnection)
+			if (_conn instanceof SybConnection || _conn instanceof TdsConnection)
 			{
 				// Setup a message handler
 		//		((SybConnection)_conn).setSybMessageHandler(this);
@@ -1867,11 +1868,12 @@ saveProps();
 			@Override
 			public void cancel() 
 			{
-				if (conn != null && conn instanceof SybConnection)
+				if (conn != null && (conn instanceof SybConnection || conn instanceof TdsConnection) )
 				{
 					try
 					{
-						((SybConnection)conn).cancel();
+						if (conn instanceof SybConnection) ((SybConnection)conn).cancel();
+						if (conn instanceof TdsConnection) ((TdsConnection)conn).cancel();
 					}
 					catch(SQLException ex)
 					{
@@ -1887,10 +1889,9 @@ saveProps();
 				// Setup a message handler
 				// Set an empty Message handler
 				SybMessageHandler curMsgHandler = null;
-				if (conn instanceof SybConnection)
+				if (conn instanceof SybConnection || conn instanceof TdsConnection)
 				{
-					curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
-					((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
+					SybMessageHandler newMessageHandler = new SybMessageHandler()
 					{
 						@Override
 						public SQLException messageHandler(SQLException sqle)
@@ -1899,7 +1900,17 @@ saveProps();
 
 							return AseConnectionUtils.sqlExceptionToWarning(sqle);
 						}
-					});
+					};
+					
+					if (conn instanceof SybConnection)
+					{
+						curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
+						((SybConnection)conn).setSybMessageHandler(newMessageHandler);
+					}
+
+					// Set a TDS Message Handler
+					if (conn instanceof TdsConnection)
+						((TdsConnection)conn).setSybMessageHandler(newMessageHandler);
 				}
 
 				try
@@ -2000,6 +2011,10 @@ System.out.println("TO TXT");
 					{
 						((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 					}
+
+					// Restore old message handler
+					if (conn instanceof TdsConnection)
+						((TdsConnection)conn).restoreSybMessageHandler();
 				}
 				getWaitDialog().setState("Done");
 

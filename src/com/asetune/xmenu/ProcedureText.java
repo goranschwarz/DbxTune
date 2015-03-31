@@ -26,6 +26,7 @@ import javax.swing.JTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
@@ -42,11 +43,12 @@ import com.asetune.utils.AseConnectionUtils;
 public class ProcedureText 
 extends XmenuActionBase 
 {
-	private Connection _conn     = null;
-	private String     _dbname   = null;
-	private String     _procname = null;
-	private int        _linenum  = -1;
-	private boolean    _closeConnOnExit;
+//	private Connection    _conn     = null;
+	private DbxConnection _conn     = null;
+	private String        _dbname   = null;
+	private String        _procname = null;
+	private int           _linenum  = -1;
+	private boolean       _closeConnOnExit;
 
 	/**
 	 * 

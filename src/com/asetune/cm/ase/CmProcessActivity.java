@@ -11,11 +11,11 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
 import com.asetune.TrendGraphDataPoint;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CounterSample;
 import com.asetune.cm.ase.gui.CmProcessActivityPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -47,7 +47,7 @@ extends CountersModel
 		"    <li>YELLOW - SPID is a System Processes</li>" +
 		"    <li>GREEN  - SPID is Executing(running) or are in the Run Queue Awaiting a time slot to Execute (runnable)</li>" +
 		"    <li>PINK   - SPID is Blocked by some other SPID that holds a Lock on a database object Table, Page or Row. This is the Lock Victim.</li>" +
-		"    <li>RED    - SPID is Blocking other SPID's from running, this SPID is Responslibe or the Root Cause of a Blocking Lock.</li>" +
+		"    <li>RED    - SPID is Blocking other SPID's from running, this SPID is Responsible or the Root Cause of a Blocking Lock.</li>" +
 		"</ul>" +
 		"</html>";
 

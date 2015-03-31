@@ -1,6 +1,5 @@
 package com.asetune;
 
-import java.sql.Connection;
 import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
@@ -8,6 +7,7 @@ import org.apache.log4j.Logger;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.oracle.CmIoStatFile;
 import com.asetune.cm.oracle.CmIoStatFunction;
+import com.asetune.cm.oracle.CmSessions;
 import com.asetune.cm.oracle.CmSummary;
 import com.asetune.cm.oracle.CmSysStat;
 import com.asetune.cm.oracle.CmSystemEvent;
@@ -18,6 +18,7 @@ import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 
 
@@ -62,6 +63,7 @@ extends CounterControllerAbstract
 
 		CmSummary           .create(counterController, guiController);
 
+		CmSessions          .create(counterController, guiController);
 		CmSystemEvent       .create(counterController, guiController);
 		CmSysStat           .create(counterController, guiController);
 		CmIoStatFunction    .create(counterController, guiController);
@@ -123,7 +125,9 @@ extends CounterControllerAbstract
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())

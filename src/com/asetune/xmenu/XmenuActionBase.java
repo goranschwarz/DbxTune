@@ -4,13 +4,12 @@
 package com.asetune.xmenu;
 
 import java.awt.Window;
-import java.sql.Connection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Properties;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
 
 /**
@@ -27,7 +26,8 @@ implements XmenuAction
 	LinkedHashMap<String,String> _paramValues     = null;
 	String                       _menuName        = null;
 	String                       _config          = null;
-	Connection                   _conn            = null;
+//	Connection                   _conn            = null;
+	DbxConnection                _conn            = null;
 	ConnectionProvider           _connProvider    = null;
 	boolean                      _closeConnOnExit = true;
 	Window                       _owner           = null;
@@ -47,7 +47,8 @@ implements XmenuAction
 	@Override public void setConfig(String name)                              { _config          = name; }
 	@Override public void setMenuName(String name)                            { _menuName        = name; }
 	@Override public void setConnectionProvider(ConnectionProvider connProv)  { _connProvider    = connProv; }
-	@Override public void setConnection(Connection conn)                      { _conn            = conn; }
+//	@Override public void setConnection(Connection conn)                      { _conn            = conn; }
+	@Override public void setConnection(DbxConnection conn)                   { _conn            = conn; }
 	@Override public void setCloseConnOnExit(boolean b)                       { _closeConnOnExit = b; }
 	@Override public void setOwner(Window window)                             { _owner           = window; }
 
@@ -59,7 +60,8 @@ implements XmenuAction
 	@Override public String                       getConfig()                 { return _config; }
 	@Override public String                       getMenuName()               { return _menuName; }
 	@Override public ConnectionProvider           getConnectionProvider()     { return _connProvider; }
-	@Override public Connection                   getConnection()             { return _conn; }
+//	@Override public Connection                   getConnection()             { return _conn; }
+	@Override public DbxConnection                getConnection()             { return _conn; }
 	@Override public boolean                      isCloseConnOnExit()         { return _closeConnOnExit; }
 	@Override public Window                       getOwner()                  { return _owner; }
 

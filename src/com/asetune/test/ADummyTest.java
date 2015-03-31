@@ -92,7 +92,7 @@ public class ADummyTest
 //			{
 //				varVal = "@@srvName";
 //			}
-//			else if ( "ASEHOSTNAME".equals(varName) )
+//			else if ( "HOSTNAME".equals(varName) )
 //			{
 //				varVal = "hostname()";
 //			}
