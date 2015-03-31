@@ -120,6 +120,8 @@ import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelDialog;
 import com.asetune.ssh.SshTunnelInfo;
@@ -177,11 +179,11 @@ public class ConnectionDialog
 	private int                _connectionType  = CANCEL;
 
 //	private Map                      _inputMap        = null;
-	private Connection               _aseConn         = null;
+	private DbxConnection            _aseConn         = null;
 	private SshConnection            _sshConn         = null;
 //	private Connection               _pcsConn         = null;
-	private Connection               _offlineConn     = null;
-	private Connection               _jdbcConn        = null;
+	private DbxConnection            _offlineConn     = null;
+	private DbxConnection            _jdbcConn        = null;
 //	private PersistentCounterHandler _pcsWriter       = null;
 
 	/** If the connected Product Name must be a certain string, this is it */
@@ -409,7 +411,6 @@ public class ConnectionDialog
 	private JButton              _sendOfflineTestConn_but     = new JButton("Test Connectivity");
 
 	//---- JDBC panel
-	@SuppressWarnings("unused")
 	private JPanel               _jdbcPanel            = null;
 	private ImageIcon            _jdbcImageIcon        = SwingUtils.readImageIcon(Version.class, "images/jdbc_connect_32.png");
 	private JLabel               _jdbcIcon             = new JLabel(_jdbcImageIcon);
@@ -501,7 +502,7 @@ public class ConnectionDialog
 		}
 	}
 
-	public static Connection showTdsOnlyConnectionDialog(Frame owner)
+	public static DbxConnection showTdsOnlyConnectionDialog(Frame owner)
 	{
 //		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, false, false, false, false, false);
 //		ConnectionDialog connDialog = new ConnectionDialog(null, null, true, false, false, false, false, false, false);
@@ -942,21 +943,21 @@ public class ConnectionDialog
 	 * Get Connection, first TDS, then OFFLINE, then JDBC
 	 * @return
 	 */
-	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
-		Connection conn = getAseConn();
+		DbxConnection conn = getAseConn();
 		if (conn == null) conn = getOfflineConn();
 		if (conn == null) conn = getJdbcConn();
 		return conn;
 	}
 
 	public int                      getConnectionType() { return _connectionType; }
-	public Connection               getAseConn()        { return _aseConn; }
+	public DbxConnection            getAseConn()        { return _aseConn; }
 	public SshConnection            getSshConn()        { return _sshConn; }
 //	public Connection               getPcsConn()        { return _pcsConn; }
 //	public PersistentCounterHandler getPcsWriter()      { return _pcsWriter; }
-	public Connection               getOfflineConn()    { return _offlineConn; }
-	public Connection               getJdbcConn()       { return _jdbcConn; }
+	public DbxConnection            getOfflineConn()    { return _offlineConn; }
+	public DbxConnection            getJdbcConn()       { return _jdbcConn; }
 
 	public SshTunnelInfo            getAseSshTunnelInfo()  { return _aseSshTunnelInfo; }
 	public SshTunnelInfo            getJdbcSshTunnelInfo() { return _jdbcSshTunnelInfo; }
@@ -2213,7 +2214,7 @@ public class ConnectionDialog
 		"<html>" +
 		"URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver<br>" +
 		"<br>" +
-		"For H2 you can use the following variables: <code>${DATE}, ${SERVERNAME}, ${ASEHOSTNAME}, ${ASETUNE_HOME}, ${ASETUNE_SAVE_DIR}</code><br>" +
+		"For H2 you can use the following variables: <code>${DATE}, ${SERVERNAME}, ${HOSTNAME}, ${DBXTUNE_HOME}, ${DBXTUNE_SAVE_DIR}</code><br>" +
 		"Explanation of the above variables<br>" +
 		"<ul>" +
 		"  <li><code>${DATE[:format=fmt[;roll=true|false]]}</code><br>" +
@@ -2240,19 +2241,19 @@ public class ConnectionDialog
 		"  <li><code>${SERVERNAME} </code> <br>" +
 		"    The SERVERNAME will be substituted with the content of the ASE global variable <code>@@servername</code> of which ASE server we are monitoring.<br>" +
 		"  </li>" +
-		"  <li><code>${ASEHOSTNAME}</code> <br>" +
-		"    The ASEHOSTNAME will be substituted with the output from ASE function <code>asehostname()</code> of which ASE server we are monitoring.<br>" +
+		"  <li><code>${HOSTNAME}</code> <br>" +
+		"    The HOSTNAME will be substituted with the output from ASE function <code>asehostname()</code> of which ASE server we are monitoring.<br>" +
 		"  </li>" +
-		"  <li><code>${ASETUNE_HOME}</code> <br>" +
-		"    The ASETUNE_HOME will be substituted with the installation path of "+Version.getAppName()+".<br>" +
+		"  <li><code>${DBXTUNE_HOME}</code> <br>" +
+		"    The DBXTUNE_HOME will be substituted with the installation path of "+Version.getAppName()+".<br>" +
 		"  </li>" +
-		"  <li><code>${ASETUNE_SAVE_DIR}</code> <br>" +
-		"    The ASETUNE_SAVE_DIR will be substituted with ${ASETUNE_HOME}/data or whatever the environment variable is set to.<br>" +
+		"  <li><code>${DBXTUNE_SAVE_DIR}</code> <br>" +
+		"    The DBXTUNE_SAVE_DIR will be substituted with ${DBXTUNE_HOME}/data or whatever the environment variable is set to.<br>" +
 		"  </li>" +
 		"</ul>" +
 		"" +
 		"Example:<br>" +
-		"<code>${ASETUNE_SAVE_DIR}/xxx.${ASEHOSTNAME}.${DATE:format=yyyy-MM-dd.HH;roll=true}</code><br>" +
+		"<code>${DBXTUNE_SAVE_DIR}/xxx.${HOSTNAME}.${DATE:format=yyyy-MM-dd.HH;roll=true}</code><br>" +
 		"<br>" +
 		"The above example, does:" +
 		"<ul>" +
@@ -2356,6 +2357,8 @@ public class ConnectionDialog
 ////		_pcsJdbcUrl_cbx.setRenderer(new GDefaultListCellRenderer());
 //		_pcsJdbcUrl_cbx.setRenderer(pcsJdbcUrl_tooltipRenderer);
 
+//		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
 		
 		_pcsWriter_cbx    .setEditable(true);
 		_pcsJdbcDriver_cbx.setEditable(true);
@@ -2368,11 +2371,11 @@ public class ConnectionDialog
 
 		// http://www.h2database.com/html/features.html#database_url
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
-		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
-		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
+		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
+		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 //		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;AUTO_SERVER=TRUE");
-//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
-//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE};AUTO_SERVER=TRUE");
+//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
+//		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE};AUTO_SERVER=TRUE");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 
@@ -3626,8 +3629,26 @@ public class ConnectionDialog
 			{
 				_logger.info("Connecting to DB Server using RAW-URL username='"+username+"', URL='"+tdsUseUrlStr+"'.");
 //				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _checkAseCfg, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit);
-				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
+//				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
+
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
+				_aseConn = DbxConnection.createDbxConnection(conn);
+
+				// Set DBX Connection Defaults
+				ConnectionProp cp = new ConnectionProp();
+				cp.setLoginTimeout ( loginTimeoutStr );
+				cp.setDriver       ( AseConnectionFactory.getDriver() );
+				cp.setUrl          ( tdsUseUrlStr );
+				cp.setUrlOptions   ( null );
+				cp.setUsername     ( username );
+				cp.setPassword     ( password );
+				cp.setAppName      ( Version.getAppName() );
+				cp.setAppVersion   ( Version.getVersionStr() );
+				cp.setSshTunnelInfo( sshTunnelInfo );
+
+				DbxConnection.setDefaultConnProp(cp);
+
 				return true;
 			}
 			catch (SQLException e)
@@ -3681,6 +3702,7 @@ public class ConnectionDialog
 		if ( ! aseSshTunnel )
 			sshTunnelInfo = null;
 
+		// The AseConnectionFactory will be phased out and replaced with DbxConnection
 		AseConnectionFactory.setAppName ( Version.getAppName() );
 		AseConnectionFactory.setHostName( Version.getVersionStr() );
 		AseConnectionFactory.setUser    ( username );
@@ -3700,13 +3722,32 @@ public class ConnectionDialog
 			Map<String,String> options = null;
 			AseConnectionFactory.setProperties(options);
 		}
+
+		
+		// Set DBX Connection Defaults
+		ConnectionProp cp = new ConnectionProp();
+		cp.setLoginTimeout ( loginTimeoutStr );
+		cp.setDriver       ( AseConnectionFactory.getDriver() );
+		cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
+		cp.setUrlOptions   ( null );
+		cp.setUsername     ( username );
+		cp.setPassword     ( password );
+		cp.setAppName      ( Version.getAppName() );
+		cp.setAppVersion   ( Version.getVersionStr() );
+//		cp.setHostPort     ( hosts, ports );
+		cp.setSshTunnelInfo( sshTunnelInfo );
+
+		DbxConnection.setDefaultConnProp(cp);
+		
 		
 		try
 		{
 			_logger.info("Connecting to DB Server '"+AseConnectionFactory.getServer()+"'.  hostPortStr='"+AseConnectionFactory.getHostPortStr()+"', user='"+AseConnectionFactory.getUser()+"'.");
 
 			String urlStr = AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr();
+//			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
+//			_aseConn = DbxConnection.createDbxConnection(conn);
 //String TDS_SSH_TUNNEL_CONNECTION  = _aseConn.getClientInfo("TDS_SSH_TUNNEL_CONNECTION");
 //String TDS_SSH_TUNNEL_INFORMATION = _aseConn.getClientInfo("TDS_SSH_TUNNEL_INFORMATION");
 //System.out.println("TDS_SSH_TUNNEL_CONNECTION="+TDS_SSH_TUNNEL_CONNECTION);
@@ -4042,7 +4083,17 @@ public class ConnectionDialog
 			}
 		}
 
-		_offlineConn = jdbcConnect(Version.getAppName(), 
+//		_offlineConn = jdbcConnect(Version.getAppName(), 
+//		Connection conn = jdbcConnect(Version.getAppName(), 
+//				jdbcDriver, 
+//				jdbcUrl,
+//				jdbcUser, 
+//				jdbcPasswd,
+//				null,
+//				null,
+//				null);
+//		_offlineConn = DbxConnection.createDbxConnection(conn);
+		_offlineConn = jdbcConnect2(Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
 				jdbcUser, 
@@ -4050,6 +4101,7 @@ public class ConnectionDialog
 				null,
 				null,
 				null);
+
 
 		if (_offlineConn == null)
 			return false;
@@ -4289,6 +4341,22 @@ public class ConnectionDialog
 //				sqlInit,
 //				tunnelInfo);
 
+
+		// Set DBX Connection Defaults
+		ConnectionProp cp = new ConnectionProp();
+		cp.setLoginTimeout ( -1 );
+		cp.setDriver       ( jdbcDriver );
+		cp.setUrl          ( jdbcUrl );
+		cp.setUrlOptions   ( jdbcUrlOptions );
+		cp.setUsername     ( jdbcUser );
+		cp.setPassword     ( jdbcPasswd );
+		cp.setAppName      ( Version.getAppName() );
+		cp.setAppVersion   ( Version.getVersionStr() );
+		cp.setSshTunnelInfo( tunnelInfo );
+
+		DbxConnection.setDefaultConnProp(cp);
+
+		
 		_jdbcConn = jdbcConnect2(Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
@@ -4342,7 +4410,7 @@ public class ConnectionDialog
 	 * @param tunnelInfo 
 	 * @throws Exception 
 	 */
-	private Connection jdbcConnect2(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
+	private DbxConnection jdbcConnect2(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
 	{
 		Properties props  = new Properties();
 	//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
@@ -4679,8 +4747,12 @@ public class ConnectionDialog
 			// if sybase cant be found, set starting directory to AseTune Save Directory
 			if (dir == null)
 			{
-				if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-					dir = System.getProperty("ASETUNE_SAVE_DIR");
+//				String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+				String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+				String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
+				if (envNameSaveDirVal != null)
+					dir = envNameSaveDirVal;
 			}
 
 			JFileChooser fc = new JFileChooser(dir);
@@ -4945,7 +5017,11 @@ public class ConnectionDialog
 			String currentUrl = _pcsJdbcUrl_cbx.getEditor().getItem().toString();
 			H2UrlHelper h2help = new H2UrlHelper(currentUrl);
 
-			File baseDir = h2help.getDir(System.getProperty("ASETUNE_SAVE_DIR"));
+//			String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+			String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+			String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
+			File baseDir = h2help.getDir(envNameSaveDirVal);
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			int returnVal = fc.showOpenDialog(this);
@@ -5012,7 +5088,11 @@ public class ConnectionDialog
 			{
 				H2UrlHelper h2help = new H2UrlHelper(url);
 
-				File baseDir = h2help.getDir(System.getProperty("ASETUNE_SAVE_DIR"));
+//				String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+				String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+				String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
+				File baseDir = h2help.getDir(envNameSaveDirVal);
 				JFileChooser fc = new JFileChooser(baseDir);
 
 				int returnVal = fc.showOpenDialog(this);
@@ -5077,7 +5157,11 @@ public class ConnectionDialog
 			{
 				H2UrlHelper h2help = new H2UrlHelper(url);
 		
-				File baseDir = h2help.getDir(System.getProperty("ASETUNE_SAVE_DIR"));
+//				String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+				String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+				String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
+				File baseDir = h2help.getDir(envNameSaveDirVal);
 				JFileChooser fc = new JFileChooser(baseDir);
 		
 				int returnVal = fc.showOpenDialog(this);
@@ -5264,9 +5348,9 @@ public class ConnectionDialog
 			String name = StringUtil.getSelectedItemString(_aseProfile_cbx);
 			ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getProfile(name);
 			if (connProfile != null)
-			{
 				load(connProfile);
-			}
+			else
+				_aseServerIcon.setIcon(_aseServerImageIcon);
 		}
 		if (_aseProfileSave_but.equals(source))
 		{
@@ -5279,9 +5363,9 @@ public class ConnectionDialog
 			String name = StringUtil.getSelectedItemString(_jdbcProfile_cbx);
 			ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getProfile(name);
 			if (connProfile != null)
-			{
 				load(connProfile);
-			}
+			else
+				_jdbcIcon.setIcon(_jdbcImageIcon);
 		}
 		if (_jdbcProfileSave_but.equals(source))
 		{
@@ -6237,6 +6321,11 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 //						_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
 //					}
 				}
+				
+				// Set the ICON
+				ImageIcon icon = ConnectionProfileManager.getIcon32(connProfile.getSrvType());
+				if (icon != null)
+					_aseServerIcon.setIcon(icon);
 			}
 			else if (connProfile.isType(ConnectionProfile.Type.JDBC))
 			{
@@ -6261,6 +6350,10 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 					loadDbxTuneParams(entry._dbxtuneParams);
 				}
 
+				// Set the ICON
+				ImageIcon icon = ConnectionProfileManager.getIcon32(connProfile.getSrvType());
+				if (icon != null)
+					_jdbcIcon.setIcon(icon);
 			}
 			else if (connProfile.isType(ConnectionProfile.Type.OFFLINE))
 			{

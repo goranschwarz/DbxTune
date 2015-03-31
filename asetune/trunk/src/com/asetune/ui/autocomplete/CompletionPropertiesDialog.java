@@ -51,6 +51,8 @@ implements ActionListener, FocusListener
 	private JCheckBox            _cc_tn_chk        = new JCheckBox("<html>Table Name Info                 - <i>Get Table Name Info, use                          </i> <code><b>Ctrl+Space   </b><code/> </html>");
 	private JCheckBox            _cc_tc_chk        = new JCheckBox("<html>Table Column Info               - <i>Get Table Column Info, current word start with    </i> <code><b>tableAlias.  </b><code/> </html>");
 	private JCheckBox            _cc_snt_chk       = new JCheckBox("<html>Schemas that dosn't have tables - <i>Get Schema names that do not have any tables      </i> <code><b>:s           </b><code/> </html>");
+	private JCheckBox            _cc_fn_chk        = new JCheckBox("<html>Function Name Info              - <i>Get Function Name Info, use                       </i> <code><b>Ctrl+Space   </b><code/> </html>");
+	private JCheckBox            _cc_fc_chk        = new JCheckBox("<html>Function Column Info            - <i>Get Function Column Info, current word start with </i> <code><b>funcAlias.   </b><code/> </html>");
 	private JCheckBox            _cc_pn_chk        = new JCheckBox("<html>Procedure Info                  - <i>Get Procedure Info, prev word is                  </i> <code><b>exec         </b><code/> </html>");
 	private JCheckBox            _cc_pp_chk        = new JCheckBox("<html>Procedure Parameter Info        - <i>Get Procedure Parameter Info                      </i> </html>");
 	private JCheckBox            _cc_spn_chk       = new JCheckBox("<html>System Procedure Info           - <i>Get System Procedure Info, prev word is           </i> <code><b>exec sp_     </b><code/> </html>");
@@ -107,6 +109,8 @@ implements ActionListener, FocusListener
 		_cc_tn_chk  .setToolTipText("<html>Get Table Name Info, use <code><b>Ctrl+Space</b><code/></html>");
 		_cc_tc_chk  .setToolTipText("<html>Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></html>");
 		_cc_snt_chk .setToolTipText("<html>Get Schema names that do not have any tables</html>");
+		_cc_fn_chk  .setToolTipText("<html>Get Function Name Info, use <code><b>Ctrl+Space</b><code/></html>");
+		_cc_fc_chk  .setToolTipText("<html>Get Function Column Info, current word start with <code><b>functionAlias.</b><code/></html>");
 		_cc_pn_chk  .setToolTipText("<html>Get Procedure Info, prev word is <code><b>exec</b><code/></html>");
 		_cc_pp_chk  .setToolTipText("<html>Get Procedure Parameter Info</html>");
 		_cc_spn_chk .setToolTipText("<html>Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></html>");
@@ -140,6 +144,11 @@ implements ActionListener, FocusListener
 		subPanel.add(_vendor_txt,          "growx, pushx, wrap 5");
 		subPanel.add(new JScrollPane(_tableType_tab), "height 50:120:n, push, grow, wrap");
 		panel.add(subPanel,                "grow, push, wrap");
+
+		subPanel = SwingUtils.createPanel("Function", true, new MigLayout("insets 0 0, gap 0"));
+		subPanel.add(_cc_fn_chk,           "wrap");
+		subPanel.add(_cc_fc_chk,           "gapleft 20, wrap");
+		panel.add(subPanel,                "growx, pushx, wrap");
 
 		subPanel = SwingUtils.createPanel("Procedure", true, new MigLayout("insets 0 0, gap 0"));
 		subPanel.add(_cc_pn_chk,           "wrap");
@@ -176,6 +185,8 @@ implements ActionListener, FocusListener
 		_cc_tc_chk  .setSelected(_completionProviderAbstract.isLookupTableColumns());
 		_cc_snt_chk .setSelected(_completionProviderAbstract.isLookupSchemaWithNoTables());
 		_cc_snt_chk .setSelected(_completionProviderAbstract.isLookupSchemaWithNoTables());
+		_cc_fn_chk  .setSelected(_completionProviderAbstract.isLookupFunctionName());
+		_cc_fc_chk  .setSelected(_completionProviderAbstract.isLookupFunctionColumns());
 		_cc_pn_chk  .setSelected(_completionProviderAbstract.isLookupProcedureName());
 		_cc_pp_chk  .setSelected(_completionProviderAbstract.isLookupProcedureColumns());
 		_cc_spn_chk .setSelected(_completionProviderAbstract.isLookupSystemProcedureName());
@@ -221,6 +232,8 @@ implements ActionListener, FocusListener
 			_completionProviderAbstract.setLookupTableName             (_cc_tn_chk  .isSelected());
 			_completionProviderAbstract.setLookupTableColumns          (_cc_tc_chk  .isSelected());
 			_completionProviderAbstract.setLookupSchemaWithNoTables    (_cc_snt_chk .isSelected());
+			_completionProviderAbstract.setLookupFunctionName          (_cc_fn_chk  .isSelected());
+			_completionProviderAbstract.setLookupFunctionColumns       (_cc_fc_chk  .isSelected());
 			_completionProviderAbstract.setLookupProcedureName         (_cc_pn_chk  .isSelected());
 			_completionProviderAbstract.setLookupProcedureColumns      (_cc_pp_chk  .isSelected());
 			_completionProviderAbstract.setLookupSystemProcedureName   (_cc_spn_chk .isSelected());

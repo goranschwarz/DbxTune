@@ -27,6 +27,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.AseConnectionUtils;
@@ -377,11 +378,12 @@ implements PropertyChangeListener, ActionListener
 			if (_conn != null )
 			{
 				// jConnect supports CANCEL on the connection level, so lets use that
-				if (_conn instanceof SybConnection)
+				if (_conn instanceof SybConnection || _conn instanceof TdsConnection)
 				{
 					try
 					{
-						((SybConnection)_conn).cancel();
+						if (_conn instanceof SybConnection) ((SybConnection)_conn).cancel();
+						if (_conn instanceof TdsConnection) ((TdsConnection)_conn).cancel();
 					}
 					catch(SQLException ex)
 					{

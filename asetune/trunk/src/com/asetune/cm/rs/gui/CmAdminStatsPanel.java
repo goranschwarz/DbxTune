@@ -1,26 +1,17 @@
 package com.asetune.cm.rs.gui;
 
-import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
-import javax.swing.JTable;
-import javax.swing.table.TableCellRenderer;
 
 import net.miginfocom.swing.MigLayout;
-
-import org.jdesktop.swingx.renderer.DefaultTableRenderer;
-import org.jdesktop.swingx.renderer.LabelProvider;
-import org.jdesktop.swingx.renderer.StringValue;
-import org.jdesktop.swingx.renderer.StringValues;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.rs.CmAdminStats;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 

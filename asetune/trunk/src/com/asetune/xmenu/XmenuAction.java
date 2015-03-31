@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Properties;
 
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
 
 /**
@@ -22,7 +23,8 @@ public interface XmenuAction
 	public void addParamValue(String key, String val);
 	public void setMenuName(String name);
 	public void setConfig(String name);
-	public void setConnection(Connection conn);
+//	public void setConnection(Connection conn);
+	public void setConnection(DbxConnection conn);
 	public void setConnectionProvider(ConnectionProvider connProvider);
 	public void setCloseConnOnExit(boolean b);
 	public void setOwner(Window window);

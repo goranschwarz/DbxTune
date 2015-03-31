@@ -22,6 +22,7 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.TdsConnection;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
@@ -53,8 +54,14 @@ implements SybMessageHandler
 		_conn = conn;
 		_queryTimeout = queryTimeout;
 
-		_saveMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
-		((SybConnection)_conn).setSybMessageHandler(this);
+		if (conn instanceof SybConnection)
+		{
+    		_saveMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
+    		((SybConnection)_conn).setSybMessageHandler(this);
+		}
+		// Set a TDS Message Handler
+		if (conn instanceof TdsConnection)
+			((TdsConnection)conn).setSybMessageHandler(this);
 
 		try
 		{
@@ -105,7 +112,12 @@ implements SybMessageHandler
 		}
 
 		// Restore message handler
-		((SybConnection)_conn).setSybMessageHandler(_saveMsgHandler);
+		if (_conn instanceof SybConnection)
+			((SybConnection)_conn).setSybMessageHandler(_saveMsgHandler);
+
+		// Restore old message handler
+		if (_conn instanceof TdsConnection)
+			((TdsConnection)_conn).restoreSybMessageHandler();
 	}
 
 	public void   setMsgPrefix(String prefix) { _msgPrefix = prefix; }
@@ -384,8 +396,7 @@ implements SybMessageHandler
 	{
 		StringBuilder sb = new StringBuilder();
 
-		SybMessageHandler oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
-		((SybConnection)_conn).setSybMessageHandler(new SybMessageHandler()
+		SybMessageHandler newMessageHandler = new SybMessageHandler()
 		{
 			@Override
 			public SQLException messageHandler(SQLException sqle)
@@ -399,7 +410,17 @@ implements SybMessageHandler
 					return sqle;
 				}
 			}
-		});
+		};
+		
+		SybMessageHandler oldMsgHandler = null;
+		if (_conn instanceof SybConnection)
+		{
+			((SybConnection)_conn).getSybMessageHandler();
+			((SybConnection)_conn).setSybMessageHandler(newMessageHandler);
+		}
+		// Set a TDS Message Handler
+		if (_conn instanceof TdsConnection)
+			((TdsConnection)_conn).setSybMessageHandler(newMessageHandler);
 
 		String sql = "";
 		try
@@ -479,7 +500,12 @@ implements SybMessageHandler
 		}
 		finally
 		{
-			((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
+			if (_conn instanceof SybConnection)
+				((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
+
+			// Restore old message handler
+			if (_conn instanceof TdsConnection)
+				((TdsConnection)_conn).restoreSybMessageHandler();
 		}
 		return sb.toString();
 	}

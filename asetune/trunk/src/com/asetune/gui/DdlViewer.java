@@ -58,6 +58,7 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
@@ -939,7 +940,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 //		String url    = "jdbc:h2:file:E:\\spam_prod_b_2011-11-30;IFEXISTS=TRUE;AUTO_SERVER=TRUE";
 		String url    = "jdbc:h2:file:C:\\projects\\_customer_visits\\1and1_germany\\2011-11-30\\spam_prod_b_2011-12-02;IFEXISTS=TRUE;AUTO_SERVER=TRUE";
 
-		Connection conn = jdbcConnect("xxx", driver, url, "sa", "");
+//		Connection conn = jdbcConnect("xxx", driver, url, "sa", "");
+		DbxConnection conn = DbxConnection.createDbxConnection( jdbcConnect("xxx", driver, url, "sa", "") );
 		PersistReader reader = new PersistReader(conn);
 		PersistReader.setInstance(reader);
 		

@@ -29,7 +29,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
@@ -40,16 +39,12 @@ import javax.swing.table.TableModel;
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.sort.RowFilters;
 import org.jdesktop.swingx.table.TableColumnExt;
 
-import com.asetune.GetCounters;
-import com.asetune.GetCountersGui;
 import com.asetune.Version;
-import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 

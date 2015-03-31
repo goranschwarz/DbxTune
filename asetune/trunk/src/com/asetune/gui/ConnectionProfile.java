@@ -1359,7 +1359,7 @@ public class ConnectionProfile
 			if (entry._jdbcSavePassword)
 				entry._jdbcPassword  = getValue(element, XML_JDBC_PASSWORD,      entry._jdbcPassword);
 			entry._jdbcSqlInit       = getValue(element, XML_JDBC_SqlInit,       entry._jdbcSqlInit);
-			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_ShhTunnelInfo, entry._jdbcUrlOptions);
+			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_UrlOptions,    entry._jdbcUrlOptions);
 			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
 
 			entry._isDbxTuneParamsValid = getValue(element, XML_TDS_IsDbxTuneParamsValid, entry._isDbxTuneParamsValid);

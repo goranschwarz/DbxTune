@@ -8,8 +8,6 @@ import java.util.Set;
 
 import com.asetune.CounterController;
 import com.asetune.CounterControllerNoOp;
-import com.asetune.GetCountersNoGui;
-import com.asetune.GetCountersNoOp;
 import com.asetune.utils.PropPropEntry;
 
 

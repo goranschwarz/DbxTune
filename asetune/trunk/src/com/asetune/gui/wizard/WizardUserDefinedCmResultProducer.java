@@ -13,7 +13,6 @@ import org.netbeans.spi.wizard.WizardException;
 import org.netbeans.spi.wizard.WizardPage.WizardResultProducer;
 
 import com.asetune.CounterControllerAbstract;
-import com.asetune.GetCounters;
 import com.asetune.gui.MainFrame;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;

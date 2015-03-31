@@ -1,6 +1,5 @@
 package com.asetune;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -9,15 +8,20 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
+import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmPerfCounters;
+import com.asetune.cm.sqlserver.CmProcedureStats;
 import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.cm.sqlserver.CmWaitStats;
+import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 
 
@@ -62,40 +66,19 @@ extends CounterControllerAbstract
 
 		CmSummary          .create(counterController, guiController);
 
+		CmWho              .create(counterController, guiController);
 		CmSchedulers       .create(counterController, guiController);
 		CmWaitStats        .create(counterController, guiController);
 		CmPerfCounters     .create(counterController, guiController);
+		CmOptimizer        .create(counterController, guiController);
+
+		CmActiveStatements .create(counterController, guiController);
+
+		CmProcedureStats   .create(counterController, guiController);
 
 		CmDeviceIo         .create(counterController, guiController);
 		CmDbIo             .create(counterController, guiController);
 
-//		CmAdminWhoSqm       .create(counterController, guiController);
-//		CmAdminWhoSqt       .create(counterController, guiController);
-//		CmAdminWhoDist      .create(counterController, guiController);
-//		CmAdminWhoDsi       .create(counterController, guiController);
-//		CmAdminWhoRsi       .create(counterController, guiController);
-//		CmAdminStats        .create(counterController, guiController);
-//		CmAdminStatsRepAgent.create(counterController, guiController);
-//		CmAdminStatsSqm     .create(counterController, guiController);
-//		CmAdminStatsSqmr    .create(counterController, guiController);
-//		CmAdminStatsSqt     .create(counterController, guiController);
-//		CmAdminStatsDist    .create(counterController, guiController);
-//		CmAdminStatsDsi     .create(counterController, guiController);
-//		CmAdminStatsDsiExec .create(counterController, guiController);
-//		CmAdminStatsDsiHq   .create(counterController, guiController);
-//		CmAdminStatsAobj    .create(counterController, guiController);
-//		CmAdminStatsSts     .create(counterController, guiController);
-//		CmAdminStatsCm      .create(counterController, guiController);
-//		CmAdminStatsServ    .create(counterController, guiController);
-//		CmAdminStatsRsh     .create(counterController, guiController);
-//		CmAdminStatsSync    .create(counterController, guiController);
-//		CmAdminStatsSyncEle .create(counterController, guiController);
-//		CmAdminStatsRsi     .create(counterController, guiController);
-//		CmAdminStatsRsiUser .create(counterController, guiController);
-//
-//		CmAdminDiskSpace    .create(counterController, guiController);
-//		CmAdminStatsBacklog .create(counterController, guiController);
-//		CmDbQueueSizeInRssd .create(counterController, guiController);
 
 		// OS HOST Monitoring
 //		CmOsIostat          .create(counterController, guiController);
@@ -123,7 +106,9 @@ extends CounterControllerAbstract
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception
+	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())

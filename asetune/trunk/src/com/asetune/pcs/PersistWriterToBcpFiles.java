@@ -23,6 +23,7 @@ import com.asetune.cm.CountersModelAppend;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.OSCommand;
+import com.asetune.utils.StringUtil;
 
 
 public class PersistWriterToBcpFiles
@@ -123,14 +124,19 @@ public class PersistWriterToBcpFiles
 		_saveToDir = props.getProperty(propPrefix+"saveToDir");
 		if (_saveToDir == null)
 		{
-			_saveToDir = System.getProperty("ASETUNE_SAVE_DIR");
+//			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+//			String envNameHomeDir = DbxTune.getInstance().getAppHomeEnvName();     // ASETUNE_HOME
+			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+			String envNameHomeDir = "DBXTUNE_HOME";
+
+			_saveToDir = StringUtil.getEnvVariableValue(envNameSaveDir);
 			if (_saveToDir == null)
 			{
-				_saveToDir = System.getProperty("ASETUNE_HOME");
+				_saveToDir = StringUtil.getEnvVariableValue(envNameHomeDir);
 
 				if (_saveToDir == null)
 				{
-					String err = "Directory 'PersistWriterToBcpFiles.saveToDir' name was not specified and ASETUNE_SAVE_DIR or ASETUNE_HOME was not set, can't save information about DDL table creation for CounterModel '"+getName()+"'."; 
+					String err = "Directory 'PersistWriterToBcpFiles.saveToDir' name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about DDL table creation for CounterModel '"+getName()+"'."; 
 					_logger.error(err);
 					throw new MandatoryPropertyException(err);
 				}

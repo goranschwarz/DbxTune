@@ -29,6 +29,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.parser.QueryWindowMessageParser;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -526,6 +527,28 @@ extends CompletionProviderAbstract
 	}
 
 	@Override
+	public void refresh()
+	{
+		// Clear old completions
+		clear();
+
+		if (getStaticCompletions().size() == 0)
+			refreshCompletionForStaticCmds();
+
+		// Restore the "saved" completions
+//		super.addCompletions(_savedComplitionList);
+		super.addCompletions(getStaticCompletions());
+
+		// DO THE REFRESH
+		List<RsCompletion> list = refreshCompletion();
+
+		if (list != null && list.size() > 0)
+			addRsCompletions(list);
+
+		setNeedRefresh(false);
+	} // end _needRefresh
+
+	@Override
 	protected List<Completion> getCompletionsImpl(JTextComponent comp)
 	{
 		RSyntaxTextArea textArea = (RSyntaxTextArea)comp;
@@ -558,25 +581,7 @@ extends CompletionProviderAbstract
 //		System.out.println("-----------------------------------");
 
 		if (needRefresh())
-		{
-			// Clear old completions
-			clear();
-
-			if (getStaticCompletions().size() == 0)
-				refreshCompletionForStaticCmds();
-
-			// Restore the "saved" completions
-//			super.addCompletions(_savedComplitionList);
-			super.addCompletions(getStaticCompletions());
-
-			// DO THE REFRESH
-			List<RsCompletion> list = refreshCompletion();
-
-			if (list != null && list.size() > 0)
-				addRsCompletions(list);
-
-			setNeedRefresh(false);
-		} // end _needRefresh
+			refresh();
 
 
 		// Complete: closed <tags>, which will make a ReplacementCompletion
@@ -848,8 +853,8 @@ extends CompletionProviderAbstract
 				
 				try
 				{
-					if (conn instanceof SybConnection)
-						((SybConnection)conn).cancel();
+					if (conn instanceof SybConnection) ((SybConnection)conn).cancel();
+					if (conn instanceof TdsConnection) ((TdsConnection)conn).cancel();
 				}
 				catch (SQLException ignore)
 				{

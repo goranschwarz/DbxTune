@@ -133,10 +133,15 @@ implements ActionListener
 		add( new JLabel(""), "span, wrap 30" );
 		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
 
+//		String envNameHomeDir = DbxTune.getInstance().getAppHomeEnvName();     // ASETUNE_HOME
+//		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+		String envNameHomeDir = "DBXTUNE_HOME";
+		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+
 		// Add comment at the bottom
 		String remember = "<html>" +
 			"Remember that you can use variables " +
-			"<code>${DATE}</code>, <code>${SERVERNAME}</code>, <code>${ASEHOSTNAME}<code>, <code>${ASETUNE_HOME}<code> and <code>${ASETUNE_SAVE_DIR}<code> " +
+			"<code>${DATE}</code>, <code>${SERVERNAME}</code>, <code>${HOSTNAME}<code>, <code>${"+envNameHomeDir+"}<code> and <code>${"+envNameSaveDir+"}<code> " +
 			"in the 'JDBC Url' specification above." +
 			"</html>";
 
@@ -146,7 +151,7 @@ implements ActionListener
 		add(mll, "span, push, bottom, wrap" );
 		
 		// Also add example that you can COPY from
-		JTextField urlExample_txt = new JTextField("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
+		JTextField urlExample_txt = new JTextField("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 		urlExample_txt.setEditable(false);
 		urlExample_txt.setToolTipText(ConnectionDialog.JDBC_URL_TOOLTIP);
 		add(new JLabel("Example:"), "span, split" );
@@ -167,13 +172,16 @@ implements ActionListener
 
 //		_writer_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
 
+//		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+
 		_jdbcDriver_cbx.addItem("org.h2.Driver");
 		_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
 
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 
@@ -263,9 +271,12 @@ implements ActionListener
 		// --- URL: BUTTON: "..." 
 		if (_jdbcUrl_but.equals(source))
 		{
+//			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+
 //			JFileChooser fc = new JFileChooser();
-//			if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-//				fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+//			if (System.getProperty(""+envNameSaveDir+"") != null)
+//				fc.setCurrentDirectory(new File(System.getProperty(""+envNameSaveDir+"")));
 //			int returnVal = fc.showOpenDialog(this);
 //			if(returnVal == JFileChooser.APPROVE_OPTION) 
 //			{
@@ -299,7 +310,7 @@ implements ActionListener
 			String currentUrl = _jdbcUrl_cbx.getEditor().getItem().toString();
 			H2UrlHelper h2help = new H2UrlHelper(currentUrl);
 
-			File baseDir = h2help.getDir(System.getProperty("ASETUNE_SAVE_DIR"));
+			File baseDir = h2help.getDir(System.getProperty(""+envNameSaveDir+""));
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			int returnVal = fc.showOpenDialog(this);

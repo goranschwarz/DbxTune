@@ -30,7 +30,6 @@ import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;

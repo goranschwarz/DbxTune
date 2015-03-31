@@ -32,10 +32,9 @@ import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.MonTablesDictionary;
-import com.asetune.cm.CountersModel;
 import com.asetune.cm.CounterSample;
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
 

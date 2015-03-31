@@ -39,8 +39,8 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"EXECUTION_TIME",
-		"MERGED_DELTA_RECORDS"
+//		"EXECUTION_TIME",
+//		"MERGED_DELTA_RECORDS"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -76,6 +76,8 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 
+		setShowClearTime(false);
+
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
@@ -110,20 +112,24 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("HOST");
-		pkCols.add("PORT");
-		pkCols.add("TYPE");
-		pkCols.add("SCHEMA_NAME");
-		pkCols.add("TABLE_NAME");
-		pkCols.add("PART_ID");
+//		pkCols.add("HOST");
+//		pkCols.add("PORT");
+//		pkCols.add("TYPE");
+//		pkCols.add("SCHEMA_NAME");
+//		pkCols.add("TABLE_NAME");
+//		pkCols.add("PART_ID");
 
-		return pkCols;
+//		return pkCols;
+		
+		return null; // NO PK, just get the rows
 	}
 
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select * from M_DELTA_MERGE_STATISTICS";
+		String sql = "select * from M_DELTA_MERGE_STATISTICS"; // should be where START_TIME >  ${lastSampleTime} order by START_TIME
+		
+		// Maybe a graph on: numOf DeltaMerges = getRowsCount for last period, and sum(NumOfMergedDeltaRecords) for last rows
 
 		return sql;
 	}

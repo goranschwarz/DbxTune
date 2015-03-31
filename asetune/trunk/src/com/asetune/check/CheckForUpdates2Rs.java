@@ -2,15 +2,15 @@ package com.asetune.check;
 
 import java.util.List;
 
-public class CheckForUpdates2Rs extends CheckForUpdates2
+public class CheckForUpdates2Rs extends CheckForUpdatesDbx
 {
 
-	@Override
-	public QueryString createCheckForUpdate(Object... params)
-	{
-		System.out.println("NOT_YET_IMPLEMENTED: createCheckForUpdate()");
-		return null;
-	}
+//	@Override
+//	public QueryString createCheckForUpdate(Object... params)
+//	{
+//		System.out.println("NOT_YET_IMPLEMENTED: createCheckForUpdate()");
+//		return null;
+//	}
 
 	@Override
 	public QueryString createSendConnectInfo(Object... params)
@@ -19,12 +19,12 @@ public class CheckForUpdates2Rs extends CheckForUpdates2
 		return null;
 	}
 
-	@Override
-	public List<QueryString> createSendCounterUsageInfo(Object... params)
-	{
-		System.out.println("NOT_YET_IMPLEMENTED: createSendCounterUsageInfo()");
-		return null;
-	}
+//	@Override
+//	public List<QueryString> createSendCounterUsageInfo(Object... params)
+//	{
+//		System.out.println("NOT_YET_IMPLEMENTED: createSendCounterUsageInfo()");
+//		return null;
+//	}
 
 	@Override
 	public List<QueryString> createSendMdaInfo(Object... params)
@@ -33,12 +33,12 @@ public class CheckForUpdates2Rs extends CheckForUpdates2
 		return null;
 	}
 
-	@Override
-	public QueryString createSendUdcInfo(Object... params)
-	{
-		System.out.println("NOT_YET_IMPLEMENTED: createSendUdcInfo()");
-		return null;
-	}
+//	@Override
+//	public QueryString createSendUdcInfo(Object... params)
+//	{
+//		System.out.println("NOT_YET_IMPLEMENTED: createSendUdcInfo()");
+//		return null;
+//	}
 
 	@Override
 	public QueryString createSendLogInfo(Object... params)

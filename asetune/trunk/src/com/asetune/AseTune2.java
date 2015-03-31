@@ -25,12 +25,18 @@ extends DbxTune
 		return APP_NAME;
 	}
 
-	@Override
-	public String getAppHomeEnvName()
-	{
-		return "ASETUNE_HOME";
-	}
-
+//	@Override
+//	public String getAppHomeEnvName()
+//	{
+//		return "ASETUNE_HOME";
+//	}
+//
+//	@Override
+//	public String getAppSaveDirEnvName()
+//	{
+//		return "ASETUNE_SAVE_DIR";
+//	}
+//
 	@Override
 	public String getConfigFileName()
 	{

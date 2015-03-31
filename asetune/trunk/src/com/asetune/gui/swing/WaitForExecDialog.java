@@ -29,6 +29,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
 import com.sybase.jdbcx.SybConnection;
@@ -381,7 +382,7 @@ implements PropertyChangeListener, ActionListener
 		if ( ! doBgThread.isDone() )
 		{
 			boolean canDoCancel = _execClass.canDoCancel();
-			if (_conn != null && _conn instanceof SybConnection)
+			if (_conn != null && (_conn instanceof SybConnection || _conn instanceof TdsConnection) )
 				canDoCancel = true;
 			_cancel_but.setVisible(canDoCancel);
 
@@ -495,11 +496,15 @@ implements PropertyChangeListener, ActionListener
 			cancel();
 
 			Connection conn = getWaitDialog()._conn;
-			if (conn != null && conn instanceof SybConnection)
+			if (conn != null && (conn instanceof SybConnection || conn instanceof TdsConnection) )
 			{
 				try
 				{
-					((SybConnection)conn).cancel();
+					if (conn instanceof SybConnection)
+						((SybConnection)conn).cancel();
+					
+					else if (conn instanceof TdsConnection)
+						((TdsConnection)conn).cancel();
 				}
 				catch (SQLException e)
 				{

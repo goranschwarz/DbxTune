@@ -15,6 +15,7 @@ import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Shape;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.StringSelection;
@@ -26,7 +27,6 @@ import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,7 +97,7 @@ import com.asetune.gui.swing.RowFilterDiffCounterIsZero;
 import com.asetune.gui.swing.RowFilterValueAndOp;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistReader;
-import com.asetune.utils.AseConnectionFactory;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
@@ -192,6 +192,7 @@ implements
 	private JTextField				_timeIntervall_txt					= new JTextField();
 	private JLabel					_timePostpone_lbl					= new JLabel("Postpone time");
 	private JTextField				_timePostpone_txt					= new JTextField();
+//	private JCheckBox				_timePostpone_lbl					= new JCheckBox("", true); // not used, maybe in the future
 	// private JTextField _timePostpone_txt = new JFormattedTextField(new
 	// DefaultFormatterFactory(new NumberFormatter()));
 	private JLabel					_timeViewStored_lbl					= new JLabel("Viewing stored data");
@@ -415,10 +416,11 @@ implements
 
 		if ( _tailMode )
 		{
-			_timeClear_lbl             .setVisible(true);
-			_timeClear_txt             .setVisible(true);
-			_timeHeadSample_lbl        .setVisible(false);
-			_timeHeadSample_txt        .setVisible(false);
+			boolean showClearTime = (cm == null) ? true : cm.showClearTime();
+   			_timeClear_lbl             .setVisible(showClearTime);
+   			_timeClear_txt             .setVisible(showClearTime);
+   			_timeHeadSample_lbl        .setVisible(!showClearTime);
+   			_timeHeadSample_txt        .setVisible(!showClearTime);
 			_timePostpone_lbl          .setVisible(true);
 			_timePostpone_txt          .setVisible(true);
 			_timeViewStored_lbl        .setVisible(false);
@@ -752,6 +754,13 @@ implements
 			if ( _cm != null )
 				setTimeInfo(_cm.getCounterClearTime(), _cm.getSampleTimeHead(), _cm.getSampleTime(), _cm.getSampleInterval());
 
+
+			boolean showClearTime = (_cm == null) ? true : _cm.showClearTime();
+			_timeClear_txt     .setVisible(showClearTime);
+			_timeClear_lbl     .setVisible(showClearTime);
+			_timeHeadSample_lbl.setVisible(!showClearTime);
+			_timeHeadSample_txt.setVisible(!showClearTime);
+
 			// Kick off the changes in the JXTable
 			// NOTE: this should be done at teh START of this method
 			//_dataTable.tableChanged(e);
@@ -1037,7 +1046,8 @@ implements
 	 **---------------------------------------------------
 	 */
 	@Override
-	public Connection getConnection()
+//	public Connection getConnection()
+	public DbxConnection getConnection()
 	{
 //		throw new RuntimeException("TabularCntrPanel has not implemented the method 'getConnection()'");
 		// FIXME: shouldn't this be done on XXX (the ICounterController from the CM or something similar)
@@ -1054,11 +1064,14 @@ implements
 		}
 	}
 	@Override
-	public Connection getNewConnection(String connName)
+//	public Connection getNewConnection(String connName)
+	public DbxConnection getNewConnection(String connName)
 	{
 		try
 		{
-			return AseConnectionFactory.getConnection(null, connName, null);
+//			return AseConnectionFactory.getConnection(null, connName, null);
+			Window guiOwner = SwingUtilities.getWindowAncestor(this);
+			return DbxConnection.connect(guiOwner, connName);
 		}
 		catch (Exception e) // SQLException, ClassNotFoundException
 		{

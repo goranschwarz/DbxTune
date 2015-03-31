@@ -3,36 +3,6 @@
  */
 package com.asetune;
 
-import java.awt.event.ActionEvent;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.swing.SwingUtilities;
-
-import org.apache.log4j.Logger;
-
-import com.asetune.cm.CountersModel;
-import com.asetune.gui.ConnectionDialog;
-import com.asetune.gui.MainFrame;
-import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.swing.WaitForExecDialog;
-import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
-import com.asetune.pcs.InMemoryCounterHandler;
-import com.asetune.pcs.PersistContainer;
-import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.Configuration;
-import com.asetune.utils.Memory;
-import com.asetune.utils.SwingUtils;
-import com.asetune.utils.TimeUtils;
 
 public class GetCountersIqGui
 {

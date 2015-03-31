@@ -829,7 +829,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		{
 			String baseDir = _traceOutSave_txt.getText();
 			if (StringUtil.isNullOrBlank(baseDir))
-				baseDir = System.getProperty("ASETUNE_SAVE_DIR");
+//				baseDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
+				baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -847,7 +848,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		{
 			String baseDir = _procSave_txt.getText();
 			if (StringUtil.isNullOrBlank(baseDir))
-				baseDir = System.getProperty("ASETUNE_SAVE_DIR");
+//				baseDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
+				baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -1057,7 +1059,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				if ( ! f.exists() )
 				{
 					String curDir = _traceOutSave_txt.getText();
-					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+//					String newDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
+					String newDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 					if (newDir != null)
 						newDir = newDir.replace('\\', '/');
 					_traceOutSave_txt.setText(newDir);
@@ -1078,7 +1081,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				if ( ! f.exists() )
 				{
 					String curDir = _procSave_txt.getText();
-					String newDir = System.getProperty("ASETUNE_SAVE_DIR");
+//					String newDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
+					String newDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 					if (newDir != null)
 						newDir = newDir.replace('\\', '/');
 					_procSave_txt.setText(newDir);
@@ -1781,7 +1785,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		// TRACE OUTPUT
 		//----------------------------------
 		_traceOutSave_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.save",          _traceOutSave_chk.isSelected()));
-		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           System.getProperty("ASETUNE_SAVE_DIR")));
+//		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName() ))); // ASETUNE_SAVE_DIR
+		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR"))); // ASETUNE_SAVE_DIR
 		_traceOutTail_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.tail",          _traceOutTail_chk.isSelected()));
 		_traceShowProcPanel_chk.setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.showProcPanel", _traceShowProcPanel_chk.isSelected()));
 
@@ -1790,7 +1795,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		//----------------------------------
 		_procGet_chk     .setSelected(conf.getBooleanProperty("aseAppTrace.proc.getProcText", _procGet_chk.isSelected()));
 		_procSave_chk    .setSelected(conf.getBooleanProperty("aseAppTrace.proc.save",        _procSave_chk.isSelected()));
-		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         System.getProperty("ASETUNE_SAVE_DIR")));
+//		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName() ))); // ASETUNE_SAVE_DIR
+		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR"))); // ASETUNE_SAVE_DIR
 		_procMvToLine_chk.setSelected(conf.getBooleanProperty("aseAppTrace.proc.moveToLine",  _procMvToLine_chk.isSelected()));
 	}
 	private void getSavedWindowProps()

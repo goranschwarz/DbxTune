@@ -60,7 +60,6 @@ import org.jdesktop.swingx.treetable.TreeTableModel;
 import com.asetune.AseConfig;
 import com.asetune.AseConfigText;
 import com.asetune.CounterControllerAbstract;
-import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.gui.OfflineSessionModel.SessionLevel;
 import com.asetune.gui.swing.AbstractComponentDecorator;

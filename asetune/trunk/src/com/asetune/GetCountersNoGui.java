@@ -3,47 +3,6 @@
  */
 package com.asetune;
 
-import java.io.Console;
-import java.io.File;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Properties;
-
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import org.apache.log4j.Logger;
-
-import com.asetune.check.CheckForUpdates;
-import com.asetune.check.CheckForUpdates2;
-import com.asetune.cm.CounterModelHostMonitor;
-import com.asetune.cm.CounterSetTemplates;
-import com.asetune.cm.CountersModel;
-import com.asetune.gui.ConnectionDialog;
-import com.asetune.gui.MainFrame;
-import com.asetune.pcs.PersistContainer;
-import com.asetune.pcs.PersistContainer.HeaderInfo;
-import com.asetune.pcs.PersistWriterBase;
-import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.ssh.SshConnection;
-import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.Configuration;
-import com.asetune.utils.MandatoryPropertyException;
-import com.asetune.utils.Memory;
-import com.asetune.utils.PropPropEntry;
-import com.asetune.utils.StringUtil;
-import com.asetune.utils.Ver;
 
 public class GetCountersNoGui
 {

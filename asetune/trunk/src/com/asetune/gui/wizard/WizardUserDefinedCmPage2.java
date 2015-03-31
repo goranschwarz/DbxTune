@@ -9,7 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.sql.Connection;
 import java.util.Map;
 
 import javax.swing.JButton;
@@ -18,6 +17,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
@@ -31,14 +31,14 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
-import com.asetune.cm.CountersModel;
 import com.asetune.cm.CounterSample;
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
-import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -353,7 +353,8 @@ implements ActionListener, FocusListener, CaretListener
 		{
 			try 
 			{
-				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
+//				Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
+				DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName()+"-wiz-udc");
 				QueryWindow qw = new QueryWindow(conn, sql, null, true, WindowType.JDIALOG_MODAL, null);
 //				qw.setModal(true);
 //				qw.setModalExclusionType(Dialog.ModalExclusionType.APPLICATION_EXCLUDE);
@@ -385,7 +386,8 @@ implements ActionListener, FocusListener, CaretListener
 		putWizardData("CounterSample", null);
 		try 
 		{
-			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
+//			Connection conn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-wiz-udc", null);
+			DbxConnection conn = DbxConnection.connect(SwingUtilities.getWindowAncestor(this), Version.getAppName()+"-wiz-udc");
 			CountersModel cm = new CountersModel();
 //			CounterSample sample = new CounterSample("asetune-wiz-udc-test", true, null, null);
 			CounterSample sample = cm.createCounterSample("asetune-wiz-udc-test", true, null, null);

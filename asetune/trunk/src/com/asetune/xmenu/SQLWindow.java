@@ -3,9 +3,9 @@
  */
 package com.asetune.xmenu;
 
-import java.sql.Connection;
 import java.util.HashMap;
 
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
@@ -32,8 +32,8 @@ extends XmenuActionBase
 	@Override 
 	public void doWork() 
 	{
-		
-		Connection conn = getConnection();
+//		Connection conn = getConnection();
+		DbxConnection conn = getConnection();
 
 		String sql = getConfig();
 		HashMap<String,String> paramValues = getParamValues();

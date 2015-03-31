@@ -1988,6 +1988,7 @@ extends CounterTableModel
 		else if ("smallint"         .equalsIgnoreCase(datatype)) enabled = true;
 		else if ("unsigned int"     .equalsIgnoreCase(datatype)) enabled = true;
 		else if ("int"              .equalsIgnoreCase(datatype)) enabled = true;
+		else if ("integer"          .equalsIgnoreCase(datatype)) enabled = true;
 		else if ("unsigned bigint"  .equalsIgnoreCase(datatype)) enabled = true;
 		else if ("bigint"           .equalsIgnoreCase(datatype)) enabled = true;
 		else if ("decimal"          .equalsIgnoreCase(datatype)) enabled = true;
@@ -1997,6 +1998,58 @@ extends CounterTableModel
 		else if ("double precision" .equalsIgnoreCase(datatype)) enabled = true;
 
 		return enabled;
+	}
+
+	public static boolean isDiffAllowedForDatatype(int jdbcType)
+	{
+		switch (jdbcType)
+		{
+		case java.sql.Types.BIT:           return false;
+		case java.sql.Types.TINYINT:       return true; // allow
+		case java.sql.Types.SMALLINT:      return true; // allow
+		case java.sql.Types.INTEGER:       return true; // allow
+		case java.sql.Types.BIGINT:        return true; // allow
+		case java.sql.Types.FLOAT:         return true; // allow
+		case java.sql.Types.REAL:          return true; // allow
+		case java.sql.Types.DOUBLE:        return true; // allow
+		case java.sql.Types.NUMERIC:       return true; // allow
+		case java.sql.Types.DECIMAL:       return true; // allow
+		case java.sql.Types.CHAR:          return false;
+		case java.sql.Types.VARCHAR:       return false;
+		case java.sql.Types.LONGVARCHAR:   return false;
+		case java.sql.Types.DATE:          return false;
+		case java.sql.Types.TIME:          return false;
+		case java.sql.Types.TIMESTAMP:     return false;
+		case java.sql.Types.BINARY:        return false;
+		case java.sql.Types.VARBINARY:     return false;
+		case java.sql.Types.LONGVARBINARY: return false;
+		case java.sql.Types.NULL:          return false;
+		case java.sql.Types.OTHER:         return false;
+		case java.sql.Types.JAVA_OBJECT:   return false;
+		case java.sql.Types.DISTINCT:      return false;
+		case java.sql.Types.STRUCT:        return false;
+		case java.sql.Types.ARRAY:         return false;
+		case java.sql.Types.BLOB:          return false;
+		case java.sql.Types.CLOB:          return false;
+		case java.sql.Types.REF:           return false;
+		case java.sql.Types.DATALINK:      return false;
+		case java.sql.Types.BOOLEAN:       return false;
+
+		//------------------------- JDBC 4.0 -----------------------------------
+		case java.sql.Types.ROWID:         return false;
+		case java.sql.Types.NCHAR:         return false;
+		case java.sql.Types.NVARCHAR:      return false;
+		case java.sql.Types.LONGNVARCHAR:  return false;
+		case java.sql.Types.NCLOB:         return false;
+		case java.sql.Types.SQLXML:        return false;
+
+		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
+		case -10:                          return false; // "oracle.jdbc.OracleTypes.CURSOR";
+
+		//------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return false;
+		}
 	}
 
 	public String debugToString()

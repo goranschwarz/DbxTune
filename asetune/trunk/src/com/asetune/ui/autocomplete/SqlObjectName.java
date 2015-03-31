@@ -40,15 +40,17 @@ public class SqlObjectName
 	public String getOriginSchemaNameN () { return StringUtil.hasValue(_originSchName ) ? _originSchName  : null; }
 	public String getOriginObjectNameN () { return StringUtil.hasValue(_originObjName ) ? _originObjName  : null; }
 
-	private String _dbProductName = null;
-	private String _dbIdentifierQuoteString = null;
+	private String  _dbProductName = null;
+	private String  _dbIdentifierQuoteString = null;
+	private boolean _dbStoresUpperCaseIdentifiers = false;
 	/** 
 	 * constructor using full name [catalog.][schema.][object] 
 	 */
-	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString)
+	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers)
 	{
-		_dbProductName           = dbProductName;
-		_dbIdentifierQuoteString = dbIdentifierQuoteString;
+		_dbProductName                = dbProductName;
+		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
+		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
 		setFullName(name);
 	}
 
@@ -116,6 +118,9 @@ public class SqlObjectName
 	{
 		_originCatName = name;
 		_catName       = stripQuote( name, _dbIdentifierQuoteString );
+
+		if (_catName != null && _dbStoresUpperCaseIdentifiers)
+			_catName = _catName.toUpperCase();
 	}
 
 	/**
@@ -132,6 +137,9 @@ public class SqlObjectName
 	{
 		_originSchName = name;
 		_schName       = stripQuote( name, _dbIdentifierQuoteString );
+
+		if (_schName != null && _dbStoresUpperCaseIdentifiers)
+			_schName = _schName.toUpperCase();
 	}
 
 	/**
@@ -148,6 +156,9 @@ public class SqlObjectName
 	{
 		_originObjName = name;
 		_objName       = stripQuote( name, _dbIdentifierQuoteString );
+
+		if (_objName != null && _dbStoresUpperCaseIdentifiers)
+			_objName = _objName.toUpperCase();
 	}
 
 //	/** make: schemaName -> catalaogName and objectName -> schemaName and blank-out objectName */

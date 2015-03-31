@@ -21,7 +21,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;

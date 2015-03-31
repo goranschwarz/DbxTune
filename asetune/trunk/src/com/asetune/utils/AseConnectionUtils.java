@@ -34,6 +34,8 @@ import org.apache.log4j.Logger;
 import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.gui.AseConfigMonitoringDialog;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.TdsConnection;
 import com.sybase.jdbc4.jdbc.SybSQLWarning;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -1478,7 +1480,8 @@ public class AseConnectionUtils
 	 * @param needsConfig an array of ASE Configuration that we can't do without. If null, nothing is required. 
 	 * @return
 	 */
-	public static boolean checkForMonitorOptions(Connection conn, String user, boolean gui, Component parent, String... needsConfig)
+//	public static boolean checkForMonitorOptions(Connection conn, String user, boolean gui, Component parent, String... needsConfig)
+	public static boolean checkForMonitorOptions(DbxConnection conn, String user, boolean gui, Component parent, String... needsConfig)
 	{
 		int    aseVersionNum  = 0;
 		String aseVersionStr  = "";
@@ -2572,6 +2575,9 @@ public class AseConnectionUtils
 			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
 			((SybConnection)conn).setSybMessageHandler(null);
 		}
+		// Set a TDS Message Handler
+		if (conn instanceof TdsConnection)
+			((TdsConnection)conn).setSybMessageHandler(null);
 
 		try
 		{
@@ -2606,6 +2612,9 @@ public class AseConnectionUtils
 			{
 				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 			}
+			// Restore old message handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).restoreSybMessageHandler();
 		}
 
 		if (sb == null)
@@ -2796,6 +2805,9 @@ public class AseConnectionUtils
 			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
 			((SybConnection)conn).setSybMessageHandler(null);
 		}
+		// Set a TDS Message Handler
+		if (conn instanceof TdsConnection)
+			((TdsConnection)conn).setSybMessageHandler(null);
 
 		try
 		{
@@ -2830,6 +2842,9 @@ public class AseConnectionUtils
 			{
 				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 			}
+			// Restore old message handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).restoreSybMessageHandler();
 		}
 
 		if (sb == null)
@@ -3034,6 +3049,9 @@ public class AseConnectionUtils
 			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
 			((SybConnection)conn).setSybMessageHandler(null);
 		}
+		// Set a TDS Message Handler
+		if (conn instanceof TdsConnection)
+			((TdsConnection)conn).setSybMessageHandler(null);
 
 		try
 		{
@@ -3069,6 +3087,9 @@ public class AseConnectionUtils
 			{
 				((SybConnection)conn).setSybMessageHandler(curMsgHandler);
 			}
+			// Restore old message handler
+			if (conn instanceof TdsConnection)
+				((TdsConnection)conn).restoreSybMessageHandler();
 		}
 
 		if (sb == null)
@@ -3177,7 +3198,8 @@ public class AseConnectionUtils
 				if (scriptLocation == null)
 					location = "'" + scriptName + "'";
 				else
-					location = "'$ASETUNE_HOME/classes' under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"'";
+//					location = "'$"+DbxTune.getInstance().getAppHomeEnvName()+"/classes' under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"'";
+					location = "'$DBXTUNE_HOME/classes' under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"'";
 
 				String msg = "Missing stored proc '"+procName+"' in database '"+dbname+"' please create it. (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from "+location+").";
 				_logger.warn(msg);

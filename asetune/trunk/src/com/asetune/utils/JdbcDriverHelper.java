@@ -132,14 +132,17 @@ public class JdbcDriverHelper
 		}
 		else if ("org.h2.Driver".equals(driverName))
 		{
+//			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+
 			templates.add("jdbc:h2:file:[<path>]<dbname>");
 			templates.add("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE");
 			templates.add("jdbc:h2:file:[<path>]<dbname>;AUTO_SERVER=TRUE");
 //			templates.add("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
-			templates.add("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
-//			templates.add("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
-			templates.add("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE}");
-//			templates.add("jdbc:h2:file:${ASETUNE_SAVE_DIR}/${ASEHOSTNAME}_${DATE};AUTO_SERVER=TRUE");
+			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
+//			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
+			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
+//			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE};AUTO_SERVER=TRUE");
 			templates.add("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 			templates.add("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 			templates.add("jdbc:h2:zip:<zipFileName>!/<dbname>");

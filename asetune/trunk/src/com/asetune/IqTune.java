@@ -25,11 +25,17 @@ extends DbxTune
 		return APP_NAME;
 	}
 
-	@Override
-	public String getAppHomeEnvName()
-	{
-		return "IQTUNE_HOME";
-	}
+//	@Override
+//	public String getAppHomeEnvName()
+//	{
+//		return "IQTUNE_HOME";
+//	}
+//
+//	@Override
+//	public String getAppSaveDirEnvName()
+//	{
+//		return "IQTUNE_SAVE_DIR";
+//	}
 
 	@Override
 	public String getConfigFileName()

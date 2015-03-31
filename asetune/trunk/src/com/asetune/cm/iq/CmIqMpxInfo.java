@@ -1,7 +1,6 @@
 package com.asetune.cm.iq;
 
 import java.sql.Connection;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
@@ -12,10 +11,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
-import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -78,6 +74,8 @@ extends CountersModel
 		setDescription(HTML_DESC);
 
 		setIconFile(GUI_ICON_FILE);
+
+		setShowClearTime(false);
 
 		setCounterController(counterController);
 		setGuiController(guiController);

@@ -1,14 +1,13 @@
 package com.asetune;
 
-import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.CounterSample;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 
 public interface ICounterController
@@ -18,12 +17,14 @@ public interface ICounterController
 	/**
 	 * Set the <code>Connection</code> to use for monitoring.
 	 */
-	public void setMonConnection(Connection conn);
+//	public void setMonConnection(Connection conn);
+	public void setMonConnection(DbxConnection conn);
 
 	/**
 	 * Gets the <code>Connection</code> to the monitored server.
 	 */
-	public Connection getMonConnection();
+//	public Connection getMonConnection();
+	public DbxConnection getMonConnection();
 
 	/**
 	 * Do we have a connection to the database?<br>
@@ -140,7 +141,7 @@ public interface ICounterController
 	Timestamp getStatisticsLastSampleTime();
 	void resetStatisticsTime();
 
-	void initCounters(Connection conn, boolean b, int srvExecutableVersionNum, boolean clusterEnabled, int mdaVersion) throws Exception;
+	void initCounters(DbxConnection conn, boolean b, int srvExecutableVersionNum, boolean clusterEnabled, int mdaVersion) throws Exception;
 
 	void reset(boolean b);
 
@@ -149,7 +150,7 @@ public interface ICounterController
 
 
 	
-	List<CountersModel> getCmListDependsOnConfig(String srvConfig, Connection conn, int srvVersionNum, boolean isClusterEnabled);
+	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn, int srvVersionNum, boolean isClusterEnabled);
 	void setWaitEvent(String string);
 	void createCounters(boolean hasGui);
 	boolean sleep(int i);

@@ -26,7 +26,6 @@ import org.jdesktop.swingx.JXTable;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.Configuration;

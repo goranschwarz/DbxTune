@@ -12,8 +12,8 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune"; // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "3.4.0";
-	public static final String VERSION_STRING     = "3.4.0.12.dev";
-	public static final String BUILD_STRING       = "2015-03-17/build 171";
+	public static final String VERSION_STRING     = "3.4.0.13.dev";
+	public static final String BUILD_STRING       = "2015-03-31/build 173";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2015-10-30";  // "YYYY-MM-DD" 

@@ -11,7 +11,6 @@ import javax.swing.table.DefaultTableModel;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseTune;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.gui.TabularCntrPanel;

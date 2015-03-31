@@ -29,6 +29,8 @@ implements Serializable
 	public String _procRemark  = null;
 	public String _procSpecificName = null;
 	
+	public String  _oraPackageName   = null; // ONLY if oracle -- needs special lookup...
+	
 	public boolean _needParamsRefresh = true;
 	public boolean isParamsRefreshed() {return ! _needParamsRefresh;}
 
@@ -89,7 +91,7 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append(_procSchema).append(".<B>").append(_procName).append("</B> - <font color=\"blue\">").append(_procType).append("</font>");
+		sb.append(_procSchema).append(".<B>").append(_procName).append("</B> - <font color=\"blue\">").append(_oraPackageName==null?"":"PACKAGE ").append(_procType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_procRemark) ? "not available" : _procRemark).append("<BR>");

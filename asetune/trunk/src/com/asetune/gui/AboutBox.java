@@ -8,7 +8,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
-import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -23,7 +22,6 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -41,10 +39,7 @@ import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.sort.RowFilters;
 
-import com.asetune.AseTune;
-import com.asetune.IqTune;
 import com.asetune.Version;
-import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdates2;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.PlatformUtils;
@@ -201,9 +196,19 @@ public class AboutBox
 //		else if (QueryWindow.APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png"));
 //		else if (IqTune     .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/iqtune_icon_32.png"));
 
-		ImageIcon appIcon = MainFrame.getInstance().getApplicationIcon32();
-		if (appIcon != null)
-			icon = new JLabel(appIcon);
+		if (QueryWindow.APP_NAME.equals(appName))
+		{
+			icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png"));
+		}
+		else
+		{
+			if (MainFrame.hasInstance())
+			{
+    			ImageIcon appIcon = MainFrame.getInstance().getApplicationIcon32();
+    			if (appIcon != null)
+    				icon = new JLabel(appIcon);
+			}
+		}
 
 		JLabel appName_lbl     = new JLabel();
 		appName_lbl.setText(Version.getAppName());

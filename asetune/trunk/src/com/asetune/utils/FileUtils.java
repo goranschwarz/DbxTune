@@ -23,15 +23,11 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
-import javax.swing.tree.DefaultMutableTreeNode;
 
 import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
-
-import com.asetune.gui.ConnectionProfile;
 
 public class FileUtils
 {

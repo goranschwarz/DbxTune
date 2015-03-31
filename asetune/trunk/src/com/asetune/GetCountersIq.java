@@ -4,22 +4,6 @@
 
 
 package com.asetune;
-import java.sql.Connection;
-import java.util.Iterator;
-
-import org.apache.log4j.Logger;
-
-import com.asetune.cm.CountersModel;
-import com.asetune.cm.iq.CmSummary;
-import com.asetune.cm.iq.CmIqStatistics;
-import com.asetune.cm.os.CmOsIostat;
-import com.asetune.cm.os.CmOsMpstat;
-import com.asetune.cm.os.CmOsUptime;
-import com.asetune.cm.os.CmOsVmstat;
-import com.asetune.gui.MainFrame;
-import com.asetune.pcs.PersistContainer.HeaderInfo;
-import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.Configuration;
 
 public abstract class GetCountersIq 
 {

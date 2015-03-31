@@ -49,6 +49,7 @@ import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -86,7 +87,8 @@ public class AseConfigMonitoringDialog
 
 	private static final String ASE_CONFIG       = "ASE_CONFIG";
 
-	private Connection         _conn             = null;
+//	private Connection         _conn             = null;
+	private DbxConnection      _conn             = null;
 	private boolean            _configErrors     = false;
 
 	private int                _aseVersionNum    = 0;
@@ -189,17 +191,20 @@ public class AseConfigMonitoringDialog
 	** BEGIN: constructors
 	**---------------------------------------------------
 	*/
-	private AseConfigMonitoringDialog(Frame owner, Connection conn, int aseVersionNum, String title)
+//	private AseConfigMonitoringDialog(Frame owner, Connection conn, int aseVersionNum, String title)
+	private AseConfigMonitoringDialog(Frame owner, DbxConnection conn, int aseVersionNum, String title)
 	{
 		super(owner, title, true);
 		init(owner, conn, aseVersionNum);
 	}
-	private AseConfigMonitoringDialog(Dialog owner, Connection conn, int aseVersionNum, String title)
+//	private AseConfigMonitoringDialog(Dialog owner, Connection conn, int aseVersionNum, String title)
+	private AseConfigMonitoringDialog(Dialog owner, DbxConnection conn, int aseVersionNum, String title)
 	{
 		super(owner, title, true);
 		init(owner, conn, aseVersionNum);
 	}
-	private void init(Window owner, Connection conn, int aseVersionNum)
+//	private void init(Window owner, Connection conn, int aseVersionNum)
+	private void init(Window owner, DbxConnection conn, int aseVersionNum)
 	{
 
 		_conn = conn;
@@ -231,7 +236,8 @@ public class AseConfigMonitoringDialog
 	}
 
 
-	public static void showDialog(Frame owner, Connection conn, int aseVersionNum)
+//	public static void showDialog(Frame owner, Connection conn, int aseVersionNum)
+	public static void showDialog(Frame owner, DbxConnection conn, int aseVersionNum)
 	{
 		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
 
@@ -241,7 +247,8 @@ public class AseConfigMonitoringDialog
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
-	public static void showDialog(Dialog owner, Connection conn, int aseVersionNum)
+//	public static void showDialog(Dialog owner, Connection conn, int aseVersionNum)
+	public static void showDialog(Dialog owner, DbxConnection conn, int aseVersionNum)
 	{
 		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
 
@@ -251,7 +258,8 @@ public class AseConfigMonitoringDialog
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
-	public static void showDialog(Component owner, Connection conn, int aseVersionNum)
+//	public static void showDialog(Component owner, Connection conn, int aseVersionNum)
+	public static void showDialog(Component owner, DbxConnection conn, int aseVersionNum)
 	{
 		AseConfigMonitoringDialog dialog = null;
 		if (owner instanceof Frame)
@@ -1904,7 +1912,8 @@ public class AseConfigMonitoringDialog
 		try
 		{
 			System.out.println("Open the Dialog with a VALID connection.");
-			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
+//			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
+			DbxConnection conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null) );
 //			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
 			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1));
 

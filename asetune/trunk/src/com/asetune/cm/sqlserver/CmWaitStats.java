@@ -76,6 +76,8 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 
+		setShowClearTime(false);
+
 		setCounterController(counterController);
 		setGuiController(guiController);
 		

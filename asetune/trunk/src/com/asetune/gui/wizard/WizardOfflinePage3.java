@@ -29,7 +29,6 @@ import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.CounterController;
-import com.asetune.GetCounters;
 import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CountersModel;

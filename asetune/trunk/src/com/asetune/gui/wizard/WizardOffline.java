@@ -43,6 +43,7 @@ import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -415,9 +416,13 @@ public class WizardOffline
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
+//					String envName = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+					String envName = "DBXTUNE_SAVE_DIR";
+					String saveDir = StringUtil.getEnvVariableValue(envName);
+							
 					JFileChooser fc = new JFileChooser(_filename);
-					if (System.getProperty("ASETUNE_SAVE_DIR") != null)
-						fc.setCurrentDirectory(new File(System.getProperty("ASETUNE_SAVE_DIR")));
+					if (saveDir != null)
+						fc.setCurrentDirectory(new File(saveDir));
 
 					int returnVal = fc.showOpenDialog(null);
 					if (returnVal == JFileChooser.APPROVE_OPTION) 

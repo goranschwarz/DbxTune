@@ -25,11 +25,17 @@ extends DbxTune
 		return APP_NAME;
 	}
 
-	@Override
-	public String getAppHomeEnvName()
-	{
-		return "HANATUNE_HOME";
-	}
+//	@Override
+//	public String getAppHomeEnvName()
+//	{
+//		return "HANATUNE_HOME";
+//	}
+//
+//	@Override
+//	public String getAppSaveDirEnvName()
+//	{
+//		return "HANATUNE_SAVE_DIR";
+//	}
 
 	@Override
 	public String getConfigFileName()
@@ -84,4 +90,5 @@ extends DbxTune
 	{
 		DbxTune.main(args);
 	}
+
 }

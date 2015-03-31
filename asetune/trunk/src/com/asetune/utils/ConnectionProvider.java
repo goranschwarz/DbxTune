@@ -3,7 +3,7 @@
  */
 package com.asetune.utils;
 
-import java.sql.Connection;
+import com.asetune.sql.conn.DbxConnection;
 
 public interface ConnectionProvider
 {
@@ -11,12 +11,14 @@ public interface ConnectionProvider
 	 * Returns a connection, which is currently used...
 	 * @return
 	 */
-	public Connection getConnection();
+//	public Connection getConnection();
+	public DbxConnection getConnection();
 	
 	/**
 	 * Creates a new connection
 	 * @param appname
 	 * @return
 	 */
-	public Connection getNewConnection(String appname);
+//	public Connection getNewConnection(String appname);
+	public DbxConnection getNewConnection(String appname);
 }

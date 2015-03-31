@@ -592,13 +592,11 @@ public class StringUtil
 	}
 
 	/**
-	 * All ${ENV_VARIABLE_NAME} will be substrituted with the environment
-	 * variable from the OperatingSystem. Some JVM's the System.getenv() does
-	 * not work<br>
+	 * All ${ENV_VARIABLE_NAME} will be substituted with the environment
+	 * variable from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
 	 * In that case go and get the value from the runtime instead...
 	 * 
-	 * @param val
-	 *            A string that should be substituted
+	 * @param val   A string that should be substituted
 	 * @return The substituted string
 	 */
 	public static String envVariableSubstitution(String val)
@@ -628,6 +626,14 @@ public class StringUtil
 					System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
 				}
 			}
+
+			// If we can't find it at the ENV fall back and get it from System.getProperty()
+			if (envVal == null)
+			{
+				envVal = System.getProperty(envName);
+			}
+
+			// Not found at all, simply set it to "" -- empty
 			if (envVal == null)
 			{
 				_logger.warn("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
@@ -643,6 +649,53 @@ public class StringUtil
 		}
 
 		return val;
+	}
+
+	/**
+	 * Get environment variable from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
+	 * In that case go and get the value from the runtime instead...
+	 * 
+	 * @param val   variable name
+	 * @return The value, null if it can't be found.
+	 */
+	public static String getEnvVariableValue(String envName)
+	{
+		if (envName == null)
+			return null;
+
+		String envVal  = null;
+
+		// Get value for a specific env variable
+		// But some java runtimes does not do getenv(),
+		// then we need to revert back to getProperty() from the system property
+		// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
+		try
+		{
+			envVal  = System.getenv(envName);
+		}
+		catch (Throwable t)
+		{
+			envVal = System.getProperty(envName);
+			if (envVal == null)
+			{
+				_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+				System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+			}
+		}
+
+		// If we can't find it at the ENV fall back and get it from System.getProperty()
+		if (envVal == null)
+		{
+			envVal = System.getProperty(envName);
+		}
+
+		// Not found at all, simply set it to "" -- empty
+		if (envVal == null)
+		{
+			_logger.debug("The Environment variable '"+envName+"' cant be found.");
+		}
+
+		return envVal;
 	}
 
 

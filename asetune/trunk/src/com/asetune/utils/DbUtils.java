@@ -16,27 +16,29 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
-import com.asetune.tools.tailw.LogTailWindow.FileType;
 
 public class DbUtils
 {
 	private static Logger _logger = Logger.getLogger(DbUtils.class);
 	
-	public static final String DB_PROD_NAME_SYBASE_ASE = "Adaptive Server Enterprise";
-	public static final String DB_PROD_NAME_SYBASE_ASA = "SQL Anywhere";
-	public static final String DB_PROD_NAME_SYBASE_IQ  = "Sybase IQ";
-	public static final String DB_PROD_NAME_SYBASE_RS  = "Replication Server";
-	public static final String DB_PROD_NAME_H2         = "H2";
-	public static final String DB_PROD_NAME_HANA       = "HDB";
-	public static final String DB_PROD_NAME_MAXDB      = "SAP DB";
+	public static final String DB_PROD_NAME_SYBASE_ASE   = "Adaptive Server Enterprise";
+	public static final String DB_PROD_NAME_SYBASE_ASA   = "SQL Anywhere";
+	public static final String DB_PROD_NAME_SYBASE_IQ    = "Sybase IQ";
+	public static final String DB_PROD_NAME_SYBASE_RS    = "Replication Server";
+	public static final String DB_PROD_NAME_SYBASE_RAX   = "Sybase Replication Agent for Unix & Windows";
+	public static final String DB_PROD_NAME_SYBASE_RSDRA = "DR Agent";
 
-	public static final String DB_PROD_NAME_HSQL       = "HSQL Database Engine"; // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_MSSQL      = "Microsoft SQL Server"; // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_ORACLE     = "Oracle";               // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_DB2_UX     = "DB2/Linux";            // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_DB2_ZOS    = "DB2";                  // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_MYSQL      = "MySQL";                // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_DERBY      = "Apache Derby";         // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_H2           = "H2";
+	public static final String DB_PROD_NAME_HANA         = "HDB";
+	public static final String DB_PROD_NAME_MAXDB        = "SAP DB";
+                                                         
+	public static final String DB_PROD_NAME_HSQL         = "HSQL Database Engine"; // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_MSSQL        = "Microsoft SQL Server"; // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_ORACLE       = "Oracle";               // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_DB2_UX       = "DB2/Linux";            // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_DB2_ZOS      = "DB2";                  // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_MYSQL        = "MySQL";                // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_DERBY        = "Apache Derby";         // got this from web, so might not be correct
 
 
 	/**
