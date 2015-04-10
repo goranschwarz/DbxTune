@@ -1,5 +1,6 @@
 package com.asetune.cm.iq;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,13 +10,24 @@ import javax.naming.NameNotFoundException;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.MonTablesDictionary;
+import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
+ */
+
+/**
+ * sp_iqstatistics procedure
+ * Returns serial number, name, description, value, and unit specifier for each available statistic, or a specified statistic. 
+ * @author I063869
+ *
  */
 public class CmIqStatistics
 extends CountersModel
@@ -24,10 +36,11 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIqStatistics.class.getSimpleName();
-	public static final String   SHORT_NAME       = "sp_iqstatistics";
+	public static final String   SHORT_NAME       = "statistics";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<h4>sp_iqstatistics</h4>" +
+		"Returns serial number, name, description, value, and unit specifier for each available statistic, or a specified statistic." +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -36,7 +49,7 @@ extends CountersModel
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"sp_iqstatistics"};
+	public static final String[] MON_TABLES       = new String[] {"sp_iqstatistics", "sp_iqstatistics_pivot"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -46,7 +59,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 60; //CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -77,7 +90,8 @@ extends CountersModel
 		setIconFile(GUI_ICON_FILE);
 
 		setShowClearTime(false);
-
+		setBackgroundDataPollingEnabled(true, false);
+		
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
@@ -90,17 +104,133 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_STAT_OPER = "IqStatisticsOperationsGraph"; 
+	public static final String GRAPH_NAME_STAT_DISK       = "IqStatisticsDiskGraph"; 
+	public static final String GRAPH_NAME_STAT_CPUS        = "IqStatisticsCPUGraph";
+	
 	
 	private void addTrendGraphs()
 	{
+		String[] labels_oper = new String[] { "[Connections Active]", "[Operations Waiting]", "[Operations Active]", "[Active Load Statements]" };
+		String[] labels_disk = new String[] { "[Main Store Disk Reads]",	"[Main Store Disk Writes]", "[Temp Store Disk Reads]", "[Temp Store Disk Writes]", "[Cache Dbspace Disk Reads]", "[Cache Dbspace Disk Writes]"} ;
+		String[] labels_cpus = new String[] { "[Cpu Total Time]", "[Cpu User Time]", "[Cpu System Time]"} ;
+				
+		addTrendGraphData(GRAPH_NAME_STAT_OPER, new TrendGraphDataPoint(GRAPH_NAME_STAT_OPER, labels_oper));
+		addTrendGraphData(GRAPH_NAME_STAT_DISK,       new TrendGraphDataPoint(GRAPH_NAME_STAT_DISK,       labels_disk));
+		addTrendGraphData(GRAPH_NAME_STAT_CPUS,        new TrendGraphDataPoint(GRAPH_NAME_STAT_CPUS,        labels_cpus));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+			tg = new TrendGraph(GRAPH_NAME_STAT_OPER,
+				"Connections, Operations and Load", // Menu CheckBox text
+				"Connections, Operations and Load", // Label 
+				labels_oper, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+			
+			tg = new TrendGraph(GRAPH_NAME_STAT_DISK,
+					"Disk activity", // Menu CheckBox text
+					"Disk activity", // Label 
+					labels_disk, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_STAT_CPUS,
+					"CPU usage",                     // Menu CheckBox text
+					"CPU usage (100 per core)", // Label 
+					labels_disk, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
+					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
 	}
+	
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_STAT_OPER.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[4];
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmRaSysmonPanel(this);
-//	}
+			arr[0] = this.getAbsValue("ConnectionsActive" , "stat_value");
+			arr[1] = this.getAbsValue("OperationsWaiting", "stat_value");
+			arr[2] = this.getAbsValue("OperationsActive", "stat_value");
+			arr[3] = this.getAbsValue("OperationsActiveloadTableStatement", "stat_value");
 
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+		
+			
+		if (GRAPH_NAME_STAT_DISK.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[5];
+
+			arr[0] = this.getRateValue("MainStoreDiskReads" , "stat_value");
+			arr[1] = this.getRateValue("MainStoreDiskWrites", "stat_value");
+			arr[2] = this.getRateValue("TempStoreDiskReads", "stat_value");
+			arr[3] = this.getRateValue("TempStoreDiskWrites", "stat_value");
+			arr[3] = this.getRateValue("CacheDbspaceDiskReads", "stat_value");
+			arr[3] = this.getRateValue("CacheDbspaceDiskWrites", "stat_value");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+		
+		if (GRAPH_NAME_STAT_CPUS.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[3];
+			
+			Double CpuTotalTime   = getDiffValue("CpuTotalTime", "stat_value").doubleValue();
+			Double CpuSystemTime  = getDiffValue("CpuSystemTime", "stat_value").doubleValue();
+			Double CpuUserTime    = getDiffValue("CpuUserTime", "stat_value").doubleValue();
+			double interval  = getLastSampleInterval();
+	
+			if (CpuTotalTime != null && CpuSystemTime != null && CpuUserTime != null)
+			{
+				double msCPU       = CpuTotalTime .doubleValue() * 1000;
+				double msCPUUser   = CpuUserTime  .doubleValue() * 1000;
+				double msCPUSystem = CpuSystemTime.doubleValue() * 1000;
+				
+				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+	
+				arr[0] = pctCPU      .doubleValue();
+				arr[1] = pctSystemCPU.doubleValue();
+				arr[2] = pctUserCPU  .doubleValue();
+				//_logger.debug("updateGraphData("+tgdp.getName()+"): pctCPU='"+arr[0]+"', pctSystemCPU='"+arr[1]+"', pctUserCPU='"+arr[2]+"'.");
+	
+			}
+			else
+			{
+				arr[0] = 0.0;
+				arr[1] = 0.0;
+				arr[2] = 0.0;
+				//_logger.debug("updateGraphData("+tgdp.getName()+"): some-value-was-null... CpuTotalTime='"+CpuTotalTime+"', CpuSystemTime='"+CpuSystemTime+"', CpuUserTime='"+CpuUserTime+"'. Adding a 0 pct CPU Usage.");
+			}
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}		
+	}
+	
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
@@ -113,14 +243,13 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			mtd.addTable("sp_iqstatistics",  "FIXME.");
+			mtd.addTable("sp_iqstatistics",  "Returns serial number, name, description, value, and unit specifier for each available statistic, or a specified statistic.");
 
-			mtd.addColumn("sp_iqstatistics", "c1",  "<html>FIXME: c1</html>");
-			mtd.addColumn("sp_iqstatistics", "c2",  "<html>FIXME: c2</html>");
-			mtd.addColumn("sp_iqstatistics", "c3",  "<html>FIXME: c3</html>");
-			mtd.addColumn("sp_iqstatistics", "c4",  "<html>FIXME: c4</html>");
-			mtd.addColumn("sp_iqstatistics", "c5",  "<html>FIXME: c5</html>");
-			mtd.addColumn("sp_iqstatistics", "c6",  "<html>FIXME: c6/html>");
+			mtd.addColumn("sp_iqstatistics", "stat_num",  "<html>Serial number of a statistic</html>");
+			mtd.addColumn("sp_iqstatistics", "stat_name",  "<html>Name of statistic</html>");
+			mtd.addColumn("sp_iqstatistics", "stat_value",  "<html>Value of statistic</html>");
+			mtd.addColumn("sp_iqstatistics", "stat_unit",  "<html>Unit specifier</html>");
+			mtd.addColumn("sp_iqstatistics", "stat_desc",  "<html>Description of statistic</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -130,7 +259,7 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("stat_num");
+		pkCols.add("stat_name");
 
 		return pkCols;
 	}

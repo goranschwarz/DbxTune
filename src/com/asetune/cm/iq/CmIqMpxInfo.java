@@ -29,7 +29,7 @@ extends CountersModel
 		"<p>FIXME</p>" +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_MULTIPLEX;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final int      NEED_SRV_VERSION = 0;
@@ -45,7 +45,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 60; //CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -76,7 +76,8 @@ extends CountersModel
 		setIconFile(GUI_ICON_FILE);
 
 		setShowClearTime(false);
-
+		setBackgroundDataPollingEnabled(false, false);
+		
 		setCounterController(counterController);
 		setGuiController(guiController);
 		

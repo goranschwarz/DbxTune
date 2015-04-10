@@ -12,36 +12,46 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
-public class CmIqMpxIncStatistics
+
+/**
+ * Reports database property information.
+ * @author I063869
+ *
+ */
+public class CmSaDbProperties
 extends CountersModel
 {
 //	private static Logger        _logger          = Logger.getLogger(CmAdminWhoSqm.class);
 	private static final long    serialVersionUID = 1L;
 
-	public static final String   CM_NAME          = CmIqMpxIncStatistics.class.getSimpleName();
-	public static final String   SHORT_NAME       = "sp_iqmpxincstatistics";
+	public static final String   CM_NAME          = CmSaDbProperties.class.getSimpleName();
+	public static final String   SHORT_NAME       = "db properties (sa)";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<h4>sa_db_properties system procedure</h4>" + 
+		"Reports database property information." +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_MULTIPLEX;
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CATALOG;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"sp_iqmpxincstatistics"};
+	public static final String[] MON_TABLES       = new String[] {"sa_db_properties"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {"stat_value"};
+	public static final String[] DIFF_COLUMNS     = new String[] {};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -61,10 +71,10 @@ extends CountersModel
 		if (guiController != null && guiController.hasGUI())
 			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
 
-		return new CmIqMpxIncStatistics(counterController, guiController);
+		return new CmSaDbProperties(counterController, guiController);
 	}
 
-	public CmIqMpxIncStatistics(ICounterController counterController, IGuiController guiController)
+	public CmSaDbProperties(ICounterController counterController, IGuiController guiController)
 	{
 		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
@@ -76,7 +86,6 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 
-		setShowClearTime(false);
 		setBackgroundDataPollingEnabled(false, false);
 		
 		setCounterController(counterController);
@@ -103,44 +112,56 @@ extends CountersModel
 //	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-	{
-		try 
-		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			mtd.addTable("sp_iqmpxincstatistics",  "FIXME.");
-
-			mtd.addColumn("sp_iqmpxincstatistics", "c1",  "<html>FIXME: c1</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c2",  "<html>FIXME: c2</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c3",  "<html>FIXME: c3</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c4",  "<html>FIXME: c4</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c5",  "<html>FIXME: c5</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c6",  "<html>FIXME: c6/html>");
-		}
-		catch (NameNotFoundException e) {/*ignore*/}
-	}
-
-	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
+	public void addMonTableDictForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			mtd.addTable("sa_db_properties",  "Reports database property information.");
+
+			mtd.addColumn("sa_db_properties", "Number",  
+					"<html>The database ID number.</html>");
+			mtd.addColumn("sa_db_properties", "PropNum",  
+					"<html>The database property number.</html>");
+			mtd.addColumn("sa_db_properties", "PropName",  
+					"<html>The database property name.</html>");
+			mtd.addColumn("sa_db_properties", "Value",  
+					"<html>The database property value.</html>");
+			mtd.addColumn("sa_db_properties", "PropDescription",  
+					"<html>The database property description.</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
+
+	@Override
 	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		List <String> pkCols = new LinkedList<String>();
-
-		pkCols.add("stat_name");
-
-		return pkCols;
+		return null;
+//		List <String> pkCols = new LinkedList<String>();
+//
+//		return pkCols;
 	}
 
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select * from sp_iqmpxincstatistics()";
-
+		String sql = "select \n" + 
+		"    PropNum,  \n" + 
+		"    PropName,  \n" +
+		"    Value = CASE \n" +  
+		"               WHEN IsNumeric(Value) = 1 THEN convert(numeric(38,5), Value) \n" +  
+		"               ELSE null  \n" + 
+		"            END, \n" + 
+		"    PropDescription \n" + 
+		"from sa_db_properties() \n" + 
+		"where IsNumeric(Value) = 1 " +
+		"order by 1\n";
 		return sql;
 	}
 }

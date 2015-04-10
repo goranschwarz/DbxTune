@@ -138,7 +138,7 @@ extends CountersModel
 		String[] labels_cpu            = new String[] { "System+User CPU", "System CPU", "User CPU" };
 		String[] labels_aaNwPacket     = new String[] { "PacketsReceived", "PacketsSent" };
 		String[] labels_commits        = new String[] { "Commits" };
-		String[] labels_requests       = new String[] { "RequestsReceived" };
+		String[] labels_requests       = new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" };
 		
 		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx));
 		addTrendGraphData(GRAPH_NAME_CPU,             new TrendGraphDataPoint(GRAPH_NAME_CPU,             labels_cpu));
@@ -203,8 +203,8 @@ extends CountersModel
 
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_REQUESTS,
-				"RequestsReceived", 	                            // Menu CheckBox text
-				"RequestsReceived per second", // Label 
+				"RequestsReceived", 	            // Menu CheckBox text
+				"RequestsReceived per second", 		// Label 
 				labels_requests, 
 				false, // is Percent Graph
 				this, 
@@ -353,30 +353,15 @@ extends CountersModel
 			Double ProcessCPUUser    = getDiffValueAsDouble(0, "ProcessCPUUser");
 			double interval  = getLastSampleInterval();
 
-System.out.println("------------------------------------------------------------");
-System.out.println("interval-in-ms        = "+interval);
-System.out.println("diff-ProcessCPU       = "+ProcessCPU);
-System.out.println("diff-ProcessCPUSystem = "+ProcessCPUSystem);
-System.out.println("diff-ProcessCPUUser   = "+ProcessCPUUser);
-
 			if (ProcessCPU != null && ProcessCPUSystem != null && ProcessCPUUser != null)
 			{
 				double msCPU       = ProcessCPU      .doubleValue() * 1000;
 				double msCPUUser   = ProcessCPUUser  .doubleValue() * 1000;
 				double msCPUSystem = ProcessCPUSystem.doubleValue() * 1000;
-
-System.out.println("msCPU       = "+msCPU);
-System.out.println("msCPUUser   = "+msCPUUser);
-System.out.println("msCPUSystem = "+msCPUSystem);
 				
 				BigDecimal pctCPU       = new BigDecimal( (msCPU       / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 				BigDecimal pctUserCPU   = new BigDecimal( (msCPUUser   / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 				BigDecimal pctSystemCPU = new BigDecimal( (msCPUSystem / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-//				BigDecimal pctIdleCPU   = new BigDecimal( (msCPUIdle   / interval) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-
-System.out.println("   pctCPU       = "+pctCPU);
-System.out.println("   pctSystemCPU = "+pctSystemCPU);
-System.out.println("   pctUserCPU   = "+pctUserCPU);
 
 				arr[0] = pctCPU      .doubleValue();
 				arr[1] = pctSystemCPU.doubleValue();
@@ -396,28 +381,6 @@ System.out.println("   pctUserCPU   = "+pctUserCPU);
 			tgdp.setData(arr);
 		}
 
-//		//---------------------------------
-//		// GRAPH:
-//		//---------------------------------
-//		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
-//		{	
-//			Double[] arr = new Double[3];
-//
-//			int ms = (int) (System.currentTimeMillis() % 1000l);
-//			ms = ms < 0 ? ms+1000 : ms;
-//
-////			arr[0] = this.getAbsValueAsDouble (0, "Connections");
-////			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
-////			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-//			arr[0] = new Double(5.1  * ms);
-//			arr[1] = new Double(10.2 * ms);
-//			arr[2] = new Double(15.5 * ms);
-//			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"'.");
-//
-//			// Set the values
-//			tgdp.setDate(this.getTimestamp());
-//			tgdp.setData(arr);
-//		}
 
 		//---------------------------------
 		// GRAPH:
@@ -428,8 +391,6 @@ System.out.println("   pctUserCPU   = "+pctUserCPU);
 
 			arr[0] = this.getRateValueAsDouble (0, "PacketsReceived");
 			arr[1] = this.getRateValueAsDouble (0, "PacketsSent");
-//			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
-//			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
 			_logger.debug("updateGraphData("+tgdp.getName()+"): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
 
 			// Set the values
@@ -457,10 +418,15 @@ System.out.println("   pctUserCPU   = "+pctUserCPU);
 		//---------------------------------
 		if (GRAPH_NAME_REQUESTS.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[1];
+			Double[] arr = new Double[4];
+			CountersModel _cm         = CounterController.getInstance().getCmByName(CmIqStatistics .CM_NAME);
 
-			arr[0] = this.getRateValueAsDouble (0, "RequestsReceived");
-			_logger.debug("updateGraphData("+tgdp.getName()+"): RequestsReceived='"+arr[0]+"'.");
+			arr[0] = _cm.getAbsValue("ConnectionsActive" , "stat_value");
+			arr[1] = _cm.getAbsValue("OperationsWaiting", "stat_value");
+			arr[2] = _cm.getAbsValue("OperationsActive", "stat_value");
+			arr[3] = _cm.getAbsValue("OperationsActiveloadTableStatement", "stat_value");
+		
+			_logger.debug("updateGraphData("+tgdp.getName()+"): ConnectionsActive='"+arr[0]+"'.");
 
 			// Set the values
 			tgdp.setDate(this.getTimestamp());

@@ -16,6 +16,21 @@ import com.asetune.gui.MainFrame;
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
+
+/**
+ * The following is a key to understanding the Main IQ I/O and Temporary IQ I/O output codes:
+ * I: Input
+ * L: Logical pages read (“Finds”)
+ * P: Physical pages read
+ * O: Output
+ * C: Pages created
+ * D: Pages dirtied
+ * P: Physically written
+ * D: Pages destroyed
+ * C: Compression ratio
+ * @author I063869
+ *
+ */
 public class CmIqStatus
 extends CountersModel
 {
@@ -23,10 +38,11 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIqStatus.class.getSimpleName();
-	public static final String   SHORT_NAME       = "sp_iqstatus";
+	public static final String   SHORT_NAME       = "status";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<h4>sp_iqstatus</h4>" + 
+		"Displays a variety of Sybase IQ status information about the current database." +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
@@ -45,7 +61,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 60; //CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -76,7 +92,8 @@ extends CountersModel
 		setIconFile(GUI_ICON_FILE);
 
 		setShowClearTime(false);
-
+		setBackgroundDataPollingEnabled(false, false);
+		
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
@@ -112,14 +129,10 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			mtd.addTable("sp_iqstatus",  "FIXME");
+			mtd.addTable("sp_iqstatus",  "The sp_iqstatus stored procedure provides a variety of IQ status information.");
 
-			mtd.addColumn("sp_iqstatus", "c1",  "<html>FIXME: c1</html>");
-			mtd.addColumn("sp_iqstatus", "c2",  "<html>FIXME: c2</html>");
-			mtd.addColumn("sp_iqstatus", "c3",  "<html>FIXME: c3</html>");
-			mtd.addColumn("sp_iqstatus", "c4",  "<html>FIXME: c4</html>");
-			mtd.addColumn("sp_iqstatus", "c5",  "<html>FIXME: c5</html>");
-			mtd.addColumn("sp_iqstatus", "c6",  "<html>FIXME: c6/html>");
+			mtd.addColumn("sp_iqstatus", "name",  "<html>Name</html>");
+			mtd.addColumn("sp_iqstatus", "value",  "<html>Value</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
