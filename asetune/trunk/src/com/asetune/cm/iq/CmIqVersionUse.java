@@ -12,36 +12,49 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
-public class CmIqMpxIncStatistics
+
+/**
+ * Displays version usage for the IQ main store.
+ * @author I063869
+ *
+ */
+public class CmIqVersionUse
 extends CountersModel
 {
 //	private static Logger        _logger          = Logger.getLogger(CmAdminWhoSqm.class);
 	private static final long    serialVersionUID = 1L;
 
-	public static final String   CM_NAME          = CmIqMpxIncStatistics.class.getSimpleName();
-	public static final String   SHORT_NAME       = "sp_iqmpxincstatistics";
+	public static final String   CM_NAME          = CmIqVersionUse.class.getSimpleName();
+	public static final String   SHORT_NAME       = "version use";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<h4>sp_iqversionuse</h4>" + 
+		"Displays version usage for the IQ main store." +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_MULTIPLEX;
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"sp_iqmpxincstatistics"};
+	public static final String[] MON_TABLES       = new String[] {"sp_iqversionuse"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {"stat_value"};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+		"MinKBRelease",
+		"MaxKBRelease"
+	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -61,10 +74,10 @@ extends CountersModel
 		if (guiController != null && guiController.hasGUI())
 			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
 
-		return new CmIqMpxIncStatistics(counterController, guiController);
+		return new CmIqVersionUse(counterController, guiController);
 	}
 
-	public CmIqMpxIncStatistics(ICounterController counterController, IGuiController guiController)
+	public CmIqVersionUse(ICounterController counterController, IGuiController guiController)
 	{
 		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
@@ -76,8 +89,7 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 
-		setShowClearTime(false);
-		setBackgroundDataPollingEnabled(false, false);
+		setBackgroundDataPollingEnabled(true, false);
 		
 		setCounterController(counterController);
 		setGuiController(guiController);
@@ -103,27 +115,33 @@ extends CountersModel
 //	}
 
 	@Override
+	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		return NEED_CONFIG;
+	}
+
+	@Override
 	public void addMonTableDictForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			mtd.addTable("sp_iqmpxincstatistics",  "FIXME.");
+			mtd.addTable("sp_iqversionuse",  "Displays version usage for the IQ main store.");
 
-			mtd.addColumn("sp_iqmpxincstatistics", "c1",  "<html>FIXME: c1</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c2",  "<html>FIXME: c2</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c3",  "<html>FIXME: c3</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c4",  "<html>FIXME: c4</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c5",  "<html>FIXME: c5</html>");
-			mtd.addColumn("sp_iqmpxincstatistics", "c6",  "<html>FIXME: c6/html>");
+			mtd.addColumn("sp_iqversionuse","VersionID",
+					"<html>The version identifier</html>");
+			mtd.addColumn("sp_iqversionuse","Server",
+					"<html>The server to which users of this version are connected</html>");
+			mtd.addColumn("sp_iqversionuse","IQConnID",
+					" <html>The connection ID using this version</html>");
+			mtd.addColumn("sp_iqversionuse","WasReported",
+					" <html>Indicates whether the server has received usage information for this version</html>");
+			mtd.addColumn("sp_iqversionuse","MinKBRelease",
+					" <html>The minimum amount of space returned once this version is no longer in use</html>");
+			mtd.addColumn("sp_iqversionuse","MaxKBRelease",
+					" <html>The maximum amount of space returned once this version is no longer in use</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
-	}
-
-	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-	{
-		return NEED_CONFIG;
 	}
 
 	@Override
@@ -131,7 +149,7 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("stat_name");
+		pkCols.add("IQConnID");
 
 		return pkCols;
 	}
@@ -139,7 +157,7 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select * from sp_iqmpxincstatistics()";
+		String sql = "select * from sp_iqversionuse()";
 
 		return sql;
 	}

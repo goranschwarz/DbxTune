@@ -8,8 +8,16 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.iq.CmConnProperties;
-import com.asetune.cm.iq.CmEngProperties;
+import com.asetune.cm.iq.CmIqCache2;
+import com.asetune.cm.iq.CmIqDbspace;
+import com.asetune.cm.iq.CmIqDiskActivity2;
+import com.asetune.cm.iq.CmIqFile;
+import com.asetune.cm.iq.CmIqVersionUse;
+import com.asetune.cm.iq.CmSaConnActivity;
+import com.asetune.cm.iq.CmSaConnInfo;
+import com.asetune.cm.iq.CmSaConnProperties;
+import com.asetune.cm.iq.CmSaDbProperties;
+import com.asetune.cm.iq.CmSaEngProperties;
 import com.asetune.cm.iq.CmIqConnection;
 import com.asetune.cm.iq.CmIqContext;
 import com.asetune.cm.iq.CmIqLocks;
@@ -72,21 +80,32 @@ extends CounterControllerAbstract
 
 		CmSummary           .create(counterController, guiController);
 
-		CmIqStatistics      .create(counterController, guiController);
+		// IQ
 		CmIqStatus          .create(counterController, guiController);
-		CmIqStatusParsed    .create(counterController, guiController);
-		CmEngProperties     .create(counterController, guiController);
-
+		// CmIqStatusParsed    .create(counterController, guiController);		
+		CmIqStatistics      .create(counterController, guiController);  
 		CmIqConnection      .create(counterController, guiController);
-		CmConnProperties    .create(counterController, guiController);
-		CmIqLocks           .create(counterController, guiController);
 		CmIqTransaction     .create(counterController, guiController);
-
+		CmIqVersionUse      .create(counterController, guiController);
+		CmIqLocks           .create(counterController, guiController);
+		CmIqContext         .create(counterController, guiController);
+		// Catalog
+		CmSaEngProperties   .create(counterController, guiController);
+		CmSaDbProperties    .create(counterController, guiController);
+		CmSaConnProperties  .create(counterController, guiController);
+		CmSaConnInfo	    .create(counterController, guiController);
+		CmSaConnActivity    .create(counterController, guiController);
+		// Multiplex
 		CmIqMpxInfo         .create(counterController, guiController);
 		CmIqMpxIncStatistics.create(counterController, guiController);
-
+		// Files
+		CmIqFile            .create(counterController, guiController);
+		CmIqDbspace			.create(counterController, guiController);
+		CmIqDiskActivity2.create(counterController, guiController);
+		// Cache
+		CmIqCache2		.create(counterController, guiController);
 		// Objects/Statements tab
-		CmIqContext         .create(counterController, guiController);
+		// CmIqDan             .create(counterController, guiController); // temporary removed by mdan  
 
 //		CmObjectActivity   .create(counterController, guiController);
 //		CmProcessActivity  .create(counterController, guiController);

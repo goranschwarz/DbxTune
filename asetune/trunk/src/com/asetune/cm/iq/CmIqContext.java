@@ -17,6 +17,17 @@ import com.asetune.gui.MainFrame;
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
+
+/**
+ * 
+ * sp_iqcontext
+ * Tracks and displays, by connection, information about statements that are currently executing.
+ * The input parameter connhandle is equal to the Number connection property and is the ID number of the connection. 
+ * When called with an input parameter of a valid connhandle, sp_iqcontext returns the information only for that connection.
+ * @author I063869
+ *
+ */
+
 public class CmIqContext
 extends CountersModel
 {
@@ -24,19 +35,20 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmIqContext.class.getSimpleName();
-	public static final String   SHORT_NAME       = "sp_iqcontext";
+	public static final String   SHORT_NAME       = "context";
 	public static final String   HTML_DESC        = 
 		"<html>" +
-		"<p>FIXME</p>" +
+		"<h4>sp_iqcontext</h4>" +
+		"Tracks and displays, by connection, information about statements that are currently executing" +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {"sp_iqcontext"};
+	public static final String[] MON_TABLES       = new String[] {"context"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -49,7 +61,7 @@ extends CountersModel
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;
-	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = 60; //CountersModel.DEFAULT_sqlQueryTimeout;
 
 	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
@@ -80,7 +92,8 @@ extends CountersModel
 		setIconFile(GUI_ICON_FILE);
 
 		setShowClearTime(false);
-
+		setBackgroundDataPollingEnabled(true, false);
+		
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
@@ -116,14 +129,22 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			mtd.addTable("sp_iqcontext",  "FIXME.");
+			mtd.addTable("sp_iqcontext",  "Tracks and displays, by connection, information about statements that are currently executing.");
 
-			mtd.addColumn("sp_iqcontext", "c1",  "<html>FIXME: c1</html>");
-			mtd.addColumn("sp_iqcontext", "c2",  "<html>FIXME: c2</html>");
-			mtd.addColumn("sp_iqcontext", "c3",  "<html>FIXME: c3</html>");
-			mtd.addColumn("sp_iqcontext", "c4",  "<html>FIXME: c4</html>");
-			mtd.addColumn("sp_iqcontext", "c5",  "<html>FIXME: c5</html>");
-			mtd.addColumn("sp_iqcontext", "c6",  "<html>FIXME: c6/html>");
+			mtd.addColumn("sp_iqcontext", "ConnOrCursor",  "<html>CONNECTION or CURSOR</html>");
+			mtd.addColumn("sp_iqcontext", "ConnHandle",  "<html>The ID number of the connection. </html>");
+			mtd.addColumn("sp_iqcontext", "Name",  "<html>The name of the server.</html>");
+			mtd.addColumn("sp_iqcontext", "Userid",  "<html>The user ID for the connection or cursor.</html>");
+			mtd.addColumn("sp_iqcontext", "numIQCursors",  "<html>If column 1 is CONNECTION, the number of cursors open on this connection."
+					+ "<br/>If column 1 is CURSOR, a number assigned sequentially to cursors associated with this connection."
+					+ "</html>");
+			mtd.addColumn("sp_iqcontext", "IQthreads",  "<html>The number of IQ threads currently assigned to the connection. Some threads may be assigned but idle.</html>");
+			mtd.addColumn("sp_iqcontext", "TxnID",  "<html>The transaction ID of the current transaction.</html>");
+			mtd.addColumn("sp_iqcontext", "ConnOrCurCreateTime",  "<html>The time this connection or cursor was created.</html>");
+			mtd.addColumn("sp_iqcontext", "IQConnID",  "<html>The 10-digit connection ID displayed as part of all messages in the .iqmsg file. This is a monotonically increasing integer unique within a server session.</html>");
+			mtd.addColumn("sp_iqcontext", "IQGovernPriority",  "<html>A value that indicates the order in which the queries of a user are queued for execution. 1 indicates high priority, 2 (the default) medium priority, and 3 low priority. A value of -1 indicates that IQGovernPriority does not apply to the operation. Set the IQGovernPriority value with the database option IQGOVERN_PRIORITY.</html>");
+			mtd.addColumn("sp_iqcontext", "CmdLine",  "<html>First 4096 characters of the user command being executed.</html>");
+			
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
