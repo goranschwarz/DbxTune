@@ -630,11 +630,14 @@ public class ConnectionDialog
 	{
 		if (conn == null)
 			return null;
+
+		String productName = null;
+
 		try
 		{
-			String str = conn.getMetaData().getDatabaseProductName();
-			_logger.debug("getDatabaseProductName() returns: '"+str+"'.");
-			return str; 
+			productName = conn.getMetaData().getDatabaseProductName();
+			_logger.debug("getDatabaseProductName() returns: '"+productName+"'.");
+			return productName; 
 		}
 		catch (SQLException e)
 		{
@@ -642,6 +645,28 @@ public class ConnectionDialog
 			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
 			if ( "JZ0SJ".equals(e.getSQLState()) )
 			{
+//				try
+//				{
+//					String str1 = "";
+//					String str2 = "";
+//					Statement stmt = conn.createStatement();
+//					ResultSet rs = stmt.executeQuery("admin rssd_name");
+//					while ( rs.next() )
+//					{
+//						str1 = rs.getString(1);
+//						str2 = rs.getString(2);
+//					}
+//					rs.close();
+//					stmt.close();
+//
+//					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
+//
+//					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+//					return DbUtils.DB_PROD_NAME_SYBASE_RS;
+//				}
+//				catch(SQLException ignoreRsExceptions) {}
+
+				// Check for Replication Server
 				try
 				{
 					String str1 = "";
@@ -659,9 +684,66 @@ public class ConnectionDialog
 					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
-					return DbUtils.DB_PROD_NAME_SYBASE_RS;
+					productName = DbUtils.DB_PROD_NAME_SYBASE_RS;
 				}
-				catch(SQLException ignoreRsExceptions) {}
+				catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductName(): at RS", ignoreRsExceptions);}
+//				catch(SQLException ignoreRsExceptions) {System.out.println("getDatabaseProductName(): at RS, caught: "+ignoreRsExceptions);}
+
+				// Check for Replication Agent
+				if (StringUtil.isNullOrBlank(productName))
+				{
+					try
+					{
+						String str1 = "";
+						Statement stmt = conn.createStatement();
+						ResultSet rs = stmt.executeQuery("ra_version");
+						while ( rs.next() )
+						{
+							str1 = rs.getString(1);
+						}
+						rs.close();
+						stmt.close();
+						
+						_logger.info("Replication Agent Version '"+str1+"'.");
+						
+						// If the above statement succeeds, then it must be a RepServer without metadata installed.
+						productName = DbUtils.DB_PROD_NAME_SYBASE_RAX;
+					}
+					catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductName(): at RepAgent", ignoreRsExceptions);}
+//					catch(SQLException ignoreRsExceptions) {System.out.println("getDatabaseProductName(): at RepAgent, caught: "+ignoreRsExceptions);}
+				}
+
+				// Check for DR Agent (Disaster Recovery AGent)
+				if (StringUtil.isNullOrBlank(productName))
+				{
+					try
+					{
+						String str1 = "";
+						String str2 = "";
+						Statement stmt = conn.createStatement();
+						ResultSet rs = stmt.executeQuery("sap_version");
+						while ( rs.next() )
+						{
+							str1 = rs.getString(1);
+							str2 = rs.getString(2);
+							
+							_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+
+							if ("DR Agent".equals(str1))
+							{
+								// If the above statement succeeds, then it must be a RepServer without metadata installed.
+								productName = DbUtils.DB_PROD_NAME_SYBASE_RSDRA;
+							}
+						}
+						rs.close();
+						stmt.close();
+					}
+					catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductName(): at DR Agent", ignoreRsExceptions);}
+//					catch(SQLException ignoreRsExceptions) {System.out.println("getDatabaseProductName(): at DR Agent, caught: "+ignoreRsExceptions);}
+				}
+				
+				if (StringUtil.hasValue(productName))
+					return productName;
 			}
 			_logger.debug("getDatabaseProductName() Caught: "+e, e);
 			throw e;
@@ -699,6 +781,7 @@ public class ConnectionDialog
 			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
 			if ( "JZ0SJ".equals(e.getSQLState()) )
 			{
+				// Check for Replication Server
 				try
 				{
 					String str = "";
@@ -717,6 +800,51 @@ public class ConnectionDialog
 					return str;
 				}
 				catch(SQLException ignoreRsExceptions) {}
+
+				// Check for Replication Agent
+				try
+				{
+					String str1 = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("ra_version");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+					}
+					rs.close();
+					stmt.close();
+
+					_logger.info("Replication Agent Version '"+str1+"'.");
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+					return str1;
+				}
+   				catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductVersion(): at RepAgent", ignoreRsExceptions);}
+
+				// Check for DR Agent (Disaster Recovery AGent)
+				try
+				{
+					String str1 = "";
+					String str2 = "";
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery("sap_version");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+						str2 = rs.getString(2);
+						
+						_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+
+						if ("DR Agent".equals(str1))
+						{
+	    					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+	    					return str2;
+						}
+					}
+					rs.close();
+					stmt.close();
+				}
+				catch(SQLException ignoreRsExceptions) {_logger.debug("getDatabaseProductVersion(): at DR Agent", ignoreRsExceptions);}
 			}
 			_logger.debug("getDatabaseProductVersion() Caught: "+e, e);
 			throw e;
@@ -4093,7 +4221,9 @@ public class ConnectionDialog
 //				null,
 //				null);
 //		_offlineConn = DbxConnection.createDbxConnection(conn);
-		_offlineConn = jdbcConnect2(Version.getAppName(), 
+		_offlineConn = jdbcConnect2( 
+				false, // Check for desired product name
+				Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
 				jdbcUser, 
@@ -4357,7 +4487,9 @@ public class ConnectionDialog
 		DbxConnection.setDefaultConnProp(cp);
 
 		
-		_jdbcConn = jdbcConnect2(Version.getAppName(), 
+		_jdbcConn = jdbcConnect2(
+				true, // Check for desired product name
+				Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
 				jdbcUser, 
@@ -4410,7 +4542,7 @@ public class ConnectionDialog
 	 * @param tunnelInfo 
 	 * @throws Exception 
 	 */
-	private DbxConnection jdbcConnect2(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
+	private DbxConnection jdbcConnect2(final boolean checkProductName, final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
 	{
 		Properties props  = new Properties();
 	//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
@@ -4439,8 +4571,12 @@ public class ConnectionDialog
 
 		try
 		{
+			String desiredProductName = null;
+			if (checkProductName)
+				desiredProductName = _desiredProductName;
+
 			ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
-			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, _options._srvExtraChecks, _sshConn, tunnelInfo, _desiredProductName, sqlInit, srvIcon);
+			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, _options._srvExtraChecks, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon);
 		}
 		catch (Exception ex)
 		{

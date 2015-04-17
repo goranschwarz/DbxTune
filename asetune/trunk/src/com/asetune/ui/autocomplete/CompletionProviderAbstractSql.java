@@ -2492,7 +2492,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			pi._procRemark       = rs.getString("REMARKS");
 //			pi._procSpecificName = rs.getString("SPECIFIC_NAME"); //in HANA = not there...
 
-System.out.println("refreshCompletionForProcedures() ADD: pi="+pi);
+//System.out.println("refreshCompletionForProcedures() ADD: pi="+pi);
 			// add schemas... this is a Set so duplicates is ignored
 			_schemaNames.add(pi._procSchema);
 

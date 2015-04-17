@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
 
 public class DbUtils
 {
@@ -251,10 +252,10 @@ public class DbUtils
 						sybLockCount++;
 //						sybLockCount = rs.getInt(1);
 						sb.append("<TR>");
-						sb.append("<TD>").append(                                  rs.getString(1)) .append("</TD>");
-						sb.append("<TD>").append(                                  rs.getString(2)) .append("</TD>");
-						sb.append("<TD>").append(AseConnectionUtils.getAseLockType(rs.getInt   (3))).append("</TD>");
-						sb.append("<TD>").append(                                  rs.getString(4)) .append("</TD>");
+						sb.append("<TD>").append(                                         rs.getString(1)) .append("</TD>");
+						sb.append("<TD>").append(                                         rs.getString(2)) .append("</TD>");
+						sb.append("<TD>").append(DbxConnectionStateInfoAse.getAseLockType(rs.getInt   (3))).append("</TD>");
+						sb.append("<TD>").append(                                         rs.getString(4)) .append("</TD>");
 						sb.append("</TR>");
 					}
 					rs.close();
@@ -401,9 +402,17 @@ public class DbUtils
 		{
 			sql = "admin log_name";
 		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_RAX))
+		{
+			sql = "log_system_name";
+		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_ASA))
 		{
 			sql = "select property('ConsoleLogFile')";
+		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			sql = "select convert(varchar(1024),serverproperty('ErrorLogFileName'))";
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_HANA))
 		{
@@ -1308,69 +1317,69 @@ public class DbUtils
 	//------------------------------------------------------------------------------
 
 	
-	/**
-	 * Get various state about a ASE Connection
-	 */
-	public static JdbcConnectionStateInfo getJdbcConnectionStateInfo(Connection conn, String dbProduct)
-	{
-		JdbcConnectionStateInfo csi = new JdbcConnectionStateInfo();
-		
-		// Do the work
-		try
-		{
-			csi._catalog        = conn.getCatalog();
-			csi._autocommit     = conn.getAutoCommit();
-			csi._isolationLevel = conn.getTransactionIsolation();
-			csi._inTransaction  = DbUtils.isInTransaction(conn, dbProduct);
-		}
-		catch (SQLException sqle)
-		{
-			_logger.error("Error in getJdbcConnectionStateInfo()", sqle);
-		}
-
-		return csi;
-	}
-	/**
-	 * Class that reflects a call to getJdbcConnectionStateInfo()
-	 * @author gorans
-	 */
-	public static class JdbcConnectionStateInfo
-	{
-		public String  _catalog        = "";
-		public boolean _autocommit     = true;
-		public int     _isolationLevel = -1;
-		public boolean _inTransaction  = false;
-
-		protected String isolationLevelToString(int isolation)
-		{
-			switch (isolation)
-			{
-				case Connection.TRANSACTION_READ_UNCOMMITTED: return "0=READ_UNCOMMITTED";
-				case Connection.TRANSACTION_READ_COMMITTED:   return "1=READ_COMMITTED";
-				case Connection.TRANSACTION_REPEATABLE_READ:  return "2=REPEATABLE_READ";
-				case Connection.TRANSACTION_SERIALIZABLE:     return "3=SERIALIZABLE";
-				case Connection.TRANSACTION_NONE:             return "NONE";
-
-				default:
-					return "TRANSACTION_ISOLATION_UNKNOWN_STATE("+isolation+")";
-			}
-		}
-
-		public String getCatalog()
-		{
-			return _catalog;
-		}
-
-		public boolean getAutoCommit()
-		{
-			return _autocommit;
-		}
-
-		public String getIsolationLevelStr()
-		{
-			return isolationLevelToString(_isolationLevel);
-		}
-	}
+//	/**
+//	 * Get various state about a ASE Connection
+//	 */
+//	public static JdbcConnectionStateInfo getJdbcConnectionStateInfo(Connection conn, String dbProduct)
+//	{
+//		JdbcConnectionStateInfo csi = new JdbcConnectionStateInfo();
+//		
+//		// Do the work
+//		try
+//		{
+//			csi._catalog        = conn.getCatalog();
+//			csi._autocommit     = conn.getAutoCommit();
+//			csi._isolationLevel = conn.getTransactionIsolation();
+//			csi._inTransaction  = DbUtils.isInTransaction(conn, dbProduct);
+//		}
+//		catch (SQLException sqle)
+//		{
+//			_logger.error("Error in getJdbcConnectionStateInfo()", sqle);
+//		}
+//
+//		return csi;
+//	}
+//	/**
+//	 * Class that reflects a call to getJdbcConnectionStateInfo()
+//	 * @author gorans
+//	 */
+//	public static class JdbcConnectionStateInfo
+//	{
+//		public String  _catalog        = "";
+//		public boolean _autocommit     = true;
+//		public int     _isolationLevel = -1;
+//		public boolean _inTransaction  = false;
+//
+//		protected String isolationLevelToString(int isolation)
+//		{
+//			switch (isolation)
+//			{
+//				case Connection.TRANSACTION_READ_UNCOMMITTED: return "0=READ_UNCOMMITTED";
+//				case Connection.TRANSACTION_READ_COMMITTED:   return "1=READ_COMMITTED";
+//				case Connection.TRANSACTION_REPEATABLE_READ:  return "2=REPEATABLE_READ";
+//				case Connection.TRANSACTION_SERIALIZABLE:     return "3=SERIALIZABLE";
+//				case Connection.TRANSACTION_NONE:             return "NONE";
+//
+//				default:
+//					return "TRANSACTION_ISOLATION_UNKNOWN_STATE("+isolation+")";
+//			}
+//		}
+//
+//		public String getCatalog()
+//		{
+//			return _catalog;
+//		}
+//
+//		public boolean getAutoCommit()
+//		{
+//			return _autocommit;
+//		}
+//
+//		public String getIsolationLevelStr()
+//		{
+//			return isolationLevelToString(_isolationLevel);
+//		}
+//	}
 	
 	private static void test(int testCase, int expected, String str)
 	{

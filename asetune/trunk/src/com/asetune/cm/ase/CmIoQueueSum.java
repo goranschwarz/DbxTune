@@ -192,11 +192,11 @@ extends CountersModel
 		if (GRAPH_NAME_DISK_IO_OPS.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[5];
-			arr[0] = this.getRateValue("User Data",   "IOs");
-			arr[1] = this.getRateValue("User Log",    "IOs");
-			arr[2] = this.getRateValue("Tempdb Data", "IOs");
-			arr[3] = this.getRateValue("Tempdb Log",  "IOs");
-			arr[4] = this.getRateValue("System",      "IOs");
+			arr[0] = this.getRateValueAsDouble("User Data",   "IOs");
+			arr[1] = this.getRateValueAsDouble("User Log",    "IOs");
+			arr[2] = this.getRateValueAsDouble("Tempdb Data", "IOs");
+			arr[3] = this.getRateValueAsDouble("Tempdb Log",  "IOs");
+			arr[4] = this.getRateValueAsDouble("System",      "IOs");
 			_logger.debug("updateGraphData(diskIo): User Data='"+arr[0]+"', User Log='"+arr[1]+"', Tempdb Data='"+arr[2]+"', Tempdb Log='"+arr[3]+"', System='"+arr[4]+"'.");
 
 			// Set the values

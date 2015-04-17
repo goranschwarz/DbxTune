@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -801,88 +802,8 @@ extends CounterCollectorThreadAbstract
 
 			try
 			{
-//				String    aseServerName    = null;
-//				String    aseHostname      = null;
-//				Timestamp mainSampleTime   = null;
-//				Timestamp counterClearTime = null;
-//
-//				String sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
-//				// If version is above 15.0.2 and you have 'sa_role' 
-//				// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-////				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
-////				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
-//				if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= Ver.ver(15,0,2))
-//				{
-//					if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
-//						sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
-//				}
-//
-//				try
-//				{
-//					Statement stmt = getMonConnection().createStatement();
-//					ResultSet rs = stmt.executeQuery(sql);
-//					while (rs.next())
-//					{
-//						mainSampleTime   = rs.getTimestamp(1);
-//						aseServerName    = rs.getString(2);
-//						aseHostname      = rs.getString(3);
-//						counterClearTime = rs.getTimestamp(4);
-//					}
-//					rs.close();
-//				//	stmt.close();
-//
-//					// CHECK IF ASE is in SHUTDOWN mode...
-//					boolean aseInShutdown = false;
-//					SQLWarning w = stmt.getWarnings();
-//					while(w != null)
-//					{
-//						// Msg=6002: A SHUTDOWN command is already in progress. Please log off.
-//						if (w.getErrorCode() == 6002)
-//						{
-//							aseInShutdown = true;
-//							break;
-//						}
-//						
-//						w = w.getNextWarning();
-//					}
-//					if (aseInShutdown)
-//					{
-//						String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
-//						_logger.info(msgLong);
-//
-//						for (CountersModel cm : getCounterController().getCmList())
-//						{
-//							if (cm == null)
-//								continue;
-//
-//							cm.setState(CountersModel.State.SRV_IN_SHUTDOWN);
-//						}
-//
-//						continue; // goto: while (_running)
-//					}
-//					stmt.close();
-//				}
-//				catch (SQLException sqlex)
-//				{
-//					// Connection is already closed.
-//					if ( "JZ0C0".equals(sqlex.getSQLState()) )
-//					{
-//						boolean forceConnectionCheck = true;
-//						boolean closeConnOnFailure   = true;
-//						if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-//						{
-//							_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-//							continue; // goto: while (_running)
-//						}
-//					}
-//
-//					_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
-//					mainSampleTime   = new Timestamp(System.currentTimeMillis());
-//					aseServerName    = "unknown";
-//					aseHostname      = "unknown";
-//					counterClearTime = new Timestamp(0);
-//				}
-				
+				getCounterController().setInRefresh(true);
+
 				// Initialize the counters, now when we know what 
 				// release we are connected to
 				if ( ! getCounterController().isInitialized() )
@@ -923,6 +844,10 @@ extends CounterCollectorThreadAbstract
 				getCounterController().setStatisticsTime(headerInfo._mainSampleTime);
 
 
+				// Keep a list of all the CM's that are refreshed during this loop
+				// This one will be passed to doPostRefresh()
+				LinkedHashMap<String, CountersModel> refreshedCms = new LinkedHashMap<String, CountersModel>();
+
 				//-----------------
 				// LOOP all CounterModels, and get new data, 
 				//   if it should be done
@@ -941,6 +866,9 @@ extends CounterCollectorThreadAbstract
 							cm.refresh();
 //							cm.refresh(getMonConnection());
 	
+							// Add it to the list of refreshed cm's
+							refreshedCms.put(cm.getName(), cm);
+
 							// move this into cm.refresh()
 //							cm.setValidSampleData( (cm.getRowCount() > 0) ); 
 
@@ -968,14 +896,32 @@ extends CounterCollectorThreadAbstract
 
 				} // END: LOOP CM's
 
+
+				//-----------------
+				// POST Refresh handling
+				//-----------------
+				_logger.debug("---- Do POST Refreshing...");
+				for (CountersModel cm : getCounterController().getCmList())
+				{
+					if ( cm == null )
+						continue;
+
+					cm.doPostRefresh(refreshedCms);
+				}
+
+				
 				// POST the container to the Persistent Counter Handler
 				// That thread will store the information in any Storage.
 				pch.add(pc);
-				
+
 			}
 			catch (Throwable t)
 			{
 				_logger.error(Version.getAppName()+": error in GetCounters loop.", t);
+			}
+			finally
+			{
+				getCounterController().setInRefresh(false);
 			}
 
 			//-----------------------------

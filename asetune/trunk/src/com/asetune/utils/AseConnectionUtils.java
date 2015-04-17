@@ -1354,7 +1354,50 @@ public class AseConnectionUtils
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("AseConnectionUtils:getRsVersionNumber(), @@version", ex);
+			_logger.error("AseConnectionUtils:getRsVersionNumber(), 'admin version'", ex);
+		}
+		
+		return srvVersionNum;
+	}
+
+	/**
+	 * Executes 'ra_version' in the Replication Agent and parses the output into a integer
+	 * @param conn
+	 * @return a int with the version number in the form:
+	 * <ul>
+	 *   <li>12503 for (12.5.0 ESD#3)</li>
+	 *   <li>12549 for (12.5.4 ESD#9)</li>
+	 *   <li>15031 for (15.0.3 ESD#1)</li>
+	 *   <li>15500 for (15.5)</li>
+	 *   <li>15502 for (15.5 ESD#2)</li>
+	 * </ul>
+	 * If the ESD level is above 9 it will still return 9 (otherwise it would wrap...)
+	 */
+	public static int getRaxVersionNumber(Connection conn)
+	{
+		int srvVersionNum = 0;
+
+		// version
+		try
+		{
+			String aseVersionStr = "";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("ra_version");
+			while ( rs.next() )
+			{
+				aseVersionStr = rs.getString(1);
+			}
+			rs.close();
+	
+			if (srvVersionNum == 0)
+			{
+				srvVersionNum = Ver.sybVersionStringToNumber(aseVersionStr);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("AseConnectionUtils:getRaVersionNumber(), 'ra_version'", ex);
 		}
 		
 		return srvVersionNum;
@@ -3500,271 +3543,286 @@ public class AseConnectionUtils
 
 
 
-	/**
-	 * Get various state about a ASE Connection
-	 * 
-	 * @param conn
-	 * @param isAse true for ASE, false if it's a MS-SQL Server (no we should probably not share this method... but at start it looked like a good idea)
-	 * @return
-	 */
-	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean isAse)
-	{
-		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
-		if (isAse)
-			sql += ", tranchained=@@tranchained, transtate=@@transtate";
-		else
-			sql += ", tranchained=sign((@@options & 2))"; // MSSQL retired @@transtate in SqlServer2008, SqlServer never implemented @@transtate 
-
-		ConnectionStateInfo csi = new ConnectionStateInfo();
-
-		// Do the work
-		try
-		{
-			Statement stmnt = conn.createStatement();
-			ResultSet rs = stmnt.executeQuery(sql);
-
-			while(rs.next())
-			{
-				csi._dbname      = rs.getString(1);
-				csi._spid        = rs.getInt   (2);
-				csi._username    = rs.getString(3);
-				csi._susername   = rs.getString(4);
-				csi._tranCount   = rs.getInt   (5);
-				csi._tranChained = rs.getInt   (6);
-				csi._tranState   = isAse ? rs.getInt(7) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
-			}
-
-//			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
-//			rs = stmnt.executeQuery(sql);
+//	/**
+//	 * Get various state about a ASE Connection
+//	 * 
+//	 * @param conn
+//	 * @param isAse true for ASE, false if it's a MS-SQL Server (no we should probably not share this method... but at start it looked like a good idea)
+//	 * @return
+//	 */
+//	public static ConnectionStateInfo getAseConnectionStateInfo(Connection conn, boolean isAse)
+//	{
+//		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
+//		if (isAse)
+//			sql += ", tranchained=@@tranchained, transtate=@@transtate";
+//		else
+//			sql += ", tranchained=sign((@@options & 2))"; // MSSQL retired @@transtate in SqlServer2008, SqlServer never implemented @@transtate 
+//
+//		ConnectionStateInfo csi = new ConnectionStateInfo();
+//
+//		// Do the work
+//		try
+//		{
+//			Statement stmnt = conn.createStatement();
+//			ResultSet rs = stmnt.executeQuery(sql);
+//
 //			while(rs.next())
 //			{
-//				csi._lockCount = rs.getInt(1);
+//				csi._dbname      = rs.getString(1);
+//				csi._spid        = rs.getInt   (2);
+//				csi._username    = rs.getString(3);
+//				csi._susername   = rs.getString(4);
+//				csi._tranCount   = rs.getInt   (5);
+//				csi._tranChained = rs.getInt   (6);
+//				csi._tranState   = isAse ? rs.getInt(7) : ConnectionStateInfo.TSQL_TRANSTATE_NOT_AVAILABLE;
 //			}
-			if (isAse)
-			{
-				sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
-					+ " from master.dbo.syslocks "
-					+ " where spid = @@spid	"
-					+ " group by dbid, id, type ";
-
-				csi._lockCount = 0;
-				csi._lockList.clear();
-
-				rs = stmnt.executeQuery(sql);
-				while(rs.next())
-				{
-					String dbname    = rs.getString(1);
-					String tableName = rs.getString(2);
-					int    lockType  = rs.getInt   (3);
-					int    lockCount = rs.getInt   (4);
-
-					csi._lockCount += lockCount;
-					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
-				}
-
-				rs.close();
-				stmnt.close();
-			}
-			else // MS SQL do not have syslocks anymore, so use: sys.dm_tran_locks, and simulate some kind of equal question...
-			{
-				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
-				    + " from sys.dm_tran_locks "
-				    + " where request_session_id = @@spid "
-				    + "  and resource_type = 'OBJECT' ";
-
-				csi._lockCount = 0;
-				csi._lockList.clear();
-
-				rs = stmnt.executeQuery(sql);
-				while(rs.next())
-				{
-					String dbname    = rs.getString(1);
-					String tableName = rs.getString(2);
-					String lockType  = rs.getString(3);
-					int    lockCount = rs.getInt   (4);
-
-					csi._lockCount += lockCount;
-					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
-				}
-
-				rs.close();
-				stmnt.close();
-			}
-
-		}
-		catch (SQLException sqle)
-		{
-			_logger.error("Error in getAseConnectionStateInfo() problems executing sql='"+sql+"'.", sqle);
-		}
-
-//		select count(*) from master.dbo.syslogshold where spid = @@spid
-
-		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', user_name()='"+csi._username+"', suser_name()='"+csi._susername+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
-		return csi;
-	}
-	/**
-	 * Class that reflects a call to getAseConnectionStateInfo()
-	 * @author gorans
-	 */
-	public static class ConnectionStateInfo
-	{
-		/** _current* below is only maintained if we are connected to ASE */
-		public String _dbname      = "";
-		public int    _spid        = -1;
-		public String _username    = "";
-		public String _susername   = "";
-		public int    _tranState   = -1;
-		public int    _tranCount   = -1;
-		public int    _tranChained = -1;
-		public int    _lockCount   = -1;
-		public List<LockRecord> _lockList = new ArrayList<LockRecord>();
-
-		// Transaction SQL states for DONE flavors
-		//
-		// 0 Transaction in progress: an explicit or implicit transaction is in effect;
-		//   the previous statement executed successfully.
-		// 1 Transaction succeeded: the transaction completed and committed its changes.
-		// 2 Statement aborted: the previous statement was aborted; no effect on the transaction.
-		// 3 Transaction aborted: the transaction aborted and rolled back any changes.
-		public static final int TSQL_TRAN_IN_PROGRESS = 0;
-		public static final int TSQL_TRAN_SUCCEED = 1;
-		public static final int TSQL_STMT_ABORT = 2;
-		public static final int TSQL_TRAN_ABORT = 3;
-		public static final int TSQL_TRANSTATE_NOT_AVAILABLE = 4; // Possible a MSSQL system
-
-		public static final String[] TSQL_TRANSTATE_NAMES =
-		{
-//			"TSQL_TRAN_IN_PROGRESS",
-//			"TSQL_TRAN_SUCCEED",
-//			"TSQL_STMT_ABORT",
-//			"TSQL_TRAN_ABORT"
-			"TRAN_IN_PROGRESS",
-			"TRAN_SUCCEED",
-			"STMT_ABORT",
-			"TRAN_ABORT",
-			"NOT_AVAILABLE"
-		};
-
-		public static final String[] TSQL_TRANSTATE_DESCRIPTIONS =
-		{
-//			"TRAN_IN_PROGRESS = Transaction in progress. A transaction is in effect; \nThe previous statement executed successfully.",
-			"TRAN_IN_PROGRESS = Transaction in progress. \nThe previous statement executed successfully.",
-			"TRAN_SUCCEED = Last Transaction succeeded. \nThe transaction completed and committed its changes.",
-			"STMT_ABORT = Last Statement aborted. \nThe previous statement was aborted; \nNo effect on the transaction.",
-			"TRAN_ABORT = Last Transaction aborted. \nThe transaction aborted and rolled back any changes.",
-			"NOT_AVAILABLE = Not available in this system."
-		};
-		
-
-		public boolean isTranStateUsed()
-		{
-			return _tranState != TSQL_TRANSTATE_NOT_AVAILABLE;
-		}
-
-		public boolean isNonNormalTranState()
-		{
-			return ! isNormalTranState();
-		}
-		public boolean isNormalTranState()
-		{
-			if (_tranState == TSQL_TRAN_SUCCEED)            return true;
-			if (_tranState == TSQL_TRANSTATE_NOT_AVAILABLE) return true;
-			return false;
-		}
-
-		public String getTranStateStr()
-		{
-			return tsqlTranStateToString(_tranState);
-		}
-
-		public String getTranStateDescription()
-		{
-			return tsqlTranStateToDescription(_tranState);
-		}
-
-		/**
-		 * Get the String name of the transactionState
-		 *
-		 * @param state
-		 * @return
-		 */
-		protected String tsqlTranStateToString(int state)
-		{
-			switch (state)
-			{
-				case TSQL_TRAN_IN_PROGRESS:
-					return TSQL_TRANSTATE_NAMES[state];
-
-				case TSQL_TRAN_SUCCEED:
-					return TSQL_TRANSTATE_NAMES[state];
-
-				case TSQL_STMT_ABORT:
-					return TSQL_TRANSTATE_NAMES[state];
-
-				case TSQL_TRAN_ABORT:
-					return TSQL_TRANSTATE_NAMES[state];
-
-				case TSQL_TRANSTATE_NOT_AVAILABLE:
-					return TSQL_TRANSTATE_NAMES[state];
-
-				default:
-					return "TSQL_UNKNOWN_STATE("+state+")";
-			}
-		}
-		protected String tsqlTranStateToDescription(int state)
-		{
-			switch (state)
-			{
-				case TSQL_TRAN_IN_PROGRESS:
-					return TSQL_TRANSTATE_DESCRIPTIONS[state];
-
-				case TSQL_TRAN_SUCCEED:
-					return TSQL_TRANSTATE_DESCRIPTIONS[state];
-
-				case TSQL_STMT_ABORT:
-					return TSQL_TRANSTATE_DESCRIPTIONS[state];
-
-				case TSQL_TRAN_ABORT:
-					return TSQL_TRANSTATE_DESCRIPTIONS[state];
-
-				case TSQL_TRANSTATE_NOT_AVAILABLE:
-					return TSQL_TRANSTATE_DESCRIPTIONS[state];
-
-				default:
-					return "TSQL_UNKNOWN_STATE("+state+")";
-			}
-		}
-		
-		/** 
-		 * @return "" if no locks, otherwise a HTML TABLE, with the headers: DB, Table, Type, Count
-		 */
-		public String getLockListTableAsHtmlTable()
-		{
-			if (_lockList.size() == 0)
-				return "";
-
-			StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
-			sb.append("<TR> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
-			for (LockRecord lr : _lockList)
-			{
-				sb.append("<TR>");
-				sb.append("<TD>").append(lr._dbname   ).append("</TD>");
-				sb.append("<TD>").append(lr._tableName).append("</TD>");
-				sb.append("<TD>").append(lr._lockType ).append("</TD>");
-				sb.append("<TD>").append(lr._lockCount).append("</TD>");
-				sb.append("</TR>");
-			}
-			sb.append("</TABLE>");
-			return sb.toString();
-		}
-	}
-	public static class LockRecord
-	{
-		public String _dbname    = "";
-		public String _tableName = "";
-		public String _lockType  = "";
-		public int    _lockCount = 0;
-
+//
+////			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
+////			rs = stmnt.executeQuery(sql);
+////			while(rs.next())
+////			{
+////				csi._lockCount = rs.getInt(1);
+////			}
+//			if (isAse)
+//			{
+//				sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
+//					+ " from master.dbo.syslocks "
+//					+ " where spid = @@spid	"
+//					+ " group by dbid, id, type ";
+//
+//				csi._lockCount = 0;
+//				csi._lockList.clear();
+//
+//				rs = stmnt.executeQuery(sql);
+//				while(rs.next())
+//				{
+//					String dbname    = rs.getString(1);
+//					String tableName = rs.getString(2);
+//					int    lockType  = rs.getInt   (3);
+//					int    lockCount = rs.getInt   (4);
+//
+//					csi._lockCount += lockCount;
+//					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+//				}
+//
+//				rs.close();
+//				stmnt.close();
+//			}
+//			else // MS SQL do not have syslocks anymore, so use: sys.dm_tran_locks, and simulate some kind of equal question...
+//			{
+//				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
+//				    + " from sys.dm_tran_locks "
+//				    + " where request_session_id = @@spid "
+//				    + "  and resource_type = 'OBJECT' ";
+//
+//				csi._lockCount = 0;
+//				csi._lockList.clear();
+//
+//				rs = stmnt.executeQuery(sql);
+//				while(rs.next())
+//				{
+//					String dbname    = rs.getString(1);
+//					String tableName = rs.getString(2);
+//					String lockType  = rs.getString(3);
+//					int    lockCount = rs.getInt   (4);
+//
+//					csi._lockCount += lockCount;
+//					csi._lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+//				}
+//
+//				rs.close();
+//				stmnt.close();
+//			}
+//
+//		}
+//		catch (SQLException sqle)
+//		{
+//			_logger.error("Error in getAseConnectionStateInfo() problems executing sql='"+sql+"'.", sqle);
+//		}
+//
+////		select count(*) from master.dbo.syslogshold where spid = @@spid
+//
+//		_logger.debug("getAseConnectionStateInfo(): db_name()='"+csi._dbname+"', @@spid='"+csi._spid+"', user_name()='"+csi._username+"', suser_name()='"+csi._susername+"', @@transtate="+csi._tranState+", '"+csi.getTranStateStr()+"', @@trancount="+csi._tranCount+".");
+//		return csi;
+//	}
+//	/**
+//	 * Class that reflects a call to getAseConnectionStateInfo()
+//	 * @author gorans
+//	 */
+//	public static class ConnectionStateInfo
+//	{
+//		/** _current* below is only maintained if we are connected to ASE */
+//		public String _dbname      = "";
+//		public int    _spid        = -1;
+//		public String _username    = "";
+//		public String _susername   = "";
+//		public int    _tranState   = -1;
+//		public int    _tranCount   = -1;
+//		public int    _tranChained = -1;
+//		public int    _lockCount   = -1;
+//		public List<LockRecord> _lockList = new ArrayList<LockRecord>();
+//
+//		// Transaction SQL states for DONE flavors
+//		//
+//		// 0 Transaction in progress: an explicit or implicit transaction is in effect;
+//		//   the previous statement executed successfully.
+//		// 1 Transaction succeeded: the transaction completed and committed its changes.
+//		// 2 Statement aborted: the previous statement was aborted; no effect on the transaction.
+//		// 3 Transaction aborted: the transaction aborted and rolled back any changes.
+//		public static final int TSQL_TRAN_IN_PROGRESS = 0;
+//		public static final int TSQL_TRAN_SUCCEED = 1;
+//		public static final int TSQL_STMT_ABORT = 2;
+//		public static final int TSQL_TRAN_ABORT = 3;
+//		public static final int TSQL_TRANSTATE_NOT_AVAILABLE = 4; // Possible a MSSQL system
+//
+//		public static final String[] TSQL_TRANSTATE_NAMES =
+//		{
+////			"TSQL_TRAN_IN_PROGRESS",
+////			"TSQL_TRAN_SUCCEED",
+////			"TSQL_STMT_ABORT",
+////			"TSQL_TRAN_ABORT"
+//			"TRAN_IN_PROGRESS",
+//			"TRAN_SUCCEED",
+//			"STMT_ABORT",
+//			"TRAN_ABORT",
+//			"NOT_AVAILABLE"
+//		};
+//
+//		public static final String[] TSQL_TRANSTATE_DESCRIPTIONS =
+//		{
+////			"TRAN_IN_PROGRESS = Transaction in progress. A transaction is in effect; \nThe previous statement executed successfully.",
+//			"TRAN_IN_PROGRESS = Transaction in progress. \nThe previous statement executed successfully.",
+//			"TRAN_SUCCEED = Last Transaction succeeded. \nThe transaction completed and committed its changes.",
+//			"STMT_ABORT = Last Statement aborted. \nThe previous statement was aborted; \nNo effect on the transaction.",
+//			"TRAN_ABORT = Last Transaction aborted. \nThe transaction aborted and rolled back any changes.",
+//			"NOT_AVAILABLE = Not available in this system."
+//		};
+//		
+//
+//		public boolean isTranStateUsed()
+//		{
+//			return _tranState != TSQL_TRANSTATE_NOT_AVAILABLE;
+//		}
+//
+//		public boolean isNonNormalTranState()
+//		{
+//			return ! isNormalTranState();
+//		}
+//		public boolean isNormalTranState()
+//		{
+//			if (_tranState == TSQL_TRAN_SUCCEED)            return true;
+//			if (_tranState == TSQL_TRANSTATE_NOT_AVAILABLE) return true;
+//			return false;
+//		}
+//
+//		public String getTranStateStr()
+//		{
+//			return tsqlTranStateToString(_tranState);
+//		}
+//
+//		public String getTranStateDescription()
+//		{
+//			return tsqlTranStateToDescription(_tranState);
+//		}
+//
+//		/**
+//		 * Get the String name of the transactionState
+//		 *
+//		 * @param state
+//		 * @return
+//		 */
+//		protected String tsqlTranStateToString(int state)
+//		{
+//			switch (state)
+//			{
+//				case TSQL_TRAN_IN_PROGRESS:
+//					return TSQL_TRANSTATE_NAMES[state];
+//
+//				case TSQL_TRAN_SUCCEED:
+//					return TSQL_TRANSTATE_NAMES[state];
+//
+//				case TSQL_STMT_ABORT:
+//					return TSQL_TRANSTATE_NAMES[state];
+//
+//				case TSQL_TRAN_ABORT:
+//					return TSQL_TRANSTATE_NAMES[state];
+//
+//				case TSQL_TRANSTATE_NOT_AVAILABLE:
+//					return TSQL_TRANSTATE_NAMES[state];
+//
+//				default:
+//					return "TSQL_UNKNOWN_STATE("+state+")";
+//			}
+//		}
+//		protected String tsqlTranStateToDescription(int state)
+//		{
+//			switch (state)
+//			{
+//				case TSQL_TRAN_IN_PROGRESS:
+//					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+//
+//				case TSQL_TRAN_SUCCEED:
+//					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+//
+//				case TSQL_STMT_ABORT:
+//					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+//
+//				case TSQL_TRAN_ABORT:
+//					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+//
+//				case TSQL_TRANSTATE_NOT_AVAILABLE:
+//					return TSQL_TRANSTATE_DESCRIPTIONS[state];
+//
+//				default:
+//					return "TSQL_UNKNOWN_STATE("+state+")";
+//			}
+//		}
+//		
+//		/** 
+//		 * @return "" if no locks, otherwise a HTML TABLE, with the headers: DB, Table, Type, Count
+//		 */
+//		public String getLockListTableAsHtmlTable()
+//		{
+//			if (_lockList.size() == 0)
+//				return "";
+//
+//			StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
+//			sb.append("<TR> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
+//			for (LockRecord lr : _lockList)
+//			{
+//				sb.append("<TR>");
+//				sb.append("<TD>").append(lr._dbname   ).append("</TD>");
+//				sb.append("<TD>").append(lr._tableName).append("</TD>");
+//				sb.append("<TD>").append(lr._lockType ).append("</TD>");
+//				sb.append("<TD>").append(lr._lockCount).append("</TD>");
+//				sb.append("</TR>");
+//			}
+//			sb.append("</TABLE>");
+//			return sb.toString();
+//		}
+//	}
+//	public static class LockRecord
+//	{
+//		public String _dbname    = "";
+//		public String _tableName = "";
+//		public String _lockType  = "";
+//		public int    _lockCount = 0;
+//
+////		public LockRecord(String dbname, String tableName, String lockType, int lockCount)
+////		{
+////			_dbname    = dbname;
+////			_tableName = tableName;
+////			_lockType  = lockType;
+////			_lockCount = lockCount;
+////		}
+//
+//		public LockRecord(String dbname, String tableName, int lockType, int lockCount)
+//		{
+//			_dbname    = dbname;
+//			_tableName = tableName;
+//			_lockType  = getAseLockType(lockType);
+//			_lockCount = lockCount;
+//		}
 //		public LockRecord(String dbname, String tableName, String lockType, int lockCount)
 //		{
 //			_dbname    = dbname;
@@ -3772,98 +3830,83 @@ public class AseConnectionUtils
 //			_lockType  = lockType;
 //			_lockCount = lockCount;
 //		}
+//	}
 
-		public LockRecord(String dbname, String tableName, int lockType, int lockCount)
-		{
-			_dbname    = dbname;
-			_tableName = tableName;
-			_lockType  = getAseLockType(lockType);
-			_lockCount = lockCount;
-		}
-		public LockRecord(String dbname, String tableName, String lockType, int lockCount)
-		{
-			_dbname    = dbname;
-			_tableName = tableName;
-			_lockType  = lockType;
-			_lockCount = lockCount;
-		}
-	}
-
-	public static String getAseLockType(int type)
-	{
-		// below values grabbed from ASE 15.7 SP102: 
-		//            select 'case '+convert(char(5),number)+': return "'+name+'";' from master..spt_values where type in ('L') and number != -1
-		switch (type)
-		{
-		case 1   : return "Ex_table";
-		case 2   : return "Sh_table";
-		case 3   : return "Ex_intent";
-		case 4   : return "Sh_intent";
-		case 5   : return "Ex_page";
-		case 6   : return "Sh_page";
-		case 7   : return "Update_page";
-		case 8   : return "Ex_row";
-		case 9   : return "Sh_row";
-		case 10  : return "Update_row";
-		case 11  : return "Sh_nextkey";
-		case 257 : return "Ex_table-blk";
-		case 258 : return "Sh_table-blk";
-		case 259 : return "Ex_intent-blk";
-		case 260 : return "Sh_intent-blk";
-		case 261 : return "Ex_page-blk";
-		case 262 : return "Sh_page-blk";
-		case 263 : return "Update_page-blk";
-		case 264 : return "Ex_row-blk";
-		case 265 : return "Sh_row-blk";
-		case 266 : return "Update_row-blk";
-		case 267 : return "Sh_nextkey-blk";
-		case 513 : return "Ex_table-demand";
-		case 514 : return "Sh_table-demand";
-		case 515 : return "Ex_intent-demand";
-		case 516 : return "Sh_intent-demand";
-		case 517 : return "Ex_page-demand";
-		case 518 : return "Sh_page-demand";
-		case 519 : return "Update_page-demand";
-		case 520 : return "Ex_row-demand";
-		case 521 : return "Sh_row-demand";
-		case 522 : return "Update_row-demand";
-		case 523 : return "Sh_nextkey-demand";
-		case 769 : return "Ex_table-demand-blk";
-		case 770 : return "Sh_table-demand-blk";
-		case 771 : return "Ex_intent-demand-blk";
-		case 772 : return "Sh_intent-demand-blk";
-		case 773 : return "Ex_page-demand-blk";
-		case 774 : return "Sh_page-demand-blk";
-		case 775 : return "Update_page-demand-blk";
-		case 776 : return "Ex_row-demand-blk";
-		case 777 : return "Sh_row-demand-blk";
-		case 778 : return "Update_row-demand-blk";
-		case 779 : return "Sh_nextkey-demand-blk";
-		case 1025: return "Ex_table-request";
-		case 1026: return "Sh_table-request";
-		case 1027: return "Ex_intent-request";
-		case 1028: return "Sh_intent-request";
-		case 1029: return "Ex_page-request";
-		case 1030: return "Sh_page-request";
-		case 1031: return "Update_page-request";
-		case 1032: return "Ex_row-request";
-		case 1033: return "Sh_row-request";
-		case 1034: return "Update_row-request";
-		case 1035: return "Sh_nextkey-request";
-		case 1537: return "Ex_table-demand-request";
-		case 1538: return "Sh_table-demand-request";
-		case 1539: return "Ex_intent-demand-request";
-		case 1540: return "Sh_intent-demand-request";
-		case 1541: return "Ex_page-demand-request";
-		case 1542: return "Sh_page-demand-request";
-		case 1543: return "Update_page-demand-request";
-		case 1544: return "Ex_row-demand-request";
-		case 1545: return "Sh_row-demand-request";
-		case 1546: return "Update_row-demand-request";
-		case 1547: return "Sh_nextkey-demand-request";
-		}
-		return "unknown("+type+")";
-	}
+//	public static String getAseLockType(int type)
+//	{
+//		// below values grabbed from ASE 15.7 SP102: 
+//		//            select 'case '+convert(char(5),number)+': return "'+name+'";' from master..spt_values where type in ('L') and number != -1
+//		switch (type)
+//		{
+//		case 1   : return "Ex_table";
+//		case 2   : return "Sh_table";
+//		case 3   : return "Ex_intent";
+//		case 4   : return "Sh_intent";
+//		case 5   : return "Ex_page";
+//		case 6   : return "Sh_page";
+//		case 7   : return "Update_page";
+//		case 8   : return "Ex_row";
+//		case 9   : return "Sh_row";
+//		case 10  : return "Update_row";
+//		case 11  : return "Sh_nextkey";
+//		case 257 : return "Ex_table-blk";
+//		case 258 : return "Sh_table-blk";
+//		case 259 : return "Ex_intent-blk";
+//		case 260 : return "Sh_intent-blk";
+//		case 261 : return "Ex_page-blk";
+//		case 262 : return "Sh_page-blk";
+//		case 263 : return "Update_page-blk";
+//		case 264 : return "Ex_row-blk";
+//		case 265 : return "Sh_row-blk";
+//		case 266 : return "Update_row-blk";
+//		case 267 : return "Sh_nextkey-blk";
+//		case 513 : return "Ex_table-demand";
+//		case 514 : return "Sh_table-demand";
+//		case 515 : return "Ex_intent-demand";
+//		case 516 : return "Sh_intent-demand";
+//		case 517 : return "Ex_page-demand";
+//		case 518 : return "Sh_page-demand";
+//		case 519 : return "Update_page-demand";
+//		case 520 : return "Ex_row-demand";
+//		case 521 : return "Sh_row-demand";
+//		case 522 : return "Update_row-demand";
+//		case 523 : return "Sh_nextkey-demand";
+//		case 769 : return "Ex_table-demand-blk";
+//		case 770 : return "Sh_table-demand-blk";
+//		case 771 : return "Ex_intent-demand-blk";
+//		case 772 : return "Sh_intent-demand-blk";
+//		case 773 : return "Ex_page-demand-blk";
+//		case 774 : return "Sh_page-demand-blk";
+//		case 775 : return "Update_page-demand-blk";
+//		case 776 : return "Ex_row-demand-blk";
+//		case 777 : return "Sh_row-demand-blk";
+//		case 778 : return "Update_row-demand-blk";
+//		case 779 : return "Sh_nextkey-demand-blk";
+//		case 1025: return "Ex_table-request";
+//		case 1026: return "Sh_table-request";
+//		case 1027: return "Ex_intent-request";
+//		case 1028: return "Sh_intent-request";
+//		case 1029: return "Ex_page-request";
+//		case 1030: return "Sh_page-request";
+//		case 1031: return "Update_page-request";
+//		case 1032: return "Ex_row-request";
+//		case 1033: return "Sh_row-request";
+//		case 1034: return "Update_row-request";
+//		case 1035: return "Sh_nextkey-request";
+//		case 1537: return "Ex_table-demand-request";
+//		case 1538: return "Sh_table-demand-request";
+//		case 1539: return "Ex_intent-demand-request";
+//		case 1540: return "Sh_intent-demand-request";
+//		case 1541: return "Ex_page-demand-request";
+//		case 1542: return "Sh_page-demand-request";
+//		case 1543: return "Update_page-demand-request";
+//		case 1544: return "Ex_row-demand-request";
+//		case 1545: return "Sh_row-demand-request";
+//		case 1546: return "Update_row-demand-request";
+//		case 1547: return "Sh_nextkey-demand-request";
+//		}
+//		return "unknown("+type+")";
+//	}
 
 	
 	/**

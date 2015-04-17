@@ -1193,7 +1193,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		CountersModel cm = GetCounters.getInstance().getCmByName(CmSummary.CM_NAME);
 //		if (cm != null && cm.hasAbsData() )
 //			setSummaryData(cm);
-		setSummaryData(_cm);
+		setSummaryData(_cm, false);
 	}
 
 	private void setFieldAbsDiffRate(CountersModel cm, String name, JLabel label, JTextField absField, JTextField diffField, JTextField rateField)
@@ -1268,7 +1268,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	}
 
 	@Override
-	public void setSummaryData(CountersModel cm)
+	public void setSummaryData(CountersModel cm, boolean postProcessing)
 	{
 		setWatermark();
 

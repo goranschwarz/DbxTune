@@ -10,9 +10,8 @@ import javax.swing.JTextArea;
 import net.miginfocom.swing.MigLayout;
 
 import com.asetune.gui.swing.GLabel;
-import com.asetune.utils.AseConnectionUtils.ConnectionStateInfo;
+import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.utils.DbUtils;
-import com.asetune.utils.DbUtils.JdbcConnectionStateInfo;
 import com.asetune.utils.StringUtil;
 
 public class StatusBar extends JPanel
@@ -33,7 +32,7 @@ public class StatusBar extends JPanel
 	private String     _productVersion         = null;
 	private String     _productServerName      = null;
 
-	private GLabel     _aseConnStateInfo       = new GLabel("");
+	private GLabel     _srvConnStateInfo       = new GLabel("");
 
 	private JLabel     _editorAtLineCol        = new JLabel("1,1");
 
@@ -114,7 +113,7 @@ public class StatusBar extends JPanel
 		// msg
 		_msgline.setToolTipText(MSG_LINE_TOOLTIP_BASE);
 
-		_aseConnStateInfo.setToolTipText(ASE_STATE_INFO_TOOLTIP_BASE);
+		_srvConnStateInfo.setToolTipText(ASE_STATE_INFO_TOOLTIP_BASE);
 		
 		// isDirty
 		_currentFilenameIsDirty.setVisible(false);
@@ -162,7 +161,7 @@ public class StatusBar extends JPanel
 		add(_currentFilenameEncoding,"hidemode 3");           
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
-		add(_aseConnStateInfo,       "split, growx, hidemode 2");
+		add(_srvConnStateInfo,       "split, growx, hidemode 2");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
 
 		add(_userName,               "growx");
@@ -224,7 +223,8 @@ public class StatusBar extends JPanel
 	{
 //		setServerName(null, null, null, null, null, null, null);
 		setServerInfo(null);
-		setAseConnectionStateInfo(null);
+		setConnectionStateInfo(null);
+//		setAseConnectionStateInfo(null);
 	}
 
 	public void setServerInfo(ServerInfo si)
@@ -336,120 +336,134 @@ public class StatusBar extends JPanel
 		return _serverName.getText();
 	}
 
-	public void setAseConnectionStateInfo(ConnectionStateInfo csi)
+	public void setConnectionStateInfo(DbxConnectionStateInfo csi)
 	{
 		if (csi == null)
 		{
-			_aseConnStateInfo.setVisible(false);
+			_srvConnStateInfo.setVisible(false);
 			return;
 		}
 
-		String dbname      = "db="          + csi._dbname;
-		String spid        = "spid="        + csi._spid;
-		String username    = "user="        + csi._username;
-		String susername   = "login="       + csi._susername;
-		String tranState   = "TranState="   + csi.getTranStateStr();
-		String tranCount   = "TranCount="   + csi._tranCount;
-		String tranChained = "TranChained=" + csi._tranChained;
-		String lockCount   = "LockCount="   + csi._lockCount;
-
-		if (csi._tranCount > 0)
-			tranCount = "TranCount=<b><font color=\"red\">" + csi._tranCount        + "</font></b>";
-
-		if ( csi.isNonNormalTranState() )
-			tranState = "TranState=<b><font color=\"red\">" + csi.getTranStateStr() + "</font></b>";
+		_srvConnStateInfo.setVisible(true);
+		_srvConnStateInfo.setText(csi.getStatusBarText());
 		
-		if (csi._tranCount > 0)
-			tranChained = "TranChained=<b><font color=\"red\">" + csi._tranChained    + "</font></b>";
-
-		if (csi._lockCount > 0)
-			lockCount = "LockCount=<b><font color=\"red\">" + csi._lockCount    + "</font></b>";
-
-		String text = spid + ", " + username + ", " + susername;
-		if (csi._tranCount > 0 || csi.isNonNormalTranState())
-		{
-			text = "<html>"
-				+ dbname    + ", "
-				+ spid      + ", " 
-				+ username  + ", " 
-				+ susername + ", " 
-				+ (csi.isTranStateUsed() ? (tranState + ", ") : "") 
-				+ tranCount + ", "
-				+ tranChained + ", "
-				+ lockCount
-				+ "</html>";
-		}
-		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
-		if (csi._tranChained == 1 && csi._lockCount == 0)
-		{ // color #B45F04 = dark yellow/orange
-			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, "+spid + ", " + username + ", " + susername + "</html>";
-		}
-
-		_aseConnStateInfo.setVisible(true);
-		_aseConnStateInfo.setText(text);
-		
-		String lockText = "<hr>";
-		if (csi._lockCount > 0)
-			lockText = "<hr>Locks held by this SPID:" + csi.getLockListTableAsHtmlTable() + "<hr>";
-
-		String tooltip = "<html>" +
-			"<table border=0 cellspacing=0 cellpadding=1>" +
-			                         "<tr> <td>Current DB:    </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
-			                         "<tr> <td>SPID:          </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
-			                         "<tr> <td>Current User:  </td> <td><b>" + csi._username         + "</b> </td> </tr>" +
-			                         "<tr> <td>Current Login: </td> <td><b>" + csi._susername        + "</b> </td> </tr>" +
-			(csi.isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
-			                         "<tr> <td>Tran Count:    </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
-			                         "<tr> <td>Tran Chained:  </td> <td><b>" + csi._tranChained      + "</b> </td> </tr>" +
-			                         "<tr> <td>Lock Count:    </td> <td><b>" + csi._lockCount        + "</b> </td> </tr>" +
-			"</table>" +
-			lockText +
-			(csi.isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...
-
-		_aseConnStateInfo.setToolTipText(tooltip); //add dbname,spid,transtate, trancount here
-
+		_srvConnStateInfo.setToolTipText(csi.getStatusBarToolTipText());
 	}
 
-	
-	public void setJdbcConnectionStateInfo(JdbcConnectionStateInfo csi)
-	{
-		if (csi == null)
-		{
-			_aseConnStateInfo.setVisible(false);
-			return;
-		}
-
-		String catalog    = "cat="        + csi._catalog;
-		String isolation  = "Isolation="  + csi.getIsolationLevelStr();
-		String autocommit = "AutoCommit=" + csi.getAutoCommit();
-
-		if ( ! csi.getAutoCommit() )
-			autocommit = "AutoCommit=<b><font color=\"red\">" + csi.getAutoCommit() + "</font></b>";
-
-		String text = "ac="+csi.getAutoCommit();
-		if ( ! csi.getAutoCommit() )
-		{
-			text = "<html>"
-				+ autocommit + ", "
-				+ catalog    + ", " 
-				+ isolation  + 
-				"</html>";
-		}
-
-		_aseConnStateInfo.setVisible(true);
-		_aseConnStateInfo.setText(text);
-		
-		String tooltip = "<html>" +
-			"<table border=0 cellspacing=0 cellpadding=1>" +
-			"<tr> <td>Current Catalog: </td> <td><b>" + csi.getCatalog()           + "</b> </td> </tr>" +
-			"<tr> <td>AutoCommit:      </td> <td><b>" + csi.getAutoCommit()        + "</b> </td> </tr>" +
-			"<tr> <td>Isolation Level: </td> <td><b>" + csi.getIsolationLevelStr() + "</b> </td> </tr>" +
-			"</table>" +
-			"<hr>" + 
-			JDBC_STATE_INFO_TOOLTIP_BASE.replace("<html>", ""); // remove the first/initial <html> tag...
-
-		_aseConnStateInfo.setToolTipText(tooltip);
-	}
+//	public void setAseConnectionStateInfo(ConnectionStateInfo csi)
+//	{
+//		if (csi == null)
+//		{
+//			_srvConnStateInfo.setVisible(false);
+//			return;
+//		}
+//
+//		String dbname      = "db="          + csi._dbname;
+//		String spid        = "spid="        + csi._spid;
+//		String username    = "user="        + csi._username;
+//		String susername   = "login="       + csi._susername;
+//		String tranState   = "TranState="   + csi.getTranStateStr();
+//		String tranCount   = "TranCount="   + csi._tranCount;
+//		String tranChained = "TranChained=" + csi._tranChained;
+//		String lockCount   = "LockCount="   + csi._lockCount;
+//
+//		if (csi._tranCount > 0)
+//			tranCount = "TranCount=<b><font color=\"red\">" + csi._tranCount        + "</font></b>";
+//
+//		if ( csi.isNonNormalTranState() )
+//			tranState = "TranState=<b><font color=\"red\">" + csi.getTranStateStr() + "</font></b>";
+//		
+//		if (csi._tranCount > 0)
+//			tranChained = "TranChained=<b><font color=\"red\">" + csi._tranChained    + "</font></b>";
+//
+//		if (csi._lockCount > 0)
+//			lockCount = "LockCount=<b><font color=\"red\">" + csi._lockCount    + "</font></b>";
+//
+//		String text = spid + ", " + username + ", " + susername;
+//		if (csi._tranCount > 0 || csi.isNonNormalTranState())
+//		{
+//			text = "<html>"
+//				+ dbname    + ", "
+//				+ spid      + ", " 
+//				+ username  + ", " 
+//				+ susername + ", " 
+//				+ (csi.isTranStateUsed() ? (tranState + ", ") : "") 
+//				+ tranCount + ", "
+//				+ tranChained + ", "
+//				+ lockCount
+//				+ "</html>";
+//		}
+//		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
+//		if (csi._tranChained == 1 && csi._lockCount == 0)
+//		{ // color #B45F04 = dark yellow/orange
+//			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, "+spid + ", " + username + ", " + susername + "</html>";
+//		}
+//
+//		_srvConnStateInfo.setVisible(true);
+//		_srvConnStateInfo.setText(text);
+//		
+//		String lockText = "<hr>";
+//		if (csi._lockCount > 0)
+//			lockText = "<hr>Locks held by this SPID:" + csi.getLockListTableAsHtmlTable() + "<hr>";
+//
+//		String tooltip = "<html>" +
+//			"<table border=0 cellspacing=0 cellpadding=1>" +
+//			                         "<tr> <td>Current DB:    </td> <td><b>" + csi._dbname           + "</b> </td> </tr>" +
+//			                         "<tr> <td>SPID:          </td> <td><b>" + csi._spid             + "</b> </td> </tr>" +
+//			                         "<tr> <td>Current User:  </td> <td><b>" + csi._username         + "</b> </td> </tr>" +
+//			                         "<tr> <td>Current Login: </td> <td><b>" + csi._susername        + "</b> </td> </tr>" +
+//			(csi.isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + csi.getTranStateStr() + "</b> </td> </tr>" : "") +
+//			                         "<tr> <td>Tran Count:    </td> <td><b>" + csi._tranCount        + "</b> </td> </tr>" +
+//			                         "<tr> <td>Tran Chained:  </td> <td><b>" + csi._tranChained      + "</b> </td> </tr>" +
+//			                         "<tr> <td>Lock Count:    </td> <td><b>" + csi._lockCount        + "</b> </td> </tr>" +
+//			"</table>" +
+//			lockText +
+//			(csi.isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...
+//
+//		_srvConnStateInfo.setToolTipText(tooltip); //add dbname,spid,transtate, trancount here
+//
+//	}
+//
+//	
+//	public void setJdbcConnectionStateInfo(JdbcConnectionStateInfo csi)
+//	{
+//		if (csi == null)
+//		{
+//			_srvConnStateInfo.setVisible(false);
+//			return;
+//		}
+//
+//		String catalog    = "cat="        + csi._catalog;
+//		String isolation  = "Isolation="  + csi.getIsolationLevelStr();
+//		String autocommit = "AutoCommit=" + csi.getAutoCommit();
+//
+//		if ( ! csi.getAutoCommit() )
+//			autocommit = "AutoCommit=<b><font color=\"red\">" + csi.getAutoCommit() + "</font></b>";
+//
+//		String text = "ac="+csi.getAutoCommit();
+//		if ( ! csi.getAutoCommit() )
+//		{
+//			text = "<html>"
+//				+ autocommit + ", "
+//				+ catalog    + ", " 
+//				+ isolation  + 
+//				"</html>";
+//		}
+//
+//		_srvConnStateInfo.setVisible(true);
+//		_srvConnStateInfo.setText(text);
+//		
+//		String tooltip = "<html>" +
+//			"<table border=0 cellspacing=0 cellpadding=1>" +
+//			"<tr> <td>Current Catalog: </td> <td><b>" + csi.getCatalog()           + "</b> </td> </tr>" +
+//			"<tr> <td>AutoCommit:      </td> <td><b>" + csi.getAutoCommit()        + "</b> </td> </tr>" +
+//			"<tr> <td>Isolation Level: </td> <td><b>" + csi.getIsolationLevelStr() + "</b> </td> </tr>" +
+//			"</table>" +
+//			"<hr>" + 
+//			JDBC_STATE_INFO_TOOLTIP_BASE.replace("<html>", ""); // remove the first/initial <html> tag...
+//
+//		_srvConnStateInfo.setToolTipText(tooltip);
+//	}
 
 	
 	//------------------------------------------------------------------------------------
@@ -513,19 +527,21 @@ public class StatusBar extends JPanel
 			String productNameShort = "";
 
 			if      (productName.equals(""))                              productNameShort = "";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) productNameShort = "ASE";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) productNameShort = "ASA";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ))  productNameShort = "IQ";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))  productNameShort = "RS";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))       productNameShort = "HANA";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB))      productNameShort = "MaxDB";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))         productNameShort = "H2";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))     productNameShort = "ORA";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))      productNameShort = "MS-SQL";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))     productNameShort = "DB2";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))    productNameShort = "DB2-MF";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))      productNameShort = "MySQL";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))      productNameShort = "DERBY";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE))   productNameShort = "ASE";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA))   productNameShort = "ASA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ))    productNameShort = "IQ";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))    productNameShort = "RS";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   productNameShort = "RAX";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) productNameShort = "RSDRA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))         productNameShort = "HANA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB))        productNameShort = "MaxDB";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           productNameShort = "H2";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       productNameShort = "ORA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))        productNameShort = "MS-SQL";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))       productNameShort = "DB2";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      productNameShort = "DB2-MF";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        productNameShort = "MySQL";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        productNameShort = "DERBY";
 			else productNameShort = "UNKNOWN";
 			
 			return productNameShort;
@@ -545,5 +561,4 @@ public class StatusBar extends JPanel
 		public void   setClientCharsetName(String clientCharsetName) { _clientCharsetName = clientCharsetName; }
 		public void   setClientCharsetDesc(String clientCharsetDesc) { _clientCharsetDesc = clientCharsetDesc; }
 	}
-
 }

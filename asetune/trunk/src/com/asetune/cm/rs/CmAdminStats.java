@@ -281,6 +281,7 @@ extends CountersModel
 	 * Create a new Sample based on the values in CmAdminStats object
 	 * <p>
 	 * All Counters in the table for a specific module will be a pivot table (one "module" for one "instance" will be one row, with many columns)
+	 * 
 	 * @param moduleName
 	 * @param xrstm 
 	 * @return

@@ -3,10 +3,11 @@ package com.asetune.sql.conn;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
-public class TdsConnection extends DbxConnection
+public abstract class TdsConnection extends DbxConnection
 {
 	public TdsConnection(Connection conn)
 	{
@@ -34,4 +35,10 @@ System.out.println("constructor::TdsConnection(conn): conn="+conn);
 		if (_conn instanceof SybConnection)
 			((SybConnection)_conn).cancel();
 	}
+
+	@Override
+	public abstract DbxConnectionStateInfo refreshConnectionStateInfo();
+
+	@Override
+	public abstract boolean isInTransaction() throws SQLException;
 }

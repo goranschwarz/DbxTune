@@ -421,10 +421,10 @@ extends CountersModel
 			Double[] arr = new Double[4];
 			CountersModel _cm         = CounterController.getInstance().getCmByName(CmIqStatistics .CM_NAME);
 
-			arr[0] = _cm.getAbsValue("ConnectionsActive" , "stat_value");
-			arr[1] = _cm.getAbsValue("OperationsWaiting", "stat_value");
-			arr[2] = _cm.getAbsValue("OperationsActive", "stat_value");
-			arr[3] = _cm.getAbsValue("OperationsActiveloadTableStatement", "stat_value");
+			arr[0] = _cm.getAbsValueAsDouble("ConnectionsActive",                  "stat_value");
+			arr[1] = _cm.getAbsValueAsDouble("OperationsWaiting",                  "stat_value");
+			arr[2] = _cm.getAbsValueAsDouble("OperationsActive",                   "stat_value");
+			arr[3] = _cm.getAbsValueAsDouble("OperationsActiveloadTableStatement", "stat_value");
 		
 			_logger.debug("updateGraphData("+tgdp.getName()+"): ConnectionsActive='"+arr[0]+"'.");
 

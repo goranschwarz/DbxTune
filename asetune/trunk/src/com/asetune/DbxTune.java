@@ -1195,6 +1195,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				if      ("AseTune2"     .equalsIgnoreCase(_mainClassName)) _instance = new AseTune2     (cmd);
 				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) _instance = new IqTune       (cmd);
 				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) _instance = new RsTune       (cmd);
+				else if ("RaxTune"      .equalsIgnoreCase(_mainClassName)) _instance = new RaxTune      (cmd);
 				else if ("HanaTune"     .equalsIgnoreCase(_mainClassName)) _instance = new HanaTune     (cmd);
 				else if ("SqlServerTune".equalsIgnoreCase(_mainClassName)) _instance = new SqlServerTune(cmd);
 				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) _instance = new OracleTune   (cmd);

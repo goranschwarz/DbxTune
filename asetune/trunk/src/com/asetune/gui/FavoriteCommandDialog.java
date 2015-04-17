@@ -100,6 +100,9 @@ implements ActionListener, FocusListener //, ChangeListener
 		ASA, 
 		IQ, 
 		RS, 
+		RAX, 
+		RSDRA, 
+		
 		HANA, 
 		MAXDB, 
 
@@ -2213,6 +2216,8 @@ implements ActionListener, FocusListener //, ChangeListener
 
 			setContentPane(panel);
 
+			_favoriteType_cbx.setMaximumRowCount(50);
+
 			// Fill in some start values
 			_favoriteType_cbx.setSelectedItem(_entry.getType());
 			_favoriteName_txt.setText(_entry.getName());
@@ -2298,18 +2303,20 @@ implements ActionListener, FocusListener //, ChangeListener
 		if (VendorType.GENERIC.equals(vendorType)) 
 			return true;
 		
-		if      (VendorType.ASE   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return true;
-		else if (VendorType.ASA   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return true;
-		else if (VendorType.IQ    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return true;
-		else if (VendorType.RS    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return true;
-		else if (VendorType.HANA  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HANA      )) return true;
-		else if (VendorType.MAXDB .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB     )) return true;
-		else if (VendorType.ORACLE.equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE    )) return true;
-		else if (VendorType.MSSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL     )) return true;
-		else if (VendorType.DB2   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX    )) return true;
-		else if (VendorType.HSQL  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL      )) return true;
-		else if (VendorType.MYSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL     )) return true;
-		else if (VendorType.DERBY .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY     )) return true;
+		if      (VendorType.ASE   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return true;
+		else if (VendorType.ASA   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return true;
+		else if (VendorType.IQ    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ   )) return true;
+		else if (VendorType.RS    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS   )) return true;
+		else if (VendorType.RAX   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RAX  )) return true;
+		else if (VendorType.RSDRA .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return true;
+		else if (VendorType.HANA  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HANA        )) return true;
+		else if (VendorType.MAXDB .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB       )) return true;
+		else if (VendorType.ORACLE.equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE      )) return true;
+		else if (VendorType.MSSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return true;
+		else if (VendorType.DB2   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX      )) return true;
+		else if (VendorType.HSQL  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL        )) return true;
+		else if (VendorType.MYSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL       )) return true;
+		else if (VendorType.DERBY .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY       )) return true;
 		
 		return false;
 	}

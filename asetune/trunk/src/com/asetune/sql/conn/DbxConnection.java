@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
+import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.DbUtils;
@@ -1174,11 +1175,91 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		
 		return sb.toString();
 	}
-
 	//#################################################################################
 	//#################################################################################
 	//### END: some helper methods
 	//#################################################################################
 	//#################################################################################
+
 	
+	
+	
+	
+	//#################################################################################
+	//#################################################################################
+	//### BEGIN: some XXXXX methods
+	//#################################################################################
+	//#################################################################################
+
+	/**
+	 * If the server handles databases like MS SQL_Server and Sybase ASE
+	 * @return true or false
+	 */
+	public boolean isDatabaseAware()
+	{
+		return false;
+	}
+
+	/**
+	 * Get information object about the connection status.<br>
+	 * This could/will be used to check if the connection for example:
+	 * <ul>
+	 *   <li>Are we in a transaction that hasn't been committed</li>
+	 *   <li>Holds any locks</li>
+	 *   <li>What is the effective user</li>
+	 *   <li>etc etc...</li>
+	 * </ul>
+	 * The returned object is used by any client that want's to check "various stuff" of the connection<br>
+	 * The content of the object will vary from database vendor<br>
+	 * For the moment one of the clients is: SQL Window 
+	 *  
+	 * @return
+	 */
+	public DbxConnectionStateInfo getConnectionStateInfo()
+	{
+		return _connStateInfo;
+	}
+	public void setConnectionStateInfo(DbxConnectionStateInfo csi)
+	{
+		_connStateInfo = csi;
+	}
+	public abstract DbxConnectionStateInfo refreshConnectionStateInfo();
+
+	private DbxConnectionStateInfo _connStateInfo = null;
+//	public boolean isConnectionStateNormal()
+//	{
+//		DbxConnectionStateInfo csi = getConnectionStateInfo();
+//		if (csi == null)
+//			return true;
+//		return csi.isNormalState();
+//	}
+
+	
+	
+	
+	public abstract boolean isInTransaction() throws SQLException;
+
+	
+//	public abstract int    getSrvVersionNumber();
+//	public abstract String getSrvVersionString();
+//
+//	public abstract boolean hasSrvAuthorization(String authName);
+//	public abstract String getSrvListeners();
+//
+//	public abstract String getSrvCharset();
+//	public abstract String getSrvSortorder();
+//	public abstract int    getSrvClientCharsetId();
+//	public abstract String getSrvClientCharsetName();
+//	public abstract String getSrvClientCharsetDesc();
+//
+//	public abstract String getServerLogFileName();
+//	public abstract String getObjectText();
+////	public abstract String getDatabaseServerName();
+////	public abstract String getDatabaseProductName();
+
+	//#################################################################################
+	//#################################################################################
+	//### END: some XXXXX methods
+	//#################################################################################
+	//#################################################################################
 }

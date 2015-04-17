@@ -9,24 +9,23 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.iq.CmIqCache2;
+import com.asetune.cm.iq.CmIqConnection;
+import com.asetune.cm.iq.CmIqContext;
 import com.asetune.cm.iq.CmIqDbspace;
 import com.asetune.cm.iq.CmIqDiskActivity2;
 import com.asetune.cm.iq.CmIqFile;
+import com.asetune.cm.iq.CmIqLocks;
+import com.asetune.cm.iq.CmIqMpxIncStatistics;
+import com.asetune.cm.iq.CmIqMpxInfo;
+import com.asetune.cm.iq.CmIqStatistics;
+import com.asetune.cm.iq.CmIqStatus;
+import com.asetune.cm.iq.CmIqTransaction;
 import com.asetune.cm.iq.CmIqVersionUse;
 import com.asetune.cm.iq.CmSaConnActivity;
 import com.asetune.cm.iq.CmSaConnInfo;
 import com.asetune.cm.iq.CmSaConnProperties;
 import com.asetune.cm.iq.CmSaDbProperties;
 import com.asetune.cm.iq.CmSaEngProperties;
-import com.asetune.cm.iq.CmIqConnection;
-import com.asetune.cm.iq.CmIqContext;
-import com.asetune.cm.iq.CmIqLocks;
-import com.asetune.cm.iq.CmIqMpxIncStatistics;
-import com.asetune.cm.iq.CmIqMpxInfo;
-import com.asetune.cm.iq.CmIqStatistics;
-import com.asetune.cm.iq.CmIqStatus;
-import com.asetune.cm.iq.CmIqStatusParsed;
-import com.asetune.cm.iq.CmIqTransaction;
 import com.asetune.cm.iq.CmSummary;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
@@ -106,6 +105,8 @@ extends CounterControllerAbstract
 		CmIqCache2		.create(counterController, guiController);
 		// Objects/Statements tab
 		// CmIqDan             .create(counterController, guiController); // temporary removed by mdan  
+		
+//		CmIqMsgLogParser    .create(counterController, guiController);
 
 //		CmObjectActivity   .create(counterController, guiController);
 //		CmProcessActivity  .create(counterController, guiController);
@@ -309,5 +310,30 @@ extends CounterControllerAbstract
 	protected String getIsClosedSql()
 	{
 		return "select 'IqTune-check:isClosed(conn)'";
+	}
+	
+	@Override
+	public void setInRefresh(boolean enterRefreshMode)
+	{
+		try
+		{
+			DbxConnection dbxConn = getMonConnection();
+			
+			if (enterRefreshMode)
+			{
+				// IQ is better with Versioning if we have it as one big transaction... but lets close the transaction once in a while...
+				if (dbxConn.getAutoCommit() == true)
+					dbxConn.setAutoCommit(false);
+				
+				// So when entering a refresh: just finishing off the current transaction.
+				dbxConn.commit(); 
+			}
+		}
+		catch(SQLException e)
+		{
+			_logger.info("Problem when changing the IQ Connection autocommit mode.");
+		}
+
+		super.setInRefresh(enterRefreshMode);
 	}
 }
