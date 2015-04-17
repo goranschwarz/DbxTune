@@ -205,13 +205,13 @@ public class SqlParam
 		else if ("clob".equals(type)) 
 		{
 			p._sqlType = Types.CLOB; 
-			p._val = isNull ? null : readCLobValue(val); 
+			p._val = isNull ? null : readCLobValue(StringUtil.envVariableSubstitution(val)); 
 		}
 		// BLOB
 		else if ("blob".equals(type)) 
 		{
 			p._sqlType = Types.BLOB; 
-			p._val = isNull ? null : readBLobValue(val); 
+			p._val = isNull ? null : readBLobValue(StringUtil.envVariableSubstitution(val)); 
 		}
 		// UNKNOWN
 		else throw new RuntimeException("Unknown RPC Datatype '"+type+"'. known datatypes 'int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob|ora_rs'");
