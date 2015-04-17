@@ -40,6 +40,7 @@ import org.apache.log4j.Logger;
 import com.asetune.Version;
 import com.asetune.gui.AboutBox;
 import com.asetune.gui.MainFrame;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
@@ -508,8 +509,20 @@ public class CheckDialog
 //		else if (RsTune     .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/rstune_icon_32.png"));
 //		else if (HanaTune   .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/hanatune_icon_32.png"));
 //		else if (MsSqlTune  .APP_NAME.equals(appName)) icon = new JLabel(SwingUtils.readImageIcon(Version.class, "images/mssqltune_icon_32.png"));
+
+		// Get icon from the MainFrame
+		ImageIcon appIcon = null;
+		if (MainFrame.hasInstance())
+			appIcon = MainFrame.getInstance().getApplicationIcon32();
+
+		// But if we haven't got a MainFrame, check application name to decide icon
+		if (appIcon == null)
+		{
+			String appName = Version.getAppName();
+			if (QueryWindow.APP_NAME.equals(appName)) 
+				appIcon = SwingUtils.readImageIcon(Version.class, "images/sql_query_window_32.png");
+		}
 		
-		ImageIcon appIcon = MainFrame.getInstance().getApplicationIcon32();
 		if (appIcon != null)
 			icon = new JLabel(appIcon);
 
