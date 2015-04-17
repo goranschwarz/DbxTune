@@ -16,8 +16,6 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
-import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -104,9 +102,10 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_STAT_OPER = "IqStatisticsOperationsGraph"; 
-	public static final String GRAPH_NAME_STAT_DISK       = "IqStatisticsDiskGraph"; 
-	public static final String GRAPH_NAME_STAT_CPUS        = "IqStatisticsCPUGraph";
+	// NOTE: storage table name will be CmName_GraphName, so try to keep the name short
+	public static final String GRAPH_NAME_STAT_OPER = "OperationsGraph"; 
+	public static final String GRAPH_NAME_STAT_DISK = "DiskGraph"; 
+	public static final String GRAPH_NAME_STAT_CPUS = "CPUGraph";
 	
 	
 	private void addTrendGraphs()
@@ -166,10 +165,10 @@ extends CountersModel
 		{	
 			Double[] arr = new Double[4];
 
-			arr[0] = this.getAbsValue("ConnectionsActive" , "stat_value");
-			arr[1] = this.getAbsValue("OperationsWaiting", "stat_value");
-			arr[2] = this.getAbsValue("OperationsActive", "stat_value");
-			arr[3] = this.getAbsValue("OperationsActiveloadTableStatement", "stat_value");
+			arr[0] = this.getAbsValueAsDouble("ConnectionsActive" , "stat_value");
+			arr[1] = this.getAbsValueAsDouble("OperationsWaiting",  "stat_value");
+			arr[2] = this.getAbsValueAsDouble("OperationsActive",   "stat_value");
+			arr[3] = this.getAbsValueAsDouble("OperationsActiveloadTableStatement", "stat_value");
 
 			// Set the values
 			tgdp.setDate(this.getTimestamp());
@@ -181,12 +180,12 @@ extends CountersModel
 		{	
 			Double[] arr = new Double[5];
 
-			arr[0] = this.getRateValue("MainStoreDiskReads" , "stat_value");
-			arr[1] = this.getRateValue("MainStoreDiskWrites", "stat_value");
-			arr[2] = this.getRateValue("TempStoreDiskReads", "stat_value");
-			arr[3] = this.getRateValue("TempStoreDiskWrites", "stat_value");
-			arr[3] = this.getRateValue("CacheDbspaceDiskReads", "stat_value");
-			arr[3] = this.getRateValue("CacheDbspaceDiskWrites", "stat_value");
+			arr[0] = this.getRateValueAsDouble("MainStoreDiskReads" ,    "stat_value");
+			arr[1] = this.getRateValueAsDouble("MainStoreDiskWrites",    "stat_value");
+			arr[2] = this.getRateValueAsDouble("TempStoreDiskReads",     "stat_value");
+			arr[3] = this.getRateValueAsDouble("TempStoreDiskWrites",    "stat_value");
+			arr[3] = this.getRateValueAsDouble("CacheDbspaceDiskReads",  "stat_value");
+			arr[3] = this.getRateValueAsDouble("CacheDbspaceDiskWrites", "stat_value");
 
 			// Set the values
 			tgdp.setDate(this.getTimestamp());
@@ -197,9 +196,9 @@ extends CountersModel
 		{	
 			Double[] arr = new Double[3];
 			
-			Double CpuTotalTime   = getDiffValue("CpuTotalTime", "stat_value").doubleValue();
-			Double CpuSystemTime  = getDiffValue("CpuSystemTime", "stat_value").doubleValue();
-			Double CpuUserTime    = getDiffValue("CpuUserTime", "stat_value").doubleValue();
+			Double CpuTotalTime   = getDiffValueAsDouble("CpuTotalTime",  "stat_value");//.doubleValue();
+			Double CpuSystemTime  = getDiffValueAsDouble("CpuSystemTime", "stat_value");//.doubleValue();
+			Double CpuUserTime    = getDiffValueAsDouble("CpuUserTime",   "stat_value");//.doubleValue();
 			double interval  = getLastSampleInterval();
 	
 			if (CpuTotalTime != null && CpuSystemTime != null && CpuUserTime != null)

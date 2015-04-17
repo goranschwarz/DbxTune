@@ -1382,7 +1382,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		CountersModel cm = GetCounters.getInstance().getCmByName(CmSummary.CM_NAME);
 //		if (cm != null && cm.hasAbsData() )
 //			setSummaryData(cm);
-		setSummaryData(_cm);
+		setSummaryData(_cm, false);
 	}
 
 	private void refreshClusterInfo()
@@ -1495,7 +1495,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	}
 
 	@Override
-	public void setSummaryData(CountersModel cm)
+	public void setSummaryData(CountersModel cm, boolean postProcessing)
 	{
 		setWatermark();
 

@@ -12,7 +12,7 @@ import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.gui.MainFrame;
+import com.asetune.gui.MainFrameIq;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -42,7 +42,7 @@ extends CountersModel
 		+ "<br/>Values are returned for all database server properties and statistics related to database servers." +
 		"</html>";
 
-	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CATALOG;
+	public static final String   GROUP_NAME       = MainFrameIq.TCP_GROUP_CATALOG;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
 	public static final int      NEED_SRV_VERSION = 0;

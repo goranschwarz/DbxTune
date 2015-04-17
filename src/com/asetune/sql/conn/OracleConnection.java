@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.info.DbxConnectionStateInfo;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.ProcedureInfo;
 
 public class OracleConnection 
@@ -71,4 +73,36 @@ System.out.println("constructor::OracleConnection(conn): conn="+conn);
 		return procInfoList;
 	}
 
+	@Override
+	public boolean isInTransaction()
+	throws SQLException
+	{
+		String sql = 
+			  "select "
+			+ "CASE "
+			+ "  WHEN dbms_transaction.local_transaction_id IS NULL THEN 0 "
+			+ "  ELSE 1 "
+			+ "END FROM DUAL";
+
+		boolean retVal = false;
+		
+		Statement stmt = createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+		while (rs.next())
+		{
+			retVal = rs.getInt(1) == 1;
+		}
+		rs.close();
+		stmt.close();
+
+		return retVal;
+	}
+
+	@Override
+	public DbxConnectionStateInfo refreshConnectionStateInfo()
+	{
+		DbxConnectionStateInfo csi = new DbxConnectionStateInfoGenericJdbc(this);
+		setConnectionStateInfo(csi);
+		return csi;
+	}
 }

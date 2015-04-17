@@ -147,8 +147,6 @@ public abstract class MainFrame
 	// GROUPS for JTabbedPane
 	public static final String    TCP_GROUP_OBJECT_ACCESS  = "Object/Access";
 	public static final String    TCP_GROUP_SERVER         = "Server";
-	public static final String    TCP_GROUP_MULTIPLEX      = "Multiplex";
-	public static final String    TCP_GROUP_CATALOG        = "Catalog";	
 	public static final String    TCP_GROUP_CACHE          = "Cache";
 	public static final String    TCP_GROUP_DISK           = "Disk";
 	public static final String    TCP_GROUP_REP_AGENT      = "RepAgent";
@@ -162,8 +160,6 @@ public abstract class MainFrame
 	public static final ImageIcon TCP_GROUP_ICON_REP_AGENT     = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_repagent.png");
 	public static final ImageIcon TCP_GROUP_ICON_HOST_MONITOR  = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_host_monitor.png");
 	public static final ImageIcon TCP_GROUP_ICON_UDC           = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_udc.png");
-	public static final ImageIcon TCP_GROUP_ICON_MULTIPLEX     = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_multiplex.png");
-	public static final ImageIcon TCP_GROUP_ICON_CATALOG       = SwingUtils.readImageIcon(Version.class, "images/tcp_group_icon_catalog.png");
 
 	//-------------------------------------------------
 	// PROPERTIES KEYS
@@ -2172,9 +2168,13 @@ public abstract class MainFrame
 //			final String NL = System.getProperty("line.separator");
 			final String NL = "\n";
 
+			String appName = Version.getAppName();
+			if (StringUtil.isNullOrBlank(appName))
+				appName = "asetune";
+
 			String fileList = "";
 			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
-			String main = Screenshot.windowScreenshot(this, Version.APP_STORE_DIR, "asetune.main", true, extraInfo);
+			String main = Screenshot.windowScreenshot(this, Version.APP_STORE_DIR, appName+".main", true, extraInfo);
 			fileList += main + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
@@ -2189,7 +2189,7 @@ public abstract class MainFrame
 					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
 						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
-						String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, "asetune."+cm.getName(), true, extraInfo);
+						String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, appName+"."+cm.getName(), true, extraInfo);
 						fileList += fn + NL;
 					}
 				}
@@ -3703,14 +3703,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return TCP_GROUP_ICON_OBJECT_ACCESS;
 		if (TCP_GROUP_SERVER       .equals(groupName)) return TCP_GROUP_ICON_SERVER;
-		if (TCP_GROUP_MULTIPLEX    .equals(groupName)) return TCP_GROUP_ICON_MULTIPLEX;
-		if (TCP_GROUP_CATALOG      .equals(groupName)) return TCP_GROUP_ICON_CATALOG;
 		if (TCP_GROUP_CACHE        .equals(groupName)) return TCP_GROUP_ICON_CACHE;
 		if (TCP_GROUP_DISK         .equals(groupName)) return TCP_GROUP_ICON_DISK;
 		if (TCP_GROUP_REP_AGENT    .equals(groupName)) return TCP_GROUP_ICON_REP_AGENT;
 		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return TCP_GROUP_ICON_HOST_MONITOR;
 		if (TCP_GROUP_UDC          .equals(groupName)) return TCP_GROUP_ICON_UDC;
-		// multiplex
 		return null;
 	}
 
@@ -3723,14 +3720,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		if (TCP_GROUP_OBJECT_ACCESS.equals(groupName)) return "<html>Performace Counters on Object and various Statements that Accesses data</html>";
 		if (TCP_GROUP_SERVER       .equals(groupName)) return "<html>Performace Counters on a Server Level</html>";
-		if (TCP_GROUP_MULTIPLEX    .equals(groupName)) return "<html>Performace Counters that <b>you</b> have defined</html>";
-		if (TCP_GROUP_CATALOG      .equals(groupName)) return "<html>Performace Counters that <b>you</b> have defined</html>";
 		if (TCP_GROUP_CACHE        .equals(groupName)) return "<html>Performace Counters for various Caches</html>";
 		if (TCP_GROUP_DISK         .equals(groupName)) return "<html>Performace Counters for Devices / Disk acesses</html>";
 		if (TCP_GROUP_REP_AGENT    .equals(groupName)) return "<html>Performace Counters for ASE Replication Agents</html>";
 		if (TCP_GROUP_HOST_MONITOR .equals(groupName)) return "<html>Performace Counters on a Operating System Level</html>";
 		if (TCP_GROUP_UDC          .equals(groupName)) return "<html>Performace Counters that <b>you</b> have defined</html>";
-		// multiplex
 		return null;
 	}
 	
@@ -3752,8 +3746,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public GTabbedPane createGroupTabbedPane(GTabbedPane mainTabbedPane)
 	{
 		GTabbedPane tabGroupServer       = new GTabbedPane("MainFrame_TabbedPane_Server");
-		GTabbedPane tabGroupCatalog      = new GTabbedPane("MainFrame_TabbedPane_Server");		
-		GTabbedPane tabGroupMultiplex    = new GTabbedPane("MainFrame_TabbedPane_Server");
 		GTabbedPane tabGroupObjectAccess = new GTabbedPane("MainFrame_TabbedPane_ObjectAccess");
 		GTabbedPane tabGroupCache        = new GTabbedPane("MainFrame_TabbedPane_Cache");
 		GTabbedPane tabGroupDisk         = new GTabbedPane("MainFrame_TabbedPane_Disk");
@@ -3763,8 +3755,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		// Lets do setTabLayoutPolicy for all sub tabs...
 		tabGroupServer      .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupCatalog     .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
-		tabGroupMultiplex   .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
 		tabGroupObjectAccess.setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
 		tabGroupCache       .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
 		tabGroupDisk        .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
@@ -3773,14 +3763,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		tabGroupUdc         .setTabLayoutPolicy(_mainTabbedPane.getTabLayoutPolicy());
 
 		if (addTabGroup(TCP_GROUP_SERVER))        _mainTabbedPane.addTab(TCP_GROUP_SERVER,        getGroupIcon(TCP_GROUP_SERVER),        tabGroupServer,       getGroupToolTipText(TCP_GROUP_SERVER));
-		if (addTabGroup(TCP_GROUP_CATALOG))       _mainTabbedPane.addTab(TCP_GROUP_CATALOG,       getGroupIcon(TCP_GROUP_CATALOG),       tabGroupCatalog,      getGroupToolTipText(TCP_GROUP_CATALOG));
-		if (addTabGroup(TCP_GROUP_MULTIPLEX))     _mainTabbedPane.addTab(TCP_GROUP_MULTIPLEX,     getGroupIcon(TCP_GROUP_MULTIPLEX),     tabGroupMultiplex,    getGroupToolTipText(TCP_GROUP_MULTIPLEX));
-//		if (addTabGroup(TCP_GROUP_OBJECT_ACCESS)) _mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
+		if (addTabGroup(TCP_GROUP_OBJECT_ACCESS)) _mainTabbedPane.addTab(TCP_GROUP_OBJECT_ACCESS, getGroupIcon(TCP_GROUP_OBJECT_ACCESS), tabGroupObjectAccess, getGroupToolTipText(TCP_GROUP_OBJECT_ACCESS));
 		if (addTabGroup(TCP_GROUP_CACHE))         _mainTabbedPane.addTab(TCP_GROUP_CACHE,         getGroupIcon(TCP_GROUP_CACHE),         tabGroupCache,        getGroupToolTipText(TCP_GROUP_CACHE));
 		if (addTabGroup(TCP_GROUP_DISK))          _mainTabbedPane.addTab(TCP_GROUP_DISK,          getGroupIcon(TCP_GROUP_DISK),          tabGroupDisk,         getGroupToolTipText(TCP_GROUP_DISK));
 		if (addTabGroup(TCP_GROUP_REP_AGENT))     _mainTabbedPane.addTab(TCP_GROUP_REP_AGENT,     getGroupIcon(TCP_GROUP_REP_AGENT),     tabGroupRepAgent,     getGroupToolTipText(TCP_GROUP_REP_AGENT));
 		if (addTabGroup(TCP_GROUP_HOST_MONITOR))  _mainTabbedPane.addTab(TCP_GROUP_HOST_MONITOR,  getGroupIcon(TCP_GROUP_HOST_MONITOR),  tabGroupHostMonitor,  getGroupToolTipText(TCP_GROUP_HOST_MONITOR));
-//		if (addTabGroup(TCP_GROUP_UDC))           _mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
+		if (addTabGroup(TCP_GROUP_UDC))           _mainTabbedPane.addTab(TCP_GROUP_UDC,           getGroupIcon(TCP_GROUP_UDC),           tabGroupUdc,          getGroupToolTipText(TCP_GROUP_UDC));
 		
 		tabGroupUdc.setEmptyTabMessage(
 			"No User Defined Performance Counters has been added.\n" +
@@ -4288,7 +4276,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public static void setSummaryData(CountersModel cm)
 	{
 //		_summaryPanel.setSummaryData(cm);
-		CounterController.getSummaryPanel().setSummaryData(cm);
+		CounterController.getSummaryPanel().setSummaryData(cm, false);
 	}
 
 //	/**

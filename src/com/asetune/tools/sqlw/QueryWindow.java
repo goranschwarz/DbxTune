@@ -191,6 +191,7 @@ import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.ui.autocomplete.CompletionProviderAse;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
+import com.asetune.ui.autocomplete.CompletionProviderRax;
 import com.asetune.ui.autocomplete.CompletionProviderRepServer;
 import com.asetune.ui.autocomplete.SqlObjectName;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
@@ -206,6 +207,7 @@ import com.asetune.ui.tooltip.suppliers.ToolTipSupplierIq;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierJdbc;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierMsSql;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierOracle;
+import com.asetune.ui.tooltip.suppliers.ToolTipSupplierRax;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierRepServer;
 import com.asetune.ui.tooltip.suppliers.ToolTipSupplierTester;
 import com.asetune.ui.tooltip.suppliers.TtpEntryCompletionProvider;
@@ -408,8 +410,8 @@ public class QueryWindow
 //	private Connection    _conn            = null;
 	private DbxConnection _conn            = null;
 	private int           _connType        = -1;
-	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo  = null;
-	private DbUtils.JdbcConnectionStateInfo        _jdbcConnectionStateInfo = null;
+//	private AseConnectionUtils.ConnectionStateInfo _aseConnectionStateInfo  = null;
+//	private DbUtils.JdbcConnectionStateInfo        _jdbcConnectionStateInfo = null;
 	
 
 //	private JTextArea	      _query_txt                  = new JTextArea();           // A field to enter a query in
@@ -1852,13 +1854,17 @@ public class QueryWindow
 		// Set how many items the DBList can have before a JScrollBar is visible
 		_dbnames_cbx.setMaximumRowCount(50);
 
-		// Refresh the database list (if ASE)
-		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
+		// Refresh the database list
+		if (_conn != null && _conn.isDatabaseAware())
 			setDbNames();
 
-		// Refresh the database list (if MSSQL)
-		if (_conn != null && DbUtils.isProductName(DbUtils.DB_PROD_NAME_MSSQL, _connectedToProductName))
-			setDbNames();
+//		// Refresh the database list (if ASE)
+//		if (_conn != null && _connType == ConnectionDialog.TDS_CONN)
+//			setDbNames();
+//
+//		// Refresh the database list (if MSSQL)
+//		if (_conn != null && DbUtils.isProductName(DbUtils.DB_PROD_NAME_MSSQL, _connectedToProductName))
+//			setDbNames();
 
 		// Write some initial text, and mark it
 		// or Kick of a initial SQL query, if one is specified.
@@ -2633,7 +2639,7 @@ public class QueryWindow
 					if (aseDbname != null)
 						AseConnectionUtils.useDbname(_conn, aseDbname);
 
-					setDbNames();
+//					setDbNames();
 
 					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
 					_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, this);
@@ -2654,8 +2660,8 @@ public class QueryWindow
 					_connectedClientCharsetDesc = AseConnectionUtils.getClientCharsetDesc(_conn);
 
 					// Also get "various statuses" like if we are in a transaction or not
-					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
-					_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+//					_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, true);
+//					_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 					setWatermark();
 				}
 				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RS))
@@ -2704,6 +2710,45 @@ public class QueryWindow
 
 					_logger.info("Connected to Replication Server version '"+_srvVersion+"'.");
 				}
+				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_RAX))
+				{
+					_compleationProviderAbstract = CompletionProviderRax.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_tooltipProviderAbstract     = new ToolTipSupplierRax(_window, _compleationProviderAbstract, this);
+					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+					_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
+
+					// Sortorder & charset
+//					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
+//					_connectedSrvSortorder = RepServerUtils.getRsSortorder(_conn);
+
+					// Read / clear warnings, we received after a connect
+//					try { _conn.clearWarnings(); }
+//					catch (SQLException ignore) {} 
+
+					// Filter out 010MX: jConnect MetatData procedures are not installed
+					ArrayList<JComponent> resultCompList1 = new ArrayList<JComponent>();
+					ArrayList<JComponent> resultCompList2 = new ArrayList<JComponent>();
+					putSqlWarningMsgs(_conn, resultCompList1, null, null, 0, 0, "connect");
+
+					for (JComponent jc : resultCompList1)
+					{
+						if (jc instanceof JTextArea)
+						{
+							String msg = ((JTextArea)jc).getText();
+							if ( msg.startsWith("010MX") )
+								continue;
+							if ( msg.startsWith("010TQ") )
+								resultCompList2.add(0, new JAseMessage("NOTE: to get rid of the below message '010TQ', please set the 'Client Charset' field in the connection dialog.", "connect"));
+						}
+						resultCompList2.add(jc);
+					}
+					if ( ! resultCompList2.isEmpty() )
+						resultCompList2.add(0, new JAseMessage("Messages below was received when connecting to Replication Agent\n----------------------------------------------------------------------------------------------", "connect"));
+					addToResultsetPanel(resultCompList2, false, false);
+
+					_logger.info("Connected to Replication Agent X version '"+_srvVersion+"'.");
+				}
 				else if (connDialog.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASA))
 				{
 					// Set AutoCommit to the proper value
@@ -2720,8 +2765,8 @@ public class QueryWindow
 					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
 
 					// JDBC Specific statuses
-					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+//					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 					
 					_logger.info("Connected to SQL Anywhere version '"+_srvVersion+"'.");
 				}
@@ -2741,8 +2786,8 @@ public class QueryWindow
 					_connectedSrvSortorder = AseConnectionUtils.getAsaSortorder(_conn);
 
 					// JDBC Specific statuses
-					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+//					_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//					_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 					
 					_logger.info("Connected to Sybase IQ version '"+_srvVersion+"'.");
 				}
@@ -2830,8 +2875,8 @@ public class QueryWindow
 			_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 			// JDBC Specific statuses
-			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+//			_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//			_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 
 			// Load Windown Props for this server
 			loadWinPropsForSrv(_conn.toString());
@@ -2984,19 +3029,19 @@ public class QueryWindow
 			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 			{
 				// Connection info status: USE ASE stuff...
-				setDbNames();
+//				setDbNames();
 
 				// Also get "various statuses" like if we are in a transaction or not
-				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, false);
-				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+//				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, false);
+//				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
 
 			}
 			else
 			{
 				//---------------------------------------------------
 				// JDBC Specific status - refreshed after each execution
-				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+//				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
 			}
 
 			
@@ -3041,6 +3086,13 @@ public class QueryWindow
 			checkForUpdatesThread.start();
 		}
 		
+		// Refresh the database list
+		if (_conn.isDatabaseAware())
+			setDbNames();
+
+		// Refresh the status bar with Connection Status Information
+		_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+
 		// What Components should be enabled/visible
 		setComponentVisibility();
 
@@ -3319,8 +3371,13 @@ public class QueryWindow
 		// MS SQL
 		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
 		{
-			_dbnames_cbx               .setEnabled(true);
+			_dbnames_cbx.setEnabled(true);
 		}
+		
+		// Should the DB-LIST be visible
+		boolean isDatabaseAware = _conn != null && _conn.isDatabaseAware(); 
+		_dbnames_cbx.setEnabled(isDatabaseAware);
+		_dbnames_cbx.setVisible(isDatabaseAware);
 
 		// Get auto commit, and decide if commit/rollback buttons should be visible or not
 		boolean autoCommit = DbUtils.getAutoCommitNoThrow(getConnection(), _connectedToProductName);
@@ -5312,31 +5369,38 @@ public class QueryWindow
 			// are we still connected?
 			_conn.isClosed(); 
 
-			// if ASE, refresh the database list and currect working database
-//			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
-			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MSSQL))
-			{
-				// issue 'select 1' to check if the connection is valid
-				doDummySelect();
-
-				// getCurrentDb() is also done in setDbNames()
-				// it only refreshes the DB Combobox if number of databases has changed.
+			// Refresh the database list
+			if (_conn.isDatabaseAware())
 				setDbNames();
 
-				// Also get "various statuses" like if we are in a transaction or not
-				boolean getTranState = DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE);
-				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, getTranState);
-				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
-			}
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
-			{
-				// Do nothing
-			}
-			else
-			{
-				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
-				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
-			}
+			// Refresh Connection state information
+			_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+			
+//			// if ASE, refresh the database list and currect working database
+////			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+//			if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MSSQL))
+//			{
+//				// issue 'select 1' to check if the connection is valid
+//				doDummySelect();
+//
+//				// getCurrentDb() is also done in setDbNames()
+//				// it only refreshes the DB Combobox if number of databases has changed.
+//				setDbNames();
+//
+//				// Also get "various statuses" like if we are in a transaction or not
+//				boolean getTranState = DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE);
+//				_aseConnectionStateInfo = AseConnectionUtils.getAseConnectionStateInfo(_conn, getTranState);
+//				_statusBar.setAseConnectionStateInfo(_aseConnectionStateInfo);
+//			}
+//			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
+//			{
+//				// Do nothing
+//			}
+//			else
+//			{
+//				_jdbcConnectionStateInfo = DbUtils.getJdbcConnectionStateInfo(_conn, _connectedToProductName);
+//				_statusBar.setJdbcConnectionStateInfo(_jdbcConnectionStateInfo);
+//			}
 		}
 		catch (SQLException e) 
 		{
@@ -9543,33 +9607,37 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		{
 			setWatermarkText("Not Connected...");
 		}
-		else if ( _aseConnectionStateInfo != null && ( _aseConnectionStateInfo._tranCount > 0 || _aseConnectionStateInfo.isNonNormalTranState()) )
+		else if ( _conn.getConnectionStateInfo() != null && !_conn.getConnectionStateInfo().isNormalState() )
 		{
-			String str = null;
-			if (_aseConnectionStateInfo._tranChained == 1)
-			{
-				if (_aseConnectionStateInfo._lockCount > 0)
-					str = "You are in CHAINED MODE (AutoCommit=false)\n"
-						+ "And you are holding "+_aseConnectionStateInfo._lockCount+" locks in the server\n"
-						+ "Don't forget to commit or rollback!";
-			}
-			else
-			{
-    			if (_aseConnectionStateInfo.isTranStateUsed())
-    				str = _aseConnectionStateInfo.getTranStateDescription() + "\n@@trancount = " + _aseConnectionStateInfo._tranCount + ", @@tranchained = " + _aseConnectionStateInfo._tranChained;
-    			else
-    				str = "@@trancount = " + _aseConnectionStateInfo._tranCount + ", @@tranchained = " + _aseConnectionStateInfo._tranChained;
-			}
-				
-			setWatermarkText(str);
+			setWatermarkText( _conn.getConnectionStateInfo().getWaterMarkText() );
 		}
-		else if ( _jdbcConnectionStateInfo != null && _jdbcConnectionStateInfo._inTransaction )
-		{
-			String str = "NOTE: You are currently in a TRANSACTION!\n"
-			           + "Don't forget to commit or rollback!";
-				
-			setWatermarkText(str);
-		}
+//		else if ( _aseConnectionStateInfo != null && ( _aseConnectionStateInfo._tranCount > 0 || _aseConnectionStateInfo.isNonNormalTranState()) )
+//		{
+//			String str = null;
+//			if (_aseConnectionStateInfo._tranChained == 1)
+//			{
+//				if (_aseConnectionStateInfo._lockCount > 0)
+//					str = "You are in CHAINED MODE (AutoCommit=false)\n"
+//						+ "And you are holding "+_aseConnectionStateInfo._lockCount+" locks in the server\n"
+//						+ "Don't forget to commit or rollback!";
+//			}
+//			else
+//			{
+//    			if (_aseConnectionStateInfo.isTranStateUsed())
+//    				str = _aseConnectionStateInfo.getTranStateDescription() + "\n@@trancount = " + _aseConnectionStateInfo._tranCount + ", @@tranchained = " + _aseConnectionStateInfo._tranChained;
+//    			else
+//    				str = "@@trancount = " + _aseConnectionStateInfo._tranCount + ", @@tranchained = " + _aseConnectionStateInfo._tranChained;
+//			}
+//				
+//			setWatermarkText(str);
+//		}
+//		else if ( _jdbcConnectionStateInfo != null && _jdbcConnectionStateInfo._inTransaction )
+//		{
+//			String str = "NOTE: You are currently in a TRANSACTION!\n"
+//			           + "Don't forget to commit or rollback!";
+//				
+//			setWatermarkText(str);
+//		}
 		// NO Query text... 
 		else if ( _query_txt.getLineCount() < 10 && StringUtil.isNullOrBlank(_query_txt.getText()))
 		{

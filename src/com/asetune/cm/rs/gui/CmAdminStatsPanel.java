@@ -42,44 +42,6 @@ extends TabularCntrPanel
 	{
 	}
 
-//	private boolean _initialized = false;
-//	private final static NoDataRenderer NODATA_RENDERER = new NoDataRenderer();
-//	@Override
-//	public void reset()
-//	{
-//		super.reset();
-//		_initialized = false;
-//	}
-//	@Override
-//	protected void updateExtendedInfoPanel()
-//	{
-//		GTable table = getDataTable();
-//
-////		if (table.getColumnCount() > 1 && !_initialized)
-//		if (table.getColumnCount() > 1)
-//		{
-//System.out.println("###### CmAdminStatsPanel: SETTING: setCellRenderer()");
-//    		table.getColumn(7  -1).setCellRenderer(NODATA_RENDERER);
-//    		table.getColumn(8  -1).setCellRenderer(NODATA_RENDERER);
-//    		table.getColumn(9  -1).setCellRenderer(NODATA_RENDERER);
-//    		table.getColumn(10 -1).setCellRenderer(NODATA_RENDERER);
-//    		table.getColumn(11 -1).setCellRenderer(NODATA_RENDERER);
-//    		_initialized = true;
-//		}
-//
-////		_xrstm.addStrColumn ("Instance",       1,  false, 255, "FIXME: description");
-////		_xrstm.addIntColumn ("InstanceId",     2,  false,      "FIXME: description");
-////		_xrstm.addIntColumn ("ModTypeInstVal", 3,  false,      "FIXME: description");
-////		_xrstm.addStrColumn ("Type",           4,  false,  10, "FIXME: description");
-////		_xrstm.addStrColumn ("Name",           5,  false,  31, "FIXME: description");
-////		_xrstm.addLongColumn("Obs",            6,  false,      "FIXME: description");
-////		_xrstm.addLongColumn("Total",          7,  false,      "FIXME: description");
-////		_xrstm.addLongColumn("Last",           8,  false,      "FIXME: description");
-////		_xrstm.addLongColumn("Max",            9,  false,      "FIXME: description");
-////		_xrstm.addLongColumn("AvgTtlObs",      10, false,      "FIXME: description");
-////		_xrstm.addLongColumn("RateXsec",       11, false,      "FIXME: description");
-//	}
-
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
@@ -111,43 +73,4 @@ extends TabularCntrPanel
 		
 		return panel;
 	}
-
-//	private static class NoDataRenderer 
-//	implements TableCellRenderer
-//	{
-//
-//		private TableCellRenderer _goodValue;
-//		private TableCellRenderer _nullValue;
-//		private StringValue       _nullStr = new StringValue()
-//		{
-//			private static final long serialVersionUID = 1L;
-//
-//			@Override
-//			public String getString(Object value)
-//			{
-//				return "(NULL)";
-//			}
-//		};
-//
-//		public NoDataRenderer()
-//		{
-////			_goodValue = new DefaultTableRenderer(new NumCheckBoxProvider(StringValues.EMPTY, SwingConstants.LEFT));
-//			_goodValue = new DefaultTableRenderer();
-//			_nullValue = new DefaultTableRenderer(new LabelProvider(_nullStr));
-//		}
-//
-//		@Override
-//		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
-//		{
-////			if (value instanceof Number)
-////			{
-////				if ( ((Number)value).intValue() == -999 )
-////					return _nullValue.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-////			}
-//			if ( value == null )
-//				return _nullValue.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-//
-//			return _goodValue.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-//		}
-//	}
 }

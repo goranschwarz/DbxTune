@@ -13,11 +13,8 @@ import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.sql.VersionInfo;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
-import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -90,6 +87,7 @@ extends CountersModel
 
 		setIconFile(GUI_ICON_FILE);
 		
+		setShowClearTime(false);
 		setBackgroundDataPollingEnabled(false, false);
 		
 		setCounterController(counterController);
@@ -104,7 +102,8 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_CACHE2 = "IqStatisticsMemoryGraph"; 
+	// NOTE: storage table name will be CmName_GraphName, so try to keep the name short
+	public static final String GRAPH_NAME_CACHE2 = "MemoryGraph";  
 
 	private void addTrendGraphs()
 	{
@@ -137,13 +136,13 @@ extends CountersModel
 		if (GRAPH_NAME_CACHE2.equals(tgdp.getName()))
 		{	
 			Double[] arr = new Double[7];
-			arr[0] = this.getAbsValue("MemoryAllocated" , "PropValue");
-			arr[1] = this.getAbsValue("MemoryMaxAllocated", "PropValue");
-			arr[2] = this.getAbsValue("MainCacheCurrentSize", "PropValue");
-			arr[3] = this.getAbsValue("TempCacheCurrentSize", "PropValue");
-			arr[4] = this.getAbsValue("CurrentCacheSize", "PropValue");
-			arr[5] = this.getAbsValue("MaxCacheSize", "PropValue");
-			arr[6] = this.getAbsValue("MinCacheSize", "PropValue");
+			arr[0] = this.getAbsValueAsDouble("MemoryAllocated" ,     "PropValue");
+			arr[1] = this.getAbsValueAsDouble("MemoryMaxAllocated",   "PropValue");
+			arr[2] = this.getAbsValueAsDouble("MainCacheCurrentSize", "PropValue");
+			arr[3] = this.getAbsValueAsDouble("TempCacheCurrentSize", "PropValue");
+			arr[4] = this.getAbsValueAsDouble("CurrentCacheSize",     "PropValue");
+			arr[5] = this.getAbsValueAsDouble("MaxCacheSize",         "PropValue");
+			arr[6] = this.getAbsValueAsDouble("MinCacheSize",         "PropValue");
 			
 			// Set the values
 			tgdp.setDate(this.getTimestamp());
@@ -166,18 +165,12 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 			mtd.addTable("iq_cache_custom",  "Various caches information.");
 
-			mtd.addColumn("iq_cache_custom", "CacheType",  
-					"<html>Catalog or IQ</html>");
-			mtd.addColumn("iq_cache_custom", "PropNum",  
-					"<html>Number (PropNum in sa_eng_properties and stat_num in sp_iqstatistics)</html>");
-			mtd.addColumn("iq_cache_custom", "PropName",  
-					"<html>Name</html>");
-			mtd.addColumn("iq_cache_custom", "PropDescription",  
-					"<html>Description</html>");
-			mtd.addColumn("iq_cache_custom", "PropValue",  
-					"<html>Value</html>");
-			mtd.addColumn("iq_cache_custom", "PropUnit",  
-					"<html>Unit of measure</html>");
+			mtd.addColumn("iq_cache_custom", "CacheType",       "<html>Catalog or IQ</html>");
+			mtd.addColumn("iq_cache_custom", "PropNum",         "<html>Number (PropNum in sa_eng_properties and stat_num in sp_iqstatistics)</html>");
+			mtd.addColumn("iq_cache_custom", "PropName",        "<html>Name</html>");
+			mtd.addColumn("iq_cache_custom", "PropDescription", "<html>Description</html>");
+			mtd.addColumn("iq_cache_custom", "PropValue",       "<html>Value</html>");
+			mtd.addColumn("iq_cache_custom", "PropUnit",        "<html>Unit of measure</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -195,12 +188,29 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select 'Catalog' CacheType, PropNum, PropName, replace(PropDescription, 'kilobytes', 'megabytes') PropDescription, case PropName when 'CachePanics' then Value else cast(Value/1024 as decimal(10,2)) end PropValue, case PropName when 'CachePanics' then '' else 'kb' end as PropUnit from sa_eng_properties() where PropName in ('CurrentCacheSize', 'MaxCacheSize', 'MinCacheSize', 'PageSize', 'CachePanics')"
-					+ "union all "
-					+ "select 'IQ' CacheType, stat_num PropNum, stat_name PropName, stat_desc PropDescription, stat_value PropValue, stat_unit PropUnit "
-					+ "from sp_iqstatistics() where stat_name in ( "
-					+ "'MainCacheCurrentSize', 'MainCacheFinds', 'MainCacheHits', 'MainCachePagesPinned', 'MainCachePagesPinnedPercentage', 'MainCachePagesDirtyPercentage', 'MainCachePagesInUsePercentage', 'TempCacheCurrentSize', 'TempCacheFinds', 'TempCacheHits', 'TempCachePagesPinned', 'TempCachePagesPinnedPercentage', 'TempCachePagesDirtyPercentage', 'TempCachePagesInUsePercentage', 'MemoryAllocated', 'MemoryMaxAllocated' "
-					+ ")";
+		String sql = 
+			"select  \n" +
+			"    'Catalog' as CacheType,  \n" +
+			"    PropNum,  \n" +
+			"    PropName,  \n" +
+			"    cast(replace(PropDescription, 'kilobytes', 'megabytes') as varchar(255)) as PropDescription,  \n" +
+			"    CASE PropName WHEN 'CachePanics' THEN cast(Value as decimal(20,2)) ELSE cast(Value/1024 as decimal(10,2)) END as PropValue,  \n" +
+			"    CASE PropName WHEN 'CachePanics' THEN ''                           ELSE 'kb'                              END as PropUnit  \n" +
+			"from sa_eng_properties()  \n" +
+			"where PropName in ('CurrentCacheSize', 'MaxCacheSize', 'MinCacheSize', 'PageSize', 'CachePanics') \n" +
+			"union all  \n" +
+			"select  \n" +
+			"    'IQ'       as CacheType,  \n" +
+			"    stat_num   as PropNum,  \n" +
+			"    stat_name  as PropName,  \n" +
+			"    cast(stat_desc as varchar(255))   as PropDescription,  \n" +
+			"    cast(stat_value as decimal(20,2)) as PropValue,  \n" +
+			"    stat_unit  as PropUnit  \n" +
+			"from sp_iqstatistics()  \n" +
+			"where stat_name in (  \n" +
+			"    'MainCacheCurrentSize', 'MainCacheFinds', 'MainCacheHits', 'MainCachePagesPinned', 'MainCachePagesPinnedPercentage', 'MainCachePagesDirtyPercentage', 'MainCachePagesInUsePercentage',  \n" +
+			"    'TempCacheCurrentSize', 'TempCacheFinds', 'TempCacheHits', 'TempCachePagesPinned', 'TempCachePagesPinnedPercentage', 'TempCachePagesDirtyPercentage', 'TempCachePagesInUsePercentage',  \n" +
+			"    'MemoryAllocated', 'MemoryMaxAllocated' ) \n";
 
 		return sql;
 	}

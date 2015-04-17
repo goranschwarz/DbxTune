@@ -618,6 +618,7 @@ PropertyConfigurator.configure(log4jProps);
 		panel.add(_tailNewRecordsTop_chk,"span, wrap");
 
 		_serverName_cbx.setEditable(true);
+		_serverName_cbx.setMaximumRowCount(50);
 		
 		// Add action listener
 		_serverNameRemove_but .addActionListener(this);

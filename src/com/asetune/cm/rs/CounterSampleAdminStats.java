@@ -143,7 +143,7 @@ extends CounterSample
 			if (_logger.isDebugEnabled())
 				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+_name+"'.");
 
-			_rows   = new ArrayList<List<Object>>();
+			_rows   = new ArrayList<List<Object>>(getColumnCount());
 
 			// Allow 'go' in the string, then we should send multiple batches
 			// this will take care about dropping tempdb tables prior to executing a batch that depends on it.

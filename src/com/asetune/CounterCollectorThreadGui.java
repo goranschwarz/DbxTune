@@ -3,6 +3,7 @@ package com.asetune;
 import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -481,107 +482,6 @@ extends CounterCollectorThreadAbstract
 				// Get the CounterStorage if we have any
 				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
 
-//				// Get session/head info
-//				String    aseServerName    = null;
-//				String    aseHostname      = null;
-//				Timestamp mainSampleTime   = null;
-//				Timestamp counterClearTime = null;
-//
-//				String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-//				if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.MON_ROLE))
-//				{
-//					sql = "select getdate(), @@servername, @@servername, CountersCleared from master..monState";
-//					// If version is above 15.0.2 and you have 'sa_role' 
-//					// then: use ASE function asehostname() to get on which OSHOST the ASE is running
-////					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
-////					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
-//					if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= Ver.ver(15,0,2))
-//					{
-//						if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
-//							sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
-//					}
-//				}
-//
-//				try
-//				{
-//					if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
-//						continue; // goto: while (_running)
-//						
-//					Statement stmt = getMonConnection().createStatement();
-//					ResultSet rs = stmt.executeQuery(sql);
-//					while (rs.next())
-//					{
-//						mainSampleTime   = rs.getTimestamp(1);
-//						aseServerName    = rs.getString(2);
-//						aseHostname      = rs.getString(3);
-//						counterClearTime = rs.getTimestamp(4);
-//					}
-//					rs.close();
-//				//	stmt.close();
-//					
-//					// CHECK IF ASE is in SHUTDOWN mode...
-//					boolean aseInShutdown = false;
-//					SQLWarning w = stmt.getWarnings();
-//					while(w != null)
-//					{
-//						// Msg=6002: A SHUTDOWN command is already in progress. Please log off.
-//						if (w.getErrorCode() == 6002)
-//						{
-//							aseInShutdown = true;
-//							break;
-//						}
-//						
-//						w = w.getNextWarning();
-//					}
-//					if (aseInShutdown)
-//					{
-//						String msgShort = "ASE in SHUTDOWN mode...";
-//						String msgLong  = "The ASE Server is waiting for a SHUTDOWN, data collection is put on hold...";
-//
-//						_logger.info(msgLong);
-//						MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, msgLong);
-////						SummaryPanel.getInstance().setWatermarkText(msgShort);
-//						CounterController.getSummaryPanel().setWatermarkText(msgShort);
-//
-//						for (CountersModel cm : _CMList)
-//						{
-//							if (cm == null)
-//								continue;
-//
-//							cm.setState(CountersModel.State.SRV_IN_SHUTDOWN);
-//						}
-//
-//						continue; // goto: while (_running)
-//					}
-//					stmt.close();
-//				}
-//				catch (SQLException sqlex)
-//				{
-//					// Connection is already closed.
-//					if ( "JZ0C0".equals(sqlex.getSQLState()) )
-//					{
-//						boolean forceConnectionCheck = true;
-//						boolean closeConnOnFailure   = true;
-//						if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-//						{
-//							_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-//							continue; // goto: while (_running)
-//						}
-//					}
-//					
-//					_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
-//					mainSampleTime   = new Timestamp(System.currentTimeMillis());
-//					aseServerName    = "unknown";
-//					aseHostname      = "unknown";
-//					counterClearTime = new Timestamp(0);
-//				}
-//				
-//				//----------------------
-//				// In some versions we need to check if the transaction log is full to some reasons
-//				// If it is full it will be truncated.
-//				//----------------------
-//				checkForFullTransLogInMaster(getMonConnection());
-				
 				// Do various other checks in the system, for instance in ASE do: checkForFullTransLogInMaster()
 				getCounterController().checkServerSpecifics();
 
@@ -607,6 +507,10 @@ extends CounterCollectorThreadAbstract
 				//-----------------
 				// Update data in tabs
 				//-----------------
+
+				// Keep a list of all the CM's that are refreshed during this loop
+				// This one will be passed to doPostRefresh()
+				LinkedHashMap<String, CountersModel> refreshedCms = new LinkedHashMap<String, CountersModel>();
 
 				// LOOP all CounterModels, and get new data,
 				//   if it should be done
@@ -643,6 +547,9 @@ extends CounterCollectorThreadAbstract
 							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing... "+cm.getDisplayName());
 							cm.setSampleException(null);
 							cm.refresh();
+							
+							// Add it to the list of refreshed cm's
+							refreshedCms.put(cm.getName(), cm);
 
 							// move this into cm.refresh()
 							//cm.setValidSampleData( (cm.getRowCount() > 0) ); 
@@ -674,6 +581,23 @@ extends CounterCollectorThreadAbstract
 					cm.endOfRefresh();
 
 				} // END: LOOP all CounterModels, and get new data
+
+
+				//---------------------------------------------------
+				// POSTPROCESSING -  Refresh handling
+				//---------------------------------------------------
+				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Post Refreshing...");
+
+				_logger.debug("---- Do POST Refreshing...");
+				for (CountersModel cm : getCounterController().getCmList())
+				{
+					if ( cm == null )
+						continue;
+
+					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Post Refreshing... "+cm.getDisplayName());
+
+					cm.doPostRefresh(refreshedCms);
+				}
 
 				
 				// POST the container to the Persistent Counter Handler
@@ -762,7 +686,7 @@ extends CounterCollectorThreadAbstract
 							// but right now, I'm doing 'select 1' in my own isClosed(conn) check...
 							if ( ! getCounterController().isRefreshing() )
 							{
-								getCounterController().isMonConnected(true, true);
+								getCounterController().isMonConnected(true, true); // forceConnectionCheck, closeConnOnFailure
 //								_isMonConnectedWatchDogLastCheck = System.currentTimeMillis();
 							}
 

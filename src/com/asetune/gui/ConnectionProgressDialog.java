@@ -1003,7 +1003,7 @@ implements ActionListener, ConnectionProgressCallback
 			return false;
 
 		// If productName is not set, then there is nothing to check, then simply return TRUE
-		if (getDesiredProductName() == null)
+		if ( StringUtil.isNullOrBlank(getDesiredProductName()) )
 			return true;
 
 		// Get Product NAME and check if it's the Desired Product name

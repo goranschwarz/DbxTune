@@ -98,6 +98,7 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	// NOTE: storage table name will be CmName_GraphName, so try to keep the name short
 	public static final String GRAPH_NAME_VERSION             = "VersionGraph";
 	public static final String GRAPH_NAME_COMPRESSION         = "CompressionGraph";
 	public static final String GRAPH_NAME_CACHE_READS         = "CacheReadsGraph";
@@ -250,7 +251,6 @@ extends CountersModel
 
 	@Override
 	public void localCalculation(CounterSample newSample)
-//	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int  Name_pos        = -1;
 		int  StrValue_pos    = -1;
@@ -562,11 +562,11 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		{	
 			Double[] arr = new Double[5];
 
-			arr[0] = this.getAbsValue("Active Txn Versions - Count:",   "IntValue");
-			arr[1] = this.getAbsValue("Active Txn Versions - Created:", "IntValue");
-			arr[2] = this.getAbsValue("Active Txn Versions - Deleted:", "IntValue");
-			arr[3] = this.getAbsValue("Other Versions - Count:",        "IntValue");
-			arr[4] = this.getAbsValue("Other Versions - Size:",         "IntValue");
+			arr[0] = this.getAbsValueAsDouble("Active Txn Versions - Count:",   "IntValue");
+			arr[1] = this.getAbsValueAsDouble("Active Txn Versions - Created:", "IntValue");
+			arr[2] = this.getAbsValueAsDouble("Active Txn Versions - Deleted:", "IntValue");
+			arr[3] = this.getAbsValueAsDouble("Other Versions - Count:",        "IntValue");
+			arr[4] = this.getAbsValueAsDouble("Other Versions - Size:",         "IntValue");
 
 			//_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
@@ -582,8 +582,8 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		{	
 			Double[] arr = new Double[2];
 
-			arr[0] = this.getAbsValue("Main IQ I/O - Compression Ratio:",      "IntValue");
-			arr[1] = this.getAbsValue("Temporary IQ I/O - Compression Ratio:", "IntValue");
+			arr[0] = this.getAbsValueAsDouble("Main IQ I/O - Compression Ratio:",      "IntValue");
+			arr[1] = this.getAbsValueAsDouble("Temporary IQ I/O - Compression Ratio:", "IntValue");
 
 			//_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
@@ -599,8 +599,8 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		{	
 			Double[] arr = new Double[2];
 
-			arr[0] = this.getRateValue("Main IQ I/O - Logical Read:",       "IntValue");
-			arr[1] = this.getRateValue("Temporary IQ I/O - Logical Read:",  "IntValue");
+			arr[0] = this.getRateValueAsDouble("Main IQ I/O - Logical Read:",       "IntValue");
+			arr[1] = this.getRateValueAsDouble("Temporary IQ I/O - Logical Read:",  "IntValue");
 
 			//_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
@@ -616,11 +616,11 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		{	
 			Double[] arr = new Double[5];
 
-			arr[0] = this.getRateValue("Main IQ I/O - Physical Read:",      "IntValue");
-			arr[1] = this.getRateValue("Main IQ I/O - Pages Created:",      "IntValue");
-			arr[2] = this.getRateValue("Main IQ I/O - Pages Dirtied:",      "IntValue");
-			arr[3] = this.getRateValue("Main IQ I/O - Physically Written:", "IntValue");
-			arr[4] = this.getRateValue("Main IQ I/O - Pages Destroyed:",    "IntValue");
+			arr[0] = this.getRateValueAsDouble("Main IQ I/O - Physical Read:",      "IntValue");
+			arr[1] = this.getRateValueAsDouble("Main IQ I/O - Pages Created:",      "IntValue");
+			arr[2] = this.getRateValueAsDouble("Main IQ I/O - Pages Dirtied:",      "IntValue");
+			arr[3] = this.getRateValueAsDouble("Main IQ I/O - Physically Written:", "IntValue");
+			arr[4] = this.getRateValueAsDouble("Main IQ I/O - Pages Destroyed:",    "IntValue");
 
 			//_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
@@ -636,11 +636,11 @@ System.out.println("AFTER: startRowc="+rowc+", endRowc="+newSample.getRowCount()
 		{	
 			Double[] arr = new Double[5];
 
-			arr[0] = this.getRateValue("Temporary IQ I/O - Physical Read:",      "IntValue");
-			arr[1] = this.getRateValue("Temporary IQ I/O - Pages Created:",      "IntValue");
-			arr[2] = this.getRateValue("Temporary IQ I/O - Pages Dirtied:",      "IntValue");
-			arr[3] = this.getRateValue("Temporary IQ I/O - Physically Written:", "IntValue");
-			arr[4] = this.getRateValue("Temporary IQ I/O - Pages Destroyed:",    "IntValue");
+			arr[0] = this.getRateValueAsDouble("Temporary IQ I/O - Physical Read:",      "IntValue");
+			arr[1] = this.getRateValueAsDouble("Temporary IQ I/O - Pages Created:",      "IntValue");
+			arr[2] = this.getRateValueAsDouble("Temporary IQ I/O - Pages Dirtied:",      "IntValue");
+			arr[3] = this.getRateValueAsDouble("Temporary IQ I/O - Physically Written:", "IntValue");
+			arr[4] = this.getRateValueAsDouble("Temporary IQ I/O - Pages Destroyed:",    "IntValue");
 
 			//_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 

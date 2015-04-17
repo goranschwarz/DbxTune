@@ -185,7 +185,6 @@ implements ResultSetMetaData
 	 * Add a column of type String
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param length            The MAX length of the string
 	 * @param description       A description of the column that can be used a s a graphical tooltip
@@ -209,7 +208,7 @@ implements ResultSetMetaData
 		entry._javaClass     = String.class;
 		entry._isNumber      = false;
 
-		entry._displayLength = length;
+		entry._displayLength = Math.max(colName.length(), length);
 		entry._precision     = -1;
 		entry._scale         = -1;
 
@@ -222,7 +221,6 @@ implements ResultSetMetaData
 	 * Add a column of type Integer
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param description       A description of the column that can be used a s a graphical tooltip
 	 */
@@ -258,7 +256,6 @@ implements ResultSetMetaData
 	 * Add a column of type Long
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param description       A description of the column that can be used a s a graphical tooltip
 	 */
@@ -281,7 +278,45 @@ implements ResultSetMetaData
 		entry._javaClass     = Long.class;
 		entry._isNumber      = true;
 
-		entry._displayLength = Math.max(colName.length(), Integer.toString(Integer.MAX_VALUE).length());
+		entry._displayLength = Math.max(colName.length(), Long.toString(Long.MAX_VALUE).length());
+		entry._precision     = -1;
+		entry._scale         = -1;
+
+		entry._description   = description;
+		
+		return addColumn(entry);
+	}
+
+	/**
+	 * Add a column of type BigDecimal
+	 * @param colName           Name of the column
+	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
+	 * @param isNullable        Is can this be a NULL result
+	 * @param description       A description of the column that can be used a s a graphical tooltip
+	 */
+	public boolean addBigDecimalColumn(String colName, int sqlColumnNumber, boolean isNullable, int precision, int scale, String description)
+	{
+		if (sqlColumnNumber < 0 && hasColumn(colName))
+			return false;
+
+		ColumnEntry entry = new ColumnEntry();
+
+		entry._colName       = colName;
+
+		entry._sqlColNum     = sqlColumnNumber;
+
+		entry._isPartOfPk    = false;
+		entry._isNullable    = isNullable;
+
+		entry._sqlType       = Types.DECIMAL;
+		entry._precision     = precision;
+		entry._scale         = scale;
+//		entry._sqlDataType   = "numeric("+precision+","+scale+")";
+		entry._sqlDataType   = "numeric";
+		entry._javaClass     = BigDecimal.class;
+		entry._isNumber      = true;
+
+		entry._displayLength = Math.max(colName.length(), precision + 1 + scale);  // 10.1
 		entry._precision     = -1;
 		entry._scale         = -1;
 
@@ -294,7 +329,6 @@ implements ResultSetMetaData
 	 * Add a column of type Datetime...
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param description       A description of the column that can be used a s a graphical tooltip
 	 */

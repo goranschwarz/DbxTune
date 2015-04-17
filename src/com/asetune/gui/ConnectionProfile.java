@@ -30,6 +30,8 @@ public class ConnectionProfile
 		TDS_ASA, 
 		TDS_IQ, 
 		TDS_RS, 
+		TDS_RAX,   // Replication Agent for Unix & Windows
+		TDS_RSDRA, // RepServer DR Agent 
 		TDS_OTHER, 
 		TDS_UNDEFINED, // if profile was saved without ever have been connected to
 
@@ -57,21 +59,23 @@ public class ConnectionProfile
 	
 	public static SrvType getServerType(Type type, String productName)
 	{
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX    )) return SrvType.JDBC_DB2_UX;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS   )) return SrvType.JDBC_DB2_ZOS;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY     )) return SrvType.JDBC_DERBY;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2        )) return SrvType.JDBC_H2;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA      )) return SrvType.JDBC_HANA;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB     )) return SrvType.JDBC_MAXDB;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL      )) return SrvType.JDBC_HSQL;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL     )) return SrvType.JDBC_MSSQL;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL     )) return SrvType.JDBC_MYSQL;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE    )) return SrvType.JDBC_ORACLE;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX      )) return SrvType.JDBC_DB2_UX;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS     )) return SrvType.JDBC_DB2_ZOS;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY       )) return SrvType.JDBC_DERBY;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2          )) return SrvType.JDBC_H2;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA        )) return SrvType.JDBC_HANA;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB       )) return SrvType.JDBC_MAXDB;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HSQL        )) return SrvType.JDBC_HSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL       )) return SrvType.JDBC_MSSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL       )) return SrvType.JDBC_MYSQL;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE      )) return SrvType.JDBC_ORACLE;
 		
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA)) return SrvType.TDS_ASA;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE)) return SrvType.TDS_ASE;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ )) return SrvType.TDS_IQ;
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS )) return SrvType.TDS_RS;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return SrvType.TDS_ASA;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return SrvType.TDS_ASE;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_IQ   )) return SrvType.TDS_IQ;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS   )) return SrvType.TDS_RS;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX  )) return SrvType.TDS_RAX;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return SrvType.TDS_RSDRA;
 
 		if (Type.TDS.equals(type))
 		{

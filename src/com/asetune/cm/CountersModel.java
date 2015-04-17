@@ -967,15 +967,24 @@ implements Cloneable, ITableTooltip
 		// if NOT first sample
 		if (_prevSample != null)
 		{
-			// counters hasn't been cleared previously and clearTime is passed 
-			if (_prevSample != null && _counterClearTime == null && clearTime != null)
-				setIsCountersCleared(true);
-
-			// New clear time is later than previous clearTime
-			if (_counterClearTime != null && clearTime != null)
+			Timestamp prevSampleTime = getPreviousSampleTime(); // hopefully this returns null in "offline mode"
+			if (prevSampleTime != null && clearTime != null)
 			{
-				if (clearTime.getTime() > _counterClearTime.getTime())
+				if (clearTime.getTime() > prevSampleTime.getTime())
 					setIsCountersCleared(true);
+			}
+			else
+			{
+    			// counters hasn't been cleared previously and we have a valid clearTime 
+    			if (_counterClearTime == null && clearTime != null)
+    				setIsCountersCleared(true);
+    
+    			// New clear time is later than previous clearTime
+    			if (_counterClearTime != null && clearTime != null)
+    			{
+    				if (clearTime.getTime() > _counterClearTime.getTime())
+    					setIsCountersCleared(true);
+    			}
 			}
 		}
 
@@ -1496,7 +1505,7 @@ implements Cloneable, ITableTooltip
 	public void setClientProperty(String key, Object value)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("getName().setClientProperty(key='"+key+"', value='"+value+"') valueDataType='"+(value==null?"null":value.getClass().getName())+"'.");
+			_logger.debug(getName()+".setClientProperty(key='"+key+"', value='"+value+"') valueDataType='"+(value==null?"null":value.getClass().getName())+"'.");
 
 		_clientProperty.put(key, value);
 	}
@@ -1514,7 +1523,7 @@ implements Cloneable, ITableTooltip
 	{
 		Object obj = _clientProperty.get(key);
 		if (_logger.isDebugEnabled())
-			_logger.debug("getName().getClientProperty(key='"+key+"') returns='"+obj+"', type='"+(obj==null?"null":obj.getClass().getName())+"'.");
+			_logger.debug(getName()+".getClientProperty(key='"+key+"') returns='"+obj+"', type='"+(obj==null?"null":obj.getClass().getName())+"'.");
 		return obj;
 	}
 
@@ -3806,6 +3815,11 @@ implements Cloneable, ITableTooltip
 			endSqlRefresh();
 		}
 
+		// translate some fields in the Absolute Counters
+		beginLcRefresh();
+		localCalculation(tmpNewSample);
+		long firstLcTime = endLcRefresh();
+
 		// initialize Diss/Diff/Pct column bitmaps
 		initColumnStuff(tmpNewSample);
 
@@ -3816,11 +3830,6 @@ implements Cloneable, ITableTooltip
 //			firstTimeSample = false; // done later
 		}
 
-		// translate some fields in the Absolute Counters
-		beginLcRefresh();
-		localCalculation(tmpNewSample);
-		long firstLcTime = endLcRefresh();
-
 		// Used later
 		final List<Integer> deletedRows = new ArrayList<Integer>();;
 
@@ -3828,7 +3837,7 @@ implements Cloneable, ITableTooltip
 		setSampleTime(    tmpNewSample.getSampleTime()     );
 		setSampleInterval(tmpNewSample.getSampleInterval() );
 
-		// If NO PK, then we dont need to do some stuff.
+		// If NO PK, then we don't need to do some stuff.
 		if ( ! doDiffCalc() )
 		{
 //			setSampleTime(    tmpNewSample.getSampleTime()     );
@@ -4042,6 +4051,18 @@ implements Cloneable, ITableTooltip
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
 
+
+	/**
+	 * This method is called <b>after</b> all CM's has been refreshed<br>
+	 * So in here you can get data from other collectors that has been refreshed during this sample
+	 * 
+	 * @param refreshedCms a Map of the what CM's that were refreshed during this sample.
+	 */
+	public void doPostRefresh(LinkedHashMap<String, CountersModel> refreshedCms)
+	{
+	}
+
+
 	/**
 	 * Compute the difference between two samples
 	 * 
@@ -4211,7 +4232,10 @@ implements Cloneable, ITableTooltip
 
 		if (newColVal instanceof BigDecimal)
 		{
-			diffColVal = new BigDecimal(newColVal.doubleValue() - prevColVal.doubleValue());
+			// Get scale of the value so we can preserve that after the difference calculation.
+			int scale = ((BigDecimal)newColVal).scale();
+			
+			diffColVal = new BigDecimal( newColVal.doubleValue() - prevColVal.doubleValue() ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 			if (diffColVal.doubleValue() < 0)
 				if (negativeDiffCountersToZero)
 					diffColVal = new BigDecimal(0);
@@ -4868,6 +4892,19 @@ implements Cloneable, ITableTooltip
 		return data.getValueAt(rowId, idCol);
 	}
 
+	// 
+	private synchronized Double getValueAsDouble(int whatData, String pkStr, String colname)
+	{
+		Object o = getValue(whatData, pkStr, colname);
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
+	}
+
 	/**
 	 *  Return the value of a cell by ROWID (rowId, colId)
 	 *  rowId starts at 0
@@ -4875,7 +4912,8 @@ implements Cloneable, ITableTooltip
 	 *  NOTE: note tested (2007-07-13)
 	 */
 	// Return the value of a cell by keyVal, (keyVal, ColumnName)
-	private synchronized Double getValue(int whatData, String pkStr, String colname)
+//	private synchronized Double getValue(int whatData, String pkStr, String colname)
+	private synchronized Object getValue(int whatData, String pkStr, String colname)
 	{
 		CounterTableModel data = null;
 
@@ -4888,7 +4926,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): data==null; return null");
+				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): data==null; return null");
 			return null;
 		}
 
@@ -4897,7 +4935,7 @@ implements Cloneable, ITableTooltip
 		if (rowId < 0)
 		{
 			if (_logger.isDebugEnabled())
-				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
+				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": rowId < 0; return null");
 			return null;
 		}
 
@@ -4906,14 +4944,15 @@ implements Cloneable, ITableTooltip
 		if (o == null)
 		{
 			if (_logger.isDebugEnabled()) 
-				_logger.debug(getName()+"getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
+				_logger.debug(getName()+".getValue(whatData="+getWhatDataTranslationStr(whatData)+", pkStr='"+pkStr+"', colname='"+colname+"'): rowId="+rowId+": o==null; return null");
 			return null;
 		}
 
-		if (o instanceof Double)
-			return (Double) o;
-		else
-			return new Double(o.toString());
+//		if (o instanceof Double)
+//			return (Double) o;
+//		else
+//			return new Double(o.toString());
+		return o;
 	}
 	/**
 	 * Get a int array of rows where colValue matches values in the column name
@@ -5280,9 +5319,11 @@ implements Cloneable, ITableTooltip
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
 	public String getAbsString        (int    rowId, String colname) { Object o = getValue     (DATA_ABS, rowId, colname); return (o==null)?"":o.toString(); }
+	public String getAbsString        (String pkStr, String colname) { Object o = getValue     (DATA_ABS, pkStr, colname); return (o==null)?"":o.toString(); }
 	public Object getAbsValue         (int    rowId, String colname) { return getValue         (DATA_ABS, rowId, colname); }
-	public Double getAbsValue         (String pkStr, String colname) { return getValue         (DATA_ABS, pkStr, colname); }
+	public Object getAbsValue         (String pkStr, String colname) { return getValue         (DATA_ABS, pkStr, colname); }
 	public Double getAbsValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_ABS, rowId, colname); }
+	public Double getAbsValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_ABS, pkStr, colname); }
 	public Double getAbsValueMax      (String colname)               { return getMaxValue      (DATA_ABS, null,  colname); }
 	public Double getAbsValueMin      (String colname)               { return getMinValue      (DATA_ABS, null,  colname); }
 	public Double getAbsValueAvg      (String colname)               { return getAvgValue      (DATA_ABS, null,  colname); }
@@ -5301,9 +5342,11 @@ implements Cloneable, ITableTooltip
 	// Wrapper functions to read DIFF (new-old) values
 	//--------------------------------------------------------------
 	public String getDiffString        (int    rowId, String colname) { Object o = getValue     (DATA_DIFF, rowId, colname); return (o==null)?"":o.toString(); }
+	public String getDiffString        (String pkStr, String colname) { Object o = getValue     (DATA_DIFF, pkStr, colname); return (o==null)?"":o.toString(); }
 	public Object getDiffValue         (int    rowId, String colname) { return getValue         (DATA_DIFF, rowId, colname); }
-	public Double getDiffValue         (String pkStr, String colname) { return getValue         (DATA_DIFF, pkStr, colname); }
+	public Object getDiffValue         (String pkStr, String colname) { return getValue         (DATA_DIFF, pkStr, colname); }
 	public Double getDiffValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_DIFF, rowId, colname); }
+	public Double getDiffValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_DIFF, pkStr, colname); }
 	public Double getDiffValueMax      (String colname)               { return getMaxValue      (DATA_DIFF, null,  colname); }
 	public Double getDiffValueMin      (String colname)               { return getMinValue      (DATA_DIFF, null,  colname); }
 	public Double getDiffValueAvg      (String colname)               { return getAvgValue      (DATA_DIFF, null,  colname); }
@@ -5322,9 +5365,11 @@ implements Cloneable, ITableTooltip
 	// Wrapper functions to read RATE DIFF/time values
 	//--------------------------------------------------------------
 	public String getRateString        (int    rowId, String colname) { Object o = getValue     (DATA_RATE, rowId, colname); return (o==null)?"":o.toString(); }
+	public String getRateString        (String pkStr, String colname) { Object o = getValue     (DATA_RATE, pkStr, colname); return (o==null)?"":o.toString(); }
 	public Object getRateValue         (int    rowId, String colname) { return getValue         (DATA_RATE, rowId, colname); }
-	public Double getRateValue         (String pkStr, String colname) { return getValue         (DATA_RATE, pkStr, colname); }
+	public Object getRateValue         (String pkStr, String colname) { return getValue         (DATA_RATE, pkStr, colname); }
 	public Double getRateValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_RATE, rowId, colname); }
+	public Double getRateValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_RATE, pkStr, colname); }
 	public Double getRateValueMax      (String colname)               { return getMaxValue      (DATA_RATE, null,  colname); }
 	public Double getRateValueMin      (String colname)               { return getMinValue      (DATA_RATE, null,  colname); }
 	public Double getRateValueAvg      (String colname)               { return getAvgValue      (DATA_RATE, null,  colname); }

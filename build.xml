@@ -104,6 +104,11 @@
 		<copy file="rstune.properties"                                  toFile="${dist}/rstune.properties"/>
 		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/lib/rstune_splash.jpg"/>
 
+		<copy file="raxtune.bat"                                         toFile="${dist}/raxtune.bat"/>
+<!--	<copy file="raxtune.sh"                                          toFile="${dist}/raxtune.sh"/>-->
+		<copy file="raxtune.properties"                                  toFile="${dist}/raxtune.properties"/>
+		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"        toFile="${dist}/lib/raxtune_splash.jpg"/>
+
 		<copy file="hanatune.bat"                                       toFile="${dist}/hanatune.bat"/>
 <!--	<copy file="hanatune.sh"                                        toFile="${dist}/hanatune.sh"/>-->
 		<copy file="hanatune.properties"                                toFile="${dist}/hanatune.properties"/>

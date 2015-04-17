@@ -1628,6 +1628,7 @@ implements ICounterController
 		try
 		{
 			String sql =  getIsClosedSql();
+//System.out.println("isClosed(): autoCommit="+conn.getAutoCommit()+", sql="+sql);
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("isClosed(): sql="+sql);

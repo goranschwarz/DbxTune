@@ -398,6 +398,9 @@ extends CounterTableModel
 	@Override
 	public int getRowNumberForPkValue(String pkStr)
 	{
+//System.out.println();
+//System.out.println();
+//System.out.println("getRowNumberForPkValue(): pkStr='"+pkStr+"', _keysToRowid="+StringUtil.toCommaStr(_keysToRowid, "=", "\n"));
 		if (_keysToRowid == null)
 			return -1;
 
@@ -1128,9 +1131,9 @@ extends CounterTableModel
 		_logger.debug("---");
 		while (rs.next())
 		{
-			key = new StringBuilder();
-			row = new ArrayList<Object>();
 			int colCount = getColumnCount();
+			key = new StringBuilder();
+			row = new ArrayList<Object>(colCount); // Use column names to size the array
 
 			// get any Messages that are attached to the ResultSet
 			String msgAsColValue = "";

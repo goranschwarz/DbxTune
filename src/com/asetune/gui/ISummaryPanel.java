@@ -31,7 +31,7 @@ extends TableModelListener //, GTabbedPane.ShowProperties
 
 	public void clearGraph();
 
-	public void setSummaryData(CountersModel cm);
+	public void setSummaryData(CountersModel cm, boolean postProcessing);
 
 	public void setWatermark();
 
