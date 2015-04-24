@@ -31,8 +31,9 @@ public class RepServerUtils
 		public String _legalValues          = "";
 		public String _datatype             = "";
 		public String _status               = "";
+		public String _table                = "";
 
-		public ConfigEntry(boolean isDefaultConfigured, boolean dynamicConfigOption, String configName, String configValue, String runValue, String defaultValue, String legalValues, String datatype, String status)
+		public ConfigEntry(boolean isDefaultConfigured, boolean dynamicConfigOption, String configName, String configValue, String runValue, String defaultValue, String legalValues, String datatype, String status, String table)
 		{
 			_isDefaultConfigured = isDefaultConfigured;
 			_dynamicConfigOption = dynamicConfigOption;
@@ -43,11 +44,25 @@ public class RepServerUtils
 			_legalValues         = legalValues;
 			_datatype            = datatype;
 			_status              = status;
+			_table               = table;
 		}
 
 		public boolean isConfigOptionChanged()
 		{
 			return ! _isDefaultConfigured && ! _dynamicConfigOption;
+		}
+		public boolean isPending()
+		{
+			if (_configValue == null && _runValue != null)
+				return true;
+			return ! _configValue.equals(_runValue);
+		}
+		public boolean isRestartRequired()
+		{
+			if (_status == null)
+				return false;
+			
+			return _status.indexOf("restart required") >= 0;
 		}
 		public String getConfigName()
 		{
@@ -56,6 +71,10 @@ public class RepServerUtils
 		public String getConfigValue()
 		{
 			return _configValue;
+		}
+		public String getTableName()
+		{
+			return _table;
 		}
 		public String getComments()
 		{
@@ -99,6 +118,12 @@ public class RepServerUtils
 		return getConfig(conn, rcl);
 	}
 
+	public static List<ConfigEntry> getTableConnectionConfig(Connection conn, String ds, String db)
+	{
+		String rcl = "admin config, 'table', '"+ds+"', '"+db+"'";
+		return getConfig(conn, rcl);
+	}
+
 	public static List<ConfigEntry> getRouteConfig(Connection conn, String destinationRs)
 	{
 		String rcl = "admin config, 'route', '"+destinationRs+"'";
@@ -125,93 +150,104 @@ public class RepServerUtils
 //		LinkedHashMap<String, ConfigEntry> result = new LinkedHashMap<String, ConfigEntry>();
 		List<ConfigEntry> result = new ArrayList<ConfigEntry>();
 
+		boolean isTableLevel = rcl.indexOf("'table'") >= 0;
 		try
 		{
 			Statement stmt = conn.createStatement();
 //			ResultSet rs = stmt.executeQuery(rcl);
 			if (stmt.execute(rcl))
 			{
-				ResultSet rs = stmt.getResultSet();
-				while (rs.next())
+				// loop multiple resultset
+				do
 				{
-					boolean isDefaultConfigured = false;
-					boolean dynamicConfigOption = false;
-
-					String configName   = rs.getString(1);
-					String configValue  = rs.getString(2);
-					String runValue     = rs.getString(3);
-					String defaultValue = rs.getString(4);
-					String legalValues  = rs.getString(5);
-					String datatype     = rs.getString(6);
-					String status       = rs.getString(7);
-	
-//System.out.println("DEBUG: configName='"+configName+"', configValue='"+configValue+"', defaultValue='"+defaultValue+"'.");
-					if (configValue == null)
-						continue;
-	
-					// Skip some configuration values
-					if (    configName.equals("config_file")
-					     || configName.equals("errorlog_file")
-					     || configName.equals("id_server")
-					     || configName.equals("ID_user")
-					     || configName.equals("interfaces_file")
-					     || configName.equals("keytab_file")
-					     || configName.equals("oserver")
-					     || configName.equals("RS_charset")
-					     || configName.equals("RS_language")
-					     || configName.equals("rs_name")
-					     || configName.equals("RS_sortorder")
-					     || configName.equals("RS_ssl_identity")
-					     || configName.equals("RS_unicode_sortorder")
-					     || configName.equals("RSSD_database")
-					     || configName.equals("RSSD_maint_user")
-					     || configName.equals("RSSD_primary_user")
-					     || configName.equals("RSSD_sec_mechanism")
-					     || configName.equals("RSSD_server")
-					     || configName.equals("trace_file")
-	
-					     // all defaultValues with 'N/A'
-					     || "N/A".equals(defaultValue)
-					   )
-						dynamicConfigOption = true;
-//						continue;
-	
-					if (configName.equals("dsi_isolation_level") && "default".equals(configValue))
-						isDefaultConfigured = true;
-						
-					if (configName.equals("dsi_cmd_separator"))
+					ResultSet rs = stmt.getResultSet();
+					while (rs.next())
 					{
-						configValue  = fixNewLineConfigString(configValue);
-						runValue     = fixNewLineConfigString(runValue);
-						defaultValue = fixNewLineConfigString(defaultValue);
+						boolean isDefaultConfigured = false;
+						boolean dynamicConfigOption = false;
 
-						if ("newline()".equals(configValue))
+						String configName   = rs.getString(1);
+						String configValue  = rs.getString(2);
+						String runValue     = rs.getString(3);
+						String defaultValue = rs.getString(4);
+						String legalValues  = rs.getString(5);
+						String datatype     = rs.getString(6);
+						String status       = rs.getString(7);
+						String table        = isTableLevel ? rs.getString(8) : ""; // only if: admin config, 'table', SRV, DB 
+		
+	//System.out.println("DEBUG: configName='"+configName+"', configValue='"+configValue+"', defaultValue='"+defaultValue+"'.");
+						if (configValue == null)
+							continue;
+		
+						// Skip some configuration values
+						if (    configName.equals("config_file")
+						     || configName.equals("errorlog_file")
+						     || configName.equals("id_server")
+						     || configName.equals("ID_user")
+						     || configName.equals("interfaces_file")
+						     || configName.equals("keytab_file")
+						     || configName.equals("oserver")
+						     || configName.equals("RS_charset")
+						     || configName.equals("RS_language")
+						     || configName.equals("rs_name")
+						     || configName.equals("RS_sortorder")
+						     || configName.equals("RS_ssl_identity")
+						     || configName.equals("RS_unicode_sortorder")
+						     || configName.equals("RSSD_database")
+						     || configName.equals("RSSD_maint_user")
+						     || configName.equals("RSSD_primary_user")
+						     || configName.equals("RSSD_sec_mechanism")
+						     || configName.equals("RSSD_server")
+						     || configName.equals("trace_file")
+		
+						     // all defaultValues with 'N/A'
+						     || "N/A".equals(defaultValue)
+						   )
+							dynamicConfigOption = true;
+//							continue;
+		
+						if (configName.equals("dsi_isolation_level") && "default".equals(configValue))
 							isDefaultConfigured = true;
-					}
-					
-					if ("default".equals(defaultValue))
-						isDefaultConfigured = true;
-	
-					if ( configValue.equals(defaultValue))
-						isDefaultConfigured = true;
-	
-					// if connection/logical_connection is inherited by the servers defaults
-					if ("<server default>".equals(configValue))
-						isDefaultConfigured = true;
-					
-					ConfigEntry cfgEntry = new ConfigEntry(isDefaultConfigured, dynamicConfigOption, 
-							configName, configValue, runValue, defaultValue, legalValues, datatype, status);
+							
+						if (configName.equals("dsi_cmd_separator"))
+						{
+							configValue  = fixNewLineConfigString(configValue);
+							runValue     = fixNewLineConfigString(runValue);
+							defaultValue = fixNewLineConfigString(defaultValue);
 
-//					result.put(configName, configValue);
-//					result.put(configName, cfgEntry);
-					result.add(cfgEntry);
+							if ("newline()".equals(configValue))
+								isDefaultConfigured = true;
+						}
+						
+						if ("default".equals(defaultValue))
+							isDefaultConfigured = true;
+		
+						if ( configValue.equals(defaultValue))
+							isDefaultConfigured = true;
+		
+						// if connection/logical_connection is inherited by the servers defaults
+						if ("<server default>".equals(configValue))
+							isDefaultConfigured = true;
+						
+						ConfigEntry cfgEntry = new ConfigEntry(isDefaultConfigured, dynamicConfigOption, 
+								configName, configValue, runValue, defaultValue, legalValues, datatype, status, table);
+
+//						result.put(configName, configValue);
+//						result.put(configName, cfgEntry);
+						result.add(cfgEntry);
+					}
+					rs.close();
 				}
-				rs.close();
+				while (stmt.getMoreResults());
 			}
 			stmt.close();
 		}
 		catch (SQLException ex)
 		{
+			// 15565 - No customized table-level configuration for any table.
+			if (ex.getErrorCode() == 15565)
+				return result;
+
 			_logger.warn("Problems when executing rcl: "+rcl, ex);
 			return null;
 		}
@@ -642,6 +678,39 @@ public class RepServerUtils
 			}
 			if ( ! printedRecords )
 				sb.append("      -- no local configurations").append("\n");
+
+			sb.append("   ---------------------------------------------------------------------------\n");
+			sb.append("   -- TABLE LEVEL CONFIGURATION: "+ds+"."+db).append(" \n");
+			printedRecords = false;
+			config = getTableConnectionConfig(conn, ds, db);
+			for (ConfigEntry ce : config)
+			{
+				if ( (onlyChangedConfigs && ce.isConfigOptionChanged()) || ! onlyChangedConfigs )
+				{
+					printedRecords = true;
+
+					String prefix = "   ";
+					String cfgDesc = configDescription.get(ce.getConfigName());
+
+					if (ce._dynamicConfigOption || ce._isDefaultConfigured)
+						prefix = "-- ";
+
+					sb.append(prefix)
+						.append("alter connection to ")
+						.append(StringUtil.left("\"" + ds + "\".\"" + db + "\"", 40))
+						.append(" for table named ")
+						.append(StringUtil.left(ce.getTableName(), 30, true))
+						.append(" set ")
+						.append(StringUtil.left(ce.getConfigName(), 30, true))
+						.append(" to ")
+						.append(StringUtil.left(ce.getConfigValue(), 40, true, "'"))
+						.append(ce.getComments())
+						.append(" Description='").append(cfgDesc).append("'.")
+						.append("\n");
+				}
+			}
+			if ( ! printedRecords )
+				sb.append("      -- No customized table-level configuration for any table.").append("\n");
 		}
 		if (rsDbs.size() == 0)
 			sb.append("      -- NO CONNECTIONS").append("\n");

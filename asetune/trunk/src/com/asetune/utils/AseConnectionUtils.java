@@ -31,9 +31,9 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
-import com.asetune.gui.AseConfigMonitoringDialog;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.sybase.jdbc4.jdbc.SybSQLWarning;

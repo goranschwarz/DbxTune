@@ -1,6 +1,6 @@
 package com.asetune.xmenu;
 
-import com.asetune.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.tools.AseAppTraceDialog;
 
 public class AseAppTrace

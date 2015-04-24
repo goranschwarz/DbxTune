@@ -8,11 +8,13 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -92,9 +94,54 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	
+	public static final String GRAPH_NAME_BYTES_SENT       = "RsiBytesSent";
+
 	private void addTrendGraphs()
 	{
+		String[] labels = new String[] { "-added-at-runtime-" };
+		
+		addTrendGraphData(GRAPH_NAME_BYTES_SENT,       new TrendGraphDataPoint(GRAPH_NAME_BYTES_SENT,       labels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_BYTES_SENT,
+				"RSI: Number of Bytes Sent, (per Second)", // Menu CheckBox text
+				"RSI: Number of Bytes Sent, (per Second)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+		}
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_BYTES_SENT.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "LogicalName");
+				dArray[i] = this.getRateValueAsDouble(i, "Bytes Sent");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
 	}
 
 //	@Override
@@ -120,11 +167,11 @@ extends CountersModel
 			mtd.addColumn("rsi", "Spid",            "<html>RepServer internal <i>thread id</i></html>");
 			mtd.addColumn("rsi", "State",           "<html>FIXME: State</html>");
 			mtd.addColumn("rsi", "Info",            "<html>FIXME: Info</html>");
-			mtd.addColumn("rsi", "Packets Sent",    "<html>FIXME: Packets Sent</html>");
-			mtd.addColumn("rsi", "Bytes Sent",      "<html>FIXME: Bytes Sent</html>");
-			mtd.addColumn("rsi", "Blocking Reads",  "<html>FIXME: Blocking Reads</html>");
-			mtd.addColumn("rsi", "Locater Sent",    "<html>FIXME: Locater Sent</html>");
-			mtd.addColumn("rsi", "Locater Deleted", "<html>FIXME: Removed</html>");
+			mtd.addColumn("rsi", "Packets Sent",    "<html>The number of network packets sent.</html>");
+			mtd.addColumn("rsi", "Bytes Sent",      "<html>The total number of bytes sent.</html>");
+			mtd.addColumn("rsi", "Blocking Reads",  "<html>The number of times the stable queue was read with a blocking read.</html>");
+			mtd.addColumn("rsi", "Locater Sent",    "<html>The locator of the last message sent (contains the queue segment, block and row).</html>");
+			mtd.addColumn("rsi", "Locater Deleted", "<html>The last locator that the recipient acknowledged and that has been deleted by Replication Server.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}

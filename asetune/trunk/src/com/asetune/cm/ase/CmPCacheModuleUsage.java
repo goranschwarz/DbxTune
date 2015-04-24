@@ -6,11 +6,11 @@ import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmPCacheModuleUsagePanel;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;

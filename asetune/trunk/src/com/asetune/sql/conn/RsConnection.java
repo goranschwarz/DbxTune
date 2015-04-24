@@ -5,6 +5,8 @@ import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRs;
+import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.RepServerUtils;
 
 public class RsConnection
 extends TdsConnection
@@ -28,5 +30,17 @@ System.out.println("constructor::RsConnection(conn): conn="+conn);
 	public boolean isInTransaction() throws SQLException
 	{
 		return false; // FIXME: Don't know how to check this, so lets assume FALSE
+	}
+
+	@Override
+	public int getDbmsVersionNumber()
+	{
+		return AseConnectionUtils.getRsVersionNumber(this);
+	}
+
+	@Override
+	public boolean isDbmsClusterEnabled()
+	{
+		return false;
 	}
 }

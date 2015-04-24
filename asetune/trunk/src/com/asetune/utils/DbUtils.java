@@ -588,6 +588,50 @@ public class DbUtils
 	}
 
 	/**
+	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
+	 * 
+	 * @param conn
+	 * @param cat       a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
+	 * @param schema    a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
+	 * @param tableName a table name pattern; must match the table name as it is stored in the database 
+	 * @return true if table exists
+	 * @throws SQLException
+	 */
+	public static boolean checkIfTableExists(Connection conn, String cat, String schema, String tableName)
+	throws SQLException
+	{
+		if (conn == null)
+			throw new SQLException("Connection is NULL.");
+		
+		DatabaseMetaData dbmd = conn.getMetaData();
+		ResultSet rs = dbmd.getTables(cat, schema, tableName, new String[] {"TABLE"});
+		boolean tabExists = rs.next();
+		rs.close();
+
+		return tabExists;
+	}
+	/**
+	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
+	 * 
+	 * @param conn
+	 * @param cat       a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
+	 * @param schema    a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
+	 * @param tableName a table name pattern; must match the table name as it is stored in the database 
+	 * @return true if table exists else false (false if any exception)
+	 */
+	public static boolean checkIfTableExistsNoThrow(Connection conn, String cat, String schema, String tableName)
+	{
+		try 
+		{ 
+			return checkIfTableExists(conn, cat, schema, tableName); 
+		}
+		catch (SQLException ex) 
+		{ 
+			return false; 
+		}
+	}
+
+	/**
 	 * Parse SQL trying to find out first line where a SQL Statement is
 	 * <p>
 	 * Basically disregards comments, empty lines etc...

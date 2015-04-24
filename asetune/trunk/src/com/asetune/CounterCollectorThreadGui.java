@@ -12,6 +12,7 @@ import javax.swing.SwingUtilities;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;

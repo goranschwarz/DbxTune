@@ -1239,6 +1239,15 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	
 	public abstract boolean isInTransaction() throws SQLException;
 
+	public int getDbmsVersionNumber()
+	{
+		return 0;
+	}
+	public boolean isDbmsClusterEnabled()
+	{
+		return false;
+	}
+
 	
 //	public abstract int    getSrvVersionNumber();
 //	public abstract String getSrvVersionString();

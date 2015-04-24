@@ -8,11 +8,11 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
-import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 

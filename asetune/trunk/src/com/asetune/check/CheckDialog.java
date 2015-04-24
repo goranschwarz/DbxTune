@@ -67,7 +67,7 @@ public class CheckDialog
 	private JCheckBox  _launchBrowserOnHtmlResponse_chk = new JCheckBox("Launch Operating System Default HTML Browser with the response content");
 
 //	private CheckForUpdates _cfu = null;
-	private CheckForUpdates2 _cfu = null;
+	private CheckForUpdates _cfu = null;
 
 
 
@@ -108,17 +108,17 @@ public class CheckDialog
 //		setFocus();
 //	}
 
-	private CheckDialog(Frame owner, CheckForUpdates2 cfu)
+	private CheckDialog(Frame owner, CheckForUpdates cfu)
 	{
 		super(owner, "", true);
 		init(owner, cfu);
 	}
-	private CheckDialog(Dialog owner, CheckForUpdates2 cfu)
+	private CheckDialog(Dialog owner, CheckForUpdates cfu)
 	{
 		super(owner, "", true);
 		init(owner, cfu);
 	}
-	private void init(Window owner, CheckForUpdates2 cfu)
+	private void init(Window owner, CheckForUpdates cfu)
 	{
 		_cfu = cfu;
 		
@@ -229,7 +229,7 @@ public class CheckDialog
 //		dialog.setVisible(true);
 //		dialog.dispose();
 //	}
-	public static void showDialog(Component owner, CheckForUpdates2 cfu)
+	public static void showDialog(Component owner, CheckForUpdates cfu)
 	{
 		//		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -576,14 +576,14 @@ public class CheckDialog
 			         "<li>You do <b>not</b> have Internet access from this machine.</li>" +
 			         "<li>You sit behind a Proxy server.</li>" +
 //			         "<li>Or simply because <A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A> is down for the moment.</li>" +
-			         "<li>Or simply because <A HREF=\""+CheckForUpdates2.getInstance().getHomeUrl()+"\">"+CheckForUpdates2.getInstance().getHomeUrl()+"</A> is down for the moment.</li>" +
+			         "<li>Or simply because <A HREF=\""+CheckForUpdates.getInstance().getHomeUrl()+"\">"+CheckForUpdates.getInstance().getHomeUrl()+"</A> is down for the moment.</li>" +
 			      "</ul>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you do not have Internet access from this machine,<br>" +
 			      "please do manual checks for new releases at:<br>" +
 //			      "<A HREF=\""+CheckForUpdates.ASETUNE_HOME_URL+"\">"+CheckForUpdates.ASETUNE_HOME_URL+"</A><br>" +
-			      "<A HREF=\""+CheckForUpdates2.getInstance().getHomeUrl()+"\">"+CheckForUpdates2.getInstance().getHomeUrl()+"</A><br>" +
+			      "<A HREF=\""+CheckForUpdates.getInstance().getHomeUrl()+"\">"+CheckForUpdates.getInstance().getHomeUrl()+"</A><br>" +
 			      "<br>" +
 			      "<HR size=\"1\">" +
 			      "If you normally have Internet access from this machine<br>" +

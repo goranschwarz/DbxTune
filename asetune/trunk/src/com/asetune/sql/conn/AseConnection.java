@@ -5,6 +5,7 @@ import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
+import com.asetune.utils.AseConnectionUtils;
 
 public class AseConnection 
 extends TdsConnection
@@ -38,5 +39,17 @@ System.out.println("constructor::AseConnection(conn): conn="+conn);
 	public boolean isDatabaseAware()
 	{
 		return true;
+	}
+
+	@Override
+	public int getDbmsVersionNumber()
+	{
+		return AseConnectionUtils.getAseVersionNumber(this);
+	}
+
+	@Override
+	public boolean isDbmsClusterEnabled()
+	{
+		return AseConnectionUtils.isClusterEnabled(this);
 	}
 }

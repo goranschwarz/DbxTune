@@ -12,18 +12,18 @@ javaSplashScreen=lib/asetune_splash.jpg
 #----------------------------------
 #--- XXX_HOME
 #----------------------------------
-APPL_HOME_propName="ASETUNE_HOME"
+APPL_HOME_propName="DBXTUNE_HOME"
 
-export ASETUNE_HOME=${ASETUNE_HOME:-$scriptPath}
-export APPL_HOME=${ASETUNE_HOME}
+export DBXTUNE_HOME=${DBXTUNE_HOME:-$scriptPath}
+export APPL_HOME=${DBXTUNE_HOME}
 
 #----------------------------------
 #--- XXX_SAVE_DIR
 #----------------------------------
-APPL_SAVE_DIR_propName="ASETUNE_SAVE_DIR"
+APPL_SAVE_DIR_propName="DBXTUNE_SAVE_DIR"
 
-export ASETUNE_SAVE_DIR=${ASETUNE_SAVE_DIR:-$APPL_HOME/data}
-export APPL_SAVE_DIR=${ASETUNE_SAVE_DIR}
+export DBXTUNE_SAVE_DIR=${DBXTUNE_SAVE_DIR:-$APPL_HOME/data}
+export APPL_SAVE_DIR=${DBXTUNE_SAVE_DIR}
 
 
 #----------------------------------
@@ -31,15 +31,15 @@ export APPL_SAVE_DIR=${ASETUNE_SAVE_DIR}
 #----------------------------------
 export JAVA_HOME=${JAVA_HOME:-$SYBASE_JRE6}
 
-echo "NOTE: Set/Change JVM Memory parameters by setting Environment variable: ASETUNE_JVM_MEMORY_PARAMS" 
+echo "NOTE: Set/Change JVM Memory parameters by setting Environment variable: DBXTUNE_JVM_MEMORY_PARAMS" 
 
-export JVM_MEMORY_PARAMS_32=${ASETUNE_JVM_MEMORY_PARAMS:-"-Xmx1024m -Xms64m"}
-export JVM_MEMORY_PARAMS_64=${ASETUNE_JVM_MEMORY_PARAMS:-"-Xmx2048m -Xms64m"}
+export JVM_MEMORY_PARAMS_32=${DBXTUNE_JVM_MEMORY_PARAMS:-"-Xmx1024m -Xms64m"}
+export JVM_MEMORY_PARAMS_64=${DBXTUNE_JVM_MEMORY_PARAMS:-"-Xmx2048m -Xms64m"}
 
-export JVM_GC_PARAMS_32=${ASETUNE_JVM_GC_PARAMS:-""}
-export JVM_GC_PARAMS_64=${ASETUNE_JVM_GC_PARAMS:-""}
+export JVM_GC_PARAMS_32=${DBXTUNE_JVM_GC_PARAMS:-""}
+export JVM_GC_PARAMS_64=${DBXTUNE_JVM_GC_PARAMS:-""}
 
-export JVM_PARAMS=${ASETUNE_JVM_PARAMS:-""}
+export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-""}
 
 export EXTRA=
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=samples,interval=20,depth=50
@@ -74,7 +74,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 
-export PATH=${ASETUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+export PATH=${DBXTUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
 
 echo "================================================================"
@@ -84,7 +84,7 @@ echo SYBASE=${SYBASE}
 echo ${APPL_HOME_propName}=${APPL_HOME}
 echo ${APPL_SAVE_DIR_propName}=${APPL_SAVE_DIR}
 echo CLASSPATH=${CLASSPATH}
-echo ASETUNE_JAVA_HOME=${ASETUNE_JAVA_HOME}
+echo DBXTUNE_JAVA_HOME=${DBXTUNE_JAVA_HOME}
 echo JAVA_HOME=${JAVA_HOME}
 
 #------------------------------------------------------------------------
@@ -97,7 +97,7 @@ then
 	echo "Error: Use a higher java version."
 	echo "-----------------------------------------------------------------------"
 	echo "The java installation can be pointed out using the variable JAVA_HOME"
-	echo "Current ASETUNE_JAVA_HOME variable is set to ${ASETUNE_JAVA_HOME}"
+	echo "Current DBXTUNE_JAVA_HOME variable is set to ${DBXTUNE_JAVA_HOME}"
 	echo "Current JAVA_HOME         variable is set to ${JAVA_HOME}"
 	echo "-----------------------------------------------------------------------"
 	

@@ -68,9 +68,9 @@ import javax.swing.event.PopupMenuListener;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
-import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.utils.Configuration;

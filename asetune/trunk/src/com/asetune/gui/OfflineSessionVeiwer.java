@@ -57,10 +57,14 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
 import org.jdesktop.swingx.treetable.TreeTableModel;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
 import com.asetune.CounterControllerAbstract;
 import com.asetune.Version;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.AseConfigText;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.OfflineSessionModel.SessionLevel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.pcs.PersistReader;
@@ -348,8 +352,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		JPopupMenu popup    = new JPopupMenu();
 		JMenuItem show      = new JMenuItem("Show");
-		JMenuItem cfgView   = new JMenuItem("View ASE Configuration...");
-		JMenuItem pcsDbInfo = new JMenuItem(Version.getAppName()+" Version that persisted this session...");
+		JMenuItem cfgView   = new JMenuItem("View DMBS Configuration...");
+		JMenuItem pcsDbInfo = new JMenuItem("Application Version that persisted this session...");
 
 		popup.add(show);
 		popup.add(cfgView);
@@ -588,10 +592,17 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		_currentPeriodEndTime   = sl.getPeriodEndTime();
 
 		// Read in the configuration for this period
-		AseConfig     .getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
-//		AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
-		AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+//		AseConfig     .getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+////		AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+//		AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
+		if (DbmsConfigManager.hasInstance())
+			DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+
+		if (DbmsConfigTextManager.hasInstances())
+			DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+
+		
 		// Read User Defined Counters, to check for any new UDC that isn't loaded/created
 		Configuration udcConf = reader.getUdcProperties(sl.getSampleId());
 		if (udcConf != null && udcConf.size() > 0)
@@ -669,12 +680,18 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			SessionLevel sl = (SessionLevel) o;
 
 			// Read in the configuration for this period
-			AseConfig     .getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
-			//AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
-			AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+//			AseConfig     .getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+//			//AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+//			AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+
+			if (DbmsConfigManager.hasInstance())
+				DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+
+			if (DbmsConfigTextManager.hasInstances())
+				DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 		}
 		
-		AseConfigViewDialog.showDialog(this, reader);
+		DbmsConfigViewDialog.showDialog(this, reader);
 	}
 	
 	public void doActionShowPcsDbInfo()

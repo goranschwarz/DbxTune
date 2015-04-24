@@ -40,7 +40,7 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.sort.RowFilters;
 
 import com.asetune.Version;
-import com.asetune.check.CheckForUpdates2;
+import com.asetune.check.CheckForUpdates;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.SwingUtils;
@@ -100,7 +100,7 @@ public class AboutBox
 
 		if ( _checkForUpdate_but.equals(e.getSource()) )
 		{
-			CheckForUpdates2.getInstance().checkForUpdateNoBlock(this, true, true);
+			CheckForUpdates.getInstance().checkForUpdateNoBlock(this, true, true);
 //			String appName = Version.getAppName();
 //			
 //			if (AseTune.APP_NAME.equals(appName))

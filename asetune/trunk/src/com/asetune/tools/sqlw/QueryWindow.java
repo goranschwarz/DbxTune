@@ -130,17 +130,21 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
-import com.asetune.AseConfigText.ConfigType;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
-import com.asetune.check.CheckForUpdates2;
-import com.asetune.check.CheckForUpdates2Sqlw;
-import com.asetune.check.CheckForUpdates2Sqlw.SqlwConnectInfo;
-import com.asetune.check.CheckForUpdates2Sqlw.SqlwUsageInfo;
+import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesSqlw;
+import com.asetune.check.CheckForUpdatesSqlw.SqlwConnectInfo;
+import com.asetune.check.CheckForUpdatesSqlw.SqlwUsageInfo;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dbms.RaxConfig;
+import com.asetune.config.dbms.RsConfig;
+import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.AboutBox;
-import com.asetune.gui.AseConfigViewDialog;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
 import com.asetune.gui.ConnectionDialog;
@@ -386,7 +390,7 @@ public class QueryWindow
 	public static final String ACTION_VIEW_CMD_HISTORY          = "VIEW_CMD_HISTORY";
 	public static final String ACTION_LOAD_LAST_HISTORY_ENTRY   = "LOAD_LAST_HISTORY_ENTRY";
 	public static final String ACTION_VIEW_LOG_TAIL             = "VIEW_LOG_TAIL";
-	public static final String ACTION_VIEW_ASE_CONFIG           = "VIEW_ASE_CONFIG";
+	public static final String ACTION_VIEW_DBMS_CONFIG          = "VIEW_DBMS_CONFIG";
 	public static final String ACTION_RS_GENERATE_CHANGED_DDL   = "RS_GENERATE_CHANGED_DDL";
 	public static final String ACTION_RS_GENERATE_ALL_DDL       = "RS_GENERATE_ALL_DDL";
 	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
@@ -563,7 +567,7 @@ public class QueryWindow
 	private JMenuItem           _logView_mi             = new JMenuItem("Open Log Window...");
 	private JMenuItem           _viewCmdHistory_mi      = new JMenuItem("Command History");
 	private JMenuItem           _viewLogFile_mi         = new JMenuItem("Tail on Server Log File");
-	private JMenuItem           _ase_viewConfig_mi      = new JMenuItem("View ASE Configuration...");
+	private JMenuItem           _dbms_viewConfig_mi     = new JMenuItem("View DBMS Configuration...");
 	private JMenuItem           _rs_configChangedDdl_mi = new JMenuItem("View RCL for changed configurations...");
 	private JMenuItem           _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
 	private JMenuItem           _rs_dumpQueue_mi        = new JMenuItem("View Stable Queue Content...");
@@ -612,7 +616,7 @@ public class QueryWindow
 		}
 
 		// Initialize the "Check For Updates" subsystem
-		CheckForUpdates2.setInstance( new CheckForUpdates2Sqlw() );
+		CheckForUpdates.setInstance( new CheckForUpdatesSqlw() );
 
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
@@ -1025,7 +1029,7 @@ public class QueryWindow
 			_view_m.add(_logView_mi);
 			_view_m.add(_viewCmdHistory_mi);
 			_view_m.add(_viewLogFile_mi);
-			_view_m.add(_ase_viewConfig_mi);
+			_view_m.add(_dbms_viewConfig_mi);
 			_view_m.add(_rs_configChangedDdl_mi);   
 			_view_m.add(_rs_configAllDdl_mi);   
 			_view_m.add(_rs_dumpQueue_mi);
@@ -1075,7 +1079,7 @@ public class QueryWindow
 			});
 
 			
-			_ase_viewConfig_mi     .setVisible(false);
+			_dbms_viewConfig_mi    .setVisible(false);
 			_rs_configChangedDdl_mi.setVisible(false);
 			_rs_configAllDdl_mi    .setVisible(false);
 			_rs_dumpQueue_mi       .setVisible(false);
@@ -1160,7 +1164,7 @@ public class QueryWindow
 			_logView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
 			_viewLogFile_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/tail_logfile.png"));
 			_viewCmdHistory_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/command_history.png"));
-			_ase_viewConfig_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
+			_dbms_viewConfig_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_dbms_view_16.png"));
 			_rs_configAllDdl_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_configChangedDdl_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_dumpQueue_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png"));
@@ -1187,7 +1191,7 @@ public class QueryWindow
 			_logView_mi                 .setActionCommand(ACTION_OPEN_LOG_VIEW);
 			_viewCmdHistory_mi          .setActionCommand(ACTION_VIEW_CMD_HISTORY);
 			_viewLogFile_mi             .setActionCommand(ACTION_VIEW_LOG_TAIL);
-			_ase_viewConfig_mi          .setActionCommand(ACTION_VIEW_ASE_CONFIG);
+			_dbms_viewConfig_mi         .setActionCommand(ACTION_VIEW_DBMS_CONFIG);
 			_rs_configChangedDdl_mi     .setActionCommand(ACTION_RS_GENERATE_CHANGED_DDL);
 			_rs_configAllDdl_mi         .setActionCommand(ACTION_RS_GENERATE_ALL_DDL);
 			_rs_dumpQueue_mi            .setActionCommand(ACTION_RS_DUMP_QUEUE);
@@ -1215,7 +1219,7 @@ public class QueryWindow
 			_logView_mi            .addActionListener(this);
 			_viewCmdHistory_mi     .addActionListener(this);
 			_viewLogFile_mi        .addActionListener(this);
-			_ase_viewConfig_mi     .addActionListener(this);
+			_dbms_viewConfig_mi    .addActionListener(this);
 			_rs_configChangedDdl_mi.addActionListener(this);
 			_rs_configAllDdl_mi    .addActionListener(this);
 			_rs_dumpQueue_mi       .addActionListener(this);
@@ -1959,8 +1963,8 @@ public class QueryWindow
 				public void run()
 				{
 //					CheckForUpdates.noBlockCheckSqlWindow(_jframe, false, true);
-					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-						CheckForUpdates2.getInstance().checkForUpdateNoBlock(_jframe, false, true);
+					if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+						CheckForUpdates.getInstance().checkForUpdateNoBlock(_jframe, false, true);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -2290,8 +2294,8 @@ public class QueryWindow
 		if (ACTION_EXIT.equals(actionCmd))
 			action_exit(e);
 
-		if (ACTION_VIEW_ASE_CONFIG.equals(actionCmd))
-			action_viewAseConfig(e);
+		if (ACTION_VIEW_DBMS_CONFIG.equals(actionCmd))
+			action_viewDbmsConfig(e);
 
 		if (ACTION_RS_GENERATE_CHANGED_DDL.equals(actionCmd))
 			action_rsGenerateDdl(e, ACTION_RS_GENERATE_CHANGED_DDL);
@@ -2647,6 +2651,9 @@ public class QueryWindow
 
 					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
 
+					// DBMS Configuration
+					DbmsConfigManager.setInstance( new AseConfig() );
+
 					// Only SA_ROLE can get listeners
 					_connectedToSysListeners = "Sorry you need 'sa_role' to query master..syslisteners";
 					if (AseConnectionUtils.hasRole(_conn, AseConnectionUtils.SA_ROLE))
@@ -2674,6 +2681,9 @@ public class QueryWindow
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
+
+					// DBMS Configuration
+					DbmsConfigManager.setInstance( new RsConfig() );
 
 					// Sortorder & charset
 					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
@@ -2717,6 +2727,9 @@ public class QueryWindow
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
 					_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
+
+					// DBMS Configuration
+					DbmsConfigManager.setInstance( new RaxConfig() );
 
 					// Sortorder & charset
 //					_connectedSrvCharset   = RepServerUtils.getRsCharset(_conn);
@@ -2814,7 +2827,7 @@ public class QueryWindow
 
 
 				// Send connection info
-				final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
+				final SqlwConnectInfo connInfo = new CheckForUpdatesSqlw.SqlwConnectInfo(connType);
 				connInfo.setProdName         (_connectedToProductName);
 				connInfo.setProdVersionStr   (_connectedToProductVersion);
 				connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2842,8 +2855,8 @@ public class QueryWindow
 					public void run()
 					{
 //						CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
-						if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-							CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
+						if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+							CheckForUpdates.getInstance().sendConnectInfoNoBlock(connInfo);
 					}
 				}, "checkForUpdatesThread");
 				checkForUpdatesThread.setDaemon(true);
@@ -2882,7 +2895,7 @@ public class QueryWindow
 			loadWinPropsForSrv(_conn.toString());
 
 			// Send connection info
-			final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdatesSqlw.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -2910,8 +2923,8 @@ public class QueryWindow
 				public void run()
 				{
 //					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
-					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-						CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
+					if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+						CheckForUpdates.getInstance().sendConnectInfoNoBlock(connInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -3050,7 +3063,7 @@ public class QueryWindow
 			loadWinPropsForSrv(_connectedWithUrl);
 
 			// Send connection info
-			final SqlwConnectInfo connInfo = new CheckForUpdates2Sqlw.SqlwConnectInfo(connType);
+			final SqlwConnectInfo connInfo = new CheckForUpdatesSqlw.SqlwConnectInfo(connType);
 			connInfo.setProdName         (_connectedToProductName);
 			connInfo.setProdVersionStr   (_connectedToProductVersion);
 			connInfo.setJdbcDriverName   (_connectedDriverName);
@@ -3078,8 +3091,8 @@ public class QueryWindow
 				public void run()
 				{
 //					CheckForUpdates.sendSqlwConnectInfoNoBlock(connInfo);
-					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-						CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connInfo);
+					if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+						CheckForUpdates.getInstance().sendConnectInfoNoBlock(connInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
@@ -3105,7 +3118,7 @@ public class QueryWindow
 		//_rsInTabs.setVisible(false);
 
 		// Set all to invisible, later set the ones that should be visible to true
-		_ase_viewConfig_mi     .setVisible(false);
+		_dbms_viewConfig_mi    .setVisible(false);
 		_rs_configChangedDdl_mi.setVisible(false);
 		_rs_configAllDdl_mi    .setVisible(false);
 		_cmdSql_but            .setVisible(false);
@@ -3192,7 +3205,7 @@ public class QueryWindow
 			
 			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
 			{
-				_ase_viewConfig_mi         .setVisible(true);// _ase_viewConfig_mi.setEnabled(true);
+				_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 				_cmdSql_but                .setVisible(true);
 				_aseCaptureSql_mi          .setVisible(true);
 				_jdbcMetaDataInfo_mi       .setVisible(true);
@@ -3224,6 +3237,7 @@ public class QueryWindow
 			}
 			else if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_RS))
 			{
+				_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 				_rs_configChangedDdl_mi    .setVisible(true);
 				_rs_configAllDdl_mi        .setVisible(true);
 				_cmdRcl_but                .setVisible(true);
@@ -3258,6 +3272,7 @@ public class QueryWindow
 			}
 			else // Probably IQ, SQL Anywhere or some other TDS implementation like OpenServer or jTDS
 			{
+				_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 //				_logger.info("Connected to the Sybase TDS service with product name '"+_connectedToProductName+"', only esential functionality is enabled.");
 				_cmdSql_but                .setVisible(true);
 				_jdbcMetaDataInfo_mi       .setVisible(true);
@@ -3326,6 +3341,7 @@ public class QueryWindow
 
 		if ( _connType == ConnectionDialog.JDBC_CONN)
 		{
+			_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
 			_cmdSql_but                .setVisible(true);
 			_jdbcMetaDataInfo_mi       .setVisible(true);
 
@@ -3416,6 +3432,14 @@ public class QueryWindow
 
 		if (_compleationProviderAbstract != null)
 			_compleationProviderAbstract.disconnect();
+
+		// DBMS Configuration
+		if (DbmsConfigManager.hasInstance())
+			DbmsConfigManager.setInstance(null);
+
+		// DBMS Configuration TEXT
+		if (DbmsConfigTextManager.hasInstances())
+			DbmsConfigTextManager.clear();
 
 		if (_conn != null)
 		{
@@ -4282,9 +4306,12 @@ public class QueryWindow
 		}
 	}
 	
-	private void action_viewAseConfig(ActionEvent e)
+	private void action_viewDbmsConfig(ActionEvent e)
 	{
-		WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Getting ASE Configuration");
+		WaitForExecDialog wait = new WaitForExecDialog(MainFrame.getInstance(), "Getting DBMS Configuration");
+
+//		// FIXME: this must be done for OTHER DBMS's as well... So we should probably do this "somewhere else", typically when we connect...
+//		DbmsConfigManager.setInstance(new AseConfig());
 
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
@@ -4292,31 +4319,51 @@ public class QueryWindow
 			@Override
 			public Object doWork()
 			{
-				getWaitDialog().setState("Getting sp_configure settings");
-				AseConfig aseCfg = AseConfig.getInstance();
-				if ( ! aseCfg.isInitialized() )
-					aseCfg.initialize(getConnection(), true, false, null);
+//				getWaitDialog().setState("Getting sp_configure settings");
+//				IDbmsConfig aseCfg = AseConfig.getInstance();
+//				if ( ! aseCfg.isInitialized() )
+//					aseCfg.initialize(getConnection(), true, false, null);
+//
+//				// initialize ASE Config Text Dictionary
+//				//AseConfigText.initializeAll(getConnection(), true, false, null);
+//				for (ConfigType t : ConfigType.values())
+//				{
+//					AseConfigText aseConfigText = AseConfigText.getInstance(t);
+//					if ( ! aseConfigText.isInitialized() )
+//					{
+//						getWaitDialog().setState("Getting '"+t+"' settings");
+//						aseConfigText.initialize(getConnection(), true, false, null);
+//					}
+//				}
+//				getWaitDialog().setState("Done");
 
-				// initialize ASE Config Text Dictionary
-				//AseConfigText.initializeAll(getConnection(), true, false, null);
-				for (ConfigType t : ConfigType.values())
+				if (DbmsConfigManager.hasInstance())
 				{
-					AseConfigText aseConfigText = AseConfigText.getInstance(t);
-					if ( ! aseConfigText.isInitialized() )
-					{
-						getWaitDialog().setState("Getting '"+t+"' settings");
-						aseConfigText.initialize(getConnection(), true, false, null);
-					}
+					getWaitDialog().setState("Getting sp_configure settings");
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					if ( ! dbmsCfg.isInitialized() )
+						dbmsCfg.initialize(getConnection(), true, false, null);
 				}
+				if (DbmsConfigTextManager.hasInstances())
+				{
+					for (IDbmsConfigText t : DbmsConfigTextManager.getInstanceList())
+					{
+						if ( ! t.isInitialized() )
+						{
+							getWaitDialog().setState("Getting '"+t.getTabLabel()+"' settings");
+							t.initialize(getConnection(), true, false, null);
+						}
+					}
 
-				getWaitDialog().setState("Done");
+					getWaitDialog().setState("Done");
+				}
 
 				return null;
 			}
 		};
 		wait.execAndWait(bgExec);
 
-		AseConfigViewDialog.showDialog(_window, this);
+		DbmsConfigViewDialog.showDialog(_window, this);
 	}
 
 
@@ -7407,8 +7454,8 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 		if (blockingCall)
 		{
 //			CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
-			if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-				CheckForUpdates2.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
+			if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+				CheckForUpdates.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
 		}
 		else
 		{
@@ -7421,8 +7468,8 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 				public void run()
 				{
 //					CheckForUpdates.sendSqlwCounterUsageInfoNoBlock(sqlwUsageInfo, blockingCall);
-					if (CheckForUpdates2.hasInstance(CheckForUpdates2Sqlw.class))
-						CheckForUpdates2.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
+					if (CheckForUpdates.hasInstance(CheckForUpdatesSqlw.class))
+						CheckForUpdates.getInstance().sendCounterUsageInfo(blockingCall, sqlwUsageInfo);
 				}
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);

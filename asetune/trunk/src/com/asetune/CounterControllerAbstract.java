@@ -26,6 +26,7 @@ import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelUserDefined;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;

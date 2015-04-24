@@ -2,8 +2,10 @@ package com.asetune;
 
 import org.apache.commons.cli.CommandLine;
 
-import com.asetune.check.CheckForUpdates2;
-import com.asetune.check.CheckForUpdates2Rs;
+import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesRs;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.RsConfig;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.utils.DbUtils;
@@ -81,9 +83,15 @@ extends DbxTune
 	}
 
 	@Override
-	public CheckForUpdates2 createCheckForUpdates()
+	public CheckForUpdates createCheckForUpdates()
 	{
-		return new CheckForUpdates2Rs(); 
+		return new CheckForUpdatesRs(); 
+	}
+
+	@Override
+	public IDbmsConfig createDbmsConfig()
+	{
+		return new RsConfig();
 	}
 
 	public static void main(String[] args)
