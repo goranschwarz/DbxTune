@@ -38,12 +38,12 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.cm.ase.CmSummary;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;

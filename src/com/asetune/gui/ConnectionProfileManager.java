@@ -1961,8 +1961,15 @@ public class ConnectionProfileManager
 				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
-					ConnectionProfile entry = TdsEntry.parseXml((Element) node);
-					addProfile(entry, false);
+					try
+					{
+						ConnectionProfile entry = TdsEntry.parseXml((Element) node);
+						addProfile(entry, false);
+					}
+					catch (Throwable tr)
+					{
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+					}
 		 		}
 			}
 
@@ -1976,8 +1983,15 @@ public class ConnectionProfileManager
 				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
-					ConnectionProfile entry = JdbcEntry.parseXml((Element) node);
-					addProfile(entry, false);
+					try
+					{
+						ConnectionProfile entry = JdbcEntry.parseXml((Element) node);
+						addProfile(entry, false);
+					}
+					catch (Throwable tr)
+					{
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+					}
 		 		}
 			}
 
@@ -1991,8 +2005,15 @@ public class ConnectionProfileManager
 				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
 				if (node.getNodeType() == Node.ELEMENT_NODE) 
 				{
-					ConnectionProfile entry = OfflineEntry.parseXml((Element) node);
-					addProfile(entry, false);
+					try
+					{
+						ConnectionProfile entry = OfflineEntry.parseXml((Element) node);
+						addProfile(entry, false);
+					}
+					catch (Throwable tr)
+					{
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+					}
 		 		}
 			}
 

@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.utils.AseConnectionUtils;
 
 
 public class IqConnection 
@@ -36,6 +37,18 @@ System.out.println("constructor::IqConnection(conn): conn="+conn);
 	public boolean isInTransaction() throws SQLException
 	{
 		return false; // FIXME: Don't know how to check this, so lets assume FALSE
+	}
+
+	@Override
+	public int getDbmsVersionNumber()
+	{
+		return AseConnectionUtils.getAseVersionNumber(this);
+	}
+
+	@Override
+	public boolean isDbmsClusterEnabled()
+	{
+		return false; // FIXME: check if we are in Multiplex mode...
 	}
 
 	public String getPlatform()

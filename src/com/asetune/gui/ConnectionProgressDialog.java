@@ -49,8 +49,8 @@ import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
@@ -706,6 +706,11 @@ implements ActionListener, ConnectionProgressCallback
 		_progress.setValue( now + 1 );
 	}
 
+
+	public void setStatus(String status)
+	{
+		_buttomStatus_lbl.setText(status);
+	}
 
 	@Override
 	public void setFinalStatus(int status)

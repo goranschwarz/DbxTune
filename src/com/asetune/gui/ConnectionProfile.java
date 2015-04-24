@@ -47,6 +47,18 @@ public class ConnectionProfile
 		JDBC_DERBY,
 		JDBC_OTHER,
 		JDBC_UNDEFINED; // if profile was saved without ever have been connected to
+
+		public static SrvType getByName(String name)
+		{
+			for(SrvType type : values())
+			{
+				if(type.toString().equals(name))
+					return type;
+			}
+			if (name.startsWith("TDS_"))
+				return TDS_OTHER;
+			return JDBC_OTHER;
+		}
 	}
 
 	private String       _name         = null;
@@ -110,7 +122,8 @@ public class ConnectionProfile
 	{
 		_name    = name;
 		_type    = Type.valueOf(type);
-		_srvType = SrvType.valueOf(srvType);
+//		_srvType = SrvType.valueOf(srvType);   // if we do this and it's a new entry then we will get: java.lang.IllegalArgumentException: No enum constant com.asetune.gui.ConnectionProfile.SrvType.TDS_RAX
+		_srvType = SrvType.getByName(srvType); // unknown/new srvType will be TDS_OTHER or JDBC_OTHER (this is for backward compatibility)
 		
 		if      (entry instanceof TdsEntry)     _tdsEntry     = (TdsEntry) entry;
 		else if (entry instanceof JdbcEntry)    _jdbcEntry    = (JdbcEntry) entry;

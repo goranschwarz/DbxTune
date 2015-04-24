@@ -2,8 +2,9 @@ package com.asetune;
 
 import org.apache.commons.cli.CommandLine;
 
-import com.asetune.check.CheckForUpdates2;
-import com.asetune.check.CheckForUpdates2Oracle;
+import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesOracle;
+import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameOracle;
 import com.asetune.utils.DbUtils;
@@ -81,9 +82,15 @@ extends DbxTune
 	}
 
 	@Override
-	public CheckForUpdates2 createCheckForUpdates()
+	public CheckForUpdates createCheckForUpdates()
 	{
-		return new CheckForUpdates2Oracle(); 
+		return new CheckForUpdatesOracle(); 
+	}
+
+	@Override
+	public IDbmsConfig createDbmsConfig()
+	{
+		return null; // null means it's not supported
 	}
 
 	public static void main(String[] args)

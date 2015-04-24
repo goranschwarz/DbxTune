@@ -18,10 +18,16 @@ import javax.script.ScriptException;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.check.CheckForUpdates2;
+import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.AseConfigText;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -747,22 +753,34 @@ extends CounterCollectorThreadAbstract
 //				System.out.println("aseSortId() = "+mtd.aseSortId);
 //				System.out.println("aseSortName() = "+mtd.aseSortName);
 				
-				// initialize ASE Config Dictionary
-				AseConfig aseCfg = AseConfig.getInstance();
-				if ( ! aseCfg.isInitialized() )
-				{
-					aseCfg.initialize(getCounterController().getMonConnection(), false, false, null);
-				}
-
-//				// initialize ASE Cache Config Dictionary
-//				AseCacheConfig aseCacheCfg = AseCacheConfig.getInstance();
-//				if ( ! aseCacheCfg.isInitialized() )
+//				// initialize ASE Config Dictionary
+//				IDbmsConfig aseCfg = AseConfig.getInstance();
+//				if ( ! aseCfg.isInitialized() )
 //				{
-//					aseCacheCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+//					aseCfg.initialize(getCounterController().getMonConnection(), false, false, null);
 //				}
+//
+////				// initialize ASE Cache Config Dictionary
+////				AseCacheConfig aseCacheCfg = AseCacheConfig.getInstance();
+////				if ( ! aseCacheCfg.isInitialized() )
+////				{
+////					aseCacheCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+////				}
+//
+//				// initialize ASE Config Text Dictionary
+//				AseConfigText.initializeAll(getCounterController().getMonConnection(), false, false, null);
 
-				// initialize ASE Config Text Dictionary
-				AseConfigText.initializeAll(getCounterController().getMonConnection(), false, false, null);
+				// initialize DBMS Config Dictionary
+				if (DbmsConfigManager.hasInstance())
+				{
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					if ( ! dbmsCfg.isInitialized() )
+						dbmsCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+				}
+				
+				// initialize DBMS Config Text Dictionary
+				if (DbmsConfigTextManager.hasInstances())
+					DbmsConfigTextManager.initializeAll(getCounterController().getMonConnection(), false, false, null);
 			}
 
 			// HOST Monitoring connection
@@ -817,7 +835,7 @@ extends CounterCollectorThreadAbstract
 
 					// Hopefully this is a better place to send connect info
 //					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
-					CheckForUpdates2.getInstance().sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
+					CheckForUpdates.getInstance().sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
 				}
 
 				if (getCounterController().getCmList() == null || (getCounterController().getCmList() != null && getCounterController().getCmList().size() == 0))

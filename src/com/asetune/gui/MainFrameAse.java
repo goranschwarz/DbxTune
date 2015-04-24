@@ -7,6 +7,7 @@ import java.awt.event.KeyEvent;
 import java.sql.Connection;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenu;
@@ -15,17 +16,20 @@ import javax.swing.KeyStroke;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
 import com.asetune.CounterController;
 import com.asetune.CounterControllerAse;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmPCacheModuleUsage;
 import com.asetune.cm.ase.CmSummary;
 import com.asetune.cm.ase.CmSysLoad;
 import com.asetune.cm.sql.VersionInfo;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
@@ -106,12 +110,34 @@ extends MainFrame
 			@Override
 			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
-				AseConfig aseCfg = AseConfig.getInstance();
-				if ( ! aseCfg.isInitialized() )
-					aseCfg.initialize(conn, true, false, null);
+//				IDbmsConfig aseCfg = AseConfig.getInstance();
+//				if ( ! aseCfg.isInitialized() )
+//					aseCfg.initialize(conn, true, false, null);
+//
+//				// initialize ASE Config Text Dictionary
+//				AseConfigText.initializeAll(conn, true, false, null);
 
-				// initialize ASE Config Text Dictionary
-				AseConfigText.initializeAll(conn, true, false, null);
+				if (DbmsConfigManager.hasInstance())
+				{
+					cpd.setStatus("Getting sp_configure settings");
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					if ( ! dbmsCfg.isInitialized() )
+						dbmsCfg.initialize(conn, true, false, null);
+				}
+				if (DbmsConfigTextManager.hasInstances())
+				{
+					List<IDbmsConfigText> list = DbmsConfigTextManager.getInstanceList();
+					for (IDbmsConfigText t : list)
+					{
+						if ( ! t.isInitialized() )
+						{
+							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
+							t.initialize(conn, true, false, null);
+						}
+					}
+
+					cpd.setStatus("");
+				}
 
 				return true;
 			}
@@ -212,11 +238,30 @@ extends MainFrame
 		MonTablesDictionary.getInstance().initializeMonTabColHelper(getOfflineConnection(), true);
 		CounterControllerAse.initExtraMonTablesDictionary();
 
-		// initialize ASE Config Dictionary
-		AseConfig.getInstance().initialize(getOfflineConnection(), true, true, null);
+//		// initialize ASE Config Dictionary
+//		AseConfig.getInstance().initialize(getOfflineConnection(), true, true, null);
+//
+//		// initialize ASE Config Text Dictionary
+//		AseConfigText.initializeAll(getOfflineConnection(), true, true, null);
 
-		// initialize ASE Config Text Dictionary
-		AseConfigText.initializeAll(getOfflineConnection(), true, true, null);
+		if (DbmsConfigManager.hasInstance())
+		{
+			IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+			if ( ! dbmsCfg.isInitialized() )
+				dbmsCfg.initialize(getOfflineConnection(), true, true, null);
+		}
+		if (DbmsConfigTextManager.hasInstances())
+			DbmsConfigTextManager.initializeAll(getOfflineConnection(), true, true, null);
+
+//		if (DbmsConfigTextManager.hasInstances())
+//		{
+//			List<IDbmsConfigText> list = DbmsConfigTextManager.getInstanceList();
+//			for (IDbmsConfigText t : list)
+//			{
+//				if ( ! t.isInitialized() )
+//					t.initialize(getOfflineConnection(), true, true, null);
+//			}
+//		}
 	}
 
 //	@Override
@@ -251,8 +296,14 @@ extends MainFrame
 	public void disconnectHookin(WaitForExecDialog waitDialog)
 	{
 		waitDialog.setState("Clearing ASE Config Dictionary.");
-		AseConfig.reset();
-		AseConfigText.reset();
+//		AseConfig.reset();
+//		AseConfigText.reset();
+
+		if (DbmsConfigManager.hasInstance())
+			DbmsConfigManager.getInstance().reset();
+
+		if (DbmsConfigTextManager.hasInstances())
+			DbmsConfigTextManager.reset();
 
 		waitDialog.setState("Clearing Mon Tables Dictionary.");
 		MonTablesDictionary.reset();      // Most probably need to work more on this one...
@@ -269,8 +320,8 @@ extends MainFrame
 		//-----------------------------
 		// MENU - VIEW
 		//-----------------------------
-		if (ACTION_OPEN_ASE_CONFIG_VIEW.equals(actionCmd))
-			AseConfigViewDialog.showDialog(this, this);
+//		if (ACTION_OPEN_ASE_CONFIG_VIEW.equals(actionCmd))
+//			DbmsConfigViewDialog.showDialog(this, this);
 
 		//-----------------------------
 		// MENU - TOOLS
@@ -325,13 +376,13 @@ extends MainFrame
 
 	}
 
-	public static final String ACTION_OPEN_ASE_CONFIG_VIEW              = "ACTION_OPEN_ASE_CONFIG_VIEW";
+//	public static final String ACTION_OPEN_ASE_CONFIG_VIEW              = "ACTION_OPEN_ASE_CONFIG_VIEW";
 	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL                  = "OPEN_CAPTURE_SQL";
 	public static final String ACTION_OPEN_ASE_APP_TRACE                = "OPEN_ASE_APP_TRACE";
 	public static final String ACTION_OPEN_ASE_STACKTRACE_TOOL          = "OPEN_ASE_STACKTRACE_TOOL";
 
-	private JMenuItem           _aseConfigView_mi;
+//	private JMenuItem           _aseConfigView_mi;
 
 	private JMenuItem           _aseConfMon_mi;
 	private JMenuItem           _captureSql_mi;
@@ -352,12 +403,12 @@ extends MainFrame
 	{
 		JMenu menu = super.createViewMenu();
 
-		_aseConfigView_mi              = new JMenuItem("View ASE Configuration...");
-		_aseConfigView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
-		_aseConfigView_mi             .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
-		_aseConfigView_mi             .addActionListener(this);
-
-		menu.add(_aseConfigView_mi, 2);
+//		_aseConfigView_mi              = new JMenuItem("View ASE Configuration...");
+//		_aseConfigView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
+//		_aseConfigView_mi             .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
+//		_aseConfigView_mi             .addActionListener(this);
+//
+//		menu.add(_aseConfigView_mi, 2);
 
 		return menu;
 	}
@@ -424,7 +475,7 @@ extends MainFrame
 			// File
 
 			// View
-			_aseConfigView_mi             .setEnabled(true);
+//			_aseConfigView_mi             .setEnabled(true);
 			
 			// Tools
 			_aseConfMon_mi                .setEnabled(true);
@@ -443,7 +494,7 @@ extends MainFrame
 			// File
 
 			// View
-			_aseConfigView_mi             .setEnabled(true);
+//			_aseConfigView_mi             .setEnabled(true);
 
 			// Tools
 			_aseConfMon_mi                .setEnabled(false);
@@ -462,7 +513,7 @@ extends MainFrame
 			// File
 
 			// View
-			_aseConfigView_mi             .setEnabled(false);
+//			_aseConfigView_mi             .setEnabled(false);
 
 			// Tools
 			_aseConfMon_mi                .setEnabled(false);

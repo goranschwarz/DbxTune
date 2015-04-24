@@ -20,8 +20,10 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
-import com.asetune.check.CheckForUpdates2;
+import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterSetTemplates;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
@@ -115,7 +117,8 @@ public abstract class DbxTune
 	public abstract MainFrame createGuiMainFrame();
 	public abstract ICounterController createCounterController(boolean hasGui);
 
-	public abstract CheckForUpdates2 createCheckForUpdates();
+	public abstract CheckForUpdates createCheckForUpdates();
+	public abstract IDbmsConfig createDbmsConfig();
 
 	public static boolean hasGui() { return _gui; } 
 	/**
@@ -622,7 +625,7 @@ public abstract class DbxTune
 			public void run()
 			{
 //				CheckForUpdates.init();
-				CheckForUpdates2.setInstance( createCheckForUpdates() );
+				CheckForUpdates.setInstance( createCheckForUpdates() );
 			}
 		}, "checkForUpdatesThread");
 //		checkForUpdatesThread.setDaemon(true);
@@ -750,6 +753,12 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			}
 		}
 
+		
+		// Create a DBMS Configuration object, note: createDbmsConfig() might return null, then the DBMS Config isn't supported...
+		IDbmsConfig dbmsConfig = createDbmsConfig();
+		DbmsConfigManager.setInstance(dbmsConfig);
+
+		
 		if ( ! _gui )
 		{
 			_logger.info("Starting "+Version.getAppName()+" in NO-GUI mode, counters will be sampled into a database.");
@@ -759,7 +768,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			//---------------------------------
 			_logger.info("Checking for new release...");
 //			CheckForUpdates.blockCheck(10*1000);
-			CheckForUpdates2.getInstance().checkForUpdateBlock(10*1000);
+			CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
 
 			//---------------------------------
 			// Create and Start the "collector" thread
@@ -779,7 +788,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				{
 					_logger.debug("----Start Shutdown Hook");
 //					CheckForUpdates.sendCounterUsageInfo(true);
-					CheckForUpdates2.getInstance().sendCounterUsageInfo(true);
+					CheckForUpdates.getInstance().sendCounterUsageInfo(true);
 					_logger.debug("----End Shutdown Hook");
 				}
 			});
@@ -882,7 +891,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 						public void run()
 						{
 //							CheckForUpdates.noBlockCheck(frame, false, true);
-							CheckForUpdates2.getInstance().checkForUpdateNoBlock(frame, false, true);
+							CheckForUpdates.getInstance().checkForUpdateNoBlock(frame, false, true);
 						}
 					}, "checkForUpdatesThread");
 					checkForUpdatesThread.setDaemon(true);
@@ -1191,8 +1200,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			//-------------------------------
 			else
 			{
-//				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) _instance = new AseTune      (cmd);
-				if      ("AseTune2"     .equalsIgnoreCase(_mainClassName)) _instance = new AseTune2     (cmd);
+				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) _instance = new AseTune      (cmd);
 				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) _instance = new IqTune       (cmd);
 				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) _instance = new RsTune       (cmd);
 				else if ("RaxTune"      .equalsIgnoreCase(_mainClassName)) _instance = new RaxTune      (cmd);

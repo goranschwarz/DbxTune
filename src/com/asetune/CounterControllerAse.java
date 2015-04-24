@@ -73,6 +73,7 @@ import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;

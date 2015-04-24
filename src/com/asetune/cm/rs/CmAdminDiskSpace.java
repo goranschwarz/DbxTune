@@ -8,11 +8,13 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -90,6 +92,58 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+
+	private void addTrendGraphs()
+	{
+		String[] labels = new String[] { "-added-at-runtime-" };
+		
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
+				"Stable Device Usage, from 'admin disk_space' (Absolute Value)", // Menu CheckBox text
+				"Stable Device Usage, from 'admin disk_space' (Absolute Value)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size() + 1];
+			String[] lArray = new String[dArray.length];
+
+			lArray[0] = "Sum-All-Devices";
+			dArray[0] = this.getAbsValueSum("Used Segs");
+
+			for (int i = 0; i < this.size(); i++)
+			{
+				lArray[i+1] = this.getAbsString       (i, "Logical");
+				dArray[i+1] = this.getAbsValueAsDouble(i, "Used Segs");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+	}
 	
 //	1> admin disk_space
 //	+--------------------------------+-------+-------+----------+---------+----------+
@@ -99,10 +153,6 @@ extends CountersModel
 //	+--------------------------------+-------+-------+----------+---------+----------+
 //	Rows 1
 //	(1 rows affected)
-
-	private void addTrendGraphs()
-	{
-	}
 
 //	@Override
 //	protected TabularCntrPanel createGui()

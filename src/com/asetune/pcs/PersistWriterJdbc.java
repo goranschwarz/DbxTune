@@ -31,17 +31,22 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseConfig;
-import com.asetune.AseConfigText;
-import com.asetune.AseConfigText.ConfigType;
 import com.asetune.DbxTune;
-import com.asetune.MonTablesDictionary;
-import com.asetune.MonTablesDictionary.MonTableColumnsEntry;
-import com.asetune.MonTablesDictionary.MonTableEntry;
-import com.asetune.TrendGraphDataPoint;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.AseConfigText;
+import com.asetune.config.dbms.DbmsConfigAbstract;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.AseConfigText.ConfigType;
+import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
+import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.PreparedStatementCache;
 import com.asetune.utils.AseConnectionUtils;
@@ -977,8 +982,6 @@ public class PersistWriterJdbc
 
 				// only 15.0 or above is supported
 				int aseVersion = AseConnectionUtils.getAseVersionNumber(_conn);
-//				if (aseVersion < 15000)
-//				if (aseVersion < 1500000)
 				if (aseVersion < Ver.ver(15,0))
 				{
 					String msg = "The PCS storage is ASE Version '"+Ver.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
@@ -1012,8 +1015,6 @@ public class PersistWriterJdbc
 					throw ex;
 				}
 
-//				if (aseVersion >= 15000)
-//				if (aseVersion >= 1500000)
 				if (aseVersion < Ver.ver(15,0))
 				{
 					_logger.debug("Connected to ASE (above 15.0), do some specific settings 'set delayed_commit on'.");
@@ -1027,7 +1028,7 @@ public class PersistWriterJdbc
 				}
 			}
 
-			// GET information already stored in the DDL Detailes storage
+			// GET information already stored in the DDL Details storage
 			populateDdlDetailesCache();
 
 		}
@@ -1288,8 +1289,8 @@ public class PersistWriterJdbc
 			checkAndCreateTable(SESSION_SAMPLE_DETAILES);
 			checkAndCreateTable(SESSION_MON_TAB_DICT);
 			checkAndCreateTable(SESSION_MON_TAB_COL_DICT);
-			checkAndCreateTable(SESSION_ASE_CONFIG);
-			checkAndCreateTable(SESSION_ASE_CONFIG_TEXT);
+			checkAndCreateTable(SESSION_DBMS_CONFIG);
+			checkAndCreateTable(SESSION_DBMS_CONFIG_TEXT);
 			checkAndCreateTable(DDL_STORAGE);
 			
 			//--------------------------
@@ -1403,15 +1404,14 @@ public class PersistWriterJdbc
 				saveMonTablesDictionary(MonTablesDictionary.getInstance(), cont._sessionStartTime);
 			}
 
-			// Storing the AseConfig and AseCacheConfig 
-			_logger.info("Storing ASE Configuration in table "+getTableName(SESSION_ASE_CONFIG, null, false));
-			saveAseConfig(AseConfig.getInstance(), cont._sessionStartTime);
-
-//			_logger.info("Storing ASE Cache Configuration in table "+getTableName(SESSION_ASE_CONFIG_TEXT, null, false));
-//			saveAseCacheConfig(AseCacheConfig.getInstance(), cont._sessionStartTime);
-
-			_logger.info("Storing Various ASE Configuration in table "+getTableName(SESSION_ASE_CONFIG_TEXT, null, false));
-			saveAseConfigText(cont._sessionStartTime);
+			// Storing the AseConfig and AseCacheConfig
+   			_logger.info("Storing DBMS Server Configuration in table "+getTableName(SESSION_DBMS_CONFIG, null, false));
+   			if (DbmsConfigManager.hasInstance())
+   				saveDbmsConfig(DbmsConfigManager.getInstance(), cont._sessionStartTime);
+    
+   			_logger.info("Storing Various DBMS Text Configuration in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
+   			if (DbmsConfigTextManager.hasInstances())
+   				saveDbmsConfigText(cont._sessionStartTime);
 
 			// Mark that this session HAS been started.
 			setSessionStarted(true);
@@ -1432,64 +1432,17 @@ public class PersistWriterJdbc
 		// FIXME: move this to the reader
 	}
 
-//	public void saveAseCacheConfig(AseCacheConfig aseCacheCfg, Timestamp sessionStartTime)
-//	{
-//		if (_conn == null)
-//		{
-//			_logger.error("No database connection to Persistent Storage DB.'");
-//			return;
-//		}
-//
-//		StringBuffer sbSql = null;
-//
-//		try
-//		{
-//			// START a transaction
-//			// This will lower number of IO's to the transaction log
-//			if (_conn.getAutoCommit() == true)
-//				_conn.setAutoCommit(false);
-//
-//			//----------------------------------------------
-//			// SESSION_MON_TAB_COL_DICT
-////			String tabName = getTableName(SESSION_ASE_CONFIG_TEXT, null, true);
-//
-//			sbSql = new StringBuffer();
-////			sbSql.append(" insert into ").append(tabName).append(" \n");
-//			sbSql.append(getTableInsertStr(SESSION_ASE_CONFIG_TEXT, null, false));
-//			sbSql.append(" values('").append(sessionStartTime).append("' \n");
-//			sbSql.append("       ,'AseCacheConfig' \n");
-//			sbSql.append("       ,").append(safeStr(aseCacheCfg.getConfig()))  .append(" \n");
-//			sbSql.append("       )\n");
-//
-//			dbExec(sbSql.toString());
-//			incInserts();
-//
-//
-//			// CLOSE the transaction
-//			_conn.commit();
-//		}
-//		catch (SQLException e)
-//		{
-//			try 
-//			{
-//				if (_conn.getAutoCommit() == true)
-//					_conn.rollback();
-//			}
-//			catch (SQLException e2) {}
-//
-//			_logger.warn("Error writing to Persistent Counter Store. SQL: "+sbSql.toString(), e);
-//		}
-//		finally
-//		{
-//			try { _conn.setAutoCommit(true); }
-//			catch (SQLException e2) { _logger.error("Problems when setting AutoCommit to true.", e2); }
-//		}
-//	}
-	public void saveAseConfigText(Timestamp sessionStartTime)
+	public void saveDbmsConfigText(Timestamp sessionStartTime)
 	{
 		if (_conn == null)
 		{
 			_logger.error("No database connection to Persistent Storage DB.'");
+			return;
+		}
+
+		if ( ! DbmsConfigTextManager.hasInstances() )
+		{
+			_logger.info("No DBMS Text configuration was avaibale in saveDbmsConfigText()");
 			return;
 		}
 
@@ -1502,20 +1455,37 @@ public class PersistWriterJdbc
 			if (_conn.getAutoCommit() == true)
 				_conn.setAutoCommit(false);
 
+//			//
+//			// Do it for all types
+//			//
+//			for (ConfigType t : AseConfigText.ConfigType.values())
+//			{
+//				AseConfigText aseConfigText = AseConfigText.getInstance(t);
+//
+//				_logger.info("Storing DB Server Configuration Text for '"+aseConfigText.getConfigType().toString()+"' in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
+//
+//				sbSql = new StringBuffer();
+//				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG_TEXT, null, false));
+//				sbSql.append(" values('").append(sessionStartTime).append("' \n");
+//				sbSql.append("       ,'"+aseConfigText.getConfigType().toString()+"' \n");
+//				sbSql.append("       ,").append(safeStr(aseConfigText.getConfig()))  .append(" \n");
+//				sbSql.append("       )\n");
+//
+//				dbExec(sbSql.toString());
+//				incInserts();
+//			}
 			//
 			// Do it for all types
 			//
-			for (ConfigType t : AseConfigText.ConfigType.values())
+			for (IDbmsConfigText dbmsConfigText : DbmsConfigTextManager.getInstanceList())
 			{
-				AseConfigText aseConfigText = AseConfigText.getInstance(t);
-
-				_logger.info("Storing ASE Configuration Text for '"+aseConfigText.getConfigType().toString()+"' in table "+getTableName(SESSION_ASE_CONFIG_TEXT, null, false));
+				_logger.info("Storing DBMS Configuration Text for '"+dbmsConfigText.getName()+"' in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
 
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(SESSION_ASE_CONFIG_TEXT, null, false));
+				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG_TEXT, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
-				sbSql.append("       ,'"+aseConfigText.getConfigType().toString()+"' \n");
-				sbSql.append("       ,").append(safeStr(aseConfigText.getConfig()))  .append(" \n");
+				sbSql.append("       ,'"+dbmsConfigText.getName()+"' \n");
+				sbSql.append("       ,").append(safeStr(dbmsConfigText.getConfig()))  .append(" \n");
 				sbSql.append("       )\n");
 
 				dbExec(sbSql.toString());
@@ -1544,11 +1514,16 @@ public class PersistWriterJdbc
 		}
 	}
 
-	public void saveAseConfig(AseConfig aseCfg, Timestamp sessionStartTime)
+	public void saveDbmsConfig(IDbmsConfig dbmsCfg, Timestamp sessionStartTime)
 	{
 		if (_conn == null)
 		{
 			_logger.error("No database connection to Persistent Storage DB.'");
+			return;
+		}
+		if (dbmsCfg == null)
+		{
+			_logger.info("No DBMS configuration was passed to saveDbmsConfig()");
 			return;
 		}
 
@@ -1563,19 +1538,19 @@ public class PersistWriterJdbc
 
 			//----------------------------------------------
 			// SESSION_MON_TAB_COL_DICT
-//			String tabName = getTableName(SESSION_ASE_CONFIG, null, true);
+//			String tabName = getTableName(SESSION_DBMS_CONFIG, null, true);
 
-			for (int r=0; r<aseCfg.getRowCount(); r++)
+			for (int r=0; r<dbmsCfg.getRowCount(); r++)
 			{
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(tabName).append(" \n");
-				sbSql.append(getTableInsertStr(SESSION_ASE_CONFIG, null, false));
+				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
 
-				for (int c=0; c<aseCfg.getColumnCount(); c++)
+				for (int c=0; c<dbmsCfg.getColumnCount(); c++)
 				{
 					// Get value
-					Object o = aseCfg.getValueAt(r, c);
+					Object o = dbmsCfg.getValueAt(r, c);
 
 					// if it's a string, surround it with '' or NULL
 					if (o instanceof String)
@@ -2269,7 +2244,7 @@ public class PersistWriterJdbc
 									str = str.substring("0x".length());
 							}
 
-							if (str != null && str.length() > allowedLength)
+							if ( allowedLength > 0  &&  str != null  &&  str.length() > allowedLength )
 							{
 								int dataLength = str.length();
 								String colName = cols.get(c);

@@ -16,7 +16,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.gui.AseConfigMonitoringDialog;
+import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;

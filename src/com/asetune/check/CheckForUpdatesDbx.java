@@ -13,9 +13,9 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.ICounterController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.Log4jLogRecord;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistReader.CmCounterInfo;
@@ -25,7 +25,7 @@ import com.asetune.pcs.PersistReader.SessionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.TimeUtils;
 
-public abstract class CheckForUpdatesDbx extends CheckForUpdates2
+public abstract class CheckForUpdatesDbx extends CheckForUpdates
 {
 	private static Logger _logger = Logger.getLogger(CheckForUpdatesDbx.class);
 

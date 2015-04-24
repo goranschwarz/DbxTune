@@ -8,12 +8,14 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -92,6 +94,54 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+
+	private void addTrendGraphs()
+	{
+		String[] labels = new String[] { "-added-at-runtime-" };
+		
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
+				"Queue Size from the RSSD (Absolute Value)", // Menu CheckBox text
+				"Queue Size from the RSSD (Absolute Value)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString       (i, "name") + "(" + this.getAbsString(i, "q_type_str") + ")";
+				dArray[i] = this.getAbsValueAsDouble(i, "size");
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+	}
 	
 	@Override
 	protected CmSybMessageHandler createSybMessageHandler()
@@ -103,10 +153,6 @@ extends CountersModel
 		msgHandler.addDiscardMsgNum(15540); // Gateway connection to 'GORAN_1_ERSSD.GORAN_1_ERSSD' is dropped.
 
 		return msgHandler;
-	}
-
-	private void addTrendGraphs()
-	{
 	}
 
 //	@Override
@@ -129,12 +175,16 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
 			mtd.addTable("db_queue_size",  "");
 
-			mtd.addColumn("db_queue_size", "xxx1",   "<html>FIXME</html>");
-			mtd.addColumn("db_queue_size", "xxx2",   "<html>FIXME</html>");
-			mtd.addColumn("db_queue_size", "xxx3",   "<html>FIXME</html>");
-			mtd.addColumn("db_queue_size", "xxx4",   "<html>FIXME</html>");
-			mtd.addColumn("db_queue_size", "xxx5",   "<html>FIXME</html>");
-			mtd.addColumn("db_queue_size", "xxx6",   "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "name",          "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "q_number",      "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "q_type",        "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "size",          "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "saved",         "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "detect_loss",   "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "ignore_loss",   "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "first_seg",     "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "status",        "<html>FIXME</html>");
+			mtd.addColumn("db_queue_size", "xnl_large_msg", "<html>FIXME</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}

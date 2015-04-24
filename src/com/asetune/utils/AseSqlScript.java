@@ -43,6 +43,7 @@ implements SybMessageHandler
 //	private ArrayList<ResultSetTableModel>  _resultCompList     = null;
 	private String                          _msgPrefix          = "";
 	private int                             _queryTimeout       = 0;
+	private boolean                         _rememberStates     = true;
 
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
@@ -51,8 +52,20 @@ implements SybMessageHandler
 	 */
 	public AseSqlScript(Connection conn, int queryTimeout)
 	{
+		this(conn, queryTimeout, true);
+	}
+
+	/** 
+	 * On open current database and message handler are saved, which is restored by close()
+	 * @param conn The Connection 
+	 * @param queryTimeout Query timeout in seconds, 0 = no timeout
+	 * @param rememberStates If we should remember in what database we are in, and the status of auto-commit etc...
+	 */
+	public AseSqlScript(Connection conn, int queryTimeout, boolean rememberStates)
+	{
 		_conn = conn;
 		_queryTimeout = queryTimeout;
+		_rememberStates = rememberStates;
 
 		if (conn instanceof SybConnection)
 		{
@@ -65,11 +78,16 @@ implements SybMessageHandler
 
 		try
 		{
-			_saveAutoCommit = _conn.getAutoCommit();
-			if (_saveAutoCommit != true)
-				_conn.setAutoCommit(true);
+			if (_rememberStates)
+			{
+    			_saveAutoCommit = _conn.getAutoCommit();
+    			if (_saveAutoCommit != true)
+    				_conn.setAutoCommit(true);
+    
+//    			_dbnameBeforeScript = AseConnectionUtils.getCurrentDbname(_conn);
+    			_dbnameBeforeScript = _conn.getCatalog();
 
-			_dbnameBeforeScript = AseConnectionUtils.getCurrentDbname(_conn);
+			}
 		}
 		catch(SQLException e)
 		{
@@ -99,8 +117,14 @@ implements SybMessageHandler
 		// Restore autoCommit
 		try
 		{
-			_conn.setAutoCommit(_saveAutoCommit);
-			AseConnectionUtils.useDbname(_conn, _dbnameBeforeScript);
+			if (_rememberStates)
+			{
+    			_conn.setAutoCommit(_saveAutoCommit);
+    			
+    			if (StringUtil.hasValue(_dbnameBeforeScript))
+    				_conn.setCatalog(_dbnameBeforeScript);
+//    			AseConnectionUtils.useDbname(_conn, _dbnameBeforeScript);
+			}
 		}
 		catch(SQLException e)
 		{

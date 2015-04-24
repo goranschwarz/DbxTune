@@ -12,12 +12,12 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmActiveStatementsPanel;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.AseConnectionUtils;
@@ -150,6 +150,9 @@ extends CountersModel
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
+		if (srvVersion >= Ver.ver(15,7))
+			return new String[] {"enable monitoring=1", "statement statistics active=1", "per object statistics active=1", "wait event timing=1"};
+
 		return NEED_CONFIG;
 	}
 

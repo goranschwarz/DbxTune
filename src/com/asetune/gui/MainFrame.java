@@ -79,16 +79,18 @@ import org.apache.log4j.lf5.LogLevel;
 import com.asetune.CounterCollectorThreadGui;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
-import com.asetune.GetCountersGui;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
-import com.asetune.check.CheckForUpdates2;
+import com.asetune.check.CheckForUpdates;
 import com.asetune.check.MailGroupDialog;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.ui.AseConfigMonitoringDialog;
+import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
@@ -222,7 +224,7 @@ public abstract class MainFrame
 	public static final String ACTION_OPEN_REFRESH_RATE                 = "OPEN_REFRESH_RATE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW             = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW             = "OPEN_GRAPH_GRAPH_VIEW";
-//	public static final String ACTION_OPEN_ASE_CONFIG_VIEW              = "ACTION_OPEN_ASE_CONFIG_VIEW";
+	public static final String ACTION_OPEN_DBMS_CONFIG_VIEW             = "ACTION_OPEN_DBMS_CONFIG_VIEW";
 	public static final String ACTION_OPEN_TCP_PANEL_CONFIG             = "OPEN_TCP_PANEL_CONFIG";
 
 //	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
@@ -350,7 +352,7 @@ public abstract class MainFrame
 	// View
 	private JMenu               _view_m;
 	private JMenuItem           _logView_mi;
-//	private JMenuItem           _aseConfigView_mi;
+	private JMenuItem           _dbmsConfigView_mi;
 	private JMenuItem           _offlineSessionsView_mi;
 	private JMenu               _preferences_m;
 	private JMenuItem           _refreshRate_mi;
@@ -503,7 +505,7 @@ public abstract class MainFrame
 				_logger.debug("----Start Shutdown Hook");
 //				CheckForUpdates.sendCounterUsageInfo(true);
 //				sendCounterUsageInfo(true);
-				CheckForUpdates2.getInstance().sendCounterUsageInfo(true);
+				CheckForUpdates.getInstance().sendCounterUsageInfo(true);
 				_logger.debug("----End Shutdown Hook");
 			}
 		});
@@ -1419,7 +1421,7 @@ public abstract class MainFrame
 		
 		_logView_mi                    = new JMenuItem("Open Log Window...");
 		_offlineSessionsView_mi        = new JMenuItem("Offline Sessions Window...");
-//		_aseConfigView_mi              = new JMenuItem("View ASE Configuration...");
+		_dbmsConfigView_mi             = new JMenuItem("View DBMS Configuration...");
 		_tcpSettingsConf_mi            = new JMenuItem("Change 'Performance Counter' Options...");
 		_counterTabView_mi             = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
 		_graphView_mi                  = new JMenuItem("Change 'Graph' Order and Visibility...");
@@ -1427,7 +1429,7 @@ public abstract class MainFrame
 
 		_logView_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
 		_offlineSessionsView_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
-//		_aseConfigView_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_view.png"));
+		_dbmsConfigView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_dbms_view_16.png"));
 		_tcpSettingsConf_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
 		_counterTabView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.png"));
 		_graphView_mi                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
@@ -1435,14 +1437,14 @@ public abstract class MainFrame
 
 		_logView_mi                   .setActionCommand(ACTION_OPEN_LOG_VIEW);
 		_offlineSessionsView_mi       .setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
-//		_aseConfigView_mi             .setActionCommand(ACTION_OPEN_ASE_CONFIG_VIEW);
+		_dbmsConfigView_mi            .setActionCommand(ACTION_OPEN_DBMS_CONFIG_VIEW);
 		_tcpSettingsConf_mi           .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
 		_counterTabView_mi            .setActionCommand(ACTION_OPEN_COUNTER_TAB_VIEW);
 		_graphView_mi                 .setActionCommand(ACTION_OPEN_GRAPH_GRAPH_VIEW);
 
 		_logView_mi                   .addActionListener(this);
 		_offlineSessionsView_mi       .addActionListener(this);
-//		_aseConfigView_mi             .addActionListener(this);
+		_dbmsConfigView_mi            .addActionListener(this);
 		_tcpSettingsConf_mi           .addActionListener(this);
 		_counterTabView_mi            .addActionListener(this);
 		_graphView_mi                 .addActionListener(this);
@@ -1453,7 +1455,7 @@ public abstract class MainFrame
 		menu.add(_logView_mi);
 		menu.add(_offlineSessionsView_mi);
 		menu.add(_preferences_m);
-//		menu.add(_aseConfigView_mi);
+		menu.add(_dbmsConfigView_mi);
 		menu.add(_tcpSettingsConf_mi);
 		menu.add(_counterTabView_mi);
 		menu.add(_graphView_mi);
@@ -1812,8 +1814,8 @@ public abstract class MainFrame
 //		if (ACTION_OPEN_ASE_CONFIG_MON.equals(actionCmd))
 //			action_openAseMonitorConfigDialog(e);
 
-//		if (ACTION_OPEN_ASE_CONFIG_VIEW.equals(actionCmd))
-//			AseConfigViewDialog.showDialog(this, this);
+		if (ACTION_OPEN_DBMS_CONFIG_VIEW.equals(actionCmd))
+			DbmsConfigViewDialog.showDialog(this, this);
 
 		if (ACTION_OPEN_TCP_PANEL_CONFIG.equals(actionCmd))
 			TcpConfigDialog.showDialog(_instance);
@@ -2749,7 +2751,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		
 		
 		ConnectionDialog connDialog = new ConnectionDialog(this, connDialogOptions);
-		if (source instanceof GetCountersGui && connDialogOptions._showAseTab)
+		if (source instanceof CounterCollectorThreadGui && connDialogOptions._showAseTab)
 		{
 			if ( action != null && action.startsWith(ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP) )
 			{
@@ -2826,7 +2828,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					PersistentCounterHandler.getInstance().addChangeListener(this);
 				}
 
-				CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
 
 			}
 		} // end: TDS_CONN
@@ -2856,7 +2858,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					PersistentCounterHandler.getInstance().addChangeListener(this);
 				}
 
-				CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
 			}
 		} // end: JDBC
 
@@ -2915,7 +2917,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				
 //				CheckForUpdates.sendConnectInfoNoBlock(connType, null);
 //				sendConnectInfoNoBlock(connType, null);
-				CheckForUpdates2.getInstance().sendConnectInfoNoBlock(connType, null);
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, null);
 			}
 		} // end: OFFLINE_CONN
 	}
@@ -3035,7 +3037,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				// Counter RESET will be done in the CheckForUpdates.sendCounterUsageInfo()
 //				CheckForUpdates.sendCounterUsageInfo(false);
 //				sendCounterUsageInfo(false);
-				CheckForUpdates2.getInstance().sendCounterUsageInfo(false);
+				CheckForUpdates.getInstance().sendCounterUsageInfo(false);
 
 				//--------------------------
 				// Clearing all cm's
@@ -4343,7 +4345,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
-//			mf._aseConfigView_mi             .setEnabled(true);
+			mf._dbmsConfigView_mi            .setEnabled(DbmsConfigManager.hasInstance());
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE
@@ -4398,7 +4400,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
-//			mf._aseConfigView_mi             .setEnabled(true);
+			mf._dbmsConfigView_mi            .setEnabled(DbmsConfigManager.hasInstance());
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE
@@ -4453,7 +4455,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterXMinutesValue_mi .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
-//			mf._aseConfigView_mi             .setEnabled(false);
+			mf._dbmsConfigView_mi            .setEnabled(false);
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE

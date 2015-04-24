@@ -9,7 +9,6 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -17,6 +16,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.rs.gui.CmAdminStatsPanel;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;

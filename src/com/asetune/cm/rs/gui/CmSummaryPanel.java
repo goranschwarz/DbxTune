@@ -859,186 +859,186 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_countersCleared_lbl,     "");
 		panel.add(_countersCleared_txt,     "growx, wrap");
 		
-		panel.add(_checkPoints_lbl,         "");
-		panel.add(_checkPoints_txt,         "growx, wrap");
-		
-		panel.add(_numDeadlocks_lbl,        "");
-		panel.add(_numDeadlocks_txt,        "growx, split");
-		panel.add(_numDeadlocksDiff_txt,    "growx, wrap");
-		
-		panel.add(_diagnosticDumps_lbl,     "");
-		panel.add(_diagnosticDumps_txt,     "growx, wrap");
-		
-		panel.add(_connections_lbl,         "");
-		panel.add(_connections_txt,         "growx, split");
-		panel.add(_connectionsDiff_txt,     "growx, wrap");
-		
-		panel.add(_distinctLogins_lbl,      "");
-		panel.add(_distinctLoginsAbs_txt,   "growx, split");
-		panel.add(_distinctLoginsDiff_txt,  "growx, wrap");
-		
-		panel.add(_lockWaitThreshold_lbl,   "");
-		panel.add(_lockWaitThreshold_txt,   "growx, wrap");
-		
-		panel.add(_lockWaits_lbl,           "");
-		panel.add(_lockWaits_txt,           "growx, split");
-		panel.add(_lockWaitsDiff_txt,       "growx, wrap");
-		
-		panel.add(_maxRecovery_lbl,         "");
-		panel.add(_maxRecovery_txt,         "growx, wrap");
-		
-		panel.add(_Transactions_lbl,        "hidemode 3");
-		panel.add(_Transactions_Abs_txt,    "hidemode 3, growx, split");
-		panel.add(_Transactions_Diff_txt,   "hidemode 3, growx, split");
-		panel.add(_Transactions_Rate_txt,   "hidemode 3, growx, wrap");
-		
-		panel.add(_Rollbacks_lbl,           "hidemode 3");
-		panel.add(_Rollbacks_Abs_txt,       "hidemode 3, growx, split");
-		panel.add(_Rollbacks_Diff_txt,      "hidemode 3, growx, split");
-		panel.add(_Rollbacks_Rate_txt,      "hidemode 3, growx, wrap");
-
-		panel.add(_Selects_lbl,             "hidemode 3");
-		panel.add(_Selects_Abs_txt,         "hidemode 3, growx, split");
-		panel.add(_Selects_Diff_txt,        "hidemode 3, growx, split");
-		panel.add(_Selects_Rate_txt,        "hidemode 3, growx, wrap");
-
-		panel.add(_Updates_lbl,             "hidemode 3");
-		panel.add(_Updates_Abs_txt,         "hidemode 3, growx, split");
-		panel.add(_Updates_Diff_txt,        "hidemode 3, growx, split");
-		panel.add(_Updates_Rate_txt,        "hidemode 3, growx, wrap");
-
-		panel.add(_Inserts_lbl,             "hidemode 3");
-		panel.add(_Inserts_Abs_txt,         "hidemode 3, growx, split");
-		panel.add(_Inserts_Diff_txt,        "hidemode 3, growx, split");
-		panel.add(_Inserts_Rate_txt,        "hidemode 3, growx, wrap");
-
-		panel.add(_Deletes_lbl,             "hidemode 3");
-		panel.add(_Deletes_Abs_txt,         "hidemode 3, growx, split");
-		panel.add(_Deletes_Diff_txt,        "hidemode 3, growx, split");
-		panel.add(_Deletes_Rate_txt,        "hidemode 3, growx, wrap");
-
-		panel.add(_Merges_lbl,              "hidemode 3");
-		panel.add(_Merges_Abs_txt,          "hidemode 3, growx, split");
-		panel.add(_Merges_Diff_txt,         "hidemode 3, growx, split");
-		panel.add(_Merges_Rate_txt,         "hidemode 3, growx, wrap");
-
-		panel.add(_TableAccesses_lbl,       "hidemode 3");
-		panel.add(_TableAccesses_Abs_txt,   "hidemode 3, growx, split");
-		panel.add(_TableAccesses_Diff_txt,  "hidemode 3, growx, split");
-		panel.add(_TableAccesses_Rate_txt,  "hidemode 3, growx, wrap");
-
-		panel.add(_IndexAccesses_lbl,       "hidemode 3");
-		panel.add(_IndexAccesses_Abs_txt,   "hidemode 3, growx, split");
-		panel.add(_IndexAccesses_Diff_txt,  "hidemode 3, growx, split");
-		panel.add(_IndexAccesses_Rate_txt,  "hidemode 3, growx, wrap");
-
-		panel.add(_TempDbObjects_lbl,       "hidemode 3");
-		panel.add(_TempDbObjects_Abs_txt,   "hidemode 3, growx, split");
-		panel.add(_TempDbObjects_Diff_txt,  "hidemode 3, growx, split");
-		panel.add(_TempDbObjects_Rate_txt,  "hidemode 3, growx, wrap");
-
-		panel.add(_WorkTables_lbl,          "hidemode 3");
-		panel.add(_WorkTables_Abs_txt,      "hidemode 3, growx, split");
-		panel.add(_WorkTables_Diff_txt,     "hidemode 3, growx, split");
-		panel.add(_WorkTables_Rate_txt,     "hidemode 3, growx, wrap");
-
-		panel.add(_ULCFlushes_lbl,          "hidemode 3");
-		panel.add(_ULCFlushes_Abs_txt,      "hidemode 3, growx, split");
-		panel.add(_ULCFlushes_Diff_txt,     "hidemode 3, growx, split");
-		panel.add(_ULCFlushes_Rate_txt,     "hidemode 3, growx, wrap");
-
-		panel.add(_ULCFlushFull_lbl,        "hidemode 3");
-		panel.add(_ULCFlushFull_Abs_txt,    "hidemode 3, growx, split");
-		panel.add(_ULCFlushFull_Diff_txt,   "hidemode 3, growx, split");
-		panel.add(_ULCFlushFull_Rate_txt,   "hidemode 3, growx, wrap");
-
-		panel.add(_ULCKBWritten_lbl,        "hidemode 3");
-		panel.add(_ULCKBWritten_Abs_txt,    "hidemode 3, growx, split");
-		panel.add(_ULCKBWritten_Diff_txt,   "hidemode 3, growx, split");
-		panel.add(_ULCKBWritten_Rate_txt,   "hidemode 3, growx, wrap");
-
-		panel.add(_PagesRead_lbl,           "hidemode 3");
-		panel.add(_PagesRead_Abs_txt,       "hidemode 3, growx, split");
-		panel.add(_PagesRead_Diff_txt,      "hidemode 3, growx, split");
-		panel.add(_PagesRead_Rate_txt,      "hidemode 3, growx, wrap");
-
-		panel.add(_PagesWritten_lbl,        "hidemode 3");
-		panel.add(_PagesWritten_Abs_txt,    "hidemode 3, growx, split");
-		panel.add(_PagesWritten_Diff_txt,   "hidemode 3, growx, split");
-		panel.add(_PagesWritten_Rate_txt,   "hidemode 3, growx, wrap");
-
-		panel.add(_PhysicalReads_lbl,       "hidemode 3");
-		panel.add(_PhysicalReads_Abs_txt,   "hidemode 3, growx, split");
-		panel.add(_PhysicalReads_Diff_txt,  "hidemode 3, growx, split");
-		panel.add(_PhysicalReads_Rate_txt,  "hidemode 3, growx, wrap");
-
-		panel.add(_PhysicalWrites_lbl,      "hidemode 3");
-		panel.add(_PhysicalWrites_Abs_txt,  "hidemode 3, growx, split");
-		panel.add(_PhysicalWrites_Diff_txt, "hidemode 3, growx, split");
-		panel.add(_PhysicalWrites_Rate_txt, "hidemode 3, growx, wrap");
-
-		panel.add(_LogicalReads_lbl,        "hidemode 3");
-		panel.add(_LogicalReads_Abs_txt,    "hidemode 3, growx, split");
-		panel.add(_LogicalReads_Diff_txt,   "hidemode 3, growx, split");
-		panel.add(_LogicalReads_Rate_txt,   "hidemode 3, growx, wrap");
-
-		panel.add(_fullTranslog_lbl,        "");
-		panel.add(_fullTranslog_txt,        "growx, wrap");
-		
-		panel.add(_oldestOpenTran_lbl,      "");
-		panel.add(_oldestOpenTran_txt,      "growx, wrap");
-		
-
-		
-		panel.add(_bootcount_lbl,           "gapy 20");
-		panel.add(_bootcount_txt,           "growx, wrap");
-		
-		panel.add(_recoveryState_lbl,       "");
-		panel.add(_recoveryState_txt,       "growx, wrap");
-		
+//		panel.add(_checkPoints_lbl,         "");
+//		panel.add(_checkPoints_txt,         "growx, wrap");
+//		
+//		panel.add(_numDeadlocks_lbl,        "");
+//		panel.add(_numDeadlocks_txt,        "growx, split");
+//		panel.add(_numDeadlocksDiff_txt,    "growx, wrap");
+//		
+//		panel.add(_diagnosticDumps_lbl,     "");
+//		panel.add(_diagnosticDumps_txt,     "growx, wrap");
+//		
+//		panel.add(_connections_lbl,         "");
+//		panel.add(_connections_txt,         "growx, split");
+//		panel.add(_connectionsDiff_txt,     "growx, wrap");
+//		
+//		panel.add(_distinctLogins_lbl,      "");
+//		panel.add(_distinctLoginsAbs_txt,   "growx, split");
+//		panel.add(_distinctLoginsDiff_txt,  "growx, wrap");
+//		
+//		panel.add(_lockWaitThreshold_lbl,   "");
+//		panel.add(_lockWaitThreshold_txt,   "growx, wrap");
+//		
+//		panel.add(_lockWaits_lbl,           "");
+//		panel.add(_lockWaits_txt,           "growx, split");
+//		panel.add(_lockWaitsDiff_txt,       "growx, wrap");
+//		
+//		panel.add(_maxRecovery_lbl,         "");
+//		panel.add(_maxRecovery_txt,         "growx, wrap");
+//		
+//		panel.add(_Transactions_lbl,        "hidemode 3");
+//		panel.add(_Transactions_Abs_txt,    "hidemode 3, growx, split");
+//		panel.add(_Transactions_Diff_txt,   "hidemode 3, growx, split");
+//		panel.add(_Transactions_Rate_txt,   "hidemode 3, growx, wrap");
+//		
+//		panel.add(_Rollbacks_lbl,           "hidemode 3");
+//		panel.add(_Rollbacks_Abs_txt,       "hidemode 3, growx, split");
+//		panel.add(_Rollbacks_Diff_txt,      "hidemode 3, growx, split");
+//		panel.add(_Rollbacks_Rate_txt,      "hidemode 3, growx, wrap");
+//
+//		panel.add(_Selects_lbl,             "hidemode 3");
+//		panel.add(_Selects_Abs_txt,         "hidemode 3, growx, split");
+//		panel.add(_Selects_Diff_txt,        "hidemode 3, growx, split");
+//		panel.add(_Selects_Rate_txt,        "hidemode 3, growx, wrap");
+//
+//		panel.add(_Updates_lbl,             "hidemode 3");
+//		panel.add(_Updates_Abs_txt,         "hidemode 3, growx, split");
+//		panel.add(_Updates_Diff_txt,        "hidemode 3, growx, split");
+//		panel.add(_Updates_Rate_txt,        "hidemode 3, growx, wrap");
+//
+//		panel.add(_Inserts_lbl,             "hidemode 3");
+//		panel.add(_Inserts_Abs_txt,         "hidemode 3, growx, split");
+//		panel.add(_Inserts_Diff_txt,        "hidemode 3, growx, split");
+//		panel.add(_Inserts_Rate_txt,        "hidemode 3, growx, wrap");
+//
+//		panel.add(_Deletes_lbl,             "hidemode 3");
+//		panel.add(_Deletes_Abs_txt,         "hidemode 3, growx, split");
+//		panel.add(_Deletes_Diff_txt,        "hidemode 3, growx, split");
+//		panel.add(_Deletes_Rate_txt,        "hidemode 3, growx, wrap");
+//
+//		panel.add(_Merges_lbl,              "hidemode 3");
+//		panel.add(_Merges_Abs_txt,          "hidemode 3, growx, split");
+//		panel.add(_Merges_Diff_txt,         "hidemode 3, growx, split");
+//		panel.add(_Merges_Rate_txt,         "hidemode 3, growx, wrap");
+//
+//		panel.add(_TableAccesses_lbl,       "hidemode 3");
+//		panel.add(_TableAccesses_Abs_txt,   "hidemode 3, growx, split");
+//		panel.add(_TableAccesses_Diff_txt,  "hidemode 3, growx, split");
+//		panel.add(_TableAccesses_Rate_txt,  "hidemode 3, growx, wrap");
+//
+//		panel.add(_IndexAccesses_lbl,       "hidemode 3");
+//		panel.add(_IndexAccesses_Abs_txt,   "hidemode 3, growx, split");
+//		panel.add(_IndexAccesses_Diff_txt,  "hidemode 3, growx, split");
+//		panel.add(_IndexAccesses_Rate_txt,  "hidemode 3, growx, wrap");
+//
+//		panel.add(_TempDbObjects_lbl,       "hidemode 3");
+//		panel.add(_TempDbObjects_Abs_txt,   "hidemode 3, growx, split");
+//		panel.add(_TempDbObjects_Diff_txt,  "hidemode 3, growx, split");
+//		panel.add(_TempDbObjects_Rate_txt,  "hidemode 3, growx, wrap");
+//
+//		panel.add(_WorkTables_lbl,          "hidemode 3");
+//		panel.add(_WorkTables_Abs_txt,      "hidemode 3, growx, split");
+//		panel.add(_WorkTables_Diff_txt,     "hidemode 3, growx, split");
+//		panel.add(_WorkTables_Rate_txt,     "hidemode 3, growx, wrap");
+//
+//		panel.add(_ULCFlushes_lbl,          "hidemode 3");
+//		panel.add(_ULCFlushes_Abs_txt,      "hidemode 3, growx, split");
+//		panel.add(_ULCFlushes_Diff_txt,     "hidemode 3, growx, split");
+//		panel.add(_ULCFlushes_Rate_txt,     "hidemode 3, growx, wrap");
+//
+//		panel.add(_ULCFlushFull_lbl,        "hidemode 3");
+//		panel.add(_ULCFlushFull_Abs_txt,    "hidemode 3, growx, split");
+//		panel.add(_ULCFlushFull_Diff_txt,   "hidemode 3, growx, split");
+//		panel.add(_ULCFlushFull_Rate_txt,   "hidemode 3, growx, wrap");
+//
+//		panel.add(_ULCKBWritten_lbl,        "hidemode 3");
+//		panel.add(_ULCKBWritten_Abs_txt,    "hidemode 3, growx, split");
+//		panel.add(_ULCKBWritten_Diff_txt,   "hidemode 3, growx, split");
+//		panel.add(_ULCKBWritten_Rate_txt,   "hidemode 3, growx, wrap");
+//
+//		panel.add(_PagesRead_lbl,           "hidemode 3");
+//		panel.add(_PagesRead_Abs_txt,       "hidemode 3, growx, split");
+//		panel.add(_PagesRead_Diff_txt,      "hidemode 3, growx, split");
+//		panel.add(_PagesRead_Rate_txt,      "hidemode 3, growx, wrap");
+//
+//		panel.add(_PagesWritten_lbl,        "hidemode 3");
+//		panel.add(_PagesWritten_Abs_txt,    "hidemode 3, growx, split");
+//		panel.add(_PagesWritten_Diff_txt,   "hidemode 3, growx, split");
+//		panel.add(_PagesWritten_Rate_txt,   "hidemode 3, growx, wrap");
+//
+//		panel.add(_PhysicalReads_lbl,       "hidemode 3");
+//		panel.add(_PhysicalReads_Abs_txt,   "hidemode 3, growx, split");
+//		panel.add(_PhysicalReads_Diff_txt,  "hidemode 3, growx, split");
+//		panel.add(_PhysicalReads_Rate_txt,  "hidemode 3, growx, wrap");
+//
+//		panel.add(_PhysicalWrites_lbl,      "hidemode 3");
+//		panel.add(_PhysicalWrites_Abs_txt,  "hidemode 3, growx, split");
+//		panel.add(_PhysicalWrites_Diff_txt, "hidemode 3, growx, split");
+//		panel.add(_PhysicalWrites_Rate_txt, "hidemode 3, growx, wrap");
+//
+//		panel.add(_LogicalReads_lbl,        "hidemode 3");
+//		panel.add(_LogicalReads_Abs_txt,    "hidemode 3, growx, split");
+//		panel.add(_LogicalReads_Diff_txt,   "hidemode 3, growx, split");
+//		panel.add(_LogicalReads_Rate_txt,   "hidemode 3, growx, wrap");
+//
+//		panel.add(_fullTranslog_lbl,        "");
+//		panel.add(_fullTranslog_txt,        "growx, wrap");
+//		
+//		panel.add(_oldestOpenTran_lbl,      "");
+//		panel.add(_oldestOpenTran_txt,      "growx, wrap");
+//		
+//
+//		
+//		panel.add(_bootcount_lbl,           "gapy 20");
+//		panel.add(_bootcount_txt,           "growx, wrap");
+//		
+//		panel.add(_recoveryState_lbl,       "");
+//		panel.add(_recoveryState_txt,       "growx, wrap");
+//		
+////		panel.add(_cpuTime_lbl,             "");
+////		panel.add(_cpuTime_txt,             "growx, wrap");
+////		panel.add(_cpuUser_lbl,             "");
+////		panel.add(_cpuUser_txt,             "growx, wrap");
+////		panel.add(_cpuSystem_lbl,           "");
+////		panel.add(_cpuSystem_txt,           "growx, wrap");
+//
 //		panel.add(_cpuTime_lbl,             "");
-//		panel.add(_cpuTime_txt,             "growx, wrap");
-//		panel.add(_cpuUser_lbl,             "");
-//		panel.add(_cpuUser_txt,             "growx, wrap");
-//		panel.add(_cpuSystem_lbl,           "");
+//		panel.add(_cpuTime_txt,             "growx, split");
+//		panel.add(_cpuUser_txt,             "growx, split");
 //		panel.add(_cpuSystem_txt,           "growx, wrap");
-
-		panel.add(_cpuTime_lbl,             "");
-		panel.add(_cpuTime_txt,             "growx, split");
-		panel.add(_cpuUser_txt,             "growx, split");
-		panel.add(_cpuSystem_txt,           "growx, wrap");
-
-		panel.add(_cpuIdle_lbl,             "");
-		panel.add(_cpuIdle_txt,             "growx, wrap");
-		
-		panel.add(_ioTotalRead_lbl,         "");
-		panel.add(_ioTotalRead_txt,         "growx, split");
-		panel.add(_ioTotalReadDiff_txt,     "growx, wrap");
-		
-		panel.add(_ioTotalWrite_lbl,        "");
-		panel.add(_ioTotalWrite_txt,        "growx, split");
-		panel.add(_ioTotalWriteDiff_txt,    "growx, wrap");
-		
-		panel.add(_aaConnections_lbl,       "");
-		panel.add(_aaConnectionsAbs_txt,    "growx, split");
-		panel.add(_aaConnectionsDiff_txt,   "growx, split");
-		panel.add(_aaConnectionsRate_txt,   "growx, wrap");
-
-		panel.add(_packReceived_lbl,        "");
-		panel.add(_packReceived_txt,        "growx, split");
-		panel.add(_packReceivedDiff_txt,    "growx, wrap");
-		
-		panel.add(_packSent_lbl,            "");
-		panel.add(_packSent_txt,            "growx, split");
-		panel.add(_packSentDiff_txt,        "growx, wrap");
-		
-		panel.add(_packetErrors_lbl,        "");
-		panel.add(_packetErrors_txt,        "growx, split");
-		panel.add(_packetErrorsDiff_txt,    "growx, wrap");
-		
-		panel.add(_totalErrors_lbl,         "");
-		panel.add(_totalErrors_txt,         "growx, split");
-		panel.add(_totalErrorsDiff_txt,     "growx, wrap");
+//
+//		panel.add(_cpuIdle_lbl,             "");
+//		panel.add(_cpuIdle_txt,             "growx, wrap");
+//		
+//		panel.add(_ioTotalRead_lbl,         "");
+//		panel.add(_ioTotalRead_txt,         "growx, split");
+//		panel.add(_ioTotalReadDiff_txt,     "growx, wrap");
+//		
+//		panel.add(_ioTotalWrite_lbl,        "");
+//		panel.add(_ioTotalWrite_txt,        "growx, split");
+//		panel.add(_ioTotalWriteDiff_txt,    "growx, wrap");
+//		
+//		panel.add(_aaConnections_lbl,       "");
+//		panel.add(_aaConnectionsAbs_txt,    "growx, split");
+//		panel.add(_aaConnectionsDiff_txt,   "growx, split");
+//		panel.add(_aaConnectionsRate_txt,   "growx, wrap");
+//
+//		panel.add(_packReceived_lbl,        "");
+//		panel.add(_packReceived_txt,        "growx, split");
+//		panel.add(_packReceivedDiff_txt,    "growx, wrap");
+//		
+//		panel.add(_packSent_lbl,            "");
+//		panel.add(_packSent_txt,            "growx, split");
+//		panel.add(_packSentDiff_txt,        "growx, wrap");
+//		
+//		panel.add(_packetErrors_lbl,        "");
+//		panel.add(_packetErrors_txt,        "growx, split");
+//		panel.add(_packetErrorsDiff_txt,    "growx, wrap");
+//		
+//		panel.add(_totalErrors_lbl,         "");
+//		panel.add(_totalErrors_txt,         "growx, split");
+//		panel.add(_totalErrorsDiff_txt,     "growx, wrap");
 				
 		setComponentProperties();
 

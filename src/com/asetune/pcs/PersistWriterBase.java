@@ -19,9 +19,11 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.AseConfig;
-import com.asetune.TrendGraphDataPoint;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
@@ -47,8 +49,8 @@ public abstract class PersistWriterBase
 	public static final int SESSION_SAMPLE_DETAILES  = 5;
 	public static final int SESSION_MON_TAB_DICT     = 6;
 	public static final int SESSION_MON_TAB_COL_DICT = 7;
-	public static final int SESSION_ASE_CONFIG       = 8;
-	public static final int SESSION_ASE_CONFIG_TEXT  = 9;
+	public static final int SESSION_DBMS_CONFIG      = 8;
+	public static final int SESSION_DBMS_CONFIG_TEXT = 9;
 	public static final int DDL_STORAGE              = 50;
 	public static final int ABS                      = 100;
 	public static final int DIFF                     = 101;
@@ -507,8 +509,8 @@ public abstract class PersistWriterBase
 		case SESSION_SAMPLE_DETAILES:  return q + "MonSessionSampleDetailes"    + q;
 		case SESSION_MON_TAB_DICT:     return q + "MonSessionMonTablesDict"     + q;
 		case SESSION_MON_TAB_COL_DICT: return q + "MonSessionMonTabColumnsDict" + q;
-		case SESSION_ASE_CONFIG:       return q + "MonSessionAseConfig"         + q;
-		case SESSION_ASE_CONFIG_TEXT:  return q + "MonSessionAseConfigText"     + q;
+		case SESSION_DBMS_CONFIG:      return q + "MonSessionDbmsConfig"        + q; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
+		case SESSION_DBMS_CONFIG_TEXT: return q + "MonSessionDbmsConfigText"    + q; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
 		case DDL_STORAGE:              return q + "MonDdlStorage"               + q;
 		case ABS:                      return q + cm.getName() + "_abs"         + q;
 		case DIFF:                     return q + cm.getName() + "_diff"        + q;
@@ -656,21 +658,30 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 1800,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
-			else if (type == SESSION_ASE_CONFIG)
+			else if (type == SESSION_DBMS_CONFIG)
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
 				sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
 
-				// Get ALL other column names from the AseConfig dictionary
-				AseConfig aseCfg = AseConfig.getInstance();				
-				for (int i=0; i<aseCfg.getColumnCount(); i++)
+//				// Get ALL other column names from the AseConfig dictionary
+//				IDbmsConfig aseCfg = AseConfig.getInstance();
+//				for (int i=0; i<aseCfg.getColumnCount(); i++)
+//				{
+//					sbSql.append("   ,"+fill(qic+aseCfg.getColumnName(i)+qic,40)+" "+fill(aseCfg.getSqlDataType(i),20)+" "+getNullable( aseCfg.getSqlDataType(i).equalsIgnoreCase("bit") ? false : true)+"\n");
+//				}
+				// Get ALL other column names from the DBMS Config dictionary
+				if (DbmsConfigManager.hasInstance())
 				{
-					sbSql.append("   ,"+fill(qic+aseCfg.getColumnName(i)+qic,40)+" "+fill(aseCfg.getSqlDataType(i),20)+" "+getNullable( aseCfg.getSqlDataType(i).equalsIgnoreCase("bit") ? false : true)+"\n");
+    				IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+    				for (int i=0; i<dbmsCfg.getColumnCount(); i++)
+    				{
+    					sbSql.append("   ,"+fill(qic+dbmsCfg.getColumnName(i)+qic,40)+" "+fill(dbmsCfg.getSqlDataType(i),20)+" "+getNullable( dbmsCfg.getSqlDataType(i).equalsIgnoreCase("bit") ? false : true)+"\n");
+    				}
 				}
 				sbSql.append(") \n");
 			}
-			else if (type == SESSION_ASE_CONFIG_TEXT)
+			else if (type == SESSION_DBMS_CONFIG_TEXT)
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
@@ -926,37 +937,60 @@ public abstract class PersistWriterBase
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
-		else if (type == SESSION_ASE_CONFIG)
+		else if (type == SESSION_DBMS_CONFIG)
 		{
+//			sbSql.append("insert into ").append(tabName).append("(");
+//			sbSql.append(qic).append("SessionStartTime").append(qic).append(", ");
+//
+//			// Get ALL other column names from the AseConfig dictionary
+//			IDbmsConfig aseCfg = AseConfig.getInstance();				
+//			for (int i=0; i<aseCfg.getColumnCount(); i++)
+//				sbSql.append(qic).append(aseCfg.getColumnName(i)).append(qic).append(", ");
+//
+//			// remove last ", "
+//			sbSql.delete(sbSql.length()-2, sbSql.length());
 			sbSql.append("insert into ").append(tabName).append("(");
-			sbSql.append(qic).append("SessionStartTime").append(qic).append(", ");
+			sbSql.append(qic).append("SessionStartTime").append(qic);
 
 			// Get ALL other column names from the AseConfig dictionary
-			AseConfig aseCfg = AseConfig.getInstance();				
-			for (int i=0; i<aseCfg.getColumnCount(); i++)
-				sbSql.append(qic).append(aseCfg.getColumnName(i)).append(qic).append(", ");
-
-			// remove last ", "
-			sbSql.delete(sbSql.length()-2, sbSql.length());
+			if (DbmsConfigManager.hasInstance())
+			{
+    			IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+    			for (int i=0; i<dbmsCfg.getColumnCount(); i++)
+    				sbSql.append(", ").append(qic).append(dbmsCfg.getColumnName(i)).append(qic);
+			}
 
 			// Add ending )
 			sbSql.append(") \n");
 
+//			// add: values(?, ...)
+//			if (addPrepStatementQuestionMarks)
+//			{
+//				sbSql.append("values(?, ");
+//				for (int i=0; i<aseCfg.getColumnCount(); i++)
+//					sbSql.append("?, ");
+//
+//				// remove last ", "
+//				sbSql.delete(sbSql.length()-2, sbSql.length());
+//
+//				// Add ending )
+//				sbSql.append(") \n");
+//			}
 			// add: values(?, ...)
 			if (addPrepStatementQuestionMarks)
 			{
-				sbSql.append("values(?, ");
-				for (int i=0; i<aseCfg.getColumnCount(); i++)
-					sbSql.append("?, ");
-
-				// remove last ", "
-				sbSql.delete(sbSql.length()-2, sbSql.length());
+				sbSql.append("values(?");
+				if (DbmsConfigManager.hasInstance())
+				{
+    				for (int i=0; i<DbmsConfigManager.getInstance().getColumnCount(); i++)
+    					sbSql.append(", ?");
+				}
 
 				// Add ending )
 				sbSql.append(") \n");
 			}
 		}
-		else if (type == SESSION_ASE_CONFIG_TEXT)
+		else if (type == SESSION_DBMS_CONFIG_TEXT)
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
 			sbSql.append(qic).append("SessionStartTime").append(qic).append(", ");
@@ -1120,11 +1154,11 @@ public abstract class PersistWriterBase
 		{
 			return null;
 		}
-		else if (type == SESSION_ASE_CONFIG)
+		else if (type == SESSION_DBMS_CONFIG)
 		{
 			return null;
 		}
-		else if (type == SESSION_ASE_CONFIG_TEXT)
+		else if (type == SESSION_DBMS_CONFIG_TEXT)
 		{
 			return null;
 		}

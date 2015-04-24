@@ -8,12 +8,14 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
-import com.asetune.MonTablesDictionary;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -94,6 +96,69 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+
+	private void addTrendGraphs()
+	{
+		String[] labels = new String[] { "-added-at-runtime-" };
+		
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			// GRAPH
+			TrendGraph tg = null;
+
+			//-----
+			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
+				"Backlog Size from 'admin statistics, backlog' in MB (Absolute Value)", // Menu CheckBox text
+				"Backlog Size from 'admin statistics, backlog' in MB (Absolute Value)", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
+		{
+			int size = 0;
+			for (int i = 0; i < this.size(); i++)
+			{
+				String monitorVal = this.getAbsString(i, "Monitor");
+				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0)
+					size++;
+			}
+			
+			// Write 1 "line" for every SQMRBacklogSeg row
+			Double[] dArray = new Double[size];
+			String[] lArray = new String[dArray.length];
+			int i2 = 0;
+			for (int i = 0; i < dArray.length; i++)
+			{
+				String monitorVal = this.getAbsString(i, "Monitor");
+				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0)
+				{
+    				lArray[i2] = this.getAbsString       (i, "Instance");
+    				dArray[i2] = this.getAbsValueAsDouble(i, "Last");
+    				i2++;
+				}
+			}
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+	}
+	
 
 	@Override
 	protected CmSybMessageHandler createSybMessageHandler()
@@ -158,9 +223,6 @@ extends CountersModel
 //	(9 rows affected)
 //	===============================================================================
 
-	private void addTrendGraphs()
-	{
-	}
 
 //	@Override
 //	protected TabularCntrPanel createGui()

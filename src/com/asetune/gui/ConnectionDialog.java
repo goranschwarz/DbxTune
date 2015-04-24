@@ -102,9 +102,9 @@ import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
-import com.asetune.MonTablesDictionary;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.ConnectionProfile.DbxTuneParams;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
@@ -4222,7 +4222,7 @@ public class ConnectionDialog
 //				null);
 //		_offlineConn = DbxConnection.createDbxConnection(conn);
 		_offlineConn = jdbcConnect2( 
-				false, // Check for desired product name
+				true, // offline connection
 				Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
@@ -4488,7 +4488,7 @@ public class ConnectionDialog
 
 		
 		_jdbcConn = jdbcConnect2(
-				true, // Check for desired product name
+				false, // is ofline connection
 				Version.getAppName(), 
 				jdbcDriver, 
 				jdbcUrl,
@@ -4542,7 +4542,7 @@ public class ConnectionDialog
 	 * @param tunnelInfo 
 	 * @throws Exception 
 	 */
-	private DbxConnection jdbcConnect2(final boolean checkProductName, final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
+	private DbxConnection jdbcConnect2(final boolean isOfflineConnection, final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo) 
 	{
 		Properties props  = new Properties();
 	//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
@@ -4571,12 +4571,17 @@ public class ConnectionDialog
 
 		try
 		{
-			String desiredProductName = null;
-			if (checkProductName)
-				desiredProductName = _desiredProductName;
+			String                         desiredProductName = _desiredProductName;
+			ConnectionProgressExtraActions connExtraActions   = _options._srvExtraChecks;
+			
+			if (isOfflineConnection)
+			{
+				desiredProductName = null;
+				connExtraActions   = null;
+			}
 
 			ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
-			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, _options._srvExtraChecks, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon);
+			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, connExtraActions, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon);
 		}
 		catch (Exception ex)
 		{
