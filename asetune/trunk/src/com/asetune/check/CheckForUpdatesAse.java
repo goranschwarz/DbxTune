@@ -128,7 +128,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //	public QueryString createSendConnectInfo(int connType, SshTunnelInfo sshTunnelInfo)
 	public QueryString createSendConnectInfo(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
+//System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
 		int connType                = (Integer)       params[0];
 		SshTunnelInfo sshTunnelInfo = (SshTunnelInfo) params[1];
 
@@ -253,8 +253,8 @@ System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnect
 
 		urlParams.add("checkId",             checkId);
 		urlParams.add("clientTime",          clientTime);
-		urlParams.add("userName",            System.getProperty("user.name"));
 		urlParams.add("clientAppName",       Version.getAppName());
+		urlParams.add("userName",            System.getProperty("user.name"));
 
 		urlParams.add("connectId",           getConnectCount()+"");
 		urlParams.add("srvVersion",          srvVersion);
@@ -287,7 +287,7 @@ System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnect
 //	public List<QueryString> createSendMdaInfo()
 	public List<QueryString> createSendMdaInfo(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendMdaInfo()");
+//System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendMdaInfo()");
 		if ( ! MonTablesDictionary.hasInstance() )
 		{
 			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
@@ -463,8 +463,8 @@ System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendMdaInfo
 
 				urlParams.add("checkId",            checkId);
 				urlParams.add("clientTime",         clientTime);
-				urlParams.add("userName",           userName);
 				urlParams.add("clientAppName",      Version.getAppName());
+				urlParams.add("userName",           userName);
 
 				urlParams.add("srvVersion",         srvVersionNum);
 				urlParams.add("isClusterEnabled",   isClusterEnabled);

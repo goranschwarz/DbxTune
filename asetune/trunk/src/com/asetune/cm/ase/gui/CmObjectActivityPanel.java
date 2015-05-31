@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.swing.JCheckBox;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -27,6 +28,7 @@ import com.asetune.cm.ase.CmCachedObjects;
 import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -37,6 +39,8 @@ extends TabularCntrPanel
 	private static final long    serialVersionUID      = 1L;
 
 //	private static final String  PROP_PREFIX           = CmObjectActivity.CM_NAME;
+
+	private JCheckBox l_sampleSystemTables_chk;
 
 	public CmObjectActivityPanel(CountersModel cm)
 	{
@@ -183,24 +187,49 @@ extends TabularCntrPanel
 		
 		
 		//-----------------------------------------
-		// sanple system tables: traceon(3650)
+		// sample system tables: traceon(3650)
 		//-----------------------------------------
 		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_systemTables : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_systemTables, CmObjectActivity.DEFAULT_sample_systemTables);
-		JCheckBox sampleSystemTables_chk = new JCheckBox("Include System Tables", defaultOpt);
+//		JCheckBox sampleSystemTables_chk = new JCheckBox("Include System Tables", defaultOpt);
+		l_sampleSystemTables_chk = new JCheckBox("Include System Tables", defaultOpt);
 
-		sampleSystemTables_chk.setName(CmObjectActivity.PROPKEY_sample_systemTables);
-		sampleSystemTables_chk.setToolTipText("<html>" +
+		l_sampleSystemTables_chk.setName(CmObjectActivity.PROPKEY_sample_systemTables);
+		l_sampleSystemTables_chk.setToolTipText("<html>" +
 				"Include system tables in the output<br>" +
 				"<b>Note 1</b>: This is enabled with dbcc traceon(3650).<br>" +
 				"<b>Note 2</b>: The traceflag 3650 is <b>not</b> checked/set before every sample, it's only set when this checkbox is touched.<br>" +
+				"<b>A word of warning</b>: This traceflag may/will cause performance degradation in the server, so <b>disable it when you are done</b>.<br>" +
 				"</html>");
 
-		sampleSystemTables_chk.addActionListener(new ActionListener()
+		l_sampleSystemTables_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
 				boolean isSelected = ((JCheckBox)e.getSource()).isSelected();
+				
+				if (isSelected)
+				{
+					String htmlMsg = "<html>"
+							+ "<h3>Warning</h3>"
+							+ "This option will enable trace flag 3650 at the server.<br>"
+							+ "<br>"
+							+ "Running with trace flag 3650 will add contention and lower overall system performance.<br>"
+							+ "It is advised that you run this for short durations of time, generally less than 30 minutes.<br>"
+							+ "<br>"
+							+ "<b>Please do not forget to disable this before you disconnect!</b><br>"
+							+ "<br>"
+							+ "Do you still want to enable this option?<br>"
+//							+ "Are you shure you want to do this?<br>"
+							+ "</html>";
+					int yesNo = JOptionPane.showConfirmDialog(CmObjectActivityPanel.this, 
+							htmlMsg, "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+					if ( yesNo == JOptionPane.NO_OPTION )
+					{
+						((JCheckBox)e.getSource()).setSelected(false);
+						return;
+					}
+				}
 				
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -240,9 +269,20 @@ extends TabularCntrPanel
 		panel.add(sampleTopRows_chk,      "split");
 		panel.add(sampleTopRowsCount_txt, "wrap");
 
-		panel.add(sampleSystemTables_chk, "wrap");
+		panel.add(l_sampleSystemTables_chk, "wrap");
 
 		return panel;
+	}
+
+	@Override
+	public void checkLocalComponents()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean confProp = conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_systemTables, CmObjectActivity.DEFAULT_sample_systemTables);
+		boolean guiProp  = l_sampleSystemTables_chk.isSelected();
+
+		if (confProp != guiProp)
+			l_sampleSystemTables_chk.setSelected(confProp);
 	}
 
 	@Override

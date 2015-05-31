@@ -423,7 +423,7 @@
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "deleteSrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "&mda_deleteIsCeEnabled=0\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "verifySrvVersion" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";

@@ -11,7 +11,7 @@ public class UnknownConnection extends DbxConnection
 	public UnknownConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::UnknownConnection(conn): conn="+conn);
+//System.out.println("constructor::UnknownConnection(conn): conn="+conn);
 	}
 
 

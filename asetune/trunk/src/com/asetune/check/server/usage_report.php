@@ -95,6 +95,7 @@ DB Cleanup:
 	$save_saveLogId            = $_GET['saveLogId'];
 
 	$mda_deleteVersion         = versionFix($_GET['mda_deleteVersion']);
+	$mda_deleteIsCeEnabled     = $_GET['mda_deleteIsCeEnabled'];
 	$mda_verifyVersion         = versionFix($_GET['mda_verifyVersion']);
 	$mda_lowVersion            = versionFix(str_replace(" ", "", $_GET['mda_lowVersion']));  // remove spaces in version str
 	$mda_highVersion           = versionFix(str_replace(" ", "", $_GET['mda_highVersion'])); // remove spaces in version str
@@ -336,6 +337,7 @@ DB Cleanup:
 		$result = mysql_query("
 			SELECT checkId,
 				serverAddTime,
+				clientAppName,
 				sessionType,
 				sessionStartTime,
 				sessionEndTime,
@@ -366,6 +368,7 @@ DB Cleanup:
 				sendCounter,
 				serverAddTime,
 				clientTime,
+				clientAppName,
 				userName,
 				srvVersion,
 				appVersion,
@@ -397,6 +400,7 @@ DB Cleanup:
 				sendCounter,
 				serverAddTime,
 				clientTime,
+				clientAppName,
 				userName,
 				srvVersion,
 				appVersion,
@@ -427,6 +431,7 @@ DB Cleanup:
 				sendCounter,
 				serverAddTime,
 				clientTime,
+				clientAppName,
 				userName,
 				srvVersion,
 				appVersion,
@@ -1180,7 +1185,7 @@ DB Cleanup:
 			echo "<h4>Cleaning up table 'asemon_mda_info' for aseVersion: $del_deleteVersion </h4>\n";
 
 			//---------
-			$sql = "DELETE FROM asemon_mda_info WHERE srvVersion = $mda_deleteVersion";
+			$sql = "DELETE FROM asemon_mda_info WHERE srvVersion = $mda_deleteVersion AND isClusterEnabled = $mda_deleteIsCeEnabled";
 
 			echo "EXEC: <code>$sql</code><br>\n";
 			mysql_query($sql) or die("ERROR: " . mysql_error());
@@ -1580,6 +1585,7 @@ DB Cleanup:
 					sessionStartTime,
 					sessionEndTime,
 					TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+					clientAppName,
 					userName,
 					connectId,
 					addSequence,
@@ -1604,6 +1610,7 @@ DB Cleanup:
 					sessionStartTime,
 					sessionEndTime,
 					TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+					clientAppName,
 					userName,
 					connectId,
 					addSequence,
@@ -1717,12 +1724,13 @@ DB Cleanup:
 					checkId            as deleteLogId,
 					checkId            as saveLogId,
 					userName,
+					clientAppName,
 					srvVersion,
 					appVersion,
 					count(sendCounter) as records,
 					max(sendCounter)   as maxSendCounter
 				FROM asemon_error_info
-				GROUP BY checkId, userName, srvVersion, appVersion
+				GROUP BY checkId, userName, clientAppName, srvVersion, appVersion
 				ORDER BY checkId desc
 				LIMIT 500
 			";
@@ -1741,12 +1749,13 @@ DB Cleanup:
 					checkId            as deleteLogId,
 					checkId            as saveLogId,
 					userName,
+					clientAppName,
 					srvVersion,
 					appVersion,
 					count(sendCounter) as records,
 					max(sendCounter)   as maxSendCounter
 				FROM asemon_error_info2
-				GROUP BY checkId, userName, srvVersion, appVersion
+				GROUP BY checkId, userName, clientAppName, srvVersion, appVersion
 				ORDER BY checkId desc
 				LIMIT 500
 			";
@@ -1770,12 +1779,13 @@ DB Cleanup:
 					max(serverAddTime) as maxServerAddTime,
 					checkId            as deleteLogId,
 					userName,
+					clientAppName,
 					srvVersion,
 					appVersion,
 					count(sendCounter) as records,
 					max(sendCounter)   as maxSendCounter
 				FROM asemon_error_info_save
-				GROUP BY checkId, userName, srvVersion, appVersion
+				GROUP BY checkId, userName, clientAppName, srvVersion, appVersion
 				ORDER BY checkId desc
 				LIMIT 500
 			";
@@ -1791,6 +1801,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1821,6 +1832,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1850,6 +1862,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1884,6 +1897,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1910,6 +1924,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1953,6 +1968,7 @@ DB Cleanup:
 					sendCounter,
 					serverAddTime,
 					clientTime,
+					clientAppName,
 					userName,
 					srvVersion,
 					appVersion,
@@ -1980,6 +1996,7 @@ DB Cleanup:
 					serverAddTime,
 					clientTime,
 					userName,
+					clientAppName,
 					srvVersion,
 					appVersion,
 					logLevel,

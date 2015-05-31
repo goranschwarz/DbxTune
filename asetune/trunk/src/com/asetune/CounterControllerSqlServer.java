@@ -121,12 +121,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using RepServer version number "+srvVersion+".");
+		_logger.info("Initializing all CM objects, using MS SQL-Server version number "+srvVersion+".");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using RepServer version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using MS SQL-Server version number "+srvVersion+".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -215,7 +215,7 @@ extends CounterControllerAbstract
 			sqlHostname      = "unknown";
 			counterClearTime = new Timestamp(0);
 		}
-System.out.println("SQLSERVER: createPcsHeaderInfo(): mainSampleTime='"+mainSampleTime+"', sqlServerName='"+sqlServerName+"', sqlHostname='"+sqlHostname+"', counterClearTime='"+counterClearTime+"'");
+//System.out.println("SQLSERVER: createPcsHeaderInfo(): mainSampleTime='"+mainSampleTime+"', sqlServerName='"+sqlServerName+"', sqlHostname='"+sqlHostname+"', counterClearTime='"+counterClearTime+"'");
 		return new HeaderInfo(mainSampleTime, sqlServerName, sqlHostname, counterClearTime);
 	}
 

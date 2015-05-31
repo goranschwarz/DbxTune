@@ -21,6 +21,12 @@ extends MainFrame
 		super();
 	}
 
+	@Override
+	public int getDefaultRefreshInterval()
+	{
+		return 30;
+	}
+
 	@Override public ImageIcon getApplicationIcon16() { return SwingUtils.readImageIcon(Version.class, "images/iqtune_icon_16.png"); };
 	@Override public ImageIcon getApplicationIcon32() { return SwingUtils.readImageIcon(Version.class, "images/iqtune_icon_32.png"); };
 

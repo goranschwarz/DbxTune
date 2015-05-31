@@ -155,7 +155,7 @@ extends TabularCntrPanel
 			{
 				setWatermarkText("Host Monitoring is Disabled or Initializing at Next sample.\n" +
 						"\n" +
-						"Enabled it when you connect to the ASE by:\n" +
+						"Enabled it when you connect to the DBMS by:\n" +
 						"- selecting the checkbox 'Monitor the OS Host for ...'\n" +
 						"In the Options panel at the bottom.");
 

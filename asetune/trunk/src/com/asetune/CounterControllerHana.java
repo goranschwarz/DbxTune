@@ -8,6 +8,8 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.hana.CmActiveStatements;
+import com.asetune.cm.hana.CmCsTables;
 import com.asetune.cm.hana.CmDeltaMerge;
 import com.asetune.cm.hana.CmIoStat;
 import com.asetune.cm.hana.CmLockStat;
@@ -68,43 +70,22 @@ extends CounterControllerAbstract
 
 		CmSummary           .create(counterController, guiController);
 
+		// Server Tab
 		CmServiceMemory     .create(counterController, guiController);
-		CmDeltaMerge        .create(counterController, guiController);
 
+		// Object/Access Tab
+		CmActiveStatements  .create(counterController, guiController);
+		CmCsTables          .create(counterController, guiController);
+		CmDeltaMerge        .create(counterController, guiController);
+		
+		// Cache Tab
 		CmPlanCacheOverview .create(counterController, guiController);
 		CmPlanCacheDetails  .create(counterController, guiController);
 
+		// Disk Tab
 		CmIoStat            .create(counterController, guiController);
 		CmLockWait          .create(counterController, guiController);
 		CmLockStat          .create(counterController, guiController);
-
-//		CmAdminWhoSqm       .create(counterController, guiController);
-//		CmAdminWhoSqt       .create(counterController, guiController);
-//		CmAdminWhoDist      .create(counterController, guiController);
-//		CmAdminWhoDsi       .create(counterController, guiController);
-//		CmAdminWhoRsi       .create(counterController, guiController);
-//		CmAdminStats        .create(counterController, guiController);
-//		CmAdminStatsRepAgent.create(counterController, guiController);
-//		CmAdminStatsSqm     .create(counterController, guiController);
-//		CmAdminStatsSqmr    .create(counterController, guiController);
-//		CmAdminStatsSqt     .create(counterController, guiController);
-//		CmAdminStatsDist    .create(counterController, guiController);
-//		CmAdminStatsDsi     .create(counterController, guiController);
-//		CmAdminStatsDsiExec .create(counterController, guiController);
-//		CmAdminStatsDsiHq   .create(counterController, guiController);
-//		CmAdminStatsAobj    .create(counterController, guiController);
-//		CmAdminStatsSts     .create(counterController, guiController);
-//		CmAdminStatsCm      .create(counterController, guiController);
-//		CmAdminStatsServ    .create(counterController, guiController);
-//		CmAdminStatsRsh     .create(counterController, guiController);
-//		CmAdminStatsSync    .create(counterController, guiController);
-//		CmAdminStatsSyncEle .create(counterController, guiController);
-//		CmAdminStatsRsi     .create(counterController, guiController);
-//		CmAdminStatsRsiUser .create(counterController, guiController);
-//
-//		CmAdminDiskSpace    .create(counterController, guiController);
-//		CmAdminStatsBacklog .create(counterController, guiController);
-//		CmDbQueueSizeInRssd .create(counterController, guiController);
 
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
@@ -147,12 +128,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using RepServer version number "+srvVersion+".");
+		_logger.info("Initializing all CM objects, using HANA version number "+srvVersion+".");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using RepServer version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using HANA version number "+srvVersion+".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);

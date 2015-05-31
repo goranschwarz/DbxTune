@@ -2,8 +2,10 @@ package com.asetune.cm.rs;
 
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import javax.naming.NameNotFoundException;
 
@@ -244,9 +246,11 @@ extends CountersModel
 			+ "go \n";
 
 		// NOTE: this should be empty when we pass a proper srvVersion number
-		String AOBJ = "trace 'on','dsi','dsi_workload' \n";
+		String AOBJ = "trace 'on','dsi','dsi_workload' \n"
+		            + "go \n";
 		if (srvVersion >= Ver.ver(15, 6))
-			AOBJ = "trace 'on','dsi','dsi_workload' \n";
+			AOBJ = "trace 'on','dsi','dsi_workload' \n"
+			     + "go \n";
 		
 		return statsOn + AOBJ;
 	}
@@ -257,15 +261,15 @@ extends CountersModel
 		String statsOff = 
 			  "admin stats, cancel \n"
 			+ "go \n"
-			+ "configure replication server set 'stats_sampling' to 'off' \n"
-			+ "go \n"
-			+ "configure replication server set 'stats_engineering_counters' to 'off' \n"
-			+ "go \n";
+			+ "--configure replication server set 'stats_sampling' to 'off' \n"
+			+ "--go \n"
+			+ "--configure replication server set 'stats_engineering_counters' to 'off' \n"
+			+ "--go \n";
 
 		// NOTE: this should be empty when we pass a proper srvVersion number
-		String AOBJ = "trace 'off','dsi','dsi_workload' \n";
+		String AOBJ = "--trace 'off','dsi','dsi_workload' \n";
 		if (srvVersion >= Ver.ver(15, 6))
-			AOBJ = "trace 'off','dsi','dsi_workload' \n";
+			AOBJ = "--trace 'off','dsi','dsi_workload' \n";
 			
 		return statsOff + AOBJ;
 	}
@@ -405,6 +409,246 @@ extends CountersModel
 		
 		return rows;
 	}
+
+
+
+
+	/**
+	 * Get all rows that is in the input Set
+	 * 
+	 * @param counterIdSet a set of CounterId's that we want to get
+	 * @return
+	 */
+	protected List<List<Object>> getCounterIds(int whatData, Set<Integer> counterIdSet)
+	{
+		Integer counterId;
+		int     counterId_pos = -1;
+
+		CounterSample cs;
+		if      (whatData == DATA_ABS)  cs = getCounterSampleAbs();
+		else if (whatData == DATA_DIFF) cs = getCounterSampleDiff();
+		else if (whatData == DATA_RATE) cs = getCounterSampleRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available. you passed whatData="+whatData);
+
+		// Find column Id's
+		List<String> colNames = cs.getColNames();
+		if (colNames == null)
+			return null;
+
+		for (int colId = 0; colId < colNames.size(); colId++)
+		{
+			String colName = (String) colNames.get(colId);
+			if (colName.equals("CounterId"))   counterId_pos   = colId;
+		}
+
+		List<List<Object>> rows = new ArrayList<List<Object>>();
+		List<Object>       row = null;
+
+		// Get all rows which is in the counterIdSet
+		for (int rowId = 0; rowId < cs.getRowCount(); rowId++)
+		{
+			row = cs.getRow(rowId);
+			
+			counterId = (Integer)  row.get(counterId_pos);
+
+			if (! counterIdSet.contains(counterId))
+				continue;
+
+			rows.add(row);
+		}
+
+		return rows;
+	}
+
+//	/**
+//	 * Create a new Sample based on the values in CmAdminStats object
+//	 * <p>
+//	 * All Counters in the table for a specific module will be a pivot table (one "module" for one "instance" will be one row, with many columns)
+//	 * 
+//	 * @param moduleName
+//	 * @param xrstm 
+//	 * @return
+//	 */
+//	protected List<List<Object>> getModuleSourceToDest(DbxTuneResultSetMetaData xrstm)
+//	{
+//		String module     = "";
+//		int    module_pos = -1;
+//
+//		String instance     = "";
+//		int    instance_pos = -1;
+//
+//		Integer instanceId;
+//		int     instanceId_pos = -1;
+//
+//		Integer counterId;
+//		int     counterId_pos = -1;
+//
+//		String type     = "";
+//		int    type_pos = -1;
+//
+//		String name     = "";
+//		int    name_pos = -1;
+//
+//		Long obs     = null;
+//		int  obs_pos = -1;
+//
+//		Long total     = null;
+//		int  total_pos = -1;
+//
+//		Long last     = null;
+//		int  last_pos = -1;
+//
+////		Long rateXsec     = null;
+////		int  rateXsec_pos = -1;
+//
+//		CounterSample cs = getCounterSampleAbs();
+//
+//		// Find column Id's
+//		List<String> colNames = cs.getColNames();
+//		if (colNames == null)
+//			return null;
+//
+//		for (int colId = 0; colId < colNames.size(); colId++)
+//		{
+//			String colName = (String) colNames.get(colId);
+//			if      (colName.equals("Module"))      module_pos      = colId;
+//			else if (colName.equals("Instance"))    instance_pos    = colId;
+//			else if (colName.equals("InstanceId"))  instanceId_pos  = colId;
+//			else if (colName.equals("CounterId"))   counterId_pos   = colId;
+//			else if (colName.equals("Type"))        type_pos        = colId;
+//			else if (colName.equals("Name"))        name_pos        = colId;
+//			else if (colName.equals("Obs"))         obs_pos         = colId;
+//			else if (colName.equals("Total"))       total_pos       = colId;
+//			else if (colName.equals("Last"))        last_pos        = colId;
+////			else if (colName.equals("RateXsec"))    rateXsec_pos    = colId;
+//		}
+//
+//		List<List<Object>> rows = new ArrayList<List<Object>>();
+//		List<Object>       row = new ArrayList<Object>();
+//
+////		db2db
+////		--	58000 (@src_dbid)				Repagent: Commands received	REPAGENT	CmdsRecv
+////		--	6000  (@src_ldbid)				SQM: Commands written to queue	SQM	CmdsWritten
+////		--	6020  (@src_ldbid)				SQM: Active queue segments	SQM	SegsActive
+////		--	62000 (special: @src_ldbid, @sqt_reader)	SQMR: Commands read from queue	SQMR	cmds	CmdsRead
+////		--	24000 (special: see code)			SQT: Commands read from queue	SQT	cmds	CmdsRead
+////		--	30000 (@src_dbid)				DIST: Commands read from inbound queue	DIST	cmds	CmdsRead
+////		--	6000  (@dest_ldbid)				SQM: Commands written to queue	SQM	CmdsWritten
+////		--	6020  (@dest_ldbid)				SQM: Active queue segments	SQM	SegsActive
+////		--	62013 (@src_ldbid, @sqt_reader)			SQMR: Unread segments	SQMR	SQMRBacklogSeg
+////		--	62013 (@dest_dbid, 10)				SQMR: Unread segments	SQMR	SQMRBacklogSeg
+////		--	5030  (@dest_dbid)				DSI: Commands read from outbound queue	DSI	cmds	DSICmdsRead
+////		rsi2db
+////		--	59001	(src_rsid)	RSIUSER: RSI messages received	RSIUSER	RSIUMsgRecv
+////		--	6000	(dest_ldbid)	SQM: Commands written to queue	SQM	CmdsWritten
+////		--	6020	(dest_dbid)	SQM: Active queue segments	SQM	SegsActive
+////		--	62013	(dest_dbid)	SQMR: Unread segments	SQMR	SQMRBacklogSeg
+////		--	5030	(dest_dbid)	DSI: Commands read from outbound queue	DSI	cmds	DSICmdsRead
+////		db2rsi
+////		--	58000	(src_dbid)		Repagent: Commands received	REPAGENT	CmdsRecv
+////		--	6000	(src_dbid)		SQM: Commands written to queue	SQM	CmdsWritten
+////		--	6020	(src_dbid)		SQM: Active queue segments	SQM	SegsActive
+////		--	62000	(src_ldbid, sqt_reader)	SQMR: Commands read from queue	SQMR	cmds	CmdsRead
+////		--	24000	(src_ldbid)		SQT: Commands read from queue	SQT	cmds	CmdsRead
+////		--	30000	(src_dbid)		DIST: Commands read from inbound queue	DIST	cmds	CmdsRead
+////		--	6000	(dest_rsid)		SQM: Commands written to queue	SQM	CmdsWritten
+////		--	6020	(dest_rsid)		SQM: Active queue segments	SQM	SegsActive
+////		--	62013	(src_ldbid)		SQMR: Unread segments	SQMR	SQMRBacklogSeg
+////		-- route backlog SQMR rs_statdetail.label looks like: SQMR, 16777320:0 BARCELONA15_RS_1, 0, GLOBAL RS
+////		-- but the easy way to tell is that the instance_id is the @dest_rsid
+////		--	62013	(dest_rsid)		SQMR: Unread segments	SQMR	SQMRBacklogSeg
+////		--	4004	(dest_rsid)		RSI: Messages sent with type RSI_MESSAGE	RSI	MsgsSent
+//		
+//		Set<Integer> counterIdSet = new HashSet<Integer>();
+//		counterIdSet.add(58000); // 58000	Repagent: Commands received	REPAGENT	CmdsRecv
+//		counterIdSet.add(6000);  // 6000	SQM: Commands written to queue	SQM	CmdsWritten
+//		counterIdSet.add(6020);  // 6020	SQM: Active queue segments	SQM	SegsActive
+//		counterIdSet.add(62000); // 62000	SQMR: Commands read from queue	SQMR	cmds	CmdsRead
+//		counterIdSet.add(24000); // 24000	SQT: Commands read from queue	SQT	cmds	CmdsRead
+//		counterIdSet.add(30000); // 30000	DIST: Commands read from inbound queue	DIST	cmds	CmdsRead
+////		counterIdSet.add(6000);  // 6000	SQM: Commands written to queue	SQM	CmdsWritten
+////		counterIdSet.add(6020);  // 6020	SQM: Active queue segments	SQM	SegsActive
+//		counterIdSet.add(62013); // 62013	SQMR: Unread segments	SQMR	SQMRBacklogSeg
+//		counterIdSet.add(5030);  // 5030	DSI: Commands read from outbound queue	DSI	cmds	DSICmdsRead
+//
+//		// rsi2db
+//		counterIdSet.add(59001); // 59001	RSIUSER: RSI messages received	RSIUSER	RSIUMsgRecv
+//
+//		// db2rsi
+//		counterIdSet.add(4004);  // 4004	RSI: Messages sent with type RSI_MESSAGE	RSI	MsgsSent
+//
+//		
+//		xrstm.addStrColumn("type",               1,  false, 10, "what type is this: db2db, rsi2db, db2rsi");
+//		xrstm.addStrColumn("source",             2,  false, 62, "Source of the data");
+//		xrstm.addStrColumn("destination",        3,  false, 62, "Destination");
+//
+//		xrstm.addLongColumn("RACmdsPerSec",      4,  true, ""); // db2db
+//		xrstm.addLongColumn("SQMInCmdsPerSec",   5,  true, ""); // db2db
+//		xrstm.addLongColumn("SegsActiveInMB",    6,  true, ""); // db2db
+//		xrstm.addLongColumn("BacklogInMB",       7,  true, ""); // db2db
+//		xrstm.addLongColumn("SQMRCmdsPerSec",    8,  true, ""); // db2db
+//		xrstm.addLongColumn("SQTCmdsPerSec",     9,  true, ""); // db2db
+//		xrstm.addLongColumn("DISTCmdsPerSec",    10, true, ""); // db2db
+//		xrstm.addLongColumn("SQMOutCmdsPerSec",  11, true, ""); // db2db
+//		xrstm.addLongColumn("SegsActiveOutMB",   12, true, ""); // db2db
+//		xrstm.addLongColumn("DSICmdsSec",        13, true, ""); // db2db
+//
+////		xrstm.addLongColumn("RSIUMsgSec",        4, true, ""); // rsi2db
+////		xrstm.addLongColumn("SQMOutCmdsPerSec",  5, true, ""); // rsi2db
+////		xrstm.addLongColumn("SegsActiveOut",     6, true, ""); // rsi2db
+////		xrstm.addLongColumn("SegsActiveOutMB",   7, true, ""); // rsi2db
+////		xrstm.addLongColumn("DSICmdsSec",        8, true, ""); // rsi2db
+////
+////		xrstm.addLongColumn("RACmdsPerSec",      4, true, ""); // db2rsi
+////		xrstm.addLongColumn("SQMInCmdsPerSec",   5, true, ""); // db2rsi
+////		xrstm.addLongColumn("SegsActiveInMB",    6, true, ""); // db2rsi
+////		xrstm.addLongColumn("SQMRCmdsPerSec",    7, true, ""); // db2rsi
+////		xrstm.addLongColumn("SQTCmdsPerSec",     8, true, ""); // db2rsi
+////		xrstm.addLongColumn("DISTCmdsPerSec",    9, true, ""); // db2rsi
+////		xrstm.addLongColumn("SQMOutCmdsPerSec", 10, true, ""); // db2rsi
+////		xrstm.addLongColumn("SegsActiveOutMB",  11, true, ""); // db2rsi
+////		xrstm.addLongColumn("BacklogOutMB",     12, true, ""); // db2rsi
+////		xrstm.addLongColumn("RSIMsgsSec",       13, true, ""); // db2rsi
+//
+////			values ('RS15.7', 'RateSummary db2db', 'RS Performance Summary (cmds/sec, backlog in MB):','RepAgent', 'SQM(i)', 'Active(i)',  'Backlog(i)', 'SQMR(SQT)', 'SQT',  'DIST',   'SQM(o)',    'Active(o)',  'DSI')
+////			values ('RS15.7', 'RateSummary db2rsi','RS Performance Summary (cmds/sec, backlog in MB):','RepAgent', 'SQM(i)', 'Backlog(i)', 'SQMR(SQT)',  'SQT',       'DIST', 'SQM(o)', 'Active(r)', 'Backlog(r)', 'RSI')
+////			values ('RS15.7', 'RateSummary rsi2db','RS Performance Summary (cmds/sec, backlog in MB):','RSIUser',  'SQM(i)', 'Active(i)',  'ActiveMB',   'DSI',       null,   null,     null,        null,         null)
+//
+//		
+//		// Get all rows which is in the counterIdSet
+//		for (int rowId = 0; rowId < cs.getRowCount(); rowId++)
+//		{
+//			row = cs.getRow(rowId);
+//			
+//			counterId = (Integer)  row.get(counterId_pos);
+//
+//			if (! counterIdSet.contains(counterId))
+//				continue;
+//
+//			rows.add(row);
+//		}
+//
+//		// Loop 
+//		for (int rowId = 0; rowId < rows.size(); rowId++)
+//		{
+//			row = rows.get(rowId);
+//			counterId = (Integer)  row.get(counterId_pos);
+//
+//			instance   = (String)  row.get(instance_pos);
+//			instanceId = (Integer) row.get(instanceId_pos);
+//			type       = (String)  row.get(type_pos);
+//			name       = (String)  row.get(name_pos);
+//			obs        = (Long)    row.get(obs_pos);
+//			total      = (Long)    row.get(total_pos);
+//			last       = (Long)    row.get(last_pos);
+////			rateXsec   = (Long)    row.get(rateXsec_pos);
+//			
+//			System.out.println("instance='"+instance+"', instanceId="+instanceId+", type='"+type+"', name='"+name+"', obs="+obs+", total="+total+", last="+last+".");
+//		}
+//		
+//		return rows;
+//	}
 }
 
 

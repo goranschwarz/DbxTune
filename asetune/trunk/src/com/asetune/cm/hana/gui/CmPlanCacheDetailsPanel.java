@@ -25,7 +25,13 @@ extends TabularCntrPanel
 //	private static final Logger  _logger	           = Logger.getLogger(CmPlanCacheDetailsPanel.class);
 	private static final long    serialVersionUID      = 1L;
 
-	public static final String  TOOLTIP_sample_afterPrevSample  = "<html>Only show executions that has accured <b>after</b> the previous sample.</html>";
+	public static final String  TOOLTIP_sample_afterPrevSample  = 
+		"<html>"
+		+ "Only show executions that has accured <b>after</b> the previous sample.<br>"
+		+ "<br>"
+		+ "<b>Note:</b> Diff calculations will <b>only</b> be accurate if a row/record is present in previous samples.<br>"
+		+ "If previous record was not present <i>diff</i> counters will be the same as the <i>absolute</i> value, and <i>rate</i> is simply calculated by taking the <i>diff</i> counter divided by sample time<br>"
+		+ "</html>";
 	public static final String  TOOLTIP_sample_extraWhereClause = 
 		"<html>" +
 		"Add extra where clause to the query that fetches information.<br>" +

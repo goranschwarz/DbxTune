@@ -38,6 +38,14 @@
 	$logLocation   = getUrlParam('logLocation');
 	$logMessage    = getUrlParam('logMessage');
 	$logStacktrace = getUrlParam('logStacktrace');
+	$clientAppName           = getUrlParam('clientAppName');
+
+
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 
 	//------------------------------------------
@@ -72,6 +80,7 @@
 		sendCounter,
 		serverAddTime,
 		clientTime,
+		clientAppName,
 		userName,
 
 		srvVersion,
@@ -90,6 +99,7 @@
 		$sendCounter,
 		NOW(),
 		'$clientTime',
+		'$clientAppName',
 		'$userName',
 
 		'$srvVersion',

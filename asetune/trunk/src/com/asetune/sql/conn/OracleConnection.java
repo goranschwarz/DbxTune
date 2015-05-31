@@ -19,7 +19,7 @@ extends DbxConnection
 	public OracleConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::OracleConnection(conn): conn="+conn);
+//System.out.println("constructor::OracleConnection(conn): conn="+conn);
 	}
 
 	public List<ProcedureInfo> getPackageProcedures(WaitForExecDialog waitDialog, String catalogName, String schemaName, String procName)

@@ -41,6 +41,7 @@
 	$checkId            = getUrlParam('checkId');
 	$connectId          = getUrlParam('connectId');
 	$clientTime         = getUrlParam('clientTime');   // removed in versions after 2011-11-09
+	$clientAppName      = getUrlParam('clientAppName');
 	$sessionType        = getUrlParam('sessionType');
 	$sessionStartTime   = getUrlParam('sessionStartTime');
 	$sessionEndTime     = getUrlParam('sessionEndTime');
@@ -58,6 +59,11 @@
 	if (empty($sessionType))
 		$sessionType= "online";
 
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 
 	// Copy all values AFTER userName to an array
@@ -96,6 +102,7 @@
 		(
 			checkId,
 			serverAddTime,
+			clientAppName,
 			sessionType,
 			sessionStartTime,
 			sessionEndTime,
@@ -111,6 +118,7 @@
 		(
 			$checkId,
 			NOW(),
+			'$clientAppName',
 			'$sessionType',
 			'$sessionStartTime',
 			'$sessionEndTime',

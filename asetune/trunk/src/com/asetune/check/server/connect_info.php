@@ -26,6 +26,7 @@
 	// Below is properties sent by the client, vstuff them into local variables
 	$checkId            = getUrlParam('checkId');
 	$clientTime         = getUrlParam('clientTime');
+	$clientAppName      = getUrlParam('clientAppName');
 	$userName           = getUrlParam('userName');
 
 	$connectId          = getUrlParam('connectId');
@@ -53,6 +54,11 @@
 	if (empty($connectId))
 		$connectId = -1;
 
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
@@ -72,6 +78,7 @@
 		checkId,
 		serverAddTime,
 		clientTime,
+		clientAppName,
 		userName,
 
 		connectId,
@@ -98,6 +105,7 @@
 		$checkId,
 		NOW(),
 		'$clientTime',
+		'$clientAppName',
 		'$userName',
 
 		$connectId,

@@ -911,7 +911,8 @@ public class DbUtils
 			return UNKNOWN;
 
 		String retStr = UNKNOWN;
-		String sql    = "select sys_context('USERENV','DB_NAME') as Instance from dual";
+//		String sql    = "select sys_context('USERENV','DB_NAME') as Instance from dual";
+		String sql    = "select sys_context('USERENV','INSTANCE_NAME') as Instance from dual";
 
 		try
 		{

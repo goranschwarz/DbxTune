@@ -2131,6 +2131,12 @@ implements
 
 						_lastUpdateExtendedInfoPanelTimer.stop();
 						updateExtendedInfoPanel();
+						
+//						CountersModel cm = _cm;
+//						if ( !_tailMode )
+//							cm = _cmDisplay;
+//						if (cm != null)
+//							cm.fireTableDataChanged();
 					}
 				});
 			}

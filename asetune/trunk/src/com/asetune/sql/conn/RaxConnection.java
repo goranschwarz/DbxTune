@@ -18,7 +18,7 @@ extends TdsConnection
 	public RaxConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::RaxConnection(conn): conn="+conn);
+//System.out.println("constructor::RaxConnection(conn): conn="+conn);
 	}
 
 	@Override

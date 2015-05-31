@@ -13,7 +13,7 @@ extends DbxConnection
 	public SqlServerConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::SqlServerConnection(conn): conn="+conn);
+//System.out.println("constructor::SqlServerConnection(conn): conn="+conn);
 	}
 
 	@Override

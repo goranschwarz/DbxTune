@@ -69,7 +69,7 @@ implements DbxConnectionStateInfo
 			return null;
 
 		if ( ! NORMAL_MODE.equals(_mode)   ) return "In mode: "+_mode; 
-		if ( "SUSPECT"    .equals(_status) ) return "Threads are down: status="+_status;
+		if ( "SUSPECT"    .equals(_status) ) return "RS Threads are down: status="+_status;
 
 		return null;
 	}

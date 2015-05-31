@@ -20,6 +20,12 @@ extends MainFrame
 		super();
 	}
 
+	@Override
+	public int getDefaultRefreshInterval()
+	{
+		return 20;
+	}
+
 	@Override public ImageIcon getApplicationIcon16() { return SwingUtils.readImageIcon(Version.class, "images/hanatune_icon_16.png"); };
 	@Override public ImageIcon getApplicationIcon32() { return SwingUtils.readImageIcon(Version.class, "images/hanatune_icon_32.png"); };
 

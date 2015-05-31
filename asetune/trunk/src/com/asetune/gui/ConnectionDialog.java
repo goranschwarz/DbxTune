@@ -1665,11 +1665,44 @@ public class ConnectionDialog
 		JLabel heading = new JLabel(" Connection Profiles ");
 		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, 14));
 
+		final JLabel     filter_lbl = new JLabel(" Filter");
+		final JTextField filter_txt = new JTextField();
+
+		filter_lbl.setToolTipText("Show only profile names that matches the filter.");
+		filter_txt.setToolTipText(filter_lbl.getToolTipText());
+
+		filter_txt.addKeyListener(new KeyListener()
+		{
+			@Override public void keyTyped(KeyEvent e) {}
+			@Override public void keyPressed(KeyEvent e) {}
+			@Override public void keyReleased(KeyEvent e) 
+			{
+				String filterStr = filter_txt.getText();
+
+				// Set the profile name to look for in the model
+				ConnectionProfileManager.getInstance().setTreeModelFilterOnProfileName(filterStr);
+				expandTree(_connProfileTree);
+
+				// set focus back to the filter
+				SwingUtilities.invokeLater(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						filter_txt.requestFocus();
+					}
+				});
+			}
+		});
+		
 //		JScrollPane treeScroll = new JScrollPane(_connProfileTree, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		JScrollPane treeScroll = new JScrollPane(_connProfileTree);
 		
 		panel.add( heading );
-//		panel.add( _connProfileTree, "push, grow" );
+		panel.add( filter_lbl, "split" );
+		panel.add( filter_txt, "pushx, growx, wrap" );
+
+		//		panel.add( _connProfileTree, "push, grow" );
 		panel.add( treeScroll, "push, grow" );
 //		panel.add( new JCheckBox("Add on Connect", true));
 		

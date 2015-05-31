@@ -13,7 +13,7 @@ public abstract class TdsConnection extends DbxConnection
 	public TdsConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::TdsConnection(conn): conn="+conn);
+//System.out.println("constructor::TdsConnection(conn): conn="+conn);
 	}
 
 	protected SybMessageHandler _oldMsgHandler = null;

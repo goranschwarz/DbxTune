@@ -291,6 +291,7 @@ implements ActionListener, MouseListener
 	@Override public void mouseReleased(MouseEvent e) {}
 	@Override public void mouseClicked (MouseEvent e)
 	{
+//System.out.println("_chart.getYChartStart()="+_chart.getYChartStart()+", _chart.getYChartEnd()="+_chart.getYChartEnd()+", NAME="+_graphName);
 		// if is RIGHT CLICK
 		if ( SwingUtilities.isRightMouseButton(e) )
 		{
@@ -790,6 +791,38 @@ implements ActionListener, MouseListener
 				initGraph(_series[i], refreshIntervalInSec, startTime);
 			}
 		}
+		
+		// Check if size of chart area is smaller than the minimum...
+		// if so make it bigger
+//		setMinimumChartArea();
+	}
+	
+	/**
+	 * If the label area grows it will make the graph area smaller...<br>
+	 * This will ensure the minChartHeight to 51 <br>
+	 * This will make the panel size a bit larger to compensate for that.
+	 */
+	public void setMinimumChartArea()
+	{
+		int minChartHeight = 51;
+		setMinimumChartArea(minChartHeight);
+	}
+	/**
+	 * If the label area grows it will make the graph area smaller...<br>
+	 * This will make the panel size a bit larger to compensate for that.
+	 */
+	public void setMinimumChartArea(int minChartHeight)
+	{
+		int currentChartHeight = _chart.getYChartStart() - _chart.getYChartEnd();
+		if (currentChartHeight < minChartHeight && _panel != null) 
+		{
+			int currentHeight     = _panel.getHeight();
+			int newPanelMinHeight = currentHeight + (minChartHeight - currentChartHeight);
+			
+			// only setMinimumSize() did not resize the panel straight away, so setSize() was also added.
+			_panel.setMinimumSize(new Dimension(-1, newPanelMinHeight));
+			_panel.setSize(       new Dimension(-1, newPanelMinHeight));
+		}
 	}
 
 	//Currently initGraph expects there to be only one TracePoint in the trace.
@@ -1095,6 +1128,8 @@ implements ActionListener, MouseListener
 				_panel.setMinimumSize(new Dimension(-1, panelMinHeight));
 				// only setMinimumSize() did not resize the panel straight away, so setSize() was also added.
 				_panel.setSize(new Dimension(-1, panelMinHeight));
+
+				setMinimumChartArea();
 
 				saveProps();
 			}

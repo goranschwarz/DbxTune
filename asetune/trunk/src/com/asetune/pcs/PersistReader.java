@@ -1376,6 +1376,8 @@ implements Runnable, ConnectionProvider
 			_logger.debug("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
 			setStatusText("");
 			
+			tg.setMinimumChartArea();
+			
 			return loadEveryXRow;
 		}
 		catch (SQLException e)

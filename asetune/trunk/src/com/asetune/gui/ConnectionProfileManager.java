@@ -560,7 +560,7 @@ public class ConnectionProfileManager
 		return _profileTreeModel;
 	}
 
-	public void   setTreeModelFilterOnProductName(String name) 
+	public void setTreeModelFilterOnProductName(String name) 
 	{ 
 		_profileTreeModel.setFilterOnProductName(name);
 		_profileTreeModel.reload();
@@ -568,6 +568,17 @@ public class ConnectionProfileManager
 	public String getTreeModelFilterOnProductName()            
 	{ 
 		return _profileTreeModel.getFilterOnProductName(); 
+	}
+
+
+	public void setTreeModelFilterOnProfileName(String name) 
+	{ 
+		_profileTreeModel.setFilterOnProfileName(name);
+		_profileTreeModel.reload();
+	}
+	public String getTreeModelFilterOnProfileName()            
+	{ 
+		return _profileTreeModel.getFilterOnProfileName(); 
 	}
 
 
@@ -1557,12 +1568,17 @@ public class ConnectionProfileManager
 		}
 
 		private String _filterProductName = null;
+		private String _filterProfileName = null;
 		
 		public void   setFilterOnProductName(String name) { _filterProductName = name; }
 		public String getFilterOnProductName()            { return _filterProductName; }
 
+		public void   setFilterOnProfileName(String name) { _filterProfileName = name; }
+		public String getFilterOnProfileName()            { return _filterProfileName; }
+
 		private boolean filterInclude(DefaultMutableTreeNode node)
 		{
+			boolean show = true;
 			Object o = node.getUserObject();
 			if (o instanceof ConnectionProfile) 
 			{
@@ -1573,59 +1589,18 @@ public class ConnectionProfileManager
 				if (_filterProductName != null)
 				{
 					if ( ! connProfile.isSrvType(_filterProductName) )
-						return false;
+						show = false;
+				}
 
-//					if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_ASE) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
-//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_IQ) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
-//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_RS))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_RS) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
-//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.TDS_ASA) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
-//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_HANA))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.JDBC_HANA) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
-//					else if (DbUtils.isProductName(_filterProductName, DbUtils.DB_PROD_NAME_MSSQL))
-//					{
-//						if ( ! connProfile.isSrvType(ConnectionProfile.SrvType.JDBC_MSSQL) )
-//						{
-//							//System.out.println("HIDE NODE: "+connProfile);
-//							return false;
-//						}
-//					}
+				// Hide Server types of NOT desired products
+				if (StringUtil.hasValue(_filterProfileName))
+				{
+					String profileName = connProfile.getName();
+					if ( profileName.indexOf(_filterProfileName) < 0 )
+						show = false;
 				}
 			}
-			return true;
+			return show;
 		}
 		
 		@Override
