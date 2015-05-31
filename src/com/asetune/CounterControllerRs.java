@@ -1,5 +1,8 @@
 package com.asetune;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
@@ -26,6 +29,7 @@ import com.asetune.cm.rs.CmAdminStatsServ;
 import com.asetune.cm.rs.CmAdminStatsSqm;
 import com.asetune.cm.rs.CmAdminStatsSqmr;
 import com.asetune.cm.rs.CmAdminStatsSqt;
+import com.asetune.cm.rs.CmRsSrcToDest;
 import com.asetune.cm.rs.CmAdminStatsSts;
 import com.asetune.cm.rs.CmAdminStatsSync;
 import com.asetune.cm.rs.CmAdminStatsSyncEle;
@@ -82,7 +86,7 @@ extends CounterControllerAbstract
 		ICounterController counterController = this;
 		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
 
-		CmSummary          .create(counterController, guiController);
+		CmSummary           .create(counterController, guiController);
 
 		CmAdminWhoSqm       .create(counterController, guiController);
 		CmAdminWhoSqt       .create(counterController, guiController);
@@ -90,6 +94,7 @@ extends CounterControllerAbstract
 		CmAdminWhoDsi       .create(counterController, guiController);
 		CmAdminWhoRsi       .create(counterController, guiController);
 		CmAdminStats        .create(counterController, guiController);
+		CmRsSrcToDest       .create(counterController, guiController);
 		CmAdminStatsRepAgent.create(counterController, guiController);
 		CmAdminStatsSqm     .create(counterController, guiController);
 		CmAdminStatsSqmr    .create(counterController, guiController);
@@ -200,54 +205,58 @@ extends CounterControllerAbstract
 	@Override
 	public PersistContainer.HeaderInfo createPcsHeaderInfo()
 	{
-		return new HeaderInfo(new Timestamp(System.currentTimeMillis()), "DUMMY_RS", "DUMMY_RS", new Timestamp(System.currentTimeMillis()));
-//		// Get session/head info
-//		String    aseServerName    = null;
-//		String    aseHostname      = null;
-//		Timestamp mainSampleTime   = null;
-//		Timestamp counterClearTime = null;
-//
+//		return new HeaderInfo(new Timestamp(System.currentTimeMillis()), "DUMMY_RS", "DUMMY_RS", new Timestamp(System.currentTimeMillis()));
+		// Get session/head info
+		String    serverName       = null;
+		String    hostname         = null;
+		Timestamp mainSampleTime   = null;
+		Timestamp counterClearTime = null;
+
 //		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-//
-//		try
-//		{
-//			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
-//				return null;
-//				
-//			Statement stmt = getMonConnection().createStatement();
-//			ResultSet rs = stmt.executeQuery(sql);
-//			while (rs.next())
-//			{
-//				mainSampleTime   = rs.getTimestamp(1);
-//				aseServerName    = rs.getString(2);
-//				aseHostname      = rs.getString(3);
+		String sql = "admin time";
+
+		try
+		{
+			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+				return null;
+
+			serverName = getMonConnection().getDatabaseServerName();
+			hostname   = serverName;
+
+			Statement stmt = getMonConnection().createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				mainSampleTime   = rs.getTimestamp(1);
+//				serverName       = rs.getString(2);
+//				hostname         = rs.getString(3);
 //				counterClearTime = rs.getTimestamp(4);
-//			}
-//			rs.close();
-//			stmt.close();
-//		}
-//		catch (SQLException sqlex)
-//		{
-//			// Connection is already closed.
-//			if ( "JZ0C0".equals(sqlex.getSQLState()) )
-//			{
-//				boolean forceConnectionCheck = true;
-//				boolean closeConnOnFailure   = true;
-//				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-//				{
-//					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-//					return null;
-//				}
-//			}
-//			
-//			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
-//			mainSampleTime   = new Timestamp(System.currentTimeMillis());
-//			aseServerName    = "unknown";
-//			aseHostname      = "unknown";
-//			counterClearTime = new Timestamp(0);
-//		}
-//		
-//		return new HeaderInfo(mainSampleTime, aseServerName, aseHostname, counterClearTime);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException sqlex)
+		{
+			// Connection is already closed.
+			if ( "JZ0C0".equals(sqlex.getSQLState()) )
+			{
+				boolean forceConnectionCheck = true;
+				boolean closeConnOnFailure   = true;
+				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
+				{
+					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
+					return null;
+				}
+			}
+			
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			mainSampleTime   = new Timestamp(System.currentTimeMillis());
+			serverName       = "unknown";
+			hostname         = "unknown";
+			counterClearTime = new Timestamp(0);
+		}
+
+		return new HeaderInfo(mainSampleTime, serverName, hostname, counterClearTime);
 	}
 
 	

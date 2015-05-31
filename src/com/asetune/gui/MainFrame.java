@@ -165,6 +165,12 @@ public abstract class MainFrame
 
 	//-------------------------------------------------
 	// PROPERTIES KEYS
+	public static final String    PROPKEY_refreshInterval              = "main.refresh.interval";
+	public static final int       DEFAULT_refreshInterval              = 10; // NOTE use: getDefaultRefreshIntervall() to get this, which depends on different implementations
+
+	public static final String    PROPKEY_refreshIntervalNoGui         = "nogui.sleepTime";
+	public static final int       DEFAULT_refreshIntervalNoGui         = 60;
+
 	public static final String    PROPKEY_useTcpGroups                 = "MainFrame.useTcpGroups";
 	public static final boolean   DEFAULT_useTcpGroups                 = true;
 
@@ -607,7 +613,10 @@ public abstract class MainFrame
 		// Set icons
 		setIconImages(getApplicationIcons());
 
-		
+		Configuration.registerDefaultValue(PROPKEY_refreshInterval,         getDefaultRefreshInterval());
+		Configuration.registerDefaultValue(PROPKEY_refreshIntervalNoGui,    DEFAULT_refreshIntervalNoGui);
+
+
 		//-------------------------------------------------------------------------
 		// HARDCODE a STOP date when this "DEVELOPMENT VERSION" will STOP working
 		//-------------------------------------------------------------------------
@@ -2930,9 +2939,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public abstract boolean disconnectAbort(boolean canBeAborted);
 	public abstract void    disconnectHookin(WaitForExecDialog waitDialog);
 
-//	public abstract void sendConnectInfoNoBlock(int connType, SshTunnelInfo sshTunnelInfo);
-//
-//	public abstract void sendCounterUsageInfo(boolean blockingCall);
+	/**
+	 * Get the default GUI refresh interval for this specific implementation of the DbXTune tool
+	 * @return
+	 */
+	public abstract int getDefaultRefreshInterval();
+
 
 	/**
 	 * 
@@ -5095,9 +5107,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			}
 		}
 
-		// 
-		_refreshInterval      = tmpConf.getIntProperty("main.refresh.interval", _refreshInterval);
-		_refreshNoGuiInterval = tmpConf.getIntProperty("nogui.sleepTime",       _refreshNoGuiInterval);
+		_refreshInterval      = tmpConf.getIntProperty(PROPKEY_refreshInterval,      getDefaultRefreshInterval());
+		_refreshNoGuiInterval = tmpConf.getIntProperty(PROPKEY_refreshIntervalNoGui, DEFAULT_refreshIntervalNoGui);
 		
 //		_sampleInterval_cbx.getModel().setSelectedItem( _refreshInterval );
 		boolean foundRefreshRate = false;

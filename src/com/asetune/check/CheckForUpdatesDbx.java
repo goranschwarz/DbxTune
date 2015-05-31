@@ -53,7 +53,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 //	public QueryString createCheckForUpdate()
 	public QueryString createCheckForUpdate(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createCheckForUpdate()");
+//System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createCheckForUpdate()");
 		// URL TO USE
 		String urlStr = DBXTUNE_CHECK_UPDATE_URL;
 
@@ -255,8 +255,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 //
 //		urlParams.add("checkId",             checkId);
 //		urlParams.add("clientTime",          clientTime);
-//		urlParams.add("userName",            System.getProperty("user.name"));
 //		urlParams.add("clientAppName",       Version.getAppName());
+//		urlParams.add("userName",            System.getProperty("user.name"));
 //
 //		urlParams.add("connectId",           getConnectCount()+"");
 //		urlParams.add("srvVersion",          srvVersion);
@@ -465,8 +465,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 //
 //				urlParams.add("checkId",            checkId);
 //				urlParams.add("clientTime",         clientTime);
+//				urlParams.add("clientAppName",      Version.getAppName());
 //				urlParams.add("userName",           userName);
-//				urlParams.add("clientAppName",       Version.getAppName());
 //
 //				urlParams.add("srvVersion",         srvVersionNum);
 //				urlParams.add("isClusterEnabled",   isClusterEnabled);
@@ -520,7 +520,7 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 //	public QueryString createSendUdcInfo()
 	public QueryString createSendUdcInfo(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendUdcInfo()");
+//System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendUdcInfo()");
 		// URL TO USE
 		String urlStr = DBXTUNE_UDC_INFO_URL;
 
@@ -544,8 +544,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 
 		urlParams.add("checkId",             checkId);
 		urlParams.add("clientTime",          clientTime);
-		urlParams.add("userName",            System.getProperty("user.name"));
 		urlParams.add("clientAppName",       Version.getAppName());
+		urlParams.add("userName",            System.getProperty("user.name"));
 
 		int udcRows = 0;
 		// key: UDC
@@ -584,7 +584,7 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 //	public List<QueryString> createSendCounterUsageInfo()
 	public List<QueryString> createSendCounterUsageInfo(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendCounterUsageInfo()");
+//System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendCounterUsageInfo()");
 		// URL TO USE
 		String urlStr = DBXTUNE_COUNTER_USAGE_INFO_URL;
 
@@ -632,8 +632,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 		urlParams.add("sessionType",         "online");
 		urlParams.add("sessionStartTime",    sampleStartTime);
 		urlParams.add("sessionEndTime",      sampleEndTime);
-		urlParams.add("userName",            System.getProperty("user.name"));
 		urlParams.add("clientAppName",       Version.getAppName());
+		urlParams.add("userName",            System.getProperty("user.name"));
 
 		int rows = 0;
 		for (CountersModel cm : CounterController.getInstance().getCmList())
@@ -700,8 +700,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 					urlParams.add("sessionType",         "offline-"+loopCnt);
 					urlParams.add("sessionStartTime",    sessionStartTime);
 					urlParams.add("sessionEndTime",      sessionEndTime);
-					urlParams.add("userName",            System.getProperty("user.name"));
 					urlParams.add("clientAppName",       Version.getAppName());
+					urlParams.add("userName",            System.getProperty("user.name"));
 
 					// Print info
 //					System.out.println("sessionInfo: \n" +
@@ -775,7 +775,7 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 //	public QueryString createSendLogInfo(Log4jLogRecord record, int sendLogInfoCount)
 	public QueryString createSendLogInfo(Object... params)
 	{
-System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendLogInfo()");
+//System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendLogInfo()");
 		Log4jLogRecord record = (Log4jLogRecord) params[0];
 		int sendLogInfoCount  = (Integer)        params[1];
 
@@ -806,8 +806,8 @@ System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: crea
 		urlParams.add("checkId",       checkId);
 		urlParams.add("sendCounter",   sendLogInfoCount +"");
 		urlParams.add("clientTime",    clientTime);
-		urlParams.add("userName",      System.getProperty("user.name"));
 		urlParams.add("clientAppName", Version.getAppName());
+		urlParams.add("userName",      System.getProperty("user.name"));
 
 		urlParams.add("srvVersion",    srvVersion);
 		urlParams.add("appVersion",    Version.getVersionStr());

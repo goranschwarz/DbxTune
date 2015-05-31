@@ -14,7 +14,7 @@ extends TdsConnection
 	public AsaConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::AsaConnection(conn): conn="+conn);
+//System.out.println("constructor::AsaConnection(conn): conn="+conn);
 	}
 
 	@Override

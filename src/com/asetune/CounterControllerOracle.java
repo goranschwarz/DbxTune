@@ -1,5 +1,8 @@
 package com.asetune;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
@@ -140,12 +143,12 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using RepServer version number "+srvVersion+".");
+		_logger.info("Initializing all CM objects, using Oracle version number "+srvVersion+".");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
-			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using RepServer version number "+srvVersion+".");
+			_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using Oracle version number "+srvVersion+".");
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
@@ -187,54 +190,53 @@ extends CounterControllerAbstract
 	@Override
 	public PersistContainer.HeaderInfo createPcsHeaderInfo()
 	{
-		return new HeaderInfo(new Timestamp(System.currentTimeMillis()), "DUMMY_ORACLE_SERVER", "DUMMY_ORACLE_SERVER", new Timestamp(System.currentTimeMillis()));
-//		// Get session/head info
-//		String    aseServerName    = null;
-//		String    aseHostname      = null;
-//		Timestamp mainSampleTime   = null;
-//		Timestamp counterClearTime = null;
-//
-//		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-//
-//		try
-//		{
-//			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
-//				return null;
-//				
-//			Statement stmt = getMonConnection().createStatement();
-//			ResultSet rs = stmt.executeQuery(sql);
-//			while (rs.next())
-//			{
-//				mainSampleTime   = rs.getTimestamp(1);
-//				aseServerName    = rs.getString(2);
-//				aseHostname      = rs.getString(3);
+		// Get session/head info
+		String    dbmsServerName   = null;
+		String    dbmsHostname     = null;
+		Timestamp mainSampleTime   = null;
+		Timestamp counterClearTime = new Timestamp(0);
+
+		String sql = "select current_timestamp, sys_context('USERENV','INSTANCE_NAME') as Instance, sys_context('USERENV','SERVER_HOST') as onHost from dual";
+
+		try
+		{
+			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+				return null;
+				
+			Statement stmt = getMonConnection().createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				mainSampleTime   = rs.getTimestamp(1);
+				dbmsServerName   = rs.getString(2);
+				dbmsHostname     = rs.getString(3);
 //				counterClearTime = rs.getTimestamp(4);
-//			}
-//			rs.close();
-//			stmt.close();
-//		}
-//		catch (SQLException sqlex)
-//		{
-//			// Connection is already closed.
-//			if ( "JZ0C0".equals(sqlex.getSQLState()) )
-//			{
-//				boolean forceConnectionCheck = true;
-//				boolean closeConnOnFailure   = true;
-//				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
-//				{
-//					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
-//					return null;
-//				}
-//			}
-//			
-//			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
-//			mainSampleTime   = new Timestamp(System.currentTimeMillis());
-//			aseServerName    = "unknown";
-//			aseHostname      = "unknown";
-//			counterClearTime = new Timestamp(0);
-//		}
-//		
-//		return new HeaderInfo(mainSampleTime, aseServerName, aseHostname, counterClearTime);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException sqlex)
+		{
+			// Connection is already closed.
+			if ( "JZ0C0".equals(sqlex.getSQLState()) )
+			{
+				boolean forceConnectionCheck = true;
+				boolean closeConnOnFailure   = true;
+				if ( ! isMonConnected(forceConnectionCheck, closeConnOnFailure) )
+				{
+					_logger.info("Problems getting basic status info in 'Counter get loop'. SQL State 'JZ0C0', which means 'Connection is already closed'. So lets start from the top." );
+					return null;
+				}
+			}
+			
+			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
+			mainSampleTime   = new Timestamp(System.currentTimeMillis());
+			dbmsServerName   = "unknown";
+			dbmsHostname     = "unknown";
+			counterClearTime = new Timestamp(0);
+		}
+		
+		return new HeaderInfo(mainSampleTime, dbmsServerName, dbmsHostname, counterClearTime);
 	}
 
 	

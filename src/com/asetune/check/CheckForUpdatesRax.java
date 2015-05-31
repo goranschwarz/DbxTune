@@ -40,11 +40,11 @@ public class CheckForUpdatesRax extends CheckForUpdatesDbx
 //		return null;
 //	}
 
-	@Override
-	public QueryString createSendLogInfo(Object... params)
-	{
-		System.out.println("NOT_YET_IMPLEMENTED: createSendLogInfo()");
-		return null;
-	}
+//	@Override
+//	public QueryString createSendLogInfo(Object... params)
+//	{
+//		System.out.println("NOT_YET_IMPLEMENTED: createSendLogInfo()");
+//		return null;
+//	}
 
 }

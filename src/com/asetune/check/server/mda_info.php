@@ -60,6 +60,7 @@
 	// Below is properties sent by the client, vstuff them into local variables
 	$checkId            = getUrlParam('checkId');
 	$clientTime         = getUrlParam('clientTime');
+	$clientAppName      = getUrlParam('clientAppName');
 	$userName           = getUrlParam('userName');
 
 	$srvVersion         = versionFix(getUrlParam('srvVersion'));
@@ -75,6 +76,12 @@
 	}
 	if ( $debug == "true" )
 		echo "DEBUG: batchSize='$batchSize'.\n";
+
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 	//------------------------------------------
 	// Now connect to the database
@@ -103,6 +110,7 @@
 			checkId,
 			serverAddTime,
 			clientTime,
+			clientAppName,
 			userName,
 			verified,
 
@@ -127,6 +135,7 @@
 			$checkId,
 			NOW(),
 			'$clientTime',
+			'$clientAppName',
 			'$userName',
 			NULL,
 

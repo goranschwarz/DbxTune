@@ -5,13 +5,17 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 import org.apache.log4j.Logger;
@@ -20,9 +24,11 @@ import com.asetune.CounterController;
 import com.asetune.CounterControllerAse;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.cm.ase.CmPCacheModuleUsage;
 import com.asetune.cm.ase.CmSummary;
 import com.asetune.cm.ase.CmSysLoad;
+import com.asetune.cm.ase.gui.CmObjectActivityPanel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
@@ -53,6 +59,12 @@ extends MainFrame
 	public MainFrameAse()
 	{
 		super();
+	}
+
+	@Override
+	public int getDefaultRefreshInterval()
+	{
+		return 20;
 	}
 
 	@Override public ImageIcon getApplicationIcon16() { return SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif"); };
@@ -279,6 +291,57 @@ extends MainFrame
 	@Override
 	public boolean disconnectAbort(boolean canBeAborted)
 	{
+		// DISABLE traceflag 3650 if it's enabled
+		try
+		{
+			Connection conn = CounterController.getInstance().getMonConnection();
+			boolean trace3650 = AseConnectionUtils.isTraceEnabled(conn, 3650);
+
+    		if (trace3650)
+    		{
+    			String htmlMsg = "<html>"
+    					+ "<h3>Warning</h3>"
+    					+ "Trace flag 3650 <i>'Collect monitoring information for system catalogs'</i> is still <b>enabled</b> at the server<br>"
+    					+ "<br>"
+						+ "Running with trace flag 3650 will add contention and lower overall system performance.<br>"
+						+ "It is advised that you run this for short durations of time, generally less than 30 minutes.<br>"
+    					+ "<br>"
+    					+ "Do you want to disable this before we disconnect?<br>"
+    					+ "</html>";
+
+    			int yesNo = JOptionPane.showConfirmDialog(this, 
+    					htmlMsg, "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+    			if ( yesNo == JOptionPane.YES_OPTION )
+    			{
+    				String sql = "DBCC traceoff("+3650+")";
+    				Statement stmnt = conn.createStatement();
+    				stmnt.executeUpdate(sql);
+    				stmnt.close();
+
+    				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+    				if (conf != null)
+    				{
+        				conf.setProperty(CmObjectActivity.PROPKEY_sample_systemTables, false);
+        				conf.save();
+    				}
+    				else
+    				{
+    					_logger.error("Could not reset the property '"+CmObjectActivity.PROPKEY_sample_systemTables+"'... conf="+conf);
+    				}
+    			}
+    		}
+		}
+		catch (SQLException sqle)
+		{
+			String htmlMsg = "<html>"
+					+ "<h3>Problems getting or setting traceflag 3650</h3>"
+					+ "" + sqle.getMessage() + "<br>"
+					+ "</html>";
+			SwingUtils.showErrorMessage(this, "Problems getting or setting traceflag(3650)",htmlMsg, sqle);
+		}
+		
+
+		// DISABLE monitoring ????
 //		int answer = AseConfigMonitoringDialog.onExit(_instance, AseTune.getCounterCollector().getMonConnection(), canBeAborted);
 		int answer = AseConfigMonitoringDialog.onExit(this, CounterController.getInstance().getMonConnection(), canBeAborted);
 

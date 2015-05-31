@@ -13,6 +13,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -392,7 +394,24 @@ implements PropertyChangeListener, ActionListener
 
 		try
 		{
-			return doBgThread.get();
+			//return doBgThread.get();
+			while (true)
+			{
+				try
+				{
+					return doBgThread.get(1000, TimeUnit.MILLISECONDS);
+				}
+				catch (TimeoutException e)
+				{
+					// if the POPUP is still visible, continue to wait
+					if (isVisible())
+						continue;
+
+					// If POPUP has been closed, simply returns NULL...
+					System.out.println("WaitForExecDialog: after 1000ms timeout, POPUP was not visible anymore, RETURN NULL... otherwise the EDT will freeze... Warning: the thread will continue to execute...");
+					return null;
+				}
+			}
 		}
 		catch (InterruptedException e)
 		{

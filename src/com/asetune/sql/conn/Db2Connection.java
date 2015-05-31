@@ -15,7 +15,7 @@ extends DbxConnection
 	public Db2Connection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::Db2Connection(conn): conn="+conn);
+//System.out.println("constructor::Db2Connection(conn): conn="+conn);
 	}
 
 	@Override

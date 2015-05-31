@@ -403,6 +403,23 @@ public class RepServerUtils
 			throw ex;
 		}
 	}
+	public static void disconnectGwNoThrow(Connection conn)
+	{
+		String cmd = "disconnect all";
+		try
+		{
+			Statement stmt = conn.createStatement();
+			stmt.executeUpdate(cmd);
+			stmt.close();
+		}
+		catch (SQLException ex)
+		{
+			// 15540 - Gateway connection to 'GORAN_3_DS.rssd' is dropped.
+			if (ex.getErrorCode() == 15540)
+				return;
+			_logger.warn("Problems when executing: "+cmd, ex);
+		}
+	}
 
 	public static void connectGwRssd(Connection conn)
 	throws SQLException

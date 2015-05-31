@@ -12,7 +12,7 @@ public class DerbyConnection extends DbxConnection
 	public DerbyConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::DerbyConnection(conn): conn="+conn);
+//System.out.println("constructor::DerbyConnection(conn): conn="+conn);
 	}
 
 	@Override

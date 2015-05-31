@@ -531,6 +531,43 @@
 //		");
 
 
+//		//--------------------------------------------------------------------
+//		// Remove the 'on update CURRENT_TIMESTAMP' on tables
+//		//--------------------------------------------------------------------
+//		doCleanup("ALTER TABLE sqlw_usage                CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE sqlw_connect_info         CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE sqlw_usage_info           CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_usage              CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_connect_info       CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_mda_info           CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_udc_info           CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_counter_usage_info CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_error_info         CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_error_info2        CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+//		doCleanup("ALTER TABLE asemon_error_info_save    CHANGE serverAddTime serverAddTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ");
+
+//		//--------------------------------------------------------------------
+//		// add clientAppName to all tables
+//		//--------------------------------------------------------------------
+//		// ADD clientAppName
+//		doCleanup("ALTER TABLE asemon_connect_info        ADD clientAppName varchar(30) AFTER clientTime");
+//		doCleanup("ALTER TABLE asemon_mda_info            ADD clientAppName varchar(30) AFTER clientTime");
+//		doCleanup("ALTER TABLE asemon_udc_info            ADD clientAppName varchar(30) AFTER clientTime");
+//		doCleanup("ALTER TABLE asemon_counter_usage_info  ADD clientAppName varchar(30) AFTER serverAddTime");
+//		doCleanup("ALTER TABLE asemon_error_info          ADD clientAppName varchar(30) AFTER clientTime");
+//		doCleanup("ALTER TABLE asemon_error_info2         ADD clientAppName varchar(30) AFTER clientTime");
+//		doCleanup("ALTER TABLE asemon_error_info_save     ADD clientAppName varchar(30) AFTER clientTime");
+
+//		// update all tables with the default value of AseTune
+//		//doCleanup("UPDATE asemon_connect_info        SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_mda_info            SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_udc_info            SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_counter_usage_info  SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_error_info          SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_error_info2         SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_error_info_save     SET clientAppName = 'AseTune'");
+
+
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
 	else if ( $doAction == "check" )

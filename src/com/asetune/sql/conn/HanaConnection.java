@@ -12,7 +12,7 @@ public class HanaConnection extends DbxConnection
 	public HanaConnection(Connection conn)
 	{
 		super(conn);
-System.out.println("constructor::HanaConnection(conn): conn="+conn);
+//System.out.println("constructor::HanaConnection(conn): conn="+conn);
 	}
 
 	@Override

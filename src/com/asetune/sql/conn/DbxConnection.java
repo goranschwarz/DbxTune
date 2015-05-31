@@ -472,6 +472,13 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	//----------------------------------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------
 	
+	public void clearCachedValues()
+	{
+		_databaseProductName    = null;
+		_databaseProductVersion = null;
+		_databaseServerName     = null;
+	}
+
 	/**
 	 * Reconnect to the server
 	 * @throws Exception
@@ -813,6 +820,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	public void close() throws SQLException
 	{
 		_conn.close();
+		clearCachedValues();
 	}
 
 	@Override

@@ -1802,6 +1802,7 @@ implements Cloneable, ITableTooltip
 			return;
 		TrendGraphDataPoint tgdp = getTrendGraphData(tg.getName());
 		tg.addPoint(tgdp);
+		tg.setMinimumChartArea();
 	}
 
 	public void updateGraphs()
@@ -4741,8 +4742,8 @@ implements Cloneable, ITableTooltip
 			throw new RuntimeException("Unknown dataView was specified. you specified dataView="+dataSource+". known values: DATA_ABS="+DATA_ABS+", DATA_DIFF="+DATA_DIFF+", DATA_RATE="+DATA_RATE+".");
 		_dataSource = dataSource;
 
-		// Update GUI's that are litening.
-		//fireTableDataChanged(); // does not do resort
+		// Update GUI's that are listening.
+		fireTableDataChanged(); // does not do resort
 		//fireTableStructureChanged(); // does resort, but: slow and makes GUI "hopp" (columns resize)
 		if (getTabPanel() != null)
 			getTabPanel().sortDatatable();

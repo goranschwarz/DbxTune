@@ -40,7 +40,15 @@
 	// Below is properties sent by the client, vstuff them into local variables
 	$checkId            = getUrlParam('checkId');
 	$clientTime         = getUrlParam('clientTime');
+	$clientAppName           = getUrlParam('clientAppName');
 	$userName           = getUrlParam('userName');
+
+
+	// Set default values for new fields that is not sent by older versions
+	if ( $clientAppName == "" )
+	{
+		$clientAppName = "AseTune";
+	}
 
 	// Copy all UDC rows into its own array
 	$udcArr = array();
@@ -79,6 +87,7 @@
 			checkId,
 			serverAddTime,
 			clientTime,
+			clientAppName,
 
 			userName,
 
@@ -90,6 +99,7 @@
 			$checkId,
 			NOW(),
 			'$clientTime',
+			'$clientAppName',
 
 			'$userName',
 

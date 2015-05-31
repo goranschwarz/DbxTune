@@ -52,7 +52,7 @@ implements Cloneable
 	}
 
 	
-	// The 2 below is only used in setData() to keep track of alraedy added data, which might not been added in the current map
+	// The 2 below is only used in setData() to keep track of already added data, which might not been added in the current map
 	private Map<String,  Integer> _labelOrder_labelName      = null;
 	private Map<Integer, String>  _labelOrder_posToLabelName = null;
 

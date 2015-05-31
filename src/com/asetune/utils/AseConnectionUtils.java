@@ -2743,6 +2743,73 @@ public class AseConnectionUtils
 
 	}
 
+	/**
+	 * Check if trace is enabled at the server.
+	 * <br>
+	 * First try: <code>show switch</code><br>
+	 * If it fails try: <code>dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)</code><br>
+	 * 
+	 * @param conn
+	 * @param trace
+	 */
+	public static boolean isTraceEnabled(Connection conn, int trace)
+	throws SQLException
+	{
+		// Works with above ASE 12.5.4 and 15.0.2
+		String showSwitch   = "show switch";
+
+		// Used as fallback if above 'set switch...' is failing
+		String dbccTraceFlags = "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)";
+
+		SQLException sqlEx = null;
+		// TRY with show switch
+		// This should also be changed to check if the MonConnection, is of version... MonConnection needs to be implemented
+		try
+		{
+			Statement stmt = conn.createStatement();
+			stmt.executeUpdate(showSwitch);
+
+			SQLWarning sqlwarn = stmt.getWarnings();
+			while (sqlwarn != null)
+			{
+				// output looks like this: Serverwide switches set :  3650,  3651.
+				if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+".") >= 0)
+					return true;
+				sqlwarn = sqlwarn.getNextWarning();
+			}
+			stmt.close();
+			return false;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("Problems when executing sql '"+showSwitch+"', I will fallback and use '"+dbccTraceFlags+"' instead.");
+
+			// Fallback and use DBCC traceflags
+			try
+			{
+				Statement stmt = conn.createStatement();
+				stmt.executeUpdate(dbccTraceFlags);
+
+				SQLWarning sqlwarn = stmt.getWarnings();
+				while (sqlwarn != null)
+				{
+					// output looks like this: Active traceflags: 3604, 3650, 3651
+					if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+"") >= 0) // NOTE: this might be true for "any" *3650*...
+						return true;
+					sqlwarn = sqlwarn.getNextWarning();
+				}
+				stmt.close();
+				return false;
+			}
+			catch (SQLException e2)
+			{
+				sqlEx = e2;
+				_logger.warn("Problems when executing sql: "+dbccTraceFlags, e2);
+				throw e2; // HERE WE DO THROW IF WE ECAUSED ALL OUR OPTIONS
+			}
+		}
+	}
+
 	/** 
 	 * Execute 'select * from monProcessSQLText where SPID = spid)' on the passed spid 
 	 * @param conn The database connection to use
