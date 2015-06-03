@@ -3688,48 +3688,48 @@ public class ConnectionDialog
 		SwingUtilities.invokeLater(deferredAction);
 	}
 
-	public static boolean checkReconnectVersion(Connection conn)
-	{
-		// If reconnected, check if it's the same version.
-		// NOTE: MonTablesDictionary is initialized at a later stage first time we connect
-		//       so if we dont have a instance, this would be the first time we connect.
-		//       THIS MIGHT CHANGE IN FUTURE.
-		if (MonTablesDictionary.hasInstance())
-		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			if ( ! mtd.isInitialized() )
-			{
-				_logger.debug("checkReconnectVersion(): MonTablesDictionary.isInitialized()=false. I'll just return true here...");
-				return true;
-			}
-			int currentVersion = mtd.getAseExecutableVersionNum();
-			int newVersion     = AseConnectionUtils.getAseVersionNumber(conn);
-	
-			if (currentVersion <= 0)
-			{
-				_logger.debug("checkReconnectVersion(): MonTablesDictionary.hasInstance()=true, Are we checking this a bit early... currentVersion='"+currentVersion+"', newVersion='"+newVersion+"'. since currentVersion is <= 0, I'll just return true here...", new Exception("Dummy Exception to get call stack..."));
-				return true;
-			}
-
-			if (currentVersion != newVersion)
-			{
-				String msg = "<html>" +
-						"Connecting to a different DB Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
-						"To connect to another DB Version, you need to restart the application." +
-						"</html>";
-				if (DbxTune.hasGui())
-					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
-				_logger.warn(msg);
-				return false;
-			}
-			else
-			{
-				_logger.info("Re-connected to the same DB Version as priviously. Version is '"+currentVersion+"'.");
-				return true;
-			}
-		}
-		return true;
-	}
+//	public static boolean checkReconnectVersion(Connection conn)
+//	{
+//		// If reconnected, check if it's the same version.
+//		// NOTE: MonTablesDictionary is initialized at a later stage first time we connect
+//		//       so if we dont have a instance, this would be the first time we connect.
+//		//       THIS MIGHT CHANGE IN FUTURE.
+//		if (MonTablesDictionary.hasInstance())
+//		{
+//			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+//			if ( ! mtd.isInitialized() )
+//			{
+//				_logger.debug("checkReconnectVersion(): MonTablesDictionary.isInitialized()=false. I'll just return true here...");
+//				return true;
+//			}
+//			int currentVersion = mtd.getAseExecutableVersionNum();
+//			int newVersion     = AseConnectionUtils.getAseVersionNumber(conn);
+//	
+//			if (currentVersion <= 0)
+//			{
+//				_logger.debug("checkReconnectVersion(): MonTablesDictionary.hasInstance()=true, Are we checking this a bit early... currentVersion='"+currentVersion+"', newVersion='"+newVersion+"'. since currentVersion is <= 0, I'll just return true here...", new Exception("Dummy Exception to get call stack..."));
+//				return true;
+//			}
+//
+//			if (currentVersion != newVersion)
+//			{
+//				String msg = "<html>" +
+//						"Connecting to a different DB Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
+//						"To connect to another DB Version, you need to restart the application." +
+//						"</html>";
+//				if (DbxTune.hasGui())
+//					JOptionPane.showMessageDialog(MainFrame.getInstance(), msg, Version.getAppName()+" - connect check", JOptionPane.WARNING_MESSAGE);
+//				_logger.warn(msg);
+//				return false;
+//			}
+//			else
+//			{
+//				_logger.info("Re-connected to the same DB Version as priviously. Version is '"+currentVersion+"'.");
+//				return true;
+//			}
+//		}
+//		return true;
+//	}
 
 	/**
 	 * Make a connection to the ASE

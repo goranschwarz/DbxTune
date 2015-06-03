@@ -58,6 +58,12 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
+			@Override public boolean doInitializeVersionInfo()        { return false; } 
+			@Override public boolean doCheckMonitorConfig()           { return false; } 
+			@Override public boolean doInitMonitorDictionary()        { return false; } 
+			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+			@Override public boolean doInitCounterCollector()         { return false; } 
+
 			@Override
 			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{

@@ -10,6 +10,8 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -165,16 +167,16 @@ implements ActionListener
 		_copy_but               .setToolTipText("Copy the ASE Configuration table into the clip board as ascii table.");
 
 		panel.add(_section_lbl,             "");
-		panel.add(_section_cbx,             "");
-
-		panel.add(_timestamp_lbl,           "split 2, right, push");
+		panel.add(_section_cbx,             "split");
+		panel.add(new JLabel(),             "pushx, growx");
+		panel.add(_timestamp_lbl,           "");
 		panel.add(_timestamp_txt,           "wrap");
 
 		panel.add(_config_lbl,              "");
-		panel.add(_config_txt,              "span, push, grow, wrap");
+		panel.add(_config_txt,              "pushx, growx, wrap");
 
-		panel.add(_showOnlyNonDefaults_chk, "span, split, push, grow");
-		panel.add(_copy_but,                "wrap");
+		panel.add(_showOnlyNonDefaults_chk, "span 2, split");
+		panel.add(_copy_but,                "tag right, wrap");
 
 		// disable input to some fields
 		_timestamp_txt.setEnabled(false);
@@ -194,6 +196,17 @@ implements ActionListener
 		_config_txt             .addActionListener(this);
 		_showOnlyNonDefaults_chk.addActionListener(this);
 		_copy_but               .addActionListener(this);
+
+		// Key listener for the config
+		_config_txt             .addKeyListener(new KeyListener()
+		{
+			@Override public void keyTyped(KeyEvent e) {}
+			@Override public void keyPressed(KeyEvent e) {}
+			@Override public void keyReleased(KeyEvent e) 
+			{
+				setTableFilter();
+			}
+		});
 
 		// set auto completion
 		AutoCompleteDecorator.decorate(_section_cbx);

@@ -93,8 +93,15 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
+			@Override public boolean doInitializeVersionInfo()        { return true; } 
+			@Override public boolean doCheckMonitorConfig()           { return true; } 
+			@Override public boolean doInitMonitorDictionary()        { return true; } 
+			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+			@Override public boolean doInitCounterCollector()         { return true; } 
+
 			@Override
-			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) 
+			throws Exception
 			{
 				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
 				MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
@@ -102,16 +109,18 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) 
+			throws Exception
 			{
 				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
 			@Override
-			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
+			throws Exception
 			{
-				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
-					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
+//				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
+//					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
 
 				MonTablesDictionary.getInstance().initialize(conn, true);
 				CounterControllerAse.initExtraMonTablesDictionary();
@@ -120,7 +129,8 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
+			throws Exception
 			{
 //				IDbmsConfig aseCfg = AseConfig.getInstance();
 //				if ( ! aseCfg.isInitialized() )
@@ -155,7 +165,8 @@ extends MainFrame
 			}
 			
 			@Override
-			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) 
+			throws Exception
 			{
 				CounterController.getInstance().initCounters(
 						conn,
