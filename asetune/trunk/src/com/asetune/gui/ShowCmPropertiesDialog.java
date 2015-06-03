@@ -136,6 +136,9 @@ extends JDialog implements ActionListener, ChangeListener
 	private JLabel             _dependsOnCm_lbl      = new JLabel("Depends on Performance Counter");
 	private JTextField         _dependsOnCm_txt      = new JTextField();
 
+	private JLabel             _toolTipMonTables_lbl = new JLabel("Tables used for column ToolTip");
+	private JTextField         _toolTipMonTables_txt = new JTextField();
+
 	CountersModel _cm = null;
 
 	public ShowCmPropertiesDialog(Frame owner, Icon icon, CountersModel cm)
@@ -310,6 +313,9 @@ extends JDialog implements ActionListener, ChangeListener
 
 		_dependsOnCm_lbl      .setToolTipText("<html>Do this Performance Counter depend on some other Performance Counters Data.</html>");
 		_dependsOnCm_txt      .setToolTipText("<html>Do this Performance Counter depend on some other Performance Counters Data.</html>");
+
+		_toolTipMonTables_lbl .setToolTipText("<html>Monitor Tables in the query. This is used to do lookup for column tooltip.</html>");
+		_toolTipMonTables_txt .setToolTipText("<html>Monitor Tables in the query. This is used to do lookup for column tooltip.</html>");
 		//------------ END: TOOLTIP
 		
 		
@@ -437,6 +443,9 @@ extends JDialog implements ActionListener, ChangeListener
 		otherPanel.add(_dependsOnCm_lbl,       "");
 		otherPanel.add(_dependsOnCm_txt,       "skip, growx, pushx, wrap");
 
+		otherPanel.add(_toolTipMonTables_lbl,  "");
+		otherPanel.add(_toolTipMonTables_txt,  "skip, growx, pushx, wrap");
+
 		panel.add(namePanel,   "growx, pushx, wrap");
 		panel.add(aseVerPanel, "wrap");
 		panel.add(sqlPanel,    "wrap");
@@ -562,6 +571,7 @@ extends JDialog implements ActionListener, ChangeListener
 		String needAseVersion   = _cm.getDependsOnVersionStr();
 		String needAseCeVersion = _cm.getDependsOnCeVersionStr();
 		String dependsOnCm      = StringUtil.toCommaStr(_cm.getDependsOnCm());
+		String toolTipMonTables = StringUtil.toCommaStr(_cm.getMonTablesInQuery());
 
 		_sqlInit .setText(sqlInit);
 		_sqlExec .setText(sqlExec);
@@ -583,6 +593,7 @@ extends JDialog implements ActionListener, ChangeListener
 		_needAseVersion_txt  .setText(needAseVersion);
 		_needAseCeVersion_txt.setText(needAseCeVersion);
 		_dependsOnCm_txt     .setText(dependsOnCm);
+		_toolTipMonTables_txt.setText(toolTipMonTables);
 
 		_pkCols_txt  .setBackground( _pkColsHighlight_chk  .isSelected() ? PK_COLOR   : _needConfig_txt.getBackground() );
 		_diffCols_txt.setBackground( _diffColsHighlight_chk.isSelected() ? DIFF_COLOR : _needConfig_txt.getBackground() );

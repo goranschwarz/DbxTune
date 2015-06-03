@@ -33,7 +33,7 @@ extends CountersModel
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {};
+	public static final String[] MON_TABLES       = new String[] {"M_SERVICE_MEMORY"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 

@@ -24,6 +24,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -2334,7 +2336,7 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				filterAction(e, "COLUMN");
+				filterAction("COLUMN");
 				saveFilterProps();
 			}
 		});
@@ -2343,7 +2345,7 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				filterAction(e, "OPERATION");
+				filterAction("OPERATION");
 				saveFilterProps();
 			}
 		});
@@ -2353,7 +2355,7 @@ implements
 			public void actionPerformed(ActionEvent e)
 			{
 				// Should be SAME CODE AS focusLost()
-				filterAction(e, "VALUE");
+				filterAction("VALUE");
 				saveFilterProps();
 			}
 		});
@@ -2363,7 +2365,7 @@ implements
 			public void focusLost(FocusEvent e)
 			{
 				// Should be SAME CODE AS actionPerformed()
-				filterAction(null, "VALUE");
+				filterAction("VALUE");
 				saveFilterProps();
 			}
 			
@@ -2374,10 +2376,22 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				filterAction(e, "VALUE");
+				filterAction("VALUE");
 				saveFilterProps();
 			}
 		});
+		// Key listener
+		_filterValue_tf.addKeyListener(new KeyListener()
+		{
+			@Override public void keyTyped(KeyEvent e) {}
+			@Override public void keyPressed(KeyEvent e) {}
+			@Override public void keyReleased(KeyEvent e) 
+			{
+				filterAction("VALUE");
+				saveFilterProps();
+			}
+		});
+
 
 
 		_filterNoZeroCounters_chk.addActionListener(new ActionListener()
@@ -2385,7 +2399,7 @@ implements
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				filterAction(e, "NO_ZERO_COUNTERS");
+				filterAction("NO_ZERO_COUNTERS");
 				saveFilterProps();
 			}
 		});
@@ -2661,7 +2675,8 @@ implements
 		});
 	}
 
-	private void filterAction(ActionEvent e, String type)
+//	private void filterAction(ActionEvent e, String type)
+	private void filterAction(String type)
 	{
 		if ("NO_ZERO_COUNTERS".equals(type))
 		{
@@ -2964,10 +2979,10 @@ implements
 
 		// kick of the action...
 		if (column != null || operation != null || value != null)
-			filterAction(null, "COLUMN,OPERATION,VALUE");
+			filterAction("COLUMN,OPERATION,VALUE");
 
 		if (noZeroCounter != null)
-			filterAction(null, "NO_ZERO_COUNTERS");
+			filterAction("NO_ZERO_COUNTERS");
 	}
 
 //	/*---------------------------------------------------

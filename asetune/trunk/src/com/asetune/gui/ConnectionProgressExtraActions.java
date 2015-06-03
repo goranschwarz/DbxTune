@@ -14,6 +14,8 @@ public interface ConnectionProgressExtraActions
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
 	public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	/** If this part should be executed */
+	public boolean doInitializeVersionInfo();
 
 	/**
 	 * Check if the Server is Configured properly for Monitoring, If it's not you may want to initialize/configure it before we continue.
@@ -24,6 +26,8 @@ public interface ConnectionProgressExtraActions
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
 	public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	/** If this part should be executed */
+	public boolean doCheckMonitorConfig();
 	
 	/**
 	 * Initialize the Monitor Dictionary, that will be used to display tool tips on the column headers
@@ -34,6 +38,8 @@ public interface ConnectionProgressExtraActions
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
 	public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	/** If this part should be executed */
+	public boolean doInitMonitorDictionary();
 	
 	/**
 	 * Initialize the Servers Configuration Dictionary
@@ -44,6 +50,8 @@ public interface ConnectionProgressExtraActions
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
 	public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	/** If this part should be executed */
+	public boolean doInitDbServerConfigDictionary();
 	
 	/**
 	 * Initialize the Counter Collector
@@ -54,4 +62,6 @@ public interface ConnectionProgressExtraActions
 	 * @throws Exception If it's thrown, the Connection sequence will be aborted.
 	 */
 	public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception;
+	/** If this part should be executed */
+	public boolean doInitCounterCollector();
 }
