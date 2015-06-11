@@ -2212,7 +2212,7 @@ System.out.println("TO TXT");
 //						inside_unknown_message = 1;
 //						sb.append(" * No program logics for Status(%d)\n", Status);
 //						sb.append(" * TURN ON THE TRACEFLAG '-X explain_status'\n");
-//						sb.append(" * Run again and mail me the output (gorans@sybase.com)\n");
+//						sb.append(" * Run again and mail me the output (goran_schwarz@hotmail.com)\n");
 //						explain_status(buf, Status, 0);
 //						sb.append(" * Status short explain(%s)\n", buf);
 //						explain_status(buf, Status, 1);

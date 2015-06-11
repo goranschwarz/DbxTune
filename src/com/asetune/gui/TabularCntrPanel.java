@@ -1814,6 +1814,8 @@ implements
 
 		panel.add(_filterNoZeroCounters_chk, "span, wrap");
 
+		_filterColumn_cb.setMaximumRowCount(50);
+
 		return panel;
 	}
 

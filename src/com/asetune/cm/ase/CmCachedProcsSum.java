@@ -15,6 +15,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmCachedProcsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.StringUtil;
@@ -51,8 +52,21 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"SumRequestCntDiff", "SumTempdbRemapCnt", "SumExecutionCount", "SumCPUTime", "SumExecutionTime", 
-		"SumPhysicalReads", "SumLogicalReads", "SumPhysicalWrites", "SumPagesWritten"};
+		"SumRequestCntDiff", 
+		"SumTempdbRemapCnt", 
+		"SumExecutionCount", 
+		"SumCPUTime", 
+		"SumExecutionTime", 
+		"SumPhysicalReads", 
+		"SumLogicalReads", 
+		"SumPhysicalWrites", 
+		"SumPagesWritten",
+
+		"SumSnapCodegenTime",    // 16.0 SP2
+		"SumSnapJITTime",        // 16.0 SP2
+		"SumSnapExecutionTime",  // 16.0 SP2
+		"SumSnapExecutionCount"  // 16.0 SP2
+	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -126,7 +140,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monCachedProcedures",  "SumActive",             "<html>Number of instances that has the column Active = 'Yes'          <br><b>Formula</b>: sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END) <br> </html>");
 			mtd.addColumn("monCachedProcedures",  "NumberOfPlanesInCache", "<html>Number of instances of this procedure in the Procedure Cache    <br><b>Formula</b>: count(*) group by DBName, ObjectName, ObjectType <br> </html>");
 			mtd.addColumn("monCachedProcedures",  "SumMemUsageKB",         "<html>SUM MemUsageKB                                                  <br><b>Formula</b>: sum(MemUsageKB)                       <br></html>");
@@ -148,6 +162,14 @@ extends CountersModel
 			mtd.addColumn("monCachedProcedures",  "AvgLogicalReads",       "<html>Logical Reads per execution count                               <br><b>Formula</b>: SumLogicalReads   / SumExecutionCount <br></html>");
 			mtd.addColumn("monCachedProcedures",  "AvgPhysicalWrites",     "<html>Physical Writes per execution count                             <br><b>Formula</b>: SumPhysicalWrites / SumExecutionCount <br></html>");
 			mtd.addColumn("monCachedProcedures",  "AvgPagesWritten",       "<html>Pages Written per execution count                               <br><b>Formula</b>: SumPagesWritten   / SumExecutionCount <br></html>");
+
+			mtd.addColumn("monCachedProcedures",  "SumSnapExecutionCount", "<html>SUM Snap Execution Count                            (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: sum(SnapExecutionCount)               <br></html>");
+			mtd.addColumn("monCachedProcedures",  "SumSnapCodegenTime",    "<html>SUM SNAP Code Generation time (microseconds)        (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: sum(SnapCodegenTime)                  <br></html>");
+			mtd.addColumn("monCachedProcedures",  "SumSnapJITTime",        "<html>SUM SNAP Just In Time Compilation (microseconds)    (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: sum(SnapJITTime)                      <br></html>");
+			mtd.addColumn("monCachedProcedures",  "SumSnapExecutionTime",  "<html>SUM SNAP Execution Time                             (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: sum(SnapExecutionTime)                <br></html>");
+			mtd.addColumn("monCachedProcedures",  "AvgSnapCodegenTime",    "<html>AVG SNAP Code Generation time (microseconds)        (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: SumSnapCodegenTime   / SumSnapExecutionCount <br></html>");
+			mtd.addColumn("monCachedProcedures",  "AvgSnapJITTime",        "<html>AVG SNAP Just In Time Compilation (microseconds)    (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: SumSnapJITTime       / SumSnapExecutionCount <br></html>");
+			mtd.addColumn("monCachedProcedures",  "AvgSnapExecutionTime",  "<html>AVG SNAP Execution Time                             (SNAP = Simplfied Native Access Plans) <br><b>Formula</b>: SumSnapExecutionTime / SumSnapExecutionCount <br></html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -210,11 +232,31 @@ extends CountersModel
 		String SumActive      = ""; // Indicates whether the plan for this procedure is active or not
 		String ase1600_nl     = "";
 
-//		if (aseVersion >= 1600000)
 		if (aseVersion >= Ver.ver(16,0))
 		{
 			SumActive      = "  SumActive = sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END), ";
 			ase1600_nl     = "\n";
+		}
+
+		// ASE 16.0 SP2
+		String SumSnapCodegenTime    = "";
+		String SumSnapJITTime        = "";
+		String SumSnapExecutionTime  = "";
+		String SumSnapExecutionCount = "";
+		String AvgSnapCodegenTime    = ""; // xxx / SnapExecutionCount
+		String AvgSnapJITTime        = ""; // xxx / SnapExecutionCount
+		String AvgSnapExecutionTime  = ""; // xxx / SnapExecutionCount
+
+		if (aseVersion >= Ver.ver(16,0,0, 2))
+		{
+			SumSnapCodegenTime    = "  SumSnapCodegenTime    = sum(convert(bigint,SnapCodegenTime   )), \n";
+			SumSnapJITTime        = "  SumSnapJITTime        = sum(convert(bigint,SnapJITTime       )), \n";
+			SumSnapExecutionTime  = "  SumSnapExecutionTime  = sum(convert(bigint,SnapExecutionTime )), \n";
+			SumSnapExecutionCount = "  SumSnapExecutionCount = sum(convert(bigint,SnapExecutionCount)), \n";
+
+			AvgSnapCodegenTime    = "  AvgSnapCodegenTime    = CASE WHEN sum(convert(bigint,SnapExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,SnapCodegenTime  )) + 0.0) / (sum(convert(bigint,SnapExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgSnapJITTime        = "  AvgSnapJITTime        = CASE WHEN sum(convert(bigint,SnapExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,SnapJITTime      )) + 0.0) / (sum(convert(bigint,SnapExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
+			AvgSnapExecutionTime  = "  AvgSnapExecutionTime  = CASE WHEN sum(convert(bigint,SnapExecutionCount)) > 0 THEN convert(numeric(16,1), (sum(convert(bigint,SnapExecutionTime)) + 0.0) / (sum(convert(bigint,SnapExecutionCount)) + 0.0)) ELSE  convert(numeric(16,1), null) END, \n";
 		}
 
 		cols = 
@@ -243,6 +285,14 @@ extends CountersModel
 			SumLogicalReads + 
 			SumPhysicalWrites + 
 			SumPagesWritten +
+
+			SumSnapExecutionCount +
+			AvgSnapCodegenTime +
+			AvgSnapJITTime +
+			AvgSnapExecutionTime +
+			SumSnapCodegenTime +
+			SumSnapJITTime +
+			SumSnapExecutionTime +
 			"";
 
 		// remove last comma
@@ -270,6 +320,15 @@ extends CountersModel
 		int  SumCPUTime_pos = -1, SumExecutionTime_pos = -1, SumPhysicalReads_pos = -1, SumLogicalReads_pos = -1, SumPhysicalWrites_pos = -1, SumPagesWritten_pos = -1;
 		int  AvgCPUTime_pos = -1, AvgExecutionTime_pos = -1, AvgPhysicalReads_pos = -1, AvgLogicalReads_pos = -1, AvgPhysicalWrites_pos = -1, AvgPagesWritten_pos = -1;
 
+		
+		long SumSnapExecutionCount;
+		int  SumSnapExecutionCount_pos = -1;
+
+		long SumSnapCodegenTime,          SumSnapJITTime,          SumSnapExecutionTime;
+		int  SumSnapCodegenTime_pos = -1, SumSnapJITTime_pos = -1, SumSnapExecutionTime_pos = -1;
+		int  AvgSnapCodegenTime_pos = -1, AvgSnapJITTime_pos = -1, AvgSnapExecutionTime_pos = -1;
+
+		
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
 		if (colNames == null)
@@ -277,20 +336,28 @@ extends CountersModel
 		for (int colId = 0; colId < colNames.size(); colId++)
 		{
 			String colName = (String) colNames.get(colId);
-			if      (colName.equals("SumRequestCnt"))     SumRequestCnt_pos        = colId;
-			else if (colName.equals("SumExecutionCount")) SumExecutionCount_pos    = colId;
-			else if (colName.equals("SumCPUTime"))        SumCPUTime_pos           = colId;
-			else if (colName.equals("SumExecutionTime"))  SumExecutionTime_pos     = colId;
-			else if (colName.equals("SumPhysicalReads"))  SumPhysicalReads_pos     = colId;
-			else if (colName.equals("SumLogicalReads"))   SumLogicalReads_pos      = colId;
-			else if (colName.equals("SumPhysicalWrites")) SumPhysicalWrites_pos    = colId;
-			else if (colName.equals("SumPagesWritten"))   SumPagesWritten_pos      = colId;
-			else if (colName.equals("AvgCPUTime"))        AvgCPUTime_pos        = colId;
-			else if (colName.equals("AvgExecutionTime"))  AvgExecutionTime_pos  = colId;
-			else if (colName.equals("AvgPhysicalReads"))  AvgPhysicalReads_pos  = colId;
-			else if (colName.equals("AvgLogicalReads"))   AvgLogicalReads_pos   = colId;
-			else if (colName.equals("AvgPhysicalWrites")) AvgPhysicalWrites_pos = colId;
-			else if (colName.equals("AvgPagesWritten"))   AvgPagesWritten_pos   = colId;
+			if      (colName.equals("SumRequestCnt"))         SumRequestCnt_pos         = colId;
+			else if (colName.equals("SumExecutionCount"))     SumExecutionCount_pos     = colId;
+			else if (colName.equals("SumCPUTime"))            SumCPUTime_pos            = colId;
+			else if (colName.equals("SumExecutionTime"))      SumExecutionTime_pos      = colId;
+			else if (colName.equals("SumPhysicalReads"))      SumPhysicalReads_pos      = colId;
+			else if (colName.equals("SumLogicalReads"))       SumLogicalReads_pos       = colId;
+			else if (colName.equals("SumPhysicalWrites"))     SumPhysicalWrites_pos     = colId;
+			else if (colName.equals("SumPagesWritten"))       SumPagesWritten_pos       = colId;
+			else if (colName.equals("AvgCPUTime"))            AvgCPUTime_pos            = colId;
+			else if (colName.equals("AvgExecutionTime"))      AvgExecutionTime_pos      = colId;
+			else if (colName.equals("AvgPhysicalReads"))      AvgPhysicalReads_pos      = colId;
+			else if (colName.equals("AvgLogicalReads"))       AvgLogicalReads_pos       = colId;
+			else if (colName.equals("AvgPhysicalWrites"))     AvgPhysicalWrites_pos     = colId;
+			else if (colName.equals("AvgPagesWritten"))       AvgPagesWritten_pos       = colId;
+
+			else if (colName.equals("SumSnapExecutionCount")) SumSnapExecutionCount_pos = colId;
+			else if (colName.equals("SumSnapCodegenTime"))    SumSnapCodegenTime_pos    = colId;
+			else if (colName.equals("SumSnapJITTime"))        SumSnapJITTime_pos        = colId;
+			else if (colName.equals("SumSnapExecutionTime"))  SumSnapExecutionTime_pos  = colId;
+			else if (colName.equals("AvgSnapCodegenTime"))    AvgSnapCodegenTime_pos    = colId;
+			else if (colName.equals("AvgSnapJITTime"))        AvgSnapJITTime_pos        = colId;
+			else if (colName.equals("AvgSnapExecutionTime"))  AvgSnapExecutionTime_pos  = colId;
 		}
 
 		if (SumExecutionCount_pos >= 0)
@@ -316,6 +383,18 @@ extends CountersModel
 				doAvgCalculation(diffData, SumExecutionCount, SumLogicalReads,   rowId, AvgLogicalReads_pos);
 				doAvgCalculation(diffData, SumExecutionCount, SumPhysicalWrites, rowId, AvgPhysicalWrites_pos);
 				doAvgCalculation(diffData, SumExecutionCount, SumPagesWritten,   rowId, AvgPagesWritten_pos);
+
+				if (SumSnapExecutionCount_pos >= 0)
+				{
+					SumSnapExecutionCount = ((Number) diffData.getValueAt(rowId, SumSnapExecutionCount_pos)).longValue();
+					SumSnapCodegenTime    = ((Number) diffData.getValueAt(rowId, SumSnapCodegenTime_pos   )).longValue();
+					SumSnapJITTime        = ((Number) diffData.getValueAt(rowId, SumSnapJITTime_pos       )).longValue();
+					SumSnapExecutionTime  = ((Number) diffData.getValueAt(rowId, SumSnapExecutionTime_pos )).longValue();
+
+					doAvgCalculation(diffData, SumSnapExecutionCount, SumSnapCodegenTime,   rowId, AvgSnapCodegenTime_pos);
+					doAvgCalculation(diffData, SumSnapExecutionCount, SumSnapJITTime,       rowId, AvgSnapJITTime_pos);
+					doAvgCalculation(diffData, SumSnapExecutionCount, SumSnapExecutionTime, rowId, AvgSnapExecutionTime_pos);
+				}
 			}
 		}
 	}

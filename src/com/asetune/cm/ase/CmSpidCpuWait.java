@@ -18,6 +18,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmSpidCpuWaitPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.AseConnectionUtils;
@@ -185,7 +186,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monProcessActivity",  "HasMonSqlText",      "Has values for: select SQLText from master..monProcessSQLText where SPID = <SPID>");
 			mtd.addColumn("monProcessActivity",  "MonSqlText",                         "select SQLText from master..monProcessSQLText where SPID = <SPID>");
 			mtd.addColumn("monProcessActivity",  "HasDbccSqlText",     "Has values for: DBCC sqltext(<SPID>)");
@@ -220,6 +221,18 @@ extends CountersModel
 					"<b>Formula</b>: diff.EventIdWaitTime / diff.Waits<br>" +
 				"</html>");
 			
+			mtd.addColumn("monProcessWaits", "UserName", 
+					"<html>" +
+						"Active User Name.<br>" +
+						"<br>" +
+						"<b>Formula</b>: suser_name(ServerUserID)<br>" +
+					"</html>");
+			mtd.addColumn("monProcessWaits", "OrigUserName", 
+					"<html>" +
+						"Original Server User Identifier. This is the Server User Identifier before setting proxy.<br>" +
+						"<br>" +
+						"<b>Formula</b>: suser_name(OrigServerUserID)<br>" +
+					"</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -279,10 +292,12 @@ extends CountersModel
 
 		// Get user name, if we are above ASE 12.5.4
 		String UserName   = "";
-//		if (aseVersion >= 12540)
-//		if (aseVersion >= 1254000)
 		if (aseVersion >= Ver.ver(12,5,4))
 			UserName = "UserName = suser_name(A.ServerUserID), ";
+		
+		String OrigUserName = ""; // in 16.0 SP2
+		if (aseVersion >= Ver.ver(16,0,0, 2))
+			OrigUserName = "OrigUserName = isnull(suser_name(A.OrigServerUserID), suser_name(A.ServerUserID)), ";
 		
 		String cols = "";
 
@@ -308,7 +323,7 @@ extends CountersModel
 		}
 
 		cols += 
-			"  A.SPID, A.KPID, "+UserName+"\n" +
+			"  A.SPID, A.KPID, " + UserName + OrigUserName + "\n" +
 			"  sampleTimeInMs = convert(int,-1), \n" + // This value is replaced with a real value in class CounterSample
 			"  A.CPUTime, A.WaitTime as SpidWaitTime, W.WaitTime as EventIdWaitTime, W.Waits, \n" +
 			"  WaitTimePerWait = CASE WHEN W.Waits > 0 THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) ELSE convert(numeric(15,3), 0.0) END, \n" +
@@ -540,7 +555,7 @@ extends CountersModel
 		String waitEventDesc = "";
 		String waitClassDesc = "";
 	
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 		if (mtd == null)
 			return;
 

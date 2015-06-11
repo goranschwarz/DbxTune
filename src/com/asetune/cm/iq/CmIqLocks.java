@@ -11,6 +11,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 
 /**
@@ -121,7 +122,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sp_iqlocks",  "Shows information about locks in the database, for both the IQ store and the catalog store.");
 
 			mtd.addColumn("sp_iqlocks", "conn_name",  "<html>The name of the current connection</html>");

@@ -41,19 +41,64 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"NumberOfTaskWakeups", 
-		"NumberTimerTaskWakeups", 
-		"TotalSleepTime", 
-		"LongestSleepTime", 
-		"AverageSleepTime", 
-		"MaxTasksInSleepQueue", 
-		"TotalTranTime", 
-		"TotalFlushTime", 
-		"AverageFlushTime", 
-		"NumberOfCommits", 
-		"NumberOfSleeps"
+		"NumberOfTaskWakeups           ", 
+		"NumberTimerTaskWakeups        ", 
+		"TotalSleepTime                ", 
+//		"LongestSleepTime              ", 
+//		"AverageSleepTime              ", 
+//		"MaxTasksInSleepQueue          ", 
+		"TotalSyncCommitTime           ", 
+		"TotalFlushTime                ", 
+//		"AverageFlushTime              ", 
+		"NumberOfCommits               ", 
+		"NumberOfSleeps                ", 
+		"CommitToRAProcessTime         ", 
+//		"AverageCommitToRAProcessTime  ", 
+//		"LongestCommitToRAProcessTime  ", 
+		"RAProcessToPkgFlushTime       ", 
+//		"AverageRAProcessToPkgFlushTime", 
+//		"LongestRAProcessToPkgFlushTime", 
+		"PkgFlushToAckTime             ", 
+//		"AveragePkgFlushToAckTime      ", 
+//		"LongestPkgFlushToAckTime      ", 
+		"AckToScheduleTime             ", 
+//		"AverageAckToScheduleTime      ", 
+//		"LongestAckToScheduleTime      ", 
+		"_last_dummy_column_which_do_not_exists_in_resultset_" 
 		};
 
+// Adaptive Server Enterprise/16.0 SP02 Beta 3/EBF 24693 SMP/P/x86_64/Enterprise Linux/asecorona/0/64-bit/OPT/Tue Jun  9 10:47:20 2015
+	
+//	RS> Col# Label                          JDBC Type Name         Guessed DBMS type
+//	RS> ---- ------------------------------ ---------------------- -----------------
+//	RS> 1    DBID                           java.sql.Types.INTEGER int              
+//	RS> 2    SPID                           java.sql.Types.INTEGER int              
+//	RS> 3    InstanceID                     java.sql.Types.TINYINT tinyint          
+//	RS> 4    NumberOfTaskWakeups            java.sql.Types.BIGINT  bigint           
+//	RS> 5    NumberTimerTaskWakeups         java.sql.Types.BIGINT  bigint           
+//	RS> 6    TotalSleepTime                 java.sql.Types.BIGINT  bigint           
+//	RS> 7    LongestSleepTime               java.sql.Types.BIGINT  bigint           
+//	RS> 8    AverageSleepTime               java.sql.Types.BIGINT  bigint           
+//	RS> 9    MaxTasksInSleepQueue           java.sql.Types.BIGINT  bigint           
+//	RS> 10   TotalSyncCommitTime            java.sql.Types.BIGINT  bigint           
+//	RS> 11   TotalFlushTime                 java.sql.Types.BIGINT  bigint           
+//	RS> 12   AverageFlushTime               java.sql.Types.BIGINT  bigint           
+//	RS> 13   NumberOfCommits                java.sql.Types.BIGINT  bigint           
+//	RS> 14   NumberOfSleeps                 java.sql.Types.BIGINT  bigint           
+//	RS> 15   CommitToRAProcessTime          java.sql.Types.BIGINT  bigint           
+//	RS> 16   AverageCommitToRAProcessTime   java.sql.Types.BIGINT  bigint           
+//	RS> 17   LongestCommitToRAProcessTime   java.sql.Types.BIGINT  bigint           
+//	RS> 18   RAProcessToPkgFlushTime        java.sql.Types.BIGINT  bigint           
+//	RS> 19   AverageRAProcessToPkgFlushTime java.sql.Types.BIGINT  bigint           
+//	RS> 20   LongestRAProcessToPkgFlushTime java.sql.Types.BIGINT  bigint           
+//	RS> 21   PkgFlushToAckTime              java.sql.Types.BIGINT  bigint           
+//	RS> 22   AveragePkgFlushToAckTime       java.sql.Types.BIGINT  bigint           
+//	RS> 23   LongestPkgFlushToAckTime       java.sql.Types.BIGINT  bigint           
+//	RS> 24   AckToScheduleTime              java.sql.Types.BIGINT  bigint           
+//	RS> 25   AverageAckToScheduleTime       java.sql.Types.BIGINT  bigint           
+//	RS> 26   LongestAckToScheduleTime       java.sql.Types.BIGINT  bigint           
+//	RS> 27   DBName                         java.sql.Types.VARCHAR varchar(30)      
+	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
 	public static final int      DEFAULT_POSTPONE_TIME          = 0;

@@ -37,7 +37,7 @@ import org.netbeans.spi.wizard.WizardPanelNavResult;
 import com.asetune.CounterController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
 
@@ -162,7 +162,7 @@ implements ActionListener, TableModelListener
 						Object cellVal = model.getValueAt(row, col);
 						if (cellVal instanceof String)
 						{
-							tip = MonTablesDictionary.getInstance().getDescription(_toolTipMonTables, (String)cellVal);
+							tip = MonTablesDictionaryManager.getInstance().getDescription(_toolTipMonTables, (String)cellVal);
 						}
 					}
 				}

@@ -17,6 +17,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmEnginesPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -185,7 +186,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 			mtd.addColumn("monEngine", "NonIdleCPUTimePct"  ,"<html>'CPU Busy' Percent calculation<br>         <b>Formula</b>: (SystemCPUTime + UserCPUTime [+ IOCPUTime]) / CPUTime * 100.0<br> <b>Note</b>: IOCPUTime depends on ASE Version and if 'Collapse IOCPUTime into IdleCPUTime' is enabled or not.<br></html>");
 			mtd.addColumn("monEngine", "SystemCPUTimePct"   ,"<html>'System CPU Busy' Percent calculation.<br> <b>Formula</b>: SystemCPUTime / CPUTime * 100.0   <br></html>");

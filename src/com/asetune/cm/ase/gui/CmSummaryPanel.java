@@ -43,7 +43,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.cm.ase.CmSummary;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
@@ -218,6 +218,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _LogicalReads_Abs_txt         = new JTextField();
 	private JTextField       _LogicalReads_Diff_txt        = new JTextField();
 	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
+	private JLabel           _TotalSyncCommitTime_lbl      = new JLabel();
+	private JTextField       _TotalSyncCommitTime_Abs_txt  = new JTextField();
+	private JTextField       _TotalSyncCommitTime_Diff_txt = new JTextField();
+	private JTextField       _TotalSyncCommitTime_Rate_txt = new JTextField();
+	private JLabel           _SnapsGenerated_lbl           = new JLabel();
+	private JTextField       _SnapsGenerated_Abs_txt       = new JTextField();
+	private JTextField       _SnapsGenerated_Diff_txt      = new JTextField();
+	private JTextField       _SnapsGenerated_Rate_txt      = new JTextField();
+	private JLabel           _SnapsExecuted_lbl            = new JLabel();
+	private JTextField       _SnapsExecuted_Abs_txt        = new JTextField();
+	private JTextField       _SnapsExecuted_Diff_txt       = new JTextField();
+	private JTextField       _SnapsExecuted_Rate_txt       = new JTextField();
+
 	private JLabel           _fullTranslog_lbl             = new JLabel();
 	private JTextField       _fullTranslog_txt             = new JTextField();
 	private JLabel           _oldestOpenTran_lbl           = new JLabel();
@@ -892,6 +905,39 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_LogicalReads_Rate_txt .setEditable(false);
 		_LogicalReads_Rate_txt .setToolTipText(tooltip);
 
+		tooltip = "Time used to do Synchronus Commits to Replication Server, (abs, diff, rate). Only available from ASE 16.0 PL5.";
+		_originToolTip         .put    ("TotalSyncCommitTime", tooltip);
+		_TotalSyncCommitTime_lbl      .setText("TotalSyncCommitTime");
+		_TotalSyncCommitTime_lbl      .setToolTipText(tooltip);
+		_TotalSyncCommitTime_Abs_txt  .setToolTipText(tooltip);
+		_TotalSyncCommitTime_Abs_txt  .setEditable(false);
+		_TotalSyncCommitTime_Diff_txt .setEditable(false);
+		_TotalSyncCommitTime_Diff_txt .setToolTipText(tooltip);
+		_TotalSyncCommitTime_Rate_txt .setEditable(false);
+		_TotalSyncCommitTime_Rate_txt .setToolTipText(tooltip);
+
+		tooltip = "Total number of Simplfied Native Access Plans compiled on the server, (abs, diff, rate). Only available from ASE 16.0 SP2.";
+		_originToolTip         .put    ("SnapsGenerated", tooltip);
+		_SnapsGenerated_lbl      .setText("SnapsGenerated");
+		_SnapsGenerated_lbl      .setToolTipText(tooltip);
+		_SnapsGenerated_Abs_txt  .setToolTipText(tooltip);
+		_SnapsGenerated_Abs_txt  .setEditable(false);
+		_SnapsGenerated_Diff_txt .setEditable(false);
+		_SnapsGenerated_Diff_txt .setToolTipText(tooltip);
+		_SnapsGenerated_Rate_txt .setEditable(false);
+		_SnapsGenerated_Rate_txt .setToolTipText(tooltip);
+
+		tooltip = "Total number of Simplfied Native Access Plan Executions happened on the server, (abs, diff, rate). Only available from ASE 16.0 SP2.";
+		_originToolTip         .put    ("SnapsExecuted", tooltip);
+		_SnapsExecuted_lbl      .setText("SnapsExecuted");
+		_SnapsExecuted_lbl      .setToolTipText(tooltip);
+		_SnapsExecuted_Abs_txt  .setToolTipText(tooltip);
+		_SnapsExecuted_Abs_txt  .setEditable(false);
+		_SnapsExecuted_Diff_txt .setEditable(false);
+		_SnapsExecuted_Diff_txt .setToolTipText(tooltip);
+		_SnapsExecuted_Rate_txt .setEditable(false);
+		_SnapsExecuted_Rate_txt .setToolTipText(tooltip);
+
 		tooltip = "Number of databases that has a full transaction log, which probably means suspended SPID's.";
 		_fullTranslog_lbl.setText("Full Transaction Logs");
 		_fullTranslog_lbl.setToolTipText(tooltip);
@@ -1168,6 +1214,21 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_LogicalReads_Diff_txt,   "hidemode 3, growx, split");
 		panel.add(_LogicalReads_Rate_txt,   "hidemode 3, growx, wrap");
 
+		panel.add(_TotalSyncCommitTime_lbl,      "hidemode 3");
+		panel.add(_TotalSyncCommitTime_Abs_txt,  "hidemode 3, growx, split");
+		panel.add(_TotalSyncCommitTime_Diff_txt, "hidemode 3, growx, split");
+		panel.add(_TotalSyncCommitTime_Rate_txt, "hidemode 3, growx, wrap");
+
+		panel.add(_SnapsGenerated_lbl,      "hidemode 3");
+		panel.add(_SnapsGenerated_Abs_txt,  "hidemode 3, growx, split");
+		panel.add(_SnapsGenerated_Diff_txt, "hidemode 3, growx, split");
+		panel.add(_SnapsGenerated_Rate_txt, "hidemode 3, growx, wrap");
+
+		panel.add(_SnapsExecuted_lbl,       "hidemode 3");
+		panel.add(_SnapsExecuted_Abs_txt,   "hidemode 3, growx, split");
+		panel.add(_SnapsExecuted_Diff_txt,  "hidemode 3, growx, split");
+		panel.add(_SnapsExecuted_Rate_txt,  "hidemode 3, growx, wrap");
+
 		panel.add(_fullTranslog_lbl,        "");
 		panel.add(_fullTranslog_txt,        "growx, wrap");
 		
@@ -1318,6 +1379,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_LogicalReads_Abs_txt   .setVisible(showAbs);
 		_LogicalReads_Diff_txt  .setVisible(showDiff);
 		_LogicalReads_Rate_txt  .setVisible(showRate);
+
+		_TotalSyncCommitTime_Abs_txt .setVisible(showAbs);
+		_TotalSyncCommitTime_Diff_txt.setVisible(showDiff);
+		_TotalSyncCommitTime_Rate_txt.setVisible(showRate);
+
+		_SnapsGenerated_Abs_txt .setVisible(showAbs);
+		_SnapsGenerated_Diff_txt.setVisible(showDiff);
+		_SnapsGenerated_Rate_txt.setVisible(showRate);
+
+		_SnapsExecuted_Abs_txt  .setVisible(showAbs);
+		_SnapsExecuted_Diff_txt .setVisible(showDiff);
+		_SnapsExecuted_Rate_txt .setVisible(showRate);
 	}
 
 	private TrendGraphDashboardPanel createGraphPanel() 
@@ -1503,7 +1576,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		String currClusterName = _clusterInstanceName_txt.getText();
 		if (clusterId != null && currClusterName.equals(""))
 		{
-			if (MonTablesDictionary.hasInstance() && MonTablesDictionary.getInstance().isClusterEnabled())
+			if (MonTablesDictionaryManager.hasInstance() && MonTablesDictionaryManager.getInstance().isClusterEnabled())
 			{
 				refreshClusterInfo();
 			}
@@ -1547,25 +1620,28 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //			_transactionsDiff_txt .setText("");
 //			_transactionsRate_txt .setText("");
 //		}
-		setFieldAbsDiffRate(cm, "Transactions",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
-		setFieldAbsDiffRate(cm, "Rollbacks",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
-		setFieldAbsDiffRate(cm, "Selects",        _Selects_lbl,        _Selects_Abs_txt,        _Selects_Diff_txt,        _Selects_Rate_txt);
-		setFieldAbsDiffRate(cm, "Updates",        _Updates_lbl,        _Updates_Abs_txt,        _Updates_Diff_txt,        _Updates_Rate_txt);
-		setFieldAbsDiffRate(cm, "Inserts",        _Inserts_lbl,        _Inserts_Abs_txt,        _Inserts_Diff_txt,        _Inserts_Rate_txt);
-		setFieldAbsDiffRate(cm, "Deletes",        _Deletes_lbl,        _Deletes_Abs_txt,        _Deletes_Diff_txt,        _Deletes_Rate_txt);
-		setFieldAbsDiffRate(cm, "Merges",         _Merges_lbl,         _Merges_Abs_txt,         _Merges_Diff_txt,         _Merges_Rate_txt);
-		setFieldAbsDiffRate(cm, "TableAccesses",  _TableAccesses_lbl,  _TableAccesses_Abs_txt,  _TableAccesses_Diff_txt,  _TableAccesses_Rate_txt);
-		setFieldAbsDiffRate(cm, "IndexAccesses",  _IndexAccesses_lbl,  _IndexAccesses_Abs_txt,  _IndexAccesses_Diff_txt,  _IndexAccesses_Rate_txt);
-		setFieldAbsDiffRate(cm, "TempDbObjects",  _TempDbObjects_lbl,  _TempDbObjects_Abs_txt,  _TempDbObjects_Diff_txt,  _TempDbObjects_Rate_txt);
-		setFieldAbsDiffRate(cm, "WorkTables",     _WorkTables_lbl,     _WorkTables_Abs_txt,     _WorkTables_Diff_txt,     _WorkTables_Rate_txt);
-		setFieldAbsDiffRate(cm, "ULCFlushes",     _ULCFlushes_lbl,     _ULCFlushes_Abs_txt,     _ULCFlushes_Diff_txt,     _ULCFlushes_Rate_txt);
-		setFieldAbsDiffRate(cm, "ULCFlushFull",   _ULCFlushFull_lbl,   _ULCFlushFull_Abs_txt,   _ULCFlushFull_Diff_txt,   _ULCFlushFull_Rate_txt);
-		setFieldAbsDiffRate(cm, "ULCKBWritten",   _ULCKBWritten_lbl,   _ULCKBWritten_Abs_txt,   _ULCKBWritten_Diff_txt,   _ULCKBWritten_Rate_txt);
-		setFieldAbsDiffRate(cm, "PagesRead",      _PagesRead_lbl,      _PagesRead_Abs_txt,      _PagesRead_Diff_txt,      _PagesRead_Rate_txt);
-		setFieldAbsDiffRate(cm, "PagesWritten",   _PagesWritten_lbl,   _PagesWritten_Abs_txt,   _PagesWritten_Diff_txt,   _PagesWritten_Rate_txt);
-		setFieldAbsDiffRate(cm, "PhysicalReads",  _PhysicalReads_lbl,  _PhysicalReads_Abs_txt,  _PhysicalReads_Diff_txt,  _PhysicalReads_Rate_txt);
-		setFieldAbsDiffRate(cm, "PhysicalWrites", _PhysicalWrites_lbl, _PhysicalWrites_Abs_txt, _PhysicalWrites_Diff_txt, _PhysicalWrites_Rate_txt);
-		setFieldAbsDiffRate(cm, "LogicalReads",   _LogicalReads_lbl,   _LogicalReads_Abs_txt,   _LogicalReads_Diff_txt,   _LogicalReads_Rate_txt);
+		setFieldAbsDiffRate(cm, "Transactions",        _Transactions_lbl,        _Transactions_Abs_txt,        _Transactions_Diff_txt,        _Transactions_Rate_txt);
+		setFieldAbsDiffRate(cm, "Rollbacks",           _Rollbacks_lbl,           _Rollbacks_Abs_txt,           _Rollbacks_Diff_txt,           _Rollbacks_Rate_txt);
+		setFieldAbsDiffRate(cm, "Selects",             _Selects_lbl,             _Selects_Abs_txt,             _Selects_Diff_txt,             _Selects_Rate_txt);
+		setFieldAbsDiffRate(cm, "Updates",             _Updates_lbl,             _Updates_Abs_txt,             _Updates_Diff_txt,             _Updates_Rate_txt);
+		setFieldAbsDiffRate(cm, "Inserts",             _Inserts_lbl,             _Inserts_Abs_txt,             _Inserts_Diff_txt,             _Inserts_Rate_txt);
+		setFieldAbsDiffRate(cm, "Deletes",             _Deletes_lbl,             _Deletes_Abs_txt,             _Deletes_Diff_txt,             _Deletes_Rate_txt);
+		setFieldAbsDiffRate(cm, "Merges",              _Merges_lbl,              _Merges_Abs_txt,              _Merges_Diff_txt,              _Merges_Rate_txt);
+		setFieldAbsDiffRate(cm, "TableAccesses",       _TableAccesses_lbl,       _TableAccesses_Abs_txt,       _TableAccesses_Diff_txt,       _TableAccesses_Rate_txt);
+		setFieldAbsDiffRate(cm, "IndexAccesses",       _IndexAccesses_lbl,       _IndexAccesses_Abs_txt,       _IndexAccesses_Diff_txt,       _IndexAccesses_Rate_txt);
+		setFieldAbsDiffRate(cm, "TempDbObjects",       _TempDbObjects_lbl,       _TempDbObjects_Abs_txt,       _TempDbObjects_Diff_txt,       _TempDbObjects_Rate_txt);
+		setFieldAbsDiffRate(cm, "WorkTables",          _WorkTables_lbl,          _WorkTables_Abs_txt,          _WorkTables_Diff_txt,          _WorkTables_Rate_txt);
+		setFieldAbsDiffRate(cm, "ULCFlushes",          _ULCFlushes_lbl,          _ULCFlushes_Abs_txt,          _ULCFlushes_Diff_txt,          _ULCFlushes_Rate_txt);
+		setFieldAbsDiffRate(cm, "ULCFlushFull",        _ULCFlushFull_lbl,        _ULCFlushFull_Abs_txt,        _ULCFlushFull_Diff_txt,        _ULCFlushFull_Rate_txt);
+		setFieldAbsDiffRate(cm, "ULCKBWritten",        _ULCKBWritten_lbl,        _ULCKBWritten_Abs_txt,        _ULCKBWritten_Diff_txt,        _ULCKBWritten_Rate_txt);
+		setFieldAbsDiffRate(cm, "PagesRead",           _PagesRead_lbl,           _PagesRead_Abs_txt,           _PagesRead_Diff_txt,           _PagesRead_Rate_txt);
+		setFieldAbsDiffRate(cm, "PagesWritten",        _PagesWritten_lbl,        _PagesWritten_Abs_txt,        _PagesWritten_Diff_txt,        _PagesWritten_Rate_txt);
+		setFieldAbsDiffRate(cm, "PhysicalReads",       _PhysicalReads_lbl,       _PhysicalReads_Abs_txt,       _PhysicalReads_Diff_txt,       _PhysicalReads_Rate_txt);
+		setFieldAbsDiffRate(cm, "PhysicalWrites",      _PhysicalWrites_lbl,      _PhysicalWrites_Abs_txt,      _PhysicalWrites_Diff_txt,      _PhysicalWrites_Rate_txt);
+		setFieldAbsDiffRate(cm, "LogicalReads",        _LogicalReads_lbl,        _LogicalReads_Abs_txt,        _LogicalReads_Diff_txt,        _LogicalReads_Rate_txt);
+		setFieldAbsDiffRate(cm, "TotalSyncCommitTime", _TotalSyncCommitTime_lbl, _TotalSyncCommitTime_Abs_txt, _TotalSyncCommitTime_Diff_txt, _TotalSyncCommitTime_Rate_txt);
+		setFieldAbsDiffRate(cm, "SnapsGenerated",      _SnapsGenerated_lbl,      _SnapsGenerated_Abs_txt,      _SnapsGenerated_Diff_txt,      _SnapsGenerated_Rate_txt);
+		setFieldAbsDiffRate(cm, "SnapsExecuted",       _SnapsExecuted_lbl,       _SnapsExecuted_Abs_txt,       _SnapsExecuted_Diff_txt,       _SnapsExecuted_Rate_txt);
 
 		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
 		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
@@ -1846,6 +1922,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_LogicalReads_Abs_txt   .setText("");
 		_LogicalReads_Diff_txt  .setText("");
 		_LogicalReads_Rate_txt  .setText("");
+
+		_TotalSyncCommitTime_Abs_txt .setText("");
+		_TotalSyncCommitTime_Diff_txt.setText("");
+		_TotalSyncCommitTime_Rate_txt.setText("");
+
+		_SnapsGenerated_Abs_txt .setText("");
+		_SnapsGenerated_Diff_txt.setText("");
+		_SnapsGenerated_Rate_txt.setText("");
+
+		_SnapsExecuted_Abs_txt  .setText("");
+		_SnapsExecuted_Diff_txt .setText("");
+		_SnapsExecuted_Rate_txt .setText("");
 
 		_fullTranslog_txt       .setText("");
 		_oldestOpenTran_txt     .setText("");

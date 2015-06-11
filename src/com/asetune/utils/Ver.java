@@ -619,8 +619,97 @@ public class Ver
 
 
 
+	public static int hanaVersionStringToNumber(String versionStr)
+	{
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
 
+		int major       = 0; // <12>.5.4
+		int minor       = 0; // 12.<5>.4
+		int maint       = 0; // 12.5.<4>
+		int servicePack = 0; // SP<01> SP<50> SP<100> or ESD#<4>.2
+		int patchLevel  = 0; // PL<02> or ESD#4.<2>
 
+		String[] sa = versionStr.split("\\.");
+		if (sa.length == 5)
+		{
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			      maint       = 0;
+			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			try { patchLevel  = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+			
+			return Ver.ver(major, minor, maint, servicePack, patchLevel);
+		}
+		else
+		{
+			_logger.error("HANA Version string '"+versionStr+"' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
+			return 0;
+		}
+	}
+
+	public static int asaVersionStringToNumber(String versionStr)
+	{
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
+
+		int major       = 0; // <12>.5.4
+		int minor       = 0; // 12.<5>.4
+		int maint       = 0; // 12.5.<4>
+//		int servicePack = 0; // SP<01> SP<50> SP<100> or ESD#<4>.2
+//		int patchLevel  = 0; // PL<02> or ESD#4.<2>
+//		int build       = 0; // 16.0.0.<1948> but convert this to a 5 digit number
+
+		String[] sa = versionStr.split("\\.");
+		if (sa.length == 4)
+		{
+			try { major = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major  = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
+			try { minor = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor  = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			try { maint = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint  = 0; _logger.warn("Problem parsing 'maint' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+//			try { build = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { build  = 0; _logger.warn("Problem parsing 'build' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+			
+			return Ver.ver(major, minor, maint);
+		}
+		else
+		{
+			_logger.error("SQL-Anywhere or IQ Version string '"+versionStr+"' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
+			return 0;
+		}
+	}
+
+	public static int iqVersionStringToNumber(String versionStr)
+	{
+		return sybVersionStringToNumber(versionStr);
+	}
+
+	public static int oracleVersionStringToNumber(String versionStr)
+	{
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
+
+		int major       = 0;
+		int minor       = 0;
+		int maint       = 0;
+		int servicePack = 0;
+		int patchLevel  = 0;
+
+		String[] sa = versionStr.split("\\.");
+		if (sa.length == 5)
+		{
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+			try { patchLevel  = Integer.parseInt(sa[4]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[4]+"'. Setting this to 0. Caught: "+ex); }
+			
+			return Ver.ver(major, minor, maint, servicePack, patchLevel);
+		}
+		else
+		{
+			_logger.error("ORACLE Version string '"+versionStr+"' doesn't consist of 5 fields separated be '.', can't parse this version string. returning 0");
+			return 0;
+		}
+	}
 
 
 

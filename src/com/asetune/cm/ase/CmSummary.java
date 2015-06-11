@@ -484,7 +484,6 @@ extends CountersModel
 			cols1 += ", StartDate           = min(StartDate) \n";
 			cols1 += ", CountersCleared     = max(CountersCleared) \n";
 			
-//			if (aseVersion >= 1570100)
 			if (aseVersion >= Ver.ver(15,7,0,100))
 			{
 				cols1 += ", Rollbacks          = sum(Rollbacks) \n";	
@@ -505,6 +504,17 @@ extends CountersModel
 				cols1 += ", PhysicalReads      = sum(PhysicalReads) \n";
 				cols1 += ", PhysicalWrites     = sum(PhysicalWrites) \n";
 				cols1 += ", LogicalReads       = sum(LogicalReads) \n";
+			}
+
+			if (aseVersion >= Ver.ver(16,0,0, 0,5))
+			{
+				cols1 += ", TotalSyncCommitTime = sum(TotalSyncCommitTime) \n";
+			}
+			
+			if (aseVersion >= Ver.ver(16,0,0, 2))
+			{
+				cols1 += ", SnapsGenerated      = sum(SnapsGenerated) \n";
+				cols1 += ", SnapsExecuted       = sum(SnapsExecuted) \n";
 			}
 		}
 
@@ -622,6 +632,9 @@ extends CountersModel
 			checkAndSetNc20(counters, rowId, "PhysicalReads");
 			checkAndSetNc20(counters, rowId, "PhysicalWrites");
 			checkAndSetNc20(counters, rowId, "LogicalReads");
+			checkAndSetNc20(counters, rowId, "TotalSyncCommitTime");
+			checkAndSetNc20(counters, rowId, "SnapsGenerated");
+			checkAndSetNc20(counters, rowId, "SnapsExecuted");
 			
 			checkAndSetNc20(counters, rowId, "io_total_read");
 			checkAndSetNc20(counters, rowId, "io_total_write");

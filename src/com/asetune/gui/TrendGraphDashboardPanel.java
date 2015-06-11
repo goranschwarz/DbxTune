@@ -15,6 +15,7 @@ import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
@@ -27,6 +28,7 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.VerticalScrollPane;
@@ -61,6 +63,8 @@ extends JPanel
 		Configuration.registerDefaultValue(PROPKEY_inMemoryHistoryEnabled, DEFAULT_inMemoryHistoryEnabled);
 		Configuration.registerDefaultValue(PROPKEY_graphLayoutColumns,     DEFAULT_graphLayoutColumns);
 	}
+
+	private JButton            _graphs_but                    = new JButton();
 
 	private int                _graphLayoutColumns            = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_graphLayoutColumns, DEFAULT_graphLayoutColumns);
 	private JLabel             _graphLayoutColumns_lbl        = new JLabel("Graph Columns");
@@ -124,6 +128,13 @@ extends JPanel
 	{
 		setLayout(new MigLayout("insets 0 0 0 0", "", ""));
 
+		_graphs_but.setName("GRAPH_ORDER"); // just for trace
+		_graphs_but.setToolTipText("<html>Open Graph properties Dialog</html>");
+		_graphs_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/graph_order_32.png"));
+		_graphs_but.setContentAreaFilled(false);
+		_graphs_but.setMargin( new Insets(0,0,0,0) );
+		_graphs_but.setToolTipText("<html>Open Graph properties Dialog</html>");
+
 		_graphLayoutColumns_lbl.setToolTipText("<html>How many Graphs do you want <i>side by side</i>. </html>");
 		_graphLayoutColumns_sp .setToolTipText("<html>How many Graphs do you want <i>side by side</i>. </html>");
 		
@@ -179,6 +190,8 @@ extends JPanel
 		// Create a separate Panel for the things to position at the top...
 		_topPanel = new JPanel(new MigLayout("insets 0 0 0 0", "", ""));
 
+		_topPanel.add(_graphs_but,                   "align left, gapleft 5");
+
 		_topPanel.add(new JLabel(""),                "span 10, align center, gaptop 10, pushx"); // Dummy to fill up space
 
 		_topPanel.add(_graphLayoutColumns_lbl,       "");
@@ -218,6 +231,19 @@ extends JPanel
 	
 	private void initComponentActions() 
 	{
+		// SOURCEFORGE
+		_graphs_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				int ret = TrendGraphPanelReorderDialog.showDialog(MainFrame.getInstance(), CounterController.getSummaryPanel().getGraphPanel());
+				if (ret == JOptionPane.OK_OPTION)
+				{
+				}
+			}
+		});
+
 		// GRAPH COLUMNS
 		_graphLayoutColumns_spm.addChangeListener(new ChangeListener()
 		{

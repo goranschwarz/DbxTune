@@ -210,7 +210,7 @@ extends CounterControllerAbstract
 			stmt.close();
 
 			// Get Server Name
-			srvName     = conn.getDatabaseServerName();
+			srvName     = conn.getDbmsServerName();
 			srvHostname = srvName;
 
 			// Get Counters Clear data

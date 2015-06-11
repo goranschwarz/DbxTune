@@ -35,17 +35,14 @@ import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
-import com.asetune.config.dbms.AseConfig;
-import com.asetune.config.dbms.AseConfigText;
-import com.asetune.config.dbms.DbmsConfigAbstract;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
-import com.asetune.config.dbms.AseConfigText.ConfigType;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.PreparedStatementCache;
@@ -1398,10 +1395,10 @@ public class PersistWriterJdbc
 
 			// Storing the MonTablesDictionary(monTables & monTableColumns), 
 			// this so we can restore the proper Column ToolTip for this ASE version.
-			if (MonTablesDictionary.hasInstance())
+			if (MonTablesDictionaryManager.hasInstance())
 			{
 				_logger.info("Storing monTables & monTableColumns dictionary in table "+getTableName(SESSION_MON_TAB_DICT, null, false)+" and "+getTableName(SESSION_MON_TAB_COL_DICT, null, false));
-				saveMonTablesDictionary(MonTablesDictionary.getInstance(), cont._sessionStartTime);
+				saveMonTablesDictionary(MonTablesDictionaryManager.getInstance(), cont._sessionStartTime);
 			}
 
 			// Storing the AseConfig and AseCacheConfig
@@ -1424,12 +1421,6 @@ public class PersistWriterJdbc
 		
 		// Close connection to db
 		close();
-	}
-
-	public void loadMonTablesDictionary(MonTablesDictionary mtd)
-	{
-		throw new RuntimeException("NOT IMPLEMENTED: loadMonTablesDictionary()");
-		// FIXME: move this to the reader
 	}
 
 	public void saveDbmsConfigText(Timestamp sessionStartTime)

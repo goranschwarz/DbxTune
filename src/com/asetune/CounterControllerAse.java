@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import javax.naming.NameNotFoundException;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 
@@ -28,6 +27,8 @@ import com.asetune.cm.ase.CmCachedProcsSum;
 import com.asetune.cm.ase.CmDataCaches;
 import com.asetune.cm.ase.CmDeadlock;
 import com.asetune.cm.ase.CmDeviceIo;
+import com.asetune.cm.ase.CmDeviceSegIO;
+import com.asetune.cm.ase.CmDeviceSegUsage;
 import com.asetune.cm.ase.CmEngines;
 import com.asetune.cm.ase.CmErrolog;
 import com.asetune.cm.ase.CmExecutionTime;
@@ -46,6 +47,7 @@ import com.asetune.cm.ase.CmProcCallStack;
 import com.asetune.cm.ase.CmProcessActivity;
 import com.asetune.cm.ase.CmQpMetrics;
 import com.asetune.cm.ase.CmRaLogActivity;
+import com.asetune.cm.ase.CmRaMemoryStat;
 import com.asetune.cm.ase.CmRaScanners;
 import com.asetune.cm.ase.CmRaScannersTime;
 import com.asetune.cm.ase.CmRaSenders;
@@ -73,7 +75,7 @@ import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
@@ -302,9 +304,9 @@ public class CounterControllerAse extends CounterControllerAbstract
 
 		ICounterController counterController = this;
 		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
-
+                           
 		CmSummary          .create(counterController, guiController);
-
+                           
 		CmObjectActivity   .create(counterController, guiController);
 		CmProcessActivity  .create(counterController, guiController);
 		CmSpidWait         .create(counterController, guiController);
@@ -322,6 +324,8 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmIoQueueSum       .create(counterController, guiController);
 		CmIoQueue          .create(counterController, guiController);
 		CmIoControllers    .create(counterController, guiController);
+		CmDeviceSegIO      .create(counterController, guiController);
+		CmDeviceSegUsage   .create(counterController, guiController);
 		CmSpinlockActivity .create(counterController, guiController);
 		CmSpinlockSum      .create(counterController, guiController);
 		CmSysmon           .create(counterController, guiController);
@@ -335,6 +339,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmRaStreamStats    .create(counterController, guiController);
 		CmRaSyncTaskStats  .create(counterController, guiController);
 		CmRaTruncPoint     .create(counterController, guiController);
+		CmRaMemoryStat     .create(counterController, guiController);
 		CmRaSysmon         .create(counterController, guiController);
 		CmCachedProcs      .create(counterController, guiController);
 		CmCachedProcsSum   .create(counterController, guiController);
@@ -390,7 +395,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 			// then: use ASE function asehostname() to get on which OSHOST the ASE is running
 //			if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 15020)
 //			if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= 1502000)
-			if (MonTablesDictionary.getInstance().getAseExecutableVersionNum() >= Ver.ver(15,0,2))
+			if (MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum() >= Ver.ver(15,0,2))
 			{
 				if (_activeRoleList != null && _activeRoleList.contains(AseConnectionUtils.SA_ROLE))
 					sql = "select getdate(), @@servername, asehostname(), CountersCleared from master..monState";
@@ -525,8 +530,8 @@ public class CounterControllerAse extends CounterControllerAbstract
 		try
 		{
 			int aseVersion = 0;
-			if (MonTablesDictionary.hasInstance())
-				aseVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+			if (MonTablesDictionaryManager.hasInstance())
+				aseVersion = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
 
 			if ( aseVersion >= Ver.ver(15,0,3,1) && aseVersion < Ver.ver(17,0) )
 			{
@@ -590,121 +595,6 @@ public class CounterControllerAse extends CounterControllerAbstract
 		}
 	}
 
-	
-	/**
-	 * Add some information to the MonTablesDictionary<br>
-	 * This will serv as a dictionary for ToolTip
-	 */
-	public static void initExtraMonTablesDictionary()
-	{
-		try
-		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-			
-			if (mtd == null)
-				return;
-
-			String clientXxx = 
-			"<html>" +
-				"The clientname, clienthostname and clientapplname is assigned by client code with individual information.<br>" +
-				"This is useful for differentiating among clients in a system where many clients connect to Adaptive Server using the same name, host name, or application name.<br>" +
-				"It can also be used by the client as a trace to indicate what part of the client code that is executing.<br>" +
-				"<br>" +
-				"Client code has probably executed:<br>" +
-				"<code>set [clientname client_name | clienthostname host_name | clientapplname application_name] value</code>" +
-			"</html>";
-
-			
-			mtd.addTable("sysprocesses",  "Holds information about SybasePID or threads/users logged in to the ASE.");
-			mtd.addColumn("sysprocesses", "kpid",           "Kernel Process Identifier.");
-			mtd.addColumn("sysprocesses", "fid",            "SPID of the parent process, Family ID.");
-			mtd.addColumn("sysprocesses", "spid",           "Session Process Identifier.");
-			mtd.addColumn("sysprocesses", "program_name",   "Name of the client program, the client application has to set this to a value otherwise it will be empty.");
-			mtd.addColumn("sysprocesses", "dbname",         "Name of the database this user is currently using.");
-			mtd.addColumn("sysprocesses", "login",          "Username that is logged in.");
-			mtd.addColumn("sysprocesses", "status",         "Status that the SPID is currently in. \n'recv sleep'=waiting for incomming network trafic, \n'sleep'=various reasons but usually waiting for disk io, \n'running'=currently executing on a engine, \n'runnable'=waiting for an engine to execute its work, \n'lock sleep'=waiting for table/page/row locks, \n'sync sleep'=waiting for childs to finnish when parallel execution. \n'...'=and more statuses");
-			mtd.addColumn("sysprocesses", "cmd",            "What are we doing. \n'SELECT/INSERT/UPDATE/DELETE'=quite obvious, \n'LOG SUSP'=waiting for log space to be available, \n'COND'=On a IF or equivalent SQL statement, \n'...'=and more");
-			mtd.addColumn("sysprocesses", "tran_name",      "More info about what the ASE is doing. \nIf we are in CREATE INDEX it will tell you the index name. \nIf we are in BCP it will give you the tablename etc. \nThis is a good place to look at when you issue ASE administrational commands and want to know whet it really does.");
-			mtd.addColumn("sysprocesses", "physical_io",    "Total number of reads/writes, this is flushed in a strange way, so do not trust the Absolute value to much...");
-			mtd.addColumn("sysprocesses", "procName",       "If a procedure is executing, this will be the name of the proc. \nif you execute a sp_ proc, it could give you a procedure name that is uncorrect. \nThis due to the fact that I'm using object_name(id,dbid) and dbid is the database the SPID is currently in, while the procId is really reflecting the id of the sp_ proc which usually is located in sybsystemprocs.");
-			mtd.addColumn("sysprocesses", "stmtnum",        "Statement number of the SQL batch or the procedure that is currently executing. \nThis might be faulty but it's usually a good indicator.");
-			mtd.addColumn("sysprocesses", "linenum",        "Line number of the SQL batch or the procedure that is currently executing. \nThis might be faulty but it's usually a good indicator. \nIf this does NOT move between samples you may have a HEAVY SQL statement to optimize or you may waiting for a blocking lock.");
-			mtd.addColumn("sysprocesses", "blocked",        "0 is a good value, otherwise it will be the SPID that we are blocked by, meaning we are waiting for that SPID to release it's locks on some objetc.");
-			mtd.addColumn("sysprocesses", "time_blocked",   "Number of seconds we have been blocked by other SPID's. \nThis is not a summary, it shows you how many seconds we have been waiting since we started to wait for the other SPID to finnish.");
-			mtd.addColumn("sysprocesses", "hostname",       "hostname of the machine where the clinet was started. (This can be filled in by the client, meaning it could be used for something else)");
-			mtd.addColumn("sysprocesses", "ipaddr",         "IP address of the connected client");
-			mtd.addColumn("sysprocesses", "hostprocess",    "hostprocess on the machine which the clinet was started at. (This can be filled in by the client, meaning it could be used for something else)");
-			mtd.addColumn("sysprocesses", "suid",           "Sybase User ID of the user which the client logged in with.");
-			mtd.addColumn("sysprocesses", "cpu",            "cumulative cpu time used by a process in 'ticks'. This is periodically flushed by the system (see sp_configure 'cpu accounting flush interval'");
-			mtd.addColumn("sysprocesses", "clientname",     clientXxx);
-			mtd.addColumn("sysprocesses", "clienthostname", clientXxx);
-			mtd.addColumn("sysprocesses", "clientapplname", clientXxx);
-
-			mtd.addColumn("sysprocesses", "tempdb_name",          "What tempdb is this SPID using for temporary storage.");
-			mtd.addColumn("sysprocesses", "pssinfo_tempdb_pages", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
-			mtd.addColumn("sysprocesses", "WaitClassDesc",        "Short description of what 'group' the WaitEventID is grouped in.");
-			mtd.addColumn("sysprocesses", "WaitEventDesc",        "Short description of what this specific WaitEventID stands for.");
-			mtd.addColumn("sysprocesses", "BatchIdDiff",          "How many 'SQL Batches' has the client sent to the server since the last sample, in Diff or Rate");
-
-			mtd.addColumn("monProcess",   "tempdb_name",          "What tempdb is this SPID using for temporary storage.");
-			mtd.addColumn("monProcess",   "pssinfo_tempdb_pages", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
-
-			
-//			mtd.addColumn("monDeviceIO", "AvgServ_ms", "Calculated column, Service time on the disk. Formula is: AvgServ_ms = IOTime / (Reads + Writes). If there is few I/O's this value might be a bit off, this due to 'click ticks' is 100 ms by default");
-
-			mtd.addColumn("monProcessStatement", "ExecTime", "The statement has been executing for ## seconds. Calculated value. <b>Formula</b>: ExecTime=datediff(ss, StartTime, getdate())");
-			mtd.addColumn("monProcessStatement", "ExecTimeInMs", "The statement has been executing for ## milliseconds. Calculated value. <b>Formula</b>: ExecTimeInMs=datediff(ms, StartTime, getdate())");
-
-			mtd.addTable("sysmonitors",   "This is basically where sp_sysmon gets it's counters.");
-			mtd.addColumn("sysmonitors",  "name",         "The internal name of the counter, this is strictly Sybase ASE INTERNAL name. If the description is NOT set it's probably an 'unknown' or not that important counter.");
-			mtd.addColumn("sysmonitors",  "instances",    "How many instances of this spinslock actually exists. For examples for 'default data cache' it's the number of 'cache partitions' the cache has.");
-//			mtd.addColumn("sysmonitors",  "grabs",        "How many times we where able to succesfuly where able to GET the spinlock.");
-//			mtd.addColumn("sysmonitors",  "waits",        "How many times we had to wait for other engines before we where able to grab the spinlock.");
-//			mtd.addColumn("sysmonitors",  "spins",        "How many times did we 'wait/spin' for other engies to release the lock. This is basically too many engines spins of the same resource.");
-			mtd.addColumn("sysmonitors",  "grabs",        "Spinlock grabs as in attempted grabs for the spinlock - includes waits");
-			mtd.addColumn("sysmonitors",  "waits",        "Spinlock waits - usually a good sign of contention");
-			mtd.addColumn("sysmonitors",  "spins",        "Spinlock spins - this is the CPU spins that drives up CPU utilization. The higher the spin count, the more CPU usage and the more serious the performance impact of the spinlock on other processes not waiting");
-			mtd.addColumn("sysmonitors",  "contention",   "waits / grabs, but in the percentage form. If this goes beond 10-20% then try to add more spinlock instances.");
-			mtd.addColumn("sysmonitors",  "spinsPerWait", "spins / waits, so this is numer of times we had to 'spin' before cound grab the spinlock. If we had to 'spin/wait' for other engines that hold the spinlock. Then how many times did we wait/spin' for other engies to release the lock. If this is high (more than 100 or 200) we might have to lower the numer of engines.");
-			mtd.addColumn("sysmonitors",  "description",  "If it's a known sppinlock, this field would have a valid description.");
-			mtd.addColumn("sysmonitors",  "id",           "The internal ID of the spinlock, for most cases this would just be a 'number' that identifies the spinlock if the spinlock itself are 'partitioned', meaning the spinlocks itselv are partitioned using some kind of 'hash' algorithm or simular.");
-
-			// Add all "known" counter name descriptions
-			mtd.addSpinlockDescription("tablockspins",              "xxxx: tablockspins,  'lock table spinlock ratio'");
-			mtd.addSpinlockDescription("fglockspins",               "xxxx: fglockspins,   'lock spinlock ratio'");
-			mtd.addSpinlockDescription("addrlockspins",             "xxxx: addrlockspins, 'lock address spinlock ratio'");
-			mtd.addSpinlockDescription("Resource->rdesmgr_spin",    "Object Manager Spinlock Contention");
-			mtd.addSpinlockDescription("Des Upd Spinlocks",         "Object Spinlock Contention");
-			mtd.addSpinlockDescription("Ides Spinlocks",            "Index Spinlock Contention");
-			mtd.addSpinlockDescription("Ides Chain Spinlocks",      "Index Hash Spinlock Contention");
-			mtd.addSpinlockDescription("Pdes Spinlocks",            "Partition Spinlock Contention");
-			mtd.addSpinlockDescription("Pdes Chain Spinlocks",      "Partition Hash Spinlock Contention");
-			mtd.addSpinlockDescription("Resource->rproccache_spin", "Procedure Cache Spinlock");
-			mtd.addSpinlockDescription("Resource->rprocmgr_spin",   "Procedure Cache Manager Spinlock");
-//			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
-//			mtd.addSpinlockDescription("xxx",      "xxxx: xxx");
-			
-			
-//
-//			sp_configure "spinlock"
-//			go
-//
-//			Parameter Name                 Default     Memory Used Config Value Run Value    Unit                 Type       
-//			--------------                 -------     ----------- ------------ ---------    ----                 ----       
-//			lock address spinlock ratio            100           0          100          100 ratio                static     
-//			lock spinlock ratio                     85           0           85           85 ratio                static     
-//			lock table spinlock ratio               20           0           20           20 ratio                static     
-//			open index hash spinlock ratio         100           0          100          100 ratio                dynamic    
-//			open index spinlock ratio              100           0          100          100 ratio                dynamic    
-//			open object spinlock ratio             100           0          100          100 ratio                dynamic    
-//			partition spinlock ratio                10           6           10           10 ratio                dynamic    
-//			user log cache spinlock ratio           20           0           20           20 ratio                dynamic    
-		}
-		catch (NameNotFoundException e)
-		{
-			/* ignore */
-		}
-	}
 
 	@Override
 	public String getServerTimeCmd()

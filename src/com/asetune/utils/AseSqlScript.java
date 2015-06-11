@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -44,7 +45,7 @@ implements SybMessageHandler
 	private String                          _msgPrefix          = "";
 	private int                             _queryTimeout       = 0;
 	private boolean                         _rememberStates     = true;
-
+	private List<Integer>                   _discardDbmsErrorList = null;
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
 	 * @param conn The Connection 
@@ -52,7 +53,7 @@ implements SybMessageHandler
 	 */
 	public AseSqlScript(Connection conn, int queryTimeout)
 	{
-		this(conn, queryTimeout, true);
+		this(conn, queryTimeout, true, null);
 	}
 
 	/** 
@@ -63,9 +64,15 @@ implements SybMessageHandler
 	 */
 	public AseSqlScript(Connection conn, int queryTimeout, boolean rememberStates)
 	{
+		this(conn, queryTimeout, rememberStates, null);
+	}
+
+	public AseSqlScript(Connection conn, int queryTimeout, boolean rememberStates, List<Integer> discardDbmsErrorList)
+	{
 		_conn = conn;
 		_queryTimeout = queryTimeout;
 		_rememberStates = rememberStates;
+		_discardDbmsErrorList = discardDbmsErrorList;
 
 		if (conn instanceof SybConnection)
 		{
@@ -423,15 +430,27 @@ implements SybMessageHandler
 		SybMessageHandler newMessageHandler = new SybMessageHandler()
 		{
 			@Override
-			public SQLException messageHandler(SQLException sqle)
+			public SQLException messageHandler(SQLException sqe)
 			{
+//System.out.println("DISCARD("+sqe.getErrorCode()+"): "+StringUtil.toCommaStr(_discardDbmsErrorList));
+//System.out.println("SQLEX: "+sqe);
+//new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
+				int errorCode = sqe.getErrorCode();
+				if (_discardDbmsErrorList != null && _discardDbmsErrorList.contains(errorCode))
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+errorCode+". Msg='"+sqe.getMessage()+"'.");
+
+					return null;
+				}
+
 				if (aseExceptionsToWarnings)
-					return AseConnectionUtils.sqlExceptionToWarning(sqle);
+					return AseConnectionUtils.sqlExceptionToWarning(sqe);
 				else
 				{
-					if (AseConnectionUtils.isInLoadDbException(sqle))
-						return AseConnectionUtils.sqlExceptionToWarning(sqle);
-					return sqle;
+					if (AseConnectionUtils.isInLoadDbException(sqe))
+						return AseConnectionUtils.sqlExceptionToWarning(sqe);
+					return sqe;
 				}
 			}
 		};
@@ -789,7 +808,20 @@ implements SybMessageHandler
 		@SuppressWarnings("unused")
 		String procName = "";
 
+//System.out.println("DISCARD("+sqe.getErrorCode()+"): "+StringUtil.toCommaStr(_discardDbmsErrorList));
+//System.out.println("SQLEX: "+sqe);
+//new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
+
 		int msgNumber = sqe.getErrorCode();
+		
+		// Discard some messages
+		if (_discardDbmsErrorList != null && _discardDbmsErrorList.contains(msgNumber))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("executeSql(BufferedReader,boolean): Discarding Error code "+msgNumber+". Msg='"+sqe.getMessage()+"'.");
+
+			return null;
+		}
 
 		String message = sqe.getMessage();
 		if ( message.endsWith("\n") )

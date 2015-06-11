@@ -59,11 +59,9 @@ import org.jdesktop.swingx.treetable.TreeTableModel;
 
 import com.asetune.CounterControllerAbstract;
 import com.asetune.Version;
-import com.asetune.config.dbms.AseConfig;
-import com.asetune.config.dbms.AseConfigText;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
-import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.OfflineSessionModel.SessionLevel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -602,6 +600,9 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		if (DbmsConfigTextManager.hasInstances())
 			DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
+		// load the column tool tip (if any was saved)
+		if (MonTablesDictionaryManager.hasInstance())
+			reader.loadMonTablesDictionary(sl.getSampleId());
 		
 		// Read User Defined Counters, to check for any new UDC that isn't loaded/created
 		Configuration udcConf = reader.getUdcProperties(sl.getSampleId());

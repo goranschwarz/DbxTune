@@ -12,7 +12,6 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 import javax.swing.ImageIcon;
-import javax.swing.JCheckBox;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -21,20 +20,19 @@ import javax.swing.KeyStroke;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
-import com.asetune.CounterControllerAse;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.cm.ase.CmPCacheModuleUsage;
 import com.asetune.cm.ase.CmSummary;
 import com.asetune.cm.ase.CmSysLoad;
-import com.asetune.cm.ase.gui.CmObjectActivityPanel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryAse;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -93,43 +91,37 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo()        { return true; } 
-			@Override public boolean doCheckMonitorConfig()           { return true; } 
-			@Override public boolean doInitMonitorDictionary()        { return true; } 
-			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean doInitCounterCollector()         { return true; } 
-
-			@Override
-			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean doInitializeVersionInfo() { return true; } 
+			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
-				MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
+				MonTablesDictionaryManager.getInstance().initializeVersionInfo(conn, true);
 				return true;
 			}
 			
-			@Override
-			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean doCheckMonitorConfig() { return true; } 
+			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
-			@Override
-			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean doInitMonitorDictionary() { return true; } 
+			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 //				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
 //					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
 
-				MonTablesDictionary.getInstance().initialize(conn, true);
-				CounterControllerAse.initExtraMonTablesDictionary();
+				MonTablesDictionaryManager.getInstance().initialize(conn, true);
+//				CounterControllerAse.initExtraMonTablesDictionary(); // Now done inside: MonTablesDictionaryManager.getInstance().initialize(conn, true);
 				
 				return true;
 			}
 			
-			@Override
-			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 //				IDbmsConfig aseCfg = AseConfig.getInstance();
@@ -164,16 +156,16 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override
-			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) 
+			@Override public boolean doInitCounterCollector() { return true; } 
+			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) 
 			throws Exception
 			{
 				CounterController.getInstance().initCounters(
 						conn,
 						true,
-						MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
-						MonTablesDictionary.getInstance().isClusterEnabled(),
-						MonTablesDictionary.getInstance().getMdaVersion());
+						MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum(),
+						MonTablesDictionaryManager.getInstance().isClusterEnabled(),
+						MonTablesDictionaryManager.getInstance().getMdaVersion());
 
 				return true;
 			}			
@@ -258,8 +250,9 @@ extends MainFrame
 	{
 		// Read in the MonTablesDictionary from the offline store
 		// This will serve as a dictionary for ToolTip
-		MonTablesDictionary.getInstance().initializeMonTabColHelper(getOfflineConnection(), true);
-		CounterControllerAse.initExtraMonTablesDictionary();
+//		MonTablesDictionaryManager.getInstance().initializeMonTabColHelper(getOfflineConnection(), true);
+		MonTablesDictionaryAse.initExtraMonTablesDictionary();
+//		CounterControllerAse.initExtraMonTablesDictionary(); // Now done inside: MonTablesDictionaryManager.getInstance().initialize(conn, true);
 
 //		// initialize ASE Config Dictionary
 //		AseConfig.getInstance().initialize(getOfflineConnection(), true, true, null);
@@ -380,7 +373,7 @@ extends MainFrame
 			DbmsConfigTextManager.reset();
 
 		waitDialog.setState("Clearing Mon Tables Dictionary.");
-		MonTablesDictionary.reset();      // Most probably need to work more on this one...
+		MonTablesDictionaryManager.reset();      // Most probably need to work more on this one...
 
 		//waitDialog.setState("Clearing Wait Event Dictionary.");
 		//MonWaitEventIdDictionary.reset(); // Do not need to be reset, it's not getting anything from DB
@@ -422,9 +415,9 @@ extends MainFrame
 
 		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 		{
-			String servername    = MonTablesDictionary.getInstance().getAseServerName();
-			String aseVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
-			int    aseVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+			String servername    = MonTablesDictionaryManager.getInstance().getDbmsServerName();
+			String aseVersionStr = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionStr();
+			int    aseVersionNum = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
 			if (aseVersionNum >= Ver.ver(15,0,2))
 			{
 				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);

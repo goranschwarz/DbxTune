@@ -24,6 +24,8 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.GuiLogAppender;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
@@ -119,6 +121,7 @@ public abstract class DbxTune
 
 	public abstract CheckForUpdates createCheckForUpdates();
 	public abstract IDbmsConfig createDbmsConfig();
+	public abstract MonTablesDictionary createMonTablesDictionary();
 
 	public static boolean hasGui() { return _gui; } 
 	/**
@@ -757,6 +760,10 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		// Create a DBMS Configuration object, note: createDbmsConfig() might return null, then the DBMS Config isn't supported...
 		IDbmsConfig dbmsConfig = createDbmsConfig();
 		DbmsConfigManager.setInstance(dbmsConfig);
+
+		// Create a MonTableDictionary object
+		MonTablesDictionary monTableDict = createMonTablesDictionary();
+		MonTablesDictionaryManager.setInstance(monTableDict);
 
 		
 		if ( ! _gui )

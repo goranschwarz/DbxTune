@@ -156,6 +156,12 @@ implements IDbmsConfigText
 		return 10;
 	}
 
+	@Override
+	public List<Integer> getDiscardDbmsErrorList()
+	{
+		return null;
+	}
+
 	/** What type is this specific Configuration of */
 	abstract public String getConfigType();
 	
@@ -401,7 +407,7 @@ implements IDbmsConfigText
 			try
 			{
 				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
-				script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState()); 
+				script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
 				_configStr = script.executeSqlStr(sql, true);
 			}
 			catch (SQLException ex)

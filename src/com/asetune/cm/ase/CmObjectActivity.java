@@ -17,6 +17,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmObjectActivityPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.RemarkDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -170,7 +171,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 			mtd.addColumn("monOpenObjectActivity", "LastScanDateDiff"               ,"<html>How many Milliseconds since last Scan.  <br><b>Formula</b>: datediff(ms, LastScanDate, getdate())<br></html>");
 			mtd.addColumn("monOpenObjectActivity", "LastInsertDateDiff"             ,"<html>How many Milliseconds since last Insert.<br><b>Formula</b>: datediff(ms, LastInsertDate, getdate())<br></html>");

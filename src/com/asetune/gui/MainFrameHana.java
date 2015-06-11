@@ -13,6 +13,7 @@ import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
@@ -61,73 +62,69 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo()        { return false; } 
+			@Override public boolean doInitializeVersionInfo()        { return true; } 
+			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+//				// NOTE: This will only work in online mode...
+//				//       To make it for in offline mode we need to do simular stuff as we do in AseTune...
+//				//       and also redo MonTablesDictionary... and subclass it etc...
+//				//MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
+//
+//				DatabaseMetaData md = conn.getMetaData();
+//				
+//				List<CountersModel> cmList = CounterController.getInstance().getCmList();
+//				for (CountersModel cm : cmList)
+//				{
+//					String[] sa = cm.getMonTablesInQuery();
+//					if (sa == null)
+//						continue;
+//					for (String tableName : sa)
+//					{
+//						MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+//						mtd.addTable(tableName,  "");
+//
+//						ResultSet rs = md.getColumns(null, null, tableName, "%");
+//						while(rs.next())
+//						{
+//							String tName = rs.getString("TABLE_NAME");
+//							String cName = rs.getString("COLUMN_NAME");
+//							String desc  = rs.getString("REMARKS");
+//
+//                            try 
+//                            {
+//    							if (StringUtil.hasValue(desc))
+//    								mtd.addColumn(tName, cName, "<html>"+desc.replace("\n", "<br>")+"</html>");
+//                            }
+//                    		catch (NameNotFoundException e) {/*ignore*/ e.printStackTrace();}
+//						}
+//					}
+//				}
+
+				MonTablesDictionaryManager.getInstance().initializeVersionInfo(conn, true);
+				return true;
+			}
+			
 			@Override public boolean doCheckMonitorConfig()           { return false; } 
-			@Override public boolean doInitMonitorDictionary()        { return false; } 
+			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				return true;
+			}
+
+			@Override public boolean doInitMonitorDictionary()        { return true; } 
+			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				MonTablesDictionaryManager.getInstance().initialize(conn, true);
+				return true;
+			}
+			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				return true;
+			}
+			
 			@Override public boolean doInitCounterCollector()         { return false; } 
-
-			@Override
-			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				// NOTE: This will only work in online mode...
-				//       To make it for in offline mode we need to do simular stuff as we do in AseTune...
-				//       and also redo MonTablesDictionary... and subclass it etc...
-				//MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
-
-				DatabaseMetaData md = conn.getMetaData();
-				
-				List<CountersModel> cmList = CounterController.getInstance().getCmList();
-				for (CountersModel cm : cmList)
-				{
-					String[] sa = cm.getMonTablesInQuery();
-					if (sa == null)
-						continue;
-					for (String tableName : sa)
-					{
-						MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-						mtd.addTable(tableName,  "");
-
-						ResultSet rs = md.getColumns(null, null, tableName, "%");
-						while(rs.next())
-						{
-							String tName = rs.getString("TABLE_NAME");
-							String cName = rs.getString("COLUMN_NAME");
-							String desc  = rs.getString("REMARKS");
-
-                            try 
-                            {
-    							if (StringUtil.hasValue(desc))
-    								mtd.addColumn(tName, cName, "<html>"+desc.replace("\n", "<br>")+"</html>");
-                            }
-                    		catch (NameNotFoundException e) {/*ignore*/ e.printStackTrace();}
-						}
-					}
-				}
-				
-				return true;
-			}
-			
-			@Override
-			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-
-			@Override
-			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-			
-			@Override
-			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-			
-			@Override
-			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;
 			}			

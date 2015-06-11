@@ -16,6 +16,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
@@ -47,10 +48,11 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1"};
 
-	public static final String[] PCT_COLUMNS      = new String[] {"CacheHitRate"};
+	public static final String[] PCT_COLUMNS      = new String[] {"CacheHitRate", "CASContention"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"CacheHitRate", "CacheSearches", 
-		"PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls", "APFReads"};
+		"PhysicalReads", "LogicalReads", "PhysicalWrites", "Stalls", "APFReads",
+		"CASGrabs", "CASSpins", "CASWaits"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -141,16 +143,26 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monDataCache",  "Stalls",       "Number of times I/O operations were delayed because no clean buffers were available in the wash area");
 
 			mtd.addColumn("monDataCache",  "CacheHitRate", "<html>" +
-			                                               "Percent calculation of how many pages was fetched from the cache.<br>" +
-			                                               "<b>Note</b>: APF reads could already be in memory, counted as a 'cache hit', check also 'devices' and APFReads.<br>" +
-			                                               "<b>Formula</b>: 100 - (PhysicalReads/CacheSearches) * 100.0" +
+			                                                   "Percent calculation of how many pages was fetched from the cache.<br>" +
+			                                                   "<b>Note</b>: APF reads could already be in memory, counted as a 'cache hit', check also 'devices' and APFReads.<br>" +
+			                                                   "<b>Formula</b>: 100 - (PhysicalReads/CacheSearches) * 100.0" +
 			                                               "</html>");
 //			mtd.addColumn("monDataCache",  "Misses",       "fixme");
 //			mtd.addColumn("monDataCache",  "Volatility",   "fixme");
+			mtd.addColumn("monDataCache",  "CASContention", "<html>" +
+			                                                    "Percent calculation the contention.<br>" +
+			                                                    "<b>Note</b>: This is calulated for both <i>Absolute</i>, <i>Difference</i> and <i>Rate</i> values.<br>" +
+			                                                    "<b>Formula</b>: (CASWaits/CASGrabs) * 100.0" +
+			                                                "</html>");
+			mtd.addColumn("monDataCache",  "CASSpinsPerWait", "<html>" +
+			                                                    "How many <i>spins</i> did we do for every <i>wait</i> .<br>" +
+			                                                    "<b>Note</b>: This is calulated for both <i>Absolute</i>, <i>Difference</i> and <i>Rate</i> values.<br>" +
+			                                                    "<b>Formula</b>: CASSpins / CASWaits" +
+			                                                "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -187,8 +199,14 @@ extends CountersModel
 		String APFReads            = "";
 		String Overhead            = "";
 
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
+		// ASE 16.0 SP2
+		String CASGrabs            = "";
+		String CASSpins            = "";
+		String CASWaits            = "";
+		String CASContention       = ""; // calculated column
+		String CASSpinsPerWait     = ""; // calculated column
+		String nl_160_sp2          = ""; // new line
+
 		if (aseVersion >= Ver.ver(15,7))
 		{
 			Status              = "Status, ";
@@ -197,6 +215,25 @@ extends CountersModel
 			ReplacementStrategy = "ReplacementStrategy, ";
 			APFReads            = "APFReads, ";
 			Overhead            = "Overhead, ";
+		}
+
+		if (aseVersion >= Ver.ver(16,0,0, 2))
+		{
+			CASGrabs            = "CASGrabs, ";
+			CASSpins            = "CASSpins, ";
+			CASWaits            = "CASWaits, ";
+//			CASContention       = "CASContention = convert(numeric(4,1), 0.0), ";
+			CASContention       = "CASContention   = CASE \n" +
+			                      "                      WHEN CASGrabs > 0 \n" +
+			                      "                      THEN convert(numeric(12,2), ((CASWaits + 0.0) / (CASGrabs + 0.0)) * 100.0) \n" +
+			                      "                      ELSE convert(numeric(12,2), 0.0) \n" +
+			                      "                  END,";
+			CASSpinsPerWait     = "CASSpinsPerWait = CASE \n" +
+			                      "                      WHEN CASWaits > 0 \n" +
+			                      "                      THEN convert(numeric(12,1), (CASSpins + 0.0) / (CASWaits + 0.0) ) \n" +
+			                      "                      ELSE convert(numeric(12,1), 0.0 ) \n" +
+			                      "                  END,";
+			nl_160_sp2 = "\n";
 		}
 
 		if (isClusterEnabled)
@@ -209,6 +246,9 @@ extends CountersModel
 		         "RelaxedReplacement, CachePartitions, BufferPools, \n" +
 		         "CacheSearches, PhysicalReads, LogicalReads, PhysicalWrites, Stalls, \n" +
 		         APFReads + Overhead +
+		         CASGrabs + CASSpins + CASWaits + nl_160_sp2 +
+		         CASContention + nl_160_sp2 +
+		         CASSpinsPerWait + nl_160_sp2 +
 		         "CacheHitRate = convert(numeric(10,1), 100 - (PhysicalReads*1.0/(CacheSearches+1)) * 100.0)" +
 //		         ", HitRate    = convert(numeric(10,1), (CacheSearches * 1.0 / LogicalReads) * 100)" +
 //		         ", Misses     = convert(numeric(10,1), (CacheSearches * 1.0 / PhysicalReads) * 1)" +
@@ -325,6 +365,64 @@ extends CountersModel
 			diffData.setValueAt(calcCacheHitRate, rowId, CacheHitRateId );
 //			diffData.setValueAt(calcMisses,       rowId, MissesId       );
 //			diffData.setValueAt(calcVolatility,   rowId, VolatilityId   );
+
+		}
+		
+		// do calculations for CAS in ASE 16.0 SP2 and above
+		localCalculation_CAS(prevSample, newSample, diffData);
+	}
+
+	public void localCalculation_CAS(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		long Grabs, Waits, Spins;
+		int  pos_Grabs = -1, pos_Waits = -1, pos_Spins = -1, pos_Contention = -1, pos_SpinsPerWait = -1;
+
+		// Find column Id's
+		List<String> colNames = diffData.getColNames();
+		if (colNames == null)
+			return;
+		for (int colId = 0; colId < colNames.size(); colId++)
+		{
+			String colName = (String) colNames.get(colId);
+			if      (colName.equals("CASGrabs"))        pos_Grabs        = colId;
+			else if (colName.equals("CASWaits"))        pos_Waits        = colId;
+			else if (colName.equals("CASSpins"))        pos_Spins        = colId;
+			else if (colName.equals("CASContention"))   pos_Contention   = colId;
+			else if (colName.equals("CASSpinsPerWait")) pos_SpinsPerWait = colId;
+		}
+		
+		// If the CAS columns are not found, just get out of here... it's not ASE 16.0 SP2 or above
+		if (pos_Grabs == -1 || pos_Waits == -1 || pos_Spins == -1 || pos_Contention == -1 || pos_SpinsPerWait == -1)
+			return;
+
+		// Loop on all diffData rows
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+			Grabs = ((Number) diffData.getValueAt(rowId, pos_Grabs)).longValue();
+			Waits = ((Number) diffData.getValueAt(rowId, pos_Waits)).longValue();
+			Spins = ((Number) diffData.getValueAt(rowId, pos_Spins)).longValue();
+
+			// contention
+			if (Grabs > 0)
+			{
+				BigDecimal contention = new BigDecimal( ((1.0 * (Waits)) / Grabs) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+				// Keep only 3 decimals
+				// row.set(AvgServ_msId, new Double (AvgServ_ms/1000) );
+				diffData.setValueAt(contention, rowId, pos_Contention);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_Contention);
+
+			// spinsPerWait
+			if (Waits > 0)
+			{
+				BigDecimal spinWarning = new BigDecimal( ((1.0 * (Spins)) / Waits) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+				diffData.setValueAt(spinWarning, rowId, pos_SpinsPerWait);
+			}
+			else
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_SpinsPerWait);
 
 		}
 	}

@@ -107,4 +107,10 @@ public interface IDbmsConfigText
 	 * @return
 	 */
 	public int getSqlTimeout();
+
+	/**
+	 * Get a list of numbers to discard, null if this isn't used.
+	 * @return A list of numbers to discard, null if this isn't used.
+	 */
+	public List<Integer> getDiscardDbmsErrorList();
 }

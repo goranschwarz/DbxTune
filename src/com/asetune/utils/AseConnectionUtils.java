@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
@@ -863,6 +864,38 @@ public class AseConnectionUtils
 		}
 	}
 
+	public static String getAseCharsetId(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select value from master..syscurconfigs where config = 131";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE charset id, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
 	public static String getAseSortorder(Connection conn)
 	{
 		final String UNKNOWN = "UNKNOWN";
@@ -895,6 +928,38 @@ public class AseConnectionUtils
 		catch (SQLException e)
 		{
 			_logger.debug("When getting ASE sortorder, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static String getAseSortorderId(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			String retStr = UNKNOWN;
+
+			String sql = "select value from master..syscurconfigs where config = 123";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return retStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE sortorder ID, Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1398,6 +1463,66 @@ public class AseConnectionUtils
 		catch (SQLException ex)
 		{
 			_logger.error("AseConnectionUtils:getRaVersionNumber(), 'ra_version'", ex);
+		}
+		
+		return srvVersionNum;
+	}
+
+	public static int getAsaVersionNumber(Connection conn)
+	{
+		int srvVersionNum = 0;
+
+		// version
+		try
+		{
+			String aseVersionStr = "";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select @@version");
+			while ( rs.next() )
+			{
+				aseVersionStr = rs.getString(1);
+			}
+			rs.close();
+	
+			if (srvVersionNum == 0)
+			{
+				srvVersionNum = Ver.asaVersionStringToNumber(aseVersionStr);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("MonTablesDictionary:getAsaVersionNumber(), @@version", ex);
+		}
+		
+		return srvVersionNum;
+	}
+
+	public static int getIqVersionNumber(Connection conn)
+	{
+		int srvVersionNum = 0;
+
+		// version
+		try
+		{
+			String aseVersionStr = "";
+
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select @@version");
+			while ( rs.next() )
+			{
+				aseVersionStr = rs.getString(1);
+			}
+			rs.close();
+	
+			if (srvVersionNum == 0)
+			{
+				srvVersionNum = Ver.iqVersionStringToNumber(aseVersionStr);
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("MonTablesDictionary:getAsaVersionNumber(), @@version", ex);
 		}
 		
 		return srvVersionNum;
@@ -2988,9 +3113,9 @@ public class AseConnectionUtils
 		int aseVersion = 0;
 		String LineNumber      = "LineNumber='', ";
 		String StatementNumber = "StatementNumber='', ";
-		if (MonTablesDictionary.hasInstance())
+		if (MonTablesDictionaryManager.hasInstance())
 		{
-			 aseVersion = MonTablesDictionary.getInstance().getMdaVersion();
+			 aseVersion = MonTablesDictionaryManager.getInstance().getMdaVersion();
 			
 //			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
 //			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
@@ -3098,11 +3223,11 @@ public class AseConnectionUtils
 		{
 			String monWaitClassInfoWhere = "";
 			String monWaitEventInfoWhere = "";
-			if (MonTablesDictionary.hasInstance())
+			if (MonTablesDictionaryManager.hasInstance())
 			{
 //				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
 //				if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
-				if (MonTablesDictionary.getInstance().getMdaVersion() >= Ver.ver(15,7))
+				if (MonTablesDictionaryManager.getInstance().getMdaVersion() >= Ver.ver(15,7))
 				{
 					monWaitClassInfoWhere = " and CI.Language = 'en_US'";
 					monWaitEventInfoWhere = "      and WI.Language = 'en_US' \n";
@@ -4011,6 +4136,5 @@ public class AseConnectionUtils
 			return false;
 		}
 	}
-
 }
 

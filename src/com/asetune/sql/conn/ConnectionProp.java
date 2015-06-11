@@ -15,7 +15,7 @@ public class ConnectionProp
 	protected String _dbname = null; // or the catalog
 
 	protected int    _loginTimeout = -1;
-	protected String _driver = null;
+	protected String _driverClass = null;
 	protected String _url    = null;
 
 	protected Properties _urlOptions = null;
@@ -37,7 +37,7 @@ public class ConnectionProp
 		_dbname        = cp._dbname;
 
 		_loginTimeout  = cp._loginTimeout;
-		_driver        = cp._driver;
+		_driverClass   = cp._driverClass;
 		_url           = cp._url;
 
 		_urlOptions    = (cp._urlOptions == null) ? null : new Properties(cp._urlOptions);
@@ -60,7 +60,7 @@ public class ConnectionProp
 	public String        getServer()        { return _server; }
 	public String        getDbname()        { return _dbname; }
 	public int           getLoginTimeout()  { return _loginTimeout; }
-	public String        getDriver()        { return _driver; }
+	public String        getDriverClass()   { return _driverClass; }
 	public String        getUrl()           { return _url; }
 	public Properties    getUrlOptions()    { return _urlOptions; }
 	public String        getAppName()       { return _appName; }
@@ -73,7 +73,7 @@ public class ConnectionProp
 	public void setDbname       (String        dbname)          { _dbname        = dbname; }
 	public void setLoginTimeout (String        loginTimeoutStr) { _loginTimeout  = StringUtil.parseInt(loginTimeoutStr, -1); }
 	public void setLoginTimeout (int           loginTimeout)    { _loginTimeout  = loginTimeout; }
-	public void setDriver       (String        driver)          { _driver        = driver; }
+	public void setDriverClass  (String        driverClass)     { _driverClass   = driverClass; }
 	public void setUrl          (String        url)             { _url           = url; }
 	public void getUrlOptions   (Properties    urlOptions)      { _urlOptions    = urlOptions; }
 	public void setAppName      (String        appName)         { _appName       = appName; }

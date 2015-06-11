@@ -18,6 +18,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmOpenDatabasesPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
@@ -202,7 +203,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monOpenDatabases", "CeDbRecoveryStatus", "<html>" +
 			                                                             "1 = The database is currently undergoing <B>node-failure</B> recovery.<br> " +
 			                                                             "0 = Normal, <B>not</B> in node-failure recovery." +

@@ -13,14 +13,8 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
-import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
-import com.asetune.gui.ConnectionDialog;
-import com.asetune.pcs.PersistReader;
-import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.ssh.SshTunnelInfo;
-import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.StringUtil;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.utils.Ver;
 
 public class CheckForUpdatesAse extends CheckForUpdatesDbx
@@ -33,7 +27,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 
 //	private static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
 //	private static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
-	private static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
+//	private static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
 	private static final String ASETUNE_MDA_INFO_URL           = "http://www.asetune.com/mda_info.php";
 //	private static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
 //	private static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
@@ -121,162 +115,162 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 
 	
 	
-	//-----------------------------------------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------------------------------------
-	@Override
-//	public QueryString createSendConnectInfo(int connType, SshTunnelInfo sshTunnelInfo)
-	public QueryString createSendConnectInfo(Object... params)
-	{
-//System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
-		int connType                = (Integer)       params[0];
-		SshTunnelInfo sshTunnelInfo = (SshTunnelInfo) params[1];
-
-		// URL TO USE
-		String urlStr = ASETUNE_CONNECT_INFO_URL;
-
-		if ( ! MonTablesDictionary.hasInstance() )
-		{
-			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
-			return null;
-		}
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
-		if (mtd == null)
-		{
-			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
-			return null;
-		}
-		
-		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
-		{
-			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
-			return null;
-		}
-
-		QueryString urlParams = new QueryString(urlStr);
-
-		Date timeNow = new Date(System.currentTimeMillis());
-
-		String checkId          = getCheckId() + "";
-		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
-
-		String srvVersion       = "0";
-		String isClusterEnabled = "0";
-
-		String srvName          = "";
-		String srvIpPort        = "";
-		String srvUser          = "";
-		String srvUserRoles     = "";
-		String srvVersionStr    = "";
-		String srvSortOrderId   = "";
-		String srvSortOrderName = "";
-		String srvCharsetId     = "";
-		String srvCharsetName   = "";
-		String srvSapSystemInfo = "";
-		String sshTunnelInfoStr = "";
-
-		String usePcs           = "";
-		String pcsConfig        = "";
-
-		
-		if (connType == ConnectionDialog.TDS_CONN)
-		{
-			srvVersion       = mtd.getAseExecutableVersionNum() + "";
-			isClusterEnabled = mtd.isClusterEnabled() + "";
-
-			srvName          = AseConnectionFactory.getServer();
-			srvIpPort        = AseConnectionFactory.getHostPortStr();
-			srvUser          = AseConnectionFactory.getUser();
-			srvUserRoles     = "not_initialized";
-			srvVersionStr    = mtd.getAseExecutableVersionStr();
-			srvSortOrderId   = mtd.getAseSortId() + "";
-			srvSortOrderName = mtd.getAseSortName();
-			srvCharsetId     = mtd.getAseCharsetId() + "";
-			srvCharsetName   = mtd.getAseCharsetName();
-			srvSapSystemInfo = mtd.getSapSystemInfo();
-
-			if (sshTunnelInfo != null)
-				sshTunnelInfoStr = sshTunnelInfo.getInfoString();
-
-			// Get role list from the Summary CM
-//			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
-			CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
-			if (summaryCm != null && summaryCm.isRuntimeInitialized())
-				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
-
-			usePcs           = "false";
-			pcsConfig        = "";
-			if (PersistentCounterHandler.hasInstance())
-			{
-				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
-				if (pch.isRunning())
-				{
-					usePcs = "true";
-					pcsConfig = pch.getConfigStr();
-				}
-			}
-		}
-		else if (connType == ConnectionDialog.OFFLINE_CONN)
-		{
-			srvVersion       = "-1";
-			isClusterEnabled = "-1";
-
-			srvName          = "offline-read";
-			srvIpPort        = "offline-read";
-			srvUser          = "offline-read";
-			srvUserRoles     = "offline-read";
-			srvVersionStr    = "offline-read";
-			srvSortOrderId   = "offline-read";
-			srvSortOrderName = "offline-read";
-			srvCharsetId     = "offline-read";
-			srvCharsetName   = "offline-read";
-			srvSapSystemInfo = "offline-read";
-			sshTunnelInfoStr = "offline-read";
-
-			usePcs           = "true";
-			pcsConfig        = "";
-
-			if ( PersistReader.hasInstance() )
-			{
-				PersistReader reader = PersistReader.getInstance();
-				pcsConfig = reader.GetConnectionInfo();
-			}
-		}
-
-		if (srvName       != null) srvName.trim();
-		if (srvIpPort     != null) srvIpPort.trim();
-		if (srvUser       != null) srvUser.trim();
-		if (srvVersionStr != null) srvVersionStr.trim();
-
-		if (_logger.isDebugEnabled())
-			urlParams.add("debug",    "true");
-
-		urlParams.add("checkId",             checkId);
-		urlParams.add("clientTime",          clientTime);
-		urlParams.add("clientAppName",       Version.getAppName());
-		urlParams.add("userName",            System.getProperty("user.name"));
-
-		urlParams.add("connectId",           getConnectCount()+"");
-		urlParams.add("srvVersion",          srvVersion);
-		urlParams.add("isClusterEnabled",    isClusterEnabled);
-
-		urlParams.add("srvName",             srvName);
-		urlParams.add("srvIpPort",           srvIpPort);
-		urlParams.add("srvUser",             srvUser);
-		urlParams.add("srvUserRoles",        srvUserRoles);
-		urlParams.add("srvVersionStr",       srvVersionStr);
-		urlParams.add("srvSortOrderId",      srvSortOrderId);
-		urlParams.add("srvSortOrderName",    srvSortOrderName);
-		urlParams.add("srvCharsetId",        srvCharsetId);
-		urlParams.add("srvCharsetName",      srvCharsetName);
-		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
-		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
-
-		urlParams.add("usePcs",              usePcs);
-		urlParams.add("pcsConfig",           pcsConfig);
-
-		return urlParams;
-	}
+//	//-----------------------------------------------------------------------------------------------------------
+//	//-----------------------------------------------------------------------------------------------------------
+//	//-----------------------------------------------------------------------------------------------------------
+//	@Override
+////	public QueryString createSendConnectInfo(int connType, SshTunnelInfo sshTunnelInfo)
+//	public QueryString createSendConnectInfo(Object... params)
+//	{
+////System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
+//		int connType                = (Integer)       params[0];
+//		SshTunnelInfo sshTunnelInfo = (SshTunnelInfo) params[1];
+//
+//		// URL TO USE
+//		String urlStr = ASETUNE_CONNECT_INFO_URL;
+//
+//		if ( ! MonTablesDictionaryManager.hasInstance() )
+//		{
+//			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
+//			return null;
+//		}
+//		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+//		if (mtd == null)
+//		{
+//			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
+//			return null;
+//		}
+//		
+//		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
+//		{
+//			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
+//			return null;
+//		}
+//
+//		QueryString urlParams = new QueryString(urlStr);
+//
+//		Date timeNow = new Date(System.currentTimeMillis());
+//
+//		String checkId          = getCheckId() + "";
+//		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+//
+//		String srvVersion       = "0";
+//		String isClusterEnabled = "0";
+//
+//		String srvName          = "";
+//		String srvIpPort        = "";
+//		String srvUser          = "";
+//		String srvUserRoles     = "";
+//		String srvVersionStr    = "";
+//		String srvSortOrderId   = "";
+//		String srvSortOrderName = "";
+//		String srvCharsetId     = "";
+//		String srvCharsetName   = "";
+//		String srvSapSystemInfo = "";
+//		String sshTunnelInfoStr = "";
+//
+//		String usePcs           = "";
+//		String pcsConfig        = "";
+//
+//		
+//		if (connType == ConnectionDialog.TDS_CONN)
+//		{
+//			srvVersion       = mtd.getDbmsExecutableVersionNum() + "";
+//			isClusterEnabled = mtd.isClusterEnabled() + "";
+//
+//			srvName          = AseConnectionFactory.getServer();
+//			srvIpPort        = AseConnectionFactory.getHostPortStr();
+//			srvUser          = AseConnectionFactory.getUser();
+//			srvUserRoles     = "not_initialized";
+//			srvVersionStr    = mtd.getDbmsExecutableVersionStr();
+//			srvSortOrderId   = mtd.getDbmsSortId() + "";
+//			srvSortOrderName = mtd.getDbmsSortName();
+//			srvCharsetId     = mtd.getDbmsCharsetId() + "";
+//			srvCharsetName   = mtd.getDbmsCharsetName();
+//			srvSapSystemInfo = mtd.getSapSystemInfo();
+//
+//			if (sshTunnelInfo != null)
+//				sshTunnelInfoStr = sshTunnelInfo.getInfoString();
+//
+//			// Get role list from the Summary CM
+////			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+//			CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
+//			if (summaryCm != null && summaryCm.isRuntimeInitialized())
+//				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
+//
+//			usePcs           = "false";
+//			pcsConfig        = "";
+//			if (PersistentCounterHandler.hasInstance())
+//			{
+//				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+//				if (pch.isRunning())
+//				{
+//					usePcs = "true";
+//					pcsConfig = pch.getConfigStr();
+//				}
+//			}
+//		}
+//		else if (connType == ConnectionDialog.OFFLINE_CONN)
+//		{
+//			srvVersion       = "-1";
+//			isClusterEnabled = "-1";
+//
+//			srvName          = "offline-read";
+//			srvIpPort        = "offline-read";
+//			srvUser          = "offline-read";
+//			srvUserRoles     = "offline-read";
+//			srvVersionStr    = "offline-read";
+//			srvSortOrderId   = "offline-read";
+//			srvSortOrderName = "offline-read";
+//			srvCharsetId     = "offline-read";
+//			srvCharsetName   = "offline-read";
+//			srvSapSystemInfo = "offline-read";
+//			sshTunnelInfoStr = "offline-read";
+//
+//			usePcs           = "true";
+//			pcsConfig        = "";
+//
+//			if ( PersistReader.hasInstance() )
+//			{
+//				PersistReader reader = PersistReader.getInstance();
+//				pcsConfig = reader.GetConnectionInfo();
+//			}
+//		}
+//
+//		if (srvName       != null) srvName.trim();
+//		if (srvIpPort     != null) srvIpPort.trim();
+//		if (srvUser       != null) srvUser.trim();
+//		if (srvVersionStr != null) srvVersionStr.trim();
+//
+//		if (_logger.isDebugEnabled())
+//			urlParams.add("debug",    "true");
+//
+//		urlParams.add("checkId",             checkId);
+//		urlParams.add("clientTime",          clientTime);
+//		urlParams.add("clientAppName",       Version.getAppName());
+//		urlParams.add("userName",            System.getProperty("user.name"));
+//
+//		urlParams.add("connectId",           getConnectCount()+"");
+//		urlParams.add("srvVersion",          srvVersion);
+//		urlParams.add("isClusterEnabled",    isClusterEnabled);
+//
+//		urlParams.add("srvName",             srvName);
+//		urlParams.add("srvIpPort",           srvIpPort);
+//		urlParams.add("srvUser",             srvUser);
+//		urlParams.add("srvUserRoles",        srvUserRoles);
+//		urlParams.add("srvVersionStr",       srvVersionStr);
+//		urlParams.add("srvSortOrderId",      srvSortOrderId);
+//		urlParams.add("srvSortOrderName",    srvSortOrderName);
+//		urlParams.add("srvCharsetId",        srvCharsetId);
+//		urlParams.add("srvCharsetName",      srvCharsetName);
+//		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
+//		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
+//
+//		urlParams.add("usePcs",              usePcs);
+//		urlParams.add("pcsConfig",           pcsConfig);
+//
+//		return urlParams;
+//	}
 
 
 	
@@ -288,27 +282,27 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 	public List<QueryString> createSendMdaInfo(Object... params)
 	{
 //System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendMdaInfo()");
-		if ( ! MonTablesDictionary.hasInstance() )
+		if ( ! MonTablesDictionaryManager.hasInstance() )
 		{
 			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
 			return null;
 		}
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 		if (mtd == null)
 		{
 			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
 			return null;
 		}
 
-		if (mtd.getAseExecutableVersionNum() <= 0)
+		if (mtd.getDbmsExecutableVersionNum() <= 0)
 		{
 			_logger.debug("MonTablesDictionary aseVersionNum is zero, stopping here.");
 			return null;
 		}
 
-		if (mtd.getAseMonTableVersionNum() > 0 && mtd.getAseExecutableVersionNum() != mtd.getAseMonTableVersionNum())
+		if (mtd.getDbmsMonTableVersionNum() > 0 && mtd.getDbmsExecutableVersionNum() != mtd.getDbmsMonTableVersionNum())
 		{
-			_logger.info("MonTablesDictionary aseVersionNum("+mtd.getAseExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getAseMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
+			_logger.info("MonTablesDictionary aseVersionNum("+mtd.getDbmsExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getDbmsMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
 			return null;
 		}
 
@@ -327,7 +321,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 		String checkId          = getCheckId() + "";
 		String clientTime       = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
 
-		String srvVersion       = mtd.getAseExecutableVersionNum() + "";
+		String srvVersion       = mtd.getDbmsExecutableVersionNum() + "";
 		String isClusterEnabled = mtd.isClusterEnabled() + "";		
 
 		// Get MDA information 
@@ -406,7 +400,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 					sendMdaInfoBatchSize, sendQueryList);
 
 //			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
-			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
+			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '"+mtd.getDbmsExecutableVersionNum()+"'.");
 		}
 		catch (SQLException e)
 		{
