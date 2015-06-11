@@ -12,6 +12,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 
 /**
@@ -134,7 +135,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sp_iqtransaction",  "FIXME");
 
 			mtd.addColumn("sp_iqtransaction", "Name",  

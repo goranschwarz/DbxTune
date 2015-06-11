@@ -6,6 +6,8 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesRs;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.RsConfig;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryRs;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.utils.DbUtils;
@@ -92,6 +94,12 @@ extends DbxTune
 	public IDbmsConfig createDbmsConfig()
 	{
 		return new RsConfig();
+	}
+
+	@Override
+	public MonTablesDictionary createMonTablesDictionary()
+	{
+		return new MonTablesDictionaryRs();
 	}
 
 	public static void main(String[] args)

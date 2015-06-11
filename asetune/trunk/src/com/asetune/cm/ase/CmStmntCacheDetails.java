@@ -15,6 +15,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmStmntCacheDetailsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -182,7 +183,7 @@ extends CountersModel
 			    "<b>Formula</b>: show_cached_plan_in_xml(SSQLID, 0)<br>" +
 			    "<b>Note</b>: If the FULL XML plan is not displayed, try to disable the 'Get Showplan' option.</html>";
 
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monCachedStatement",  "msgAsColValue", showplanTooltip);
 			mtd.addColumn("monCachedStatement",  "HasShowplan",   showplanTooltip);
 			mtd.addColumn("monCachedStatement",  "sqltext",       sqltextTooltip);

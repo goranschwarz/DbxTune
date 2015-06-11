@@ -11,6 +11,7 @@ import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -58,32 +59,28 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo()        { return false; } 
-			@Override public boolean doCheckMonitorConfig()           { return false; } 
-			@Override public boolean doInitMonitorDictionary()        { return false; } 
+			@Override public boolean doInitializeVersionInfo() { return true; } 
+			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
+				MonTablesDictionaryManager.getInstance().initializeVersionInfo(conn, true);
+				return true;
+			}
+			
+			@Override public boolean doCheckMonitorConfig() { return false; } 
+			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				return true;
+			}
+
+			@Override public boolean doInitMonitorDictionary() { return false; } 
+			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			{
+				return true;
+			}
+			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean doInitCounterCollector()         { return false; } 
-
-			@Override
-			public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-			
-			@Override
-			public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-
-			@Override
-			public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
-			{
-				return true;
-			}
-			
-			@Override
-			public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				if (DbmsConfigManager.hasInstance())
 				{
@@ -110,8 +107,8 @@ extends MainFrame
 				return true;
 			}
 			
-			@Override
-			public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean doInitCounterCollector() { return false; } 
+			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				return true;
 			}			

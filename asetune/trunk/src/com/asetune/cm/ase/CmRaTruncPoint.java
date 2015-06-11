@@ -45,8 +45,28 @@ extends CountersModel
 		"TotalProcessingTime", 
 		"LongestProcessingTime", 
 		"IdleTime", 
-		"NumberOfWakeups"
+		"NumberOfWakeups",
+		"TruncpointsRequested",
+		"TruncpointsConfirmed"
 		};
+
+// Adaptive Server Enterprise/16.0 SP02 Beta 3/EBF 24693 SMP/P/x86_64/Enterprise Linux/asecorona/0/64-bit/OPT/Tue Jun  9 10:47:20 2015
+	
+//	RS> Col# Label                 JDBC Type Name         Guessed DBMS type
+//	RS> ---- --------------------- ---------------------- -----------------
+//	RS> 1    DBID                  java.sql.Types.INTEGER int              
+//	RS> 2    SPID                  java.sql.Types.INTEGER int              
+//	RS> 3    InstanceID            java.sql.Types.TINYINT tinyint          
+//	RS> 4    TruncpointsProcessed  java.sql.Types.BIGINT  bigint           
+//	RS> 5    TotalProcessingTime   java.sql.Types.BIGINT  bigint           
+//	RS> 6    LongestProcessingTime java.sql.Types.BIGINT  bigint           
+//	RS> 7    IdleTime              java.sql.Types.BIGINT  bigint           
+//	RS> 8    NumberOfWakeups       java.sql.Types.BIGINT  bigint           
+//	RS> 9    TruncpointsRequested  java.sql.Types.BIGINT  bigint           
+//	RS> 10   TruncpointsConfirmed  java.sql.Types.BIGINT  bigint           
+//	RS> 11   DBName                java.sql.Types.VARCHAR varchar(30)      
+//	RS> 12   Status                java.sql.Types.VARCHAR varchar(30)      
+//	RS> 13   SleepStatus           java.sql.Types.VARCHAR varchar(30)      
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;

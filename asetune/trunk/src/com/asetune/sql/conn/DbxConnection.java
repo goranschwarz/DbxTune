@@ -59,7 +59,13 @@ implements Connection
 	protected String _databaseProductName    = null;
 	protected String _databaseProductVersion = null;
 	protected String _databaseServerName     = null;
-
+	protected int    _dbmsVersionNumber      = -1;
+	protected String _dbmsVersionStr         = null;
+	
+	protected String _dbmsCharsetName        = null;
+	protected String _dbmsCharsetId          = null;
+	protected String _dbmsSortOrderName      = null;
+	protected String _dbmsSortOrderId        = null;
 	
 //	public String getUsername() { return _username; }
 //	public String getPassword() { return _password; }
@@ -126,14 +132,14 @@ implements Connection
 	public static DbxConnection connect(Window guiOwner, ConnectionProp connProp)
 	throws Exception
 	{
-		String     driver     = connProp.getDriver();
-		String     url        = connProp.getUrl();
+		String     driverClass = connProp.getDriverClass();
+		String     url         = connProp.getUrl();
 
-		String     user       = connProp.getUsername();
-		String     passwd     = connProp.getPassword();
-		Properties urlOptions = connProp.getUrlOptions();
+		String     user        = connProp.getUsername();
+		String     passwd      = connProp.getPassword();
+		Properties urlOptions  = connProp.getUrlOptions();
 		
-		String     appname    = connProp.getAppName();
+		String     appname     = connProp.getAppName();
 		
 		SshTunnelInfo sshTunnelInfo = connProp.getSshTunnelInfo();
 
@@ -144,7 +150,7 @@ implements Connection
 			{
 				Driver jdbcDriver = DriverManager.getDriver(url);
 				if (jdbcDriver == null)
-					Class.forName(driver).newInstance();
+					Class.forName(driverClass).newInstance();
 			}
 			catch (Exception ex)
 			{
@@ -159,7 +165,10 @@ implements Connection
 		//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
 			props.put("user", user);
 			props.put("password", passwd);
-			
+
+			if (urlOptions != null)
+				props.putAll(urlOptions);
+
 //			if (StringUtil.hasValue(urlOptions))
 //			{
 //				Map<String, String> urlMap = StringUtil.parseCommaStrToMap(urlOptions);
@@ -180,7 +189,7 @@ implements Connection
 				}
 			}
 
-			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+			_logger.debug("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
 
 			// some applications might want to have additional OPTIONS (if not already set)
 			// Lets put those "default" options in (if not already set)
@@ -216,7 +225,7 @@ implements Connection
 			else
 			{
 				ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
-				conn = ConnectionProgressDialog.connectWithProgressDialog(guiOwner, driver, url, props, null, null, sshTunnelInfo, null, null, srvIcon);
+				conn = ConnectionProgressDialog.connectWithProgressDialog(guiOwner, driverClass, url, props, null, null, sshTunnelInfo, null, null, srvIcon);
 			}
 
 			
@@ -262,6 +271,7 @@ implements Connection
 				dbxConn = createDbxConnection(conn);
 			
 			// Set the connection properties used, so we can reconnect if we lost the connection.
+System.out.println("DbxConnection.connect(): setConnProp: "+connProp);
 			dbxConn.setConnProp(connProp);
 
 			return dbxConn;
@@ -477,6 +487,13 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		_databaseProductName    = null;
 		_databaseProductVersion = null;
 		_databaseServerName     = null;
+		_dbmsVersionNumber      = -1;
+		_dbmsVersionStr         = null;  // more or less the same as _databaseProductVersion, but ASE 16 is not returning the FULL string, so this is a wrapper around  
+
+		_dbmsCharsetName        = null;
+		_dbmsCharsetId          = null;
+		_dbmsSortOrderName      = null;
+		_dbmsSortOrderId        = null;
 	}
 
 	/**
@@ -488,10 +505,14 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	{
 //		throw new Exception("NOT YET IMPLEMENTED");
 
-		if (getConnProp() == null)
+		ConnectionProp connProp = getConnProp();
+		if (connProp == null)
+			connProp = getDefaultConnProp();
+		
+		if (connProp == null)
 			throw new Exception("This connection doesn't have any Connection Properties set, so It's impossible to reconnect.");
 
-		DbxConnection newConn = connect( guiOwner, getConnProp() );
+		DbxConnection newConn = connect( guiOwner, connProp );
 
 		// Check if it's the same DbxConnection subclass
 		if ( ! this.getClass().getName().equals( newConn.getClass().getName() ) )
@@ -685,7 +706,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 * @return null if not connected else: Retrieves the name of this database server/instance name.
 	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
 	 */
-	public String getDatabaseServerName() 
+	public String getDbmsServerName() 
 	throws SQLException
 	{
 		if (_databaseServerName != null)
@@ -719,6 +740,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		{
 			serverName = RepServerUtils.getServerName(_conn);
 		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+			serverName = DbUtils.getHanaServername(_conn);
+		}
 		// H2
 		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
 		{
@@ -741,7 +767,368 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		_databaseServerName = serverName;
 		return serverName;
 	}
+
+	public String getDbmsCharsetName()
+	throws SQLException
+	{
+		if (_dbmsCharsetName != null)
+			return _dbmsCharsetName;
+		
+		if (_conn == null)
+			return null;
+		
+		String charsetName = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			charsetName = AseConnectionUtils.getAseCharset(_conn);
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+			charsetName = AseConnectionUtils.getAsaCharset(_conn);
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+			charsetName = AseConnectionUtils.getAsaCharset(_conn);
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+			charsetName = RepServerUtils.getRsCharset(_conn);
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+			charsetName = DbUtils.getOracleCharset(_conn);
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsCharsetName = charsetName;
+		return charsetName;
+	}
+
+	public String getDbmsCharsetId()
+	throws SQLException
+	{
+		if (_dbmsCharsetId != null)
+			return _dbmsCharsetId;
+		
+		if (_conn == null)
+			return null;
+		
+		String charsetId = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			charsetId = AseConnectionUtils.getAseCharsetId(_conn);
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsCharsetId = charsetId;
+		return charsetId;
+	}
+
+	public String getDbmsSortOrderName() 
+	throws SQLException
+	{
+		if (_dbmsSortOrderName != null)
+			return _dbmsSortOrderName;
+		
+		if (_conn == null)
+			return null;
+		
+		String sortOrderName = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			sortOrderName = AseConnectionUtils.getAseSortorder(_conn);
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+			sortOrderName = AseConnectionUtils.getAsaSortorder(_conn);
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+			sortOrderName = AseConnectionUtils.getAsaSortorder(_conn);
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+			sortOrderName = RepServerUtils.getRsSortorder(_conn);
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+			sortOrderName = DbUtils.getOracleSortorder(_conn);
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsSortOrderName = sortOrderName;
+		return sortOrderName;
+	}
+
+	public String getDbmsSortOrderId() 
+	throws SQLException
+	{
+		if (_dbmsSortOrderId != null)
+			return _dbmsSortOrderId;
+		
+		if (_conn == null)
+			return null;
+		
+		String sortOrderId = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			sortOrderId = AseConnectionUtils.getAseSortorderId(_conn);
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsSortOrderId = sortOrderId;
+		return sortOrderId;
+	}
 	
+	/**
+	 * more or less the same as getDatabaseProductVersion()<br>
+	 * But ASE 16.x is not returning the <b>long/full</b> string, so this is a wrapper around getDatabaseProductVersion() 
+	 * @return the <i>long</i> version string from the DBMS
+	 * @throws SQLException
+	 */
+	public String getDbmsVersionStr() 
+	throws SQLException
+	{
+		if (_dbmsVersionStr != null)
+			return _dbmsVersionStr;
+		
+		if (_conn == null)
+			return null;
+		
+		String versionStr = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			versionStr = AseConnectionUtils.getAseVersionStr(_conn);
+		}
+//		// ASA SQL Anywhere
+//		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+//		{
+//		}
+//		// Sybase IQ
+//		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+//		{
+//		}
+//		// Replication Server
+//		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+//		{
+//		}
+//		// H2
+//		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+//		{
+//		}
+//		// ORACLE
+//		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+//		{
+//		}
+//		// Microsoft
+//		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+//		{
+//		}
+		// UNKNOWN
+		else
+		{
+			versionStr = getDatabaseProductVersion();
+		}
+
+		_dbmsVersionStr = versionStr;
+		return versionStr;
+	}
+	
+	public int getDbmsVersionNumber()
+	{
+		if (_dbmsVersionNumber != -1)
+			return _dbmsVersionNumber;
+		
+		if (_conn == null)
+			return -1;
+		
+		int dbmsVersionNumber = -1;
+		String currentDbProductName = "";
+		try 
+		{ 
+			currentDbProductName = getDatabaseProductName(); 
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("getDbmsVersionNumber(): Problems calling getDatabaseProductName(), returning -1, caught: "+ex);
+			return -1;
+		}
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = AseConnectionUtils.getAseVersionNumber(_conn);
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = AseConnectionUtils.getAsaVersionNumber(_conn);
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = AseConnectionUtils.getIqVersionNumber(_conn);
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = AseConnectionUtils.getRsVersionNumber(_conn);
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = DbUtils.getHanaVersionNumber(_conn);
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+			dbmsVersionNumber = DbUtils.getOracleVersionNumber(_conn);
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+//			dbmsVersionNumber = DbUtils.getSqlServerVersionNumber(_conn);
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsVersionNumber = dbmsVersionNumber;
+		return dbmsVersionNumber;
+	}
+
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: delegated methods for Connection
@@ -771,19 +1158,22 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	@Override
 	public Statement createStatement() throws SQLException
 	{
-		return _conn.createStatement();
+//		return _conn.createStatement();
+		return DbxStatement.create( _conn.createStatement() );
 	}
 
 	@Override
 	public PreparedStatement prepareStatement(String sql) throws SQLException
 	{
-		return _conn.prepareStatement(sql);
+//		return _conn.prepareStatement(sql);
+		return DbxPreparedStatement.create( _conn.prepareStatement(sql) );
 	}
 
 	@Override
 	public CallableStatement prepareCall(String sql) throws SQLException
 	{
-		return _conn.prepareCall(sql);
+//		return _conn.prepareCall(sql);
+		return DbxCallableStatement.create( _conn.prepareCall(sql) );
 	}
 
 	@Override
@@ -832,7 +1222,8 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	@Override
 	public DatabaseMetaData getMetaData() throws SQLException
 	{
-		return _conn.getMetaData();
+		return DbxDatabaseMetaData.create( _conn.getMetaData() );
+//		return _conn.getMetaData();
 	}
 
 	@Override
@@ -1247,29 +1638,25 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	
 	public abstract boolean isInTransaction() throws SQLException;
 
-	public int getDbmsVersionNumber()
-	{
-		return 0;
-	}
 	public boolean isDbmsClusterEnabled()
 	{
 		return false;
 	}
 
 	
-//	public abstract int    getSrvVersionNumber();
-//	public abstract String getSrvVersionString();
+//	public abstract int    getDbmsVersionNumber();
+//	public abstract String getDbmsVersionString();
 //
-//	public abstract boolean hasSrvAuthorization(String authName);
-//	public abstract String getSrvListeners();
+//	public abstract boolean hasDbmsAuthorization(String authName);
+//	public abstract String getDbmsListeners();
 //
-//	public abstract String getSrvCharset();
-//	public abstract String getSrvSortorder();
-//	public abstract int    getSrvClientCharsetId();
-//	public abstract String getSrvClientCharsetName();
-//	public abstract String getSrvClientCharsetDesc();
+//	public abstract String getDbmsCharset();
+//	public abstract String getDbmsSortorder();
+//	public abstract int    getDbmsClientCharsetId();
+//	public abstract String getDbmsClientCharsetName();
+//	public abstract String getDbmsClientCharsetDesc();
 //
-//	public abstract String getServerLogFileName();
+//	public abstract String getDbmsLogFileName();
 //	public abstract String getObjectText();
 ////	public abstract String getDatabaseServerName();
 ////	public abstract String getDatabaseProductName();

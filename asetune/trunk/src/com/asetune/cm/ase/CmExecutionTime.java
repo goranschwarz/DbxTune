@@ -15,6 +15,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmExecutionTimePanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -178,7 +179,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monSysExecutionTime",  "ExecutionTimePerCnt",     "<html>" +
 			                                                                     "ExecutionTime in Micro Seconds for each individual ExecutionCount<br>" +
 			                                                                     "<b>Formula</b>: ExecutionTime / ExecutionCnt<br>" +

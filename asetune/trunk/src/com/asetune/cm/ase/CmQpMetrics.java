@@ -17,6 +17,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmQpMetricsPanel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.ResultSetMetaDataChangable;
@@ -143,7 +144,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sysquerymetrics",  "Holds about Query Plan Metrics.");
 
 			mtd.addColumn("sysquerymetrics", "DBName",       "<html>Database name</html>");

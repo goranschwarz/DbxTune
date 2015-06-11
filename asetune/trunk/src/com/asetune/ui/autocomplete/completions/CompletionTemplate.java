@@ -12,12 +12,12 @@ public class CompletionTemplate
 	
 	public CompletionTemplate(String inputText)
 	{
-		this(inputText, null, null);
+		this(inputText, inputText, null);
 	}
 
 	public CompletionTemplate(String inputText, String replacementText)
 	{
-		this(inputText, null, null);
+		this(inputText, replacementText, null);
 	}
 
 	public CompletionTemplate(String inputText, String replacementText, String description)

@@ -41,7 +41,7 @@ extends TdsConnection
 	private String _cached_srvName = null;
 
 	@Override
-	public String getDatabaseServerName()
+	public String getDbmsServerName()
 	{
 		if (_cached_srvName != null)
 			return _cached_srvName;

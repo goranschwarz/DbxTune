@@ -12,6 +12,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
@@ -200,7 +201,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("dist",  "");
 
 			mtd.addColumn("dist", "Spid",           "<html>RepServer internal <i>thread id</i></html>");

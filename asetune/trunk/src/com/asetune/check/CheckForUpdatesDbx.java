@@ -2,6 +2,8 @@ package com.asetune.check;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -14,15 +16,25 @@ import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.Version;
+import com.asetune.check.CheckForUpdates.QueryString;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.Log4jLogRecord;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistReader.CmCounterInfo;
 import com.asetune.pcs.PersistReader.CmNameSum;
 import com.asetune.pcs.PersistReader.SampleCmCounterInfo;
 import com.asetune.pcs.PersistReader.SessionInfo;
+import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.JdbcUrlParser;
+import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.ssh.SshTunnelInfo;
+import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 public abstract class CheckForUpdatesDbx extends CheckForUpdates
@@ -122,38 +134,39 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 
 
 	
+
 	
-//	//-----------------------------------------------------------------------------------------------------------
-//	//-----------------------------------------------------------------------------------------------------------
-//	//-----------------------------------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------------------------------------
 //	@Override
 ////	public QueryString createSendConnectInfo(int connType, SshTunnelInfo sshTunnelInfo)
 //	public QueryString createSendConnectInfo(Object... params)
 //	{
-//System.out.println(">>>>>> CheckForUpdates-Generic-DbxTune >>>>>>>>> TRACE: createSendConnectInfo()");
+////System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
 //		int connType                = (Integer)       params[0];
 //		SshTunnelInfo sshTunnelInfo = (SshTunnelInfo) params[1];
 //
 //		// URL TO USE
 //		String urlStr = DBXTUNE_CONNECT_INFO_URL;
 //
-//		if ( ! MonTablesDictionary.hasInstance() )
+//		if ( ! MonTablesDictionaryManager.hasInstance() )
 //		{
 //			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
 //			return null;
 //		}
-//		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+//		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 //		if (mtd == null)
 //		{
 //			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
 //			return null;
 //		}
 //		
-//		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
-//		{
-//			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
-//			return null;
-//		}
+////		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
+////		{
+////			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
+////			return null;
+////		}
 //
 //		QueryString urlParams = new QueryString(urlStr);
 //
@@ -181,20 +194,23 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 //		String pcsConfig        = "";
 //
 //		
-//		if (connType == ConnectionDialog.TDS_CONN)
+//		if (connType == ConnectionDialog.TDS_CONN || connType == ConnectionDialog.JDBC_CONN)
 //		{
-//			srvVersion       = mtd.getAseExecutableVersionNum() + "";
+//			srvVersion       = mtd.getDbmsExecutableVersionNum() + "";
 //			isClusterEnabled = mtd.isClusterEnabled() + "";
 //
-//			srvName          = AseConnectionFactory.getServer();
-//			srvIpPort        = AseConnectionFactory.getHostPortStr();
-//			srvUser          = AseConnectionFactory.getUser();
+//			srvName          = mtd.getDbmsServerName();
+////			srvIpPort        = mtd.getDbmsHostPortStr();
+////			srvUser          = mtd.getDbmsUser();
+////			srvName          = AseConnectionFactory.getServer();
+////			srvIpPort        = AseConnectionFactory.getHostPortStr();
+////			srvUser          = AseConnectionFactory.getUser();
 //			srvUserRoles     = "not_initialized";
-//			srvVersionStr    = mtd.getAseExecutableVersionStr();
-//			srvSortOrderId   = mtd.getAseSortId() + "";
-//			srvSortOrderName = mtd.getAseSortName();
-//			srvCharsetId     = mtd.getAseCharsetId() + "";
-//			srvCharsetName   = mtd.getAseCharsetName();
+//			srvVersionStr    = mtd.getDbmsExecutableVersionStr();
+//			srvSortOrderId   = mtd.getDbmsSortId() + "";
+//			srvSortOrderName = mtd.getDbmsSortName();
+//			srvCharsetId     = mtd.getDbmsCharsetId() + "";
+//			srvCharsetName   = mtd.getDbmsCharsetName();
 //			srvSapSystemInfo = mtd.getSapSystemInfo();
 //
 //			if (sshTunnelInfo != null)
@@ -274,11 +290,367 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 //		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
 //		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
 //
-//		urlParams.add("usePcs",              usePcs);
-//		urlParams.add("pcsConfig",           pcsConfig);
-//
+//        urlParams.add("usePcs",              usePcs);
+//        urlParams.add("pcsConfig",           pcsConfig);
+//        
+////--//urlParams.add("checkId",             checkId);
+////--//urlParams.add("clientTime",          clientTime);
+////--//urlParams.add("userName",            System.getProperty("user.name"));
+////
+////--//urlParams.add("connectId",           getConnectCount()+"");
+////urlParams.add("connectType",         sqlwConnInfo.getConnTypeStr());
+////
+////urlParams.add("prodName",            sqlwConnInfo.getProdName());
+////--//urlParams.add("prodVersionStr",      sqlwConnInfo.getProdVersionStr());
+////
+////urlParams.add("jdbcDriverName",      sqlwConnInfo.getJdbcDriverName());
+////urlParams.add("jdbcDriverVersion",   sqlwConnInfo.getJdbcDriverVersion());
+////urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
+////urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
+////
+////--//urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
+////--//urlParams.add("srvName",             sqlwConnInfo.getSrvName());
+////--//urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
+////--//urlParams.add("srvCharsetName",      sqlwConnInfo.getSrvCharset());
+////--//urlParams.add("srvSortOrderName",    sqlwConnInfo.getSrvSortorder());
+////
+////--//urlParams.add("sshTunnelInfo",       sqlwConnInfo.getSshTunnelInfoStr());
 //		return urlParams;
 //	}
+	@Override
+//	public QueryString createSendConnectInfo(int connType, SshTunnelInfo sshTunnelInfo)
+	public QueryString createSendConnectInfo(Object... params)
+	{
+//System.out.println(">>>>>> CheckForUpdatesAse >>>>>>>>> TRACE: createSendConnectInfo()");
+//		int connType            = (Integer)        params[0];
+		DbxConnectInfo connInfo = (DbxConnectInfo) params[0];
+
+		// URL TO USE
+		String urlStr = DBXTUNE_CONNECT_INFO_URL;
+
+//		if ( ! MonTablesDictionaryManager.hasInstance() )
+//		{
+//			_logger.debug("MonTablesDictionary not initialized when trying to send connection info, skipping this.");
+//			return null;
+//		}
+//		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+//		if (mtd == null)
+//		{
+//			_logger.debug("MonTablesDictionary was null when trying to send connection info, skipping this.");
+//			return null;
+//		}
+		
+//		if (connType != ConnectionDialog.TDS_CONN && connType != ConnectionDialog.OFFLINE_CONN)
+//		{
+//			_logger.warn("ConnectInfo: Connection type must be TDS_CONN | OFFLINE_CONN");
+//			return null;
+//		}
+
+		int connType = connInfo.getConnTypeInt();
+
+		QueryString urlParams = new QueryString(urlStr);
+
+		Date timeNow = new Date(System.currentTimeMillis());
+
+		String checkId           = getCheckId() + "";
+		String clientTime        = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(timeNow);
+                                 
+		String srvVersion        = "0";
+		String isClusterEnabled  = "0";
+                                 
+		String srvName           = "";
+		String srvIpPort         = "";
+		String srvUser           = "";
+		String srvUserRoles      = "";
+		String srvVersionStr     = "";
+		String srvSortOrderId    = "";
+		String srvSortOrderName  = "";
+		String srvCharsetId      = "";
+		String srvCharsetName    = "";
+		String srvSapSystemInfo  = "";
+		String sshTunnelInfoStr  = "";
+                                 
+		String usePcs            = "";
+		String pcsConfig         = "";
+                                 
+		String connTypeStr       = "";   
+		String prodName          = "";     
+		String prodVersionStr    = "";   
+		String jdbcUrl           = "";
+		String jdbcDriverClass   = "";  
+		String jdbcDriverName    = "";
+		String jdbcDriverVersion = "";
+		
+		if (connType == ConnectionDialog.TDS_CONN || connType == ConnectionDialog.JDBC_CONN)
+		{
+			srvVersion       = connInfo.getDbmsVersionInt() + "";
+			isClusterEnabled = connInfo.isDbmsClusterEnabled() + "";
+
+			srvName          = connInfo.getDbmsServerName();
+			srvIpPort        = connInfo.getJdbcHostPort();
+			srvUser          = connInfo.getDbmsUserName();
+			srvUserRoles     = "not_initialized";
+			srvVersionStr    = connInfo.getDbmsVersionStr();
+			srvSortOrderId   = connInfo.getDbmsSortorderId();
+			srvSortOrderName = connInfo.getDbmsSortorderName();
+			srvCharsetId     = connInfo.getDbmsCharsetId();
+			srvCharsetName   = connInfo.getDbmsCharsetName();
+			
+			connTypeStr       = connInfo.getConnTypeStr();
+			prodName          = connInfo.getProdName();
+			prodVersionStr    = connInfo.getProdVersionStr();
+			jdbcUrl           = connInfo.getJdbcUrl();
+			jdbcDriverClass   = connInfo.getJdbcDriverClass();
+			jdbcDriverName    = connInfo.getJdbcDriverName();
+			jdbcDriverVersion = connInfo.getJdbcDriverVersion();
+			
+			
+			if (MonTablesDictionaryManager.hasInstance())
+				srvSapSystemInfo = MonTablesDictionaryManager.getInstance().getSapSystemInfo();
+
+			sshTunnelInfoStr = connInfo.getSshTunnelInfoStr();
+
+			// Get role list from the Summary CM
+//			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
+			CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
+			if (summaryCm != null && summaryCm.isRuntimeInitialized())
+				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
+
+			usePcs           = "false";
+			pcsConfig        = "";
+			if (PersistentCounterHandler.hasInstance())
+			{
+				PersistentCounterHandler pch = PersistentCounterHandler.getInstance();
+				if (pch.isRunning())
+				{
+					usePcs = "true";
+					pcsConfig = pch.getConfigStr();
+				}
+			}
+		}
+		else if (connType == ConnectionDialog.OFFLINE_CONN)
+		{
+			srvVersion       = "-1";
+			isClusterEnabled = "-1";
+
+			srvName          = "offline-read";
+			srvIpPort        = "offline-read";
+			srvUser          = "offline-read";
+			srvUserRoles     = "offline-read";
+			srvVersionStr    = "offline-read";
+//			srvSortOrderId   = "offline-read";
+//			srvSortOrderName = "offline-read";
+//			srvCharsetId     = "offline-read";
+//			srvCharsetName   = "offline-read";
+			srvSortOrderId   = connInfo.getDbmsSortorderId();
+			srvSortOrderName = connInfo.getDbmsSortorderName();
+			srvCharsetId     = connInfo.getDbmsCharsetId();
+			srvCharsetName   = connInfo.getDbmsCharsetName();
+			srvSapSystemInfo = "offline-read";
+			sshTunnelInfoStr = "offline-read";
+
+			usePcs           = "true";
+			pcsConfig        = "";
+
+			connTypeStr       = connInfo.getConnTypeStr();
+			prodName          = connInfo.getProdName();
+			prodVersionStr    = connInfo.getProdVersionStr();
+			jdbcUrl           = connInfo.getJdbcUrl();
+			jdbcDriverClass   = connInfo.getJdbcDriverClass();
+			jdbcDriverName    = connInfo.getJdbcDriverName();
+			jdbcDriverVersion = connInfo.getJdbcDriverVersion();
+
+			if ( PersistReader.hasInstance() )
+			{
+				PersistReader reader = PersistReader.getInstance();
+				pcsConfig = reader.GetConnectionInfo();
+			}
+		}
+
+		if (srvName       != null) srvName.trim();
+		if (srvIpPort     != null) srvIpPort.trim();
+		if (srvUser       != null) srvUser.trim();
+		if (srvVersionStr != null) srvVersionStr.trim();
+
+		if (_logger.isDebugEnabled())
+			urlParams.add("debug",    "true");
+
+		urlParams.add("checkId",             checkId);
+		urlParams.add("clientTime",          clientTime);
+		urlParams.add("clientAppName",       Version.getAppName());
+		urlParams.add("userName",            System.getProperty("user.name"));
+
+		urlParams.add("connectId",           getConnectCount()+"");
+		urlParams.add("srvVersion",          srvVersion);
+		urlParams.add("isClusterEnabled",    isClusterEnabled);
+
+		urlParams.add("srvName",             srvName);
+		urlParams.add("srvIpPort",           srvIpPort);
+		urlParams.add("srvUser",             srvUser);
+		urlParams.add("srvUserRoles",        srvUserRoles);
+		urlParams.add("srvVersionStr",       srvVersionStr);
+		urlParams.add("srvSortOrderId",      srvSortOrderId);
+		urlParams.add("srvSortOrderName",    srvSortOrderName);
+		urlParams.add("srvCharsetId",        srvCharsetId);
+		urlParams.add("srvCharsetName",      srvCharsetName);
+		urlParams.add("srvSapSystemInfo",    srvSapSystemInfo);
+		urlParams.add("sshTunnelInfo",       sshTunnelInfoStr);
+
+        urlParams.add("usePcs",              usePcs);
+        urlParams.add("pcsConfig",           pcsConfig);
+        
+        urlParams.add("connTypeStr",         connTypeStr);
+        urlParams.add("prodName",            prodName);
+        urlParams.add("prodVersionStr",      prodVersionStr);
+        urlParams.add("jdbcUrl",             jdbcUrl);
+        urlParams.add("jdbcDriverClass",     jdbcDriverClass);
+        urlParams.add("jdbcDriverName",      jdbcDriverName);
+        urlParams.add("jdbcDriverVersion",   jdbcDriverVersion);
+        
+		return urlParams;
+	}
+
+	public static class DbxConnectInfo
+	{
+//		private final int           _connType; 
+//		private final String        _connTypeStr;
+		private       int           _connType; 
+		private       String        _connTypeStr;
+		private       String        _prodName          = "";
+		private       String        _prodVersionStr    = ""; // from jdbc metadata
+		private       String        _jdbcDriverName    = "";
+		private       String        _jdbcDriverVersion = "";
+		private       String        _jdbcDriverClass   = "";
+		private       String        _jdbcUrl           = "";
+		private       String        _jdbcHostPort      = "";
+		private       int           _dbmsVersionInt    = 0;
+		private       String        _dbmsVersionStr    = "";
+		private       String        _dbmsServerName    = "";
+		private       String        _dbmsUserName      = "";
+		private       String        _dbmsCharsetName   = "";
+		private       String        _dbmsCharsetId     = "";
+		private       String        _dbmsSortorderName = "";
+		private       String        _dbmsSortorderId   = "";
+		private       SshTunnelInfo _sshInfo           = null;
+		private       boolean       _isClusterEnabled  = false;
+
+		public DbxConnectInfo(int connType)
+		{
+			_connType = connType;
+			if      (_connType == ConnectionDialog.TDS_CONN)     _connTypeStr = "TDS";
+			else if (_connType == ConnectionDialog.OFFLINE_CONN) _connTypeStr = "OFFLINE";
+			else if (_connType == ConnectionDialog.JDBC_CONN)    _connTypeStr = "JDBC";
+			else                                                 _connTypeStr = "UNKNOWN("+connType+")";
+		}
+
+		public DbxConnectInfo(DbxConnection xconn, boolean online)
+		{
+			String url = "unknown";
+
+			ConnectionProp cp = xconn.getConnProp();
+			if (cp != null)
+			{
+				url = cp.getUrl();
+
+				setDbmsUserName     (cp.getUsername());
+				setJdbcDriverClass  (cp.getDriverClass());
+				setSshTunnelInfo    (cp.getSshTunnelInfo());
+			}
+			else
+			{
+				try
+				{
+					DatabaseMetaData dbmd = xconn.getMetaData();
+					
+					setDbmsUserName(dbmd.getUserName());
+					url = dbmd.getURL();
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems initializing DbxConnectInfo object. ConnectionProp was null, so accessing DatabaseMetaData. Caught: "+ex);
+				}
+			}
+			
+			
+			if (url == null)
+				url = "unknown";
+
+			try { setProdName          (xconn.getDatabaseProductName());           } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductName(). Caught: "+ex); }
+			try { setProdVersionStr    (xconn.getDatabaseProductVersion());        } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDatabaseProductVersion(). Caught: "+ex); }
+			try { setJdbcDriverName    (ConnectionDialog.getDriverName(xconn));    } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling ConnectionDialog.getDriverName(conn). Caught: "+ex); }
+			try { setJdbcDriverVersion (ConnectionDialog.getDriverVersion(xconn)); } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling xxx. Caught: "+ex); }
+			      setJdbcUrl           (url);
+			      setJdbcHostPort      (JdbcUrlParser.parse(url).getHostPortStr());
+			      setDbmsVersionInt    (xconn.getDbmsVersionNumber());
+			try { setDbmsVersionStr    (xconn.getDbmsVersionStr());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsVersionStr().    Caught: "+ex); }
+			try { setDbmsServerName    (xconn.getDbmsServerName());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsServerName().    Caught: "+ex); }
+			try { setDbmsCharsetName   (xconn.getDbmsCharsetName());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetName().   Caught: "+ex); }
+			try { setDbmsCharsetId     (xconn.getDbmsCharsetId());                 } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetId().     Caught: "+ex); }
+			try { setDbmsSortorderName (xconn.getDbmsSortOrderName());             } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderName(). Caught: "+ex); }
+			try { setDbmsSortorderId   (xconn.getDbmsSortOrderId());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderId().   Caught: "+ex); }
+			      setDbmsClusterEnabled(xconn.isDbmsClusterEnabled());
+			
+
+			if (online)
+			{
+				if (url.startsWith("jdbc:sybase:Tds:"))
+				{
+					_connType = ConnectionDialog.TDS_CONN;
+					_connTypeStr = "TDS";
+				}
+				else
+				{
+					_connType = ConnectionDialog.JDBC_CONN;
+					_connTypeStr = "JDBC";
+				}
+			}
+			else
+			{
+				_connType = ConnectionDialog.OFFLINE_CONN;
+				_connTypeStr = "OFFLINE";
+			}
+		}
+
+		public int           getConnTypeInt      () { return _connType; }
+		public String        getConnTypeStr      () { return _connTypeStr       == null ? "UNKNOWN" : _connTypeStr; }
+		
+		public String        getProdName         () { return _prodName          == null ? "" : _prodName         .trim(); }
+		public String        getProdVersionStr   () { return _prodVersionStr    == null ? "" : _prodVersionStr   .trim(); }
+		public String        getJdbcDriverName   () { return _jdbcDriverName    == null ? "" : _jdbcDriverName   .trim(); }
+		public String        getJdbcDriverVersion() { return _jdbcDriverVersion == null ? "" : _jdbcDriverVersion.trim(); }
+		public String        getJdbcDriverClass  () { return _jdbcDriverClass   == null ? "" : _jdbcDriverClass  .trim(); }
+		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
+		public String        getJdbcHostPort     () { return _jdbcHostPort      == null ? "" : _jdbcHostPort     .trim(); }
+		public int           getDbmsVersionInt   () { return _dbmsVersionInt; }
+		public String        getDbmsVersionStr   () { return _dbmsVersionStr    == null ? "" : _dbmsVersionStr   .trim(); }
+		public String        getDbmsServerName   () { return _dbmsServerName    == null ? "" : _dbmsServerName   .trim(); }
+		public String        getDbmsUserName     () { return _dbmsUserName      == null ? "" : _dbmsUserName     .trim(); }
+		public String        getDbmsCharsetName  () { return _dbmsCharsetName   == null ? "" : _dbmsCharsetName  .trim(); }
+		public String        getDbmsCharsetId    () { return _dbmsCharsetId     == null ? "" : _dbmsCharsetId    .trim(); }
+		public String        getDbmsSortorderName() { return _dbmsSortorderName == null ? "" : _dbmsSortorderName.trim(); }
+		public String        getDbmsSortorderId()   { return _dbmsSortorderId   == null ? "" : _dbmsSortorderId  .trim(); }
+		public SshTunnelInfo getSshTunnelInfo    () { return _sshInfo; }
+		public String        getSshTunnelInfoStr () { return _sshInfo           == null ? "" : _sshInfo.getInfoString(); }
+		public boolean       isDbmsClusterEnabled() { return _isClusterEnabled; }
+
+		public void setProdName          (String str)            { _prodName          = StringUtil.hasValue(str) ? str : ""; }
+		public void setProdVersionStr    (String str)            { _prodVersionStr    = StringUtil.hasValue(str) ? str : ""; }
+		public void setJdbcDriverName    (String str)            { _jdbcDriverName    = StringUtil.hasValue(str) ? str : ""; }
+		public void setJdbcDriverVersion (String str)            { _jdbcDriverVersion = StringUtil.hasValue(str) ? str : ""; }
+		public void setJdbcDriverClass   (String str)            { _jdbcDriverClass   = StringUtil.hasValue(str) ? str : ""; }
+		public void setJdbcUrl           (String str)            { _jdbcUrl           = StringUtil.hasValue(str) ? str : ""; }
+		public void setJdbcHostPort      (String str)            { _jdbcHostPort      = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsVersionInt    (int    ver)            { _dbmsVersionInt    = ver; }
+		public void setDbmsVersionStr    (String str)            { _dbmsVersionStr    = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsServerName    (String str)            { _dbmsServerName    = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsUserName      (String str)            { _dbmsUserName      = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsCharsetName   (String str)            { _dbmsCharsetName   = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsCharsetId     (String str)            { _dbmsCharsetId     = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsSortorderName (String str)            { _dbmsSortorderName = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsSortorderId   (String str)            { _dbmsSortorderId   = StringUtil.hasValue(str) ? str : ""; }
+		public void setSshTunnelInfo     (SshTunnelInfo sshInfo) { _sshInfo           = sshInfo; }
+		public void setDbmsClusterEnabled(boolean toVal)         { _isClusterEnabled  = toVal; }
+	}
 
 
 	
@@ -783,13 +1155,13 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		String urlStr = DBXTUNE_ERROR_INFO_URL;
 
 		String srvVersion = "not-connected";
-		if ( MonTablesDictionary.hasInstance() )
+		if ( MonTablesDictionaryManager.hasInstance() )
 		{
-			if ( MonTablesDictionary.getInstance().isInitialized() )
-				srvVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum() + "";
+			if ( MonTablesDictionaryManager.getInstance().isInitialized() )
+				srvVersion = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum() + "";
 
-			else if (MonTablesDictionary.getInstance().hasEarlyVersionInfo())
-				srvVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum() + "";
+			else if (MonTablesDictionaryManager.getInstance().hasEarlyVersionInfo())
+				srvVersion = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum() + "";
 		}
 
 		// COMPOSE: parameters to send to HTTP server

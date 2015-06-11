@@ -13,6 +13,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmActiveObjectsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Ver;
@@ -118,7 +119,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monProcessObject",  "dupMergeCount", "<html>" +
 			                                                       "If more than <b>one</b> row was fetched for this \"Primary Key\".<br>" +
 			                                                       "Then this column will hold number of rows merged into this row. 0=No Merges(only one row for this PK), 1=One Merge accurred(two rows was seen for this PK), etc...<br>" +

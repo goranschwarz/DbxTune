@@ -20,7 +20,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.graph.TrendGraphDataPoint;
@@ -636,7 +635,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"Parameters"       +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Indicators"       +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Size"             +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 1800,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
@@ -652,9 +651,9 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"Scale"            +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Length"           +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Indicators"       +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"ColumnName"       +qic,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"TypeName"         +qic,40)+" "+fill(getDatatype("varchar", 30,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"ColumnName"       +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"TypeName"         +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 1800,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}

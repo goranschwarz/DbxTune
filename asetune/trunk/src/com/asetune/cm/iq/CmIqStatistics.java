@@ -13,6 +13,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
@@ -241,7 +242,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sp_iqstatistics",  "Returns serial number, name, description, value, and unit specifier for each available statistic, or a specified statistic.");
 
 			mtd.addColumn("sp_iqstatistics", "stat_num",  "<html>Serial number of a statistic</html>");

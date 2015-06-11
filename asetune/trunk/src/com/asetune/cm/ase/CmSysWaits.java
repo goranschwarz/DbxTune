@@ -27,6 +27,7 @@ import com.asetune.cm.ase.gui.CmSysWaitsPanel;
 import com.asetune.cm.ase.helper.WaitCounterSummary;
 import com.asetune.cm.ase.helper.WaitCounterSummary.WaitCounterEntry;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -190,7 +191,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monSysWaits", "WaitTimePerWait", "<html>" +
 			                                                   "Wait time in seconds per wait. formula: diff.WaitTime / diff.Waits<br>" +
 			                                                   "Since WaitTime here is in seconds, this value will also be in seconds." +
@@ -266,7 +267,7 @@ extends CountersModel
 		String waitEventDesc = "";
 		String waitClassDesc = "";
 	
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 		if (mtd == null)
 			return;
 

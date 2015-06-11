@@ -101,10 +101,8 @@ import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.CounterController;
-import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.gui.ConnectionProfile.DbxTuneParams;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
@@ -137,7 +135,6 @@ import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
-import com.asetune.utils.Ver;
 
 
 public class ConnectionDialog
@@ -3799,7 +3796,7 @@ public class ConnectionDialog
 				// Set DBX Connection Defaults
 				ConnectionProp cp = new ConnectionProp();
 				cp.setLoginTimeout ( loginTimeoutStr );
-				cp.setDriver       ( AseConnectionFactory.getDriver() );
+				cp.setDriverClass  ( AseConnectionFactory.getDriver() );
 				cp.setUrl          ( tdsUseUrlStr );
 				cp.setUrlOptions   ( null );
 				cp.setUsername     ( username );
@@ -3809,6 +3806,9 @@ public class ConnectionDialog
 				cp.setSshTunnelInfo( sshTunnelInfo );
 
 				DbxConnection.setDefaultConnProp(cp);
+				
+				if (_aseConn != null)
+					_aseConn.setConnProp(cp);
 
 				return true;
 			}
@@ -3888,7 +3888,7 @@ public class ConnectionDialog
 		// Set DBX Connection Defaults
 		ConnectionProp cp = new ConnectionProp();
 		cp.setLoginTimeout ( loginTimeoutStr );
-		cp.setDriver       ( AseConnectionFactory.getDriver() );
+		cp.setDriverClass  ( AseConnectionFactory.getDriver() );
 		cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
 		cp.setUrlOptions   ( null );
 		cp.setUsername     ( username );
@@ -3913,6 +3913,10 @@ public class ConnectionDialog
 //String TDS_SSH_TUNNEL_INFORMATION = _aseConn.getClientInfo("TDS_SSH_TUNNEL_INFORMATION");
 //System.out.println("TDS_SSH_TUNNEL_CONNECTION="+TDS_SSH_TUNNEL_CONNECTION);
 //System.out.println("TDS_SSH_TUNNEL_INFORMATION="+TDS_SSH_TUNNEL_INFORMATION);
+
+			if (_aseConn != null)
+				_aseConn.setConnProp(cp);
+
 			return true;
 		}
 		catch (SQLException e)
@@ -4265,7 +4269,20 @@ public class ConnectionDialog
 				null,
 				null);
 
+		ConnectionProp cp = new ConnectionProp();
+		cp.setLoginTimeout ( -1 );
+		cp.setDriverClass  ( jdbcDriver );
+		cp.setUrl          ( jdbcUrl );
+		cp.setUrlOptions   ( null );
+		cp.setUsername     ( jdbcUser );
+		cp.setPassword     ( jdbcPasswd );
+		cp.setAppName      ( Version.getAppName() );
+		cp.setAppVersion   ( Version.getVersionStr() );
+		cp.setSshTunnelInfo( null );
 
+		if (_offlineConn != null)
+			_offlineConn.setConnProp(cp);
+		
 		if (_offlineConn == null)
 			return false;
 
@@ -4508,7 +4525,7 @@ public class ConnectionDialog
 		// Set DBX Connection Defaults
 		ConnectionProp cp = new ConnectionProp();
 		cp.setLoginTimeout ( -1 );
-		cp.setDriver       ( jdbcDriver );
+		cp.setDriverClass  ( jdbcDriver );
 		cp.setUrl          ( jdbcUrl );
 		cp.setUrlOptions   ( jdbcUrlOptions );
 		cp.setUsername     ( jdbcUser );
@@ -4531,6 +4548,9 @@ public class ConnectionDialog
 				sqlInit,
 				tunnelInfo);
 		
+		if (_jdbcConn != null)
+			_jdbcConn.setConnProp(cp);
+
 		return _jdbcConn != null;
 	}
 

@@ -50,7 +50,7 @@ import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.ase.CmProcessActivity;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.MonWaitEventIdDictionary;
 import com.asetune.config.dict.RemarkDictionary;
 import com.asetune.graph.TrendGraphDataPoint;
@@ -1545,7 +1545,7 @@ implements Cloneable, ITableTooltip
 	@Override
 	public String getToolTipTextOnTableColumnHeader(String colName)
 	{
-		return MonTablesDictionary.getInstance().getDescription(getMonTablesInQuery(), colName);
+		return MonTablesDictionaryManager.getInstance().getDescription(getMonTablesInQuery(), colName);
 	}
 
 	/**

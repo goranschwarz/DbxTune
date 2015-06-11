@@ -458,4 +458,32 @@ public class AseUrlHelper
 	{
 		_options = urlOptionsMap;
 	}
+
+	/**
+	 * Get first host name (if there are several)
+	 */
+	public String getFirstHost()
+	{
+		if (_hostPort == null)
+			return null;
+
+		for (String key : _hostPort.keySet())
+			return key;
+
+		return null;
+	}
+
+	/**
+	 * Get first port number (if there are several)
+	 */
+	public int getFirstPort()
+	{
+		if (_hostPort == null)
+			return -1;
+
+		for (List<String> list : _hostPort.values())
+			return Integer.parseInt( list.get(0) );
+
+		return -1;
+	}
 }

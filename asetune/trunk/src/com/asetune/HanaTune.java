@@ -5,6 +5,8 @@ import org.apache.commons.cli.CommandLine;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesHana;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryHana;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameHana;
 import com.asetune.utils.DbUtils;
@@ -91,6 +93,12 @@ extends DbxTune
 	public IDbmsConfig createDbmsConfig()
 	{
 		return null; // null means it's not supported
+	}
+
+	@Override
+	public MonTablesDictionary createMonTablesDictionary()
+	{
+		return new MonTablesDictionaryHana();
 	}
 
 	public static void main(String[] args)

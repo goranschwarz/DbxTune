@@ -12,12 +12,12 @@ public class CheckForUpdatesIq extends CheckForUpdatesDbx
 //		return null;
 //	}
 
-	@Override
-	public QueryString createSendConnectInfo(Object... params)
-	{
-		System.out.println("NOT_YET_IMPLEMENTED: createSendConnectInfo()");
-		return null;
-	}
+//	@Override
+//	public QueryString createSendConnectInfo(Object... params)
+//	{
+//		System.out.println("NOT_YET_IMPLEMENTED: createSendConnectInfo()");
+//		return null;
+//	}
 
 //	@Override
 //	public List<QueryString> createSendCounterUsageInfo(Object... params)

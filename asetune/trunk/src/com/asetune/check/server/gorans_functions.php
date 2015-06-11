@@ -157,8 +157,12 @@
 	//----------------------------------------
 //NOTE: NOT READY YET
 // test it with: http://www.asemon.se/db_cleanup.php?doAction=testVersion&version=1570100
+//	function versionFix($clientAppName, $version)
 	function versionFix($version)
 	{
+//		if ($clientAppName != "AseTune")
+//			return $version;
+
 		// If the input is empty, lets just return with nothing...
 		if (strlen($version) == 0)
 			return $version;
@@ -192,6 +196,13 @@
 			$plVersion = "00";
 			$version = $baseVersion . $esdVersion . $plVersion;
 
+			return $version;
+		}
+
+		// HANA version 1 or other products with a major release less than 10
+		if (strlen($version) == 8)
+		{
+//echo "HANA version 1 or other products with a major release less than 10<br>";
 			return $version;
 		}
 
@@ -276,6 +287,18 @@
 	{
 		if ( ! is_numeric($version) )
 			return $version;
+
+		// get rid of begining traing spaces
+		$version = trim($version);
+
+		if (strlen($version) == 8) // typically HANA, or a version string with MAIN version to less that 10
+		{
+			$baseVersion = substr($version, 0, 3);
+			$spVersion   = substr($version, 3, 3);
+			$plVersion   = substr($version, 6);
+
+			return $baseVersion . " " . $spVersion . " " . $plVersion;
+		}
 
 		if (strlen($version) == 9)
 		{

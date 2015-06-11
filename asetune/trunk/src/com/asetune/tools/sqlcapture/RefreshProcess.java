@@ -48,6 +48,7 @@ import com.asetune.Version;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.sql.conn.DbxConnection;
@@ -530,7 +531,7 @@ public class RefreshProcess extends Thread
 				currentDBID        = -1;
 				currentProcedureID = -1;
 				
-				MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+				MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 				boolean firstRow = true;
 				while (rs.next())
@@ -2792,9 +2793,9 @@ public class RefreshProcess extends Thread
 			}
 		}
 
-		_aseVersion       = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
-		_isClusterEnabled = MonTablesDictionary.getInstance().isClusterEnabled();
-		_monTablesVersion = MonTablesDictionary.getInstance().getMdaVersion();
+		_aseVersion       = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+		_isClusterEnabled = MonTablesDictionaryManager.getInstance().isClusterEnabled();
+		_monTablesVersion = MonTablesDictionaryManager.getInstance().getMdaVersion();
 
 		try
 		{

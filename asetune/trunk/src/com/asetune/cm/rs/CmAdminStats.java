@@ -2,7 +2,6 @@ package com.asetune.cm.rs;
 
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +18,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.rs.gui.CmAdminStatsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -187,7 +187,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("stats",  "");
 
 			mtd.addColumn("stats", "Instance",       "<html>FIXME: Instance</html>");
@@ -236,43 +236,42 @@ extends CountersModel
 	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
 		String statsOn = 
-			  "admin stats, cancel \n"
+			  "--admin stats, cancel -- cancel might crach RS in some cases...\n"
 			+ "go \n"
 			+ "configure replication server set 'stats_sampling' to 'on' \n"
 			+ "go \n"
 			+ "configure replication server set 'stats_engineering_counters' to 'on' \n"
 			+ "go \n"
-			+ "admin statistics, reset \n"
+			+ "--admin statistics, reset \n"
 			+ "go \n";
 
-		// NOTE: this should be empty when we pass a proper srvVersion number
-		String AOBJ = "trace 'on','dsi','dsi_workload' \n"
-		            + "go \n";
+// NOTE: this should be empty when we pass a proper srvVersion number
+String AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n" + "go \n";
 		if (srvVersion >= Ver.ver(15, 6))
-			AOBJ = "trace 'on','dsi','dsi_workload' \n"
+			AOBJ = "trace 'on', 'dsi', 'dsi_workload' \n"
 			     + "go \n";
 		
 		return statsOn + AOBJ;
 	}
 
-	@Override
-	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-	{
-		String statsOff = 
-			  "admin stats, cancel \n"
-			+ "go \n"
-			+ "--configure replication server set 'stats_sampling' to 'off' \n"
-			+ "--go \n"
-			+ "--configure replication server set 'stats_engineering_counters' to 'off' \n"
-			+ "--go \n";
-
-		// NOTE: this should be empty when we pass a proper srvVersion number
-		String AOBJ = "--trace 'off','dsi','dsi_workload' \n";
-		if (srvVersion >= Ver.ver(15, 6))
-			AOBJ = "--trace 'off','dsi','dsi_workload' \n";
-			
-		return statsOff + AOBJ;
-	}
+//	@Override
+//	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	{
+//		String statsOff = 
+//			  "--admin stats, cancel -- cancel might crach RS in some cases...\n"
+//			+ "go \n"
+//			+ "--configure replication server set 'stats_sampling' to 'off' \n"
+//			+ "--go \n"
+//			+ "--configure replication server set 'stats_engineering_counters' to 'off' \n"
+//			+ "--go \n";
+//
+//		// NOTE: this should be empty when we pass a proper srvVersion number
+//		String AOBJ = "--trace 'off','dsi','dsi_workload' \n";
+//		if (srvVersion >= Ver.ver(15, 6))
+//			AOBJ = "--trace 'off','dsi','dsi_workload' \n";
+//			
+//		return statsOff + AOBJ;
+//	}
 	
 	@Override
 	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)

@@ -779,6 +779,41 @@ public class DbUtils
 		}
 	}
 
+	public static int getHanaVersionNumber(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String versionStr = "";
+		String sql = "select VERSION from m_database";
+
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				versionStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			int versionNum = Ver.hanaVersionStringToNumber(versionStr);
+//System.out.println("getHanaVersionNumber() VersionNum = "+versionNum);
+//System.out.println("getHanaVersionNumber() VersionStr = '"+versionStr+"'.");
+			return versionNum;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting HANA Version Number. sql='"+sql+"', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
 	/**
 	 * Try to extract he procedure or function name from a HANA error message
 	 * <p>
@@ -930,6 +965,39 @@ public class DbUtils
 		catch (SQLException e)
 		{
 			_logger.debug("When getting Oracle Server Instance Name. sql='"+sql+"', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static int getOracleVersionNumber(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String versionStr = "";
+		String sql = "SELECT version FROM V$INSTANCE";
+
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				versionStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			int versionNum = Ver.oracleVersionStringToNumber(versionStr);
+			return versionNum;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting HANA Version Number. sql='"+sql+"', Caught exception.", e);
 
 			return UNKNOWN;
 		}

@@ -51,6 +51,7 @@ import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
@@ -1347,7 +1348,7 @@ implements ActionListener, ConnectionProgressCallback
 					}
 					
 					// Reset initialized dictionaries
-					MonTablesDictionary.reset();
+					MonTablesDictionaryManager.reset();
 
 					_exception = e;
 					return e;

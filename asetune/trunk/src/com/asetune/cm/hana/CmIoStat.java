@@ -184,6 +184,7 @@ extends CountersModel
 		pkCols.add("HOST");
 		pkCols.add("PORT");
 		pkCols.add("VOLUME_ID");
+		pkCols.add("PATH"); // It looks like we need this as well... for unique rows
 		pkCols.add("TYPE");
 		pkCols.add("MAX_IO_BUFFER");
 

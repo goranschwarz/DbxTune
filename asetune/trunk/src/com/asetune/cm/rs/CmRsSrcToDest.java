@@ -31,7 +31,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.RepServerUtils;
-import com.asetune.utils.Ver;
 
 /**
  * This one is a little odd...<br>

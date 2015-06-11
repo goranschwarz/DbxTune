@@ -22,6 +22,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.rax.gui.CmRaStatisticsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -615,7 +616,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("ra_statistics",  "");
 
 			mtd.addColumn("ra_statistics", "Component",     "<html>What component in the RepAgent</html>");

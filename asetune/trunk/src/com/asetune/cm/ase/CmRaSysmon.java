@@ -13,6 +13,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sql.VersionInfo;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Ver;
@@ -139,7 +140,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("sysmonitors", "value",                 "<html>The Counter value for this raw counter name.</html>");
 			mtd.addColumn("sysmonitors", "log_waits",             "<html>Log Extension Wait:                Count</html>");
 			mtd.addColumn("sysmonitors", "sum_log_wait",          "<html>Log Extension Wait:                Amount of time (ms)</html>");

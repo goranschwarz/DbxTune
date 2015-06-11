@@ -4,7 +4,7 @@
 DbxTune is a collection of programs to Tune various DBMS dialects
 The project started out as AseMon, later renamed to AseTune
 Then I decided to extend the tool to embrace other DBMS types as well
-Hence the recent change to DbxTune 
+Hence the recent change to DbxTune (or it will soon be renamed to DbxTune)
 
 
 ==============================================================================
@@ -113,22 +113,20 @@ Here are some of the functionality
 ------------------------------------------------------------------------------
 -- Tail Window ---------------------------------------------------------------
 ------------------------------------------------------------------------------
+  Tail any file, if it's a remote file it uses SSH to do the "remote" tail.
 
 ------------------------------------------------------------------------------
 -- PerfDemo ------------------------------------------------------------------
 ------------------------------------------------------------------------------
+  Small utility to execute load in a ASE
+  This utility is mainly used by me when doing demos of AseTune...
+  If you want to use it, you need to install some server side objects.
+  * Unzip lib/asetune.jar and go to directory 'src/com/asetune/perftest/sql'
+  * Look at the README.txt in above directory
+  * if you have problems, plese send me an email at: goran_schwarz@hotmail.com
 
 
-
-
-doCleanup("ALTER TABLE asemon_connect_info        ADD connTypeStr        varchar(30)  AFTER userName");
-doCleanup("ALTER TABLE asemon_connect_info        ADD prodName           varchar(30)  AFTER srvUserRoles");
-doCleanup("ALTER TABLE asemon_connect_info        ADD prodVersionStr     varchar(255) AFTER prodName");
-doCleanup("ALTER TABLE asemon_connect_info        ADD jdbcDriver         varchar(60)  AFTER srvSapSystemInfo");
-doCleanup("ALTER TABLE asemon_connect_info        ADD jdbcUrl            varchar(255) AFTER jdbcDriver");
-doCleanup("ALTER TABLE asemon_connect_info        ADD jdbcDriverName     varchar(255) AFTER jdbcUrl");
-doCleanup("ALTER TABLE asemon_connect_info        ADD jdbcDriverVersion  varchar(255) AFTER jdbcDriverName");
-
+  
 
 
 

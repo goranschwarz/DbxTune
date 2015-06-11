@@ -4,15 +4,13 @@ import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 import javax.swing.SwingUtilities;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -124,7 +122,7 @@ extends CounterCollectorThreadAbstract
 	{
 		boolean	  firstLoopAfterConnect = true;
 //		boolean   canDoReconnect        = false; // means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection
-		int       reconnectProblems     = 0;
+		int       reconnectProblemsSleeptSeconds = 0;
 
 		// If you want to start a new session in the Persistent Storage, just set this to true...
 		// This could for instance be used when you connect to a new ASE Server
@@ -138,6 +136,7 @@ extends CounterCollectorThreadAbstract
 		_logger.info("Starting GetCounters GUI collector");
 
 		// loop
+		@SuppressWarnings("unused")
 		int loopCounter = 0;
 
 		//---------------------------
@@ -199,23 +198,20 @@ extends CounterCollectorThreadAbstract
 				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Not connected to any server. Please connect now!");
 
 				getCounterController().sleep(500);
-//				try { Thread.sleep(500); }
-//				catch (InterruptedException ignore) {}
 
 				// maybe do reconnect if the connection has been lost
 				if (_canDoReconnect)
 				{
-//					Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 					Configuration tmpConf = Configuration.getCombinedConfiguration();
 
-					// null: means that reset() has ben called, which is done on a disconnect
-					Map<String, List<String>> aseHostPortMap = AseConnectionFactory.getHostPortMap();
 					boolean optReconnectOnFailure = tmpConf.getBooleanProperty(ConnectionDialog.CONF_OPTION_RECONNECT_ON_FAILURE, false);
-					if ( optReconnectOnFailure && aseHostPortMap != null )
+					if ( optReconnectOnFailure )
 					{
 						// Give up after X number of reconnects
-						if (reconnectProblems < 100)
+						if (reconnectProblemsSleeptSeconds < 3600*1000) // Try for 1 hour
 						{
+							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Trying to Re-connect to the monitored server.");
+
 							// NOTE: we might have to do:
 							//   mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP));
 							// But for now just try to grab a connection and continue, revisit this later
@@ -229,22 +225,23 @@ extends CounterCollectorThreadAbstract
 //								String str = AseConnectionFactory.getServer() + " (" +
 //								             AseConnectionFactory.getHost()   + ":" +
 //								             AseConnectionFactory.getPort()   + ")";
-								String str = AseConnectionFactory.getServer() + " (" + AseConnectionFactory.getHostPortStr() + ")";
+//								String str = AseConnectionFactory.getServer() + " (" + AseConnectionFactory.getHostPortStr() + ")";
+
+								String str = getCounterController().getMonConnection().getDbmsServerName();
 
 								_logger.info("Re-connected to monitored server '"+str+"' after a 'lost connection'.");
-								reconnectProblems = 0;
+								reconnectProblemsSleeptSeconds = 0;
 							}
 							catch (Exception e)
 							{
-								reconnectProblems++;
 								_logger.warn("Problem when re-connecting to monitored server. Caught: "+e);
 								_logger.debug("Problem when re-connecting to monitored server. Caught: "+e, e);
 								MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Re-connect FAILED, I will soon try again.");
 
 								// On connect failure sleep for a little longer
-								getCounterController().sleep(5000);
-//								try { Thread.sleep(5000); }
-//								catch (InterruptedException ignore) {}
+								int sleepTime = 5000;
+								getCounterController().sleep(sleepTime);
+								reconnectProblemsSleeptSeconds += sleepTime;
 							}
 						}
 					}
@@ -419,9 +416,9 @@ extends CounterCollectorThreadAbstract
 					getCounterController().initCounters(
 						getCounterController().getMonConnection(),
 						true,
-						MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
-						MonTablesDictionary.getInstance().isClusterEnabled(),
-						MonTablesDictionary.getInstance().getMdaVersion());
+						MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum(),
+						MonTablesDictionaryManager.getInstance().isClusterEnabled(),
+						MonTablesDictionaryManager.getInstance().getMdaVersion());
 
 					// emulate a slow INIT time...
 					//try { Thread.sleep(7000); }

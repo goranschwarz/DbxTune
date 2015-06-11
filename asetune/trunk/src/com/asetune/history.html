@@ -22,8 +22,23 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2014-mm-dd</H2>
+<H2>2015-mm-dd</H2>
 <UL>
+	<LI>
+	<b>A bunch of new tools has been added... but all are still in Alpha/Beta stage</b><br>
+	<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+		<TR> <TH>Tool Name    </TH> <TH>Status</TH>    <TH>Description</TH> </TR>
+		<TR> <TD>IqTune       </TD> <TD>Beta</TD>      <TD>Sybase/SAP IQ</TD> </TR>
+		<TR> <TD>RsTune       </TD> <TD>Alpha</TD>     <TD>Sybase/SAP Replication Server</TD> </TR>
+		<TR> <TD>RaxTune      </TD> <TD>Beta</TD>      <TD>Sybase/SAP Replication Agent X (Oracle, DB2, MSSQL)</TD> </TR>
+		<TR> <TD>HanaTune     </TD> <TD>Alpha</TD>     <TD>SAP HANA</TD> </TR>
+		<TR> <TD>SqlServerTune</TD> <TD>Alpha</TD>     <TD>Microsoft SQL-Server</TD> </TR>
+		<TR> <TD>OracleTune   </TD> <TD>Pre-Alpha</TD> <TD>Oracle</TD> </TR>
+	</TABLE>
+	To try them out unzip the dbxtune_beta_tools.zip into <b>current</b> directory where AseTUne is installed.<br>
+	And <b>please</b> send feedback if you want me to enhance the tools any further. (also with ideas of what to add/implement)  
+	</LI>
+
 	<LI>
 	<b>Enhancement: NAME - CmName</b><br>
 	xxx<br>
@@ -39,6 +54,41 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: Objects - CmObjectActivity</b><br>
 	When enabling "Include System Tables", a warning popup will be displayed: "may cause performance degradation"<br>
 	When disconnection: I check if traceflag 3650 is enabled at the server side. If it is: A popup question "disable traceflag 3650?" will be displayed.<br>
+	</LI>
+
+	<LI>
+	<b>New: RepAgent Memory Statistics - CmRaMemoryStat</b><br>
+	This table was introduced in ASE 16.0 PL1<br>
+	</LI>
+
+	<LI>
+	<b>New: Segment IO - CmDeviceSegIO</b><br>
+	This table was introduced in ASE 16.0 SP2<br>
+	</LI>
+
+	<LI>
+	<b>New: Segment Usage - CmDeviceSegUsage</b><br>
+	This table was introduced in ASE 16.0 SP2<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Caches - CmDataCaches</b><br>
+	Added columns: CASGrabs, CASSpins, CASWaits, CASContention, CASSpinsPerWait<br>
+	CASContention is based on CASSpins/CASWaits<br>
+	CASSpinsPerWait is based on number of spins per wait during this period.<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Cached Procedures - CmCachedProcs and Cached Procedures Sum - CmCachedProcsSum</b><br>
+	Added columns: SnapExecutionCount, SnapCodegenTime, SnapJITTime, SnapExecutionTime, AvgSnapCodegenTime, AvgSnapJITTime, AvgSnapExecutionTime<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: SPID Wait - CmSpidWait and SPID Activity - CmSpidCpuWait</b><br>
+	Added columns: OrigUserName = Original Server User Identifier. This is the Server User Identifier before setting proxy.<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
 	</LI>
 
 	<LI>

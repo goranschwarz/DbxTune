@@ -256,7 +256,6 @@ public class AboutBox
 			"<br>" +
 			"Send comments and suggestions to: <br>" +
 			"<A HREF=\"mailto:goran_schwarz@hotmail.com\">goran_schwarz@hotmail.com</A><br>" +
-			"<A HREF=\"mailto:gorans@sybase.com\">gorans@sybase.com</A><br>" +
 			"<br>" +
 			creditTo +
 			suggestion +

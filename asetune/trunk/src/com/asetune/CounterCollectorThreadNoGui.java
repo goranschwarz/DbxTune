@@ -19,15 +19,15 @@ import javax.script.ScriptException;
 import org.apache.log4j.Logger;
 
 import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
-import com.asetune.config.dbms.AseConfig;
-import com.asetune.config.dbms.AseConfigText;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -308,7 +308,6 @@ extends CounterCollectorThreadAbstract
 		//---------------------------
 		// Create all the CM objects, the objects will be added to _CMList
 		getCounterController().createCounters(hasGui);
-
 		
 		// SPECIAL things for some offline CMD LINE parameters
 		String cmOptions = _storeProps.getProperty("cmdLine.cmOptions");
@@ -741,11 +740,11 @@ extends CounterCollectorThreadAbstract
 				}
 				
 				// initialize Mon Table Dictionary
-				mtd = MonTablesDictionary.getInstance();
+				mtd = MonTablesDictionaryManager.getInstance();
 				if ( ! mtd.isInitialized() )
 				{
 					mtd.initialize(getCounterController().getMonConnection(), false);
-					CounterControllerAse.initExtraMonTablesDictionary();
+//					CounterControllerAse.initExtraMonTablesDictionary(); // Now done inside: MonTablesDictionaryManager.getInstance().initialize(conn, true);
 				}
 //				System.out.println("aseServerName() = "+mtd.aseServerName);
 //				System.out.println("aseVersionNum() = "+mtd.aseVersionNum);
@@ -826,16 +825,22 @@ extends CounterCollectorThreadAbstract
 				// release we are connected to
 				if ( ! getCounterController().isInitialized() )
 				{
+					DbxConnection xconn = getCounterController().getMonConnection();
+					
 					getCounterController().initCounters( 
 							getCounterController().getMonConnection(), 
 							false, 
-							mtd.getAseExecutableVersionNum(), 
+							mtd.getDbmsExecutableVersionNum(), 
 							mtd.isClusterEnabled(), 
 							mtd.getMdaVersion());
 
 					// Hopefully this is a better place to send connect info
 //					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
-					CheckForUpdates.getInstance().sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
+//					CheckForUpdates.getInstance().sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
+
+					DbxConnectInfo ci = new DbxConnectInfo(xconn, true);
+//					ci.setSshTunnelInfo(fixme-if-this-is-used);
+					CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 				}
 
 				if (getCounterController().getCmList() == null || (getCounterController().getCmList() != null && getCounterController().getCmList().size() == 0))

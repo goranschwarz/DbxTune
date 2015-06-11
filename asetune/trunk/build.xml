@@ -76,6 +76,8 @@
 
 <!--		<launch4j configFile="./launch4j.xml" />-->
 
+		<copy file="README.txt"                                         toFile="${dist}/README.txt"/>
+
 		<copy file="perfdemo.bat"                                       toFile="${dist}/perfdemo.bat"/>
 
 		<copy file="sqlw.bat"                                           toFile="${dist}/sqlw.bat"/>
@@ -94,35 +96,6 @@
 		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
 
-		<copy file="iqtune.bat"                                         toFile="${dist}/iqtune.bat"/>
-<!--	<copy file="iqtune.sh"                                          toFile="${dist}/iqtune.sh"/>-->
-		<copy file="iqtune.properties"                                  toFile="${dist}/iqtune.properties"/>
-		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/lib/iqtune_splash.jpg"/>
-
-		<copy file="rstune.bat"                                         toFile="${dist}/rstune.bat"/>
-<!--	<copy file="rstune.sh"                                          toFile="${dist}/rstune.sh"/>-->
-		<copy file="rstune.properties"                                  toFile="${dist}/rstune.properties"/>
-		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/lib/rstune_splash.jpg"/>
-
-		<copy file="raxtune.bat"                                         toFile="${dist}/raxtune.bat"/>
-<!--	<copy file="raxtune.sh"                                          toFile="${dist}/raxtune.sh"/>-->
-		<copy file="raxtune.properties"                                  toFile="${dist}/raxtune.properties"/>
-		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"        toFile="${dist}/lib/raxtune_splash.jpg"/>
-
-		<copy file="hanatune.bat"                                       toFile="${dist}/hanatune.bat"/>
-<!--	<copy file="hanatune.sh"                                        toFile="${dist}/hanatune.sh"/>-->
-		<copy file="hanatune.properties"                                toFile="${dist}/hanatune.properties"/>
-		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/lib/hanatune_splash.jpg"/>
-
-		<copy file="sqlservertune.bat"                                  toFile="${dist}/sqlservertune.bat"/>
-<!--	<copy file="sqlservertune.sh"                                   toFile="${dist}/sqlservertune.sh"/>-->
-		<copy file="sqlservertune.properties"                           toFile="${dist}/sqlservertune.properties"/>
-		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/lib/sqlservertune_splash.jpg"/>
-
-		<copy file="oracletune.bat"                                     toFile="${dist}/oracletune.bat"/>
-<!--	<copy file="oracletune.sh"                                      toFile="${dist}/oracletune.sh"/>-->
-		<copy file="oracletune.properties"                              toFile="${dist}/oracletune.properties"/>
-		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/lib/oracletune_splash.jpg"/>
 
 		<copy file="${src}/com/asetune/history.html"                    toFile="${dist}/history.html"/>
 		<copy todir="${dist}/lib">
@@ -157,7 +130,53 @@
 			</manifest>
 		</jar>
 
+
+		<!-- - - - - - - - - - - - - - -->
+		<!-- create a ZIP file with all the BETA (not released) applications -->
+		<!-- - - - - - - - - - - - - - -->
+		<mkdir dir="${dist}/beta"/>
+		<mkdir dir="${dist}/beta/lib"/>
+
+		<copy file="iqtune.bat"                                         toFile="${dist}/beta/iqtune.bat"/>
+<!--		<copy file="iqtune.sh"                                          toFile="${dist}/beta/iqtune.sh"/>-->
+		<copy file="iqtune.properties"                                  toFile="${dist}/beta/iqtune.properties"/>
+		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/beta/lib/iqtune_splash.jpg"/>
+
+		<copy file="rstune.bat"                                         toFile="${dist}/beta/rstune.bat"/>
+<!--		<copy file="rstune.sh"                                          toFile="${dist}/beta/rstune.sh"/>-->
+		<copy file="rstune.properties"                                  toFile="${dist}/beta/rstune.properties"/>
+		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/beta/lib/rstune_splash.jpg"/>
+
+		<copy file="raxtune.bat"                                         toFile="${dist}/beta/raxtune.bat"/>
+<!--		<copy file="raxtune.sh"                                          toFile="${dist}/beta/raxtune.sh"/>-->
+		<copy file="raxtune.properties"                                  toFile="${dist}/beta/raxtune.properties"/>
+		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"        toFile="${dist}/beta/lib/raxtune_splash.jpg"/>
+
+		<copy file="hanatune.bat"                                       toFile="${dist}/beta/hanatune.bat"/>
+<!--		<copy file="hanatune.sh"                                        toFile="${dist}/beta/hanatune.sh"/>-->
+		<copy file="hanatune.properties"                                toFile="${dist}/beta/hanatune.properties"/>
+		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/beta/lib/hanatune_splash.jpg"/>
+
+		<copy file="sqlservertune.bat"                                  toFile="${dist}/beta/sqlservertune.bat"/>
+<!--		<copy file="sqlservertune.sh"                                   toFile="${dist}/beta/sqlservertune.sh"/>-->
+		<copy file="sqlservertune.properties"                           toFile="${dist}/beta/sqlservertune.properties"/>
+		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/beta/lib/sqlservertune_splash.jpg"/>
+
+		<copy file="oracletune.bat"                                     toFile="${dist}/beta/oracletune.bat"/>
+<!--		<copy file="oracletune.sh"                                      toFile="${dist}/beta/oracletune.sh"/>-->
+		<copy file="oracletune.properties"                              toFile="${dist}/beta/oracletune.properties"/>
+		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/beta/lib/oracletune_splash.jpg"/>
+
+		<zip destfile="${dist}/dbxtune_beta_tools.zip"
+			basedir="${dist}/beta"
+		/>
+		
+		<delete dir="${dist}/beta"/>
+
+
+		<!-- - - - - - - - - - - - - - -->
 		<!-- make a zip file asetune_${DSTAMP}.jar -->
+		<!-- - - - - - - - - - - - - - -->
 		<zip destfile="asetune_${DSTAMP}.zip"
 			basedir="${dist}"
 		/>

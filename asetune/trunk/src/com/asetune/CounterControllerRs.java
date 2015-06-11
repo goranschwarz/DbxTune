@@ -29,7 +29,6 @@ import com.asetune.cm.rs.CmAdminStatsServ;
 import com.asetune.cm.rs.CmAdminStatsSqm;
 import com.asetune.cm.rs.CmAdminStatsSqmr;
 import com.asetune.cm.rs.CmAdminStatsSqt;
-import com.asetune.cm.rs.CmRsSrcToDest;
 import com.asetune.cm.rs.CmAdminStatsSts;
 import com.asetune.cm.rs.CmAdminStatsSync;
 import com.asetune.cm.rs.CmAdminStatsSyncEle;
@@ -39,6 +38,7 @@ import com.asetune.cm.rs.CmAdminWhoRsi;
 import com.asetune.cm.rs.CmAdminWhoSqm;
 import com.asetune.cm.rs.CmAdminWhoSqt;
 import com.asetune.cm.rs.CmDbQueueSizeInRssd;
+import com.asetune.cm.rs.CmRsSrcToDest;
 import com.asetune.cm.rs.CmSummary;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -220,7 +220,7 @@ extends CounterControllerAbstract
 			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 				return null;
 
-			serverName = getMonConnection().getDatabaseServerName();
+			serverName = getMonConnection().getDbmsServerName();
 			hostname   = serverName;
 
 			Statement stmt = getMonConnection().createStatement();

@@ -559,7 +559,7 @@
 //		doCleanup("ALTER TABLE asemon_error_info_save     ADD clientAppName varchar(30) AFTER clientTime");
 
 //		// update all tables with the default value of AseTune
-//		//doCleanup("UPDATE asemon_connect_info        SET clientAppName = 'AseTune'");
+//		doCleanup("UPDATE asemon_connect_info        SET clientAppName = 'AseTune'");
 //		doCleanup("UPDATE asemon_mda_info            SET clientAppName = 'AseTune'");
 //		doCleanup("UPDATE asemon_udc_info            SET clientAppName = 'AseTune'");
 //		doCleanup("UPDATE asemon_counter_usage_info  SET clientAppName = 'AseTune'");
@@ -567,6 +567,13 @@
 //		doCleanup("UPDATE asemon_error_info2         SET clientAppName = 'AseTune'");
 //		doCleanup("UPDATE asemon_error_info_save     SET clientAppName = 'AseTune'");
 
+//		doCleanup("alter table asemon_connect_info add connTypeStr       varchar(30)");
+//		doCleanup("alter table asemon_connect_info add prodName          varchar(30)");
+//		doCleanup("alter table asemon_connect_info add prodVersionStr    varchar(255)");
+//		doCleanup("alter table asemon_connect_info add jdbcUrl           varchar(255)");
+//		doCleanup("alter table asemon_connect_info add jdbcDriverClass   varchar(60)");
+//		doCleanup("alter table asemon_connect_info add jdbcDriverName    varchar(255)");
+//		doCleanup("alter table asemon_connect_info add jdbcDriverVersion varchar(255)");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

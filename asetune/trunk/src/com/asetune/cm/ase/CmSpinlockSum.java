@@ -17,6 +17,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmSpinlockSumPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
@@ -702,7 +703,7 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 		long grabs,        waits,        spins;
 		int  grabsId = -1, waitsId = -1, spinsId = -1, contentionId = -1, spinsPerWaitId = -1;

@@ -83,12 +83,14 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.check.MailGroupDialog;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.ConnectionDialog.Options;
@@ -2837,7 +2839,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					PersistentCounterHandler.getInstance().addChangeListener(this);
 				}
 
-				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
+				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getAseConn(), true);
+				ci.setSshTunnelInfo(connDialog.getAseSshTunnelInfo());
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
+//				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
 
 			}
 		} // end: TDS_CONN
@@ -2867,7 +2872,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					PersistentCounterHandler.getInstance().addChangeListener(this);
 				}
 
-				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
+				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getJdbcConn(), true);
+				ci.setSshTunnelInfo(connDialog.getJdbcSshTunnelInfo());
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
+//				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
 			}
 		} // end: JDBC
 
@@ -2926,7 +2934,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				
 //				CheckForUpdates.sendConnectInfoNoBlock(connType, null);
 //				sendConnectInfoNoBlock(connType, null);
-				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, null);
+
+				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getOfflineConn(), false);
+//				ci.setSshTunnelInfo(connDialog.getOfflineSshTunnelInfo());
+				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
+//				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, null);
 			}
 		} // end: OFFLINE_CONN
 	}
@@ -4873,11 +4885,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			   )
 			{
 				String monWaitEventInfoWhere = "";
-				if (MonTablesDictionary.hasInstance())
+				if (MonTablesDictionaryManager.hasInstance())
 				{
 //					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
 //					if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
-					if (MonTablesDictionary.getInstance().getMdaVersion() >= Ver.ver(15,7))
+					if (MonTablesDictionaryManager.getInstance().getMdaVersion() >= Ver.ver(15,7))
 						monWaitEventInfoWhere = " and W.Language = 'en_US'";
 				}
 

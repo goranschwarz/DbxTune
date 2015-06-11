@@ -18,6 +18,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmActiveStatementsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.AseConnectionUtils;
@@ -125,7 +126,7 @@ extends CountersModel
 	{
 		try 
 		{
-			MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addColumn("monProcess",  "BlockingOtherSpids", "This SPID is Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.");
 			mtd.addColumn("monProcess",  "multiSampled",       "<html>" +
 			                                                       "This indicates that the PrimaryKey (SPID, monSource[, InstanceID]) has been in this table for more than one sample.<br>" +
@@ -255,8 +256,7 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null)";
-//		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
-//		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+
 		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 			cols2 += "S.RowsAffected, " +
@@ -267,9 +267,6 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "S.SPID != @@spid";
-//		if (aseVersion >= 12540 && aseVersion <= 15000)
-//		if (aseVersion < 15000)
-//		if (aseVersion < 1500000)
 		if (aseVersion < Ver.ver(15,0))
 		{
 			whereSpidNotMe = "S.SPID != convert(int,@@spid)";
@@ -552,9 +549,9 @@ extends CountersModel
 		String waitClassDesc = "";
 		CounterSample counters = diffData;
 
-		if ( ! MonTablesDictionary.hasInstance() )
+		if ( ! MonTablesDictionaryManager.hasInstance() )
 			return;
-		MonTablesDictionary mtd = MonTablesDictionary.getInstance();
+		MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
 		if (counters == null)
 			return;

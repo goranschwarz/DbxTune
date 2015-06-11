@@ -34,6 +34,10 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.BackwardNameCompatibility;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
+import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -726,6 +730,113 @@ implements Runnable, ConnectionProvider
 		}
 
 		addCommand(new QueueCommand(CMD_loadSessions));
+	}
+
+	public void loadMonTablesDictionary(Timestamp sampleId)
+	{
+//		throw new RuntimeException("NOT IMPLEMENTED: loadMonTablesDictionary()");
+// OK NOT YET TESTED...
+		if (sampleId == null)
+			throw new IllegalArgumentException("sampleId can't be null");
+		
+		HashMap<String,MonTableEntry> monTablesMap = new HashMap<String,MonTableEntry>();
+
+		String monTables       = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
+		String monTableColumns = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
+
+		final String SQL_TABLES                = "select \"TableID\", \"Columns\", \"Parameters\", \"Indicators\", \"Size\", \"TableName\", \"Description\" from "+monTables;
+		final String SQL_COLUMNS               = "select \"TableID\", \"ColumnID\", \"TypeID\", \"Precision\", \"Scale\", \"Length\", \"Indicators\", \"TableName\", \"ColumnName\", \"TypeName\", \"Description\" from "+monTableColumns;
+
+		String sessionStartTime = sampleId.toString();
+		String sql = null;
+		try
+		{
+			Statement stmt = _conn.createStatement();
+			sql = SQL_TABLES + " where \"SessionStartTime\" = '"+sessionStartTime+"'";
+
+			ResultSet rs = stmt.executeQuery(sql);
+			while ( rs.next() )
+			{
+				MonTableEntry entry = new MonTableEntry();
+
+				int pos = 1;
+				entry._tableID      = rs.getInt   (pos++);
+				entry._columns      = rs.getInt   (pos++);
+				entry._parameters   = rs.getInt   (pos++);
+				entry._indicators   = rs.getInt   (pos++);
+				entry._size         = rs.getInt   (pos++);
+				entry._tableName    = rs.getString(pos++);
+				entry._description  = rs.getString(pos++);
+				
+				// Create substructure with the columns
+				// This is filled in BELOW (next SQL query)
+				entry._monTableColumns = new HashMap<String,MonTableColumnsEntry>();
+
+				monTablesMap.put(entry._tableName, entry);
+			}
+			rs.close();
+		}
+		catch (SQLException ex)
+		{
+			if (ex.getMessage().contains("not found"))
+			{
+				_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
+				return;
+			}
+			_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+			return;
+		}
+
+		for (Map.Entry<String,MonTableEntry> mapEntry : monTablesMap.entrySet()) 
+		{
+		//	String        key           = mapEntry.getKey();
+			MonTableEntry monTableEntry = mapEntry.getValue();
+			
+			if (monTableEntry._monTableColumns == null)
+				monTableEntry._monTableColumns = new HashMap<String,MonTableColumnsEntry>();
+			else
+				monTableEntry._monTableColumns.clear();
+
+			try
+			{
+				Statement stmt = _conn.createStatement();
+				sql = SQL_COLUMNS + " where \"SessionStartTime\" = '"+sessionStartTime+"' and \"TableName\" = '"+monTableEntry._tableName+"'";
+
+				ResultSet rs = stmt.executeQuery(sql);
+				while ( rs.next() )
+				{
+					MonTableColumnsEntry entry = new MonTableColumnsEntry();
+
+					int pos = 1;
+					entry._tableID      = rs.getInt   (pos++);
+					entry._columnID     = rs.getInt   (pos++);
+					entry._typeID       = rs.getInt   (pos++);
+					entry._precision    = rs.getInt   (pos++);
+					entry._scale        = rs.getInt   (pos++);
+					entry._length       = rs.getInt   (pos++);
+					entry._indicators   = rs.getInt   (pos++);
+					entry._tableName    = rs.getString(pos++);
+					entry._columnName   = rs.getString(pos++);
+					entry._typeName     = rs.getString(pos++);
+					entry._description  = rs.getString(pos++);
+					
+					monTableEntry._monTableColumns.put(entry._columnName, entry);
+				}
+				rs.close();
+			}
+			catch (SQLException ex)
+			{
+				if (ex.getMessage().contains("not found"))
+				{
+					_logger.warn("Tooltip on column headers wasn't available in the offline database. This simply means that tooltip wont be showed in various places.");
+					return;
+				}
+				_logger.error("MonTablesDictionary:initialize:sql='"+sql+"'", ex);
+				return;
+			}
+		}
+
+		MonTablesDictionaryManager.getInstance().setMonTablesDictionaryMap(monTablesMap);
 	}
 
 	/**
