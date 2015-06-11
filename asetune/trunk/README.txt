@@ -21,6 +21,14 @@ tool (AseTune) to be able to perform my duties at customer sites.
  Available tools
 ==============================================================================
 * AseTune       - Tune Sybase/SAP Adaptive Server Enterprise
+* SQL Window    - Simple Query tool, connect to all of the above server types and execute commands (and any JDBC compliant DBMS)  
+* Tail Window   - Tail any file, if the file is located on Unix/Linux, simply open a SSH connection for the tail.
+* PerfDemo      - A tool that can be used to stress load ASE - used for demo purposes of AseTune
+
+The below is in beta status...
+If you want to use them simply unzip dbxtune_beta_tools.zip 
+in the directory where the base package (asetune_YYYY-MM-DD.zip) is installed
+
 * RaxTune       - Tune Sybase/SAP Replication Agent X (not a DBMS, but still possible to capture statistics)
 * RsTune        - Tune Sybase/SAP Replication Server  (not a DBMS, but still possible to capture statistics)
 * IqTune        - Tune Sybase/SAP IQ - The Column Store database
@@ -28,9 +36,6 @@ tool (AseTune) to be able to perform my duties at customer sites.
 * SqlServerTune - Tune Microsoft SQL-Server
 * OracleTune    - Tune Oracle DBMS
  
-* SQL Window    - Simple Query tool, connect to all of the above server types and execute commands (and any JDBC compliant DBMS)  
-* Tail Window   - Tail any file, if the file is located on Unix/Linux, simply open a SSH connection for the tail.
-* PerfDemo      - A tool that can be used to stress load ASE - used for demo purposes of AseTune
 
 
 ==============================================================================
