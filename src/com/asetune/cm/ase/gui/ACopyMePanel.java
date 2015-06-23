@@ -1,9 +1,7 @@
 package com.asetune.cm.ase.gui;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.utils.SwingUtils;
 
 public class ACopyMePanel
 extends TabularCntrPanel

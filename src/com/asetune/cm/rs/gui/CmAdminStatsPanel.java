@@ -8,7 +8,6 @@ import javax.swing.JPanel;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.rs.CmAdminStats;
 import com.asetune.gui.TabularCntrPanel;

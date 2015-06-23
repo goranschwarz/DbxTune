@@ -15,7 +15,6 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.CounterController;
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.TabularCntrPanel;

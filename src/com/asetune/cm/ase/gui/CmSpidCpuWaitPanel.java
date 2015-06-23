@@ -16,7 +16,6 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.HighlighterFactory;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.gui.TabularCntrPanel;

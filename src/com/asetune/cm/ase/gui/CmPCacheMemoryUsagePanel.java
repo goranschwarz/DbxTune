@@ -40,7 +40,6 @@ import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 import org.jfree.util.TableOrder;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmPCacheMemoryUsage;
 import com.asetune.gui.TabularCntrPanel;
