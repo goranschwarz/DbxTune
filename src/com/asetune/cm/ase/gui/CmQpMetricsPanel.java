@@ -34,8 +34,8 @@ extends TabularCntrPanel
 	{
 		super(cm);
 
-		if (cm.getIconFile() != null)
-			setIcon( SwingUtils.readImageIcon(Version.class, cm.getIconFile()) );
+//		if (cm.getIconFile() != null)
+//			setIcon( SwingUtils.readImageIcon(Version.class, cm.getIconFile()) );
 
 		init();
 	}

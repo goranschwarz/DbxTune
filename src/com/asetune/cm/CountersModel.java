@@ -797,7 +797,26 @@ implements Cloneable, ITableTooltip
 		{
 			if (_guiController.hasGUI())
 			{
-				_guiController.addPanel(createGui());
+//				_guiController.addPanel(createGui());
+
+				JPanel p = createGui();
+
+				if (p instanceof TabularCntrPanel)
+				{
+					TabularCntrPanel tcp = (TabularCntrPanel)p;
+					
+					if (getIconFile() != null)
+					{
+						ImageIcon icon = SwingUtils.readImageIcon(Version.class, getIconFile());
+
+						// Get default icon if we can't find the first icon
+						if (icon == null)
+							icon = SwingUtils.readImageIcon(Version.class, getIconFileDefault());
+							
+						tcp.setIcon(icon);
+					}
+				}
+				_guiController.addPanel(p);
 			}
 		}
 	}
@@ -841,16 +860,16 @@ implements Cloneable, ITableTooltip
 	{
 		TabularCntrPanel tcp = new TabularCntrPanel(this);
 
-		if (getIconFile() != null)
-		{
-			ImageIcon icon = SwingUtils.readImageIcon(Version.class, getIconFile());
-
-			// Get default icon if we can't find the first icon
-			if (icon == null)
-				icon = SwingUtils.readImageIcon(Version.class, getIconFileDefault());
-				
-			tcp.setIcon(icon);
-		}
+//		if (getIconFile() != null)
+//		{
+//			ImageIcon icon = SwingUtils.readImageIcon(Version.class, getIconFile());
+//
+//			// Get default icon if we can't find the first icon
+//			if (icon == null)
+//				icon = SwingUtils.readImageIcon(Version.class, getIconFileDefault());
+//				
+//			tcp.setIcon(icon);
+//		}
 
 		return tcp;
 	}
