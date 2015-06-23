@@ -11,7 +11,6 @@ import net.miginfocom.swing.MigLayout;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
 import com.asetune.gui.TabularCntrPanel;

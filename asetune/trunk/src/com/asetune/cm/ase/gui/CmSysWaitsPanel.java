@@ -41,7 +41,6 @@ import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 import org.jfree.util.TableOrder;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpidWait;
 import com.asetune.cm.ase.CmSysWaits;

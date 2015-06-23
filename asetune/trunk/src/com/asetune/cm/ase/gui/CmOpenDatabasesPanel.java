@@ -40,7 +40,6 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.TextAnchor;
 
 import com.asetune.CounterController;
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.gui.ChangeToJTabDialog;

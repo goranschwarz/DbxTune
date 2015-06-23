@@ -14,7 +14,6 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.rax.CmRaStatistics;
 import com.asetune.gui.TabularCntrPanel;
