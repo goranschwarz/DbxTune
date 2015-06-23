@@ -50,10 +50,11 @@ extends AbstractTreeTableModel
 	/**
 	 * 
 	 */
-	public OfflineSessionModel(boolean showCmCounterInfoColumns) 
+	public OfflineSessionModel(boolean showCmCounterInfoColumns, boolean showCmCounterRowsAsSamples) 
 	{
 		super();
-		_showCmCounterInfoColumns = showCmCounterInfoColumns;
+		_showCmCounterInfoColumns   = showCmCounterInfoColumns;
+		_showCmCounterRowsAsSamples = showCmCounterRowsAsSamples; 
 	}
 
 //	public void refresh()
@@ -253,6 +254,7 @@ extends AbstractTreeTableModel
 
 
 //BEGIN: move this to a better place
+	private boolean _showCmCounterRowsAsSamples = true;
 	private boolean _showCmCounterInfoColumns = false;
 	private List<String> _cmShortNameSumCols = new ArrayList<String>();
 	private List<String> _cmLongNameSumCols  = new ArrayList<String>();
@@ -855,10 +857,10 @@ public void setSummaryCmCounterInfo(SampleCmCounterInfo summaryCmCounterInfo) {_
 				if (_showCmCounterInfoColumns)
 				{
 					SampleCmCounterInfo scmci = _xxx_sampleCmCounterInfoMap.get(currTs);
-					allLevelScmci   .merge(scmci);
-					dayLevelScmci   .merge(scmci);
-					hourLevelScmci  .merge(scmci);
-					minuteLevelScmci.merge(scmci);
+					allLevelScmci   .merge(scmci, _showCmCounterRowsAsSamples);
+					dayLevelScmci   .merge(scmci, _showCmCounterRowsAsSamples);
+					hourLevelScmci  .merge(scmci, _showCmCounterRowsAsSamples);
+					minuteLevelScmci.merge(scmci, _showCmCounterRowsAsSamples);
 				}
 
 				// Add current sample to the minute level

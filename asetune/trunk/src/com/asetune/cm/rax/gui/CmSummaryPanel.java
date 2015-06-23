@@ -134,145 +134,145 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _ltlMbSentToRs_Rate_txt       = new JTextField();
 
 
-	private JTextField       _checkPoints_txt              = new JTextField();
-	private JLabel           _checkPoints_lbl              = new JLabel();
-	private JTextField       _numDeadlocks_txt             = new JTextField();
-	private JTextField       _numDeadlocksDiff_txt         = new JTextField();
-	private JLabel           _numDeadlocks_lbl             = new JLabel();
-	private JTextField       _diagnosticDumps_txt          = new JTextField();
-	private JLabel           _diagnosticDumps_lbl          = new JLabel();
-	private JTextField       _connectionsDiff_txt          = new JTextField();
-	private JTextField       _connections_txt              = new JTextField();
-	private JLabel           _connections_lbl              = new JLabel();
-	private JTextField       _distinctLoginsDiff_txt       = new JTextField();
-	private JTextField       _distinctLoginsAbs_txt        = new JTextField();
-	private JLabel           _distinctLogins_lbl           = new JLabel();
-	private JTextField       _lockWaitThreshold_txt        = new JTextField();
-	private JLabel           _lockWaitThreshold_lbl        = new JLabel();
-	private JTextField       _lockWaits_txt                = new JTextField();
-	private JTextField       _lockWaitsDiff_txt            = new JTextField();
-	private JLabel           _lockWaits_lbl                = new JLabel();
-	private JTextField       _maxRecovery_txt              = new JTextField();
-	private JLabel           _maxRecovery_lbl              = new JLabel();
-	private JLabel           _Transactions_lbl             = new JLabel();
-	private JTextField       _Transactions_Abs_txt         = new JTextField();
-	private JTextField       _Transactions_Diff_txt        = new JTextField();
-	private JTextField       _Transactions_Rate_txt        = new JTextField();
-	private JLabel           _Rollbacks_lbl                = new JLabel();
-	private JTextField       _Rollbacks_Abs_txt            = new JTextField();
-	private JTextField       _Rollbacks_Diff_txt           = new JTextField();
-	private JTextField       _Rollbacks_Rate_txt           = new JTextField();
-	private JLabel           _Selects_lbl                  = new JLabel();
-	private JTextField       _Selects_Abs_txt              = new JTextField();
-	private JTextField       _Selects_Diff_txt             = new JTextField();
-	private JTextField       _Selects_Rate_txt             = new JTextField();
-	private JLabel           _Updates_lbl                  = new JLabel();
-	private JTextField       _Updates_Abs_txt              = new JTextField();
-	private JTextField       _Updates_Diff_txt             = new JTextField();
-	private JTextField       _Updates_Rate_txt             = new JTextField();
-	private JLabel           _Inserts_lbl                  = new JLabel();
-	private JTextField       _Inserts_Abs_txt              = new JTextField();
-	private JTextField       _Inserts_Diff_txt             = new JTextField();
-	private JTextField       _Inserts_Rate_txt             = new JTextField();
-	private JLabel           _Deletes_lbl                  = new JLabel();
-	private JTextField       _Deletes_Abs_txt              = new JTextField();
-	private JTextField       _Deletes_Diff_txt             = new JTextField();
-	private JTextField       _Deletes_Rate_txt             = new JTextField();
-	private JLabel           _Merges_lbl                   = new JLabel();
-	private JTextField       _Merges_Abs_txt               = new JTextField();
-	private JTextField       _Merges_Diff_txt              = new JTextField();
-	private JTextField       _Merges_Rate_txt              = new JTextField();
-	private JLabel           _TableAccesses_lbl            = new JLabel();
-	private JTextField       _TableAccesses_Abs_txt        = new JTextField();
-	private JTextField       _TableAccesses_Diff_txt       = new JTextField();
-	private JTextField       _TableAccesses_Rate_txt       = new JTextField();
-	private JLabel           _IndexAccesses_lbl            = new JLabel();
-	private JTextField       _IndexAccesses_Abs_txt        = new JTextField();
-	private JTextField       _IndexAccesses_Diff_txt       = new JTextField();
-	private JTextField       _IndexAccesses_Rate_txt       = new JTextField();
-	private JLabel           _TempDbObjects_lbl            = new JLabel();
-	private JTextField       _TempDbObjects_Abs_txt        = new JTextField();
-	private JTextField       _TempDbObjects_Diff_txt       = new JTextField();
-	private JTextField       _TempDbObjects_Rate_txt       = new JTextField();
-	private JLabel           _WorkTables_lbl               = new JLabel();
-	private JTextField       _WorkTables_Abs_txt           = new JTextField();
-	private JTextField       _WorkTables_Diff_txt          = new JTextField();
-	private JTextField       _WorkTables_Rate_txt          = new JTextField();
-	private JLabel           _ULCFlushes_lbl               = new JLabel();
-	private JTextField       _ULCFlushes_Abs_txt           = new JTextField();
-	private JTextField       _ULCFlushes_Diff_txt          = new JTextField();
-	private JTextField       _ULCFlushes_Rate_txt          = new JTextField();
-	private JLabel           _ULCFlushFull_lbl             = new JLabel();
-	private JTextField       _ULCFlushFull_Abs_txt         = new JTextField();
-	private JTextField       _ULCFlushFull_Diff_txt        = new JTextField();
-	private JTextField       _ULCFlushFull_Rate_txt        = new JTextField();
-	private JLabel           _ULCKBWritten_lbl             = new JLabel();
-	private JTextField       _ULCKBWritten_Abs_txt         = new JTextField();
-	private JTextField       _ULCKBWritten_Diff_txt        = new JTextField();
-	private JTextField       _ULCKBWritten_Rate_txt        = new JTextField();
-	private JLabel           _PagesRead_lbl                = new JLabel();
-	private JTextField       _PagesRead_Abs_txt            = new JTextField();
-	private JTextField       _PagesRead_Diff_txt           = new JTextField();
-	private JTextField       _PagesRead_Rate_txt           = new JTextField();
-	private JLabel           _PagesWritten_lbl             = new JLabel();
-	private JTextField       _PagesWritten_Abs_txt         = new JTextField();
-	private JTextField       _PagesWritten_Diff_txt        = new JTextField();
-	private JTextField       _PagesWritten_Rate_txt        = new JTextField();
-	private JLabel           _PhysicalReads_lbl            = new JLabel();
-	private JTextField       _PhysicalReads_Abs_txt        = new JTextField();
-	private JTextField       _PhysicalReads_Diff_txt       = new JTextField();
-	private JTextField       _PhysicalReads_Rate_txt       = new JTextField();
-	private JLabel           _PhysicalWrites_lbl           = new JLabel();
-	private JTextField       _PhysicalWrites_Abs_txt       = new JTextField();
-	private JTextField       _PhysicalWrites_Diff_txt      = new JTextField();
-	private JTextField       _PhysicalWrites_Rate_txt      = new JTextField();
-	private JLabel           _LogicalReads_lbl             = new JLabel();
-	private JTextField       _LogicalReads_Abs_txt         = new JTextField();
-	private JTextField       _LogicalReads_Diff_txt        = new JTextField();
-	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
-	private JLabel           _fullTranslog_lbl             = new JLabel();
-	private JTextField       _fullTranslog_txt             = new JTextField();
-	private JLabel           _oldestOpenTran_lbl           = new JLabel();
-	private JTextField       _oldestOpenTran_txt           = new JTextField();
-	
-	private JLabel           _bootcount_lbl                = new JLabel();
-	private JTextField       _bootcount_txt                = new JTextField();
-	private JLabel           _recoveryState_lbl            = new JLabel();
-	private JTextField       _recoveryState_txt            = new JTextField();
-
-	private JLabel           _cpuTime_lbl                  = new JLabel();
-	private JTextField       _cpuTime_txt                  = new JTextField();
-	private JLabel           _cpuUser_lbl                  = new JLabel();
-	private JTextField       _cpuUser_txt                  = new JTextField();
-	private JLabel           _cpuSystem_lbl                = new JLabel();
-	private JTextField       _cpuSystem_txt                = new JTextField();
-	private JLabel           _cpuIdle_lbl                  = new JLabel();
-	private JTextField       _cpuIdle_txt                  = new JTextField();
-
-	private JLabel           _ioTotalRead_lbl               = new JLabel();
-	private JTextField       _ioTotalRead_txt               = new JTextField();
-	private JTextField       _ioTotalReadDiff_txt           = new JTextField();
-	private JLabel           _ioTotalWrite_lbl              = new JLabel();
-	private JTextField       _ioTotalWrite_txt              = new JTextField();
-	private JTextField       _ioTotalWriteDiff_txt          = new JTextField();
-
-	private JLabel           _aaConnections_lbl             = new JLabel();
-	private JTextField       _aaConnectionsAbs_txt          = new JTextField();
-	private JTextField       _aaConnectionsDiff_txt         = new JTextField();
-	private JTextField       _aaConnectionsRate_txt         = new JTextField();
-
-	private JLabel           _packReceived_lbl              = new JLabel();
-	private JTextField       _packReceived_txt              = new JTextField();
-	private JTextField       _packReceivedDiff_txt          = new JTextField();
-	private JLabel           _packSent_lbl                  = new JLabel();
-	private JTextField       _packSent_txt                  = new JTextField();
-	private JTextField       _packSentDiff_txt              = new JTextField();
-	private JLabel           _packetErrors_lbl              = new JLabel();
-	private JTextField       _packetErrors_txt              = new JTextField();
-	private JTextField       _packetErrorsDiff_txt          = new JTextField();
-	private JLabel           _totalErrors_lbl               = new JLabel();
-	private JTextField       _totalErrors_txt               = new JTextField();
-	private JTextField       _totalErrorsDiff_txt           = new JTextField();
+//	private JTextField       _checkPoints_txt              = new JTextField();
+//	private JLabel           _checkPoints_lbl              = new JLabel();
+//	private JTextField       _numDeadlocks_txt             = new JTextField();
+//	private JTextField       _numDeadlocksDiff_txt         = new JTextField();
+//	private JLabel           _numDeadlocks_lbl             = new JLabel();
+//	private JTextField       _diagnosticDumps_txt          = new JTextField();
+//	private JLabel           _diagnosticDumps_lbl          = new JLabel();
+//	private JTextField       _connectionsDiff_txt          = new JTextField();
+//	private JTextField       _connections_txt              = new JTextField();
+//	private JLabel           _connections_lbl              = new JLabel();
+//	private JTextField       _distinctLoginsDiff_txt       = new JTextField();
+//	private JTextField       _distinctLoginsAbs_txt        = new JTextField();
+//	private JLabel           _distinctLogins_lbl           = new JLabel();
+//	private JTextField       _lockWaitThreshold_txt        = new JTextField();
+//	private JLabel           _lockWaitThreshold_lbl        = new JLabel();
+//	private JTextField       _lockWaits_txt                = new JTextField();
+//	private JTextField       _lockWaitsDiff_txt            = new JTextField();
+//	private JLabel           _lockWaits_lbl                = new JLabel();
+//	private JTextField       _maxRecovery_txt              = new JTextField();
+//	private JLabel           _maxRecovery_lbl              = new JLabel();
+//	private JLabel           _Transactions_lbl             = new JLabel();
+//	private JTextField       _Transactions_Abs_txt         = new JTextField();
+//	private JTextField       _Transactions_Diff_txt        = new JTextField();
+//	private JTextField       _Transactions_Rate_txt        = new JTextField();
+//	private JLabel           _Rollbacks_lbl                = new JLabel();
+//	private JTextField       _Rollbacks_Abs_txt            = new JTextField();
+//	private JTextField       _Rollbacks_Diff_txt           = new JTextField();
+//	private JTextField       _Rollbacks_Rate_txt           = new JTextField();
+//	private JLabel           _Selects_lbl                  = new JLabel();
+//	private JTextField       _Selects_Abs_txt              = new JTextField();
+//	private JTextField       _Selects_Diff_txt             = new JTextField();
+//	private JTextField       _Selects_Rate_txt             = new JTextField();
+//	private JLabel           _Updates_lbl                  = new JLabel();
+//	private JTextField       _Updates_Abs_txt              = new JTextField();
+//	private JTextField       _Updates_Diff_txt             = new JTextField();
+//	private JTextField       _Updates_Rate_txt             = new JTextField();
+//	private JLabel           _Inserts_lbl                  = new JLabel();
+//	private JTextField       _Inserts_Abs_txt              = new JTextField();
+//	private JTextField       _Inserts_Diff_txt             = new JTextField();
+//	private JTextField       _Inserts_Rate_txt             = new JTextField();
+//	private JLabel           _Deletes_lbl                  = new JLabel();
+//	private JTextField       _Deletes_Abs_txt              = new JTextField();
+//	private JTextField       _Deletes_Diff_txt             = new JTextField();
+//	private JTextField       _Deletes_Rate_txt             = new JTextField();
+//	private JLabel           _Merges_lbl                   = new JLabel();
+//	private JTextField       _Merges_Abs_txt               = new JTextField();
+//	private JTextField       _Merges_Diff_txt              = new JTextField();
+//	private JTextField       _Merges_Rate_txt              = new JTextField();
+//	private JLabel           _TableAccesses_lbl            = new JLabel();
+//	private JTextField       _TableAccesses_Abs_txt        = new JTextField();
+//	private JTextField       _TableAccesses_Diff_txt       = new JTextField();
+//	private JTextField       _TableAccesses_Rate_txt       = new JTextField();
+//	private JLabel           _IndexAccesses_lbl            = new JLabel();
+//	private JTextField       _IndexAccesses_Abs_txt        = new JTextField();
+//	private JTextField       _IndexAccesses_Diff_txt       = new JTextField();
+//	private JTextField       _IndexAccesses_Rate_txt       = new JTextField();
+//	private JLabel           _TempDbObjects_lbl            = new JLabel();
+//	private JTextField       _TempDbObjects_Abs_txt        = new JTextField();
+//	private JTextField       _TempDbObjects_Diff_txt       = new JTextField();
+//	private JTextField       _TempDbObjects_Rate_txt       = new JTextField();
+//	private JLabel           _WorkTables_lbl               = new JLabel();
+//	private JTextField       _WorkTables_Abs_txt           = new JTextField();
+//	private JTextField       _WorkTables_Diff_txt          = new JTextField();
+//	private JTextField       _WorkTables_Rate_txt          = new JTextField();
+//	private JLabel           _ULCFlushes_lbl               = new JLabel();
+//	private JTextField       _ULCFlushes_Abs_txt           = new JTextField();
+//	private JTextField       _ULCFlushes_Diff_txt          = new JTextField();
+//	private JTextField       _ULCFlushes_Rate_txt          = new JTextField();
+//	private JLabel           _ULCFlushFull_lbl             = new JLabel();
+//	private JTextField       _ULCFlushFull_Abs_txt         = new JTextField();
+//	private JTextField       _ULCFlushFull_Diff_txt        = new JTextField();
+//	private JTextField       _ULCFlushFull_Rate_txt        = new JTextField();
+//	private JLabel           _ULCKBWritten_lbl             = new JLabel();
+//	private JTextField       _ULCKBWritten_Abs_txt         = new JTextField();
+//	private JTextField       _ULCKBWritten_Diff_txt        = new JTextField();
+//	private JTextField       _ULCKBWritten_Rate_txt        = new JTextField();
+//	private JLabel           _PagesRead_lbl                = new JLabel();
+//	private JTextField       _PagesRead_Abs_txt            = new JTextField();
+//	private JTextField       _PagesRead_Diff_txt           = new JTextField();
+//	private JTextField       _PagesRead_Rate_txt           = new JTextField();
+//	private JLabel           _PagesWritten_lbl             = new JLabel();
+//	private JTextField       _PagesWritten_Abs_txt         = new JTextField();
+//	private JTextField       _PagesWritten_Diff_txt        = new JTextField();
+//	private JTextField       _PagesWritten_Rate_txt        = new JTextField();
+//	private JLabel           _PhysicalReads_lbl            = new JLabel();
+//	private JTextField       _PhysicalReads_Abs_txt        = new JTextField();
+//	private JTextField       _PhysicalReads_Diff_txt       = new JTextField();
+//	private JTextField       _PhysicalReads_Rate_txt       = new JTextField();
+//	private JLabel           _PhysicalWrites_lbl           = new JLabel();
+//	private JTextField       _PhysicalWrites_Abs_txt       = new JTextField();
+//	private JTextField       _PhysicalWrites_Diff_txt      = new JTextField();
+//	private JTextField       _PhysicalWrites_Rate_txt      = new JTextField();
+//	private JLabel           _LogicalReads_lbl             = new JLabel();
+//	private JTextField       _LogicalReads_Abs_txt         = new JTextField();
+//	private JTextField       _LogicalReads_Diff_txt        = new JTextField();
+//	private JTextField       _LogicalReads_Rate_txt        = new JTextField();
+//	private JLabel           _fullTranslog_lbl             = new JLabel();
+//	private JTextField       _fullTranslog_txt             = new JTextField();
+//	private JLabel           _oldestOpenTran_lbl           = new JLabel();
+//	private JTextField       _oldestOpenTran_txt           = new JTextField();
+//	
+//	private JLabel           _bootcount_lbl                = new JLabel();
+//	private JTextField       _bootcount_txt                = new JTextField();
+//	private JLabel           _recoveryState_lbl            = new JLabel();
+//	private JTextField       _recoveryState_txt            = new JTextField();
+//
+//	private JLabel           _cpuTime_lbl                  = new JLabel();
+//	private JTextField       _cpuTime_txt                  = new JTextField();
+//	private JLabel           _cpuUser_lbl                  = new JLabel();
+//	private JTextField       _cpuUser_txt                  = new JTextField();
+//	private JLabel           _cpuSystem_lbl                = new JLabel();
+//	private JTextField       _cpuSystem_txt                = new JTextField();
+//	private JLabel           _cpuIdle_lbl                  = new JLabel();
+//	private JTextField       _cpuIdle_txt                  = new JTextField();
+//
+//	private JLabel           _ioTotalRead_lbl               = new JLabel();
+//	private JTextField       _ioTotalRead_txt               = new JTextField();
+//	private JTextField       _ioTotalReadDiff_txt           = new JTextField();
+//	private JLabel           _ioTotalWrite_lbl              = new JLabel();
+//	private JTextField       _ioTotalWrite_txt              = new JTextField();
+//	private JTextField       _ioTotalWriteDiff_txt          = new JTextField();
+//
+//	private JLabel           _aaConnections_lbl             = new JLabel();
+//	private JTextField       _aaConnectionsAbs_txt          = new JTextField();
+//	private JTextField       _aaConnectionsDiff_txt         = new JTextField();
+//	private JTextField       _aaConnectionsRate_txt         = new JTextField();
+//
+//	private JLabel           _packReceived_lbl              = new JLabel();
+//	private JTextField       _packReceived_txt              = new JTextField();
+//	private JTextField       _packReceivedDiff_txt          = new JTextField();
+//	private JLabel           _packSent_lbl                  = new JLabel();
+//	private JTextField       _packSent_txt                  = new JTextField();
+//	private JTextField       _packSentDiff_txt              = new JTextField();
+//	private JLabel           _packetErrors_lbl              = new JLabel();
+//	private JTextField       _packetErrors_txt              = new JTextField();
+//	private JTextField       _packetErrorsDiff_txt          = new JTextField();
+//	private JLabel           _totalErrors_lbl               = new JLabel();
+//	private JTextField       _totalErrors_txt               = new JTextField();
+//	private JTextField       _totalErrorsDiff_txt           = new JTextField();
 	
 	private static final Color NON_CONFIGURED_MONITORING_COLOR = new Color(255, 224, 115);
 	private HashMap<String, String> _originToolTip = new HashMap<String, String>(); // <name><msg>
@@ -280,6 +280,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	/** Color to be used when counters is cleared is used */
 	private static final Color COUNTERS_CLEARED_COLOR = Color.ORANGE;
 	
+	private static final JTextField DUMMY_TEXTFIELD = new JTextField();
+	private static final Font       RATE_FONT       = new Font(DUMMY_TEXTFIELD.getFont().getFontName(), Font.ITALIC, DUMMY_TEXTFIELD.getFont().getSize());
+
 	@Override
 	public String getName()
 	{
@@ -423,7 +426,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		String tooltip = "";
 
 		tooltip = "The name we used when "+Version.getAppName()+" connected to the server, meaning name in sql.ini or interfaces ";
-		_localServerName_lbl  .setText("Local server name");
+//		_localServerName_lbl  .setText("Local server name");
+		_localServerName_lbl  .setText("Connection Info");
 		_localServerName_lbl  .setToolTipText(tooltip);
 		_localServerName_txt  .setToolTipText(tooltip);
 		_localServerName_txt  .setEditable(false);
@@ -500,7 +504,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_raAction_txt         .setEditable(false);
 
 
-		tooltip = "Number of LTL Commands Sent to Replication Server from the RA (abs, diff, rate)";
+
+		tooltip = "<html>Number of LTL Commands Sent to Replication Server from the RA (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip        .put    ("Number of LTL commands sent", tooltip);
 		_ltlSentToRs_lbl      .setText("LTL Cmds Sent");
 		_ltlSentToRs_lbl      .setToolTipText(tooltip);
@@ -510,8 +515,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlSentToRs_Diff_txt .setToolTipText(tooltip);
 		_ltlSentToRs_Rate_txt .setEditable(false);
 		_ltlSentToRs_Rate_txt .setToolTipText(tooltip);
+		_ltlSentToRs_Diff_txt.setForeground(Color.BLUE);
+		_ltlSentToRs_Rate_txt.setForeground(Color.BLUE);
+		_ltlSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "Total Log Operations Scanned (abs, diff, rate)";
+		tooltip = "<html>Total Log Operations Scanned (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip        .put    ("Total operations scanned", tooltip);
 		_lrScanned_lbl        .setText("Log Op Scanned");
 		_lrScanned_lbl        .setToolTipText(tooltip);
@@ -521,8 +529,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lrScanned_Diff_txt   .setToolTipText(tooltip);
 		_lrScanned_Rate_txt   .setEditable(false);
 		_lrScanned_Rate_txt   .setToolTipText(tooltip);
+		_lrScanned_Diff_txt.setForeground(Color.BLUE);
+		_lrScanned_Rate_txt.setForeground(Color.BLUE);
+		_lrScanned_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "Total Transactions processed (abs, diff, rate)";
+		tooltip = "<html>Total Transactions processed (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total transactions processed", tooltip);
 		_lrTranProcessed_lbl      .setText("Tran Processed");
 		_lrTranProcessed_lbl      .setToolTipText(tooltip);
@@ -532,8 +543,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lrTranProcessed_Diff_txt .setToolTipText(tooltip);
 		_lrTranProcessed_Rate_txt .setEditable(false);
 		_lrTranProcessed_Rate_txt .setToolTipText(tooltip);
+		_lrTranProcessed_Diff_txt.setForeground(Color.BLUE);
+		_lrTranProcessed_Rate_txt.setForeground(Color.BLUE);
+		_lrTranProcessed_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "Bytes Sent by the RepAgent to RepServer (abs, diff, rate)";
+		tooltip = "<html>Bytes Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent", tooltip);
 		_ltlBytesSentToRs_lbl      .setText("Bytes Sent to RS");
 		_ltlBytesSentToRs_lbl      .setToolTipText(tooltip);
@@ -543,8 +557,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlBytesSentToRs_Diff_txt .setToolTipText(tooltip);
 		_ltlBytesSentToRs_Rate_txt .setEditable(false);
 		_ltlBytesSentToRs_Rate_txt .setToolTipText(tooltip);
+		_ltlBytesSentToRs_Diff_txt.setForeground(Color.BLUE);
+		_ltlBytesSentToRs_Rate_txt.setForeground(Color.BLUE);
+		_ltlBytesSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "KB Sent by the RepAgent to RepServer (abs, diff, rate)";
+		tooltip = "<html>KB Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent - KB", tooltip);
 		_ltlKbSentToRs_lbl      .setText("KB Sent to RS");
 		_ltlKbSentToRs_lbl      .setToolTipText(tooltip);
@@ -554,8 +571,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlKbSentToRs_Diff_txt .setToolTipText(tooltip);
 		_ltlKbSentToRs_Rate_txt .setEditable(false);
 		_ltlKbSentToRs_Rate_txt .setToolTipText(tooltip);
+		_ltlKbSentToRs_Diff_txt.setForeground(Color.BLUE);
+		_ltlKbSentToRs_Rate_txt.setForeground(Color.BLUE);
+		_ltlKbSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "MB Sent by the RepAgent to RepServer (abs, diff, rate)";
+		tooltip = "<html>MB Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent - MB", tooltip);
 		_ltlMbSentToRs_lbl      .setText("MB Sent to RS");
 		_ltlMbSentToRs_lbl      .setToolTipText(tooltip);
@@ -565,385 +585,458 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlMbSentToRs_Diff_txt .setToolTipText(tooltip);
 		_ltlMbSentToRs_Rate_txt .setEditable(false);
 		_ltlMbSentToRs_Rate_txt .setToolTipText(tooltip);
+		_ltlMbSentToRs_Diff_txt.setForeground(Color.BLUE);
+		_ltlMbSentToRs_Rate_txt.setForeground(Color.BLUE);
+		_ltlMbSentToRs_Rate_txt.setFont(RATE_FONT);
 		
 		
 		
-		tooltip = "Whether any checkpoint is currently running.";
-		_checkPoints_lbl      .setText("Running checkpoint");
-		_checkPoints_lbl      .setToolTipText(tooltip);
-		_checkPoints_txt      .setToolTipText(tooltip);
-		_checkPoints_txt      .setEditable(false);
-
-		tooltip = "Total number of deadlocks that have occurred.";
-		_numDeadlocks_lbl     .setText("Number of deadlock");
-		_numDeadlocks_lbl     .setToolTipText(tooltip);
-		_numDeadlocks_txt     .setToolTipText(tooltip);
-		_numDeadlocks_txt     .setEditable(false);
-		_numDeadlocksDiff_txt .setEditable(false);
-		_numDeadlocksDiff_txt .setToolTipText("The difference since previous sample.");
-
-		tooltip = "Whether the Sybmon diagnostic utility is performing a shared memory dump.";
-		_diagnosticDumps_lbl  .setText("Diagnostics Dumps");
-		_diagnosticDumps_lbl  .setToolTipText(tooltip);
-		_diagnosticDumps_txt  .setToolTipText(tooltip);
-		_diagnosticDumps_txt  .setEditable(false);
-
-		tooltip = "Number of active inbound connections.";
-		_connections_lbl      .setText("Connections");
-		_connections_lbl      .setToolTipText(tooltip);
-		_connections_txt      .setToolTipText(tooltip);
-		_connections_txt      .setEditable(false);
-		_connectionsDiff_txt  .setEditable(false);
-		_connectionsDiff_txt  .setToolTipText("The difference since previous sample.");
-
-		tooltip = "Number of distinct User Names that is logged in to ASE.";
-		_distinctLogins_lbl    .setText("Distinct Logins");
-		_distinctLogins_lbl    .setToolTipText(tooltip);
-		_distinctLoginsAbs_txt .setToolTipText(tooltip);
-		_distinctLoginsAbs_txt .setEditable(false);
-		_distinctLoginsDiff_txt.setEditable(false);
-		_distinctLoginsDiff_txt.setToolTipText("The difference since previous sample.");
-
-		tooltip = "Time (in seconds) that processes must have waited for locks in order to be reported.";
-		_lockWaitThreshold_lbl.setText("Lock wait threshold");
-		_lockWaitThreshold_lbl.setToolTipText(tooltip);
-		_lockWaitThreshold_txt.setToolTipText(tooltip);
-		_lockWaitThreshold_txt.setEditable(false);
-
-		tooltip = "Number of processes that have waited longer than LockWaitThreshold seconds.";
-		_lockWaits_lbl        .setText("Lock waits");
-		_lockWaits_lbl        .setToolTipText(tooltip);
-		_lockWaits_txt        .setToolTipText(tooltip);
-		_lockWaits_txt        .setEditable(false);
-		_lockWaitsDiff_txt    .setEditable(false);
-		_lockWaitsDiff_txt    .setToolTipText("The difference since previous sample.");
-
-		tooltip = "The maximum time (in minutes), per database, that ASE uses to complete its recovery procedures in case of a system failure, the current 'Run Value' for the 'recovery interval in minutes' configuration option.";
-		_maxRecovery_lbl      .setText("Max recovery");
-		_maxRecovery_lbl      .setToolTipText(tooltip);
-		_maxRecovery_txt      .setToolTipText(tooltip);
-		_maxRecovery_txt      .setEditable(false);
-		
-		tooltip = "Number of transactions executed (abs, diff, rate), Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).";
-		_originToolTip        .put    ("Transactions", tooltip);
-		_Transactions_lbl     .setText("Transactions");
-		_Transactions_lbl     .setToolTipText(tooltip);
-		_Transactions_Abs_txt .setToolTipText(tooltip);
-		_Transactions_Abs_txt .setEditable(false);
-		_Transactions_Diff_txt.setEditable(false);
-		_Transactions_Diff_txt.setToolTipText(tooltip);
-		_Transactions_Rate_txt.setEditable(false);
-		_Transactions_Rate_txt.setToolTipText(tooltip);
-		
-		tooltip = "Total number of transactions that have been rolled back on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip      .put    ("Rollbacks", tooltip);
-		_Rollbacks_lbl      .setText("Rollbacks");
-		_Rollbacks_lbl      .setToolTipText(tooltip);
-		_Rollbacks_Abs_txt  .setToolTipText(tooltip);
-		_Rollbacks_Abs_txt  .setEditable(false);
-		_Rollbacks_Diff_txt .setEditable(false);
-		_Rollbacks_Diff_txt .setToolTipText(tooltip);
-		_Rollbacks_Rate_txt .setEditable(false);
-		_Rollbacks_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of select operations that have been executed on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip    .put    ("Selects", tooltip);
-		_Selects_lbl      .setText("Selects");
-		_Selects_lbl      .setToolTipText(tooltip);
-		_Selects_Abs_txt  .setToolTipText(tooltip);
-		_Selects_Abs_txt  .setEditable(false);
-		_Selects_Diff_txt .setEditable(false);
-		_Selects_Diff_txt .setToolTipText(tooltip);
-		_Selects_Rate_txt .setEditable(false);
-		_Selects_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of update operations that have been executed on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip    .put    ("Updates", tooltip);
-		_Updates_lbl      .setText("Updates");
-		_Updates_lbl      .setToolTipText(tooltip);
-		_Updates_Abs_txt  .setToolTipText(tooltip);
-		_Updates_Abs_txt  .setEditable(false);
-		_Updates_Diff_txt .setEditable(false);
-		_Updates_Diff_txt .setToolTipText(tooltip);
-		_Updates_Rate_txt .setEditable(false);
-		_Updates_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of insert operations that have been executed on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip    .put    ("Inserts", tooltip);
-		_Inserts_lbl      .setText("Inserts");
-		_Inserts_lbl      .setToolTipText(tooltip);
-		_Inserts_Abs_txt  .setToolTipText(tooltip);
-		_Inserts_Abs_txt  .setEditable(false);
-		_Inserts_Diff_txt .setEditable(false);
-		_Inserts_Diff_txt .setToolTipText(tooltip);
-		_Inserts_Rate_txt .setEditable(false);
-		_Inserts_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of delete operations that have been executed on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip    .put    ("Deletes", tooltip);
-		_Deletes_lbl      .setText("Deletes");
-		_Deletes_lbl      .setToolTipText(tooltip);
-		_Deletes_Abs_txt  .setToolTipText(tooltip);
-		_Deletes_Abs_txt  .setEditable(false);
-		_Deletes_Diff_txt .setEditable(false);
-		_Deletes_Diff_txt .setToolTipText(tooltip);
-		_Deletes_Rate_txt .setEditable(false);
-		_Deletes_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of merge operations that have been executed on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip   .put    ("Merges", tooltip);
-		_Merges_lbl      .setText("Merges");
-		_Merges_lbl      .setToolTipText(tooltip);
-		_Merges_Abs_txt  .setToolTipText(tooltip);
-		_Merges_Abs_txt  .setEditable(false);
-		_Merges_Diff_txt .setEditable(false);
-		_Merges_Diff_txt .setToolTipText(tooltip);
-		_Merges_Rate_txt .setEditable(false);
-		_Merges_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of pages where data was retrieved without an index on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip          .put    ("TableAccesses", tooltip);
-		_TableAccesses_lbl      .setText("TableAccesses");
-		_TableAccesses_lbl      .setToolTipText(tooltip);
-		_TableAccesses_Abs_txt  .setToolTipText(tooltip);
-		_TableAccesses_Abs_txt  .setEditable(false);
-		_TableAccesses_Diff_txt .setEditable(false);
-		_TableAccesses_Diff_txt .setToolTipText(tooltip);
-		_TableAccesses_Rate_txt .setEditable(false);
-		_TableAccesses_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of pages where data was retrieved using an index on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip          .put    ("IndexAccesses", tooltip);
-		_IndexAccesses_lbl      .setText("IndexAccesses");
-		_IndexAccesses_lbl      .setToolTipText(tooltip);
-		_IndexAccesses_Abs_txt  .setToolTipText(tooltip);
-		_IndexAccesses_Abs_txt  .setEditable(false);
-		_IndexAccesses_Diff_txt .setEditable(false);
-		_IndexAccesses_Diff_txt .setToolTipText(tooltip);
-		_IndexAccesses_Rate_txt .setEditable(false);
-		_IndexAccesses_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of temporary tables created on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip          .put    ("TempDbObjects", tooltip);
-		_TempDbObjects_lbl      .setText("TempDbObjects");
-		_TempDbObjects_lbl      .setToolTipText(tooltip);
-		_TempDbObjects_Abs_txt  .setToolTipText(tooltip);
-		_TempDbObjects_Abs_txt  .setEditable(false);
-		_TempDbObjects_Diff_txt .setEditable(false);
-		_TempDbObjects_Diff_txt .setToolTipText(tooltip);
-		_TempDbObjects_Rate_txt .setEditable(false);
-		_TempDbObjects_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of work tables created on the server, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip       .put    ("WorkTables", tooltip);
-		_WorkTables_lbl      .setText("WorkTables");
-		_WorkTables_lbl      .setToolTipText(tooltip);
-		_WorkTables_Abs_txt  .setToolTipText(tooltip);
-		_WorkTables_Abs_txt  .setEditable(false);
-		_WorkTables_Diff_txt .setEditable(false);
-		_WorkTables_Diff_txt .setToolTipText(tooltip);
-		_WorkTables_Rate_txt .setEditable(false);
-		_WorkTables_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total number of times the User Log Cache was flushed, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip       .put    ("ULCFlushes", tooltip);
-		_ULCFlushes_lbl      .setText("ULCFlushes");
-		_ULCFlushes_lbl      .setToolTipText(tooltip);
-		_ULCFlushes_Abs_txt  .setToolTipText(tooltip);
-		_ULCFlushes_Abs_txt  .setEditable(false);
-		_ULCFlushes_Diff_txt .setEditable(false);
-		_ULCFlushes_Diff_txt .setToolTipText(tooltip);
-		_ULCFlushes_Rate_txt .setEditable(false);
-		_ULCFlushes_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of times the User Log Cache was flushed because it was full, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip         .put    ("ULCFlushFull", tooltip);
-		_ULCFlushFull_lbl      .setText("ULCFlushFull");
-		_ULCFlushFull_lbl      .setToolTipText(tooltip);
-		_ULCFlushFull_Abs_txt  .setToolTipText(tooltip);
-		_ULCFlushFull_Abs_txt  .setEditable(false);
-		_ULCFlushFull_Diff_txt .setEditable(false);
-		_ULCFlushFull_Diff_txt .setToolTipText(tooltip);
-		_ULCFlushFull_Rate_txt .setEditable(false);
-		_ULCFlushFull_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of kilobytes written to the user log cache, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip         .put    ("ULCKBWritten", tooltip);
-		_ULCKBWritten_lbl      .setText("ULCKBWritten");
-		_ULCKBWritten_lbl      .setToolTipText(tooltip);
-		_ULCKBWritten_Abs_txt  .setToolTipText(tooltip);
-		_ULCKBWritten_Abs_txt  .setEditable(false);
-		_ULCKBWritten_Diff_txt .setEditable(false);
-		_ULCKBWritten_Diff_txt .setToolTipText(tooltip);
-		_ULCKBWritten_Rate_txt .setEditable(false);
-		_ULCKBWritten_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of pages read on server wide, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip      .put    ("PagesRead", tooltip);
-		_PagesRead_lbl      .setText("PagesRead");
-		_PagesRead_lbl      .setToolTipText(tooltip);
-		_PagesRead_Abs_txt  .setToolTipText(tooltip);
-		_PagesRead_Abs_txt  .setEditable(false);
-		_PagesRead_Diff_txt .setEditable(false);
-		_PagesRead_Diff_txt .setToolTipText(tooltip);
-		_PagesRead_Rate_txt .setEditable(false);
-		_PagesRead_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of pages written on server wide, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip         .put    ("PagesWritten", tooltip);
-		_PagesWritten_lbl      .setText("PagesWritten");
-		_PagesWritten_lbl      .setToolTipText(tooltip);
-		_PagesWritten_Abs_txt  .setToolTipText(tooltip);
-		_PagesWritten_Abs_txt  .setEditable(false);
-		_PagesWritten_Diff_txt .setEditable(false);
-		_PagesWritten_Diff_txt .setToolTipText(tooltip);
-		_PagesWritten_Rate_txt .setEditable(false);
-		_PagesWritten_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of buffers read from the disk, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip          .put    ("PhysicalReads", tooltip);
-		_PhysicalReads_lbl      .setText("PhysicalReads");
-		_PhysicalReads_lbl      .setToolTipText(tooltip);
-		_PhysicalReads_Abs_txt  .setToolTipText(tooltip);
-		_PhysicalReads_Abs_txt  .setEditable(false);
-		_PhysicalReads_Diff_txt .setEditable(false);
-		_PhysicalReads_Diff_txt .setToolTipText(tooltip);
-		_PhysicalReads_Rate_txt .setEditable(false);
-		_PhysicalReads_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of buffers written to the disk, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip           .put    ("PhysicalWrites", tooltip);
-		_PhysicalWrites_lbl      .setText("PhysicalWrites");
-		_PhysicalWrites_lbl      .setToolTipText(tooltip);
-		_PhysicalWrites_Abs_txt  .setToolTipText(tooltip);
-		_PhysicalWrites_Abs_txt  .setEditable(false);
-		_PhysicalWrites_Diff_txt .setEditable(false);
-		_PhysicalWrites_Diff_txt .setToolTipText(tooltip);
-		_PhysicalWrites_Rate_txt .setEditable(false);
-		_PhysicalWrites_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of buffers read from cache, (abs, diff, rate). Only available from ASE 15.7 SP100.";
-		_originToolTip         .put    ("LogicalReads", tooltip);
-		_LogicalReads_lbl      .setText("LogicalReads");
-		_LogicalReads_lbl      .setToolTipText(tooltip);
-		_LogicalReads_Abs_txt  .setToolTipText(tooltip);
-		_LogicalReads_Abs_txt  .setEditable(false);
-		_LogicalReads_Diff_txt .setEditable(false);
-		_LogicalReads_Diff_txt .setToolTipText(tooltip);
-		_LogicalReads_Rate_txt .setEditable(false);
-		_LogicalReads_Rate_txt .setToolTipText(tooltip);
-
-		tooltip = "Number of databases that has a full transaction log, which probably means suspended SPID's.";
-		_fullTranslog_lbl.setText("Full Transaction Logs");
-		_fullTranslog_lbl.setToolTipText(tooltip);
-		_fullTranslog_txt.setToolTipText(tooltip);
-		_fullTranslog_txt.setEditable(false);
-
-//		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
-//				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
-//				"<br>" +
-//				"<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>";
-		_oldestOpenTran_lbl.setText("Oldest Open Tran");
-		_oldestOpenTran_lbl.setToolTipText(tooltip);
-		_oldestOpenTran_txt.setToolTipText(tooltip);
-		_oldestOpenTran_txt.setEditable(false);
-
-		
-		
-		tooltip = "How many times has this ASE been rebooted.";
-		_bootcount_lbl      .setText("Boot Count");
-		_bootcount_lbl      .setToolTipText(tooltip);
-		_bootcount_txt      .setToolTipText(tooltip);
-		_bootcount_txt      .setEditable(false);
-
-		tooltip = "If the ASE is in-recovery, this would be the reason.";
-		_recoveryState_lbl      .setText("Recovery State");
-		_recoveryState_lbl      .setToolTipText(tooltip);
-		_recoveryState_txt      .setToolTipText(tooltip);
-		_recoveryState_txt      .setEditable(false);
-
-		tooltip = "CPU Time. Global variable @@cpu_busy + @@io_busy.";
-//		_cpuTime_lbl      .setText("CPU Usage");
-		_cpuTime_lbl      .setText("CPU Time/User/Sys");
-		_cpuTime_lbl      .setToolTipText(tooltip);
-		_cpuTime_txt      .setToolTipText(tooltip);
-		_cpuTime_txt      .setEditable(false);
-
-		tooltip = "CPU Busy. Global variable @@cpu_busy.";
-		_cpuUser_lbl      .setText("CPU User");
-		_cpuUser_lbl      .setToolTipText(tooltip);
-		_cpuUser_txt      .setToolTipText(tooltip);
-		_cpuUser_txt      .setEditable(false);
-
-		tooltip = "CPU spent in IO. Global variable @@io_busy.";
-		_cpuSystem_lbl      .setText("CPU System");
-		_cpuSystem_lbl      .setToolTipText(tooltip);
-		_cpuSystem_txt      .setToolTipText(tooltip);
-		_cpuSystem_txt      .setEditable(false);
-
-		tooltip = "CPU Idle. Global variable @@idle.";
-		_cpuIdle_lbl      .setText("CPU Idle");
-		_cpuIdle_lbl      .setToolTipText(tooltip);
-		_cpuIdle_txt      .setToolTipText(tooltip);
-		_cpuIdle_txt      .setEditable(false);
-
-		tooltip = "Total Read IO's. Global variable @@total_read.";
-		_ioTotalRead_lbl      .setText("IO Read");
-		_ioTotalRead_lbl      .setToolTipText(tooltip);
-		_ioTotalRead_txt      .setToolTipText(tooltip);
-		_ioTotalRead_txt      .setEditable(false);
-		_ioTotalReadDiff_txt  .setEditable(false);
-		_ioTotalReadDiff_txt  .setToolTipText(tooltip);
-
-		tooltip = "Total Write IO's. Global variable @@total_write.";
-		_ioTotalWrite_lbl      .setText("IO Write");
-		_ioTotalWrite_lbl      .setToolTipText(tooltip);
-		_ioTotalWrite_txt      .setToolTipText(tooltip);
-		_ioTotalWrite_txt      .setEditable(false);
-		_ioTotalWriteDiff_txt  .setEditable(false);
-		_ioTotalWriteDiff_txt  .setToolTipText(tooltip);
-
-		tooltip = "Total Connection that was attemped to make to the ASE Server, even those that failes. Global variable @@connections. (abs/diff/rate)";
-		_aaConnections_lbl     .setText("Connections Tried");
-		_aaConnections_lbl     .setToolTipText(tooltip);
-		_aaConnectionsAbs_txt  .setEditable(false);
-		_aaConnectionsAbs_txt  .setToolTipText(tooltip);
-		_aaConnectionsDiff_txt .setEditable(false);
-		_aaConnectionsDiff_txt .setToolTipText(tooltip);
-		_aaConnectionsRate_txt .setEditable(false);
-		_aaConnectionsRate_txt .setToolTipText(tooltip);
-
-		tooltip = "Total Network Packets Received. Global variable @@pack_received.";
-		_packReceived_lbl      .setText("NW Packet Received");
-		_packReceived_lbl      .setToolTipText(tooltip);
-		_packReceived_txt      .setToolTipText(tooltip);
-		_packReceived_txt      .setEditable(false);
-		_packReceivedDiff_txt  .setEditable(false);
-		_packReceivedDiff_txt  .setToolTipText(tooltip);
-
-		tooltip = "Total Network Packets Sent. Global variable @@pack_sent.";
-		_packSent_lbl      .setText("NW Packet Sent");
-		_packSent_lbl      .setToolTipText(tooltip);
-		_packSent_txt      .setToolTipText(tooltip);
-		_packSent_txt      .setEditable(false);
-		_packSentDiff_txt  .setEditable(false);
-		_packSentDiff_txt  .setToolTipText(tooltip);
-
-		tooltip = "Total Network Packets Errors. Global variable @@packet_errors.";
-		_packetErrors_lbl      .setText("NW Packet Errors");
-		_packetErrors_lbl      .setToolTipText(tooltip);
-		_packetErrors_txt      .setToolTipText(tooltip);
-		_packetErrors_txt      .setEditable(false);
-		_packetErrorsDiff_txt  .setEditable(false);
-		_packetErrorsDiff_txt  .setToolTipText(tooltip);
-
-		tooltip = "Total Errors. Global variable @@total_errors.";
-		_totalErrors_lbl      .setText("Total Errors");
-		_totalErrors_lbl      .setToolTipText(tooltip);
-		_totalErrors_txt      .setToolTipText(tooltip);
-		_totalErrors_txt      .setEditable(false);
-		_totalErrorsDiff_txt  .setEditable(false);
-		_totalErrorsDiff_txt  .setToolTipText(tooltip);
+//		tooltip = "Whether any checkpoint is currently running.";
+//		_checkPoints_lbl      .setText("Running checkpoint");
+//		_checkPoints_lbl      .setToolTipText(tooltip);
+//		_checkPoints_txt      .setToolTipText(tooltip);
+//		_checkPoints_txt      .setEditable(false);
+//
+//		tooltip = "Total number of deadlocks that have occurred.";
+//		_numDeadlocks_lbl     .setText("Number of deadlock");
+//		_numDeadlocks_lbl     .setToolTipText(tooltip);
+//		_numDeadlocks_txt     .setToolTipText(tooltip);
+//		_numDeadlocks_txt     .setEditable(false);
+//		_numDeadlocksDiff_txt .setEditable(false);
+//		_numDeadlocksDiff_txt .setToolTipText("The difference since previous sample.");
+//		_numDeadlocksDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Whether the Sybmon diagnostic utility is performing a shared memory dump.";
+//		_diagnosticDumps_lbl  .setText("Diagnostics Dumps");
+//		_diagnosticDumps_lbl  .setToolTipText(tooltip);
+//		_diagnosticDumps_txt  .setToolTipText(tooltip);
+//		_diagnosticDumps_txt  .setEditable(false);
+//
+//		tooltip = "Number of active inbound connections.";
+//		_connections_lbl      .setText("Connections");
+//		_connections_lbl      .setToolTipText(tooltip);
+//		_connections_txt      .setToolTipText(tooltip);
+//		_connections_txt      .setEditable(false);
+//		_connectionsDiff_txt  .setEditable(false);
+//		_connectionsDiff_txt  .setToolTipText("The difference since previous sample.");
+//		_connectionsDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Number of distinct User Names that is logged in to ASE.";
+//		_distinctLogins_lbl    .setText("Distinct Logins");
+//		_distinctLogins_lbl    .setToolTipText(tooltip);
+//		_distinctLoginsAbs_txt .setToolTipText(tooltip);
+//		_distinctLoginsAbs_txt .setEditable(false);
+//		_distinctLoginsDiff_txt.setEditable(false);
+//		_distinctLoginsDiff_txt.setToolTipText("The difference since previous sample.");
+//		_distinctLoginsDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Time (in seconds) that processes must have waited for locks in order to be reported.";
+//		_lockWaitThreshold_lbl.setText("Lock wait threshold");
+//		_lockWaitThreshold_lbl.setToolTipText(tooltip);
+//		_lockWaitThreshold_txt.setToolTipText(tooltip);
+//		_lockWaitThreshold_txt.setEditable(false);
+//
+//		tooltip = "Number of processes that have waited longer than LockWaitThreshold seconds.";
+//		_lockWaits_lbl        .setText("Lock waits");
+//		_lockWaits_lbl        .setToolTipText(tooltip);
+//		_lockWaits_txt        .setToolTipText(tooltip);
+//		_lockWaits_txt        .setEditable(false);
+//		_lockWaitsDiff_txt    .setEditable(false);
+//		_lockWaitsDiff_txt    .setToolTipText("The difference since previous sample.");
+//		_lockWaitsDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "The maximum time (in minutes), per database, that ASE uses to complete its recovery procedures in case of a system failure, the current 'Run Value' for the 'recovery interval in minutes' configuration option.";
+//		_maxRecovery_lbl      .setText("Max recovery");
+//		_maxRecovery_lbl      .setToolTipText(tooltip);
+//		_maxRecovery_txt      .setToolTipText(tooltip);
+//		_maxRecovery_txt      .setEditable(false);
+//		
+//		tooltip = "<html>Number of transactions executed (abs, <font color=\"blue\">diff, <i>rate</i></font>), Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).";
+//		_originToolTip        .put    ("Transactions", tooltip);
+//		_Transactions_lbl     .setText("Transactions");
+//		_Transactions_lbl     .setToolTipText(tooltip);
+//		_Transactions_Abs_txt .setToolTipText(tooltip);
+//		_Transactions_Abs_txt .setEditable(false);
+//		_Transactions_Diff_txt.setEditable(false);
+//		_Transactions_Diff_txt.setToolTipText(tooltip);
+//		_Transactions_Rate_txt.setEditable(false);
+//		_Transactions_Rate_txt.setToolTipText(tooltip);
+//		_Transactions_Diff_txt.setForeground(Color.BLUE);
+//		_Transactions_Rate_txt.setForeground(Color.BLUE);
+//		_Transactions_Rate_txt.setFont(RATE_FONT);
+//		
+//		tooltip = "<html>Total number of transactions that have been rolled back on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip      .put    ("Rollbacks", tooltip);
+//		_Rollbacks_lbl      .setText("Rollbacks");
+//		_Rollbacks_lbl      .setToolTipText(tooltip);
+//		_Rollbacks_Abs_txt  .setToolTipText(tooltip);
+//		_Rollbacks_Abs_txt  .setEditable(false);
+//		_Rollbacks_Diff_txt .setEditable(false);
+//		_Rollbacks_Diff_txt .setToolTipText(tooltip);
+//		_Rollbacks_Rate_txt .setEditable(false);
+//		_Rollbacks_Rate_txt .setToolTipText(tooltip);
+//		_Rollbacks_Diff_txt.setForeground(Color.BLUE);
+//		_Rollbacks_Rate_txt.setForeground(Color.BLUE);
+//		_Rollbacks_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of select operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip    .put    ("Selects", tooltip);
+//		_Selects_lbl      .setText("Selects");
+//		_Selects_lbl      .setToolTipText(tooltip);
+//		_Selects_Abs_txt  .setToolTipText(tooltip);
+//		_Selects_Abs_txt  .setEditable(false);
+//		_Selects_Diff_txt .setEditable(false);
+//		_Selects_Diff_txt .setToolTipText(tooltip);
+//		_Selects_Rate_txt .setEditable(false);
+//		_Selects_Rate_txt .setToolTipText(tooltip);
+//		_Selects_Diff_txt.setForeground(Color.BLUE);
+//		_Selects_Rate_txt.setForeground(Color.BLUE);
+//		_Selects_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of update operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip    .put    ("Updates", tooltip);
+//		_Updates_lbl      .setText("Updates");
+//		_Updates_lbl      .setToolTipText(tooltip);
+//		_Updates_Abs_txt  .setToolTipText(tooltip);
+//		_Updates_Abs_txt  .setEditable(false);
+//		_Updates_Diff_txt .setEditable(false);
+//		_Updates_Diff_txt .setToolTipText(tooltip);
+//		_Updates_Rate_txt .setEditable(false);
+//		_Updates_Rate_txt .setToolTipText(tooltip);
+//		_Updates_Diff_txt.setForeground(Color.BLUE);
+//		_Updates_Rate_txt.setForeground(Color.BLUE);
+//		_Updates_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of insert operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip    .put    ("Inserts", tooltip);
+//		_Inserts_lbl      .setText("Inserts");
+//		_Inserts_lbl      .setToolTipText(tooltip);
+//		_Inserts_Abs_txt  .setToolTipText(tooltip);
+//		_Inserts_Abs_txt  .setEditable(false);
+//		_Inserts_Diff_txt .setEditable(false);
+//		_Inserts_Diff_txt .setToolTipText(tooltip);
+//		_Inserts_Rate_txt .setEditable(false);
+//		_Inserts_Rate_txt .setToolTipText(tooltip);
+//		_Inserts_Diff_txt.setForeground(Color.BLUE);
+//		_Inserts_Rate_txt.setForeground(Color.BLUE);
+//		_Inserts_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of delete operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip    .put    ("Deletes", tooltip);
+//		_Deletes_lbl      .setText("Deletes");
+//		_Deletes_lbl      .setToolTipText(tooltip);
+//		_Deletes_Abs_txt  .setToolTipText(tooltip);
+//		_Deletes_Abs_txt  .setEditable(false);
+//		_Deletes_Diff_txt .setEditable(false);
+//		_Deletes_Diff_txt .setToolTipText(tooltip);
+//		_Deletes_Rate_txt .setEditable(false);
+//		_Deletes_Rate_txt .setToolTipText(tooltip);
+//		_Deletes_Diff_txt.setForeground(Color.BLUE);
+//		_Deletes_Rate_txt.setForeground(Color.BLUE);
+//		_Deletes_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of merge operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip   .put    ("Merges", tooltip);
+//		_Merges_lbl      .setText("Merges");
+//		_Merges_lbl      .setToolTipText(tooltip);
+//		_Merges_Abs_txt  .setToolTipText(tooltip);
+//		_Merges_Abs_txt  .setEditable(false);
+//		_Merges_Diff_txt .setEditable(false);
+//		_Merges_Diff_txt .setToolTipText(tooltip);
+//		_Merges_Rate_txt .setEditable(false);
+//		_Merges_Rate_txt .setToolTipText(tooltip);
+//		_Merges_Diff_txt.setForeground(Color.BLUE);
+//		_Merges_Rate_txt.setForeground(Color.BLUE);
+//		_Merges_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of pages where data was retrieved without an index on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip          .put    ("TableAccesses", tooltip);
+//		_TableAccesses_lbl      .setText("TableAccesses");
+//		_TableAccesses_lbl      .setToolTipText(tooltip);
+//		_TableAccesses_Abs_txt  .setToolTipText(tooltip);
+//		_TableAccesses_Abs_txt  .setEditable(false);
+//		_TableAccesses_Diff_txt .setEditable(false);
+//		_TableAccesses_Diff_txt .setToolTipText(tooltip);
+//		_TableAccesses_Rate_txt .setEditable(false);
+//		_TableAccesses_Rate_txt .setToolTipText(tooltip);
+//		_TableAccesses_Diff_txt.setForeground(Color.BLUE);
+//		_TableAccesses_Rate_txt.setForeground(Color.BLUE);
+//		_TableAccesses_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of pages where data was retrieved using an index on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip          .put    ("IndexAccesses", tooltip);
+//		_IndexAccesses_lbl      .setText("IndexAccesses");
+//		_IndexAccesses_lbl      .setToolTipText(tooltip);
+//		_IndexAccesses_Abs_txt  .setToolTipText(tooltip);
+//		_IndexAccesses_Abs_txt  .setEditable(false);
+//		_IndexAccesses_Diff_txt .setEditable(false);
+//		_IndexAccesses_Diff_txt .setToolTipText(tooltip);
+//		_IndexAccesses_Rate_txt .setEditable(false);
+//		_IndexAccesses_Rate_txt .setToolTipText(tooltip);
+//		_IndexAccesses_Diff_txt.setForeground(Color.BLUE);
+//		_IndexAccesses_Rate_txt.setForeground(Color.BLUE);
+//		_IndexAccesses_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of temporary tables created on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip          .put    ("TempDbObjects", tooltip);
+//		_TempDbObjects_lbl      .setText("TempDbObjects");
+//		_TempDbObjects_lbl      .setToolTipText(tooltip);
+//		_TempDbObjects_Abs_txt  .setToolTipText(tooltip);
+//		_TempDbObjects_Abs_txt  .setEditable(false);
+//		_TempDbObjects_Diff_txt .setEditable(false);
+//		_TempDbObjects_Diff_txt .setToolTipText(tooltip);
+//		_TempDbObjects_Rate_txt .setEditable(false);
+//		_TempDbObjects_Rate_txt .setToolTipText(tooltip);
+//		_TempDbObjects_Diff_txt.setForeground(Color.BLUE);
+//		_TempDbObjects_Rate_txt.setForeground(Color.BLUE);
+//		_TempDbObjects_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of work tables created on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip       .put    ("WorkTables", tooltip);
+//		_WorkTables_lbl      .setText("WorkTables");
+//		_WorkTables_lbl      .setToolTipText(tooltip);
+//		_WorkTables_Abs_txt  .setToolTipText(tooltip);
+//		_WorkTables_Abs_txt  .setEditable(false);
+//		_WorkTables_Diff_txt .setEditable(false);
+//		_WorkTables_Diff_txt .setToolTipText(tooltip);
+//		_WorkTables_Rate_txt .setEditable(false);
+//		_WorkTables_Rate_txt .setToolTipText(tooltip);
+//		_WorkTables_Diff_txt.setForeground(Color.BLUE);
+//		_WorkTables_Rate_txt.setForeground(Color.BLUE);
+//		_WorkTables_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Total number of times the User Log Cache was flushed, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip       .put    ("ULCFlushes", tooltip);
+//		_ULCFlushes_lbl      .setText("ULCFlushes");
+//		_ULCFlushes_lbl      .setToolTipText(tooltip);
+//		_ULCFlushes_Abs_txt  .setToolTipText(tooltip);
+//		_ULCFlushes_Abs_txt  .setEditable(false);
+//		_ULCFlushes_Diff_txt .setEditable(false);
+//		_ULCFlushes_Diff_txt .setToolTipText(tooltip);
+//		_ULCFlushes_Rate_txt .setEditable(false);
+//		_ULCFlushes_Rate_txt .setToolTipText(tooltip);
+//		_ULCFlushes_Diff_txt.setForeground(Color.BLUE);
+//		_ULCFlushes_Rate_txt.setForeground(Color.BLUE);
+//		_ULCFlushes_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of times the User Log Cache was flushed because it was full, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip         .put    ("ULCFlushFull", tooltip);
+//		_ULCFlushFull_lbl      .setText("ULCFlushFull");
+//		_ULCFlushFull_lbl      .setToolTipText(tooltip);
+//		_ULCFlushFull_Abs_txt  .setToolTipText(tooltip);
+//		_ULCFlushFull_Abs_txt  .setEditable(false);
+//		_ULCFlushFull_Diff_txt .setEditable(false);
+//		_ULCFlushFull_Diff_txt .setToolTipText(tooltip);
+//		_ULCFlushFull_Rate_txt .setEditable(false);
+//		_ULCFlushFull_Rate_txt .setToolTipText(tooltip);
+//		_ULCFlushFull_Diff_txt.setForeground(Color.BLUE);
+//		_ULCFlushFull_Rate_txt.setForeground(Color.BLUE);
+//		_ULCFlushFull_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of kilobytes written to the user log cache, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip         .put    ("ULCKBWritten", tooltip);
+//		_ULCKBWritten_lbl      .setText("ULCKBWritten");
+//		_ULCKBWritten_lbl      .setToolTipText(tooltip);
+//		_ULCKBWritten_Abs_txt  .setToolTipText(tooltip);
+//		_ULCKBWritten_Abs_txt  .setEditable(false);
+//		_ULCKBWritten_Diff_txt .setEditable(false);
+//		_ULCKBWritten_Diff_txt .setToolTipText(tooltip);
+//		_ULCKBWritten_Rate_txt .setEditable(false);
+//		_ULCKBWritten_Rate_txt .setToolTipText(tooltip);
+//		_ULCKBWritten_Diff_txt.setForeground(Color.BLUE);
+//		_ULCKBWritten_Rate_txt.setForeground(Color.BLUE);
+//		_ULCKBWritten_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of pages read on server wide, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip      .put    ("PagesRead", tooltip);
+//		_PagesRead_lbl      .setText("PagesRead");
+//		_PagesRead_lbl      .setToolTipText(tooltip);
+//		_PagesRead_Abs_txt  .setToolTipText(tooltip);
+//		_PagesRead_Abs_txt  .setEditable(false);
+//		_PagesRead_Diff_txt .setEditable(false);
+//		_PagesRead_Diff_txt .setToolTipText(tooltip);
+//		_PagesRead_Rate_txt .setEditable(false);
+//		_PagesRead_Rate_txt .setToolTipText(tooltip);
+//		_PagesRead_Diff_txt.setForeground(Color.BLUE);
+//		_PagesRead_Rate_txt.setForeground(Color.BLUE);
+//		_PagesRead_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of pages written on server wide, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip         .put    ("PagesWritten", tooltip);
+//		_PagesWritten_lbl      .setText("PagesWritten");
+//		_PagesWritten_lbl      .setToolTipText(tooltip);
+//		_PagesWritten_Abs_txt  .setToolTipText(tooltip);
+//		_PagesWritten_Abs_txt  .setEditable(false);
+//		_PagesWritten_Diff_txt .setEditable(false);
+//		_PagesWritten_Diff_txt .setToolTipText(tooltip);
+//		_PagesWritten_Rate_txt .setEditable(false);
+//		_PagesWritten_Rate_txt .setToolTipText(tooltip);
+//		_PagesWritten_Diff_txt.setForeground(Color.BLUE);
+//		_PagesWritten_Rate_txt.setForeground(Color.BLUE);
+//		_PagesWritten_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of buffers read from the disk, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip          .put    ("PhysicalReads", tooltip);
+//		_PhysicalReads_lbl      .setText("PhysicalReads");
+//		_PhysicalReads_lbl      .setToolTipText(tooltip);
+//		_PhysicalReads_Abs_txt  .setToolTipText(tooltip);
+//		_PhysicalReads_Abs_txt  .setEditable(false);
+//		_PhysicalReads_Diff_txt .setEditable(false);
+//		_PhysicalReads_Diff_txt .setToolTipText(tooltip);
+//		_PhysicalReads_Rate_txt .setEditable(false);
+//		_PhysicalReads_Rate_txt .setToolTipText(tooltip);
+//		_PhysicalReads_Diff_txt.setForeground(Color.BLUE);
+//		_PhysicalReads_Rate_txt.setForeground(Color.BLUE);
+//		_PhysicalReads_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of buffers written to the disk, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip           .put    ("PhysicalWrites", tooltip);
+//		_PhysicalWrites_lbl      .setText("PhysicalWrites");
+//		_PhysicalWrites_lbl      .setToolTipText(tooltip);
+//		_PhysicalWrites_Abs_txt  .setToolTipText(tooltip);
+//		_PhysicalWrites_Abs_txt  .setEditable(false);
+//		_PhysicalWrites_Diff_txt .setEditable(false);
+//		_PhysicalWrites_Diff_txt .setToolTipText(tooltip);
+//		_PhysicalWrites_Rate_txt .setEditable(false);
+//		_PhysicalWrites_Rate_txt .setToolTipText(tooltip);
+//		_PhysicalWrites_Diff_txt.setForeground(Color.BLUE);
+//		_PhysicalWrites_Rate_txt.setForeground(Color.BLUE);
+//		_PhysicalWrites_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "<html>Number of buffers read from cache, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		_originToolTip         .put    ("LogicalReads", tooltip);
+//		_LogicalReads_lbl      .setText("LogicalReads");
+//		_LogicalReads_lbl      .setToolTipText(tooltip);
+//		_LogicalReads_Abs_txt  .setToolTipText(tooltip);
+//		_LogicalReads_Abs_txt  .setEditable(false);
+//		_LogicalReads_Diff_txt .setEditable(false);
+//		_LogicalReads_Diff_txt .setToolTipText(tooltip);
+//		_LogicalReads_Rate_txt .setEditable(false);
+//		_LogicalReads_Rate_txt .setToolTipText(tooltip);
+//		_LogicalReads_Diff_txt.setForeground(Color.BLUE);
+//		_LogicalReads_Rate_txt.setForeground(Color.BLUE);
+//		_LogicalReads_Rate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "Number of databases that has a full transaction log, which probably means suspended SPID's.";
+//		_fullTranslog_lbl.setText("Full Transaction Logs");
+//		_fullTranslog_lbl.setToolTipText(tooltip);
+//		_fullTranslog_txt.setToolTipText(tooltip);
+//		_fullTranslog_txt.setEditable(false);
+//
+////		tooltip = "<html>Oldest Open Transaction in any database, presented in seconds.<br>" +
+////				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+////				"<br>" +
+////				"<b>Note</b>: if value is -99, this means that you did not have access to the 'master..syslogshold' table.</html>";
+//		_oldestOpenTran_lbl.setText("Oldest Open Tran");
+//		_oldestOpenTran_lbl.setToolTipText(tooltip);
+//		_oldestOpenTran_txt.setToolTipText(tooltip);
+//		_oldestOpenTran_txt.setEditable(false);
+//
+//		
+//		
+//		tooltip = "How many times has this ASE been rebooted.";
+//		_bootcount_lbl      .setText("Boot Count");
+//		_bootcount_lbl      .setToolTipText(tooltip);
+//		_bootcount_txt      .setToolTipText(tooltip);
+//		_bootcount_txt      .setEditable(false);
+//
+//		tooltip = "If the ASE is in-recovery, this would be the reason.";
+//		_recoveryState_lbl      .setText("Recovery State");
+//		_recoveryState_lbl      .setToolTipText(tooltip);
+//		_recoveryState_txt      .setToolTipText(tooltip);
+//		_recoveryState_txt      .setEditable(false);
+//
+//		tooltip = "CPU Time. Global variable @@cpu_busy + @@io_busy.";
+////		_cpuTime_lbl      .setText("CPU Usage");
+//		_cpuTime_lbl      .setText("CPU Time/User/Sys");
+//		_cpuTime_lbl      .setToolTipText(tooltip);
+//		_cpuTime_txt      .setToolTipText(tooltip);
+//		_cpuTime_txt      .setEditable(false);
+//
+//		tooltip = "CPU Busy. Global variable @@cpu_busy.";
+//		_cpuUser_lbl      .setText("CPU User");
+//		_cpuUser_lbl      .setToolTipText(tooltip);
+//		_cpuUser_txt      .setToolTipText(tooltip);
+//		_cpuUser_txt      .setEditable(false);
+//
+//		tooltip = "CPU spent in IO. Global variable @@io_busy.";
+//		_cpuSystem_lbl      .setText("CPU System");
+//		_cpuSystem_lbl      .setToolTipText(tooltip);
+//		_cpuSystem_txt      .setToolTipText(tooltip);
+//		_cpuSystem_txt      .setEditable(false);
+//
+//		tooltip = "CPU Idle. Global variable @@idle.";
+//		_cpuIdle_lbl      .setText("CPU Idle");
+//		_cpuIdle_lbl      .setToolTipText(tooltip);
+//		_cpuIdle_txt      .setToolTipText(tooltip);
+//		_cpuIdle_txt      .setEditable(false);
+//
+//		tooltip = "Total Read IO's. Global variable @@total_read.";
+//		_ioTotalRead_lbl      .setText("IO Read");
+//		_ioTotalRead_lbl      .setToolTipText(tooltip);
+//		_ioTotalRead_txt      .setToolTipText(tooltip);
+//		_ioTotalRead_txt      .setEditable(false);
+//		_ioTotalReadDiff_txt  .setEditable(false);
+//		_ioTotalReadDiff_txt  .setToolTipText(tooltip);
+//		_ioTotalReadDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Total Write IO's. Global variable @@total_write.";
+//		_ioTotalWrite_lbl      .setText("IO Write");
+//		_ioTotalWrite_lbl      .setToolTipText(tooltip);
+//		_ioTotalWrite_txt      .setToolTipText(tooltip);
+//		_ioTotalWrite_txt      .setEditable(false);
+//		_ioTotalWriteDiff_txt  .setEditable(false);
+//		_ioTotalWriteDiff_txt  .setToolTipText(tooltip);
+//		_ioTotalWriteDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "<html>Total Connection that was attemped to make to the ASE Server, even those that failes. Global variable @@connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+//		_aaConnections_lbl     .setText("Connections Tried");
+//		_aaConnections_lbl     .setToolTipText(tooltip);
+//		_aaConnectionsAbs_txt  .setEditable(false);
+//		_aaConnectionsAbs_txt  .setToolTipText(tooltip);
+//		_aaConnectionsDiff_txt .setEditable(false);
+//		_aaConnectionsDiff_txt .setToolTipText(tooltip);
+//		_aaConnectionsRate_txt .setEditable(false);
+//		_aaConnectionsRate_txt .setToolTipText(tooltip);
+//		_aaConnectionsDiff_txt.setForeground(Color.BLUE);
+//		_aaConnectionsRate_txt.setForeground(Color.BLUE);
+//		_aaConnectionsRate_txt.setFont(RATE_FONT);
+//
+//		tooltip = "Total Network Packets Received. Global variable @@pack_received.";
+//		_packReceived_lbl      .setText("NW Packet Received");
+//		_packReceived_lbl      .setToolTipText(tooltip);
+//		_packReceived_txt      .setToolTipText(tooltip);
+//		_packReceived_txt      .setEditable(false);
+//		_packReceivedDiff_txt  .setEditable(false);
+//		_packReceivedDiff_txt  .setToolTipText(tooltip);
+//		_packReceivedDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Total Network Packets Sent. Global variable @@pack_sent.";
+//		_packSent_lbl      .setText("NW Packet Sent");
+//		_packSent_lbl      .setToolTipText(tooltip);
+//		_packSent_txt      .setToolTipText(tooltip);
+//		_packSent_txt      .setEditable(false);
+//		_packSentDiff_txt  .setEditable(false);
+//		_packSentDiff_txt  .setToolTipText(tooltip);
+//		_packSentDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Total Network Packets Errors. Global variable @@packet_errors.";
+//		_packetErrors_lbl      .setText("NW Packet Errors");
+//		_packetErrors_lbl      .setToolTipText(tooltip);
+//		_packetErrors_txt      .setToolTipText(tooltip);
+//		_packetErrors_txt      .setEditable(false);
+//		_packetErrorsDiff_txt  .setEditable(false);
+//		_packetErrorsDiff_txt  .setToolTipText(tooltip);
+//		_packetErrorsDiff_txt.setForeground(Color.BLUE);
+//
+//		tooltip = "Total Errors. Global variable @@total_errors.";
+//		_totalErrors_lbl      .setText("Total Errors");
+//		_totalErrors_lbl      .setToolTipText(tooltip);
+//		_totalErrors_txt      .setToolTipText(tooltip);
+//		_totalErrors_txt      .setEditable(false);
+//		_totalErrorsDiff_txt  .setEditable(false);
+//		_totalErrorsDiff_txt  .setToolTipText(tooltip);
+//		_totalErrorsDiff_txt.setForeground(Color.BLUE);
 
 		
 		//--------------------------
@@ -1242,81 +1335,81 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 
 		
-		_Transactions_Abs_txt   .setVisible(showAbs); 
-		_Transactions_Diff_txt  .setVisible(showDiff);
-		_Transactions_Rate_txt  .setVisible(showRate);
-
-		_Rollbacks_Abs_txt      .setVisible(showAbs);
-		_Rollbacks_Diff_txt     .setVisible(showDiff);
-		_Rollbacks_Rate_txt     .setVisible(showRate);
-
-		_Selects_Abs_txt        .setVisible(showAbs);
-		_Selects_Diff_txt       .setVisible(showDiff);
-		_Selects_Rate_txt       .setVisible(showRate);
-
-		_Updates_Abs_txt        .setVisible(showAbs);
-		_Updates_Diff_txt       .setVisible(showDiff);
-		_Updates_Rate_txt       .setVisible(showRate);
-
-		_Inserts_Abs_txt        .setVisible(showAbs);
-		_Inserts_Diff_txt       .setVisible(showDiff);
-		_Inserts_Rate_txt       .setVisible(showRate);
-
-		_Deletes_Abs_txt        .setVisible(showAbs);
-		_Deletes_Diff_txt       .setVisible(showDiff);
-		_Deletes_Rate_txt       .setVisible(showRate);
-
-		_Merges_Abs_txt         .setVisible(showAbs);
-		_Merges_Diff_txt        .setVisible(showDiff);
-		_Merges_Rate_txt        .setVisible(showRate);
-
-		_TableAccesses_Abs_txt  .setVisible(showAbs);
-		_TableAccesses_Diff_txt .setVisible(showDiff);
-		_TableAccesses_Rate_txt .setVisible(showRate);
-
-		_IndexAccesses_Abs_txt  .setVisible(showAbs);
-		_IndexAccesses_Diff_txt .setVisible(showDiff);
-		_IndexAccesses_Rate_txt .setVisible(showRate);
-
-		_TempDbObjects_Abs_txt  .setVisible(showAbs);
-		_TempDbObjects_Diff_txt .setVisible(showDiff);
-		_TempDbObjects_Rate_txt .setVisible(showRate);
-
-		_WorkTables_Abs_txt     .setVisible(showAbs);
-		_WorkTables_Diff_txt    .setVisible(showDiff);
-		_WorkTables_Rate_txt    .setVisible(showRate);
-
-		_ULCFlushes_Abs_txt     .setVisible(showAbs);
-		_ULCFlushes_Diff_txt    .setVisible(showDiff);
-		_ULCFlushes_Rate_txt    .setVisible(showRate);
-
-		_ULCFlushFull_Abs_txt   .setVisible(showAbs);
-		_ULCFlushFull_Diff_txt  .setVisible(showDiff);
-		_ULCFlushFull_Rate_txt  .setVisible(showRate);
-
-		_ULCKBWritten_Abs_txt   .setVisible(showAbs);
-		_ULCKBWritten_Diff_txt  .setVisible(showDiff);
-		_ULCKBWritten_Rate_txt  .setVisible(showRate);
-
-		_PagesRead_Abs_txt      .setVisible(showAbs);
-		_PagesRead_Diff_txt     .setVisible(showDiff);
-		_PagesRead_Rate_txt     .setVisible(showRate);
-
-		_PagesWritten_Abs_txt   .setVisible(showAbs);
-		_PagesWritten_Diff_txt  .setVisible(showDiff);
-		_PagesWritten_Rate_txt  .setVisible(showRate);
-
-		_PhysicalReads_Abs_txt  .setVisible(showAbs);
-		_PhysicalReads_Diff_txt .setVisible(showDiff);
-		_PhysicalReads_Rate_txt .setVisible(showRate);
-
-		_PhysicalWrites_Abs_txt .setVisible(showAbs);
-		_PhysicalWrites_Diff_txt.setVisible(showDiff);
-		_PhysicalWrites_Rate_txt.setVisible(showRate);
-
-		_LogicalReads_Abs_txt   .setVisible(showAbs);
-		_LogicalReads_Diff_txt  .setVisible(showDiff);
-		_LogicalReads_Rate_txt  .setVisible(showRate);
+//		_Transactions_Abs_txt   .setVisible(showAbs); 
+//		_Transactions_Diff_txt  .setVisible(showDiff);
+//		_Transactions_Rate_txt  .setVisible(showRate);
+//
+//		_Rollbacks_Abs_txt      .setVisible(showAbs);
+//		_Rollbacks_Diff_txt     .setVisible(showDiff);
+//		_Rollbacks_Rate_txt     .setVisible(showRate);
+//
+//		_Selects_Abs_txt        .setVisible(showAbs);
+//		_Selects_Diff_txt       .setVisible(showDiff);
+//		_Selects_Rate_txt       .setVisible(showRate);
+//
+//		_Updates_Abs_txt        .setVisible(showAbs);
+//		_Updates_Diff_txt       .setVisible(showDiff);
+//		_Updates_Rate_txt       .setVisible(showRate);
+//
+//		_Inserts_Abs_txt        .setVisible(showAbs);
+//		_Inserts_Diff_txt       .setVisible(showDiff);
+//		_Inserts_Rate_txt       .setVisible(showRate);
+//
+//		_Deletes_Abs_txt        .setVisible(showAbs);
+//		_Deletes_Diff_txt       .setVisible(showDiff);
+//		_Deletes_Rate_txt       .setVisible(showRate);
+//
+//		_Merges_Abs_txt         .setVisible(showAbs);
+//		_Merges_Diff_txt        .setVisible(showDiff);
+//		_Merges_Rate_txt        .setVisible(showRate);
+//
+//		_TableAccesses_Abs_txt  .setVisible(showAbs);
+//		_TableAccesses_Diff_txt .setVisible(showDiff);
+//		_TableAccesses_Rate_txt .setVisible(showRate);
+//
+//		_IndexAccesses_Abs_txt  .setVisible(showAbs);
+//		_IndexAccesses_Diff_txt .setVisible(showDiff);
+//		_IndexAccesses_Rate_txt .setVisible(showRate);
+//
+//		_TempDbObjects_Abs_txt  .setVisible(showAbs);
+//		_TempDbObjects_Diff_txt .setVisible(showDiff);
+//		_TempDbObjects_Rate_txt .setVisible(showRate);
+//
+//		_WorkTables_Abs_txt     .setVisible(showAbs);
+//		_WorkTables_Diff_txt    .setVisible(showDiff);
+//		_WorkTables_Rate_txt    .setVisible(showRate);
+//
+//		_ULCFlushes_Abs_txt     .setVisible(showAbs);
+//		_ULCFlushes_Diff_txt    .setVisible(showDiff);
+//		_ULCFlushes_Rate_txt    .setVisible(showRate);
+//
+//		_ULCFlushFull_Abs_txt   .setVisible(showAbs);
+//		_ULCFlushFull_Diff_txt  .setVisible(showDiff);
+//		_ULCFlushFull_Rate_txt  .setVisible(showRate);
+//
+//		_ULCKBWritten_Abs_txt   .setVisible(showAbs);
+//		_ULCKBWritten_Diff_txt  .setVisible(showDiff);
+//		_ULCKBWritten_Rate_txt  .setVisible(showRate);
+//
+//		_PagesRead_Abs_txt      .setVisible(showAbs);
+//		_PagesRead_Diff_txt     .setVisible(showDiff);
+//		_PagesRead_Rate_txt     .setVisible(showRate);
+//
+//		_PagesWritten_Abs_txt   .setVisible(showAbs);
+//		_PagesWritten_Diff_txt  .setVisible(showDiff);
+//		_PagesWritten_Rate_txt  .setVisible(showRate);
+//
+//		_PhysicalReads_Abs_txt  .setVisible(showAbs);
+//		_PhysicalReads_Diff_txt .setVisible(showDiff);
+//		_PhysicalReads_Rate_txt .setVisible(showRate);
+//
+//		_PhysicalWrites_Abs_txt .setVisible(showAbs);
+//		_PhysicalWrites_Diff_txt.setVisible(showDiff);
+//		_PhysicalWrites_Rate_txt.setVisible(showRate);
+//
+//		_LogicalReads_Abs_txt   .setVisible(showAbs);
+//		_LogicalReads_Diff_txt  .setVisible(showDiff);
+//		_LogicalReads_Rate_txt  .setVisible(showRate);
 	}
 
 	private TrendGraphDashboardPanel createGraphPanel() 
@@ -1760,119 +1853,119 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_raState_txt            .setText("");
 		_raAction_txt           .setText("");
 
-		_checkPoints_txt        .setText("");
-		_numDeadlocks_txt       .setText("");
-		_numDeadlocksDiff_txt   .setText("");
-		_diagnosticDumps_txt    .setText("");
-		_connections_txt        .setText("");
-		_connectionsDiff_txt    .setText("");
-		_distinctLoginsAbs_txt  .setText("");
-		_distinctLoginsDiff_txt .setText("");
-		_lockWaitThreshold_txt  .setText("");
-		_lockWaits_txt          .setText("");
-		_lockWaitsDiff_txt      .setText("");
-		_maxRecovery_txt        .setText("");
-
-		_Transactions_Abs_txt   .setText("");
-		_Transactions_Diff_txt  .setText("");
-		_Transactions_Rate_txt  .setText("");
-
-		_Rollbacks_Abs_txt      .setText("");
-		_Rollbacks_Diff_txt     .setText("");
-		_Rollbacks_Rate_txt     .setText("");
-
-		_Selects_Abs_txt        .setText("");
-		_Selects_Diff_txt       .setText("");
-		_Selects_Rate_txt       .setText("");
-
-		_Updates_Abs_txt        .setText("");
-		_Updates_Diff_txt       .setText("");
-		_Updates_Rate_txt       .setText("");
-
-		_Inserts_Abs_txt        .setText("");
-		_Inserts_Diff_txt       .setText("");
-		_Inserts_Rate_txt       .setText("");
-
-		_Deletes_Abs_txt        .setText("");
-		_Deletes_Diff_txt       .setText("");
-		_Deletes_Rate_txt       .setText("");
-
-		_Merges_Abs_txt         .setText("");
-		_Merges_Diff_txt        .setText("");
-		_Merges_Rate_txt        .setText("");
-
-		_TableAccesses_Abs_txt  .setText("");
-		_TableAccesses_Diff_txt .setText("");
-		_TableAccesses_Rate_txt .setText("");
-
-		_IndexAccesses_Abs_txt  .setText("");
-		_IndexAccesses_Diff_txt .setText("");
-		_IndexAccesses_Rate_txt .setText("");
-
-		_TempDbObjects_Abs_txt  .setText("");
-		_TempDbObjects_Diff_txt .setText("");
-		_TempDbObjects_Rate_txt .setText("");
-
-		_WorkTables_Abs_txt     .setText("");
-		_WorkTables_Diff_txt    .setText("");
-		_WorkTables_Rate_txt    .setText("");
-
-		_ULCFlushes_Abs_txt     .setText("");
-		_ULCFlushes_Diff_txt    .setText("");
-		_ULCFlushes_Rate_txt    .setText("");
-
-		_ULCFlushFull_Abs_txt   .setText("");
-		_ULCFlushFull_Diff_txt  .setText("");
-		_ULCFlushFull_Rate_txt  .setText("");
-
-		_ULCKBWritten_Abs_txt   .setText("");
-		_ULCKBWritten_Diff_txt  .setText("");
-		_ULCKBWritten_Rate_txt  .setText("");
-
-		_PagesRead_Abs_txt      .setText("");
-		_PagesRead_Diff_txt     .setText("");
-		_PagesRead_Rate_txt     .setText("");
-
-		_PagesWritten_Abs_txt   .setText("");
-		_PagesWritten_Diff_txt  .setText("");
-		_PagesWritten_Rate_txt  .setText("");
-
-		_PhysicalReads_Abs_txt  .setText("");
-		_PhysicalReads_Diff_txt .setText("");
-		_PhysicalReads_Rate_txt .setText("");
-
-		_PhysicalWrites_Abs_txt .setText("");
-		_PhysicalWrites_Diff_txt.setText("");
-		_PhysicalWrites_Rate_txt.setText("");
-
-		_LogicalReads_Abs_txt   .setText("");
-		_LogicalReads_Diff_txt  .setText("");
-		_LogicalReads_Rate_txt  .setText("");
-
-		_fullTranslog_txt       .setText("");
-		_oldestOpenTran_txt     .setText("");
-		
-		_bootcount_txt          .setText("");
-		_recoveryState_txt      .setText("");
-		_cpuTime_txt            .setText("");
-		_cpuUser_txt            .setText("");
-		_cpuSystem_txt          .setText("");
-		_cpuIdle_txt            .setText("");
-		_ioTotalRead_txt        .setText("");
-		_ioTotalReadDiff_txt    .setText("");
-		_ioTotalWrite_txt       .setText("");
-		_ioTotalWriteDiff_txt   .setText("");
-		_aaConnectionsAbs_txt   .setText("");
-		_aaConnectionsDiff_txt  .setText("");
-		_aaConnectionsRate_txt  .setText("");
-		_packReceived_txt       .setText("");
-		_packReceivedDiff_txt   .setText("");
-		_packSent_txt           .setText("");
-		_packSentDiff_txt       .setText("");
-		_packetErrors_txt       .setText("");
-		_packetErrorsDiff_txt   .setText("");
-		_totalErrors_txt        .setText("");
-		_totalErrorsDiff_txt    .setText("");
+//		_checkPoints_txt        .setText("");
+//		_numDeadlocks_txt       .setText("");
+//		_numDeadlocksDiff_txt   .setText("");
+//		_diagnosticDumps_txt    .setText("");
+//		_connections_txt        .setText("");
+//		_connectionsDiff_txt    .setText("");
+//		_distinctLoginsAbs_txt  .setText("");
+//		_distinctLoginsDiff_txt .setText("");
+//		_lockWaitThreshold_txt  .setText("");
+//		_lockWaits_txt          .setText("");
+//		_lockWaitsDiff_txt      .setText("");
+//		_maxRecovery_txt        .setText("");
+//
+//		_Transactions_Abs_txt   .setText("");
+//		_Transactions_Diff_txt  .setText("");
+//		_Transactions_Rate_txt  .setText("");
+//
+//		_Rollbacks_Abs_txt      .setText("");
+//		_Rollbacks_Diff_txt     .setText("");
+//		_Rollbacks_Rate_txt     .setText("");
+//
+//		_Selects_Abs_txt        .setText("");
+//		_Selects_Diff_txt       .setText("");
+//		_Selects_Rate_txt       .setText("");
+//
+//		_Updates_Abs_txt        .setText("");
+//		_Updates_Diff_txt       .setText("");
+//		_Updates_Rate_txt       .setText("");
+//
+//		_Inserts_Abs_txt        .setText("");
+//		_Inserts_Diff_txt       .setText("");
+//		_Inserts_Rate_txt       .setText("");
+//
+//		_Deletes_Abs_txt        .setText("");
+//		_Deletes_Diff_txt       .setText("");
+//		_Deletes_Rate_txt       .setText("");
+//
+//		_Merges_Abs_txt         .setText("");
+//		_Merges_Diff_txt        .setText("");
+//		_Merges_Rate_txt        .setText("");
+//
+//		_TableAccesses_Abs_txt  .setText("");
+//		_TableAccesses_Diff_txt .setText("");
+//		_TableAccesses_Rate_txt .setText("");
+//
+//		_IndexAccesses_Abs_txt  .setText("");
+//		_IndexAccesses_Diff_txt .setText("");
+//		_IndexAccesses_Rate_txt .setText("");
+//
+//		_TempDbObjects_Abs_txt  .setText("");
+//		_TempDbObjects_Diff_txt .setText("");
+//		_TempDbObjects_Rate_txt .setText("");
+//
+//		_WorkTables_Abs_txt     .setText("");
+//		_WorkTables_Diff_txt    .setText("");
+//		_WorkTables_Rate_txt    .setText("");
+//
+//		_ULCFlushes_Abs_txt     .setText("");
+//		_ULCFlushes_Diff_txt    .setText("");
+//		_ULCFlushes_Rate_txt    .setText("");
+//
+//		_ULCFlushFull_Abs_txt   .setText("");
+//		_ULCFlushFull_Diff_txt  .setText("");
+//		_ULCFlushFull_Rate_txt  .setText("");
+//
+//		_ULCKBWritten_Abs_txt   .setText("");
+//		_ULCKBWritten_Diff_txt  .setText("");
+//		_ULCKBWritten_Rate_txt  .setText("");
+//
+//		_PagesRead_Abs_txt      .setText("");
+//		_PagesRead_Diff_txt     .setText("");
+//		_PagesRead_Rate_txt     .setText("");
+//
+//		_PagesWritten_Abs_txt   .setText("");
+//		_PagesWritten_Diff_txt  .setText("");
+//		_PagesWritten_Rate_txt  .setText("");
+//
+//		_PhysicalReads_Abs_txt  .setText("");
+//		_PhysicalReads_Diff_txt .setText("");
+//		_PhysicalReads_Rate_txt .setText("");
+//
+//		_PhysicalWrites_Abs_txt .setText("");
+//		_PhysicalWrites_Diff_txt.setText("");
+//		_PhysicalWrites_Rate_txt.setText("");
+//
+//		_LogicalReads_Abs_txt   .setText("");
+//		_LogicalReads_Diff_txt  .setText("");
+//		_LogicalReads_Rate_txt  .setText("");
+//
+//		_fullTranslog_txt       .setText("");
+//		_oldestOpenTran_txt     .setText("");
+//		
+//		_bootcount_txt          .setText("");
+//		_recoveryState_txt      .setText("");
+//		_cpuTime_txt            .setText("");
+//		_cpuUser_txt            .setText("");
+//		_cpuSystem_txt          .setText("");
+//		_cpuIdle_txt            .setText("");
+//		_ioTotalRead_txt        .setText("");
+//		_ioTotalReadDiff_txt    .setText("");
+//		_ioTotalWrite_txt       .setText("");
+//		_ioTotalWriteDiff_txt   .setText("");
+//		_aaConnectionsAbs_txt   .setText("");
+//		_aaConnectionsDiff_txt  .setText("");
+//		_aaConnectionsRate_txt  .setText("");
+//		_packReceived_txt       .setText("");
+//		_packReceivedDiff_txt   .setText("");
+//		_packSent_txt           .setText("");
+//		_packSentDiff_txt       .setText("");
+//		_packetErrors_txt       .setText("");
+//		_packetErrorsDiff_txt   .setText("");
+//		_totalErrors_txt        .setText("");
+//		_totalErrorsDiff_txt    .setText("");
 	}
 
 	@Override

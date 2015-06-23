@@ -34,7 +34,6 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.BackwardNameCompatibility;
-import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -1698,16 +1697,26 @@ implements Runnable, ConnectionProvider
 			int colSqlDataType[] = new int[cols];
 			List<String> colHead = new ArrayList<String>(cols);
 
-			// Get headers / colNames
-			for (int c=5; c<=cols; c++)
+			int     startColPos = 5;
+			boolean hasNewDiffRateRowCol = false;
+
+			// Backward compatibility... for older recordings...
+			// A new column 'CmNewDiffRateRow' was added to all ABS/RATE/DIFF tables
+			// If this column exists, inrement the start position
+			String checkCol = rsmd.getColumnLabel(startColPos);
+			if ("CmNewDiffRateRow".equalsIgnoreCase(checkCol))
 			{
-//				ha[c-4] = rsmd.getColumnLabel(c);
+				startColPos++;
+				hasNewDiffRateRowCol = true;
+			}
+			
+			// Get headers / colNames
+			for (int c=startColPos; c<=cols; c++)
+			{
 				colHead.add(rsmd.getColumnLabel(c));
 				colSqlDataType[c-1] = rsmd.getColumnType(c);
 			}
 			cm.setColumnNames(type, colHead);
-//			cm.setColumnName(type, c);
-//			cm.setColumnClass(type, c);
 
 			// Get Rows
 			while (rs.next())
@@ -1716,13 +1725,15 @@ implements Runnable, ConnectionProvider
 				Timestamp sessionSampleTime = rs.getTimestamp(2);
 				Timestamp sampleTime        = rs.getTimestamp(3);
 				int       sampleMs          = rs.getInt(4);
+				int       newDiffRateRow    = hasNewDiffRateRowCol ? rs.getInt(5) : 0;
 
 //				cm.setSampleTimeHead(sessionStartTime);
 				cm.setSampleTimeHead(sessionSampleTime);
 				cm.setSampleTime(sampleTime);
 				cm.setSampleInterval(sampleMs);
+				cm.setNewDeltaOrRateRow(row, newDiffRateRow>0);
 				
-				for (int c=5,col=0; c<=cols; c++,col++)
+				for (int c=startColPos,col=0; c<=cols; c++,col++)
 				{
 //					oa[col] = rs.getObject(c);
 					Object colVal = rs.getObject(c);
@@ -2379,19 +2390,50 @@ implements Runnable, ConnectionProvider
 		public CmCounterInfo()
 		{
 		}
-		public CmCounterInfo(CmCounterInfo copyMe)
+		public CmCounterInfo(CmCounterInfo copyMe, boolean asSamples)
 		{
 			_sessionStartTime  = copyMe._sessionStartTime;
 			_sessionSampleTime = copyMe._sessionSampleTime;
 			_cmName            = copyMe._cmName;
 			_type              = copyMe._type;
-			_graphCount        = copyMe._graphCount;
-			_absRows           = copyMe._absRows;
-			_diffRows          = copyMe._diffRows;
-			_rateRows          = copyMe._rateRows;
+			if (asSamples)
+			{
+				_graphCount += copyMe._graphCount == 0 ? 0 : 1;
+				_absRows    += copyMe._absRows    == 0 ? 0 : 1;
+				_diffRows   += copyMe._diffRows   == 0 ? 0 : 1;
+				_rateRows   += copyMe._rateRows   == 0 ? 0 : 1;
+			}
+			else
+			{
+				_graphCount += copyMe._graphCount;
+				_absRows    += copyMe._absRows;
+				_diffRows   += copyMe._diffRows;
+				_rateRows   += copyMe._rateRows;
+			}
+//			_graphCount        = copyMe._graphCount;
+//			_absRows           = copyMe._absRows;
+//			_diffRows          = copyMe._diffRows;
+//			_rateRows          = copyMe._rateRows;
 			_sqlRefreshTime    = copyMe._sqlRefreshTime;
 			_guiRefreshTime    = copyMe._guiRefreshTime;
 			_lcRefreshTime     = copyMe._lcRefreshTime;
+		}
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append("sessionStartTime='")   .append(_sessionStartTime) .append("'");
+			sb.append(", sessionSampleTime='").append(_sessionSampleTime).append("'");
+			sb.append(", cmName='")           .append(_cmName)           .append("'");
+			sb.append(", type=")              .append(_type);
+			sb.append(", graphCount=")        .append(_graphCount);
+			sb.append(", absRows=")           .append(_absRows);
+			sb.append(", diffRows=")          .append(_diffRows);
+			sb.append(", rateRows=")          .append(_rateRows);
+			sb.append(", sqlRefreshTime=")    .append(_sqlRefreshTime);
+			sb.append(", guiRefreshTime=")    .append(_guiRefreshTime);
+			sb.append(", lcRefreshTime=")     .append(_lcRefreshTime);
+			return sb.toString();
 		}
 	}
 	public static class SampleCmCounterInfo
@@ -2406,7 +2448,7 @@ implements Runnable, ConnectionProvider
 			_sessionSampleTime = sessionSampleTime;
 		}
 
-		public void merge(SampleCmCounterInfo in)
+		public void merge(SampleCmCounterInfo in, boolean asSamples)
 		{
 			if (in == null)
 				return;
@@ -2416,17 +2458,30 @@ implements Runnable, ConnectionProvider
 			{
 				String        cmName = entry.getKey();
 				CmCounterInfo cmci   = entry.getValue();
+
 				if ( ! this._ciMap.containsKey(cmName) )
 				{
-					this._ciMap.put(cmName, new CmCounterInfo(cmci));
+					this._ciMap.put(cmName, new CmCounterInfo(cmci, asSamples));
+//System.out.println("----1: cm='"+cmName+"', cmci="+cmci);
 				}
 				else
 				{
 					CmCounterInfo localCmci = this._ciMap.get(cmName);
-					localCmci._graphCount += cmci._graphCount;
-					localCmci._absRows    += cmci._absRows;
-					localCmci._diffRows   += cmci._diffRows;
-					localCmci._rateRows   += cmci._rateRows;
+//System.out.println("2: cm='"+cmName+"', localCmci="+localCmci);
+					if (asSamples)
+					{
+						localCmci._graphCount += cmci._graphCount == 0 ? 0 : 1;
+						localCmci._absRows    += cmci._absRows    == 0 ? 0 : 1;
+						localCmci._diffRows   += cmci._diffRows   == 0 ? 0 : 1;
+						localCmci._rateRows   += cmci._rateRows   == 0 ? 0 : 1;
+					}
+					else
+					{
+						localCmci._graphCount += cmci._graphCount;
+						localCmci._absRows    += cmci._absRows;
+						localCmci._diffRows   += cmci._diffRows;
+						localCmci._rateRows   += cmci._rateRows;
+					}
 
 					localCmci._sqlRefreshTime += cmci._sqlRefreshTime;
 					localCmci._guiRefreshTime += cmci._guiRefreshTime;

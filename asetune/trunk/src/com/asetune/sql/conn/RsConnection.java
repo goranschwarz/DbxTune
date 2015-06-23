@@ -6,7 +6,6 @@ import java.sql.SQLException;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRs;
 import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.RepServerUtils;
 
 public class RsConnection
 extends TdsConnection

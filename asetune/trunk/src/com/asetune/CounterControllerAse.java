@@ -71,12 +71,14 @@ import com.asetune.cm.ase.CmTempdbActivity;
 import com.asetune.cm.ase.CmThreads;
 import com.asetune.cm.ase.CmThresholdEvent;
 import com.asetune.cm.ase.CmWorkQueues;
+import com.asetune.cm.ase.ToolTipSupplierAse;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
@@ -606,5 +608,11 @@ public class CounterControllerAse extends CounterControllerAbstract
 	protected String getIsClosedSql()
 	{
 		return "select 'AseTune-check:isClosed(conn)'";
+	}
+
+	@Override
+	public ITableTooltip createCmToolTipSupplier(CountersModel cm)
+	{
+		return new ToolTipSupplierAse(cm);
 	}
 }

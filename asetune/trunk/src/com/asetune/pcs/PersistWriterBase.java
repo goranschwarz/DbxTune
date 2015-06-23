@@ -719,6 +719,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"CmSampleTime"     +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"CmSampleMs"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"CmNewDiffRateRow" +qic,40)+" "+fill(getDatatype("tinyint", -1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				
 				ResultSetMetaData rsmd = cm.getResultSetMetaData();
@@ -1027,6 +1028,7 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("SessionSampleTime").append(qic).append(", ");
 			sbSql.append(qic).append("CmSampleTime")     .append(qic).append(", ");
 			sbSql.append(qic).append("CmSampleMs")       .append(qic).append(", ");
+			sbSql.append(qic).append("CmNewDiffRateRow") .append(qic).append(", ");
 			
 			// Get ALL other column names from the CM
 			int cols = cm.getColumnCount();
@@ -1042,7 +1044,7 @@ public abstract class PersistWriterBase
 			// add: values(?, ...)
 			if (addPrepStatementQuestionMarks)
 			{
-				sbSql.append("values(?, ?, ?, ?, ");
+				sbSql.append("values(?, ?, ?, ?, ?, ");
 				for (int c=0; c<cols; c++) 
 					sbSql.append("?, ");
 

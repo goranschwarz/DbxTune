@@ -340,9 +340,9 @@ extends CountersModel
 	{
 	}
 	
-	@Override protected CounterTableModel getCounterDataAbs()  { return _osSampleTable; }
-	@Override protected CounterTableModel getCounterDataDiff() { return null; }
-	@Override protected CounterTableModel getCounterDataRate() { return null; }
+	@Override public CounterTableModel getCounterDataAbs()  { return _osSampleTable; }
+	@Override public CounterTableModel getCounterDataDiff() { return null; }
+	@Override public CounterTableModel getCounterDataRate() { return null; }
 
 	@Override public boolean hasAbsData()  { return _osSampleTable != null; }
 	@Override public boolean hasDiffData() { return false; }

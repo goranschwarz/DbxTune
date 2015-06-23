@@ -257,7 +257,7 @@ extends CountersModel
 	 * if counters has been reset outside, shorten the sample interval
 	 */
 	@Override
-	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<Integer> newDeltaRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
 //		detectCounterResetHelper(oldSample, newSample);
 
@@ -300,7 +300,7 @@ extends CountersModel
 		}
 
 		// Let super do all the work
-		CounterSample diff = super.computeDiffCnt(oldSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
+		CounterSample diff = super.computeDiffCnt(oldSample, newSample, deletedRows, newDeltaRows, pkCols, isDiffCol, isCountersCleared);
 		
 		// Adjust interval (make it shorter) if counters has been cleared
 		if (isCountersCleared && getCounterClearTime() != null)

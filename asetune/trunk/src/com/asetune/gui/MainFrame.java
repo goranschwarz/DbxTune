@@ -89,7 +89,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.config.dbms.DbmsConfigManager;
-import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
@@ -107,6 +106,8 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.JdbcUrlParser;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
@@ -1479,7 +1480,8 @@ public abstract class MainFrame
 	{
 		JMenu menu = new JMenu("Preferences");
 		_optDoGc_m = createJavaGcMenu();
-		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));
+//		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));gc_now
+		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/gc_now.png"));
 
 		_autoResizePcTable_mi          = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
 		_autoRefreshOnTabChange_mi     = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
@@ -4700,16 +4702,35 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //						AseConnectionFactory.getHost()   + ":" +
 //						AseConnectionFactory.getPort()   + ")"
 //						);
-				_statusServerName.setText(
-						AseConnectionFactory.getUser() +
-						" - " + AseConnectionFactory.getServer() +
-						" ("  + AseConnectionFactory.getHostPortStr() + ")" );
+//				_statusServerName.setText(
+//						AseConnectionFactory.getUser() +
+//						" - " + AseConnectionFactory.getServer() +
+//						" ("  + AseConnectionFactory.getHostPortStr() + ")" );
+				
+				DbxConnection xconn = CounterController.getInstance().getMonConnection();
+				ConnectionProp connProp = xconn.getConnProp();
+				
+				String userHostPort = "";
+				if (connProp != null)
+				{
+					String serverName = connProp.getServer();
+					if (StringUtil.isNullOrBlank(serverName))
+					{
+						try { serverName = xconn.getDbmsServerName(); }
+    					catch (SQLException e) {}
+					}
+
+					JdbcUrlParser urlParser = JdbcUrlParser.parse(connProp.getUrl());
+					userHostPort = connProp.getUsername() 
+						+ " - " + serverName
+						+ " (" + urlParser.getHostPortStr() + ")";
+				}
+				_statusServerName.setText(userHostPort);
 
 				if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
 				{
-					Connection conn = CounterController.getInstance().getMonConnection();
-					if (AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE))
-						_statusServerListeners.setText(AseConnectionUtils.getListeners(conn, true, true, _instance));
+					if (AseConnectionUtils.hasRole(xconn, AseConnectionUtils.SA_ROLE))
+						_statusServerListeners.setText(AseConnectionUtils.getListeners(xconn, true, true, _instance));
 					else
 						_statusServerListeners.setText("Need 'sa_role' to get listeners.");
 				}

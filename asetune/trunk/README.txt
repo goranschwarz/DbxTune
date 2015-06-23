@@ -78,7 +78,7 @@ This is the most complete tool. This because it has been around for 7-10 years
 - get values from various admin who, xxx
 - get values from admin statistics, which all tabs under "counters" are based on
   This tool is new in release 2015-06-01
-  Status: low functionality, a lot of things to-do here (not sure if it will be released) 
+  Status: low functionality, a lot of things to-do here (not sure if it will be released, please send me feedback) 
 
 ------------------------------------------------------------------------------
 -- IqTune --------------------------------------------------------------------
@@ -91,18 +91,22 @@ This is the most complete tool. This because it has been around for 7-10 years
 ------------------------------------------------------------------------------
   This tool is new in release 2015-06-01
   Status: Not that much functionality, needs MORE work before released. 
+  Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 -- SqlServerTune -------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2015-06-01
   Status: Not that much functionality, needs MORE work before released. 
+  Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 -- OracleTune ----------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2015-06-01
   Status: Not that much functionality, needs A LOT MORE work before released. 
+  Note: Recording capability doesn't work that good for the moment (JDBC ResultSet MetaData returns "strange" data types for Oracle Columns, which I need to "map" into something more appropriate for H2 or any other "normal" database)
+  Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 -- SQL Window ----------------------------------------------------------------
@@ -111,9 +115,14 @@ This tool has also been around for a long time, and it has grown to
 be more and more potent.
 
 Here are some of the functionality
- * Code Completion: 
- * Command History:
- * xxx: 
+ * Code completion Ctrl+space 
+ * Command history
+ * Execute favorite commands (added by the user)
+ * A bunch of predefined "SQL Short cut commands"
+ * Tail the Server error log (done via SSH if it’s not located on your box)
+ * View Server configurations (show all, or just the changed ones)
+ * View JDBC MetaData structures
+ * Etc, etc…
   
 ------------------------------------------------------------------------------
 -- Tail Window ---------------------------------------------------------------

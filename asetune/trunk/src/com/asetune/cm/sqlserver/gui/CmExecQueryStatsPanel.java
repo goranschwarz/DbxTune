@@ -1,4 +1,4 @@
-package com.asetune.cm.hana.gui;
+package com.asetune.cm.sqlserver.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,13 +13,13 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.hana.CmPlanCacheDetails;
+import com.asetune.cm.sqlserver.CmExecQueryStats;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
-public class CmPlanCacheDetailsPanel
+public class CmExecQueryStatsPanel
 extends TabularCntrPanel
 {
 //	private static final Logger  _logger	           = Logger.getLogger(CmPlanCacheDetailsPanel.class);
@@ -32,38 +32,41 @@ extends TabularCntrPanel
 		+ "<b>Note:</b> Diff calculations will <b>only</b> be accurate if a row/record is present in previous samples.<br>"
 		+ "If previous record was not present <i>diff</i> counters will be the same as the <i>absolute</i> value, and <i>rate</i> is simply calculated by taking the <i>diff</i> counter divided by sample time<br>"
 		+ "</html>";
+
 	public static final String  TOOLTIP_sample_lastXminutes = 
 		"<html>"
 		+ "Only show executions that has accured at the last X minutes (default is 10 minutes).<br>"
 		+ "<br>"
 		+ "<b>Note:</b> This will just restrict number or rows a bit, It's probably better than <i>'Show only SQL executed since last sample time'</i> but same rules applies.<br>"
-		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>"+CmPlanCacheDetails.PROPKEY_sample_lastXminutesTime+"</code><br>"
+		+ "<b>Note:</b> Number of minutes can be changed using the property: <code>"+CmExecQueryStats.PROPKEY_sample_lastXminutesTime+"</code><br>"
 		+ "</html>";
+			
 	public static final String  TOOLTIP_sample_lastXminutesTime = 
-		"<html>"
-		+ "Number of minutes to show if this is enabled (default is 10 minutes).<br>"
-		+ "</html>";
+			"<html>"
+			+ "Number of minutes to show if this is enabled (default is 10 minutes).<br>"
+			+ "</html>";
+				
 	public static final String  TOOLTIP_sample_extraWhereClause = 
 		"<html>" +
 		"Add extra where clause to the query that fetches information.<br>" +
 		"To check SQL statement that are used: Right click on the 'tab', and choose 'Properties'<br>" +
 		"<br>" +
-		"<b>Examples:</b><br>" +
-		"<b>- Only users with the login 'sa'</b><br>" +
-		"<code>S.SESSION_USER_NAME = 'SYSTEM' </code><br>" +
-		"<br>" +
-		"<b>- Only for some specific SCHEMA</b><br>" +
-		"<code>S.SCHEMA_NAME = 'SOME_NAME' </code><br>" +
-		"<br>" +
-		"<b>- Only for some specific Table</b><br>" +
-		"<code>S.ACCESSED_TABLE_NAMES like '%TABLE1%' </code><br>" +
-		"<br>" +
-		"<b>- Only for some specific SQL Statemets</b><br>" +
-		"<code>S.STATEMENT_STRING like '%SOME_STRING%' </code><br>" +
-		"<br>" +
+//		"<b>Examples:</b><br>" +
+//		"<b>- Only users with the login 'sa'</b><br>" +
+//		"<code>S.SESSION_USER_NAME = 'SYSTEM' </code><br>" +
+//		"<br>" +
+//		"<b>- Only for some specific SCHEMA</b><br>" +
+//		"<code>S.SCHEMA_NAME = 'SOME_NAME' </code><br>" +
+//		"<br>" +
+//		"<b>- Only for some specific Table</b><br>" +
+//		"<code>S.ACCESSED_TABLE_NAMES like '%TABLE1%' </code><br>" +
+//		"<br>" +
+//		"<b>- Only for some specific SQL Statemets</b><br>" +
+//		"<code>S.STATEMENT_STRING like '%SOME_STRING%' </code><br>" +
+//		"<br>" +
 		"</html>";
-		
-	public CmPlanCacheDetailsPanel(CountersModel cm)
+
+	public CmExecQueryStatsPanel(CountersModel cm)
 	{
 		super(cm);
 
@@ -154,19 +157,19 @@ extends TabularCntrPanel
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmPlanCacheDetails.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmPlanCacheDetails.PROPKEY_sample_lastXminutes,    CmPlanCacheDetails.DEFAULT_sample_lastXminutes));
-		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmPlanCacheDetails.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmPlanCacheDetails.PROPKEY_sample_afterPrevSample, CmPlanCacheDetails.DEFAULT_sample_afterPrevSample));
+		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,    CmExecQueryStats.DEFAULT_sample_lastXminutes));
+		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmExecQueryStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample, CmExecQueryStats.DEFAULT_sample_afterPrevSample));
 		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
 
 		_sampleLastXminutes_chk    .setToolTipText(TOOLTIP_sample_lastXminutes);
+		_sampleAfterPrevSample_chk .setToolTipText(TOOLTIP_sample_afterPrevSample);
 		_sampleExtraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);
 		_sampleExtraWhereClause_txt.setToolTipText(TOOLTIP_sample_extraWhereClause);
-		_sampleAfterPrevSample_chk .setToolTipText(TOOLTIP_sample_afterPrevSample);
 
 
 		// Set initial values for some fields
-		String sampleExtraWhereClause = (conf == null ? CmPlanCacheDetails.DEFAULT_sample_extraWhereClause : conf.getProperty(CmPlanCacheDetails.PROPKEY_sample_extraWhereClause, CmPlanCacheDetails.DEFAULT_sample_extraWhereClause));
+		String sampleExtraWhereClause = (conf == null ? CmExecQueryStats.DEFAULT_sample_extraWhereClause : conf.getProperty(CmExecQueryStats.PROPKEY_sample_extraWhereClause, CmExecQueryStats.DEFAULT_sample_extraWhereClause));
 
 		_sampleExtraWhereClause_txt.setText(sampleExtraWhereClause);
 		_sampleExtraWhereClause_txt.setHighlightCurrentLine(false);
@@ -187,7 +190,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmPlanCacheDetails.PROPKEY_sample_lastXminutes, ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// ReInitialize the SQL
@@ -203,7 +206,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmPlanCacheDetails.PROPKEY_sample_afterPrevSample, ((JCheckBox)e.getSource()).isSelected());
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// ReInitialize the SQL
@@ -219,7 +222,7 @@ extends TabularCntrPanel
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
-				conf.setProperty(CmPlanCacheDetails.PROPKEY_sample_extraWhereClause, _sampleExtraWhereClause_txt.getText().trim());
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_extraWhereClause, _sampleExtraWhereClause_txt.getText().trim());
 				conf.save();
 				
 				// ReInitialize the SQL

@@ -144,6 +144,7 @@ extends CountersModel
 
 		pkCols.add("database_id");
 		pkCols.add("object_id");
+		pkCols.add("plan_handle");
 
 		return pkCols;
 	}

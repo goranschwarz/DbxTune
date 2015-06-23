@@ -22,6 +22,7 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
@@ -32,6 +33,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
@@ -1899,6 +1901,21 @@ implements ICounterController
 	}
 	//==================================================================
 	// END: statistical mehods
+	//==================================================================
+
+	
+	
+	
+	//==================================================================
+	// BEGIN: CM Tooltip
+	//==================================================================
+	@Override
+	public ITableTooltip createCmToolTipSupplier(CountersModel cm)
+	{
+		return new CmToolTipSupplierDefault(cm);
+	}
+	//==================================================================
+	// END: CM Tooltip
 	//==================================================================
 
 }

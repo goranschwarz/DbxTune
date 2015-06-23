@@ -11,15 +11,13 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -49,15 +47,12 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.cm.CounterSetTemplates.Type;
-import com.asetune.cm.ase.CmProcessActivity;
-import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.config.dict.MonWaitEventIdDictionary;
-import com.asetune.config.dict.RemarkDictionary;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.TdsConnection;
@@ -226,6 +221,8 @@ implements Cloneable, ITableTooltip
 	
 	public enum State { NORMAL, SRV_IN_SHUTDOWN };
 	private State _state = State.NORMAL;
+
+	private GTable.ITableTooltip _cmToolTipSupplier = null;
 	
 	//-------------------------------------------------------
 	// BEGIN: Graph members
@@ -338,6 +335,9 @@ implements Cloneable, ITableTooltip
 		_sqlInitDone    = false;
 
 		maxRowSeen      = 0; // this isn't used ???
+
+		// new delta/rate row flag
+		_isNewDeltaOrRateRow = null;
 
 		// reset panel, if we got one
 		if (tabPanel != null)
@@ -457,6 +457,8 @@ implements Cloneable, ITableTooltip
 		_postponeTime       = defaultPostponeTime;
 
 		_sybMessageHandler  = createSybMessageHandler();
+		
+		_cmToolTipSupplier  = createToolTipSupplier();
 		
 		//		filterColId       = -1;
 		_prevSample       = null; // Contains old raw data
@@ -630,6 +632,8 @@ implements Cloneable, ITableTooltip
 		c._isNonConfiguredMonitoringAllowed       = this._isNonConfiguredMonitoringAllowed;
 		c._hasNonConfiguredMonitoringHappened     = this._hasNonConfiguredMonitoringHappened;
 		c._lastNonConfiguredMonitoringMessageList = this._lastNonConfiguredMonitoringMessageList; // Should we clone this or not...
+
+		c._isNewDeltaOrRateRow = this._isNewDeltaOrRateRow;
 
 		return c;
 	}
@@ -1538,6 +1542,16 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Create a tool tip supplier...<br>
+	 * The default is to let the CounterController create it...
+	 * @return
+	 */
+	public GTable.ITableTooltip createToolTipSupplier()
+	{
+		return CounterController.getInstance().createCmToolTipSupplier(this);
+	}
+
+	/**
 	 * Get tooltip for a specific Table Column
 	 * @param colName
 	 * @return the tooltip
@@ -1545,7 +1559,10 @@ implements Cloneable, ITableTooltip
 	@Override
 	public String getToolTipTextOnTableColumnHeader(String colName)
 	{
-		return MonTablesDictionaryManager.getInstance().getDescription(getMonTablesInQuery(), colName);
+		if (_cmToolTipSupplier == null)
+			return null;
+
+		return _cmToolTipSupplier.getToolTipTextOnTableColumnHeader(colName);
 	}
 
 	/**
@@ -1560,213 +1577,221 @@ implements Cloneable, ITableTooltip
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{
-		// Get tip on WaitEventID
-		if ("WaitEventID".equals(colName))
-		{
-			//Object cellVal = getValueAt(modelRow, modelCol);
-			if (cellValue instanceof Number)
-			{
-				int waitEventId = ((Number)cellValue).intValue();
-				if (waitEventId > 0)
-					return MonWaitEventIdDictionary.getInstance().getToolTipText(waitEventId);
-			}
-		}
+		if (_cmToolTipSupplier == null)
+			return null;
 
-		// Get tip on Remark (at least in CMobjectActivity/CM_NAME__OBJECT_ACTIVITY)
-		if ("Remark".equals(colName))
-		{
-			//Object cellVal = getValueAt(modelRow, modelCol);
-			if (cellValue instanceof String)
-			{
-				String key = (String)cellValue;
-				if ( ! StringUtil.isNullOrBlank(key) )
-					return RemarkDictionary.getInstance().getToolTipText(key);
-			}
-		}
-
-		// If we are CONNECTED and we have a USER DEFINED TOOLTIP for this columns
-		if (cellValue != null)
-		{
-			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
-
-			// If we reading an offline database, go there to fetch data...
-			if ( sql != null && ! isConnected() )
-			{
-				// IF SPID, get values from JTable in OFFLINE MODE
-				if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
-				     || "OldestTranSpid".equalsIgnoreCase(colName) // from CmOpenDatabases
-				     || "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
-				     || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
-				     || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
-				   )
-				{
-					// Determine the COLUMN name to be used in the search
-					String whereColName = "SPID";
-					if (    "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
-						 || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
-						 || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
-					   )
-					{
-						whereColName = "KPID";
-					}
-					
-					if (MainFrame.isOfflineConnected())
-					{
-						// FIXME: _counterController is NOT set for UDC Counters (especially when initialized from OfflineStorage)
-//						CountersModel cm = getCounterController().getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
-						CountersModel cm = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
-						TabularCntrPanel tcp = cm.getTabPanel();
-						if (tcp != null)
-						{
-							tcp.tabSelected();
-							cm = tcp.getDisplayCm();
-							if (cm != null)
-							{
-								CounterTableModel ctmAbs  = cm.getCounterDataAbs();
-								CounterTableModel ctmDiff = cm.getCounterDataDiff();
-								CounterTableModel ctmRate = cm.getCounterDataRate();
-								if (ctmRate == null)
-								{
-//									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
-									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
-								}
-								else
-								{
-									int cellPidInt = -1;
-									if (cellValue instanceof Number)
-										cellPidInt = ((Number)cellValue).intValue();
-									else
-									{
-										return "<html>" +
-												"Current Cell value '"+cellValue+"' is not a <i>Number</i>.<br>" +
-												"The object type is <code>"+cellValue.getClass().getName()+"</code><br>" +
-												"It must be of datatype <code>Number</code><br>" +
-												"</html>";
-									}
-										
-									int pid_pos = ctmRate.findColumn(whereColName);
-									int rowCount = ctmRate.getRowCount();
-									for (int r=0; r<rowCount; r++)
-									{
-										Object rowCellValue = ctmRate.getValueAt(r, pid_pos);
-										int rowPidInt = -1;
-										if (rowCellValue instanceof Number)
-											rowPidInt = ((Number)rowCellValue).intValue();
-										else
-											continue;
-//										System.out.println("CellValue='"+cellValue+"', tableRow="+r+", Value="+ctmRate.getValueAt(r, spid_pos)+", TableObjType="+ctmRate.getValueAt(r, spid_pos).getClass().getName()+", cellValueObjType="+cellValue.getClass().getName());
-										
-//										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
-										if ( cellPidInt == rowPidInt )
-										{
-											StringBuilder sb = new StringBuilder(300);
-											sb.append("<html>\n");
-											sb.append("<table border=0 cellspacing=0 >\n");
-//											sb.append("<table border=1 cellspacing=0 >\n");
-//											sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
-
-											sb.append("<tr>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Column Name")      .append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Absolute Counters").append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Diff Counters")    .append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Rate Counters")    .append("</b></font></td>");
-											sb.append("</tr>\n");
-
-											for (int c=0; c<ctmRate.getColumnCount(); c++)
-											{
-//												System.out.println("XXXX: colName='"+ctm.getColumnName(c)+"', value='"+ctm.getValueAt(r, c)+"'.");
-
-												if ( (c % 2) == 0 )
-													sb.append("<tr bgcolor=\"#ffffff\">"); // white
-												else
-													sb.append("<tr bgcolor=\"#ffffcc\">"); // light yellow
-
-												sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append(ctmRate.getColumnName(c)).append("</b></font></td>");
-
-												sb.append("<td nowrap>").append(ctmAbs ==null?"":ctmAbs .getValueAt(r, c)).append("</td>");
-												sb.append("<td nowrap>").append(ctmDiff==null?"":ctmDiff.getValueAt(r, c)).append("</td>");
-												sb.append("<td nowrap>").append(ctmRate==null?"":ctmRate.getValueAt(r, c)).append("</td>");
-												sb.append("</tr>\n");
-											}
-											sb.append("</table>\n");
-											sb.append("</html>\n");
-											return sb.toString();
-										}
-									}
-								}
-//								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
-								return "<html>Can't find the "+whereColName+" '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
-							}
-						}
-					} // end: offline
-				} // end: SPID
-
-				return "<html>" +
-				       "No runtime tool tip available for '"+colName+"'. <br>" +
-				       "Not connected to the monitored server.<br>" +
-				       "</html>";
-			}
-
-			if (sql != null)
-			{
-				try
-				{
-					Connection conn = getCounterController().getMonConnection();
-
-					StringBuilder sb = new StringBuilder(300);
-					sb.append("<html>\n");
-//					sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
-					sb.append("<table border=1>\n");
-
-					PreparedStatement stmt = conn.prepareStatement(sql);
-					stmt.setObject(1, cellValue);
-
-					ResultSet rs = stmt.executeQuery();
-					ResultSetMetaData rsmd = rs.getMetaData();
-					int cols = rsmd.getColumnCount();
-
-					sb.append("<tr>");
-					for (int c=1; c<=cols; c++)
-						sb.append("<td nowrap>").append(rsmd.getColumnName(c)).append("</td>");
-					sb.append("</tr>\n");
-
-					while (rs.next())
-					{
-						sb.append("<tr>");
-						for (int c=1; c<=cols; c++)
-							sb.append("<td nowrap>").append(rs.getObject(c)).append("</td>");
-						sb.append("</tr>\n");
-					}
-					sb.append("</table>\n");
-					sb.append("</html>\n");
-
-					for (SQLWarning sqlw = stmt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
-					{
-						// IGNORE: DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
-						if (sqlw.getMessage().startsWith("DBCC execution completed. If DBCC"))
-							continue;
-
-						sb = sb.append(sqlw.getMessage()).append("<br>");
-					}
-					rs.close();
-					stmt.close();
-					
-					return sb.toString();
-				}
-				catch (SQLException ex)
-				{
-					_logger.warn("Problems when executing sql for cm='"+getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
-					return "<html>" +  
-					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-					       "Problems when executing sql: "+sql+"<br>" +
-					       ex.toString() +
-					       "</html>";
-				}
-			}
-		}
-
-		return null;
+		return _cmToolTipSupplier.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
+//	@Override
+//	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+//	{
+//		// Get tip on WaitEventID
+//		if ("WaitEventID".equals(colName))
+//		{
+//			//Object cellVal = getValueAt(modelRow, modelCol);
+//			if (cellValue instanceof Number)
+//			{
+//				int waitEventId = ((Number)cellValue).intValue();
+//				if (waitEventId > 0)
+//					return MonWaitEventIdDictionary.getInstance().getToolTipText(waitEventId);
+//			}
+//		}
+//
+//		// Get tip on Remark (at least in CMobjectActivity/CM_NAME__OBJECT_ACTIVITY)
+//		if ("Remark".equals(colName))
+//		{
+//			//Object cellVal = getValueAt(modelRow, modelCol);
+//			if (cellValue instanceof String)
+//			{
+//				String key = (String)cellValue;
+//				if ( ! StringUtil.isNullOrBlank(key) )
+//					return RemarkDictionary.getInstance().getToolTipText(key);
+//			}
+//		}
+//
+//		// If we are CONNECTED and we have a USER DEFINED TOOLTIP for this columns
+//		if (cellValue != null)
+//		{
+//			String sql = MainFrame.getUserDefinedToolTip(getName(), colName);
+//
+//			// If we reading an offline database, go there to fetch data...
+//			if ( sql != null && ! isConnected() )
+//			{
+//				// IF SPID, get values from JTable in OFFLINE MODE
+//				if (    "SPID"          .equalsIgnoreCase(colName) // From a bunch of places
+//				     || "OldestTranSpid".equalsIgnoreCase(colName) // from CmOpenDatabases
+//				     || "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+//				     || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+//				     || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
+//				   )
+//				{
+//					// Determine the COLUMN name to be used in the search
+//					String whereColName = "SPID";
+//					if (    "KPID"          .equalsIgnoreCase(colName) // From a bunch of places
+//						 || "OwnerPID"      .equalsIgnoreCase(colName) // CmSpinlockActivity
+//						 || "LastOwnerPID"  .equalsIgnoreCase(colName) // CmSpinlockActivity
+//					   )
+//					{
+//						whereColName = "KPID";
+//					}
+//					
+//					if (MainFrame.isOfflineConnected())
+//					{
+//						// FIXME: _counterController is NOT set for UDC Counters (especially when initialized from OfflineStorage)
+////						CountersModel cm = getCounterController().getCmByName(GetCounters.CM_NAME__PROCESS_ACTIVITY);
+//						CountersModel cm = getCounterController().getCmByName(CmProcessActivity.CM_NAME);
+//						TabularCntrPanel tcp = cm.getTabPanel();
+//						if (tcp != null)
+//						{
+//							tcp.tabSelected();
+//							cm = tcp.getDisplayCm();
+//							if (cm != null)
+//							{
+//								CounterTableModel ctmAbs  = cm.getCounterDataAbs();
+//								CounterTableModel ctmDiff = cm.getCounterDataDiff();
+//								CounterTableModel ctmRate = cm.getCounterDataRate();
+//								if (ctmRate == null)
+//								{
+////									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+//									return "<html>Counters of type 'rate' was not saved for Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
+//								}
+//								else
+//								{
+//									int cellPidInt = -1;
+//									if (cellValue instanceof Number)
+//										cellPidInt = ((Number)cellValue).intValue();
+//									else
+//									{
+//										return "<html>" +
+//												"Current Cell value '"+cellValue+"' is not a <i>Number</i>.<br>" +
+//												"The object type is <code>"+cellValue.getClass().getName()+"</code><br>" +
+//												"It must be of datatype <code>Number</code><br>" +
+//												"</html>";
+//									}
+//										
+//									int pid_pos = ctmRate.findColumn(whereColName);
+//									int rowCount = ctmRate.getRowCount();
+//									for (int r=0; r<rowCount; r++)
+//									{
+//										Object rowCellValue = ctmRate.getValueAt(r, pid_pos);
+//										int rowPidInt = -1;
+//										if (rowCellValue instanceof Number)
+//											rowPidInt = ((Number)rowCellValue).intValue();
+//										else
+//											continue;
+////										System.out.println("CellValue='"+cellValue+"', tableRow="+r+", Value="+ctmRate.getValueAt(r, spid_pos)+", TableObjType="+ctmRate.getValueAt(r, spid_pos).getClass().getName()+", cellValueObjType="+cellValue.getClass().getName());
+//										
+////										if ( cellValue.equals(ctmRate.getValueAt(r, spid_pos)) )
+//										if ( cellPidInt == rowPidInt )
+//										{
+//											StringBuilder sb = new StringBuilder(300);
+//											sb.append("<html>\n");
+//											sb.append("<table border=0 cellspacing=0 >\n");
+////											sb.append("<table border=1 cellspacing=0 >\n");
+////											sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
+//
+//											sb.append("<tr>");
+//											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Column Name")      .append("</b></font></td>");
+//											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Absolute Counters").append("</b></font></td>");
+//											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Diff Counters")    .append("</b></font></td>");
+//											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Rate Counters")    .append("</b></font></td>");
+//											sb.append("</tr>\n");
+//
+//											for (int c=0; c<ctmRate.getColumnCount(); c++)
+//											{
+////												System.out.println("XXXX: colName='"+ctm.getColumnName(c)+"', value='"+ctm.getValueAt(r, c)+"'.");
+//
+//												if ( (c % 2) == 0 )
+//													sb.append("<tr bgcolor=\"#ffffff\">"); // white
+//												else
+//													sb.append("<tr bgcolor=\"#ffffcc\">"); // light yellow
+//
+//												sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append(ctmRate.getColumnName(c)).append("</b></font></td>");
+//
+//												sb.append("<td nowrap>").append(ctmAbs ==null?"":ctmAbs .getValueAt(r, c)).append("</td>");
+//												sb.append("<td nowrap>").append(ctmDiff==null?"":ctmDiff.getValueAt(r, c)).append("</td>");
+//												sb.append("<td nowrap>").append(ctmRate==null?"":ctmRate.getValueAt(r, c)).append("</td>");
+//												sb.append("</tr>\n");
+//											}
+//											sb.append("</table>\n");
+//											sb.append("</html>\n");
+//											return sb.toString();
+//										}
+//									}
+//								}
+////								return "<html>Can't find the SPID '"+cellValue+"' in Performance Counter '"+GetCounters.CM_DESC__PROCESS_ACTIVITY+"'.</html>";
+//								return "<html>Can't find the "+whereColName+" '"+cellValue+"' in Performance Counter '"+CmProcessActivity.SHORT_NAME+"'.</html>";
+//							}
+//						}
+//					} // end: offline
+//				} // end: SPID
+//
+//				return "<html>" +
+//				       "No runtime tool tip available for '"+colName+"'. <br>" +
+//				       "Not connected to the monitored server.<br>" +
+//				       "</html>";
+//			}
+//
+//			if (sql != null)
+//			{
+//				try
+//				{
+//					Connection conn = getCounterController().getMonConnection();
+//
+//					StringBuilder sb = new StringBuilder(300);
+//					sb.append("<html>\n");
+////					sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
+//					sb.append("<table border=1>\n");
+//
+//					PreparedStatement stmt = conn.prepareStatement(sql);
+//					stmt.setObject(1, cellValue);
+//
+//					ResultSet rs = stmt.executeQuery();
+//					ResultSetMetaData rsmd = rs.getMetaData();
+//					int cols = rsmd.getColumnCount();
+//
+//					sb.append("<tr>");
+//					for (int c=1; c<=cols; c++)
+//						sb.append("<td nowrap>").append(rsmd.getColumnName(c)).append("</td>");
+//					sb.append("</tr>\n");
+//
+//					while (rs.next())
+//					{
+//						sb.append("<tr>");
+//						for (int c=1; c<=cols; c++)
+//							sb.append("<td nowrap>").append(rs.getObject(c)).append("</td>");
+//						sb.append("</tr>\n");
+//					}
+//					sb.append("</table>\n");
+//					sb.append("</html>\n");
+//
+//					for (SQLWarning sqlw = stmt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+//					{
+//						// IGNORE: DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
+//						if (sqlw.getMessage().startsWith("DBCC execution completed. If DBCC"))
+//							continue;
+//
+//						sb = sb.append(sqlw.getMessage()).append("<br>");
+//					}
+//					rs.close();
+//					stmt.close();
+//					
+//					return sb.toString();
+//				}
+//				catch (SQLException ex)
+//				{
+//					_logger.warn("Problems when executing sql for cm='"+getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
+//					return "<html>" +  
+//					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
+//					       "Problems when executing sql: "+sql+"<br>" +
+//					       ex.toString() +
+//					       "</html>";
+//				}
+//			}
+//		}
+//
+//		return null;
+//	}
 
 	//-------------------------------------------
 	// BEGIN: TrendGraph
@@ -3832,7 +3857,10 @@ implements Cloneable, ITableTooltip
 		}
 
 		// Used later
-		final List<Integer> deletedRows = new ArrayList<Integer>();;
+//		final List<Integer> deletedRows  = new ArrayList<Integer>();
+//		final List<Integer> newDeltaRows = new ArrayList<Integer>();
+		final List<Integer> deletedRows  = null;
+		final List<Integer> newDeltaRows = null;
 
 		// Set sample time and interval
 		setSampleTime(    tmpNewSample.getSampleTime()     );
@@ -3867,7 +3895,7 @@ implements Cloneable, ITableTooltip
 			{
 				// old sample is not null, so we can compute the diffs
 //				tmpDiffData = CounterSample.computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
-				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, _pkCols, _isDiffCol, _isCountersCleared);
+				tmpDiffData = computeDiffCnt(_prevSample, tmpNewSample, deletedRows, newDeltaRows, _pkCols, _isDiffCol, _isCountersCleared);
 			}
 	
 			if (tmpDiffData == null)
@@ -3904,7 +3932,7 @@ implements Cloneable, ITableTooltip
 			}
 		}
 
-		// Check if there is any rows that we want to interogate more, , every CM's has to implement this.
+		// Check if there is any rows that we want to interrogate more, , every CM's has to implement this.
 		sendDdlDetailsRequest(tmpNewSample, tmpDiffData, tmpRateData);
 
 		// Do we want to send an Alarm somewhere, every CM's has to implement this.
@@ -4075,7 +4103,7 @@ implements Cloneable, ITableTooltip
 	 * @param isCountersCleared If the counters has been cleared 
 	 * @return
 	 */
-	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
+	public CounterSample computeDiffCnt(CounterSample oldSample, CounterSample newSample, List<Integer> deletedRows, List<Integer> newDeltaRows, List<String> pkCols, boolean[] isDiffCol, boolean isCountersCleared)
 	{
 //		return CounterSample.computeDiffCnt(prevSample, newSample, deletedRows, pkCols, isDiffCol, isCountersCleared);
 		// Initialize result structure
@@ -4117,16 +4145,19 @@ implements Cloneable, ITableTooltip
 		// or actually rows that are no longer available in the new sample...
 		boolean oldSampleAccessArr[] = new boolean[oldSample.getRowCount()]; // default values: false
 
+		if (_isNewDeltaOrRateRow == null)
+			_isNewDeltaOrRateRow = new boolean[newSample.getRowCount()+10]; // default values: false... add some extra fields...
+
 		// Loop on all rows from the NEW sample
 		for (int newRowId = 0; newRowId < newSample.getRowCount(); newRowId++)
 		{
 			newRow = newSample.getRow(newRowId);
-			diffRow = new ArrayList<Object>();
+			diffRow = new ArrayList<Object>(newRow.size());
 			
 			// get PK of the new row
 			String newPk = newSample.getPkValue(newRowId);
 
-			// Retreive old same row
+			// Retrieve old same row
 			oldRowId = oldSample.getRowNumberForPkValue(newPk);
 			
 			// if old Row EXISTS, we can do diff calculation
@@ -4179,6 +4210,8 @@ implements Cloneable, ITableTooltip
 						}
 					}
 				}
+
+				setNewDeltaOrRateRow(newRowId, false);
 			} // end: old row was found
 			else
 			{
@@ -4188,6 +4221,11 @@ implements Cloneable, ITableTooltip
 				{
 					diffRow.add(newRow.get(i));
 				}
+				
+				if (newDeltaRows != null)
+					newDeltaRows.add(newRowId);
+				
+				setNewDeltaOrRateRow(newRowId, true);
 			}
 
 			diffCnt.addRow(diffRow);
@@ -4422,7 +4460,6 @@ implements Cloneable, ITableTooltip
 		
 		return rate;
 	}
-
 
 	/**
 	 * Called when a timeout has been found in the refreshGetData() method
@@ -4665,6 +4702,8 @@ implements Cloneable, ITableTooltip
 		if (_newSample  != null) _newSample .removeAllRows();
 		if (_diffData   != null) _diffData  .removeAllRows();
 		if (_rateData   != null) _rateData  .removeAllRows();
+
+		_isNewDeltaOrRateRow = null;
 	}
 
 	public void clear()
@@ -4752,28 +4791,28 @@ implements Cloneable, ITableTooltip
 			saveProps();
 	}
 	
-	protected CounterTableModel getCounterDataAbs()
+	public CounterTableModel getCounterDataAbs()
 	{
 		return _newSample;
 	}
-	protected CounterTableModel getCounterDataDiff()
+	public CounterTableModel getCounterDataDiff()
 	{
 		return _diffData;
 	}
-	protected CounterTableModel getCounterDataRate()
+	public CounterTableModel getCounterDataRate()
 	{
 		return _rateData;
 	}
 
-	protected CounterSample getCounterSampleAbs()
+	public CounterSample getCounterSampleAbs()
 	{
 		return _newSample;
 	}
-	protected CounterSample getCounterSampleDiff()
+	public CounterSample getCounterSampleDiff()
 	{
 		return _diffData;
 	}
-	protected CounterSample getCounterSampleRate()
+	public CounterSample getCounterSampleRate()
 	{
 		return _rateData;
 	}
@@ -5434,6 +5473,7 @@ implements Cloneable, ITableTooltip
 			tempProps.setProperty(base + PROPKEY_persistCounters_diff,           isPersistCountersDiffEnabled());
 			tempProps.setProperty(base + PROPKEY_persistCounters_rate,           isPersistCountersRateEnabled());
 			tempProps.setProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, isNonConfiguredMonitoringAllowed());
+			tempProps.setProperty(base + PROPKEY_highlightNewDateOrRateRows,     isNewDeltaOrRateRowHighlightEnabled());
 
 			tempProps.setProperty(base + PROPKEY_postponeTime,                   getPostponeTime());
 			tempProps.setProperty(base + PROPKEY_queryTimeout,                   getQueryTimeout());
@@ -5459,6 +5499,7 @@ implements Cloneable, ITableTooltip
 		Configuration.registerDefaultValue(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled());
 		Configuration.registerDefaultValue(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled());
 		Configuration.registerDefaultValue(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed());
+		Configuration.registerDefaultValue(base + PROPKEY_highlightNewDateOrRateRows,     getDefaultIsNewDeltaOrRateRowHighlightEnabled());
 
 		Configuration.registerDefaultValue(base + PROPKEY_postponeTime,                   getDefaultPostponeTime());
 	}
@@ -5481,21 +5522,22 @@ implements Cloneable, ITableTooltip
 		{
 			_inLoadProps = true;
 
-			setQueryTimeout(                  tempProps.getIntProperty(    base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout()) );
+			setQueryTimeout(                     tempProps.getIntProperty(    base + PROPKEY_queryTimeout,                   getDefaultQueryTimeout()) );
+                                                 
+			setDataSource(                       tempProps.getIntProperty(    base + PROPKEY_currentDataSource,              getDefaultDataSource())                         ,false);
+                                                                                                                                                                             
+			setFilterAllZero(                    tempProps.getBooleanProperty(base + PROPKEY_filterAllZeroDiffCounters,      getDefaultIsFilterAllZero())                    ,false);
+			setPauseDataPolling(                 tempProps.getBooleanProperty(base + PROPKEY_sampleDataIsPaused,             getDefaultIsDataPollingPaused())                ,false);
+			setBackgroundDataPollingEnabled(     tempProps.getBooleanProperty(base + PROPKEY_sampleDataInBackground,         getDefaultIsBackgroundDataPollingEnabled())     ,false);
+			setNegativeDiffCountersToZero(       tempProps.getBooleanProperty(base + PROPKEY_negativeDiffCountersToZero,     getDefaultIsNegativeDiffCountersToZero())       ,false);
+			setPersistCounters(                  tempProps.getBooleanProperty(base + PROPKEY_persistCounters,                getDefaultIsPersistCountersEnabled())           ,false);
+			setPersistCountersAbs(               tempProps.getBooleanProperty(base + PROPKEY_persistCounters_abs,            getDefaultIsPersistCountersAbsEnabled())        ,false);
+			setPersistCountersDiff(              tempProps.getBooleanProperty(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled())       ,false);
+			setPersistCountersRate(              tempProps.getBooleanProperty(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled())       ,false);
+			setNonConfiguredMonitoringAllowed(   tempProps.getBooleanProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed())   ,false);
+			setNewDeltaOrRateRowHighlightEnabled(tempProps.getBooleanProperty(base + PROPKEY_highlightNewDateOrRateRows,     getDefaultIsNewDeltaOrRateRowHighlightEnabled()),false);
 
-			setDataSource(                    tempProps.getIntProperty(    base + PROPKEY_currentDataSource,              getDefaultDataSource())                      ,false);
-
-			setFilterAllZero(                 tempProps.getBooleanProperty(base + PROPKEY_filterAllZeroDiffCounters,      getDefaultIsFilterAllZero())                 ,false);
-			setPauseDataPolling(              tempProps.getBooleanProperty(base + PROPKEY_sampleDataIsPaused,             getDefaultIsDataPollingPaused())             ,false);
-			setBackgroundDataPollingEnabled(  tempProps.getBooleanProperty(base + PROPKEY_sampleDataInBackground,         getDefaultIsBackgroundDataPollingEnabled())  ,false);
-			setNegativeDiffCountersToZero(    tempProps.getBooleanProperty(base + PROPKEY_negativeDiffCountersToZero,     getDefaultIsNegativeDiffCountersToZero())    ,false);
-			setPersistCounters(               tempProps.getBooleanProperty(base + PROPKEY_persistCounters,                getDefaultIsPersistCountersEnabled())        ,false);
-			setPersistCountersAbs(            tempProps.getBooleanProperty(base + PROPKEY_persistCounters_abs,            getDefaultIsPersistCountersAbsEnabled())     ,false);
-			setPersistCountersDiff(           tempProps.getBooleanProperty(base + PROPKEY_persistCounters_diff,           getDefaultIsPersistCountersDiffEnabled())    ,false);
-			setPersistCountersRate(           tempProps.getBooleanProperty(base + PROPKEY_persistCounters_rate,           getDefaultIsPersistCountersRateEnabled())    ,false);
-			setNonConfiguredMonitoringAllowed(tempProps.getBooleanProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed()),false);
-
-			setPostponeTime(                  tempProps.getIntProperty    (base + PROPKEY_postponeTime,                   getDefaultPostponeTime())                    ,false);
+			setPostponeTime(                     tempProps.getIntProperty    (base + PROPKEY_postponeTime,                   getDefaultPostponeTime())                       ,false);
 
 			_inLoadProps = false;
 		}
@@ -5513,6 +5555,7 @@ implements Cloneable, ITableTooltip
 	public static final String PROPKEY_postponeTime                   = "postponeTime";
 	public static final String PROPKEY_queryTimeout                   = "queryTimeout";
 	public static final String PROPKEY_nonConfiguredMonitoringAllowed = "nonConfiguredMonitoringAllowed";
+	public static final String PROPKEY_highlightNewDateOrRateRows     = "highlightNewDateOrRateRows";
 
 
 	
@@ -5709,4 +5752,74 @@ implements Cloneable, ITableTooltip
 	//-------------------------------------------------------
 	// END: NON CONFIGURED MONITORING 
 	//-------------------------------------------------------
+
+
+	//-------------------------------------------------------
+	// BEGIN: HIGHLIGHT NEW DIFF/RATE ROWS 
+	//-------------------------------------------------------
+	private boolean[] _isNewDeltaOrRateRow = null;
+	private boolean   _isNewDeltaOrRateRowHighlightEnabled = true;
+
+	public boolean getDefaultIsNewDeltaOrRateRowHighlightEnabled()
+	{
+		return true;
+	}
+	public boolean isNewDeltaOrRateRowHighlightEnabled()
+	{
+		return _isNewDeltaOrRateRowHighlightEnabled;
+	}
+	public boolean setNewDeltaOrRateRowHighlightEnabled(boolean isItAllowed)
+	{
+		return _isNewDeltaOrRateRowHighlightEnabled = isItAllowed;
+	}
+	public void setNewDeltaOrRateRowHighlightEnabled(boolean toValue, boolean saveProps)
+	{
+		// No need to continue if we are not changing it
+		if (isNewDeltaOrRateRowHighlightEnabled() == toValue)
+			return;
+
+		setNewDeltaOrRateRowHighlightEnabled(toValue);
+		if (saveProps)
+			saveProps();
+	}
+
+	public boolean isNewDeltaOrRateRow(int mrow)
+	{
+		if (_isNewDeltaOrRateRow == null)
+			return false;
+
+		if (mrow < 0 || mrow >= _isNewDeltaOrRateRow.length)
+		{
+			_logger.warn("isNewDeltaOrRateRow(mrow="+mrow+"): is out of range: _isNewDeltaOrRateRow.length="+_isNewDeltaOrRateRow.length);
+			return false;
+		}
+		// For development purposes
+		//if (mrow == 10)
+		//	return true;
+		
+		return _isNewDeltaOrRateRow[mrow];
+	}
+
+	public void setNewDeltaOrRateRow(int mrow, boolean isNewDeltaOrRateRow)
+	{
+		if (_isNewDeltaOrRateRow == null)
+			_isNewDeltaOrRateRow = new boolean[100]; // default values: false...
+
+//		ArrayList<Integer> xxx = new ArrayList<Integer>();
+//		xxx.add(111);
+		
+		// If the array is to small, expand it
+		int curentSize = _isNewDeltaOrRateRow.length;
+		if (mrow >= curentSize) 
+		{
+			int newSize = (curentSize*3)/2 + 1;
+			_isNewDeltaOrRateRow = Arrays.copyOf(_isNewDeltaOrRateRow, newSize);
+		}
+
+		if (mrow >= 0 && mrow < _isNewDeltaOrRateRow.length)
+			_isNewDeltaOrRateRow[mrow] = isNewDeltaOrRateRow;
+		else
+			_logger.warn("computeDiffCnt(): cm='"+getName()+"', _isNewDeltaOrRateRow[newRowId="+mrow+"]=FALSE, _isNewDeltaOrRateRow.length="+_isNewDeltaOrRateRow.length+".");
+	}
+
 }

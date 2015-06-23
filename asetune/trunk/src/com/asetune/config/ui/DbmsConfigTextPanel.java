@@ -12,7 +12,6 @@ import com.asetune.DbxTune;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.ConnectionProvider;
 
 
