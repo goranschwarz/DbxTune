@@ -243,7 +243,10 @@ implements
 	
 	/** Color to be used when counters is cleared is used */
 	private static final Color COUNTERS_CLEARED_COLOR = Color.ORANGE;
-	
+
+//	private static final Color NEW_DELTA_OR_RATE_ROW_COLOR = new Color(152,251,152); // Pale Green
+	private static final Color NEW_DELTA_OR_RATE_ROW_COLOR = new Color(102,205,170); // Medium Aquamarine
+
 	// -------------------------------------------------
 
 	/*---------------------------------------------------
@@ -2026,7 +2029,28 @@ implements
 							}
 						}
 					});
+					popupMenu.add(mi);
 
+					// Highlight new DIFF or RATE rows
+					mi = new JCheckBoxMenuItem();
+					mi.setText("<html>Mark new Diff or Rate entries with a <i>Aqua Marine Green</i> background color. <font bgcolor=#66cdaa>(example)</font></html>"); //NEW_DELTA_OR_RATE_ROW_COLOR.getRGB()
+					mi.setSelected(cm.isNewDeltaOrRateRowHighlightEnabled());
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JCheckBoxMenuItem)
+							{
+								boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+								cm.setNewDeltaOrRateRowHighlightEnabled(toValue, true); // calls saveProps() on the CM
+
+								_logger.info("Setting 'Highlight new diff/rate rows' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+							}
+						}
+					});
 					popupMenu.add(mi);
 				}
 			}
@@ -2286,6 +2310,8 @@ implements
 			_dataTable.addHighlighter(HighlighterFactory.createSimpleStriping());
 		_dataTable.addHighlighter(new HighlighterDiffData(_highligtIfDelta)); 
 		_dataTable.addHighlighter(new HighlighterPctData(_highligtIfPct));
+		_dataTable.addHighlighter(new HighlighterNewDeltaOrRateData(_highligtIfNewDeltaOrRateRow));
+		
 
 
 		// Fixing/setting background selection color... on some platforms it
@@ -3817,9 +3843,9 @@ implements
 			if ( !_tailMode )
 				cm = _cmDisplay;
 	
-			if ( cm == null )                               return false;
-			if ( !cm.isDataInitialized() )                  return false;
-			if ( cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if ( cm == null )                                return false;
+			if ( !cm.isDataInitialized() )                   return false;
+			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
 			return cm.isDiffColumn(adapter.convertColumnIndexToModel(adapter.column));
 		}
 	};
@@ -3832,10 +3858,26 @@ implements
 			if ( !_tailMode )
 				cm = _cmDisplay;
 
-			if ( cm == null )                               return false;
-			if ( !cm.isDataInitialized() )                  return false;
-			if ( cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if ( cm == null )                                return false;
+			if ( !cm.isDataInitialized() )                   return false;
+			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
 			return cm.isPctColumn(adapter.convertColumnIndexToModel(adapter.column));
+		}
+	};
+	private HighlightPredicate _highligtIfNewDeltaOrRateRow = new HighlightPredicate()
+	{
+		@Override
+		public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+		{
+			CountersModel cm = _cm;
+			if ( !_tailMode )
+				cm = _cmDisplay;
+
+			if ( cm == null )                                return false;
+			if ( !cm.isDataInitialized() )                   return false;
+			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if ( !cm.isNewDeltaOrRateRowHighlightEnabled() ) return false;
+			return cm.isNewDeltaOrRateRow(adapter.convertRowIndexToModel(adapter.row));
 		}
 	};
 //	private Highlighter[] _highliters = { 
@@ -3863,6 +3905,21 @@ implements
 					comp.setFont(comp.getFont().deriveFont(Font.BOLD));
 				}
 			}
+			return comp;
+		}
+	}
+
+	private static class HighlighterNewDeltaOrRateData extends AbstractHighlighter
+	{
+		public HighlighterNewDeltaOrRateData(HighlightPredicate predicate)
+		{
+			super(predicate);
+		}
+
+		@Override
+		protected Component doHighlight(Component comp, ComponentAdapter adapter)
+		{
+			comp.setBackground(NEW_DELTA_OR_RATE_ROW_COLOR);
 			return comp;
 		}
 	}

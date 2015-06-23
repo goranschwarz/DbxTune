@@ -168,7 +168,13 @@ extends CountersModel
 	public static final String  DEFAULT_sample_extraWhereClause   = "";
 
 	public static final String  PROPKEY_sample_afterPrevSample    = PROP_PREFIX + ".sample.afterPrevSample";
-	public static final boolean DEFAULT_sample_afterPrevSample    = true;
+	public static final boolean DEFAULT_sample_afterPrevSample    = false;
+
+	public static final String  PROPKEY_sample_lastXminutes       = PROP_PREFIX + ".sample.lastXminutes";
+	public static final boolean DEFAULT_sample_lastXminutes       = true;
+
+	public static final String  PROPKEY_sample_lastXminutesTime   = PROP_PREFIX + ".sample.lastXminutes.time";
+	public static final int     DEFAULT_sample_lastXminutesTime   = 10;
 
 
 	@Override
@@ -178,6 +184,8 @@ extends CountersModel
 
 		Configuration.registerDefaultValue(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
 		Configuration.registerDefaultValue(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample);
+		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
+		Configuration.registerDefaultValue(PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
 	}
 
 
@@ -190,6 +198,8 @@ extends CountersModel
 
 		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
 		lc.setProperty(PROPKEY_sample_afterPrevSample,  conf.getBooleanProperty(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample));
+		lc.setProperty(PROPKEY_sample_lastXminutes,     conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes));
+		lc.setProperty(PROPKEY_sample_lastXminutesTime, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime));
 		
 		return lc;
 	}
@@ -199,6 +209,8 @@ extends CountersModel
 	{
 		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmPlanCacheDetailsPanel.TOOLTIP_sample_extraWhereClause;
 		if (propName.equals(PROPKEY_sample_afterPrevSample))  return CmPlanCacheDetailsPanel.TOOLTIP_sample_afterPrevSample;
+		if (propName.equals(PROPKEY_sample_lastXminutes))     return CmPlanCacheDetailsPanel.TOOLTIP_sample_lastXminutes;
+		if (propName.equals(PROPKEY_sample_lastXminutesTime)) return CmPlanCacheDetailsPanel.TOOLTIP_sample_lastXminutesTime;
 	
 		return "";
 	}
@@ -207,6 +219,8 @@ extends CountersModel
 	{
 		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
 		if (propName.equals(PROPKEY_sample_afterPrevSample))  return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_lastXminutes))     return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_lastXminutesTime)) return Integer.class.getSimpleName();
 
 		return "";
 	}
@@ -250,11 +264,17 @@ extends CountersModel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String  sample_extraWhereClause   = conf.getProperty(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
+		boolean sample_lastXminutes     = conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
+		int     sample_lastXminutesTime = conf.getIntProperty(    PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime);
 
 		// Do we have extra where clauses
 		String sql_sample_extraWhereClause = "  -- Extra where clauses will go here. (it will look like: AND the_extra_where_clause) \n";
 		if ( ! StringUtil.isNullOrBlank(sample_extraWhereClause) )
 			sql_sample_extraWhereClause = "  AND " + sample_extraWhereClause + "\n";
+
+		String sql_sample_lastXminutes = "";
+		if (sample_lastXminutes)
+			sql_sample_lastXminutes = "  AND LAST_EXECUTION_TIMESTAMP > ADD_SECONDS(current_timestamp, -("+sample_lastXminutesTime+"*60))\n";
 
 		String sql = 
 			"select \n" +
@@ -268,26 +288,32 @@ extends CountersModel
 			"    IS_VALID, \n" +                                     // java.sql.Types.VARCHAR   VARCHAR(5)     
 			"    IS_INTERNAL, \n" +                                  // java.sql.Types.VARCHAR   VARCHAR(5)     
 			"    IS_DISTRIBUTED_EXECUTION, \n" +                     // java.sql.Types.VARCHAR   VARCHAR(5)     
+			"    TABLE_TYPES, \n" +                                  // java.sql.Types.VARCHAR   VARCHAR(128)   
+			
+			"    TOTAL_EXECUTION_TIME, \n" +                         // java.sql.Types.BIGINT    BIGINT         
+			"    AVG_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
+			"    MIN_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
+			"    MAX_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
+
+			"    LAST_EXECUTION_TIMESTAMP, \n" +                     // java.sql.Types.TIMESTAMP TIMESTAMP      
+			"    SECONDS_BETWEEN(IFNULL(LAST_EXECUTION_TIMESTAMP,LAST_PREPARATION_TIMESTAMP), CURRENT_TIMESTAMP) as LAST_EXECUTION_TIMESTAMP_SS, \n" +
+			"    EXECUTION_COUNT, \n" +                              // java.sql.Types.BIGINT    BIGINT         
+			"    STATEMENT_STRING, \n" +                             // java.sql.Types.NCLOB     NCLOB          
+
 			"    IS_PINNED_PLAN, \n" +                               // java.sql.Types.VARCHAR   VARCHAR(5)     
 			"    PINNED_PLAN_ID, \n" +                               // java.sql.Types.BIGINT    BIGINT         
 			"    ABAP_VARCHAR_MODE, \n" +                            // java.sql.Types.VARCHAR   VARCHAR(5)     
-			"    TABLE_TYPES, \n" +                                  // java.sql.Types.VARCHAR   VARCHAR(128)   
 			"    PLAN_SHARING_TYPE, \n" +                            // java.sql.Types.VARCHAR   VARCHAR(128)   
 			"    OWNER_CONNECTION_ID, \n" +                          // java.sql.Types.INTEGER   INTEGER        
 			"    PLAN_MEMORY_SIZE, \n" +                             // java.sql.Types.BIGINT    BIGINT         
 			"    REFERENCE_COUNT, \n" +                              // java.sql.Types.BIGINT    BIGINT         
 			"    PARAMETER_COUNT, \n" +                              // java.sql.Types.BIGINT    BIGINT         
 			"    UPDATED_TABLE_OID, \n" +                            // java.sql.Types.BIGINT    BIGINT         
-			"    EXECUTION_COUNT, \n" +                              // java.sql.Types.BIGINT    BIGINT         
 			"    EXECUTION_COUNT_BY_ROUTING, \n" +                   // java.sql.Types.BIGINT    BIGINT         
 			"    TOTAL_CURSOR_DURATION, \n" +                        // java.sql.Types.BIGINT    BIGINT         
 			"    AVG_CURSOR_DURATION, \n" +                          // java.sql.Types.BIGINT    BIGINT         
 			"    MIN_CURSOR_DURATION, \n" +                          // java.sql.Types.BIGINT    BIGINT         
 			"    MAX_CURSOR_DURATION, \n" +                          // java.sql.Types.BIGINT    BIGINT         
-			"    TOTAL_EXECUTION_TIME, \n" +                         // java.sql.Types.BIGINT    BIGINT         
-			"    AVG_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
-			"    MIN_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
-			"    MAX_EXECUTION_TIME, \n" +                           // java.sql.Types.BIGINT    BIGINT         
 			"    TOTAL_EXECUTION_OPEN_TIME, \n" +                    // java.sql.Types.BIGINT    BIGINT         
 			"    AVG_EXECUTION_OPEN_TIME, \n" +                      // java.sql.Types.BIGINT    BIGINT         
 			"    MIN_EXECUTION_OPEN_TIME, \n" +                      // java.sql.Types.BIGINT    BIGINT         
@@ -314,12 +340,9 @@ extends CountersModel
 			"    TOTAL_LOCK_WAIT_COUNT, \n" +                        // java.sql.Types.BIGINT    BIGINT         
 			"    TOTAL_LOCK_WAIT_DURATION, \n" +                     // java.sql.Types.BIGINT    BIGINT         
 			"    LAST_CONNECTION_ID, \n" +                           // java.sql.Types.INTEGER   INTEGER        
-			"    LAST_EXECUTION_TIMESTAMP, \n" +                     // java.sql.Types.TIMESTAMP TIMESTAMP      
-			"    SECONDS_BETWEEN(IFNULL(LAST_EXECUTION_TIMESTAMP,LAST_PREPARATION_TIMESTAMP), CURRENT_TIMESTAMP) as LAST_EXECUTION_TIMESTAMP_SS, \n" +
 			"    LAST_PREPARATION_TIMESTAMP, \n" +                   // java.sql.Types.TIMESTAMP TIMESTAMP      
 			"    SECONDS_BETWEEN(LAST_PREPARATION_TIMESTAMP, CURRENT_TIMESTAMP) as LAST_PREPARATION_TIMESTAMP_SS, \n" +
 			"    TABLE_LOCATIONS, \n" +                              // java.sql.Types.VARCHAR   VARCHAR(2000)  
-			"    STATEMENT_STRING, \n" +                             // java.sql.Types.NCLOB     NCLOB          
 			"    ACCESSED_TABLES, \n" +                              // java.sql.Types.VARCHAR   VARCHAR(5000)  
 			"    ACCESSED_TABLE_NAMES, \n" +                         // java.sql.Types.NVARCHAR  NVARCHAR(5000) 
 			"    ACCESSED_OBJECTS, \n" +                             // java.sql.Types.VARCHAR   VARCHAR(5000)  
@@ -327,7 +350,8 @@ extends CountersModel
 			"    STATEMENT_HASH \n" +                                // java.sql.Types.VARCHAR   VARCHAR(32)    
 			"FROM M_SQL_PLAN_CACHE S \n" +
 			"WHERE 1 = 1 -- to make extra where clauses easier \n" +
-			sql_sample_extraWhereClause;
+			sql_sample_extraWhereClause +
+			sql_sample_lastXminutes;
 
 		// maybe: where last_execution_time > ${prevSampleTime} -- this to just get what has been executed since last "poll" 
 		// Or top ### order by LAST_PREPARATION_TIMESTAMP desc

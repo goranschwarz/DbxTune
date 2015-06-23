@@ -109,6 +109,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 //	private JTextField             _minute_txt      = new JTextField();
 	private JButton                _refresh_but     = new JButton("Refresh");
 	private JCheckBox              _showCounterInfo_chk = new JCheckBox("Show Counter Info", false);
+	private JCheckBox              _showCiAsSamples_chk = new JCheckBox("As Samples",        true);
 	private JCheckBox              _linkSliderTree_chk  = new JCheckBox("Link Slider with Tree", true);
 
 	// Bottom panel
@@ -194,9 +195,15 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		_refresh_but.setToolTipText("Refresh the sessions list from the database.");
 		_showCounterInfo_chk.setToolTipText(
 				"<html>" +
-				  "Show how many rows each individual Performance Counter Sample has.<br>" +
+				  "Show how many <b>rows</b> each individual Performance Counter Sample has.<br>" +
 				  "This is presented to the right hand side.<br>" +
-				  "<b>NOTE:</b> Not yet implemented." +
+				  "<b>NOTE:</b> This doesn't work wery well yet." +
+				"</html>");
+		_showCiAsSamples_chk.setToolTipText(
+				"<html>" +
+				  "Show how many <b>samples</b> each individual Performance Counter Sample has.<br>" +
+				  "This is presented to the right hand side.<br>" +
+				  "<b>NOTE:</b> This doesn't work wery well yet." +
 				"</html>");
 
 		panel.add(_day_lbl,  "");
@@ -215,6 +222,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		panel.add(new JLabel(""),  "grow, push, right");
 		
 		panel.add(_showCounterInfo_chk, "");
+		panel.add(_showCiAsSamples_chk, "");
 		panel.add(_refresh_but, "");
 
 		return panel;
@@ -291,7 +299,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 //			_conn = getOfflineConnection();
 
 //		_model = new OfflineSessionModel(_conn);
-		_model = new OfflineSessionModel(_showCounterInfo_chk.isSelected());
+		_model = new OfflineSessionModel(_showCounterInfo_chk.isSelected(), _showCiAsSamples_chk.isSelected());
 //		_model.init(null);
 
 		_treeTable.setTreeTableModel(_model);
@@ -493,7 +501,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		}
 
 //		_model = new OfflineSessionModel(_conn);
-		_model = new OfflineSessionModel(_showCounterInfo_chk.isSelected());
+		_model = new OfflineSessionModel(_showCounterInfo_chk.isSelected(), _showCiAsSamples_chk.isSelected());
 		setSomeValuesToModel();
 		_model.init(sessionList);
 		_treeTable.setTreeTableModel(_model);
@@ -778,8 +786,9 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			tmpConf.setProperty(base + "hourLevel",   _hourLevel);
 			tmpConf.setProperty(base + "minuteLevel", _minuteLevel);
 			
-			tmpConf.setProperty(base + "option.showCounterInfo", _showCounterInfo_chk.isSelected());
-			tmpConf.setProperty(base + "option.linkSliderTree",  _linkSliderTree_chk.isSelected());
+			tmpConf.setProperty(base + "option.showCounterInfo",          _showCounterInfo_chk.isSelected());
+			tmpConf.setProperty(base + "option.showCounterInfoAsSamples", _showCiAsSamples_chk.isSelected());
+			tmpConf.setProperty(base + "option.linkSliderTree",           _linkSliderTree_chk.isSelected());
 
 			tmpConf.save();
 		}
@@ -813,6 +822,9 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		boolean bool;
 		bool = tmpConf.getBooleanProperty(base + "option.showCounterInfo", _showCounterInfo_chk.isSelected());
 		_showCounterInfo_chk.setSelected(bool);
+
+		bool = tmpConf.getBooleanProperty(base + "option.showCounterInfoAsSamples", _showCiAsSamples_chk.isSelected());
+		_showCiAsSamples_chk.setSelected(bool);
 
 		bool = tmpConf.getBooleanProperty(base + "option.linkSliderTree", _linkSliderTree_chk.isSelected());
 		_linkSliderTree_chk.setSelected(bool);

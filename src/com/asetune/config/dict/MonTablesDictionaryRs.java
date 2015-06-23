@@ -3,17 +3,12 @@
  */
 package com.asetune.config.dict;
 
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.CounterController;
-import com.asetune.cm.CountersModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.SwingUtils;

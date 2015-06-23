@@ -47,7 +47,12 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"xxxx"
+		"DISTINCT_LOGINS",
+		"CONNECTED_USERS",
+		"COUNT_BLOCKING_WAIT",
+		"MAX_BLOCKING_WAIT_IN_SEC",
+		"TRANSACTIONS",
+		"ROLLBACKS"
 	};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -98,16 +103,25 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_XXX             = "xxx";
-//	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
+	public static final String GRAPH_NAME_XXX                = "xxx";
+	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
+	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
+	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
+	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";               // Transactions, Rollbacks
 
 	private void addTrendGraphs()
 	{
-		String[] labels_xxx            = new String[] { "Hour", "Minute", "Second"};
-//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+		String[] labels_xxx              = new String[] { "Hour", "Minute", "Second"};
+		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
+		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)" };
+		String[] labels_openTran         = new String[] { "Seconds" };
+		String[] labels_transaction      = new String[] { "user commits", "user rollbacks" };
 		
-		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx));
-//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
+		addTrendGraphData(GRAPH_NAME_XXX,                new TrendGraphDataPoint(GRAPH_NAME_XXX,                labels_xxx));
+		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
+		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
+		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
+		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -123,23 +137,54 @@ extends CountersModel
 				labels_xxx, 
 				true,  // is Percent Graph
 				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
+				"Transaction per second",    // Menu CheckBox text
+				"Transaction per Second",    // Label 
+				labels_transaction, 
+				false,   // is Percent Graph
+				this, 
+				true,   // visible at start
+				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
+				"Blocking Locks", 	                     // Menu CheckBox text
+				"Number of Concurrently Blocking Locks", // Label 
+				labels_blockingLocks, 
+				false, // is Percent Graph
+				this, 
 				true, // visible at start
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-//					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-//					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
-//					labels_aaNwPacket, 
-//					false, // is Percent Graph
-//					this, 
-//					false, // visible at start
-//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);   // minimum height
-//				addTrendGraph(tg.getName(), tg, true);
+			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
+				"Connections/Users", 	          // Menu CheckBox text
+				"Connections/Users connected to Oracle", // Label 
+				labels_connection, 
+				false, // is Percent Graph
+				this, 
+				true, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
 
+			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+				"Oldest Open Transaction",     // Menu CheckBox text
+				"Oldest Open Transaction, in Seconds", // Label 
+				labels_openTran, 
+				false, // is Percent Graph
+				this, 
+				true, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
 		}
 	}
 
@@ -182,19 +227,28 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-//		String cols1, cols2, cols3;
-//		cols1 = cols2 = cols3 = "";
-//
-//		cols1 = "* \n";
-//		cols3 = "";
-//
-//		String fromTable = " from master..monState A \n";
-//
-//		String sql = "select " + cols1 + cols2 + cols3 + fromTable;
-//		
-//		return sql;
-
-		return "select 1 from dual";
+		return 
+				"select \n" +
+	            "    INSTANCE_NAME, \n" +
+	            "    HOST_NAME, \n" +
+	            "    VERSION, \n" +
+	            "    STARTUP_TIME, \n" +
+	            "    CAST (current_date - STARTUP_TIME as INT)                                             as DAYS_RUNNING, \n" +
+	            "    current_date                                                                          as TIME_NOW, \n" +
+	            "    CAST(sys_extract_utc(SYSTIMESTAMP) AS DATE)                                           as UTC_DATE, \n" +
+	            "    CAST( (24*60) * (current_date - CAST(sys_extract_utc(SYSTIMESTAMP) AS DATE)) as int)  as UTC_MINUTE_DIFF, \n" +
+	            "    (select count(distinct USERNAME) from V$SESSION)                                      as DISTINCT_LOGINS, \n" +
+	            "    (select count(*) from V$SESSION where USERNAME is not null)                           as CONNECTED_USERS, \n" +
+	            "    CAST( (24*60*60) * (select current_date - min(START_DATE) from v$transaction) as int) as OLDEST_OPEN_TRAN_IN_SEC, \n" +
+	            "    (select min(START_DATE) from v$transaction)                                           as OLDEST_OPEN_TRAN_TIME, \n" +
+	            "    CAST( 30 as INT)                                                                      as OLDEST_OPEN_TRAN_IN_SEC_TH, \n" + // TH = THRESHOLD 
+	            "    (select max(SECONDS_IN_WAIT) from v$session where BLOCKING_SESSION is not null)       as MAX_BLOCKING_WAIT_IN_SEC, \n" +
+	            "    (select count(*) from v$session where BLOCKING_SESSION is not null)                   as COUNT_BLOCKING_WAIT, \n" +
+	            "    CAST( 10 as INT)                                                                      as BLOCKING_WAIT_IN_SEC_TH, \n" +  // TH = THRESHOLD
+	            "    (select sum(value) from v$sysstat where name = 'user commits')                        as TRANSACTIONS, \n" +
+	            "    (select sum(value) from v$sysstat where name = 'user rollbacks')                      as ROLLBACKS \n" +
+	            "from V$INSTANCE \n" +
+	            "";
 	}
 	
 	@Override
@@ -230,23 +284,68 @@ extends CountersModel
 			tgdp.setData(arr);
 		}
 
-//		//---------------------------------
-//		// GRAPH:
-//		//---------------------------------
-//		if (GRAPH_NAME_AA_NW_PACKET.equals(tgdp.getName()))
-//		{	
-//			Double[] arr = new Double[2];
-//
-//			arr[0] = this.getRateValueAsDouble (0, "PacketsReceived");
-//			arr[1] = this.getRateValueAsDouble (0, "PacketsSent");
-////			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
-////			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
-//			_logger.debug("updateGraphData(aaPacketGraph): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
-//
-//			// Set the values
-//			tgdp.setDate(this.getTimestamp());
-//			tgdp.setData(arr);
-//		}
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_TRANSACTION.equals(tgdp.getName()))
+		{
+			Double[] dArray = new Double[2];
+			String[] lArray = new String[] { "user commits", "user rollbacks" };
 
+			dArray[0] = this.getRateValueSum("TRANSACTIONS");
+			dArray[1] = this.getRateValueSum("ROLLBACKS");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setLabel(lArray);
+			tgdp.setData(dArray);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_BLOCKING_LOCKS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble (0, "COUNT_BLOCKING_WAIT");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): LockWait='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_CONNECTION.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[2];
+
+			arr[0] = this.getAbsValueAsDouble (0, "CONNECTED_USERS");
+			arr[1] = this.getAbsValueAsDouble (0, "DISTINCT_LOGINS");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_OLDEST_TRAN_IN_SEC.equals(tgdp.getName()))
+		{	
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble(0, "OLDEST_OPEN_TRAN_IN_SEC");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
+		}
 	}
 }

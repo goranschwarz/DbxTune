@@ -194,7 +194,13 @@ extends CountersModel
 //		
 //		return sql;
 
-		return "select * from m_database";
+		return 
+				"select \n" + 
+				"    *,  \n" +
+				"    CURRENT_TIMESTAMP                                                         as TIME_NOW, \n" + 
+				"    CAST(SECONDS_BETWEEN(CURRENT_UTCTIMESTAMP, CURRENT_TIMESTAMP)/60  as INT) as UTC_MINUTE_DIFF \n" +
+				"from m_database \n" +
+				"";
 	}
 	
 	@Override

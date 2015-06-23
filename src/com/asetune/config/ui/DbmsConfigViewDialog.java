@@ -9,7 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -21,11 +20,7 @@ import javax.swing.JTabbedPane;
 import net.miginfocom.swing.MigLayout;
 
 import com.asetune.Version;
-import com.asetune.config.dbms.AseConfigText;
-import com.asetune.config.dbms.AseConfigText.Cache;
-import com.asetune.config.dbms.AseConfigText.ConfigType;
 import com.asetune.config.dbms.DbmsConfigManager;
-import com.asetune.config.dbms.DbmsConfigTextAbstract;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.gui.swing.WaitForExecDialog;

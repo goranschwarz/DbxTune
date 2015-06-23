@@ -12,7 +12,6 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.DbUtils;

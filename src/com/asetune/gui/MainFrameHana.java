@@ -1,23 +1,15 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.util.List;
 
-import javax.naming.NameNotFoundException;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
-import com.asetune.CounterController;
 import com.asetune.Version;
-import com.asetune.cm.CountersModel;
-import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class MainFrameHana 

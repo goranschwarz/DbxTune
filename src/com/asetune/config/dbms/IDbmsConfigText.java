@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.util.List;
 
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 
 public interface IDbmsConfigText
 {

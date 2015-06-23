@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
-import com.asetune.utils.AseConnectionUtils;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 

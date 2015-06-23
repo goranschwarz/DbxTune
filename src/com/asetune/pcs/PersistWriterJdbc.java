@@ -2178,6 +2178,9 @@ public class PersistWriterJdbc
 				// How long the sample was for, in Milliseconds
 				pstmt.setInt(col++, cm.getLastSampleInterval());
 
+				// How long the sample was for, in Milliseconds
+				pstmt.setInt(col++, cm.isNewDeltaOrRateRow(r) ? 1 : 0);
+
 				// loop all columns
 				for (int c=0; c<colsCount; c++)
 				{

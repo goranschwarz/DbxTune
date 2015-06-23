@@ -11,6 +11,9 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
+import com.asetune.cm.sqlserver.CmExecQueryStats;
+import com.asetune.cm.sqlserver.CmIndexOpStat;
+import com.asetune.cm.sqlserver.CmIndexUsage;
 import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmPerfCounters;
 import com.asetune.cm.sqlserver.CmProcedureStats;
@@ -18,7 +21,9 @@ import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWho;
+import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
@@ -73,6 +78,9 @@ extends CounterControllerAbstract
 		CmOptimizer        .create(counterController, guiController);
 
 		CmActiveStatements .create(counterController, guiController);
+		CmIndexUsage       .create(counterController, guiController);
+		CmIndexOpStat      .create(counterController, guiController);
+		CmExecQueryStats   .create(counterController, guiController);
 
 		CmProcedureStats   .create(counterController, guiController);
 
@@ -229,5 +237,11 @@ extends CounterControllerAbstract
 	protected String getIsClosedSql()
 	{
 		return "SELECT 'SqlServerTune-check:isClosed(conn)'";
+	}
+
+	@Override
+	public ITableTooltip createCmToolTipSupplier(CountersModel cm)
+	{
+		return new ToolTipSupplierSqlServer(cm);
 	}
 }

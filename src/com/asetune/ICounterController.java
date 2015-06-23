@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
+import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
@@ -163,4 +164,6 @@ public interface ICounterController
 	void checkServerSpecifics();
 	String getServerTimeCmd();
 	boolean isSqlBatchingSupported();
+
+	ITableTooltip createCmToolTipSupplier(CountersModel cm);
 }

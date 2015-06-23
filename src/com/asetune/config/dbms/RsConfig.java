@@ -20,7 +20,6 @@ import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.RepServerUtils.ConfigEntry;
-import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 

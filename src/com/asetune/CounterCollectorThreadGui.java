@@ -231,6 +231,8 @@ extends CounterCollectorThreadAbstract
 
 								_logger.info("Re-connected to monitored server '"+str+"' after a 'lost connection'.");
 								reconnectProblemsSleeptSeconds = 0;
+
+								MainFrame.getInstance().setStatus(MainFrame.ST_CONNECT);
 							}
 							catch (Exception e)
 							{
