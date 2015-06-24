@@ -710,7 +710,8 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		//-------------------------------------------------------------------------
 		// HARDCODE a STOP date when this "DEVELOPMENT VERSION" will STOP working
 		//-------------------------------------------------------------------------
-		if (Version.IS_DEVELOPMENT_VERSION)
+		boolean enforceOldDbxTuneVersionsCheck = System.getProperty("_ENFORCE_OLD_DBXTUNE_VERSIONS_CHECK_", "true").equalsIgnoreCase("true");
+		if (Version.IS_DEVELOPMENT_VERSION && enforceOldDbxTuneVersionsCheck)
 		{
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 

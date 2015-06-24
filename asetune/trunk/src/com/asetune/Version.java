@@ -10,13 +10,13 @@ import java.util.Date;
 
 public class Version
 {
-	public static       String PRODUCT_STRING     = "AseTune"; // Do not have spaces etc in this one
-//	public static final String VERSION_STRING     = "3.4.0";
-	public static final String VERSION_STRING     = "3.4.0.18.dev";
-	public static final String BUILD_STRING       = "2015-06-23/build 178";
+	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
+	public static final String VERSION_STRING     = "3.5.0";        // Use this for public releases
+//	public static final String VERSION_STRING     = "3.4.0.18.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2015-06-24/build 179";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
-	public static final String  DEV_VERSION_EXPIRE_STR  = "2015-10-30";  // "YYYY-MM-DD" 
+	public static final String  DEV_VERSION_EXPIRE_STR  = "2016-11-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
 	public static final String SOURCE_DATE_STRING = "$Date$";
