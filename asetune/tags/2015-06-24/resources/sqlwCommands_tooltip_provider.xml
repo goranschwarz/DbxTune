@@ -1,0 +1,267 @@
+<!-- ============================================================================================ -->
+<!-- == NOTE: This file is included from all other tooltip provider files ======================= -->
+<!-- ============================================================================================ -->
+
+
+<!-- ============================================================================================ -->
+<!-- == SQL Window Command ====================================================================== -->
+<!-- ============================================================================================ -->
+
+
+<!-- == go =================================== -->
+<Entry>
+    <CmdName>go</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description><![CDATA[Terminator that sends of a SQL <i>batch</i> to the server.]]></Description>
+    <Syntax>
+<![CDATA[
+<pre>
+go [#1 [wait #2]] [ | {grep | egrep | bcp} ]
+</pre>
+#1 = Number of times to repeat the command<br>
+#2 = Ms to sleep after each batch execution<br>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: executes the command 10 times.<BR>
+       <CODE>insert into t1(c1,c2,c3) values(1,2,3)</CODE><br>
+       <CODE>go 10</CODE><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: executes the command 10 times, and waits 100 milliseconds betwen execution.<BR>
+       <CODE>select timeNow = getdate()</CODE><br>
+       <CODE>go 10 wait 100</CODE><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+</Entry>
+
+
+<!-- == reset =================================== -->
+<Entry>
+    <CmdName>reset</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Reset the command batch, and continue to read. next 'go' will execute</Description>
+    <Syntax><![CDATA[<pre>reset</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == exit =================================== -->
+<Entry>
+    <CmdName>exit</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Stop here, do not execute any more SQL batches (same as quit)</Description>
+    <Syntax><![CDATA[<pre>exit</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == quit =================================== -->
+<Entry>
+    <CmdName>quit</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Stop here, do not execute any more SQL batches (same as exit)</Description>
+    <Syntax><![CDATA[<pre>exit</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == \prep =================================== -->
+<Entry>
+    <CmdName>prep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a statement (via PreparedStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\prep FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \call =================================== -->
+<Entry>
+    <CmdName>call</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure (via CallableStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\call FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \exec =================================== -->
+<Entry>
+    <CmdName>exec</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure (via RPC if possible), and get the return code from the procedure</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\exec FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \rpc =================================== -->
+<Entry>
+    <CmdName>rpc</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure, but enforced via RPC (Remote Procedure Call). and get the return code from the procedure</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\rpc FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>\exec</SeeAlso>
+</Entry>
+
+
+<!-- == grep =================================== -->
+<Entry>
+    <CmdName>grep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Grep the output from a command and search for specific rows</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+sp_who
+go | grep some_string
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>egrep, bcp</SeeAlso>
+</Entry>
+
+
+<!-- == egrep =================================== -->
+<Entry>
+    <CmdName>egrep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Grep the output (using regular expresion) from a command and search for specific rows</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+sp_who
+go | grep some_string
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, bcp</SeeAlso>
+</Entry>
+
+
+<!-- == bcp =================================== -->
+<Entry>
+    <CmdName>bcp</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>do 'bcp' on a resultset into another server</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+select * from tab1
+go | bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-b]
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, egrep</SeeAlso>
+</Entry>
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Code Completion ========================================================================= -->
+<!-- ============================================================================================ -->
+
+<!-- == :a =================================== -->
+<Entry>
+    <CmdName>:a</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all known/used schemas in the current catalog.</Description>
+    <Syntax><![CDATA[<code>:a</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == use =================================== -->
+<Entry>
+    <CmdName>use</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all known catalogs in the server, starting with 'temp'</Description>
+    <Syntax><![CDATA[<code>use temp</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == exec =================================== -->
+<Entry>
+    <CmdName>exec</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all stored procedures, starting with the char 'a'</Description>
+    <Syntax><![CDATA[<code>exec a</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == xxx =================================== -->
+<Entry>
+    <CmdName>xxx</CmdName>
+    <Module>
+    DUMMY TEST
+    </Module>
+    <Description>TEST</Description>
+    <Syntax>
+    <![CDATA[
+ <A HREF="http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html">http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html</A>
+    ]]>
+    </Syntax>
+	<SeeAlso>
+    <![CDATA[
+ <A HREF="http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html">http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html</A>
+    ]]>
+	</SeeAlso>
+</Entry>
