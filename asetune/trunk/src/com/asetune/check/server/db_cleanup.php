@@ -233,8 +233,8 @@
 	}
 	else if ( $doAction == "errors_old_versions" )
 	{
-		doCleanup("delete from asemon_error_info  where appVersion <> '3.4.0' ");
-		doCleanup("delete from asemon_error_info2 where appVersion <> '3.4.0' ");
+		doCleanup("delete from asemon_error_info  where appVersion <= '3.5.0' ");
+		doCleanup("delete from asemon_error_info2 where appVersion <= '3.5.0' ");
 	}
 	else if ( $doAction == "dbmaint" )
 	{
@@ -617,7 +617,7 @@
 	mysql_close() or die("ERROR: " . mysql_error());
 
 	echo "<h2>Other options</h2>\n";
-	echo "    <A HREF=\"http://www.asemon.se/db_cleanup.php?doAction=errors_old_versions\" >Cleanup old versions errors: != '3.4.0'</A>\n";
+	echo "    <A HREF=\"http://www.asemon.se/db_cleanup.php?doAction=errors_old_versions\" >Cleanup old versions errors: != '3.5.0'</A>\n";
 ?>
 <BR>
 -END-

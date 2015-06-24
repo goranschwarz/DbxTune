@@ -202,7 +202,7 @@
 		// HANA version 1 or other products with a major release less than 10
 		if (strlen($version) == 8)
 		{
-//echo "HANA version 1 or other products with a major release less than 10<br>";
+echo "HANA version 1 or other products with a major release less than 10<br>";
 			return $version;
 		}
 
