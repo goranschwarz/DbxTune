@@ -22,10 +22,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2015-mm-dd</H2>
+<H2>2015-06-24</H2>
 <UL>
 	<LI>
 	<b>A bunch of new tools has been added... but all are still in Alpha/Beta stage</b><br>
+	Many internal code changes has been done to make this happen, hopefully it hasn't affected AseTune functionality.<br>
+	If you find bugs/issues, please mail me those things at goran_schwarz@hotmail.com<br>
 	<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
 		<TR> <TH>Tool Name    </TH> <TH>Status</TH>    <TH>Description</TH> </TR>
 		<TR> <TD>IqTune       </TD> <TD>Beta</TD>      <TD>Sybase/SAP IQ</TD> </TR>
@@ -35,19 +37,20 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<TR> <TD>SqlServerTune</TD> <TD>Alpha</TD>     <TD>Microsoft SQL-Server</TD> </TR>
 		<TR> <TD>OracleTune   </TD> <TD>Pre-Alpha</TD> <TD>Oracle</TD> </TR>
 	</TABLE>
-	To try them out unzip the dbxtune_beta_tools.zip into <b>current</b> directory where AseTUne is installed.<br>
-	And <b>please</b> send feedback if you want me to enhance the tools any further. (also with ideas of what to add/implement)  
-	</LI>
-
-	<LI>
-	<b>Enhancement: NAME - CmName</b><br>
-	xxx<br>
+	  <UL>
+	    <li> If you want to test them: unzip the dbxtune_beta_tools.zip into <b>current</b> directory where AseTUne is installed.<br>
+	         And <b>please</b> send feedback if you want me to enhance the tools any further. (also with ideas of what to add/implement) </li>
+	    <li> The simplest way to create your own Performance Counters is to create a 'User Defined Counter'.<br>
+	         This can be done under: main-menu -&gt; Tools -&gt; Create 'User Defined Counter' Wizard...<br>
+	         And <b>please</b> send the Performance Counters to me at goran_schwarz@hotmail.com, so I can add them in next release.</li>
+	  </UL>
 	</LI>
 
 	<LI>
 	<b>Enhancement: To all Counters</b><br>
 	All new rows for <i>diff</i> and <i>rate</i> is highlighted with a background color, <font color=#66cdaa>some kind of aqua marine green</font>.<br>
 	This can be turned on/off for every Counter, at the <i>options</i> panel, at the lower right corner at the <i>check box</i> icon.<br>
+	The option is called 'Mark new Diff or Rate entries with a <i>Aqua Marine Green</i> background color'.<br>
 	</LI>
 
 	<LI>
@@ -98,6 +101,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</LI>
 
 	<LI>
+	<b>Other various changes</b><br>
+	There are probably many changes that isn't recorded in this document, so expect more changes or new stuff that isn't described here, sorry for that!<br>
+	And like I said earlier, a lot of internal code changes has been made to implement a more generic framework to support "other" DBMS types than Sybase/SAP ASE.<br>
+	</LI>
+
+	<LI>
 	<b>SQL Window: Enhancements</b><br>
 	<ul>
        <li>Get sort order and character set when connection to a RepServer</li>
@@ -120,14 +129,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
        <li>Dialog to view all JDBC MetaData on the Connection Level. This is under: Menu -&gt; View -&gt; 'View JDBC Meta Data info...'</li>
        <li>Dialog to view error log information and change log level. This is under: Menu -&gt; View -&gt; 'Open Log Window...'</li>
        <li>About Dialog to view application version. This is under: Menu -&gt; Help -&gt; 'About'</li>
-       <li></li>
 
        <li>More options in the "Options" button (to the right of "exec" button)</li>
        <ul>
            <li>Show Row Number    - Add a Row Number as first column 'row#' when displaying data</li>
            <li>Trim String values - Do you want to remove leading/trailing blanks from "strings"</li>
            <li>Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
-           <li></li>
        </ul>
 
        <li>Bug fix: in Code Completions with respect to SCHEMA prefixes and stored procedures</li>
@@ -180,18 +187,6 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Mac OSX, java 8 wont start.</b><br>
 	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br> 
-	</LI>
-
-	<LI>
-	<b>Bug fix: name - CmName</b><br>
-	xxx<br> 
-	</LI>
-
-	<LI>
-	<b>Upgraded some of the third party libraries/jars</b><br>
-	<ul>
-	  <li>To version x.x.x,      Component: xxx</li>
-	</ul>
 	</LI>
 
 </UL>
