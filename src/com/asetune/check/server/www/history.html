@@ -22,14 +22,657 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2015-06-24</H2>
+<UL>
+	<LI>
+	<b>A bunch of new tools has been added... but all are still in Alpha/Beta stage</b><br>
+	Many internal code changes has been done to make this happen, hopefully it hasn't affected AseTune functionality.<br>
+	If you find bugs/issues, please mail me those things at goran_schwarz@hotmail.com<br>
+	<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1>
+		<TR> <TH>Tool Name    </TH> <TH>Status</TH>    <TH>Description</TH> </TR>
+		<TR> <TD>IqTune       </TD> <TD>Beta</TD>      <TD>Sybase/SAP IQ</TD> </TR>
+		<TR> <TD>RsTune       </TD> <TD>Alpha</TD>     <TD>Sybase/SAP Replication Server</TD> </TR>
+		<TR> <TD>RaxTune      </TD> <TD>Beta</TD>      <TD>Sybase/SAP Replication Agent X (Oracle, DB2, MSSQL)</TD> </TR>
+		<TR> <TD>HanaTune     </TD> <TD>Alpha</TD>     <TD>SAP HANA</TD> </TR>
+		<TR> <TD>SqlServerTune</TD> <TD>Alpha</TD>     <TD>Microsoft SQL-Server</TD> </TR>
+		<TR> <TD>OracleTune   </TD> <TD>Pre-Alpha</TD> <TD>Oracle</TD> </TR>
+	</TABLE>
+	  <UL>
+	    <li> If you want to test them: unzip the dbxtune_beta_tools.zip into <b>current</b> directory where AseTUne is installed.<br>
+	         And <b>please</b> send feedback if you want me to enhance the tools any further. (also with ideas of what to add/implement) </li>
+	    <li> The simplest way to create your own Performance Counters is to create a 'User Defined Counter'.<br>
+	         This can be done under: main-menu -&gt; Tools -&gt; Create 'User Defined Counter' Wizard...<br>
+	         And <b>please</b> send the Performance Counters to me at goran_schwarz@hotmail.com, so I can add them in next release.</li>
+	  </UL>
+	</LI>
+
+	<LI>
+	<b>Enhancement: To all Counters</b><br>
+	All new rows for <i>diff</i> and <i>rate</i> is highlighted with a background color, <font color=#66cdaa>some kind of aqua marine green</font>.<br>
+	This can be turned on/off for every Counter, at the <i>options</i> panel, at the lower right corner at the <i>check box</i> icon.<br>
+	The option is called 'Mark new Diff or Rate entries with a <i>Aqua Marine Green</i> background color'.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Spinlock Sum, Spinlock Act - CmSpinlockSum, CmSpinlockAct</b><br>
+	Added Tooltip on the panel with a description of what spinlock is and how they can be solved.<br>
+	Added Tooltip when hovering over table cells for 'spinName' and 'description' and possible solution for this specific spinlock.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Objects - CmObjectActivity</b><br>
+	When enabling "Include System Tables", a warning popup will be displayed: "may cause performance degradation"<br>
+	When disconnection: I check if traceflag 3650 is enabled at the server side. If it is: A popup question "disable traceflag 3650?" will be displayed.<br>
+	</LI>
+
+	<LI>
+	<b>New: RepAgent Memory Statistics - CmRaMemoryStat</b><br>
+	This table was introduced in ASE 16.0 PL1<br>
+	</LI>
+
+	<LI>
+	<b>New: Segment IO - CmDeviceSegIO</b><br>
+	This table was introduced in ASE 16.0 SP2<br>
+	</LI>
+
+	<LI>
+	<b>New: Segment Usage - CmDeviceSegUsage</b><br>
+	This table was introduced in ASE 16.0 SP2<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Caches - CmDataCaches</b><br>
+	Added columns: CASGrabs, CASSpins, CASWaits, CASContention, CASSpinsPerWait<br>
+	CASContention is based on CASSpins/CASWaits<br>
+	CASSpinsPerWait is based on number of spins per wait during this period.<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Cached Procedures - CmCachedProcs and Cached Procedures Sum - CmCachedProcsSum</b><br>
+	Added columns: SnapExecutionCount, SnapCodegenTime, SnapJITTime, SnapExecutionTime, AvgSnapCodegenTime, AvgSnapJITTime, AvgSnapExecutionTime<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: SPID Wait - CmSpidWait and SPID Activity - CmSpidCpuWait</b><br>
+	Added columns: OrigUserName = Original Server User Identifier. This is the Server User Identifier before setting proxy.<br>
+	<b>Note:</b> This is based on MDA information from ASE 16.0 SP2 beta3.<br>
+	</LI>
+
+	<LI>
+	<b>Other various changes</b><br>
+	There are probably many changes that isn't recorded in this document, so expect more changes or new stuff that isn't described here, sorry for that!<br>
+	And like I said earlier, a lot of internal code changes has been made to implement a more generic framework to support "other" DBMS types than Sybase/SAP ASE.<br>
+	</LI>
+
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+       <li>Get sort order and character set when connection to a RepServer</li>
+       <li>\rpc \exec \call commands handles return codes/parameters in a better way</li>
+       <li>\rpc \exec \call \prep commands handles more types (bigint|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob)</li>
+       <li>\rpc \exec \call \prep with type string accepts environment variables in the form ${ENV_NAME}</li>
+       <li>go | bcp ...: return how many rows was actually transferred by the BCP, and some other enhancements</li>
+       <li>Command History: you can now copy the file name from the status bar</li>
+       <li>Insert/Get last history commands with Crtl-Shift+H</li>
+       <li>Favorite commands, can be bound to a specific Vendor</li>
+       <li>Save/Restore "untitled" file</li>
+       <li>AutoCommit enable/disable functionality, if you are in AutoCommit=false, two extra buttons will be visible "Commit" and "Rollback"<br>
+	       in ASE and in AutoCommit=false (chained mode) a Watermark warning will only appear if you holding locks in the server (syslocks)</li>
+       <li>Better error handling for Oracle, if a 'create procedure' failed, get the reasons from Oracle system tables 'ALL_ERROR'</li>
+       <li>Moved Completion properties into a separate dialog</li>
+       <li>Various enhancements to the Code Completion subsystem</li>
+       <li>If it's a BLOB or Text column value AND the content seems to be a picture, lets show the picture if you hover/tooltip over the value</li>
+       <li>Oracle show stored procedure source code (using a tooltip at error message), in case of non-handled server side exceptions</li>
+       <li>New File: has been implemented.</li>
+       <li>Dialog to view all JDBC MetaData on the Connection Level. This is under: Menu -&gt; View -&gt; 'View JDBC Meta Data info...'</li>
+       <li>Dialog to view error log information and change log level. This is under: Menu -&gt; View -&gt; 'Open Log Window...'</li>
+       <li>About Dialog to view application version. This is under: Menu -&gt; Help -&gt; 'About'</li>
+
+       <li>More options in the "Options" button (to the right of "exec" button)</li>
+       <ul>
+           <li>Show Row Number    - Add a Row Number as first column 'row#' when displaying data</li>
+           <li>Trim String values - Do you want to remove leading/trailing blanks from "strings"</li>
+           <li>Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
+       </ul>
+
+       <li>Bug fix: in Code Completions with respect to SCHEMA prefixes and stored procedures</li>
+       <li>Bug fix: better handling of getting the correct object CLOB=getString(), BLOB=convertToHex(), etc...</li>
+       <li>Bug fix: Command line switched wasn't working to 100% (-U -P -S) to make initial connection on startup</li>
+       <li>Bug fix: ResultSetTableModel sometimes generated wrong data type</li>
+
+       <li>Probably a bunch of more stuff that I have forgot</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: freeze</b><br>
+	The GUI seems to freeze in some cases. Hopefully this is fixed...<br>
+	The major change made was: WaitForExec dialog now always gets executed on the EDT - Event Dispatch Thread<br>
+	The above dialog was used during Java Garbage Collections<br>  
+	</LI>
+
+	<LI>
+	<b>Bug fix: Rep Senders - CmRaSenders, Log Scanners - CmRaScanners</b><br>
+	Both of them had wrong PK for delta calculation. It now uses ScannerSPID in CmRaScanners and SenderSPID for CmRaSenders<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Devices - CmDeviceIO</b><br>
+	For ASE 12.5.x TotalIOs: convert to numeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Databases - CmOpenDatabases</b><br>
+	Check if user are authorized to select on master..syslogshold, if not columns OldestTran* to static values<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Procedure Call Stack - CmProcCallStack</b><br>
+	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: sp_monitorconfig - CmSpMonitorConfig, and 'View ASE Configuration'</b><br>
+	now checks for SA_ROLE before calling sp_monitorconfig<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Memory check</b><br>
+	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br> 
+	</LI>
+
+
+	<LI>
+	<b>Bug fix: Mac OSX, java 8 wont start.</b><br>
+	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br> 
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
+<H2>2014-07-07</H2>
+<UL>
+	<LI>
+	<b>SQL Windows: Major improvements has been done... Try it sql.bat or sqlw.sh</b><br>
+	It has been tested on ASE, RS, SQL Anywhere, IQ, HANA, Oracle, DB2, MSSQL, H2<br>
+	</LI>
+
+	<LI>
+	<b>ASE 16.0 support</b><br>
+	Here is the big picture of what has been added for ASE 16.0
+	<ul>
+	   <li>Version String in 16 has been changed again. SP### will now be SP## PL##. So ServicePack and PachLevel has been separated.<br>
+	       Changes in AseTune was also made to the internal version "integer" which holds the parsed version number.</li>
+	   <li>Tool 'Configure ASE for Monitoring': added parameters 'threshold event monitoring', 'threshold event max messages' </li> 
+	   <li>Processes: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
+	   <li>Active Statements: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
+	   <li>Cached Procedures: new column 'Active' - Indicates whether the plan for this procedure is active or not</li> 
+	   <li>Cached Procedures Sum: new column 'SumActive' - How many of this instance where column Active = 'Yes'</li> 
+	   <li>Objects: new columns</li>
+	     <ul>
+	       <li>Scans              - The number of scans on this object</li>
+	       <li>LastScanDate       - The date of the last scan on this object</li>
+	       <li>LastScanDateDiff   - How many MS ago did we do a Scan</li>
+	       <li>Inserts            - The number of inserts on this object</li>
+	       <li>LastInsertDate     - The date of the last insert on this object</li>
+	       <li>LastInsertDateDiff - How many MS ago did we do a Insert</li>
+	       <li>Updates            - The number of updates on this object</li>
+	       <li>LastUpdateDate     - The date of the last update on this object</li>
+	       <li>LastUpdateDateDiff - How many MS ago did we do a Update</li>
+	       <li>Deletes            - The number of deletes on this object</li>
+	       <li>LastDeleteDate     - The date of the last delete on this object</li>
+	       <li>LastDeleteDateDiff - How many MS ago did we do a Delete</li>
+	     </ul> 
+	   <li>Statement Cache Details: new columns (the below was also back ported for ASE 15.7 SP130)</li>
+	     <ul>
+	       <li>TotalPIO         - The total PIO value.</li>
+	       <li>TotalLIO         - The total LIO value.</li>
+	       <li>TotalCpuTime     - The total execution time value. (ms)</li>
+	       <li>TotalElapsedTime - The total elapsed time value. (ms)</li>
+	     </ul> 
+	   <li>Server - Resource Governor - New Performance Counter, works on MDA Table 'monThresholdEvent', which contains information "events" that the Resource Governor has exceeded.</li> 
+	   <li>RepAgent - Stream Stats   - New Performance Counter, works on MDA Table 'monRepStreamStatistics'.</li> 
+	   <li>RepAgent - Sync Task Stat - New Performance Counter, works on MDA Table 'monRepSyncTaskStatistics'.</li> 
+	   <li>RepAgent - RA Trunc Point - New Performance Counter, works on MDA Table 'monRepTruncationPoint'.</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Engines</b><br>
+	When you use ASE 15.7 and using 'threaded kernel mode' CPU Usage calculation gets a bit <i>strange</i>, this due to including IOCPUTime in the calculation.<br>
+	This manifests itself as a <b>higher</b> CPU usages than it really is, because <b>all</b> engines will have a high IOCPUTime even if it's only one engine/SPID that
+	the IO originates from. The IO is done by the IOController but the counter IOCPUTime is <i>faulty</i> increased on <b>all</b> engines.<br>
+	By the way this might be fixed by ASE CR#757246 in the future<br>
+	<br>
+	A CheckBox '<code>Collapse IOCPUTime into IdleCPUTime</code>' was introduced, so you can decide if you want to <i>disregard</i> the column IOCPUTime in the calculations. Or actually 
+	move/collapse the IOCPUTime counter into the IdleCPUTime counter.<br>
+	Note: this CheckBox is only visible if you run ASE 15.7 and if you are in process kernel mode, the CheckBox will be disabled.<br>
+	<br>
+	Also added the following columns, while the old columns 'CPUTime', 'SystemCPUTime', 'UserCPUTime', 'IOCPUTime' and 'IdleCPUTime' are now <i>just</i> difference counters. 
+	<ul>
+	   <li>NonIdleCPUTimePct - Formula: (SystemCPUTime + UserCPUTime [ + IOCPUTime]) / CPUTime * 100.0</li> 
+	   <li>SystemCPUTimePct  - Formula: SystemCPUTime / CPUTime * 100.0</li>
+	   <li>UserCPUTimePct    - Formula: UserCPUTime   / CPUTime * 100.0</li>
+	   <li>IOCPUTimePct      - Formula: IOCPUTime     / CPUTime * 100.0</li>
+	   <li>IdleCPUTimePct    - Formula: IdleCPUTime   / CPUTime * 100.0</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Wait</b><br>
+	Added WaitTimePerWait to the local graphs...<br>
+	Also enabled the CheckBox 'Include [250] waiting for incoming network data in graph   
+	</LI>
+
+	<LI>
+	<b>Enhancement: SPID Wait</b><br>
+	Added local graphs... More or less the same graphs as in the 'Wait' tab.<br>
+	<ul>
+	   <li>Summary Graphs on EventID - WaitTime, Waits, WaitTimePerWait (all records is summarized over EventID)</li> 
+	   <li>Summary Graphs on ClassName - WaitTime, Waits, WaitTimePerWait (all records is summarized over ClassName)</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Summary Tab</b><br>
+	Multiple columns for the Summary Graphs (graphs side-by-side)<br>
+	Five new Trend Graphs
+	<ul>
+	   <li>Server Waits group by 'EventID'   (Choose one of the following data source <code>WaitTime|Wiats|<b>WaitTimePerWait</b></code>)</li>
+	   <li>Server Waits group by 'ClassName' (Choose one of the following data source <code>WaitTime|Wiats|<b>WaitTimePerWait</b></code>)</li>
+	   <li>SPID Waits group by 'EventID'     (Choose one of the following data source <code>WaitTime|Wiats|<b>WaitTimePerWait</b></code>)</li>
+	   <li>SPID Waits group by 'ClassName'   (Choose one of the following data source <code>WaitTime|Wiats|<b>WaitTimePerWait</b></code>)</li>
+	   <li>Connection Attempts Per Second (source @@connections)</li>
+	</ul>
+	Mark field 'Lock waits', 'Full Transaction Logs' and 'Oldest Open Tran' as red when there is problems with any of them<br>
+    <br>
+	Added entries to Graphs sub menu
+	<ul>
+		<li> "Reset/Clear this Graph" - Clears the graph from data </li>
+		<li> "Set Max Values, in Y Axis..." </li>
+	</ul>
+	Also added a secondary time-line-ruler, with the color "light gray".<br>
+	On single click, it will be visible/enabled on all graphs (hopefully on the same time)<br>
+	To disable/hide it click on a point where the line is enabled/visible.<br>
+	</LI>
+
+
+	<LI>
+	<b>Enhancement: System Load</b><br>
+	Three new graphs
+	<ul>
+	   <li>Outstanding IO's, When the refresh happened, Per Engine</li> 
+	   <li>Outstanding IO's, Average over last minute, Per Engine</li> 
+	   <li>Outstanding IO's, Summary for all instances</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Databases</b><br>
+	Some new columns
+	<ul>
+	   <li>LogSizeFreeInMbDiff  - Same as LogSizeFreeInMb, but the difference from previous sample</li> 
+	   <li>DataSizeInMb         - How much Data is allocated in MB for this database</li> 
+	   <li>DataSizeFreeInMb     - How much Data are we NOT using in MB</li> 
+	   <li>DataSizeFreeInMbDiff - Same as DataSizeFreeInMbDiff, but the difference from previous sample</li> 
+	   <li>DataSizeUsedPct      - How much Data are we using in Percent</li> 
+	   <li>SPID                 - duplicate of OldestTranSpid, to enable table right click menu</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Temp Db</b><br>
+	Some new columns
+	<ul>
+	   <li>LockContPct    - Percent Calculation of Lock Contention</li> 
+	   <li>CatLockContPct - Percent Calculation of Catalog Lock Contention</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Summary Panel</b><br>
+	New field 'UTC Time Diff', which just prints out the time difference in minutes to UTC Data<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Objects, Cached Objects</b><br>
+	In the GUI Panel you can now limit number of records fetched from the server.<br>
+	This is of interest if you have thousands of tables, and it takes a <b>long time</b> to fetch the rows.<br>
+	The limitation is done <b>after</b> the <code>order by</code> has been applied...<br>
+	And the <code>order by</code> for the Counter Models are:
+	<ul>
+	   <li>Objects        - <code>order by LogicalReads desc</code></li> 
+	   <li>Cached Objects - <code>order by CachedKB desc</code></li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: IO Controller</b><br>
+	Two new graphs
+	<ul>
+	   <li>Pending IO's, or number of outstanding IO's</li> 
+	   <li>Completed IO's per seconds</li> 
+	</ul>
+	Also removed column Pending from being difference calculated, it seems that it's a peek counter.
+	</LI>
+
+	<LI>
+	<b>Enhancement: Spinlock Sum</b><br>
+	Handle counter overflow in a better way.<br>
+	Algorithm bumping up to a higher datatype: and adding the negative delta on top of Integer.MAX_VALUE<br>
+	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint <br>
+	Also at the client side, try to do a better job when the higher datatype (unsigned int) gets wrapped but NOT cleared.<br>
+       Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
+       Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br> 
+    If the underlying counters are cleared, the sample interval is adjusted to reflect <b>when</b> the counters where cleared and the values will start at zero (as it's a counter reset)<br>
+    The goal is to eliminate problems with Counter Wrapping and Counter Resets...<br>
+    So even when it happens, the counters in the "difference calculated" values should reflect the actual DIFFERENCE from previous sample<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Objects Tab</b><br>
+	a new local checkbox 'Include System Tables'<br>
+	This checkbox sends 'dbcc trace{on|off}(3650)' to the server to include system tables in monOpenObjectActivity<br>
+	Note: it doesn't check if the traceflag is on/off for every sample, it just sends 'on/off' when you press the checkbox.<br>
+	When the Performance Counter initializes, it will set traceflag 3650 on if it was enabled last time you used AseTune (it will not turn it of)<br>  
+	</LI>
+
+	<LI>
+	<b>Enhancement: Sysmon Raw</b><br>
+	Implemented 3 new sysmon sections
+	<ul>
+	   <li>Disk I/O Management</li> 
+	   <li>Network I/O Management</li> 
+	   <li>Monitor Access to Executing SQL</li> 
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: All Performance Counters</b><br>
+    If counters has been cleared (for example by sp_sysmon or someone else externally)<br>
+    Then set the field 'Clear time' background color to orange<br>
+    If we are viewing a recorded session, the colored field will instead be 'Head time' <br>
+	</LI>
+
+	<LI>
+	<b>Java Garbage Collection: Enhancements</b><br>
+	<ul>
+	    <li>Make Java Garbage Collection every X minute, the default is set to 10 minutes<br>
+	        This can be enabled/disabled from view-&gt;Preferences, the interval can also be changed from here.</li>
+	    <li>Do not show "GUI progress" if the AseTune window is not activated<br>
+            This means: the user is not "disturbed" if he are working in another window</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Enhancement: pause/refresh button</b><br>
+	If you are in paused mode, F5 or the "refresh" button will still work<br>
+	So if you want to do "refresh" to capture a specific user event, this is now a bit easier.<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement to tool: SQL Capture</b><br>
+	The tool can now be reached from all the JTable right click menus that has SPID columns in it.<br>
+	Previously this was only enabled when KPID was available.<br>
+	</LI>
+
+	<LI>
+	<b>NEW Standalone tool: tailw</b><br>
+	This is the same tool as within AeTune and SqlWindow, but now as a standalone utility.<br>
+	Start it using 'tailw.bat' or 'tailw.sh'<br>
+	With the tool you can tail any file, local or remote.<br>
+	When using the remote tail, SSH connection is used to read/stream to the client side, which probably is on windows.<br> 
+	</LI>
+
+	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+	Connection Profile: this will make it a bit easier to connect...<br>
+	A Tree View in a new panel, located to the left of the connection attributes can be enabled.<br> 
+    The connection dialog will be used for both the AseTune and SqlWindow applications<br>
+    To enable/disable the Tree View Panel, there are two buttons on the bottom left corner.<br> 
+    A Connection Profiles can also be selected from a Drop Down Box, called "Use Profile"<br>
+    New Connection Profiles is "automatically" created after a connection has been successfully established, it will ask you for
+    a name... if you change some attributes and connect, a dialog will be asking you if you want to save it or not.<br> 
+    Another way to Save/Create a Profile is by pressing 'Save Profile...'<br>  
+    * The SSH Connection Stuff now also takes a 'init OS Command', so you can kick off a OS command when the SSH connects
+      this can then kick of a shell scripts, which may 'setup a new SSH Tunnel Connection chain' or setup some environment, or...<br>
+    * JCheckbox option to enable jConnect Password Encryption over the network<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+	When you successfully has connect via host:port and the entry is NOT part of the interfaces file<br>
+    Show a popup that ask you if you want to add the entry to the interfaces file<br>
+    If the current interfaces is not writable, then an option to copy the current interfaces to a local/private files will be displayed<br>
+    If you open the interfaces file for EDIT, and it's not writable offer the above "copy option"<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Connection Dialog</b><br>
+	Also added a new option "Use Counter Template", and a list of templates you can choose from...<br>
+	When using this option, the predefined template will be used, which mean you can have different predefined Performance
+	Counter Sets for different servers, and when you connect that Counter Template will automatically be used.<br>
+	Maintaining Template Sets is done in the existing dialog  'Settings for All Collector Tabs', which you can open by clicking 'Template Dialog'<br>
+	This dialog can also be reached "at any time" from the Main Menu-&gt;View-&gt;Change 'Performance Counter' Options... 
+	</LI>
+
+	<LI>
+	<b>Enhancement: View ASE Configuration</b><br>
+	Added 1 tab: ASE Config File - Tries to read the ASE configuration file. This will use CIS and needs configuration 'enable file access' to be enabled 
+	</LI>
+
+	<LI>
+	<b>Enhancement - Stacktrace analyzer</b><br>
+	Right click menu: Stack Matrix Table<br>
+	In the 'Stack Matrix Table' Dialog you can navigate within the stacktrace samples to: 
+	<ul>
+	   <li>Select a specific sample, then look at the <i>source</i> content in the stack file for that sample.</li>
+	   <li>Highlight what other samples the current KPID, SPID or SUID is active in.</li>
+	   <li>What KPID, SPID, SUID or TABLE-OBJECT is the most active within the whole sampled stacktrace session.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+	   <li>Option: How long does a SQL Statement takes from the clients perspective.<br>
+	       Client Exec Time: %MM:%SS.%ms (sqlExec=%MM:%SS.%ms, readResults=%MM:%SS.%ms)</li>
+	   <li>Added sub command 'wait #ms' to the 'go' terminator.<br>
+	       <b>Example:</b> <code>go 10 wait 100</code> will execute the SQL batch 10 times, and wait 100 ms after each SQL batch has been sent.</li>
+	   <li>The progress dialog, now updates 'SQL Batch' timing when you use multi execution 'go 20'</li>
+	   <li>Code completion works a bit better, especially for dbname.dbo.&lt;ctrl-space&gt; (cross database lookups,
+           but there are still <b>more</b> to do with code completion, I would like to parse the SQL to figure out "where"
+           we are located in the SQL Statement, and from there decide more about what to display... anyone that has a good parser for this...)</li>
+       <li>Tooltip Supplier: Some support for ASE/HANA = "hover" over a function or other SQL Statement, if there
+           are help for it a tooltip will popup with some help (I need to do RepServer here, but it’s just
+           a XML file with textual description...<br>
+           and also on the "todo" list is to display table/column help... hover over a tablename = get column descriptions for that table)</li>
+       <li>Error hint: On any error messages, try to <b>mark</b> them with red underline + "red cross" on the
+           left hand side (at the line number) + red snivel to the right of the scrollbar
+           (this is <b>really</b> usefull when coding multiple functions/procedures in the same file,
+           Usually you have to "guess" what line in the file the error is at, multiple 'go' will cause the location problem)</li>
+       <li>ASE variable/identifier "marker" = put cursor on a identifier/variable = all other vars/tables/cols/etc with the same name will be "highlighted"</li>
+       <li>More information about the connected database in the status bar (especially when using the "generic" JDBC connection)</li>
+       <li>If you edit a file and another application changes the file, a popup will ask if you want to "reload" the file (cooperate with another editor)</li>
+       <li>Option to save the file before sending the SQL to the server. (good if you want to cooperate with another editor)</li>
+       <li>Option to restore the window size/location based on the connected server name. (after connect the window will be moved/resized)</li>
+       <li>In the status bar (bottom right corner) show what line and column the cursor is located at.</li>
+       <li>Copy Results button: right click to choose format you want to copy it as (if you just press the button, last used method will be used)</li>
+       <li>JTable: in the right click menu: "Execute content of selected rows" (hover of it = will show the SQL that will be executed):
+           good for generating SQL and execute it…. Ex: select "select tabName='"+name+"', rowc=count(*) from "+name from sysobjects where type = 'U'</li>
+       <li>\call, \exec and \rpc now works a bit better (for ASE, IQ, SA, RS, MS-SQL) The return code is automatically fetched
+           the CallableStament will be like '{?=call procname(params)}' for others it will be '{call procname(params)}'.<br>
+           This makes it possible to receive output parameters for variables that vendors that does not have the return code.<br>
+           Example of calling a stored proc with output params is HANA "\call procname('in-a', ?) :(string=null out)"</li>
+       <li>More command line switches example(-Uuser -Ppasswd -ujdbc:sap://host.acme.com:30115)</li>
+       <li>send 'sql init' string when you connect</li>
+       <li>ToolTip Provider accesses Code Completion, and show column/parameters information for tables/procedures</li>
+       <li>Added the Capture SQL to the tools menu... (if you connect to a ASE) this could be good to have from within SQL Window</li>
+       <li>All text areas using RSyntaxTextArea can now do ToUpperCase(Ctrl-U) and ToLowerCase(Ctrl-L), and the pupup menu also has to upper and lower entries.</li>
+       <li>The send terminator 'go' now has a bunch of sub command</li>
+       <ul>
+           <li><code>plain </code> - This temporary sets 'As Plain Text' but just for this SQL batch. ResultSets for this SQL Batch will be displayed in a RSyntaxtTextArea object.</li>
+           <li><code>top # </code> - This temporary sets 'Limit ResultSet rows' but just for this SQL batch.</li>
+           <li><code>psql  </code> - This temporary sets 'Print the executed SQL Statement in the output' but just for this SQL batch.</li>
+           <li><code>prsi  </code> - This temporary sets 'Print info about the ResultSet data types etc in the output' but just for this SQL batch.</li>
+           <li><code>time  </code> - This temporary sets 'Print how long time the SQL Batch took, from the clients perspective' but just for this SQL batch.</li>
+           <li><code>rowc  </code> - This temporary sets 'Print the rowcount from JDBC driver, not the number of rows actually returned' but just for this SQL batch.</li>
+           <li><code>append</code> - This temporary sets 'Do NOT clear results from previous executions. Append at the end' but just for this SQL batch.</li>
+           <li><code>nodata</code> - This temporary sets 'Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)' but just for this SQL batch.</li>
+       </ul>
+       <li>Send SQL Batch Terminator string can be changed (via a dialog), the default is 'go'.</li>
+       <li>Code Completion List now also shows icons...</li>
+       <li>When NULL Values in the ResultSet Table, set background to "light gray" to emphasize that it's a NULL value.'</li>
+       <li>On errors, two buttons will be visible: 'next' and 'previous', which will move the cursor to the SQL Text where the error happened</li>
+       <li>If you click on a (error) message in the output window, the cursor will be moved in the SQL Text, which was responsible for the error message.</li>
+       <li>Command History: If the SQL Text is to big do not add it to the history. (default is 5K, 5120 bytes, which can be changed with property 'CommandHistory.entry.limit.size=sizeInBytes')</li>
+       <li>Command History: added filter field to search the history</li>
+       <li>Command History: The Command column isn't "over sized" anymore... This simply means: it's less annoying when you have any wide commands in the history</li>
+       <li>Added ASE Set option 'set statistics *_html', which enables/disables ALL options for HTML Statistics output.</li>
+       <li>After the sql.ini/interfaces file has been changed via the "edit" button: Select the last edited entry as the new server.</li>
+       <li>Client character set can be chosen via a ComboBox, it will simply update the 'URL Options' field.</li>
+       <li>Favorite SQL/RCL button now you can execute commands directly from the dialog, and the dialog isn't modal anymore.</li>
+       <li>Show what encoding current file has (also before loading a file get/guess the file encoding, so it can be opened with the correct file encoding).</li>
+       <li>Input and Output window, side by side: Enable/Disable Menu-&gt;View-&gt;Preferences-&gt;Editor and Output Window side-by-side</li>
+       <li>Favorite SQL: Added some 'system' procedures that will be executed/created. (same as the Predefined SQL Statements in AseTune)</li>
+       <li>Right click menu in editor, added options: 'Visible Whitespace' and 'Visible End Of Line Markers'</li>
+       <li>More options in the "Options" button (to the right of "exec" button)</li>
+       <ul>
+           <li>Append results (just keep appending to the output, usable if you want to compare some results, from 2 different executions)</li>
+           <li>Limit the ResultSet to # rows, or simply stop reading rows in a ResultSet after # rows. And a dialog to configure this.</li>
+           <li>Show sent SQL (more or less same as –e in isql)</li>
+           <li>Print ResultSet info (print out what JDBC think it will receive, java.sql.Types.VARCHAR, varchar(30), makes it easier to verify some stuff)</li>
+           <li>Client timing (how long did the query take from the client side, SQL Execution, Read ResultSet), tooltip will show the SQL that was executed.</li>
+           <li>Send using ‘;’ (good if you are used to Oracle, this is a bit limited, or not 100% compatible with sqlPlus)</li>
+           <li>If connected to Oracle: enable/reads the dbms_output subsystem</li>
+           <li>On errors within stored procedures, get the SP Text and mark the "error" row with red. The text is displayed in the tooltip of the error.</li>
+           <li>Code Completion: Finer control of what to get/refresh</li>
+           <li>ToolTip Supplier, option to enable/disable column/parameter lookup to Code Completion</li>
+           <li>Ability to change JDBC AutoCommit, this is hidden, but can be enabled with property 'QueryWindow.jdbc.autoCommit.show=true'</li>
+       </ul>
+       <li>Probably a bunch of more stuff that I have forgot</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>PerfDemo application: Enhancements</b><br>
+	<ul>
+	   <li>Timestamp in the log window</li>
+	   <li>Now handles/discards any produced ResultSets from the Consumer Procedures.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: ASE Version parsing, now handles SP50 (or SP with less that 3 digits)</b><br>
+	ASE 15.7.0 SP50 was previously detected as 15.7.0, this is now fixed.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: 'Cached Procedures Sum' in the group 'Cache'</b><br>
+	Error 3606: Arithmetic overflow occurred.<br>
+	Now convert the integers to bigint before doing the sum() aggregates<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Sometimes the GUI freezes</b><br>
+	Changes to check if the connection is alive has been changed, this is the second attempts at this, hope it's solved this time.<br>
+	If you see problems with this:<br>
+	Please do the following:
+	<ul>
+	   <li>Open a command prompt, and do the following:</li>
+	   <li><code>jps</code></li>
+	   <li><code>jstack <i>on-the-pid-for-AseTune</i></code></li>
+	   <li>Send the output to: goran_schwarz@hotmail.com</li>
+	   <li>Also send the c:\Users\&lt;userName&gt;\.asetune\AseTune.log and try to describe what you where doing...</li>
+	</ul>
+	Note: <code>jps</code> and <code>jstack</code> is located under the JDK installation $JAVA_HOME/bin (possible c:\Program Files\Java\jdk*\bin)<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: SQL Window</b><br>
+	<code>(script row #)</code> in ASE Error massages does now reflect the correct row in the script even if a "selection" is executed.<br>
+	ASE Error messages has the output:<br>
+	<code>Msg 99999, Level 16, State 1:</code><br>
+	<code>Server 'GORAN_1570_DS', Line 1 (script row 12), Status 0, TranState 1:</code><br>
+	<code>Dummy Error message, just to test</code><br>
+	Which means; row 1 in the current SQL Batch, but row 12 in the editor.<br>
+	This makes it <b>a lot</b> easier to find errors in the editor when executing/debugging stuff.<br> 
+	</LI>
+
+	<LI>
+	<b>Enhanced Dialog: Warning - Use a Local drive for recordings</b><br>
+	This dialog now has an option to discard the warning for future attempts.<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: PCS - Recording functionality</b><br>
+	<ul>
+	   <li>CmCachedProcSum - DDL Storage was made of faulty column changed from 'RequestCntDiff' to 'SumRequestCntDiff'</li>
+	   <li>The 'label_#' column in tables that stores Summary Graphs was previously varchar(30), this is now changed to varchar(60). It was already done in the 'create table', but in the 'alter table add label_#' it was missing.'</li>
+	   <li>When we check if the Cm* tables exists, also check if we are missing any columns, if so add them.<br>
+	       This could happen if we record information from 2 different ASE versions in the same database.</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: Active Statements</b><br>
+	Columns 'Command' and 'Application' was placed in the wrong order in the output for 'BLOCKER' section.<br>
+	Simply moved the columns to match the 'ACTIVE' section of the select statement.<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Cached Procedure Sum</b><br>
+	Recording of DDL for procedures was using 'RequestCntDiff' which was faulty, use 'RequestCntDiff' instead<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Threads</b><br>
+	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: UDC Wizard</b><br>
+    "hint" why "next" button is not enabled was broken in some places<br>
+    Writing the SQL entries to the properties file in another way (newlines etc are escaped, so they will be visible in the Properties Dialog)<br>
+	</LI>
+
+	<LI>
+	<b>Bug fix: All Performance Counters, JTable</b><br>
+    The "hide column" popup was to large (outside of the screen in some cases)<br>
+    1: new Dialog where you can enable disable columns and also change the layout order (accessible by right cling on the column header)<br>
+    2: new MenuItem "Hide this column 'ColumnName'", where ColumnName is the current column header you did right click on<br>
+	</LI>
+
+	<LI>
+	<b>Upgraded some of the third party libraries/jars</b><br>
+	<ul>
+	  <li>To version 1.0.21,     Component: JCommon</li>
+	  <li>To version 1.0.17,     Component: JFreeChart</li>
+	  <li>To version 2.5.2,      Component: RSyntaxTextArea</li>
+	  <li>To version 2.5.2,      Component: Autocomplete, part of RSyntaxTextArea</li>
+	  <li>To version 2.5.2,      Component: RSTAUI, part of RSyntaxTextArea</li>
+	  <li>To version 1.3.176,    Component: H2 database</li>
+	  <li>To version 2013-12-09, Component: ProxyVole</li>
+	  <li>To version ASE 16,     Component: jConnect, jTSD3</li>
+	  <li>To version 1.6.5-1,    Component: SwingX</li>
+	</ul>
+	</LI>
+
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2013-06-28</H2>
 <UL>
 	<LI>
 	<b>Support for ASE 15.7 SP100, or SAP version string, based on Service Pack or SP</b><br>
 	From now on ASE will be using SAP Version strings, which means no more ESD#<br>
 	Now it's called SP (Service Pack) instead of ESD#<br>
-	AseTune internal parsing of the @@version string to an integer was previously 5 numbers (15034 = 15.0.3 ESD#4), 
-	the new internal representation is an integer that consists of 7 numbers (1570042 = 15.7.0 ESD#4.2, 1570100 = 15.7 SP100, 1570101 = 15.7 SP101)<br> 
+	AseTune internal parsing of the @@version string to an integer was previously 5 numbers (15034 = 15.0.3 ESD#4),
+	the new internal representation is an integer that consists of 7 numbers (1570042 = 15.7.0 ESD#4.2, 1570100 = 15.7 SP100, 1570101 = 15.7 SP101)<br>
 	</LI>
 
 	<LI>
@@ -93,7 +736,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	  <li><code>fullTranslogCount</code> - Checking if any database transaction logs are full, using <code>lct_admin('logfull', dbid)</code> was to expensive, or time consuming.<br>
 	      This was replaced with checking the <code>monOpenDatabases.TransactionLogFull</code> column, this is only done if the user has <code>mon_role</code> granted and configuration <code>enable monitoring</code> is enabled.
 	      If the above is not true, we fall back and use the old <code>lct_admin('logfull', dbid)</code> check.</li>
-	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold' 
+	  <li><code>oldestOpenTranInSec</code> - If you are connected with low authorized user you would get 'SELECT permission denied on object syslogshold'
 	      when trying to get oldest open transaction. If you are not authorized to select on syslogshold, a static value of -99 will be used instead.</li>
 	</ul>
 	</LI>
@@ -121,8 +764,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</ul>
 	Also keeping the old behaviour to summarize/collapse all Spinlocks that have multiple instances into one row.<br>
 	This collapse option is implemented as a checkbox in the "local options panel"<br>
-	Tooltip or Hover over any cell for the columns <code>OwnerPID, LastOwnerPID</code> will show a tooltip that basically 
-	  displays "select * from master..sysprocesses where kpid = ${LastOwnerPID|OwnerPID}" which makes it easier to discover 
+	Tooltip or Hover over any cell for the columns <code>OwnerPID, LastOwnerPID</code> will show a tooltip that basically
+	  displays "select * from master..sysprocesses where kpid = ${LastOwnerPID|OwnerPID}" which makes it easier to discover
 	  what user/application that was holding the spinlock.<br>
 	</LI>
 
@@ -145,7 +788,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	To few records in the Performance Counter. This was due to a bad join from monThread to monTask<br>
 	The join towards monTask is only to distinguage syb_system_pool:NetController and syb_system_pool:DiskController<br>
 	Now using a outer join to get records that doesn't have a record in monTask<br>
-	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads 
+	monThread.KTID *= monTask.KTID: the KTID in monTask only has a matching KTID for currently running SPID/Threads
 	but the rest of the "engine" threads has no matching entry in monTask, because they are not executing anything.<br>
 	</LI>
 
@@ -404,7 +1047,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</p>
 	<p>
 	   Please let me know if you still have memory issues.<br>
-	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script. 
+	   Or simply raise the JVM Parameter -Xmx####m to <b>as high as possible</b> values (see below for default values). This is done in the asetune.bat or asetune.sh script.
 	     or by setting the environment variable <code>ASETUNE_JVM_MEMORY_PARAMS</code> to <code>-Xmx####m -Xms##m</code>
 	</p>
 	Also new default values for Java memory:
@@ -442,7 +1085,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	In fact, you can view/tail "any" file on the (remote) machine, not just the ASE server log.<br>
 	The same functionality is available in the stand alone SQLWindow tool (sqlw.bat or sqlw.sh), which is
 	perfect if you connect to Replication Server and want to view the (remote) RepServer log at the same time
-	as you enter various commands.<br> 
+	as you enter various commands.<br>
 	</LI>
 
 	<LI>
@@ -479,8 +1122,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	where the IOTime seems to be incremented in some arbitrary larger number than milliseconds. This might be
 	solved in next release (I think this is solved in ASE 15.7 ESD#4) so I didn't want change or remove the Graph connected to CmIoQueueSum...
 	<p>
-	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br> 
-	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread. 
+	In ASE 15.7 The 'CPU Thread BusyTicksPct' Graphs is a better CPU measurement when using Threaded Kernel.<br>
+	The monEngine.IOCPUTime shown some kind of average from the 'DiskController' Thread.
 	  Then the server looks like it's overloaded with IO even if you are just issuing a table scan from a single SPID.<br>
 	Note: Watch out for 100% values from 'BusyTicks' for 'syb_blocking_pool' and 'syb_system_pool' (RTC pools 'Run To Completion') they are always 100% in first versions, this is fixed in ASE 15.7 ESD#3<br>
 	I might release a new AseTune, when I know how to fix the issue in a better way. <b>Suggestions are always welcome</b>, since I don't have access to any <b>good or highly used</b> ASE Server for testing.
@@ -605,9 +1248,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Spinlock Sum - for ASE Cluster Edition</b><br>
 	Some values would end up as "duplicate" entries. In ASE-CE the field_id was reused for some counters. So the join was also done on field_name<br>
-	Also the field_name 'fglockspins' can optionally be discarded. 
+	Also the field_name 'fglockspins' can optionally be discarded.
 	If you choose not to include 'fglockspins' in ASE-CE, the performance will hopefully be much better, number of records for 'fglockspins' could easily be more than 100000
-	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.) 
+	removing those entries from the calculation would speed it up. And since it's so <b>many</b> rows with those values, a average wouldn't say that much. (a high value in one or two 'fglockspins' would just average out on all the other rows.)
 	</LI>
 
 	<LI>

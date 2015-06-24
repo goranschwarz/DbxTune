@@ -51,8 +51,8 @@ CHECKIN
 ###########################################################
 ## Subversion TAG the release
 ###########################################################
-svn copy https://svn.gorans.no-ip.org/projects/asetune/trunk \
- https://svn.gorans.no-ip.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
+svn copy https://svn.gorans.org/projects/asetune/trunk \
+ https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD -m "Tagging the release."
 
 
 ###########################################################
@@ -64,7 +64,7 @@ cd c:\tmpsvn
 
 c:
 cd c:\tmpsvn
-svn co https://svn.gorans.no-ip.org/projects/asetune/tags/YYYY-MM-DD release
+svn co https://svn.gorans.org/projects/asetune/tags/YYYY-MM-DD release
 cd release
 
 set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_45
